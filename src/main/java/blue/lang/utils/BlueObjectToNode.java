@@ -3,7 +3,6 @@ package blue.lang.utils;
 import blue.lang.graph.Feature;
 import blue.lang.graph.Node;
 import blue.lang.graph.feature.InlineValueFeature;
-import blue.lang.graph.BasicNode;
 import blue.lang.model.BlueObject;
 
 import java.util.ArrayList;
@@ -14,10 +13,10 @@ import java.util.stream.Collectors;
 import static blue.lang.utils.Properties.OBJECT_NAME;
 import static blue.lang.utils.Properties.OBJECT_TYPE;
 
-public class BlueObjectToBasicNode {
+public class BlueObjectToNode {
 
-    public static BasicNode convert(BlueObject object) {
-        return new BasicNode()
+    public static Node convert(BlueObject object) {
+        return new Node()
                 .name(object.getStringValue(OBJECT_NAME))
                 .type(object.getStringValue(OBJECT_TYPE))
                 .value(object.getValue())
@@ -30,7 +29,7 @@ public class BlueObjectToBasicNode {
     private static List<Node> getItems(BlueObject object) {
         List<BlueObject> items = object.getItems();
         return items == null ? null : items.stream()
-                .map(BlueObjectToBasicNode::convert)
+                .map(BlueObjectToNode::convert)
                 .collect(Collectors.toList());
     }
 
@@ -40,7 +39,7 @@ public class BlueObjectToBasicNode {
                 .filter(entry -> !entry.getKey().equals(OBJECT_NAME) && !entry.getKey().equals(OBJECT_TYPE))
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        entry -> BlueObjectToBasicNode.convert(entry.getValue())
+                        entry -> BlueObjectToNode.convert(entry.getValue())
                 ));
     }
 

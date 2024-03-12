@@ -1,9 +1,6 @@
 package blue.lang;
 
-import blue.lang.graph.BasicNode;
-import blue.lang.graph.BasicNodeManager;
-import blue.lang.graph.Merger;
-import blue.lang.graph.NodeProcessor;
+import blue.lang.graph.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -16,21 +13,21 @@ public class BasicTest {
     @Test
     public void testSimpleNodesMerge() throws Exception {
 
-        BasicNode a = new BasicNode().name("A").value(1);
-        BasicNode b = new BasicNode().name("B").type("A").value(2);
-        BasicNode c = new BasicNode().name("C").type("B").value(3);
+        Node a = new Node().name("A").value(1);
+        Node b = new Node().name("B").type("A").value(2);
+        Node c = new Node().name("C").type("B").value(3);
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode().type("C")
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node().type("C")
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
-        BasicNodeManager manager = new BasicNodeManager(nodes, numbersMustIncreasePayloadMerger());
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
+        NodeManager manager = new NodeManager(nodes, numbersMustIncreasePayloadMerger());
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
         merger.merge(node, manager.getNode("Y"));
 
         assertEquals(node.getProperties().size(), 1);

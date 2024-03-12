@@ -1,12 +1,9 @@
 package blue.lang.graph;
 
-import lombok.Getter;
-
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Getter
 public class Types {
 
     private final Map<String, Node> types;
@@ -14,6 +11,10 @@ public class Types {
     public Types(List<? extends Node> nodes) {
         types = nodes.stream()
                 .collect(Collectors.toMap(Node::getName, node -> node));
+    }
+
+    public Map<String, Node> getTypes() {
+        return types;
     }
 
     public boolean isSubtype(Node node, String supertype) {

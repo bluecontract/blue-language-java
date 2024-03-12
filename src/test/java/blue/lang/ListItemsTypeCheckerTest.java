@@ -16,21 +16,21 @@ public class ListItemsTypeCheckerTest {
 
     @Test
     public void testSuccess() throws Exception {
-        BasicNode a = new BasicNode().name("A");
-        BasicNode b = new BasicNode().name("B").type("A");
-        BasicNode c = new BasicNode().name("C").type("B");
+        Node a = new Node().name("A");
+        Node b = new Node().name("B").type("A");
+        Node c = new Node().name("C").type("B");
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode().items(
-                        new BasicNode().type("B"),
-                        new BasicNode().type("C")
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node().items(
+                        new Node().type("B"),
+                        new Node().type("C")
                 )
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
         NodeProcessor nodeProcessor = new SequentialNodeProcessor(
                 Arrays.asList(
@@ -38,10 +38,10 @@ public class ListItemsTypeCheckerTest {
                         new ListItemsTypeChecker(types)
                 )
         );
-        BasicNodeManager manager = new BasicNodeManager(nodes, nodeProcessor);
+        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
         merger.merge(node, manager.getNode("Y"));
 
         assertEquals(node.getProperties().get("a").getType(), "B");
@@ -50,21 +50,21 @@ public class ListItemsTypeCheckerTest {
 
     @Test
     public void testFailure() throws Exception {
-        BasicNode a = new BasicNode().name("A");
-        BasicNode b = new BasicNode().name("B").type("A");
-        BasicNode c = new BasicNode().name("C").type("B");
+        Node a = new Node().name("A");
+        Node b = new Node().name("B").type("A");
+        Node c = new Node().name("C").type("B");
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode().items(
-                        new BasicNode().type("A"),
-                        new BasicNode().type("C")
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node().items(
+                        new Node().type("A"),
+                        new Node().type("C")
                 )
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
         NodeProcessor nodeProcessor = new SequentialNodeProcessor(
                 Arrays.asList(
@@ -72,10 +72,10 @@ public class ListItemsTypeCheckerTest {
                         new ListItemsTypeChecker(types)
                 )
         );
-        BasicNodeManager manager = new BasicNodeManager(nodes, nodeProcessor);
+        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
 
         assertThrows(IllegalArgumentException.class, () -> {
             merger.merge(node, manager.getNode("Y"));

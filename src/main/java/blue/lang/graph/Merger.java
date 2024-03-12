@@ -1,16 +1,17 @@
 package blue.lang.graph;
 
-import lombok.AllArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@AllArgsConstructor
 public class Merger {
 
     private NodeManager nodeManager;
+
+    public Merger(NodeManager nodeManager) {
+        this.nodeManager = nodeManager;
+    }
 
     public void merge(Node target, Node source) {
 //        System.out.println("merging " + target + " from source " + source);

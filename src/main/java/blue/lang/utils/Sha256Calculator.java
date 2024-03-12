@@ -1,16 +1,17 @@
 package blue.lang.utils;
 
-import lombok.AllArgsConstructor;
-
 import java.util.*;
 import java.util.function.Function;
 
-@AllArgsConstructor
 public class Sha256Calculator {
 
     private static final String SHA256_KEY = "sha256";
 
     private Function<Object, String> sha256Provider;
+
+    public Sha256Calculator(Function<Object, String> sha256Provider) {
+        this.sha256Provider = sha256Provider;
+    }
 
     public Map<String, Object> calculate(Map<String, Object> map) {
         if (map.size() == 1 && map.containsKey(SHA256_KEY))

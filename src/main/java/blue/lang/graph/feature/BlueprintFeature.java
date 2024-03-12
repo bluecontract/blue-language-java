@@ -1,14 +1,21 @@
 package blue.lang.graph.feature;
 
 import blue.lang.graph.Feature;
-import blue.lang.graph.Node;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 
 import java.util.Map;
 
-@Data
-@AllArgsConstructor
 public class BlueprintFeature implements Feature {
     private Map<String, Object> features;
+
+    public BlueprintFeature(Map<String, Object> features) {
+        this.features = features;
+    }
+
+    public Map<String, Object> getFeatures() {
+        return features;
+    }
+
+    public void setFeatures(Map<String, Object> features) {
+        this.features = features;
+    }
 }

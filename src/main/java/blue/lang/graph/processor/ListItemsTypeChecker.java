@@ -4,14 +4,16 @@ import blue.lang.graph.Node;
 import blue.lang.graph.NodeManager;
 import blue.lang.graph.NodeProcessor;
 import blue.lang.graph.Types;
-import lombok.AllArgsConstructor;
 
 import java.util.List;
 
-@AllArgsConstructor
 public class ListItemsTypeChecker implements NodeProcessor {
 
     private final Types types;
+
+    public ListItemsTypeChecker(Types types) {
+        this.types = types;
+    }
 
     @Override
     public void process(Node target, Node source, NodeManager nodeManager) {

@@ -15,28 +15,28 @@ public class TypeAssignerTest {
 
     @Test
     public void testPropertySubtype() throws Exception {
-        BasicNode a = new BasicNode().name("A");
-        BasicNode b = new BasicNode().name("B").type("A");
-        BasicNode c = new BasicNode().name("C").type("B");
+        Node a = new Node().name("A");
+        Node b = new Node().name("B").type("A");
+        Node c = new Node().name("C").type("B");
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode().type("C")
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node().type("C")
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
         NodeProcessor nodeProcessor = new SequentialNodeProcessor(
                 Collections.singletonList(
                         new TypeAssigner(types)
                 )
         );
-        BasicNodeManager manager = new BasicNodeManager(nodes, nodeProcessor);
+        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
         merger.merge(node, manager.getNode("Y"));
 
         assertEquals(node.getProperties().get("a").getType(), "C");
@@ -45,28 +45,28 @@ public class TypeAssignerTest {
 
     @Test
     public void testEmptyTypeIsInherited() throws Exception {
-        BasicNode a = new BasicNode().name("A");
-        BasicNode b = new BasicNode().name("B").type("A");
-        BasicNode c = new BasicNode().name("C").type("B");
+        Node a = new Node().name("A");
+        Node b = new Node().name("B").type("A");
+        Node c = new Node().name("C").type("B");
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode()
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node()
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
         NodeProcessor nodeProcessor = new SequentialNodeProcessor(
                 Collections.singletonList(
                         new TypeAssigner(types)
                 )
         );
-        BasicNodeManager manager = new BasicNodeManager(nodes, nodeProcessor);
+        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
         merger.merge(node, manager.getNode("Y"));
 
         assertEquals(node.getProperties().get("a").getType(), "B");

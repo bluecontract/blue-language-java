@@ -6,12 +6,10 @@ import blue.lang.graph.NodeProcessor;
 import blue.lang.graph.feature.SupportedTypesFeature;
 import blue.lang.graph.utils.Features;
 import blue.lang.graph.utils.Nodes;
-import lombok.AllArgsConstructor;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@AllArgsConstructor
 public class SupportedTypesPropagator implements NodeProcessor {
     @Override
     public void process(Node target, Node source, NodeManager nodeManager) {

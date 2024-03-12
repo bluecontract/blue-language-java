@@ -9,7 +9,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-import lombok.Getter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -181,8 +180,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
 
     public static class NestedJsonException extends RuntimeException {
 
-        @Getter
-        private final Throwable nestedException; // needed to prevent exception discarding when ObjectMapper only propagates root cause
+        private final Throwable nestedException;
 
         public NestedJsonException(Throwable nestedException) {
             this.nestedException = nestedException;

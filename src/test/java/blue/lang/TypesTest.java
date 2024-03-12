@@ -1,6 +1,6 @@
 package blue.lang;
 
-import blue.lang.graph.BasicNode;
+import blue.lang.graph.Node;
 import blue.lang.graph.Types;
 import org.junit.jupiter.api.Test;
 
@@ -14,9 +14,9 @@ public class TypesTest {
     @Test
     public void testIsSubtype() throws Exception {
 
-        BasicNode a = new BasicNode().name("A");
-        BasicNode b = new BasicNode().name("B").type("A");
-        BasicNode c = new BasicNode().name("C").type("B");
+        Node a = new Node().name("A");
+        Node b = new Node().name("B").type("A");
+        Node c = new Node().name("C").type("B");
 
         Types types = new Types(Arrays.asList(a, b, c));
 

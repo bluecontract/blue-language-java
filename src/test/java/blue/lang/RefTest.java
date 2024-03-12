@@ -17,21 +17,21 @@ public class RefTest {
     @Test
     public void testInlineValueWithFeatureShouldProcessRef() throws Exception {
 
-        BasicNode a = new BasicNode().name("A").value(1);
-        BasicNode b = new BasicNode().name("B").type("A").value(2);
-        BasicNode c = new BasicNode().name("C").type("B").value(3);
+        Node a = new Node().name("A").value(1);
+        Node b = new Node().name("B").type("A").value(2);
+        Node c = new Node().name("C").type("B").value(3);
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
 
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode().value("should-go-as-ref").features(
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node().value("should-go-as-ref").features(
                         Collections.singletonList(new InlineValueFeature())
                 )
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
         NodeProcessor nodeProcessor = new SequentialNodeProcessor(
                 Arrays.asList(
@@ -42,28 +42,28 @@ public class RefTest {
                         new TypeAssigner(types)
                 )
         );
-        BasicNodeManager manager = new BasicNodeManager(nodes, nodeProcessor);
+        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
         merger.merge(node, manager.getNode("Y"));
 
         assertEquals(node.getProperties().get("a").getValue(), "enriched-should-go-as-ref");
     }
 
     @Test
-    public void testExplicitRefShouldProcessRef() throws Exception {BasicNode a = new BasicNode().name("A").value(1);
-        BasicNode b = new BasicNode().name("B").type("A").value(2);
-        BasicNode c = new BasicNode().name("C").type("B").value(3);
+    public void testExplicitRefShouldProcessRef() throws Exception {Node a = new Node().name("A").value(1);
+        Node b = new Node().name("B").type("A").value(2);
+        Node c = new Node().name("C").type("B").value(3);
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode().ref("should-go-as-ref")
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node().ref("should-go-as-ref")
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
         NodeProcessor nodeProcessor = new SequentialNodeProcessor(
                 Arrays.asList(
@@ -74,10 +74,10 @@ public class RefTest {
                         new TypeAssigner(types)
                 )
         );
-        BasicNodeManager manager = new BasicNodeManager(nodes, nodeProcessor);
+        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
         merger.merge(node, manager.getNode("Y"));
 
         assertEquals(node.getProperties().get("a").getValue(), "enriched-should-go-as-ref");
@@ -85,18 +85,18 @@ public class RefTest {
 
     @Test
     public void testInlineValueWithNoFeatureShouldProcessValue() throws Exception {
-        BasicNode a = new BasicNode().name("A").value(1);
-        BasicNode b = new BasicNode().name("B").type("A").value(2);
-        BasicNode c = new BasicNode().name("C").type("B").value(3);
+        Node a = new Node().name("A").value(1);
+        Node b = new Node().name("B").type("A").value(2);
+        Node c = new Node().name("C").type("B").value(3);
 
-        BasicNode x = new BasicNode().name("X").properties(
-                "a", new BasicNode().type("B")
+        Node x = new Node().name("X").properties(
+                "a", new Node().type("B")
         );
-        BasicNode y = new BasicNode().name("Y").type("X").properties(
-                "a", new BasicNode().value("should-not-go-as-ref")
+        Node y = new Node().name("Y").type("X").properties(
+                "a", new Node().value("should-not-go-as-ref")
         );
 
-        List<BasicNode> nodes = Arrays.asList(a, b, c, x, y);
+        List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
         NodeProcessor nodeProcessor = new SequentialNodeProcessor(
                 Arrays.asList(
@@ -107,10 +107,10 @@ public class RefTest {
                         new TypeAssigner(types)
                 )
         );
-        BasicNodeManager manager = new BasicNodeManager(nodes, nodeProcessor);
+        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
         Merger merger = new Merger(manager);
-        BasicNode node = new BasicNode();
+        Node node = new Node();
         merger.merge(node, manager.getNode("Y"));
 
         assertEquals(node.getProperties().get("a").getValue(), "should-not-go-as-ref");

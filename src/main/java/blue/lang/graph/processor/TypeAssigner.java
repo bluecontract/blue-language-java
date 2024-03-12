@@ -4,12 +4,14 @@ import blue.lang.graph.Node;
 import blue.lang.graph.NodeManager;
 import blue.lang.graph.Types;
 import blue.lang.graph.NodeProcessor;
-import lombok.AllArgsConstructor;
 
-@AllArgsConstructor
 public class TypeAssigner implements NodeProcessor {
 
     private final Types types;
+
+    public TypeAssigner(Types types) {
+        this.types = types;
+    }
 
     @Override
     public void process(Node target, Node source, NodeManager nodeManager) {

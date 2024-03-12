@@ -1,6 +1,7 @@
 package blue.lang;
 
 import blue.lang.graph.Node;
+import blue.lang.model.BlueObject;
 
 import java.util.List;
 
@@ -14,13 +15,6 @@ public class Blue {
         return null;
     }
 
-    public <T> T resolve(Node object, List<String> paths, Class<T> type) {
-        return null;
-    }
-
-    public String getBlueId(Node node) {
-        return null;
-    }
 
 
 

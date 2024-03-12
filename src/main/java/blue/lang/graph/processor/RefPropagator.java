@@ -4,12 +4,14 @@ import blue.lang.graph.Node;
 import blue.lang.graph.NodeManager;
 import blue.lang.graph.ref.RefBasedEnricher;
 import blue.lang.graph.NodeProcessor;
-import lombok.AllArgsConstructor;
 
-@AllArgsConstructor
 public class RefPropagator implements NodeProcessor {
 
     private RefBasedEnricher refBasedEnricher;
+
+    public RefPropagator(RefBasedEnricher refBasedEnricher) {
+        this.refBasedEnricher = refBasedEnricher;
+    }
 
     @Override
     public void process(Node target, Node source, NodeManager nodeManager) {

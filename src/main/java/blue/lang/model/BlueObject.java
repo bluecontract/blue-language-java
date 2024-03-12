@@ -4,8 +4,6 @@ import blue.lang.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigInteger;
 import java.util.LinkedHashMap;
@@ -14,22 +12,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-@Data
-@NoArgsConstructor
 public class BlueObject {
     private String ref;
     private Object value;
     private List<BlueObject> items;
     private Map<String, BlueObject> objectValue;
     private boolean inlineValue;
-
-    @JsonAnySetter
-    public void set(String name, JsonNode value) {
-        if (objectValue == null)
-            objectValue = new LinkedHashMap<>();
-        BlueObject object = handleNode(value);
-        objectValue.put(name, object);
-    }
 
     public BlueObject(Object value) {
         this.value = value;
@@ -96,4 +84,31 @@ public class BlueObject {
         return type.cast(objectValue.get(key).getValue());
     }
 
+    @JsonAnySetter
+    public void set(String name, JsonNode value) {
+        if (objectValue == null)
+            objectValue = new LinkedHashMap<>();
+        BlueObject object = handleNode(value);
+        objectValue.put(name, object);
+    }
+
+    public String getRef() {
+        return ref;
+    }
+
+    public Object getValue() {
+        return value;
+    }
+
+    public List<BlueObject> getItems() {
+        return items;
+    }
+
+    public Map<String, BlueObject> getObjectValue() {
+        return objectValue;
+    }
+
+    public boolean isInlineValue() {
+        return inlineValue;
+    }
 }
