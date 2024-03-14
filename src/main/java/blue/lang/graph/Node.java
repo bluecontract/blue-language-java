@@ -18,6 +18,7 @@ public class Node implements Cloneable {
     private List<Node> items;
     private Map<String, Node> properties;
     private String ref;
+    private String blueId;
     @JsonIgnore
     private List<Feature> features;
 
@@ -47,6 +48,10 @@ public class Node implements Cloneable {
 
     public String getRef() {
         return ref;
+    }
+
+    public String getBlueId() {
+        return blueId;
     }
 
     public List<Feature> getFeatures() {
@@ -112,6 +117,11 @@ public class Node implements Cloneable {
 
     public Node ref(String ref) {
         this.ref = ref;
+        return this;
+    }
+
+    public Node blueId(String blueId) {
+        this.blueId = blueId;
         return this;
     }
 

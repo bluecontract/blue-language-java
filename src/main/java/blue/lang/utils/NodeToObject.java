@@ -12,10 +12,6 @@ public class NodeToObject {
 
     public static Object get(Node node) {
 
-        boolean onlyValue = node.getValue() != null && node.getType() == null && node.getProperties() == null;
-        if (onlyValue)
-            return node.getValue();
-
         if (node.getItems() != null)
             return node.getItems().stream()
                     .map(NodeToObject::get)
@@ -28,6 +24,8 @@ public class NodeToObject {
             result.put(OBJECT_TYPE, node.getType());
         if (node.getValue() != null)
             result.put(OBJECT_VALUE, node.getValue());
+        if (node.getBlueId() != null)
+            result.put(OBJECT_BLUE_ID, node.getBlueId());
         if (node.getProperties() != null)
             node.getProperties().forEach((key, value) -> result.put(key, get(value)));
         return result;

@@ -10,6 +10,8 @@ public class Properties {
     public static final String OBJECT_CHANGE_POLICY = "change policy";
     public static final String OBJECT_VALUE = "value";
     public static final String OBJECT_ITEMS = "items";
+    public static final String OBJECT_REF = "ref";
+    public static final String OBJECT_BLUE_ID = "blueId";
 
     public static final String TRANSLATION_TRANSLATION = "translation";
     public static final String TRANSLATION_TRANSLATION_SOURCE = "translation source";

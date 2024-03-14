@@ -20,6 +20,7 @@ public class BlueObjectToNode {
                 .name(object.getStringValue(OBJECT_NAME))
                 .type(object.getStringValue(OBJECT_TYPE))
                 .value(object.getValue())
+                .blueId(object.getBlueId())
                 .items(getItems(object))
                 .properties(getProperties(object))
                 .ref(object.getRef())

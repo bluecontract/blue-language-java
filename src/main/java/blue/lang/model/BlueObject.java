@@ -1,5 +1,6 @@
 package blue.lang.model;
 
+import blue.lang.utils.BlueId;
 import blue.lang.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -18,10 +19,18 @@ public class BlueObject {
     private List<BlueObject> items;
     private Map<String, BlueObject> objectValue;
     private boolean inlineValue;
+    private String blueId;
+
+    public BlueObject() {
+    }
 
     public BlueObject(Object value) {
-        this.value = value;
-        this.inlineValue = true;
+        if (value instanceof String && BlueId.isPotentialBlueId((String) value))
+            this.blueId = (String) value;
+        else {
+            this.value = value;
+            this.inlineValue = true;
+        }
     }
 
     private BlueObject(List<BlueObject> value) {
@@ -110,5 +119,9 @@ public class BlueObject {
 
     public boolean isInlineValue() {
         return inlineValue;
+    }
+
+    public String getBlueId() {
+        return blueId;
     }
 }
