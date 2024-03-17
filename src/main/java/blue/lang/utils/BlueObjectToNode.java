@@ -1,8 +1,8 @@
 package blue.lang.utils;
 
-import blue.lang.graph.Feature;
-import blue.lang.graph.Node;
-import blue.lang.graph.feature.InlineValueFeature;
+import blue.lang.Feature;
+import blue.lang.Node;
+import blue.lang.feature.InlineValueFeature;
 import blue.lang.model.BlueObject;
 
 import java.util.ArrayList;

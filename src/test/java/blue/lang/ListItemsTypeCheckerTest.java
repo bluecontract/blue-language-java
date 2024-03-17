@@ -1,14 +1,16 @@
 package blue.lang;
 
-import blue.lang.graph.*;
-import blue.lang.graph.processor.ListItemsTypeChecker;
-import blue.lang.graph.processor.SequentialNodeProcessor;
-import blue.lang.graph.processor.TypeAssigner;
+import blue.lang.*;
+import blue.lang.processor.ListItemsTypeChecker;
+import blue.lang.processor.SequentialNodeProcessor;
+import blue.lang.processor.TypeAssigner;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
+import static blue.lang.TestUtils.numbersMustIncreasePayloadMerger;
+import static blue.lang.TestUtils.useNodeNameAsBlueIdProvider;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -38,11 +40,11 @@ public class ListItemsTypeCheckerTest {
                         new ListItemsTypeChecker(types)
                 )
         );
-        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
-        Merger merger = new Merger(manager);
+        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
         Node node = new Node();
-        merger.merge(node, manager.getNode("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
         assertEquals(node.getProperties().get("a").getType(), "B");
     }
@@ -72,13 +74,13 @@ public class ListItemsTypeCheckerTest {
                         new ListItemsTypeChecker(types)
                 )
         );
-        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
-        Merger merger = new Merger(manager);
+        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
         Node node = new Node();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            merger.merge(node, manager.getNode("Y"));
+            merger.merge(node, nodeProvider.fetchByBlueId("Y"));
         });
     }
 

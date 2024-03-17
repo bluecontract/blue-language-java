@@ -1,14 +1,15 @@
 package blue.lang;
 
-import blue.lang.graph.*;
-import blue.lang.graph.processor.SequentialNodeProcessor;
-import blue.lang.graph.processor.TypeAssigner;
+import blue.lang.*;
+import blue.lang.processor.SequentialNodeProcessor;
+import blue.lang.processor.TypeAssigner;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static blue.lang.TestUtils.useNodeNameAsBlueIdProvider;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TypeAssignerTest {
@@ -33,11 +34,11 @@ public class TypeAssignerTest {
                         new TypeAssigner(types)
                 )
         );
-        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
-        Merger merger = new Merger(manager);
+        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
         Node node = new Node();
-        merger.merge(node, manager.getNode("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
         assertEquals(node.getProperties().get("a").getType(), "C");
     }
@@ -63,11 +64,11 @@ public class TypeAssignerTest {
                         new TypeAssigner(types)
                 )
         );
-        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
-        Merger merger = new Merger(manager);
+        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
         Node node = new Node();
-        merger.merge(node, manager.getNode("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
         assertEquals(node.getProperties().get("a").getType(), "B");
     }

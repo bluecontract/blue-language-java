@@ -1,15 +1,16 @@
 package blue.lang;
 
-import blue.lang.graph.*;
-import blue.lang.graph.feature.InlineValueFeature;
-import blue.lang.graph.processor.*;
-import blue.lang.graph.ref.RefBasedEnricher;
+import blue.lang.*;
+import blue.lang.feature.InlineValueFeature;
+import blue.lang.processor.*;
+import blue.lang.ref.RefBasedEnricher;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static blue.lang.TestUtils.useNodeNameAsBlueIdProvider;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RefTest {
@@ -42,11 +43,10 @@ public class RefTest {
                         new TypeAssigner(types)
                 )
         );
-        NodeManager manager = new NodeManager(nodes, nodeProcessor);
-
-        Merger merger = new Merger(manager);
+        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
         Node node = new Node();
-        merger.merge(node, manager.getNode("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
         assertEquals(node.getProperties().get("a").getValue(), "enriched-should-go-as-ref");
     }
@@ -74,11 +74,11 @@ public class RefTest {
                         new TypeAssigner(types)
                 )
         );
-        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
-        Merger merger = new Merger(manager);
+        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
         Node node = new Node();
-        merger.merge(node, manager.getNode("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
         assertEquals(node.getProperties().get("a").getValue(), "enriched-should-go-as-ref");
     }
@@ -107,11 +107,11 @@ public class RefTest {
                         new TypeAssigner(types)
                 )
         );
-        NodeManager manager = new NodeManager(nodes, nodeProcessor);
 
-        Merger merger = new Merger(manager);
+        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
         Node node = new Node();
-        merger.merge(node, manager.getNode("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
         assertEquals(node.getProperties().get("a").getValue(), "should-not-go-as-ref");
     }

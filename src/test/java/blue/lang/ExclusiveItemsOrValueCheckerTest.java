@@ -1,8 +1,8 @@
 package blue.lang;
 
-import blue.lang.graph.Node;
-import blue.lang.graph.NodeProcessor;
-import blue.lang.graph.processor.ExclusiveItemsOrValueChecker;
+import blue.lang.Node;
+import blue.lang.NodeProcessor;
+import blue.lang.processor.ExclusiveItemsOrValueChecker;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;

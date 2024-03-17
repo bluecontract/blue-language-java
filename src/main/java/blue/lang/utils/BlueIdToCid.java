@@ -5,7 +5,7 @@ import org.apache.commons.codec.binary.Base32;
 public class BlueIdToCid {
 
     public static void main(String[] args) {
-        String blueId = "35ZMWe4oiDhLkffao6REsFK7kYPWpPpZ8f8UN1xz4BDn";
+        String blueId = "rDavmh3op7A7t5EfKBj5c86xPKxVQxBE5TosM7RrbAc";
         byte[] sha256Bytes = Base58.decode(blueId);
 
         // Create the multihash bytes for SHA-256 (0x12 for the hash function and 0x20 for the length)

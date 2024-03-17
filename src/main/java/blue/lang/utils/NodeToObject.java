@@ -1,6 +1,6 @@
 package blue.lang.utils;
 
-import blue.lang.graph.Node;
+import blue.lang.Node;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

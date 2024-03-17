@@ -1,7 +1,7 @@
 package blue.lang;
 
-import blue.lang.graph.Node;
-import blue.lang.graph.Types;
+import blue.lang.Node;
+import blue.lang.Types;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
