@@ -1,11 +1,11 @@
-package blue.lang.utils;
+package blue.lang.ipfs;
 
+import blue.lang.utils.Base58;
 import org.apache.commons.codec.binary.Base32;
 
 public class BlueIdToCid {
 
-    public static void main(String[] args) {
-        String blueId = "rDavmh3op7A7t5EfKBj5c86xPKxVQxBE5TosM7RrbAc";
+    public static String convert(String blueId) {
         byte[] sha256Bytes = Base58.decode(blueId);
 
         // Create the multihash bytes for SHA-256 (0x12 for the hash function and 0x20 for the length)
@@ -24,8 +24,7 @@ public class BlueIdToCid {
         Base32 base32 = new Base32();
         String cid = "b" + base32.encodeAsString(cidBytes).toLowerCase().replaceAll("=", "");
 
-        // Print the CID
-        System.out.println("CID: " + cid);
+        return cid;
     }
 
 }

@@ -1,6 +1,5 @@
 package blue.lang;
 
-import blue.lang.*;
 import blue.lang.feature.InlineValueFeature;
 import blue.lang.processor.*;
 import blue.lang.ref.RefBasedEnricher;
@@ -44,7 +43,7 @@ public class RefTest {
                 )
         );
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
@@ -76,7 +75,7 @@ public class RefTest {
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
@@ -109,7 +108,7 @@ public class RefTest {
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 

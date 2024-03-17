@@ -1,6 +1,6 @@
 package blue.lang.processor;
 
-import blue.lang.Resolver;
+import blue.lang.NodeProvider;
 import blue.lang.Node;
 import blue.lang.NodeProcessor;
 import blue.lang.feature.SupportedTypesFeature;
@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class SupportedTypesPropagator implements NodeProcessor {
     @Override
-    public void process(Node target, Node source, Resolver resolver) {
+    public void process(Node target, Node source, NodeProvider nodeProvider) {
         SupportedTypesFeature sourceFeature = Features.getFeature(source, SupportedTypesFeature.class);
         if (sourceFeature == null)
             return;

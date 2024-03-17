@@ -124,4 +124,8 @@ public class BlueObject {
     public String getBlueId() {
         return blueId;
     }
+
+    public void setBlueId(String blueId) {
+        this.blueId = blueId;
+    }
 }

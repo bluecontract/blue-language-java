@@ -1,6 +1,5 @@
 package blue.lang;
 
-import blue.lang.*;
 import blue.lang.processor.SequentialNodeProcessor;
 import blue.lang.processor.TypeAssigner;
 import org.junit.jupiter.api.Test;
@@ -36,7 +35,7 @@ public class TypeAssignerTest {
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
@@ -66,7 +65,7 @@ public class TypeAssignerTest {
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 

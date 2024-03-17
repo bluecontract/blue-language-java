@@ -1,6 +1,6 @@
 package blue.lang.processor;
 
-import blue.lang.Resolver;
+import blue.lang.NodeProvider;
 import blue.lang.Node;
 import blue.lang.ref.RefBasedEnricher;
 import blue.lang.NodeProcessor;
@@ -14,7 +14,7 @@ public class RefPropagator implements NodeProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, Resolver resolver) {
+    public void process(Node target, Node source, NodeProvider nodeProvider) {
         String ref = source.getRef();
         if (ref == null)
             return;

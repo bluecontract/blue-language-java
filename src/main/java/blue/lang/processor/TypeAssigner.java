@@ -1,9 +1,6 @@
 package blue.lang.processor;
 
-import blue.lang.Resolver;
-import blue.lang.Node;
-import blue.lang.Types;
-import blue.lang.NodeProcessor;
+import blue.lang.*;
 
 public class TypeAssigner implements NodeProcessor {
 
@@ -14,7 +11,7 @@ public class TypeAssigner implements NodeProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, Resolver resolver) {
+    public void process(Node target, Node source, NodeProvider nodeProvider) {
         String targetType = target.getType();
         String sourceType = source.getType();
         if (targetType == null)

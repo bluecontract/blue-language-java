@@ -1,6 +1,5 @@
 package blue.lang;
 
-import blue.lang.*;
 import blue.lang.processor.ListItemsTypeChecker;
 import blue.lang.processor.SequentialNodeProcessor;
 import blue.lang.processor.TypeAssigner;
@@ -9,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.lang.TestUtils.numbersMustIncreasePayloadMerger;
 import static blue.lang.TestUtils.useNodeNameAsBlueIdProvider;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,7 +40,7 @@ public class ListItemsTypeCheckerTest {
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
@@ -76,7 +74,7 @@ public class ListItemsTypeCheckerTest {
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node node = new Node();
 
         assertThrows(IllegalArgumentException.class, () -> {

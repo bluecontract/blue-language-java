@@ -9,12 +9,10 @@ public class Merger {
 
     private NodeProvider nodeProvider;
     private NodeProcessor nodeProcessor;
-    private Resolver resolver;
 
-    public Merger(NodeProvider nodeProvider, NodeProcessor nodeProcessor, Resolver resolver) {
+    public Merger(NodeProvider nodeProvider, NodeProcessor nodeProcessor) {
         this.nodeProvider = nodeProvider;
         this.nodeProcessor = nodeProcessor;
-        this.resolver = resolver;
     }
 
     public void merge(Node target, Node source) {
@@ -24,7 +22,7 @@ public class Merger {
     }
 
     private void mergeObject(Node target, Node source) {
-        nodeProcessor.process(target, source, resolver);
+        nodeProcessor.process(target, source, nodeProvider);
         List<Node> children = source.getItems();
         if (children != null)
             mergeChildren(target, children);

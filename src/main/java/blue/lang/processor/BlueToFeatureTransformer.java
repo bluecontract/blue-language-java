@@ -1,6 +1,6 @@
 package blue.lang.processor;
 
-import blue.lang.Resolver;
+import blue.lang.NodeProvider;
 import blue.lang.Node;
 import blue.lang.NodeProcessor;
 import blue.lang.feature.BlueprintFeature;
@@ -15,7 +15,7 @@ public class BlueToFeatureTransformer implements NodeProcessor {
     public static final String BLUE_PROPERTY_KEY = "blue";
 
     @Override
-    public void process(Node target, Node source, Resolver resolver) {
+    public void process(Node target, Node source, NodeProvider nodeProvider) {
         Map<String, Node> properties = source.getProperties();
         if (properties == null)
             return;

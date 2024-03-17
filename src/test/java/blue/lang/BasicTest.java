@@ -1,6 +1,5 @@
 package blue.lang;
 
-import blue.lang.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -29,7 +28,7 @@ public class BasicTest {
         List<Node> nodes = Arrays.asList(a, b, c, x, y);
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
         NodeProcessor nodeProcessor = numbersMustIncreasePayloadMerger();
-        Merger merger = new Merger(nodeProvider, nodeProcessor, null);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
 
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));

@@ -1,9 +1,6 @@
 package blue.lang.processor;
 
-import blue.lang.Resolver;
-import blue.lang.Node;
-import blue.lang.NodeProcessor;
-import blue.lang.Types;
+import blue.lang.*;
 
 import java.util.List;
 
@@ -16,7 +13,7 @@ public class ListItemsTypeChecker implements NodeProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, Resolver resolver) {
+    public void process(Node target, Node source, NodeProvider nodeProvider) {
         List<Node> items = source.getItems();
         String type = target.getType();
         if (items == null || type == null)

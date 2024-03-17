@@ -1,6 +1,6 @@
 package blue.lang.processor;
 
-import blue.lang.Resolver;
+import blue.lang.NodeProvider;
 import blue.lang.Node;
 import blue.lang.NodeProcessor;
 
@@ -15,7 +15,7 @@ public class SequentialNodeProcessor implements NodeProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, Resolver resolver) {
-        nodeProcessors.forEach(e -> e.process(target, source, resolver));
+    public void process(Node target, Node source, NodeProvider nodeProvider) {
+        nodeProcessors.forEach(e -> e.process(target, source, nodeProvider));
     }
 }

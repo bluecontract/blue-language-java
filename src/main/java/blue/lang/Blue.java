@@ -10,10 +10,16 @@ import blue.lang.utils.NodeToObject;
 
 import java.util.Arrays;
 
-public class Blue implements Resolver {
+import static blue.lang.model.Limits.NO_LIMITS;
+
+public class Blue implements NodeProvider {
 
     private NodeProvider nodeProvider;
     private NodeProcessor nodeProcessor;
+
+    public Blue() {
+        this(node -> null);
+    }
 
     public Blue(NodeProvider nodeProvider) {
         this.nodeProvider = nodeProvider;
@@ -25,17 +31,28 @@ public class Blue implements Resolver {
         this.nodeProcessor = nodeProcessor;
     }
 
-    @Override
+    public Node resolve(BlueObject object) {
+        return resolve(object, NO_LIMITS);
+    }
+
     public Node resolve(BlueObject object, Limits limits) {
-        Merger merger = new Merger(nodeProvider, nodeProcessor, this);
+        Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node resultNode = new Node();
         Node sourceNode = BlueObjectToNode.convert(object);
         merger.merge(resultNode, sourceNode);
         return resultNode;
     }
 
+    public Object resolveToObject(BlueObject object) {
+        return resolveToObject(object, NO_LIMITS);
+    }
+
     public Object resolveToObject(BlueObject object, Limits limits) {
         return NodeToObject.get(resolve(object, limits));
+    }
+
+    public String resolveToBlueId(BlueObject object) {
+        return resolveToBlueId(object, NO_LIMITS);
     }
 
     public String resolveToBlueId(BlueObject object, Limits limits) {
@@ -44,8 +61,17 @@ public class Blue implements Resolver {
         return calculator.calculate(obj);
     }
 
+    @Override
+    public Node fetchByBlueId(String blueId) {
+        Merger merger = new Merger(this, nodeProcessor);
+        Node resultNode = new Node();
+        Node sourceNode = nodeProvider.fetchByBlueId(blueId);
+        merger.merge(resultNode, sourceNode);
+        return resultNode;
+    }
+
     private NodeProcessor createDefaultNodeProcessor() {
-        SequentialNodeProcessor sequentialNodeProcessor = new SequentialNodeProcessor(
+        return new SequentialNodeProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
                         new ValuePropagator(),
@@ -53,7 +79,6 @@ public class Blue implements Resolver {
                         new NameToNullOnTypeMatchTransformer()
                 )
         );
-        return sequentialNodeProcessor;
     }
 
 }

@@ -25,6 +25,9 @@ dependencies {
 
     implementation("commons-codec:commons-codec:1.15")
 
+    testImplementation("org.apache.httpcomponents:httpclient:4.5.14")
+
+
 }
 
 tasks.test {
