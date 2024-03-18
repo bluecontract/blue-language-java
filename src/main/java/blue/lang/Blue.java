@@ -39,7 +39,7 @@ public class Blue implements NodeProvider {
         Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node resultNode = new Node();
         Node sourceNode = BlueObjectToNode.convert(object);
-        merger.merge(resultNode, sourceNode);
+        merger.merge(resultNode, sourceNode, limits);
         return resultNode;
     }
 
@@ -66,7 +66,7 @@ public class Blue implements NodeProvider {
         Merger merger = new Merger(this, nodeProcessor);
         Node resultNode = new Node();
         Node sourceNode = nodeProvider.fetchByBlueId(blueId);
-        merger.merge(resultNode, sourceNode);
+        merger.merge(resultNode, sourceNode, NO_LIMITS);
         return resultNode;
     }
 

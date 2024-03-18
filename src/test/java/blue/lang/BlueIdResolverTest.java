@@ -1,6 +1,7 @@
 package blue.lang;
 
 import blue.lang.model.BlueObject;
+import blue.lang.model.Limits;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -29,9 +30,12 @@ public class BlueIdResolverTest {
 
         Blue blue = new Blue(samplesDirectoryNodeProvider());
         BlueObject object = YAML_MAPPER.readValue(doc, BlueObject.class);
-        Object result = blue.resolveToObject(object);
-        System.out.println(result);
-
+        System.out.println(blue.resolveToObject(object, new Limits(1)));
+        System.out.println(blue.resolveToObject(object, new Limits(2)));
+        System.out.println(blue.resolveToObject(object, new Limits("x")));
+        System.out.println(blue.resolveToObject(object, new Limits("y")));
+        System.out.println(blue.resolveToObject(object, new Limits("x/a/a")));
+        System.out.println(blue.resolveToObject(object, new Limits("x/*/*")));
     }
 
 }
