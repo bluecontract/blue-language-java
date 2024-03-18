@@ -1,13 +1,15 @@
 package blue.lang;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Node implements Cloneable {
+@JsonDeserialize(using = NodeDeserializer.class)
+public class Node {
 
     private String name;
     private String type;

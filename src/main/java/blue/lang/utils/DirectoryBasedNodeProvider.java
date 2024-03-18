@@ -3,7 +3,6 @@ package blue.lang.utils;
 import blue.lang.Blue;
 import blue.lang.Node;
 import blue.lang.NodeProvider;
-import blue.lang.model.BlueObject;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -13,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,18 +21,18 @@ import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class DirectoryBasedNodeProvider implements NodeProvider {
 
-    private List<BlueObject> objects;
+    private List<Node> nodes;
     private Map<String, Node> blueIdToNodeMap;
 
     public DirectoryBasedNodeProvider(String... directories) throws IOException {
-        this.objects = load(directories);
+        this.nodes = load(directories);
         Blue blue = new Blue();
-        this.blueIdToNodeMap = objects.stream()
-                .collect(Collectors.toMap(blue::resolveToBlueId, BlueObjectToNode::convert));
+        this.blueIdToNodeMap = nodes.stream()
+                .collect(Collectors.toMap(blue::resolveToBlueId, Function.identity()));
     }
 
-    private List<BlueObject> load(String... directories) throws IOException {
-        List<BlueObject> result = new ArrayList<>();
+    private List<Node> load(String... directories) throws IOException {
+        List<Node> result = new ArrayList<>();
         for (String directory : directories) {
             Path path;
             try {
@@ -46,9 +46,9 @@ public class DirectoryBasedNodeProvider implements NodeProvider {
                         .collect(Collectors.toList());
                 for (Path p : pathList) {
                     try {
-                        result.add(YAML_MAPPER.readValue(p.toFile(), BlueObject.class));
+                        result.add(YAML_MAPPER.readValue(p.toFile(), Node.class));
                     } catch(RuntimeException ex) {
-                        result.add(JSON_MAPPER.readValue(p.toFile(), BlueObject.class));
+                        result.add(JSON_MAPPER.readValue(p.toFile(), Node.class));
                     }
                 }
             }
@@ -61,8 +61,8 @@ public class DirectoryBasedNodeProvider implements NodeProvider {
         return blueIdToNodeMap.get(blueId);
     }
 
-    public List<BlueObject> getObjects() {
-        return objects;
+    public List<Node> getNodes() {
+        return nodes;
     }
 
     public Map<String, Node> getBlueIdToNodeMap() {

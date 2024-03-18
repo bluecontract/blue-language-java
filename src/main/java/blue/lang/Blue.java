@@ -1,11 +1,9 @@
 package blue.lang;
 
 import blue.lang.processor.*;
-import blue.lang.model.BlueObject;
 import blue.lang.model.Limits;
 import blue.lang.utils.Base58Sha256Provider;
 import blue.lang.utils.BlueIdCalculator;
-import blue.lang.utils.BlueObjectToNode;
 import blue.lang.utils.NodeToObject;
 
 import java.util.Arrays;
@@ -31,32 +29,31 @@ public class Blue implements NodeProvider {
         this.nodeProcessor = nodeProcessor;
     }
 
-    public Node resolve(BlueObject object) {
-        return resolve(object, NO_LIMITS);
+    public Node resolve(Node node) {
+        return resolve(node, NO_LIMITS);
     }
 
-    public Node resolve(BlueObject object, Limits limits) {
+    public Node resolve(Node node, Limits limits) {
         Merger merger = new Merger(nodeProvider, nodeProcessor);
         Node resultNode = new Node();
-        Node sourceNode = BlueObjectToNode.convert(object);
-        merger.merge(resultNode, sourceNode);
+        merger.merge(resultNode, node);
         return resultNode;
     }
 
-    public Object resolveToObject(BlueObject object) {
-        return resolveToObject(object, NO_LIMITS);
+    public Object resolveToObject(Node node) {
+        return resolveToObject(node, NO_LIMITS);
     }
 
-    public Object resolveToObject(BlueObject object, Limits limits) {
-        return NodeToObject.get(resolve(object, limits));
+    public Object resolveToObject(Node node, Limits limits) {
+        return NodeToObject.get(resolve(node, limits));
     }
 
-    public String resolveToBlueId(BlueObject object) {
-        return resolveToBlueId(object, NO_LIMITS);
+    public String resolveToBlueId(Node node) {
+        return resolveToBlueId(node, NO_LIMITS);
     }
 
-    public String resolveToBlueId(BlueObject object, Limits limits) {
-        Object obj = resolveToObject(object, limits);
+    public String resolveToBlueId(Node node, Limits limits) {
+        Object obj = resolveToObject(node, limits);
         BlueIdCalculator calculator = new BlueIdCalculator(new Base58Sha256Provider());
         return calculator.calculate(obj);
     }

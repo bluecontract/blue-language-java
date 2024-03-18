@@ -1,9 +1,8 @@
 package blue.lang.ipfs;
 
 import blue.lang.Blue;
-import blue.lang.model.BlueObject;
+import blue.lang.Node;
 import blue.lang.utils.JsonCanonicalizer;
-import blue.lang.utils.UncheckedObjectMapper;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,14 +20,14 @@ public class PrintAllBlueIdsAndCanonicalJsons {
                         entry -> {
                             if (entry.getValue() instanceof Map) {
                                 print((Map) entry.getValue());
-                                BlueObject object = JSON_MAPPER.convertValue(entry.getValue(), BlueObject.class);
-                                return BLUE.resolveToBlueId(object);
+                                Node node = JSON_MAPPER.convertValue(entry.getValue(), Node.class);
+                                return BLUE.resolveToBlueId(node);
                             } else
                                 return entry.getValue();
                         }
                 ));
-        BlueObject object = JSON_MAPPER.convertValue(flat, BlueObject.class);
-        System.out.println(BLUE.resolveToBlueId(object));
+        Node node = JSON_MAPPER.convertValue(flat, Node.class);
+        System.out.println(BLUE.resolveToBlueId(node));
         System.out.println(JsonCanonicalizer.canonicalize(flat));
         System.out.println("---");
     }

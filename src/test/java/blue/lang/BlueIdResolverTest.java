@@ -1,6 +1,5 @@
 package blue.lang;
 
-import blue.lang.model.BlueObject;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -17,8 +16,8 @@ public class BlueIdResolverTest {
                 "x: 1";
 
         Blue blue = new Blue(samplesDirectoryNodeProvider());
-        BlueObject object = YAML_MAPPER.readValue(doc, BlueObject.class);
-        Object result = blue.resolve(object);
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+        Object result = blue.resolve(node);
 
         System.out.println(result);
     }
@@ -28,8 +27,8 @@ public class BlueIdResolverTest {
                 "x: Ao6wor1Lzv6M2x1M5CF9Ki4XNMQgX98JNJqRKySnhLhB";
 
         Blue blue = new Blue(samplesDirectoryNodeProvider());
-        BlueObject object = YAML_MAPPER.readValue(doc, BlueObject.class);
-        Object result = blue.resolveToObject(object);
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+        Object result = blue.resolveToObject(node);
         System.out.println(result);
 
     }
