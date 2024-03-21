@@ -1,0 +1,61 @@
+name: Ingredient
+type: Text
+constraints:
+  options:
+    - Salt
+    - Pepper
+    - Olive Oil
+    - Garlic
+    - Onion
+    - Tomato
+    - Basil
+    - Oregano
+    - Paprika
+    - Cumin
+    - Turmeric
+    - Ginger
+    - Cilantro
+    - Parsley
+    - Thyme
+    - Rosemary
+    - Cinnamon
+    - Nutmeg
+    - Clove
+    - Chili Powder
+    - Lemon
+    - Lime
+    - Vinegar
+    - Soy Sauce
+    - Honey
+    - Sugar
+    - Flour
+    - Rice
+    - Pasta
+    - Bread
+    - Chicken
+    - Beef
+    - Pork
+    - Fish
+    - Shrimp
+    - Tofu
+    - Egg
+    - Milk
+    - Cheese
+    - Butter
+    - Yogurt
+    - Potato
+    - Carrot
+    - Bell Pepper
+    - Broccoli
+    - Spinach
+    - Mushroom
+    - Apple
+    - Banana
+    - Strawberry
+    - Blueberry
+    - Chocolate
+    - Vanilla
+    - Almond
+    - Peanut
+    - Walnut
+    - Coconut

@@ -2,6 +2,7 @@ package blue.lang.ipfs;
 
 import blue.lang.Blue;
 import blue.lang.Node;
+import blue.lang.utils.NodeToObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,7 +16,7 @@ public class Sample1Print {
         String filename = "src/test/java/blue/lang/ipfs/sample.blue";
         Node node = YAML_MAPPER.readValue(new File(filename), Node.class);
         Blue blue = new Blue();
-        Object result = blue.resolveToObject(node);
+        Object result = NodeToObject.get(blue.resolve(node));
         PrintAllBlueIdsAndCanonicalJsons.print((Map) result);
     }
 

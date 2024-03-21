@@ -1,8 +1,6 @@
 package blue.lang;
 
-import blue.lang.processor.ListItemsTypeChecker;
-import blue.lang.processor.SequentialNodeProcessor;
-import blue.lang.processor.TypeAssigner;
+import blue.lang.processor.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -32,19 +30,22 @@ public class ListItemsTypeCheckerTest {
 
         List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
-        NodeProcessor nodeProcessor = new SequentialNodeProcessor(
+        MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new TypeAssigner(types),
-                        new ListItemsTypeChecker(types)
+                        new BlueIdResolver(),
+                        new NamePropagator(),
+                        new TypeAssigner(),
+                        new ListItemsTypeChecker(types),
+                        new NameToNullOnTypeMatchTransformer()
                 )
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor);
+        Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = new Node();
         merger.merge(node, nodeProvider.fetchByBlueId("Y"));
 
-        assertEquals(node.getProperties().get("a").getType(), "B");
+        assertEquals("B", node.getProperties().get("a").getType().getName());
     }
 
 
@@ -66,15 +67,18 @@ public class ListItemsTypeCheckerTest {
 
         List<Node> nodes = Arrays.asList(a, b, c, x, y);
         Types types = new Types(nodes);
-        NodeProcessor nodeProcessor = new SequentialNodeProcessor(
+        MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new TypeAssigner(types),
-                        new ListItemsTypeChecker(types)
+                        new BlueIdResolver(),
+                        new NamePropagator(),
+                        new TypeAssigner(),
+                        new ListItemsTypeChecker(types),
+                        new NameToNullOnTypeMatchTransformer()
                 )
         );
 
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
-        Merger merger = new Merger(nodeProvider, nodeProcessor);
+        Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = new Node();
 
         assertThrows(IllegalArgumentException.class, () -> {

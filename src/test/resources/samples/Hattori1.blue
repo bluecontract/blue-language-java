@@ -1,0 +1,31 @@
+name: General Hattori Hanzo Voucher
+details:
+  restaurantName: Hattori Hanzo
+  validity:
+    startDate: 2024-04-01
+    endDate: 2024-12-31
+  termsAndConditions:
+    - Voucher must be presented before ordering.
+    - Not redeemable for cash.
+    - Cannot be combined with other offers or discounts.
+    - Valid for dine-in only.
+    - Excludes alcoholic beverages.
+  redemptionProcess:
+    - Present the voucher at the time of seating.
+    - Inform the server of the voucher before ordering.
+    - Enjoy your meal up to the voucher's value.
+  exclusions:
+    - Special events
+    - Catering services
+  purchaseChannels:
+    - In-restaurant
+    - Online through the official website
+  customerSupport:
+    phone: "+1234567890"
+    email: "support@hattorihanzo.com"
+issuer:
+  name: Hattori Hanzo Dining Group
+  address: 123 Samurai Lane, Kyoto, Japan
+  contactInfo:
+    phone: "+1234567890"
+    email: "info@hattorihanzo.com"

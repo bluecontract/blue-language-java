@@ -2,14 +2,15 @@ package blue.lang.processor;
 
 import blue.lang.NodeProvider;
 import blue.lang.Node;
-import blue.lang.NodeProcessor;
+import blue.lang.MergingProcessor;
+import blue.lang.NodeResolver;
 import blue.lang.feature.BlueprintFeature;
 import blue.lang.utils.Features;
 import blue.lang.utils.Nodes;
 
-public class BlueProcessor implements NodeProcessor {
+public class BlueProcessor implements MergingProcessor {
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider) {
+    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         if (Features.containsFeature(target, BlueprintFeature.class))
             System.out.println("target has feature: " + Features.getFeature(target, BlueprintFeature.class));
         if (Features.containsFeature(source, BlueprintFeature.class)) {

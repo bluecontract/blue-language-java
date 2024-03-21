@@ -1,6 +1,7 @@
 package blue.lang.ipfs;
 
 import blue.lang.*;
+import blue.lang.utils.NodeToObject;
 import blue.lang.utils.SequentialNodeProvider;
 
 import java.io.IOException;
@@ -17,7 +18,7 @@ public class Sample2Resolve {
 
         Blue blue = new Blue(new IPFSNodeProvider());
         Node node = YAML_MAPPER.readValue(doc, Node.class);
-        Object result = blue.resolveToObject(node);
+        Object result = NodeToObject.get(blue.resolve(node));
         System.out.println(result);
     }
 

@@ -1,7 +1,5 @@
 package blue.lang;
 
-import blue.lang.Node;
-import blue.lang.NodeProcessor;
 import blue.lang.processor.ExclusiveItemsOrValueChecker;
 import org.junit.jupiter.api.Test;
 
@@ -15,9 +13,9 @@ public class ExclusiveItemsOrValueCheckerTest {
         Node source = new Node()
                 .items(new Node(), new Node());
         Node target = new Node();
-        NodeProcessor processor = new ExclusiveItemsOrValueChecker();
+        MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
-        assertDoesNotThrow(() -> processor.process(target, source, null));
+        assertDoesNotThrow(() -> processor.process(target, source, null, null));
     }
 
     @Test
@@ -25,9 +23,9 @@ public class ExclusiveItemsOrValueCheckerTest {
         Node source = new Node()
                 .value("Some value");
         Node target = new Node();
-        NodeProcessor processor = new ExclusiveItemsOrValueChecker();
+        MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
-        assertDoesNotThrow(() -> processor.process(target, source, null));
+        assertDoesNotThrow(() -> processor.process(target, source, null, null));
     }
 
     @Test
@@ -36,17 +34,17 @@ public class ExclusiveItemsOrValueCheckerTest {
                 .items(new Node(), new Node())
                 .value("Some value");
         Node target = new Node();
-        NodeProcessor processor = new ExclusiveItemsOrValueChecker();
+        MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
-        assertThrows(IllegalArgumentException.class, () -> processor.process(target, source, null));
+        assertThrows(IllegalArgumentException.class, () -> processor.process(target, source, null, null));
     }
 
     @Test
     public void testNodeWithNeitherItemsNorValueShouldPass() {
         Node source = new Node();
         Node target = new Node();
-        NodeProcessor processor = new ExclusiveItemsOrValueChecker();
+        MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
-        assertDoesNotThrow(() -> processor.process(target, source, null));
+        assertDoesNotThrow(() -> processor.process(target, source, null, null));
     }
 }

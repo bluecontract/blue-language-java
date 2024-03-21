@@ -2,7 +2,8 @@ package blue.lang.processor;
 
 import blue.lang.NodeProvider;
 import blue.lang.Node;
-import blue.lang.NodeProcessor;
+import blue.lang.MergingProcessor;
+import blue.lang.NodeResolver;
 import blue.lang.feature.BlueprintFeature;
 import blue.lang.utils.Features;
 import blue.lang.utils.Nodes;
@@ -10,12 +11,12 @@ import blue.lang.utils.Nodes;
 import java.util.HashMap;
 import java.util.Map;
 
-public class BlueToFeatureTransformer implements NodeProcessor {
+public class BlueToFeatureTransformer implements MergingProcessor {
 
     public static final String BLUE_PROPERTY_KEY = "blue";
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider) {
+    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         Map<String, Node> properties = source.getProperties();
         if (properties == null)
             return;

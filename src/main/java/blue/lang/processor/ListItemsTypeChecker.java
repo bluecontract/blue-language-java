@@ -4,7 +4,9 @@ import blue.lang.*;
 
 import java.util.List;
 
-public class ListItemsTypeChecker implements NodeProcessor {
+import static blue.lang.Types.isSubtype;
+
+public class ListItemsTypeChecker implements MergingProcessor {
 
     private final Types types;
 
@@ -13,14 +15,14 @@ public class ListItemsTypeChecker implements NodeProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider) {
+    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         List<Node> items = source.getItems();
-        String type = target.getType();
+        Node type = target.getType();
         if (items == null || type == null)
             return;
         for (Node item : items) {
-            String itemType = item.getType();
-            if (itemType != null && !types.isSubtype(itemType, type)) {
+            Node itemType = item.getType();
+            if (itemType != null && !isSubtype(itemType, type, nodeProvider)) {
                 String errorMessage = String.format("List item type '%s' is not a subtype of expected type '%s'.", itemType, type);
                 throw new IllegalArgumentException(errorMessage);
             }

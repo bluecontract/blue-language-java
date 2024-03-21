@@ -7,16 +7,20 @@ import java.util.List;
 
 public class TestUtils {
 
-    public static NodeProvider samplesDirectoryNodeProvider() throws IOException {
+    public static DirectoryBasedNodeProvider samplesDirectoryNodeProvider() throws IOException {
         return new DirectoryBasedNodeProvider("samples");
     }
 
     public static NodeProvider useNodeNameAsBlueIdProvider(List<Node> nodes) {
-        return (blueId) -> nodes.stream().filter(e -> blueId.equals(e.getName())).findAny().orElse(null);
+        return (blueId) -> nodes.stream()
+                .filter(e -> blueId.equals(e.getName()))
+                .findAny()
+                .map(Node::clone)
+                .orElse(null);
     }
 
-    public static NodeProcessor numbersMustIncreasePayloadMerger() {
-        return (target, source, nodeProvider) -> {
+    public static MergingProcessor numbersMustIncreasePayloadMerger() {
+        return (target, source, nodeProvider, nodeResolver) -> {
             Integer targetValue = (Integer) target.getValue();
             Integer sourceValue = (Integer) source.getValue();
             if (sourceValue == null)

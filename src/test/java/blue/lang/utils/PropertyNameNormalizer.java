@@ -40,11 +40,4 @@ public class PropertyNameNormalizer {
         // Re-add leading underscore for variables that start with digits
         return startsWithUnderscore ? "_" + sb : sb.toString();
     }
-
-
-    public static void main(String[] args) {
-        String input = "1 a b c";
-//        String input = "to \"♥\" rozwiązanie!!";
-        System.out.println(normalize(input)); // Output: toRozwiazanie
-    }
 }

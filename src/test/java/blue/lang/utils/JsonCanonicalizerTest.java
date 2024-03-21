@@ -28,7 +28,7 @@ public class JsonCanonicalizerTest {
         String expectedResult = "{\"\\n\":\"Newline\",\"\\r\":\"Carriage Return\",\"1\":\"One\",\"</script>\":\"Browser Challenge\"," +
                 "\"\u0080\":\"Control\u007F\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\"," +
                 "\"\uD83D\uDE02\":\"Smiley\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}";
-        assertEquals(JsonCanonicalizer.canonicalize(map), expectedResult);
+        assertEquals(expectedResult, JsonCanonicalizer.canonicalize(map));
     }
 
     @Test
@@ -43,7 +43,7 @@ public class JsonCanonicalizerTest {
 
         String expectedResult = "{\"peach\":\"This sorting order\",\"péché\":\"is wrong according to French\"," +
                 "\"pêche\":\"but canonicalization MUST\",\"sin\":\"ignore locale\"}";
-        assertEquals(JsonCanonicalizer.canonicalize(map), expectedResult);
+        assertEquals(expectedResult, JsonCanonicalizer.canonicalize(map));
     }
 
     @Test
@@ -55,7 +55,7 @@ public class JsonCanonicalizerTest {
         Map map = JSON_MAPPER.readValue(a, Map.class);
 
         String expectedResult = "{\"num\":203984578234652384758236485726348576238947562839746582739465902736450892736480592039845782346523847582364857263485762389475628397465827394659027364508927364805920398457823465238475823648572634857623894756283974658273946590273645089273648059,\"num2\":20398457823465238475823648572634857623894756283974658273946590273645089273648059.8692457869345769345769345769345769345}";
-        assertEquals(JsonCanonicalizer.canonicalize(map), expectedResult);
+        assertEquals(expectedResult, JsonCanonicalizer.canonicalize(map));
     }
 
 }

@@ -1,5 +1,8 @@
 package blue.lang.utils;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class Properties {
 
     public static final String OBJECT_NAME = "name";
@@ -36,5 +39,10 @@ public class Properties {
     public static final String TYPE_SHA256 = "sha256";
     public static final String TYPE_LIST = "list";
 
+    public static final String TEXT_TYPE = "Text";
+    public static final String NUMBER_TYPE = "Number";
+    public static final String INTEGER_TYPE = "Integer";
+    public static final String BOOLEAN_TYPE = "Boolean";
+    public static final List<String> BASIC_TYPES = Arrays.asList(TEXT_TYPE, NUMBER_TYPE, INTEGER_TYPE, BOOLEAN_TYPE);
 
 }

@@ -1,6 +1,5 @@
 package blue.lang.utils;
 
-import blue.lang.Blue;
 import blue.lang.Node;
 import blue.lang.NodeProvider;
 
@@ -12,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -26,9 +26,8 @@ public class DirectoryBasedNodeProvider implements NodeProvider {
 
     public DirectoryBasedNodeProvider(String... directories) throws IOException {
         this.nodes = load(directories);
-        Blue blue = new Blue();
         this.blueIdToNodeMap = nodes.stream()
-                .collect(Collectors.toMap(blue::resolveToBlueId, Function.identity()));
+                .collect(Collectors.toMap(BlueIdCalculator::calculateBlueId, Function.identity()));
     }
 
     private List<Node> load(String... directories) throws IOException {
@@ -58,7 +57,8 @@ public class DirectoryBasedNodeProvider implements NodeProvider {
 
     @Override
     public Node fetchByBlueId(String blueId) {
-        return blueIdToNodeMap.get(blueId);
+        Optional<Node> result = Optional.ofNullable(blueIdToNodeMap.get(blueId));
+        return result.map(Node::clone).orElse(null);
     }
 
     public List<Node> getNodes() {

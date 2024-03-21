@@ -2,7 +2,8 @@ package blue.lang.processor;
 
 import blue.lang.NodeProvider;
 import blue.lang.Node;
-import blue.lang.NodeProcessor;
+import blue.lang.MergingProcessor;
+import blue.lang.NodeResolver;
 import blue.lang.feature.SupportedTypesFeature;
 import blue.lang.utils.Features;
 import blue.lang.utils.Nodes;
@@ -10,9 +11,9 @@ import blue.lang.utils.Nodes;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SupportedTypesPropagator implements NodeProcessor {
+public class SupportedTypesPropagator implements MergingProcessor {
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider) {
+    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         SupportedTypesFeature sourceFeature = Features.getFeature(source, SupportedTypesFeature.class);
         if (sourceFeature == null)
             return;

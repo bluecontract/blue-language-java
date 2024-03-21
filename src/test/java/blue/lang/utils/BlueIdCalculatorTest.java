@@ -48,10 +48,10 @@ public class BlueIdCalculatorTest {
         String result4 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map4);
 
         String expectedResult = "hash({pqr=hash({value=1}), abc=hash({def=hash({value=1}), ghi=hash({jkl=hash({value=2}), mno=hash({value=x})})})})";
-        assertEquals(result1, expectedResult);
-        assertEquals(result2, expectedResult);
-        assertEquals(result3, expectedResult);
-        assertEquals(result4, expectedResult);
+        assertEquals(expectedResult, result1);
+        assertEquals(expectedResult, result2);
+        assertEquals(expectedResult, result3);
+        assertEquals(expectedResult, result4);
     }
 
     @Test
@@ -76,9 +76,9 @@ public class BlueIdCalculatorTest {
         String result3 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map3);
 
         String expectedResult = "hash({abc=hash([hash([hash(1), hash(2)]), hash(3)])})";
-        assertEquals(result1, expectedResult);
-        assertEquals(result2, expectedResult);
-        assertEquals(result3, expectedResult);
+        assertEquals(expectedResult, result1);
+        assertEquals(expectedResult, result2);
+        assertEquals(expectedResult, result3);
     }
 
     @Test
@@ -95,8 +95,8 @@ public class BlueIdCalculatorTest {
         String result2 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map2);
 
         String expectedResult = "hash({abc=hash({value=x})})";
-        assertEquals(result1, expectedResult);
-        assertEquals(result2, expectedResult);
+        assertEquals(expectedResult, result1);
+        assertEquals(expectedResult, result2);
     }
 
     private static Function<Object, String> fakeHashValueProvider() {

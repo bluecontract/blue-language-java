@@ -3,16 +3,21 @@ package blue.lang;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static blue.lang.Types.isBasicType;
 
 @JsonDeserialize(using = NodeDeserializer.class)
-public class Node {
+public class Node implements Cloneable {
+
+    public static final Node INTEGER = new Node().name("Integer");
 
     private String name;
-    private String type;
+    private String description;
+    private Node type;
     private Object value;
     private List<Node> items;
     private Map<String, Node> properties;
@@ -25,7 +30,11 @@ public class Node {
         return name;
     }
 
-    public String getType() {
+    public String getDescription() {
+        return description;
+    }
+
+    public Node getType() {
         return type;
     }
 
@@ -58,14 +67,33 @@ public class Node {
         return this;
     }
 
+    public Node description(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public Node type(Node type) {
+        this.type = type;
+        return this;
+    }
 
     public Node type(String type) {
-        this.type = type;
+        this.type = isBasicType(type) ? new Node().value(type) : new Node().blueId(type);
         return this;
     }
 
     public Node value(Object value) {
         this.value = value;
+        return this;
+    }
+
+    public Node value(long value) {
+        this.value = BigInteger.valueOf(value);
+        return this;
+    }
+
+    public Node value(double value) {
+        this.value = BigDecimal.valueOf(value);
         return this;
     }
 
@@ -123,6 +151,28 @@ public class Node {
     public Node features(List<Feature> features) {
         this.features = features;
         return this;
+    }
+
+    @Override
+    public Node clone() {
+        try {
+            Node cloned = (Node) super.clone();
+            if (this.items != null) {
+                cloned.items = this.items.stream()
+                        .map(Node::clone)
+                        .collect(Collectors.toCollection(ArrayList::new));
+            }
+            if (this.properties != null) {
+                cloned.properties = this.properties.entrySet().stream()
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                entry -> entry.getValue().clone()
+                        ));
+            }
+            return cloned;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("BasicNode must be cloneable", e);
+        }
     }
 
 }

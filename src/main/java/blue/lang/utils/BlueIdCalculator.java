@@ -1,5 +1,7 @@
 package blue.lang.utils;
 
+import blue.lang.Node;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -8,10 +10,16 @@ import static blue.lang.utils.Properties.*;
 
 public class BlueIdCalculator {
 
+    public static final BlueIdCalculator INSTANCE = new BlueIdCalculator(new Base58Sha256Provider());
+
     private Function<Object, String> hashProvider;
 
     public BlueIdCalculator(Function<Object, String> hashProvider) {
         this.hashProvider = hashProvider;
+    }
+
+    public static String calculateBlueId(Node node) {
+        return BlueIdCalculator.INSTANCE.calculate(NodeToObject.get(node));
     }
 
     public String calculate(Object object) {
@@ -26,7 +34,7 @@ public class BlueIdCalculator {
     }
 
     private String calculateMap(Map<String, Object> map) {
-        if (map.size() == 1 && map.containsKey(OBJECT_BLUE_ID))
+        if (map.containsKey(OBJECT_BLUE_ID))
             return (String) map.get(OBJECT_BLUE_ID);
 
         Map<String, Object> hashes = map.entrySet().stream()

@@ -1,8 +1,13 @@
 package blue.lang;
 
+import blue.lang.utils.BlueIdCalculator;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static blue.lang.utils.BlueIdCalculator.calculateBlueId;
+import static blue.lang.utils.Properties.*;
 
 public class Types {
 
@@ -13,23 +18,33 @@ public class Types {
                 .collect(Collectors.toMap(Node::getName, node -> node));
     }
 
-    public Map<String, Node> getTypes() {
-        return types;
-    }
-
-    public boolean isSubtype(Node node, String supertype) {
-        return node.getType() != null && isSubtype(node.getType(), supertype);
-    }
-
-    public boolean isSubtype(String subtype, String supertype) {
-        if (subtype.equals(supertype))
+    public static boolean isSubtype(Node subtype, Node supertype, NodeProvider nodeProvider) {
+        String subtypeBlueId = calculateBlueId(subtype);
+        String supertypeBlueId = calculateBlueId(supertype);
+        if (subtypeBlueId.equals(supertypeBlueId))
             return true;
-        Node current = types.get(subtype);
-        while (current != null && current.getType() != null) {
-            if (current.getType().equals(supertype))
+
+        Node current = getType(subtype, nodeProvider);
+        while (current != null) {
+            String blueId = calculateBlueId(current);
+            if (blueId.equals(supertypeBlueId))
                 return true;
-            current = types.get(current.getType());
+            current = getType(current, nodeProvider);
         }
         return false;
+    }
+
+    private static Node getType(Node node, NodeProvider nodeProvider) {
+        Node type = node.getType();
+        if (type == null)
+            return null;
+
+        if (type.getBlueId() != null)
+            return nodeProvider.fetchByBlueId(type.getBlueId());
+        return type;
+    }
+
+    public static boolean isBasicType(String type) {
+        return BASIC_TYPES.contains(type);
     }
 }

@@ -1,0 +1,45 @@
+name: Celebrating Kill Bill Anniversary 2024
+type:
+  name: General Hattori Hanzo Voucher
+  blueId: DCyDSo93sXazauSwAidZ8kToTt5icKwKTGg8DK2o8i9g
+availableMenuItems:
+  appetizers:
+    - SakuraSpringSalad:
+        description: "A delicate mix of spring greens, cherry blossoms, and a light yuzu dressing."
+        isVegetarian: true
+    - EdamameWithSeaSalt:
+        description: "Freshly steamed edamame sprinkled with sea salt."
+        isVegetarian: true
+    - TunaTataki:
+        description: "Lightly seared tuna slices with ponzu sauce and scallions."
+        isVegetarian: false
+  mains:
+    - TempuraTastingPlatter:
+        description: "An assortment of seasonal vegetables and seafood in a light tempura batter."
+        isVegetarian: false
+    - GrilledMisoSalmon:
+        description: "Salmon fillet marinated in miso and grilled to perfection."
+        isVegetarian: false
+    - VegetableSushiPlatter:
+        description: "A variety of sushi featuring seasonal vegetables."
+        isVegetarian: true
+  desserts:
+    - CherryBlossomRoll:
+        description: "Sweet sushi roll with cherry blossom-infused cream and fresh fruit."
+        isVegetarian: true
+    - MatchaGreenTeaCheesecake:
+        description: "Rich and creamy cheesecake with a bold matcha flavor."
+        isVegetarian: true
+    - YuzuSorbet:
+        description: "Refreshing sorbet with the citrusy tang of yuzu."
+        isVegetarian: true
+  beverages:
+    - SakuraMartini:
+        description: "A floral martini with hints of cherry blossom and sake."
+        isAlcoholic: true
+    - GreenTeaLatte:
+        description: "Creamy latte made with steamed milk and rich green tea."
+        isAlcoholic: false
+    - SparklingPlumWine:
+        description: "Effervescent plum wine, perfect for toasting the season."
+        isAlcoholic: true
