@@ -1,6 +1,7 @@
 package blue.lang;
 
 import blue.lang.feature.InlineValueFeature;
+import blue.lang.model.limits.Limits;
 import blue.lang.processor.*;
 import blue.lang.ref.RefBasedEnricher;
 import org.junit.jupiter.api.Test;

@@ -1,25 +1,20 @@
 package blue.lang;
 
-import blue.lang.model.Limits;
+import blue.lang.model.limits.Limits;
 import blue.lang.processor.*;
 import blue.lang.utils.BasicNodesProvider;
-import blue.lang.utils.BlueIdCalculator;
 import blue.lang.utils.DirectoryBasedNodeProvider;
-import blue.lang.utils.NodeToObject;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static blue.lang.TestUtils.useNodeNameAsBlueIdProvider;
 import static blue.lang.utils.BlueIdCalculator.calculateBlueId;
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TypeAssignerTest {
 
@@ -162,11 +157,81 @@ public class TypeAssignerTest {
 
         Merger merger = new Merger(mergingProcessor, dirNodeProvider);
         Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
+
         Node node = merger.resolve(source, Limits.NO_LIMITS);
 
         assertEquals("+1234567890", node.getProperties().get("details")
                 .getProperties().get("customerSupport")
                 .getProperties().get("phone").getValue());
+
+    }
+
+    @Test
+    public void testPathLimits() throws Exception {
+
+        DirectoryBasedNodeProvider dirNodeProvider = TestUtils.samplesDirectoryNodeProvider();
+
+        MergingProcessor mergingProcessor = new SequentialMergingProcessor(
+                Arrays.asList(
+                        new BlueIdResolver(),
+                        new NamePropagator(),
+                        new ValuePropagator(),
+                        new TypeAssigner(),
+                        new NameToNullOnTypeMatchTransformer()
+                )
+        );
+
+        Merger merger = new Merger(mergingProcessor, dirNodeProvider);
+        Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
+
+        Node node = merger.resolve(source, Limits.path("details/customerSupport/phone"));
+
+        assertEquals("+1234567890", node.getProperties().get("details")
+                .getProperties().get("customerSupport")
+                .getProperties().get("phone").getValue());
+
+        assertThrows(NullPointerException.class, () -> {
+            node.getProperties().get("details")
+                    .getProperties().get("customerSupport")
+                    .getProperties().get("email").getValue();
+        });
+
+    }
+
+    @Test
+    public void testDepthLimit2() throws Exception {
+
+        DirectoryBasedNodeProvider dirNodeProvider = TestUtils.samplesDirectoryNodeProvider();
+
+        MergingProcessor mergingProcessor = new SequentialMergingProcessor(
+                Arrays.asList(
+                        new BlueIdResolver(),
+                        new NamePropagator(),
+                        new ValuePropagator(),
+                        new TypeAssigner(),
+                        new NameToNullOnTypeMatchTransformer()
+                )
+        );
+
+        Merger merger = new Merger(mergingProcessor, dirNodeProvider);
+        Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
+
+        Node node = merger.resolve(source, Limits.depth(2));
+
+        assertEquals("HvB9broPqR3gU5jkKCUnqoYNzEbZ4WhUj88D3DsEkJ4n", node.getProperties().get("details")
+                .getProperties().get("customerSupport").getBlueId());
+
+        assertThrows(NullPointerException.class, () -> {
+            node.getProperties().get("details")
+                    .getProperties().get("customerSupport")
+                    .getProperties().get("email").getValue();
+        });
+
+        assertThrows(NullPointerException.class, () -> {
+            node.getProperties().get("details")
+                    .getProperties().get("customerSupport")
+                    .getProperties().get("phone").getValue();
+        });
 
     }
 
