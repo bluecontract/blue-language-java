@@ -1,17 +1,26 @@
 package blue.lang.utils;
 
+import blue.lang.model.*;
+import blue.lang.model.BlueId;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import com.fasterxml.jackson.databind.introspect.Annotated;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS;
 import static com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_INTEGER_FOR_INTS;
@@ -39,6 +48,10 @@ public class UncheckedObjectMapper extends ObjectMapper {
         setSerializationInclusion(Include.NON_NULL);
         enable(USE_BIG_DECIMAL_FOR_FLOATS);
         enable(USE_BIG_INTEGER_FOR_INTS);
+
+        SimpleModule module = new SimpleModule();
+        module.setSerializerModifier(new BlueIdBeanSerializerModifier());
+        registerModule(module);
     }
 
     @Override

@@ -1,4 +1,4 @@
-package blue.lang.ipfs;
+package blue.lang.samples.ipfs;
 
 import blue.lang.Node;
 import blue.lang.utils.JsonCanonicalizer;

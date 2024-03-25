@@ -1,2 +1,9 @@
 name: Abc
-x: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH
+x:
+  x1: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH
+  x2:
+    name: 2345
+    list:
+      - 1
+      - 2
+      - 3

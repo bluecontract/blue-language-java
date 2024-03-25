@@ -3,6 +3,7 @@ package blue.lang;
 import blue.lang.model.limits.Limits;
 import blue.lang.model.limits.LimitsInterface;
 import blue.lang.utils.BlueIdCalculator;
+import blue.lang.utils.NodeToObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,12 +38,12 @@ public class Merger implements NodeResolver {
     private void mergeObject(Node target, Node source, LimitsInterface limits) {
         mergingProcessor.process(target, source, nodeProvider, this);
 
-            List<Node> children = source.getItems();
-            if (children != null)
-                mergeChildren(target, children, limits);
-            Map<String, Node> properties = source.getProperties();
-            if (properties != null)
-                properties.forEach((key, value) -> mergeProperty(target, key, value, limits));
+        List<Node> children = source.getItems();
+        if (children != null)
+            mergeChildren(target, children, limits);
+        Map<String, Node> properties = source.getProperties();
+        if (properties != null)
+            properties.forEach((key, value) -> mergeProperty(target, key, value, limits));
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, LimitsInterface limits) {

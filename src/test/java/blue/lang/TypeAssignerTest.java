@@ -6,12 +6,14 @@ import blue.lang.utils.BasicNodesProvider;
 import blue.lang.utils.DirectoryBasedNodeProvider;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static blue.lang.TestUtils.samplesDirectoryNodeProvider;
 import static blue.lang.utils.BlueIdCalculator.calculateBlueId;
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
@@ -142,8 +144,8 @@ public class TypeAssignerTest {
 
     @Test
     public void testDifferentSubtypeVariations2() throws Exception {
-        
-        DirectoryBasedNodeProvider dirNodeProvider = TestUtils.samplesDirectoryNodeProvider();
+
+        DirectoryBasedNodeProvider dirNodeProvider = samplesDirectoryNodeProvider();
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
@@ -169,7 +171,7 @@ public class TypeAssignerTest {
     @Test
     public void testPathLimits() throws Exception {
 
-        DirectoryBasedNodeProvider dirNodeProvider = TestUtils.samplesDirectoryNodeProvider();
+        DirectoryBasedNodeProvider dirNodeProvider = samplesDirectoryNodeProvider();
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
@@ -201,7 +203,7 @@ public class TypeAssignerTest {
     @Test
     public void testDepthLimit2() throws Exception {
 
-        DirectoryBasedNodeProvider dirNodeProvider = TestUtils.samplesDirectoryNodeProvider();
+        DirectoryBasedNodeProvider dirNodeProvider = samplesDirectoryNodeProvider();
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(

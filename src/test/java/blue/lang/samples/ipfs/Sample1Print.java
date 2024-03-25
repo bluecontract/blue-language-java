@@ -1,4 +1,4 @@
-package blue.lang.ipfs;
+package blue.lang.samples.ipfs;
 
 import blue.lang.Blue;
 import blue.lang.Node;
@@ -13,7 +13,7 @@ import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
 public class Sample1Print {
 
     public static void main(String[] args) throws IOException {
-        String filename = "src/test/java/blue/lang/ipfs/sample.blue";
+        String filename = "src/test/java/blue/lang/samples/ipfs/sample.blue";
         Node node = YAML_MAPPER.readValue(new File(filename), Node.class);
         Blue blue = new Blue();
         Object result = NodeToObject.get(blue.resolve(node));

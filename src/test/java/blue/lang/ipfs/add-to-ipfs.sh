@@ -1,1 +1,0 @@
-ipfs add --cid-version=1 --raw-leaves input.txt

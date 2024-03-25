@@ -3,3 +3,7 @@ surname:
   type: Text
 age:
   type: Integer
+pets:
+  type:
+    name: Pet
+    blueId: 68Y1GazJSKJL1irezxJ3S4ZE7UCVXVswTRAhJf5RatK8

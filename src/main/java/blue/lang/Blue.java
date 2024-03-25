@@ -1,6 +1,5 @@
 package blue.lang;
 
-import blue.lang.model.limits.Limits;
 import blue.lang.model.limits.LimitsInterface;
 import blue.lang.processor.*;
 
@@ -8,7 +7,7 @@ import java.util.Arrays;
 
 import static blue.lang.model.limits.Limits.NO_LIMITS;
 
-public class Blue implements NodeProvider, NodeResolver {
+public class Blue implements NodeResolver {
 
     private NodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
@@ -35,17 +34,6 @@ public class Blue implements NodeProvider, NodeResolver {
     public Node resolve(Node node, LimitsInterface limits) {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         return merger.resolve(node, limits);
-    }
-
-    /// TODO: what to do there? limits in provider seems not OK
-
-    @Override
-    public Node fetchByBlueId(String blueId) {
-        Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node resultNode = new Node();
-        Node sourceNode = nodeProvider.fetchByBlueId(blueId);
-        merger.merge(resultNode, sourceNode, NO_LIMITS);
-        return resultNode;
     }
 
     private MergingProcessor createDefaultNodeProcessor() {

@@ -1,11 +1,9 @@
-package blue.lang.ipfs;
+package blue.lang.samples.ipfs;
 
 import blue.lang.*;
 import blue.lang.utils.NodeToObject;
-import blue.lang.utils.SequentialNodeProvider;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
 

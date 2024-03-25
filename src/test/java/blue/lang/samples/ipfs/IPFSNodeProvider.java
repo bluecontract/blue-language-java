@@ -1,4 +1,4 @@
-package blue.lang.ipfs;
+package blue.lang.samples.ipfs;
 
 import blue.lang.Blue;
 import blue.lang.Node;

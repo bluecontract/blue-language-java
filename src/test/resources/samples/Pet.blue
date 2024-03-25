@@ -1,0 +1,10 @@
+name: Pet
+description: A domestic animal kept for companionship and enjoyment.
+age:
+  type: Integer
+weightKg:
+  type: Number
+favouriteToys:
+  type:
+    name: Toy
+    blueId: ESXYrxrWjvNT5tgdpHPhVVUAqjDq6dnToxxec5zU65gf

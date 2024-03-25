@@ -1,0 +1,8 @@
+name: Toy
+description: A playful gadget that sparks joy and unleashes the fun side of pets, keeping them active and happy.
+kind:
+  type: Text
+color:
+  type: Text
+features:
+  type: Text
