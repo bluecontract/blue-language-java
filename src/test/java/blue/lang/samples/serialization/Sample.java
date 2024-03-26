@@ -41,11 +41,11 @@ public class Sample {
         Node newNode = YAML_MAPPER.readValue(doc, Node.class);
         System.out.println(YAML_MAPPER.writeValueAsString(newNode));
 
-//        result = blue.resolve(node);
+        result = blue.resolve(node);
 //        result = blue.resolve(node, Limits.path("pets/0/age/*"));
 //        result = blue.resolve(node, Limits.depth(3));
-        result = blue.resolve(node, Limits.depth(3)
-                .and(Limits.path("pets/0/age/*")));
+//        result = blue.resolve(node, Limits.depth(3)
+//                .and(Limits.path("pets/0/age/*")));
         System.out.println(YAML_MAPPER.writeValueAsString(NodeToObject.get(result)));
 
 //        printBlueIds();
