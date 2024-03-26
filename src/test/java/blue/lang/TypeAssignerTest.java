@@ -137,7 +137,7 @@ public class TypeAssignerTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))));
 
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
@@ -160,80 +160,11 @@ public class TypeAssignerTest {
         Merger merger = new Merger(mergingProcessor, dirNodeProvider);
         Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
 
-        Node node = merger.resolve(source, Limits.NO_LIMITS);
+        Node node = merger.resolve(source);
 
         assertEquals("+1234567890", node.getProperties().get("details")
                 .getProperties().get("customerSupport")
                 .getProperties().get("phone").getValue());
-
-    }
-
-    @Test
-    public void testPathLimits() throws Exception {
-
-        DirectoryBasedNodeProvider dirNodeProvider = samplesDirectoryNodeProvider();
-
-        MergingProcessor mergingProcessor = new SequentialMergingProcessor(
-                Arrays.asList(
-                        new BlueIdResolver(),
-                        new NamePropagator(),
-                        new ValuePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
-                )
-        );
-
-        Merger merger = new Merger(mergingProcessor, dirNodeProvider);
-        Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
-
-        Node node = merger.resolve(source, Limits.path("details/customerSupport/phone"));
-
-        assertEquals("+1234567890", node.getProperties().get("details")
-                .getProperties().get("customerSupport")
-                .getProperties().get("phone").getValue());
-
-        assertThrows(NullPointerException.class, () -> {
-            node.getProperties().get("details")
-                    .getProperties().get("customerSupport")
-                    .getProperties().get("email").getValue();
-        });
-
-    }
-
-    @Test
-    public void testDepthLimit2() throws Exception {
-
-        DirectoryBasedNodeProvider dirNodeProvider = samplesDirectoryNodeProvider();
-
-        MergingProcessor mergingProcessor = new SequentialMergingProcessor(
-                Arrays.asList(
-                        new BlueIdResolver(),
-                        new NamePropagator(),
-                        new ValuePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
-                )
-        );
-
-        Merger merger = new Merger(mergingProcessor, dirNodeProvider);
-        Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
-
-        Node node = merger.resolve(source, Limits.depth(2));
-
-        assertEquals("HvB9broPqR3gU5jkKCUnqoYNzEbZ4WhUj88D3DsEkJ4n", node.getProperties().get("details")
-                .getProperties().get("customerSupport").getBlueId());
-
-        assertThrows(NullPointerException.class, () -> {
-            node.getProperties().get("details")
-                    .getProperties().get("customerSupport")
-                    .getProperties().get("email").getValue();
-        });
-
-        assertThrows(NullPointerException.class, () -> {
-            node.getProperties().get("details")
-                    .getProperties().get("customerSupport")
-                    .getProperties().get("phone").getValue();
-        });
 
     }
 

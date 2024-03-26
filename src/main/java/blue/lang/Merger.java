@@ -4,6 +4,7 @@ import blue.lang.model.limits.Limits;
 import blue.lang.model.limits.LimitsInterface;
 import blue.lang.utils.BlueIdCalculator;
 import blue.lang.utils.NodeToObject;
+import blue.lang.utils.Nodes;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +28,7 @@ public class Merger implements NodeResolver {
     public void merge(Node target, Node source, LimitsInterface limits) {
         if (limits.canReadNext()) {
             if (source.getType() != null) {
-                Node resolvedType = resolve(source.getType(), limits);
+                Node resolvedType = resolve(source.getType(), limits.next(true));
                 source.type(resolvedType);
                 merge(target, source.getType(), limits.next(true));
             }
@@ -36,6 +37,9 @@ public class Merger implements NodeResolver {
     }
 
     private void mergeObject(Node target, Node source, LimitsInterface limits) {
+        if (!limits.canReadNext()) {
+            return;
+        }
         mergingProcessor.process(target, source, nodeProvider, this);
 
         List<Node> children = source.getItems();
@@ -56,10 +60,8 @@ public class Merger implements NodeResolver {
         } else if (sourceChildren.size() != targetChildren.size())
             throw new IllegalArgumentException("Cannot merge two lists with different items size.");
         for (int i = 0; i < sourceChildren.size(); i++)
-            if (!limits.canReadNext()) {
-                targetChildren.get(i).blueId(BlueIdCalculator.calculateBlueId(sourceChildren.get(i)));
-            } else {
-                merge(targetChildren.get(i), sourceChildren.get(i), limits);
+            if (limits.canReadIndex(i)) {
+                merge(targetChildren.get(i), sourceChildren.get(i), limits.next(false));
             }
     }
 
@@ -67,14 +69,8 @@ public class Merger implements NodeResolver {
         if (!limits.filter(sourceKey)) {
             return;
         }
-        if (!limits.canReadNext()) {
-            Node node = resolve(sourceValue, Limits.depth(0));
-            target.blueId(BlueIdCalculator.calculateBlueId(node));
-            return;
-        }
 
-        Node node = resolve(sourceValue, limits.next(false));
-
+        Node node =  resolve(sourceValue, limits.next(sourceKey));
 
         if (target.getProperties() == null)
             target.properties(new HashMap<>());
@@ -82,13 +78,18 @@ public class Merger implements NodeResolver {
         if (targetValue == null)
             target.getProperties().put(sourceKey, node);
         else
-            mergeObject(targetValue, node, limits.next(false));
+            mergeObject(targetValue, node, limits.next(sourceKey));
     }
 
     @Override
     public Node resolve(Node node, LimitsInterface limits) {
         Node resultNode = new Node();
-        merge(resultNode, node, limits);
+        if (limits == Limits.END_LIMITS) {
+            resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
+        } else {
+            merge(resultNode, node, limits);
+        }
+
         return resultNode;
     }
 }
