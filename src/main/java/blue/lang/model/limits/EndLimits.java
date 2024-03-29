@@ -1,13 +1,13 @@
 package blue.lang.model.limits;
 
-public class EndLimits implements LimitsInterface {
+public class EndLimits implements Limits{
     @Override
     public boolean canReadNext() {
         return false;
     }
 
     @Override
-    public LimitsInterface next(boolean forTypeInference) {
+    public Limits next(boolean forTypeInference) {
         return this;
     }
 
@@ -15,4 +15,5 @@ public class EndLimits implements LimitsInterface {
     public boolean filter(String name) {
         return false;
     }
+
 }

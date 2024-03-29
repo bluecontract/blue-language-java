@@ -1,6 +1,6 @@
 package blue.lang;
 
-import blue.lang.model.limits.LimitsInterface;
+import blue.lang.model.limits.Limits;
 import blue.lang.processor.*;
 
 import java.util.Arrays;
@@ -31,7 +31,7 @@ public class Blue implements NodeResolver {
     }
 
     @Override
-    public Node resolve(Node node, LimitsInterface limits) {
+    public Node resolve(Node node, Limits limits) {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         return merger.resolve(node, limits);
     }

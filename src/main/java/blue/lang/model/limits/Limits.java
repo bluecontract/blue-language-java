@@ -2,27 +2,43 @@ package blue.lang.model.limits;
 
 import java.util.List;
 
-public class Limits {
-    public static LimitsInterface depth(int maxDepth) {
+public interface Limits {
+    static Limits depth(int maxDepth) {
         if (maxDepth < 1) {
             return END_LIMITS;
         }
         return new DepthLimits(maxDepth);
     }
 
-    public static LimitsInterface path(String path) {
+    static Limits path(String path) {
         return new PathLimits(path);
     }
 
-    public static final LimitsInterface NO_LIMITS = new NoLimits();
+    static Limits NO_LIMITS = new NoLimits();
 
-    public static final LimitsInterface END_LIMITS = new EndLimits();
+    static Limits END_LIMITS = new EndLimits();
 
-    public static LimitsInterface query(List<String> paths, int depth) {
+    public static Limits query(List<String> paths, int depth) {
         return new QueryLimits(paths, depth);
     }
 
-    public static LimitsInterface query(List<String> paths) {
+    public static Limits query(List<String> paths) {
         return new QueryLimits(paths);
+    }
+    boolean canReadNext();
+    default boolean canReadIndex(int index) {
+        return canReadNext();
+    }
+    Limits next(boolean forTypeInference);
+    default Limits next(String pathName) {
+        return next(false);
+    }
+    boolean filter(String name);
+    default Limits and(Limits other) {
+        return this;
+    }
+
+    default Limits copy() {
+        return this;
     }
 }

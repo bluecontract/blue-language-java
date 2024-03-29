@@ -1,7 +1,6 @@
 package blue.lang;
 
 import blue.lang.model.limits.Limits;
-import blue.lang.model.limits.LimitsInterface;
 import blue.lang.processor.*;
 import blue.lang.utils.DirectoryBasedNodeProvider;
 import blue.lang.utils.NodeToObject;
@@ -17,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class LimitsTest {
-    private static final boolean PRINT = true;
+    private static final boolean PRINT = false;
 
     @Test
     public void testZeroDepthLimits() throws Exception {
@@ -167,7 +166,7 @@ public class LimitsTest {
 
     @Test
     public void testQueryLimitsMultiStarDepthLimitAnd() throws Exception {
-        LimitsInterface limits = Limits.path("details/customerSupport/**")
+        Limits limits = Limits.path("details/customerSupport/**")
                 .and(Limits.query(Arrays.asList("availableMenuItems"), 1))
                 .and(Limits.depth(5))
                 .and(Limits.depth(2))
@@ -197,20 +196,15 @@ public class LimitsTest {
 
         print(node);
 
-        assertTrue(Nodes.isEmptyNode(node.getProperties()
+        assertEquals(1, node.getProperties()
                 .get("availableMenuItems")
                 .getProperties().get("appetizers")
-                .getItems().get(0)));
+                .getItems().size());
 
         assertNotNull(node.getProperties()
                 .get("availableMenuItems")
                 .getProperties().get("appetizers")
-                .getItems().get(1).getProperties().get("EdamameWithSeaSalt"));
-
-        assertTrue(Nodes.isEmptyNode(node.getProperties()
-                .get("availableMenuItems")
-                .getProperties().get("appetizers")
-                .getItems().get(2)));
+                .getItems().get(0).getProperties().get("EdamameWithSeaSalt"));
     }
 
     @Test
@@ -219,23 +213,23 @@ public class LimitsTest {
 
         print(node);
 
-        assertTrue(Nodes.isEmptyNode(node.getProperties()
+        assertEquals(2, node.getProperties()
                 .get("availableMenuItems")
                 .getProperties().get("appetizers")
-                .getItems().get(0)));
+                .getItems().size());
 
         assertNotNull(node.getProperties()
                 .get("availableMenuItems")
                 .getProperties().get("appetizers")
-                .getItems().get(1).getProperties().get("EdamameWithSeaSalt"));
+                .getItems().get(0).getProperties().get("EdamameWithSeaSalt"));
 
         assertNotNull(node.getProperties()
                 .get("availableMenuItems")
                 .getProperties().get("appetizers")
-                .getItems().get(2).getProperties().get("TunaTataki"));
+                .getItems().get(1).getProperties().get("TunaTataki"));
     }
 
-    private Node resolve(LimitsInterface limits) {
+    private Node resolve(Limits limits) {
         DirectoryBasedNodeProvider dirNodeProvider = null;
         try {
             dirNodeProvider = samplesDirectoryNodeProvider();

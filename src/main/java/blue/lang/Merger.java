@@ -1,7 +1,6 @@
 package blue.lang;
 
 import blue.lang.model.limits.Limits;
-import blue.lang.model.limits.LimitsInterface;
 import blue.lang.utils.BlueIdCalculator;
 import blue.lang.utils.NodeToObject;
 import blue.lang.utils.Nodes;
@@ -25,7 +24,7 @@ public class Merger implements NodeResolver {
         merge(target, source, Limits.NO_LIMITS);
     }
 
-    public void merge(Node target, Node source, LimitsInterface limits) {
+    public void merge(Node target, Node source, Limits limits) {
         if (limits.canReadNext()) {
             if (source.getType() != null) {
                 Node resolvedType = resolve(source.getType(), limits.next(true));
@@ -36,7 +35,7 @@ public class Merger implements NodeResolver {
         mergeObject(target, source, limits);
     }
 
-    private void mergeObject(Node target, Node source, LimitsInterface limits) {
+    private void mergeObject(Node target, Node source, Limits limits) {
         if (!limits.canReadNext()) {
             return;
         }
@@ -50,7 +49,7 @@ public class Merger implements NodeResolver {
             properties.forEach((key, value) -> mergeProperty(target, key, value, limits));
     }
 
-    private void mergeChildren(Node target, List<Node> sourceChildren, LimitsInterface limits) {
+    private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
         List<Node> targetChildren = target.getItems();
         if (targetChildren == null) {
             targetChildren = new ArrayList<>();
@@ -59,13 +58,17 @@ public class Merger implements NodeResolver {
             target.items(targetChildren);
         } else if (sourceChildren.size() != targetChildren.size())
             throw new IllegalArgumentException("Cannot merge two lists with different items size.");
-        for (int i = 0; i < sourceChildren.size(); i++)
+
+        Limits limitsCopy = limits.copy();
+        for (int i = 0; i < sourceChildren.size(); i++) {
             if (limits.canReadIndex(i)) {
-                merge(targetChildren.get(i), sourceChildren.get(i), limits.next(false));
+                merge(targetChildren.get(i), sourceChildren.get(i), limitsCopy.next(false));
             }
+        }
+        target.getItems().removeIf(Nodes::isEmptyNode);
     }
 
-    private void mergeProperty(Node target, String sourceKey, Node sourceValue, LimitsInterface limits) {
+    private void mergeProperty(Node target, String sourceKey, Node sourceValue, Limits limits) {
         if (!limits.filter(sourceKey)) {
             return;
         }
@@ -82,7 +85,7 @@ public class Merger implements NodeResolver {
     }
 
     @Override
-    public Node resolve(Node node, LimitsInterface limits) {
+    public Node resolve(Node node, Limits limits) {
         Node resultNode = new Node();
         if (limits == Limits.END_LIMITS) {
             resultNode.blueId(BlueIdCalculator.calculateBlueId(node));

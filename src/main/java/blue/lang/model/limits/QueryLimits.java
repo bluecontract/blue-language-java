@@ -5,22 +5,22 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class QueryLimits implements LimitsInterface {
+public class QueryLimits implements Limits {
 
-    public static LimitsInterface paths(List<String> paths) {
+    public static Limits paths(List<String> paths) {
         return new QueryLimits(paths);
     }
 
-    public static LimitsInterface paths(List<String> paths, int depth) {
+    public static Limits paths(List<String> paths, int depth) {
         return new QueryLimits(paths, depth);
     }
 
-    public static LimitsInterface pathLimits(List<LimitsInterface> paths, LimitsInterface depthLimit) {
+    public static Limits pathLimits(List<Limits> paths, Limits depthLimit) {
         return new QueryLimits(paths, depthLimit);
     }
 
-    private final List<LimitsInterface> pathLimits;
-    private LimitsInterface depthLimits;
+    private final List<Limits> pathLimits;
+    private Limits depthLimits;
 
     public QueryLimits(List<String> paths, int depth) {
         this.pathLimits = paths.stream().map(PathLimits::path).collect(Collectors.toList());
@@ -31,7 +31,7 @@ public class QueryLimits implements LimitsInterface {
         this.depthLimits = Limits.NO_LIMITS;
     }
 
-    public QueryLimits(List<LimitsInterface> paths, LimitsInterface depthLimit) {
+    public QueryLimits(List<Limits> paths, Limits depthLimit) {
         this.pathLimits = paths;
         this.depthLimits = depthLimit;
     }
@@ -43,13 +43,13 @@ public class QueryLimits implements LimitsInterface {
         }
 
         return pathLimits.stream()
-                .map(LimitsInterface::canReadNext)
+                .map(Limits::canReadNext)
                 .filter(e -> e)
                 .count() > 0;
     }
 
     @Override
-    public LimitsInterface next(boolean forTypeInference) {
+    public Limits next(boolean forTypeInference) {
         return QueryLimits.pathLimits(pathLimits.stream()
                         .map(e -> e.next(forTypeInference))
                         .collect(Collectors.toList()),
@@ -57,15 +57,15 @@ public class QueryLimits implements LimitsInterface {
     }
 
     @Override
-    public LimitsInterface next(String pathName) {
-        List<LimitsInterface> paths = pathLimits.stream()
+    public Limits next(String pathName) {
+        List<Limits> paths = pathLimits.stream()
                 .map(e -> e.next(pathName))
                 .filter(e -> e != Limits.END_LIMITS)
                 .collect(Collectors.toList());
         if (paths.isEmpty()) {
             return Limits.END_LIMITS;
         }
-        LimitsInterface depth = depthLimits.next(pathName);
+        Limits depth = depthLimits.next(pathName);
         if (depth == Limits.END_LIMITS) {
             return Limits.END_LIMITS;
         }
@@ -86,7 +86,7 @@ public class QueryLimits implements LimitsInterface {
     }
 
     @Override
-    public LimitsInterface and(LimitsInterface other) {
+    public Limits and(Limits other) {
         if (other instanceof DepthLimits) {
             depthLimits = depthLimits.and(other);
             return this;
@@ -101,5 +101,12 @@ public class QueryLimits implements LimitsInterface {
             return this;
         }
         return this;
+    }
+
+    public Limits copy() {
+        return new QueryLimits(pathLimits.stream()
+                .map(Limits::copy)
+                .collect(Collectors.toList()),
+                depthLimits.copy());
     }
 }

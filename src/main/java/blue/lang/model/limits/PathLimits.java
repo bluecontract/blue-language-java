@@ -4,12 +4,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.Integer.parseInt;
 
-public class PathLimits implements LimitsInterface {
+public class PathLimits implements Limits {
 
-    public static LimitsInterface path(String path) {
+    public static Limits path(String path) {
         return new PathLimits(path);
     }
 
@@ -54,6 +55,18 @@ public class PathLimits implements LimitsInterface {
         return convertToIndex(bounds[index]);
     }
 
+    private boolean isRange(String path) {
+        return path.contains("-");
+    }
+
+    private boolean isSingleIndex(String path) {
+        return !isRange(path) && convertToIndex(path).isPresent();
+    }
+
+    private boolean isHandlingIndex(String path) {
+        return isRange(path) || isSingleIndex(path);
+    }
+
     private Optional<Integer> convertToIndex(String index) {
         try {
             int number = parseInt(index);
@@ -64,7 +77,7 @@ public class PathLimits implements LimitsInterface {
     }
 
     @Override
-    public LimitsInterface next(boolean forTypeInference) {
+    public Limits next(boolean forTypeInference) {
         if (forTypeInference) {
             return this;
         }
@@ -73,6 +86,14 @@ public class PathLimits implements LimitsInterface {
         }
         List<String> subList = path.subList(1, path.size());
 
+//        path = Collections.singletonList(path.get(0) + subList.stream().map(e -> {
+        path = path.stream().map(e -> {
+            if (isHandlingIndex(e)) {
+                return "*";
+            }
+            return e;
+        }).collect(Collectors.toList());
+
         if (subList.get(0).equals("**")) {
             return Limits.NO_LIMITS;
         }
@@ -80,7 +101,7 @@ public class PathLimits implements LimitsInterface {
     }
 
     @Override
-    public LimitsInterface next(String pathName) {
+    public Limits next(String pathName) {
         if (path.get(0).equals("*")) {
             return next(false);
         }
@@ -102,7 +123,7 @@ public class PathLimits implements LimitsInterface {
     }
 
     @Override
-    public LimitsInterface and(LimitsInterface other) {
+    public Limits and(Limits other) {
         if (other instanceof DepthLimits) {
             return new QueryLimits(Collections.singletonList(this), other);
         }
@@ -113,5 +134,9 @@ public class PathLimits implements LimitsInterface {
             return other.and(this);
         }
         return this;
+    }
+
+    public Limits copy() {
+        return new PathLimits(String.join("/", path));
     }
 }

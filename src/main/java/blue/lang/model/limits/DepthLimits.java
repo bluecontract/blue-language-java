@@ -2,7 +2,7 @@ package blue.lang.model.limits;
 
 import java.util.Collections;
 
-public class DepthLimits implements LimitsInterface {
+public class DepthLimits implements Limits {
     private int maxDepth;
 
     public DepthLimits(int maxDepth) {
@@ -15,7 +15,7 @@ public class DepthLimits implements LimitsInterface {
     }
 
     @Override
-    public LimitsInterface next(boolean forTypeInference) {
+    public Limits next(boolean forTypeInference) {
         if (maxDepth <= 1) { return Limits.END_LIMITS; }
 
         return new DepthLimits(maxDepth - 1);
@@ -27,7 +27,7 @@ public class DepthLimits implements LimitsInterface {
     }
 
     @Override
-    public LimitsInterface and(LimitsInterface other) {
+    public Limits and(Limits other) {
         if (other instanceof DepthLimits) {
             return new DepthLimits(Integer.max(maxDepth, ((DepthLimits) other).maxDepth));
         }
@@ -38,5 +38,9 @@ public class DepthLimits implements LimitsInterface {
             return other.and(this);
         }
         return this;
+    }
+
+    public Limits copy() {
+        return new DepthLimits(maxDepth);
     }
 }
