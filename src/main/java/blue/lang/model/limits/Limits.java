@@ -11,6 +11,9 @@ public interface Limits {
     }
 
     static Limits path(String path) {
+        if (path.equals("/")) {
+            return END_LIMITS;
+        }
         return new PathLimits(path);
     }
 
@@ -36,6 +39,10 @@ public interface Limits {
     boolean filter(String name);
     default Limits and(Limits other) {
         return this;
+    }
+
+    default boolean canCopyMetadata() {
+        return true;
     }
 
     default Limits copy() {

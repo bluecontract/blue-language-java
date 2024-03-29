@@ -62,10 +62,15 @@ public class Merger implements NodeResolver {
         Limits limitsCopy = limits.copy();
         for (int i = 0; i < sourceChildren.size(); i++) {
             if (limits.canReadIndex(i)) {
-                merge(targetChildren.get(i), sourceChildren.get(i), limitsCopy.next(false));
+                Limits l = limitsCopy.next(false);
+                if (l == Limits.END_LIMITS) {
+                    targetChildren.get(i).blueId(BlueIdCalculator.calculateBlueId(sourceChildren.get(i)));
+                } else
+//                    merge(targetChildren.get(i), sourceChildren.get(i), l);
+                    targetChildren.set(i, resolve(sourceChildren.get(i), l));
             }
         }
-        target.getItems().removeIf(Nodes::isEmptyNode);
+        target.getItems().removeIf(Nodes::isEmptyNodeWithoutBlueId);
     }
 
     private void mergeProperty(Node target, String sourceKey, Node sourceValue, Limits limits) {
@@ -91,8 +96,10 @@ public class Merger implements NodeResolver {
             resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
         } else {
             merge(resultNode, node, limits);
-            resultNode.name(node.getName());
-            resultNode.description(node.getDescription());
+            if (limits.canCopyMetadata()) {
+                resultNode.name(node.getName());
+                resultNode.description(node.getDescription());
+            }
         }
 
         return resultNode;

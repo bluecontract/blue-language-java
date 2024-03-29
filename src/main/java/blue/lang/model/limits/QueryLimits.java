@@ -103,6 +103,12 @@ public class QueryLimits implements Limits {
         return this;
     }
 
+    @Override
+    public boolean canCopyMetadata() {
+        return pathLimits.stream()
+                .anyMatch(Limits::canCopyMetadata);
+    }
+
     public Limits copy() {
         return new QueryLimits(pathLimits.stream()
                 .map(Limits::copy)

@@ -16,6 +16,8 @@ public class PathLimits implements Limits {
 
     private List<String> path;
 
+    private boolean isInitialPath = true;
+
     public PathLimits(String path) {
         if (path.isEmpty()) {
             throw new IllegalArgumentException("Path must start with /");
@@ -108,7 +110,9 @@ public class PathLimits implements Limits {
         }
 
         String newPath = "/" + String.join("/", subList);
-        return new PathLimits(newPath);
+        PathLimits l = (PathLimits) Limits.path(newPath);
+        l.isInitialPath = false;
+        return l;
     }
 
     @Override
@@ -147,8 +151,15 @@ public class PathLimits implements Limits {
         return this;
     }
 
+    @Override
+    public boolean canCopyMetadata() {
+        return isInitialPath ? true : path.get(0).equals("*") || path.get(0).equals("**");
+    }
+
     public Limits copy() {
         String newPath = "/" + String.join("/", path);
-        return new PathLimits(newPath);
+        PathLimits l = (PathLimits) Limits.path(newPath);
+        l.isInitialPath = isInitialPath;
+        return l;
     }
 }
