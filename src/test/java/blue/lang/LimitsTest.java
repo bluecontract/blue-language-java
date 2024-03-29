@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 import static blue.lang.TestUtils.samplesDirectoryNodeProvider;
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
@@ -79,9 +80,27 @@ public class LimitsTest {
         });
 
     }
+
+    @Test
+    public void testPathThrowsSlashBegin() throws Exception {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Limits.path("details/customerSupport/phone/*");
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            Limits.path("");
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            Limits.query(Collections.singletonList(""));
+        });
+        assertDoesNotThrow(() -> {
+            Limits l = Limits.path("/details/customerSupport/phone/*");
+            Limits copy = l.copy();
+        });
+    }
+
     @Test
     public void testPathLimits() throws Exception {
-        Node node = resolve(Limits.path("details/customerSupport/phone/*"));
+        Node node = resolve(Limits.path("/details/customerSupport/phone/*"));
 
         print(node);
 
@@ -100,8 +119,8 @@ public class LimitsTest {
     public void testQueryLimits() throws Exception {
         Node node = resolve(Limits.query(
                 Arrays.asList(
-                        "details/customerSupport/phone/*",
-                        "details/customerSupport/*"
+                        "/details/customerSupport/phone/*",
+                        "/details/customerSupport/*"
                 )
         ));
 
@@ -121,9 +140,9 @@ public class LimitsTest {
     public void testQueryLimitsMultiStar() throws Exception {
         Node node = resolve(Limits.query(
                 Arrays.asList(
-                        "details/customerSupport/phone/*",
-                        "details/customerSupport/**",
-                        "availableMenuItems"
+                        "/details/customerSupport/phone/*",
+                        "/details/customerSupport/**",
+                        "/availableMenuItems"
                 )
         ));
 
@@ -146,8 +165,8 @@ public class LimitsTest {
     @Test
     public void testQueryLimitsMultiStarDepthLimit() throws Exception {
         Node node = resolve(Limits.query(
-                Arrays.asList(
-                        "details/customerSupport/**"
+                Collections.singletonList(
+                        "/details/customerSupport/**"
                 ), 5
         ));
 
@@ -166,8 +185,8 @@ public class LimitsTest {
 
     @Test
     public void testQueryLimitsMultiStarDepthLimitAnd() throws Exception {
-        Limits limits = Limits.path("details/customerSupport/**")
-                .and(Limits.query(Arrays.asList("availableMenuItems"), 1))
+        Limits limits = Limits.path("/details/customerSupport/**")
+                .and(Limits.query(Arrays.asList("/availableMenuItems"), 1))
                 .and(Limits.depth(5))
                 .and(Limits.depth(2))
                 .and(Limits.END_LIMITS) // should not affect the result
@@ -192,7 +211,7 @@ public class LimitsTest {
 
     @Test
     public void testQueryLimitsItems() throws Exception {
-        Node node = resolve(Limits.path("availableMenuItems/appetizers/1/**"));
+        Node node = resolve(Limits.path("/availableMenuItems/appetizers/1/**"));
 
         print(node);
 
@@ -209,7 +228,7 @@ public class LimitsTest {
 
     @Test
     public void testQueryLimitsItemsRange() throws Exception {
-        Node node = resolve(Limits.path("availableMenuItems/appetizers/1-2/**"));
+        Node node = resolve(Limits.path("/availableMenuItems/appetizers/1-2/**"));
 
         print(node);
 

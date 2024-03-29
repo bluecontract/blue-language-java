@@ -17,6 +17,15 @@ public class PathLimits implements Limits {
     private List<String> path;
 
     public PathLimits(String path) {
+        if (path.isEmpty()) {
+            throw new IllegalArgumentException("Path must start with /");
+        }
+        if (path.charAt(0) != '/') {
+            throw new IllegalArgumentException("Path must start with /");
+        }
+
+        path = path.substring(1);
+
         this.path = Arrays.asList(path.split("/"));
     }
 
@@ -86,7 +95,7 @@ public class PathLimits implements Limits {
         }
         List<String> subList = path.subList(1, path.size());
 
-//        path = Collections.singletonList(path.get(0) + subList.stream().map(e -> {
+        // Replace indexes with wildcards for future merges
         path = path.stream().map(e -> {
             if (isHandlingIndex(e)) {
                 return "*";
@@ -97,7 +106,9 @@ public class PathLimits implements Limits {
         if (subList.get(0).equals("**")) {
             return Limits.NO_LIMITS;
         }
-        return new PathLimits(String.join("/", subList));
+
+        String newPath = "/" + String.join("/", subList);
+        return new PathLimits(newPath);
     }
 
     @Override
@@ -137,6 +148,7 @@ public class PathLimits implements Limits {
     }
 
     public Limits copy() {
-        return new PathLimits(String.join("/", path));
+        String newPath = "/" + String.join("/", path);
+        return new PathLimits(newPath);
     }
 }
