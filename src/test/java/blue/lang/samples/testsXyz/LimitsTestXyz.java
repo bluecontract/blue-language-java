@@ -30,7 +30,7 @@ public class LimitsTestXyz {
 
         print(node);
 
-         assertNotNull(node.getBlueId());
+        assertNotNull(node.getBlueId());
     }
 
     @Test
@@ -114,7 +114,7 @@ public class LimitsTestXyz {
 
         print(node);
 
-        // assertNotNull(node.getBlueId());
+        assertNotNull(node.getName());
     }
 
     @Test
@@ -123,7 +123,7 @@ public class LimitsTestXyz {
 
         print(node);
 
-        // assertNotNull(node.getBlueId());
+        assertNotNull(node.getName());
     }
 
     @Test
@@ -132,7 +132,7 @@ public class LimitsTestXyz {
 
         print(node);
 
-        // assertNotNull(node.getBlueId());
+        assertNotNull(node.getName());
     }
 
     private Node resolve(Limits limits) throws IOException {
