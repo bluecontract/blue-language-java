@@ -246,10 +246,8 @@ public class LimitsTest {
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
-                        new NamePropagator(),
                         new ValuePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
+                        new TypeAssigner()
                 )
         );
 

@@ -34,10 +34,8 @@ public class ListItemsTypeCheckerTest {
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
-                        new NamePropagator(),
                         new TypeAssigner(),
-                        new ListItemsTypeChecker(types),
-                        new NameToNullOnTypeMatchTransformer()
+                        new ListItemsTypeChecker(types)
                 )
         );
 
@@ -71,10 +69,8 @@ public class ListItemsTypeCheckerTest {
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
-                        new NamePropagator(),
                         new TypeAssigner(),
-                        new ListItemsTypeChecker(types),
-                        new NameToNullOnTypeMatchTransformer()
+                        new ListItemsTypeChecker(types)
                 )
         );
 

@@ -22,7 +22,7 @@ pets:
 
   - name: Fido
     age: 5
-    weightKg: 20.0
+    weightKg: 21.2
     favouriteToys:
       - name: Rubber Ball
         type: FETCH_TOY

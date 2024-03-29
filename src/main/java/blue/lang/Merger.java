@@ -88,6 +88,8 @@ public class Merger implements NodeResolver {
             resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
         } else {
             merge(resultNode, node, limits);
+            resultNode.name(node.getName());
+            resultNode.description(node.getDescription());
         }
 
         return resultNode;

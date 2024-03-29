@@ -6,7 +6,6 @@ import blue.lang.utils.BasicNodesProvider;
 import blue.lang.utils.DirectoryBasedNodeProvider;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +15,7 @@ import java.util.stream.Stream;
 import static blue.lang.TestUtils.samplesDirectoryNodeProvider;
 import static blue.lang.utils.BlueIdCalculator.calculateBlueId;
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TypeAssignerTest {
 
@@ -42,9 +41,7 @@ public class TypeAssignerTest {
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
-                        new NamePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
+                        new TypeAssigner()
                 )
         );
 
@@ -77,9 +74,7 @@ public class TypeAssignerTest {
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
-                        new NamePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
+                        new TypeAssigner()
                 )
         );
 
@@ -130,9 +125,7 @@ public class TypeAssignerTest {
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
-                        new NamePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
+                        new TypeAssigner()
                 )
         );
 
@@ -150,10 +143,8 @@ public class TypeAssignerTest {
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new BlueIdResolver(),
-                        new NamePropagator(),
                         new ValuePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
+                        new TypeAssigner()
                 )
         );
 

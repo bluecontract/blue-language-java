@@ -41,9 +41,7 @@ public class Blue implements NodeResolver {
                 Arrays.asList(
                         new BlueIdResolver(),
                         new ValuePropagator(),
-                        new NamePropagator(),
-                        new TypeAssigner(),
-                        new NameToNullOnTypeMatchTransformer()
+                        new TypeAssigner()
                 )
         );
     }
