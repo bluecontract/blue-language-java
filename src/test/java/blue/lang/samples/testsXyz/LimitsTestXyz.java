@@ -100,10 +100,12 @@ public class LimitsTestXyz {
     @Test
     public void testCZeroStar() throws Exception {
         Node node = resolve(Limits.path("/c/0/*"));
-//        Node node = resolve(Limits.depth(4));
         print(node);
 
-        // assertNotNull(node.getBlueId());
+        assertNotNull(node.getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getBlueId());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getBlueId());
     }
 
     @Test
@@ -118,6 +120,15 @@ public class LimitsTestXyz {
     @Test
     public void testC1StarStar() throws Exception {
         Node node = resolve(Limits.path("/c/1/*/*"));
+
+        print(node);
+
+        // assertNotNull(node.getBlueId());
+    }
+
+    @Test
+    public void testNoLimits() throws Exception {
+        Node node = resolve(Limits.NO_LIMITS);
 
         print(node);
 
