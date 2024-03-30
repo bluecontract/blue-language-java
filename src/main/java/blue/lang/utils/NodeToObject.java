@@ -3,10 +3,11 @@ package blue.lang.utils;
 import blue.lang.Node;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.lang.utils.NodeToObject.Strategy.SINGLE_VALUE;
+import static blue.lang.utils.NodeToObject.Strategy.DOMAIN_MAPPING;
 import static blue.lang.utils.NodeToObject.Strategy.STANDARD;
 import static blue.lang.utils.Properties.*;
 
@@ -14,7 +15,7 @@ public class NodeToObject {
 
     public enum Strategy {
         STANDARD,
-        SINGLE_VALUE
+        DOMAIN_MAPPING
     }
 
     public static Object get(Node node) {
@@ -23,13 +24,15 @@ public class NodeToObject {
 
     public static Object get(Node node, Strategy strategy) {
 
-        if (node.getValue() != null && strategy == SINGLE_VALUE)
+        if (node.getValue() != null && strategy == DOMAIN_MAPPING)
             return node.getValue();
 
-        if (node.getItems() != null)
-            return node.getItems().stream()
-                    .map(item -> get(item, strategy))
-                    .collect(Collectors.toList());
+        List<Object> items = node.getItems() == null ? null :
+                node.getItems().stream()
+                        .map(item -> get(item, strategy))
+                        .collect(Collectors.toList());
+        if (items != null && strategy == DOMAIN_MAPPING)
+            return items;
 
         Map<String, Object> result = new LinkedHashMap<>();
         if (node.getName() != null)
@@ -40,6 +43,8 @@ public class NodeToObject {
             result.put(OBJECT_TYPE, get(node.getType()));
         if (node.getValue() != null)
             result.put(OBJECT_VALUE, node.getValue());
+        if (items != null)
+            result.put(OBJECT_ITEMS, items);
         if (node.getRef() != null)
             result.put(OBJECT_REF, node.getRef());
         if (node.getBlueId() != null)

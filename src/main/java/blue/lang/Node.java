@@ -175,4 +175,17 @@ public class Node implements Cloneable {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Node{" +
+                "name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", type=" + type +
+                ", value=" + value +
+                ", items=" + items +
+                ", properties=" + properties +
+                ", ref='" + ref + '\'' +
+                ", blueId='" + blueId + '\'' +
+                '}';
+    }
 }

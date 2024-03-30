@@ -2,13 +2,13 @@ package blue.lang;
 
 import blue.lang.model.limits.Limits;
 import blue.lang.utils.BlueIdCalculator;
-import blue.lang.utils.NodeToObject;
 import blue.lang.utils.Nodes;
+import com.sun.org.apache.bcel.internal.generic.ACONST_NULL;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Merger implements NodeResolver {
 
@@ -52,18 +52,29 @@ public class Merger implements NodeResolver {
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
         List<Node> targetChildren = target.getItems();
         if (targetChildren == null) {
-            targetChildren = new ArrayList<>();
-            for (int i = 0; i < sourceChildren.size(); i++)
-                targetChildren.add(new Node());
+            Limits limitsCopy = limits.copy();
+            targetChildren = sourceChildren.stream()
+                    .map(child -> resolve(child, limits))
+                    .collect(Collectors.toList());
             target.items(targetChildren);
-        } else if (sourceChildren.size() != targetChildren.size())
-            throw new IllegalArgumentException("Cannot merge two lists with different items size.");
+        } else if (sourceChildren.size() < targetChildren.size())
+            throw new IllegalArgumentException(String.format(
+                    "Subtype of element must not have more items (%d) than the element itself (%d).",
+                    targetChildren.size(), sourceChildren.size()
+            ));
 
-        Limits limitsCopy = limits.copy();
         for (int i = 0; i < sourceChildren.size(); i++) {
-            if (limits.canReadIndex(i)) {
-                merge(targetChildren.get(i), sourceChildren.get(i), limitsCopy.next(false));
+            if (i >= targetChildren.size()) {
+                targetChildren.add(sourceChildren.get(i));
+                continue;
             }
+            String sourceBlueId = BlueIdCalculator.calculateBlueId(sourceChildren.get(i));
+            String targetBlueId = BlueIdCalculator.calculateBlueId(targetChildren.get(i));
+            if (!sourceBlueId.equals(targetBlueId))
+                throw new IllegalArgumentException(String.format(
+                        "Mismatched items at index %d: source item has blueId '%s', but target item has blueId '%s'.",
+                        i, sourceBlueId, targetBlueId
+                ));
         }
         target.getItems().removeIf(Nodes::isEmptyNode);
     }
