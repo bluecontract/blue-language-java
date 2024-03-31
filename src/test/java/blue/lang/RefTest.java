@@ -46,7 +46,7 @@ public class RefTest {
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = new Node();
-        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y").get(0));
 
         // TODO: implement referencing
 //        assertEquals("enriched-should-go-as-ref", node.getProperties().get("a").getValue());
@@ -79,7 +79,7 @@ public class RefTest {
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = new Node();
-        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y").get(0));
 
         assertEquals("enriched-should-go-as-ref", node.getProperties().get("a").getValue());
     }
@@ -112,7 +112,7 @@ public class RefTest {
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = new Node();
-        merger.merge(node, nodeProvider.fetchByBlueId("Y"));
+        merger.merge(node, nodeProvider.fetchByBlueId("Y").get(0));
 
         assertEquals("should-not-go-as-ref", node.getProperties().get("a").getValue());
     }

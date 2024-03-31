@@ -22,6 +22,13 @@ public class BlueIdCalculator {
         return BlueIdCalculator.INSTANCE.calculate(NodeToObject.get(node));
     }
 
+    public static String calculateBlueId(List<Node> nodes) {
+        List<Object> objects = nodes.stream()
+                .map(NodeToObject::get)
+                .collect(Collectors.toList());
+        return BlueIdCalculator.INSTANCE.calculate(objects);
+    }
+
     public String calculate(Object object) {
         if (object instanceof String || object instanceof Number || object instanceof Boolean) {
             return hashProvider.apply(object.toString());

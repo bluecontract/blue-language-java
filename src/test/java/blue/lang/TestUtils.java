@@ -3,6 +3,7 @@ package blue.lang;
 import blue.lang.utils.DirectoryBasedNodeProvider;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 public class TestUtils {
@@ -16,6 +17,7 @@ public class TestUtils {
                 .filter(e -> blueId.equals(e.getName()))
                 .findAny()
                 .map(Node::clone)
+                .map(Collections::singletonList)
                 .orElse(null);
     }
 

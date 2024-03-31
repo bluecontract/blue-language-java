@@ -14,7 +14,7 @@ public class SequentialNodeProvider implements NodeProvider {
     }
 
     @Override
-    public Node fetchByBlueId(String blueId) {
+    public List<Node> fetchByBlueId(String blueId) {
         return nodeProviders.stream()
                 .map(provider -> provider.fetchByBlueId(blueId))
                 .filter(Objects::nonNull)

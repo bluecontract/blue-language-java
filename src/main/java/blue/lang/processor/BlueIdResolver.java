@@ -5,6 +5,8 @@ import blue.lang.MergingProcessor;
 import blue.lang.NodeProvider;
 import blue.lang.NodeResolver;
 
+import java.util.List;
+
 public class BlueIdResolver implements MergingProcessor {
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
@@ -12,17 +14,25 @@ public class BlueIdResolver implements MergingProcessor {
         if (blueId == null)
             return;
 
-        Node resolved = nodeProvider.fetchByBlueId(blueId);
+        List<Node> resolved = nodeProvider.fetchByBlueId(blueId);
         if (resolved == null) {
             target.blueId(blueId);
             return;
         }
 
-        source.blueId(null)
-                .name(resolved.getName())
-                .type(resolved.getType())
-                .value(resolved.getValue())
-                .items(resolved.getItems())
-                .properties(resolved.getProperties());
+        if (resolved.size() == 1) {
+            Node element = resolved.get(0);
+            source.blueId(null)
+                    .name(element.getName())
+                    .type(element.getType())
+                    .value(element.getValue())
+                    .items(element.getItems())
+                    .properties(element.getProperties());
+        } else {
+            source.blueId(null)
+                    .items(resolved);
+        }
+
+
     }
 }

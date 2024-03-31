@@ -57,6 +57,7 @@ public class Merger implements NodeResolver {
                     .map(child -> resolve(child, limits))
                     .collect(Collectors.toList());
             target.items(targetChildren);
+            return;
         } else if (sourceChildren.size() < targetChildren.size())
             throw new IllegalArgumentException(String.format(
                     "Subtype of element must not have more items (%d) than the element itself (%d).",

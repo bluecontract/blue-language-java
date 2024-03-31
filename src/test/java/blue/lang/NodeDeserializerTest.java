@@ -7,6 +7,7 @@ import java.math.BigInteger;
 
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class NodeDeserializerTest {
 
@@ -98,6 +99,36 @@ public class NodeDeserializerTest {
 
         assertEquals(2, node.getProperties().get("props1").getItems().size());
         assertEquals(2, node.getProperties().get("props2").getItems().size());
+    }
+
+    @Test
+    public void testText() throws Exception {
+        String doc = "abc";
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+        assertEquals("abc", node.getValue());
+    }
+
+    @Test
+    public void testList() throws Exception {
+        String doc = "- A\n" +
+                "- B";
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+        assertEquals(2, node.getItems().size());
+    }
+
+    @Test
+    public void testItemsAsBlueId() throws Exception {
+        String doc = "name: Abc\n" +
+                "items: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getItems().get(0).getBlueId());
+    }
+
+    @Test
+    public void testItemsAsBlueIdThrowIfNotBlueId() throws Exception {
+        String doc = "name: Abc\n" +
+                "items: illegal";
+        assertThrows(IllegalArgumentException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
     }
 
 }

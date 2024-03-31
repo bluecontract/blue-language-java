@@ -42,7 +42,7 @@ public class ListItemsTypeCheckerTest {
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = new Node();
-        merger.merge(node, nodeProvider.fetchByBlueId("Y"), Limits.NO_LIMITS);
+        merger.merge(node, nodeProvider.fetchByBlueId("Y").get(0), Limits.NO_LIMITS);
 
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
@@ -79,7 +79,7 @@ public class ListItemsTypeCheckerTest {
         Node node = new Node();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            merger.merge(node, nodeProvider.fetchByBlueId("Y"), Limits.NO_LIMITS);
+            merger.merge(node, nodeProvider.fetchByBlueId("Y").get(0), Limits.NO_LIMITS);
         });
     }
 

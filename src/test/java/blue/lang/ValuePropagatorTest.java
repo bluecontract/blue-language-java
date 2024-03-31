@@ -39,7 +39,7 @@ public class ValuePropagatorTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("B"))));
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("B"))).get(0));
 
         assertEquals("xyz", node.getValue());
     }
@@ -68,7 +68,7 @@ public class ValuePropagatorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
 
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("B")))));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("B"))).get(0)));
     }
 
 }

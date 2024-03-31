@@ -1,13 +1,11 @@
 package blue.lang;
 
-import blue.lang.utils.BlueIdCalculator;
-
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static blue.lang.utils.BlueIdCalculator.calculateBlueId;
-import static blue.lang.utils.Properties.*;
+import static blue.lang.utils.Properties.BASIC_TYPES;
 
 public class Types {
 
@@ -36,11 +34,22 @@ public class Types {
 
     private static Node getType(Node node, NodeProvider nodeProvider) {
         Node type = node.getType();
-        if (type == null)
+        if (type == null) {
             return null;
+        }
 
-        if (type.getBlueId() != null)
-            return nodeProvider.fetchByBlueId(type.getBlueId());
+        if (type.getBlueId() != null) {
+            List<Node> typeNodes = nodeProvider.fetchByBlueId(type.getBlueId());
+            if (typeNodes == null || typeNodes.isEmpty())
+                return null;
+            if (typeNodes.size() > 1)
+                throw new IllegalStateException(String.format(
+                        "Expected a single node for type with blueId '%s', but found multiple.",
+                        type.getBlueId()
+                ));
+            return typeNodes.get(0);
+        }
+        
         return type;
     }
 

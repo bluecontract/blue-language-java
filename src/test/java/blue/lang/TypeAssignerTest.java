@@ -47,7 +47,7 @@ public class TypeAssignerTest {
 
         BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
 
         assertEquals("C", node.getProperties().get("a").getType().getName());
     }
@@ -80,7 +80,7 @@ public class TypeAssignerTest {
 
         BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
 
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
@@ -130,7 +130,7 @@ public class TypeAssignerTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))));
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
 
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
@@ -152,6 +152,7 @@ public class TypeAssignerTest {
         Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
 
         Node node = merger.resolve(source);
+        System.out.println(YAML_MAPPER.writeValueAsString(node));
 
         assertEquals("+1234567890", node.getProperties().get("details")
                 .getProperties().get("customerSupport")

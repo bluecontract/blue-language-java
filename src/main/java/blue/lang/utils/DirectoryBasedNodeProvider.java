@@ -8,16 +8,14 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static blue.lang.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static java.util.Collections.singletonList;
 
 public class DirectoryBasedNodeProvider implements NodeProvider {
 
@@ -56,9 +54,11 @@ public class DirectoryBasedNodeProvider implements NodeProvider {
     }
 
     @Override
-    public Node fetchByBlueId(String blueId) {
-        Optional<Node> result = Optional.ofNullable(blueIdToNodeMap.get(blueId));
-        return result.map(Node::clone).orElse(null);
+    public List<Node> fetchByBlueId(String blueId) {
+        Node node = blueIdToNodeMap.get(blueId);
+        if (node == null)
+            return null;
+        return singletonList(node.clone());
     }
 
     public List<Node> getNodes() {
