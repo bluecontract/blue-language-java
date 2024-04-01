@@ -1,2 +1,2 @@
-rootProject.name = "blue-java-lang"
+rootProject.name = "blue-language-java"
 
