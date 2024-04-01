@@ -1,7 +1,7 @@
 package blue.language.samples.serialization;
 
 import blue.language.Blue;
-import blue.language.Node;
+import blue.language.model.Node;
 import blue.language.TestUtils;
 import blue.language.model.limits.Limits;
 import blue.language.utils.BlueIdCalculator;

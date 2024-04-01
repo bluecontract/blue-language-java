@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.model.Node;
 import blue.language.utils.BasicNodesProvider;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static blue.language.TestUtils.useNodeNameAsBlueIdProvider;
-import static blue.language.Types.isSubtype;
+import static blue.language.utils.Types.isSubtype;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

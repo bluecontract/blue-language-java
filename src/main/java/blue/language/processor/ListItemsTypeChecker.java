@@ -1,10 +1,12 @@
 package blue.language.processor;
 
 import blue.language.*;
+import blue.language.model.Node;
+import blue.language.utils.Types;
 
 import java.util.List;
 
-import static blue.language.Types.isSubtype;
+import static blue.language.utils.Types.isSubtype;
 
 public class ListItemsTypeChecker implements MergingProcessor {
 

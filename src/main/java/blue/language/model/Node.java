@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -8,7 +8,7 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static blue.language.Types.isBasicType;
+import static blue.language.utils.Types.isBasicType;
 
 @JsonDeserialize(using = NodeDeserializer.class)
 public class Node implements Cloneable {
@@ -23,6 +23,7 @@ public class Node implements Cloneable {
     private Map<String, Node> properties;
     private String ref;
     private String blueId;
+    private Constraints constraints;
     @JsonIgnore
     private List<Feature> features;
 
@@ -56,6 +57,10 @@ public class Node implements Cloneable {
 
     public String getBlueId() {
         return blueId;
+    }
+
+    public Constraints getConstraints() {
+        return constraints;
     }
 
     public List<Feature> getFeatures() {
@@ -148,6 +153,11 @@ public class Node implements Cloneable {
         return this;
     }
 
+    public Node constraints(Constraints constraints) {
+        this.constraints = constraints;
+        return this;
+    }
+
     public Node features(List<Feature> features) {
         this.features = features;
         return this;
@@ -186,6 +196,7 @@ public class Node implements Cloneable {
                 ", properties=" + properties +
                 ", ref='" + ref + '\'' +
                 ", blueId='" + blueId + '\'' +
+                ", constraints=" + constraints +
                 '}';
     }
 }

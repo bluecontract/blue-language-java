@@ -1,8 +1,13 @@
 package blue.language;
 
+import blue.language.model.Constraints;
+import blue.language.model.Node;
 import blue.language.utils.NodeToObject;
+import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
@@ -176,6 +181,51 @@ public class NodeToObjectTest {
         assertEquals(2, fourthItemList.size());
         assertEquals("y1", fourthItemList.get(0));
         assertEquals("y2", fourthItemList.get(1));
+    }
+
+    @Test
+    public void testNodeWithConstraintsMappingStrategy() throws Exception {
+        Constraints constraints = new Constraints()
+                .required(true)
+                .allowMultiple(false)
+                .minLength(5)
+                .maxLength(10)
+                .pattern("^[a-z]+$")
+                .minimum(new BigDecimal("1.0"))
+                .maximum(new BigDecimal("100.0"))
+                .exclusiveMinimum(new BigDecimal("0.0"))
+                .exclusiveMaximum(new BigDecimal("101.0"))
+                .multipleOf(new BigDecimal("2.0"))
+                .minItems(1)
+                .maxItems(5)
+                .uniqueItems(true);
+
+        Node node = new Node()
+                .name("nameA")
+                .description("descriptionA")
+                .constraints(constraints);
+
+        Object object = NodeToObject.get(node);
+        assertInstanceOf(Map.class, object);
+        Map<?, ?> result = (Map<?, ?>) object;
+
+        Object constraintsObject = result.get(Properties.OBJECT_CONSTRAINTS);
+        assertInstanceOf(Map.class, constraintsObject);
+        Map<?, ?> constraintsMap = (Map<?, ?>) constraintsObject;
+
+        assertEquals(true, constraintsMap.get("required"));
+        assertEquals(false, constraintsMap.get("allowMultiple"));
+        assertEquals(new BigInteger("5"), constraintsMap.get("minLength"));
+        assertEquals(new BigInteger("10"), constraintsMap.get("maxLength"));
+        assertEquals("^[a-z]+$", constraintsMap.get("pattern"));
+        assertEquals(new BigDecimal("1.0"), constraintsMap.get("minimum"));
+        assertEquals(new BigDecimal("100.0"), constraintsMap.get("maximum"));
+        assertEquals(new BigDecimal("0.0"), constraintsMap.get("exclusiveMinimum"));
+        assertEquals(new BigDecimal("101.0"), constraintsMap.get("exclusiveMaximum"));
+        assertEquals(new BigDecimal("2.0"), constraintsMap.get("multipleOf"));
+        assertEquals(new BigInteger("1"), constraintsMap.get("minItems"));
+        assertEquals(new BigInteger("5"), constraintsMap.get("maxItems"));
+        assertEquals(true, constraintsMap.get("uniqueItems"));
     }
     
 }

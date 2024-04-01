@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.model.Node;
 import blue.language.processor.ExclusiveItemsOrValueChecker;
 import org.junit.jupiter.api.Test;
 

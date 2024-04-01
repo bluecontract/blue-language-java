@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.*;
+import blue.language.model.Feature;
+import blue.language.model.Node;
 import blue.language.utils.Features;
 import blue.language.utils.Nodes;
 import blue.language.feature.InlineValueFeature;

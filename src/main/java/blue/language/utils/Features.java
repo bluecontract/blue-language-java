@@ -1,7 +1,7 @@
 package blue.language.utils;
 
-import blue.language.Node;
-import blue.language.Feature;
+import blue.language.model.Node;
+import blue.language.model.Feature;
 
 public class Features {
 

@@ -1,4 +1,7 @@
-package blue.language;
+package blue.language.utils;
+
+import blue.language.NodeProvider;
+import blue.language.model.Node;
 
 import java.util.List;
 import java.util.Map;

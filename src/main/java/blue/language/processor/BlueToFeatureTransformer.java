@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.NodeProvider;
-import blue.language.Node;
+import blue.language.model.Node;
 import blue.language.MergingProcessor;
 import blue.language.NodeResolver;
 import blue.language.feature.BlueprintFeature;

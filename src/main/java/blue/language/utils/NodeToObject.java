@@ -1,6 +1,7 @@
 package blue.language.utils;
 
-import blue.language.Node;
+import blue.language.model.Node;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.stream.Collectors;
 import static blue.language.utils.NodeToObject.Strategy.DOMAIN_MAPPING;
 import static blue.language.utils.NodeToObject.Strategy.STANDARD;
 import static blue.language.utils.Properties.*;
+import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class NodeToObject {
 
@@ -49,6 +51,8 @@ public class NodeToObject {
             result.put(OBJECT_REF, node.getRef());
         if (node.getBlueId() != null)
             result.put(OBJECT_BLUE_ID, node.getBlueId());
+        if (node.getConstraints() != null)
+            result.put(OBJECT_CONSTRAINTS, YAML_MAPPER.convertValue(node.getConstraints(), new TypeReference<Map<String, Object>>() {}));
         if (node.getProperties() != null)
             node.getProperties().forEach((key, value) -> result.put(key, get(value, strategy)));
         return result;

@@ -1,6 +1,7 @@
-package blue.language;
+package blue.language.model;
 
 import blue.language.utils.BlueId;
+import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -58,6 +59,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                     case OBJECT_ITEMS:
                         obj.items(handleArray(value).getItems());
                         break;
+                    case OBJECT_CONSTRAINTS:
+                        obj.constraints(handleConstraints(value));
+                        break;
                     default:
                         properties.put(key, handleNode(value));
                         break;
@@ -108,6 +112,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             return new Node().items(result);
         } else
             throw new IllegalArgumentException("The 'items' field must be an array or a blueId.");
+    }
+
+    private Constraints handleConstraints(JsonNode constraintsNode) {
+        return UncheckedObjectMapper.YAML_MAPPER.convertValue(constraintsNode, Constraints.class);
     }
 
 }

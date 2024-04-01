@@ -1,6 +1,6 @@
 package blue.language.feature;
 
-import blue.language.Feature;
+import blue.language.model.Feature;
 
 import java.util.Map;
 

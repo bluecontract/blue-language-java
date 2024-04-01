@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.model.Node;
 import blue.language.model.limits.Limits;
 
 public interface NodeResolver {

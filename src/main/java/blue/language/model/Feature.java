@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.model;
 
 public interface Feature {
 }

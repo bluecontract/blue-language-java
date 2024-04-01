@@ -1,6 +1,6 @@
 package blue.language.samples.ipfs;
 
-import blue.language.Node;
+import blue.language.model.Node;
 import blue.language.utils.JsonCanonicalizer;
 
 import java.util.Map;

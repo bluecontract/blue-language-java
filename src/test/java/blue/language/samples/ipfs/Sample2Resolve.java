@@ -1,6 +1,7 @@
 package blue.language.samples.ipfs;
 
 import blue.language.*;
+import blue.language.model.Node;
 import blue.language.utils.NodeToObject;
 
 import java.io.IOException;

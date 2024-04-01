@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.model.Node;
 import blue.language.model.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
@@ -104,6 +105,7 @@ public class Merger implements NodeResolver {
             merge(resultNode, node, limits);
             resultNode.name(node.getName());
             resultNode.description(node.getDescription());
+            resultNode.constraints(node.getConstraints());
         }
 
         return resultNode;

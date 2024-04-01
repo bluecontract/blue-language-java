@@ -1,6 +1,6 @@
 package blue.language.utils;
 
-import blue.language.Node;
+import blue.language.model.Node;
 
 import java.util.*;
 import java.util.function.Function;

@@ -1,7 +1,7 @@
 package blue.language.samples.ipfs;
 
 import blue.language.Blue;
-import blue.language.Node;
+import blue.language.model.Node;
 import blue.language.utils.NodeToObject;
 
 import java.io.File;

@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.model.Node;
 import blue.language.processor.SequentialMergingProcessor;
 import blue.language.processor.ValuePropagator;
 import blue.language.utils.BasicNodesProvider;

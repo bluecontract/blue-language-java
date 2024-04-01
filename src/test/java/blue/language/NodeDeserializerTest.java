@@ -1,13 +1,14 @@
 package blue.language;
 
+import blue.language.model.Constraints;
+import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class NodeDeserializerTest {
 
@@ -129,6 +130,50 @@ public class NodeDeserializerTest {
         String doc = "name: Abc\n" +
                 "items: illegal";
         assertThrows(IllegalArgumentException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
+    }
+
+
+    @Test
+    public void testConstraints() throws Exception {
+        String doc = "name: name\n" +
+                "constraints:\n" +
+                "  required: true\n" +
+                "  allowMultiple: false\n" +
+                "  minLength: 5\n" +
+                "  maxLength: 10\n" +
+                "  pattern: \"^[a-z]+$\"\n" +
+                "  minimum: 1.01\n" +
+                "  maximum: 100.01\n" +
+                "  exclusiveMinimum: 0.01\n" +
+                "  exclusiveMaximum: 101.01\n" +
+                "  multipleOf: 2.01\n" +
+                "  minItems: 1\n" +
+                "  maxItems: 5\n" +
+                "  uniqueItems: true\n" +
+                "  options:\n" +
+                "    - blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                "    - name: name2\n" +
+                "      description: description2";
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        Constraints constraints = node.getConstraints();
+        assertTrue(constraints.getRequired());
+        assertEquals(false, constraints.getAllowMultiple());
+        assertEquals((Integer) 5, constraints.getMinLength());
+        assertEquals((Integer) 10, constraints.getMaxLength());
+        assertEquals("^[a-z]+$", constraints.getPattern());
+        assertEquals(new BigDecimal("1.01"), constraints.getMinimum());
+        assertEquals(new BigDecimal("100.01"), constraints.getMaximum());
+        assertEquals(new BigDecimal("0.01"), constraints.getExclusiveMinimum());
+        assertEquals(new BigDecimal("101.01"), constraints.getExclusiveMaximum());
+        assertEquals(new BigDecimal("2.01"), constraints.getMultipleOf());
+        assertEquals((Integer) 1, constraints.getMinItems());
+        assertEquals((Integer) 5, constraints.getMaxItems());
+        assertEquals(true, constraints.getUniqueItems());
+        assertEquals(2, constraints.getOptions().size());
+        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", constraints.getOptions().get(0).getBlueId());
+        assertEquals("name2", constraints.getOptions().get(1).getName());
+        assertEquals("description2", constraints.getOptions().get(1).getDescription());
     }
 
 }
