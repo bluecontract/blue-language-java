@@ -4,8 +4,10 @@ import blue.language.model.Node;
 import blue.language.utils.DirectoryBasedNodeProvider;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TestUtils {
 
@@ -32,6 +34,13 @@ public class TestUtils {
                 throw new IllegalArgumentException("targetValue > sourceValue, " + targetValue + ", " + sourceValue);
             target.value(sourceValue);
         };
+    }
+
+    public static String indent(String input, int spaces) {
+        String indentation = new String(new char[spaces]).replace('\0', ' ');
+        return Arrays.stream(input.split("\n"))
+                .map(line -> indentation + line)
+                .collect(Collectors.joining("\n"));
     }
 
 }

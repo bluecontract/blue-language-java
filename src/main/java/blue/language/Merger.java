@@ -2,6 +2,7 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.model.limits.Limits;
+import blue.language.processor.ConstraintsVerifier;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
 
@@ -47,6 +48,8 @@ public class Merger implements NodeResolver {
         Map<String, Node> properties = source.getProperties();
         if (properties != null)
             properties.forEach((key, value) -> mergeProperty(target, key, value, limits));
+
+        new ConstraintsVerifier().process(target, source, nodeProvider, this);
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
@@ -105,7 +108,6 @@ public class Merger implements NodeResolver {
             merge(resultNode, node, limits);
             resultNode.name(node.getName());
             resultNode.description(node.getDescription());
-            resultNode.constraints(node.getConstraints());
         }
 
         return resultNode;

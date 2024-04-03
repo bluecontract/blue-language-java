@@ -5,27 +5,43 @@ import blue.language.NodeProvider;
 import blue.language.NodeResolver;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
+import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.NodeToObject;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static java.lang.Boolean.TRUE;
 
 public class ConstraintsVerifier implements MergingProcessor {
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        Constraints constraints = source.getConstraints();
+        Constraints constraints = target.getConstraints();
         if (constraints == null)
             return;
 
-        verifyRequired(constraints.getRequired(), target.getValue());
-        verifyAllowMultiple(constraints.getAllowMultiple(), target.getItems());
-        verifyMinLength(constraints.getMinLength(), target.getValue());
-        verifyMaxLength(constraints.getMaxLength(), target.getValue());
-        verifyPattern(constraints.getPattern(), target.getValue());
+        verifyRequired(constraints.getRequiredValue(), target.getValue());
+        verifyAllowMultiple(constraints.getAllowMultipleValue(), target.getItems());
+        verifyMinLength(constraints.getMinLengthValue(), target.getValue());
+        verifyMaxLength(constraints.getMaxLengthValue(), target.getValue());
+        verifyPattern(constraints.getPatternValue(), target.getValue());
+        verifyMinimum(constraints.getMinimumValue(), target.getValue());
+        verifyMaximum(constraints.getMaximumValue(), target.getValue());
+        verifyExclusiveMinimum(constraints.getExclusiveMinimumValue(), target.getValue());
+        verifyExclusiveMaximum(constraints.getExclusiveMaximumValue(), target.getValue());
+        verifyMultipleOf(constraints.getMultipleOfValue(), target.getValue());
+        verifyMinItems(constraints.getMinItemsValue(), target.getItems());
+        verifyMaxItems(constraints.getMaxItemsValue(), target.getItems());
+        verifyUniqueItems(constraints.getUniqueItemsValue(), target.getItems());
+        verifyOptions(constraints.getOptions(), target);
     }
 
     private void verifyRequired(Boolean required, Object value) {
-        if (Boolean.TRUE.equals(required) && value == null)
+        if (TRUE.equals(required) && value == null)
             throw new IllegalArgumentException("Value is required but is null.");
     }
 
@@ -51,6 +67,81 @@ public class ConstraintsVerifier implements MergingProcessor {
                 throw new IllegalArgumentException("Value does not match the required pattern.");
             }
         }
+    }
+
+    private void verifyMinimum(BigDecimal minimum, Object value) {
+        if (minimum != null && value instanceof Number) {
+            BigDecimal valueDecimal = new BigDecimal(value.toString());
+            if (valueDecimal.compareTo(minimum) < 0) {
+                throw new IllegalArgumentException("Value is less than the minimum value of " + minimum + ".");
+            }
+        }
+    }
+
+    private void verifyMaximum(BigDecimal maximum, Object value) {
+        if (maximum != null && value instanceof Number) {
+            BigDecimal valueDecimal = new BigDecimal(value.toString());
+            if (valueDecimal.compareTo(maximum) > 0) {
+                throw new IllegalArgumentException("Value is greater than the maximum value of " + maximum + ".");
+            }
+        }
+    }
+
+    private void verifyExclusiveMinimum(BigDecimal exclusiveMinimum, Object value) {
+        if (exclusiveMinimum != null && value instanceof Number) {
+            BigDecimal valueDecimal = new BigDecimal(value.toString());
+            if (valueDecimal.compareTo(exclusiveMinimum) <= 0) {
+                throw new IllegalArgumentException("Value is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
+            }
+        }
+    }
+
+    private void verifyExclusiveMaximum(BigDecimal exclusiveMaximum, Object value) {
+        if (exclusiveMaximum != null && value instanceof Number) {
+            BigDecimal valueDecimal = new BigDecimal(value.toString());
+            if (valueDecimal.compareTo(exclusiveMaximum) >= 0) {
+                throw new IllegalArgumentException("Value is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
+            }
+        }
+    }
+
+    private void verifyMultipleOf(BigDecimal multipleOf, Object value) {
+        if (multipleOf != null && value instanceof Number) {
+            BigDecimal valueDecimal = new BigDecimal(value.toString());
+            BigDecimal remainder = valueDecimal.remainder(multipleOf);
+            if (remainder.compareTo(BigDecimal.ZERO) != 0) {
+                throw new IllegalArgumentException("Value is not a multiple of " + multipleOf + ".");
+            }
+        }
+    }
+
+    private void verifyMinItems(Integer minItems, List<Node> items) {
+        if (minItems != null && (items == null || items.size() < minItems)) {
+            throw new IllegalArgumentException("Number of items is less than the minimum required items of " + minItems + ".");
+        }
+    }
+
+    private void verifyMaxItems(Integer maxItems, List<Node> items) {
+        if (maxItems != null && items != null && items.size() > maxItems) {
+            throw new IllegalArgumentException("Number of items is greater than the maximum allowed items of " + maxItems + ".");
+        }
+    }
+
+    private void verifyUniqueItems(Boolean uniqueItems, List<Node> items) {
+        if (Boolean.TRUE.equals(uniqueItems) && items != null) {
+            int uniqueItemsCount = items.stream()
+                    .map(NodeToObject::get)
+                    .map(doc -> YAML_MAPPER.convertValue(doc, Node.class))
+                    .map(BlueIdCalculator::calculateBlueId)
+                    .collect(Collectors.toSet())
+                    .size();
+            if (items.size() != uniqueItemsCount)
+                throw new IllegalArgumentException("Unique items are required, but some items are identical.");
+        }
+    }
+
+    private void verifyOptions(List<Node> options, Node node) {
+        // TODO: if node has a value, options should reflect it; if it's an object
     }
 
 }

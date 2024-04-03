@@ -52,10 +52,10 @@ public class ValuePropagatorTest {
                 "value: xyz";
 
         String b = "name: B\n" +
-                "value: xyz\n" +
+                "value: abc\n" +
                 "type:\n" +
                 "  name: A\n" +
-                "  value: abc";
+                "  value: xyz";
 
         Map<String, Node> nodes = Stream.of(a, b)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
