@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class LimitsTestXyz {
 
-    private static final boolean PRINT = true;
+    private static final boolean PRINT = false;
 
     @Test
     public void testSlash() throws Exception {
@@ -104,17 +104,26 @@ public class LimitsTestXyz {
 
         assertNotNull(node.getName());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getName());
-        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getBlueId());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getName());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getBlueId());
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            node.getProperties().get("c").getItems().get(1);
+        });
     }
 
     @Test
     public void testCStarStar() throws Exception {
         Node node = resolve(Limits.path("/c/*/*"));
-
         print(node);
 
         assertNotNull(node.getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getBlueId());
+        assertNotNull(node.getProperties().get("c").getItems().get(1).getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(1).getType().getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(1).getProperties().get("price").getBlueId());
+
     }
 
     @Test
@@ -124,6 +133,13 @@ public class LimitsTestXyz {
         print(node);
 
         assertNotNull(node.getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getBlueId());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("details").getProperties().get("specification").getBlueId());
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            node.getProperties().get("c").getItems().get(1);
+        });
     }
 
     @Test
