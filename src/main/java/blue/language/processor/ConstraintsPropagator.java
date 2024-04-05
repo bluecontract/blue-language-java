@@ -5,8 +5,10 @@ import blue.language.NodeProvider;
 import blue.language.NodeResolver;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
+import blue.language.utils.LCM;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -120,8 +122,7 @@ public class ConstraintsPropagator implements MergingProcessor {
         BigDecimal sourceMultipleOf = source.getMultipleOfValue();
         BigDecimal targetMultipleOf = target.getMultipleOfValue();
         if (sourceMultipleOf != null && targetMultipleOf != null) {
-            // TODO: implement - it should store both values - if source has 6 and target has 4,
-            //  and value will be 12, than it will meet both of them
+            target.multipleOf(LCM.lcm(targetMultipleOf, sourceMultipleOf));
         } else if (sourceMultipleOf != null) {
             target.multipleOf(sourceMultipleOf);
         }
