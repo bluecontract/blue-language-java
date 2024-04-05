@@ -1,0 +1,35 @@
+name: Xyz
+a:
+  name: Xyz2
+  description: Abc
+  a1:
+    a11: 1
+    a12: 2
+  a2: 3
+b: 4
+c:
+  - name: iPhone8
+    type:
+      name: Product
+      blueId: 3oSR8HzfzSsRTqD42mrjU9SfKcZZBaXTocH9rv2veXTx
+    price:
+      type:
+        blueId: Dz6mgfcLjf6nwRP4MZYj4NF6HguvAeuQ8V6hhnVgCZfC
+      amount: 1000
+      currency: EUR
+  - name: iPhone11
+    type:
+      name: Product
+      blueId: 3oSR8HzfzSsRTqD42mrjU9SfKcZZBaXTocH9rv2veXTx
+    price:
+      type:
+        blueId: Dz6mgfcLjf6nwRP4MZYj4NF6HguvAeuQ8V6hhnVgCZfC
+      amount: 2000
+      currency: EUR
+    details:
+      type:
+         blueId: A3WFtNjBmmggf8c1g9D96mEfVgAm75yLesJ9cBiyrRVc
+      specification:
+          9000MHz
+      otherDetail:
+          5G RAM

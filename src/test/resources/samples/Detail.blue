@@ -1,0 +1,6 @@
+name: Detail
+blueId: A3WFtNjBmmggf8c1g9D96mEfVgAm75yLesJ9cBiyrRVc
+specification:
+    type: Text
+otherDetail:
+    type: Text

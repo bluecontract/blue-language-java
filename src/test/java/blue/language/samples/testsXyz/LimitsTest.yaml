@@ -1,0 +1,150 @@
+name: Xyz
+a:
+  name: Xyz2
+  description: Abc
+  a1:
+    a11: 1
+    a12: 2
+  a2: 3
+b: 4
+c:
+  - name: iPhone8
+    type:
+      name: Product
+      blueId: (..)
+    price:
+      type:
+        blueId: (..)
+      amount: 1000
+      currency: EUR
+  - name: iPhone11
+    type:
+      name: Product
+      blueId: (..)
+    price:
+      type:
+        blueId: (..)
+      amount: 2000
+      currency: EUR
+    details:
+      blueId: (..)
+---
+/
+---
+blueId: (..)
+---
+/*
+---
+name: Xyz
+a:
+  blueId: (..)
+b:
+  value: 4
+c:
+  blueId: (..)
+---
+/a/*
+/b/*
+---
+name: Xyz
+a:
+  name: Xyz2
+  description: Abc
+  a1:
+    blueId: (..)
+  a2:
+    value: 3
+b:
+  value: 4
+---
+/a/a1
+---
+name: Xyz
+a:
+  a1:
+    blueId: ...
+---
+/c
+---
+name: Xyz
+c:
+  blueId: (..)
+---
+/c/*
+---
+name: Xyz
+c:
+  - blueId: (..)
+  - blueId: (..)
+---
+/c/0/*
+---
+name: Xyz
+c:
+  - name: iPhone8
+    type:
+      blueId: (..)
+    price:
+      blueId: (..)
+---
+/c/*/*
+---
+name: Xyz
+c:
+  - name: iPhone8
+    type:
+      blueId: (..)
+    price:
+      blueId: (..)
+  - name: iPhone11
+    type:
+      blueId: (..)
+    price:
+      blueId: (..)
+    details:
+      blueId: (..)
+---
+/c/1/*/*
+---
+name: Xyz
+c:
+  name: iPhone11
+  type:
+    name: Product
+    price:
+      blueId: (..)
+    details:
+      blueId: (..)
+    images:
+      blueId: (..)
+  price:
+    type:
+      blueId: (..)
+    amount:
+      value: 2000
+    currency:
+      value: EUR
+  details:
+    specification:
+      blueId: (..)
+    otherDetail:
+      blueId: (..)
+---
+/c/1/details/specification/vendorDoc/publicationDate/**
+(no tests needed for this one)
+---
+name: Xyz
+c:
+  details:
+    specification:
+      vendorDoc:
+        publicationDate:
+          type:
+            blueId: (..)
+          day:
+            value: 12
+          month:
+            value: 4
+          year:
+            value: 2022
+

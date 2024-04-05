@@ -1,0 +1,7 @@
+name: Product
+price:
+    type: Price
+    blueId: Dz6mgfcLjf6nwRP4MZYj4NF6HguvAeuQ8V6hhnVgCZfC
+details:
+    type: Detail
+    blueId: A3WFtNjBmmggf8c1g9D96mEfVgAm75yLesJ9cBiyrRVc

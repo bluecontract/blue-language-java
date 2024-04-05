@@ -1,0 +1,6 @@
+name: Price
+blueId: Dz6mgfcLjf6nwRP4MZYj4NF6HguvAeuQ8V6hhnVgCZfC
+amount:
+    type: Number
+currency:
+    type: Text

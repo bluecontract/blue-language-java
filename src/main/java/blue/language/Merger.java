@@ -6,6 +6,7 @@ import blue.language.processor.ConstraintsVerifier;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +38,13 @@ public class Merger implements NodeResolver {
     }
 
     private void mergeObject(Node target, Node source, Limits limits) {
+        mergingProcessor.process(target, source, nodeProvider, this);
+
         if (!limits.canReadNext()) {
             return;
         }
-        mergingProcessor.process(target, source, nodeProvider, this);
+
+        stripType(target, limits.nextForTypeStrip());
 
         List<Node> children = source.getItems();
         if (children != null)
@@ -55,10 +59,17 @@ public class Merger implements NodeResolver {
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
         List<Node> targetChildren = target.getItems();
         if (targetChildren == null) {
+            targetChildren = new ArrayList<>();
             Limits limitsCopy = limits.copy();
-            targetChildren = sourceChildren.stream()
-                    .map(child -> resolve(child, limits))
-                    .collect(Collectors.toList());
+            for (int i = 0; i < sourceChildren.size(); i++) {
+                if (limits.canReadIndex(i)) {
+                    Limits l = limitsCopy.next(false);
+                    if (l == Limits.END_LIMITS) {
+                        targetChildren.add(new Node().blueId(BlueIdCalculator.calculateBlueId(sourceChildren.get(i))));
+                    } else
+                        targetChildren.add(resolve(sourceChildren.get(i), l));
+                }
+            }
             target.items(targetChildren);
             return;
         } else if (sourceChildren.size() < targetChildren.size())
@@ -67,9 +78,16 @@ public class Merger implements NodeResolver {
                     targetChildren.size(), sourceChildren.size()
             ));
 
+        Limits limitsCopy = limits.copy();
         for (int i = 0; i < sourceChildren.size(); i++) {
             if (i >= targetChildren.size()) {
-                targetChildren.add(sourceChildren.get(i));
+                if (limits.canReadIndex(i)) {
+                    Limits l = limitsCopy.next(false);
+                    if (l == Limits.END_LIMITS) {
+                        targetChildren.add(new Node().blueId(BlueIdCalculator.calculateBlueId(sourceChildren.get(i))));
+                    } else
+                        targetChildren.add(resolve(sourceChildren.get(i), l));
+                }
                 continue;
             }
             String sourceBlueId = BlueIdCalculator.calculateBlueId(sourceChildren.get(i));
@@ -99,15 +117,34 @@ public class Merger implements NodeResolver {
             mergeObject(targetValue, node, limits.next(sourceKey));
     }
 
+    private void stripType(Node target, Limits limits) {
+        if (target.getType() == null || limits == Limits.NO_LIMITS) {
+            return;
+        }
+        if (limits == Limits.END_LIMITS) {
+            Node resultNode = new Node();
+            resultNode.blueId(BlueIdCalculator.calculateBlueId(target.getType()));
+            target.type(resultNode);
+        } else {
+            stripType(target.getType(), limits.nextForTypeStrip());
+        }
+    }
+
     @Override
     public Node resolve(Node node, Limits limits) {
         Node resultNode = new Node();
         if (limits == Limits.END_LIMITS) {
-            resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
+            if (Nodes.isSingleValueNode(node)) {
+                resultNode.value(node.getValue());
+            } else {
+                resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
+            }
         } else {
             merge(resultNode, node, limits);
-            resultNode.name(node.getName());
-            resultNode.description(node.getDescription());
+            if (limits.canCopyMetadata()) {
+                resultNode.name(node.getName());
+                resultNode.description(node.getDescription());
+            }
         }
 
         return resultNode;
