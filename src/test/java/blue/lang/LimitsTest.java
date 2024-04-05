@@ -34,7 +34,7 @@ public class LimitsTest {
 
         print(node);
 
-        assertNotNull(node.getProperties().get("purchaseDate").getBlueId());
+        assertNotNull(node.getProperties().get("purchaseDate").getValue());
 
         assertThrows(NullPointerException.class, () -> {
             node.getProperties().get("details")
@@ -132,7 +132,7 @@ public class LimitsTest {
 
         assertNotNull(node.getProperties().get("details")
                         .getProperties().get("customerSupport")
-                        .getProperties().get("email").getBlueId()
+                        .getProperties().get("email").getValue()
         );
     }
 
@@ -175,12 +175,12 @@ public class LimitsTest {
         assertNotNull(node.getProperties().get("details")
                 .getProperties().get("customerSupport")
                 .getProperties().get("phone")
-                .getBlueId());
+                .getValue());
 
         assertNotNull(node.getProperties().get("details")
                 .getProperties().get("customerSupport")
                 .getProperties().get("email")
-                .getBlueId());
+                .getValue());
     }
 
     @Test
@@ -199,12 +199,12 @@ public class LimitsTest {
         assertNotNull(node.getProperties().get("details")
                 .getProperties().get("customerSupport")
                 .getProperties().get("phone")
-                .getBlueId());
+                .getValue());
 
         assertNotNull(node.getProperties().get("details")
                 .getProperties().get("customerSupport")
                 .getProperties().get("email")
-                .getBlueId());
+                .getValue());
 
         assertNotNull(node.getProperties().get("availableMenuItems").getBlueId());
     }

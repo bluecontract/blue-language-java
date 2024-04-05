@@ -116,6 +116,23 @@ public class PathLimits implements Limits {
     }
 
     @Override
+    public Limits nextForTypeStrip() {
+        if (path.size() <= 1) {
+            return Limits.END_LIMITS;
+        }
+        List<String> subList = path.subList(1, path.size());
+
+        if (subList.get(0).equals("**")) {
+            return Limits.NO_LIMITS;
+        }
+
+        String newPath = "/" + String.join("/", subList);
+        PathLimits l = (PathLimits) Limits.path(newPath);
+        l.isInitialPath = false;
+        return l;
+    }
+
+    @Override
     public Limits next(String pathName) {
         if (path.get(0).equals("*")) {
             return next(false);

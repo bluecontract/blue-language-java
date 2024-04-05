@@ -20,7 +20,7 @@ import static blue.lang.TestUtils.samplesDirectoryNodeProvider;
 import static blue.lang.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class LimitsTestXyz {
+public class LimitsXyzTest {
 
     private static final boolean PRINT = false;
 
@@ -41,8 +41,21 @@ public class LimitsTestXyz {
 
         assertNotNull(node.getName());
         assertNotNull(node.getProperties().get("a").getBlueId());
-        assertNotNull(node.getProperties().get("b").getBlueId());
+        assertNotNull(node.getProperties().get("b").getValue());
         assertNotNull(node.getProperties().get("c").getBlueId());
+
+    }
+
+    @Test
+    public void testSlashB() throws Exception {
+        Node node = resolve(Limits.path("/b"));
+
+        print(node);
+
+        assertNotNull(node.getName());
+        assertNull(node.getProperties().get("a"));
+        assertNotNull(node.getProperties().get("b").getValue());
+        assertNull(node.getProperties().get("c"));
 
     }
 
@@ -56,7 +69,7 @@ public class LimitsTestXyz {
         assertNotNull(node.getProperties().get("a").getName());
         assertNotNull(node.getProperties().get("a").getDescription());
         assertNotNull(node.getProperties().get("a").getProperties().get("a1").getBlueId());
-        assertNotNull(node.getProperties().get("a").getProperties().get("a2").getBlueId());
+        assertNotNull(node.getProperties().get("a").getProperties().get("a2").getValue());
         assertNotNull(node.getProperties().get("b").getValue());
     }
 
@@ -104,7 +117,7 @@ public class LimitsTestXyz {
 
         assertNotNull(node.getName());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getName());
-        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getBlueId());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getBlueId());
         assertThrows(IndexOutOfBoundsException.class, () -> {
             node.getProperties().get("c").getItems().get(1);
@@ -118,10 +131,10 @@ public class LimitsTestXyz {
 
         assertNotNull(node.getName());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getName());
-        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getBlueId());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getBlueId());
         assertNotNull(node.getProperties().get("c").getItems().get(1).getName());
-        assertNotNull(node.getProperties().get("c").getItems().get(1).getType().getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(1).getType().getBlueId());
         assertNotNull(node.getProperties().get("c").getItems().get(1).getProperties().get("price").getBlueId());
 
     }
@@ -137,6 +150,44 @@ public class LimitsTestXyz {
         assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getName());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getBlueId());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("details").getProperties().get("specification").getBlueId());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getValue());
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            node.getProperties().get("c").getItems().get(1);
+        });
+    }
+
+    @Test
+    public void testC1PriceAmount() throws Exception {
+        Node node = resolve(Limits.path("/c/1/price/amount/**"));
+
+        print(node);
+
+        assertNotNull(node.getName());
+        assertNull(node.getProperties().get("c").getItems().get(0).getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType());
+        assertNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getBlueId());
+        assertNull(node.getProperties().get("c").getItems().get(0).getProperties().get("details"));
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getValue());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getType().getName());
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            node.getProperties().get("c").getItems().get(1);
+        });
+    }
+
+    @Test
+    public void testCStarCompound() throws Exception {
+        Node node = resolve(Limits.path("/c/1/price/amount")
+                .and(Limits.path("/c/1/price/currency")));
+
+        print(node);
+
+        assertNotNull(node.getName());
+        assertNull(node.getProperties().get("c").getItems().get(0).getName());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getType());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getBlueId());
+        assertNull(node.getProperties().get("c").getItems().get(0).getProperties().get("details"));
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getValue());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("currency").getValue());
         assertThrows(IndexOutOfBoundsException.class, () -> {
             node.getProperties().get("c").getItems().get(1);
         });

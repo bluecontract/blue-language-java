@@ -11,19 +11,19 @@ c:
   - name: iPhone8
     type:
       name: Product
-      blueId: JD9zZZMGbyaJBgc4um21MhoTVR1cP2zaMurNSM8izU6p
+      blueId: 3oSR8HzfzSsRTqD42mrjU9SfKcZZBaXTocH9rv2veXTx
     price:
       type:
-        blueId: 3btmrZz5nKr3yFkaVmhFhKDyLg7BexpmnH2pnzQSmB3D
+        blueId: Dz6mgfcLjf6nwRP4MZYj4NF6HguvAeuQ8V6hhnVgCZfC
       amount: 1000
       currency: EUR
   - name: iPhone11
     type:
       name: Product
-      blueId: JD9zZZMGbyaJBgc4um21MhoTVR1cP2zaMurNSM8izU6p
+      blueId: 3oSR8HzfzSsRTqD42mrjU9SfKcZZBaXTocH9rv2veXTx
     price:
       type:
-        blueId: 3btmrZz5nKr3yFkaVmhFhKDyLg7BexpmnH2pnzQSmB3D
+        blueId: Dz6mgfcLjf6nwRP4MZYj4NF6HguvAeuQ8V6hhnVgCZfC
       amount: 2000
       currency: EUR
     details:

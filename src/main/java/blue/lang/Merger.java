@@ -5,10 +5,8 @@ import blue.lang.utils.BlueIdCalculator;
 import blue.lang.utils.NodeToObject;
 import blue.lang.utils.Nodes;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Merger implements NodeResolver {
 
@@ -36,10 +34,13 @@ public class Merger implements NodeResolver {
     }
 
     private void mergeObject(Node target, Node source, Limits limits) {
+        mergingProcessor.process(target, source, nodeProvider, this);
+
         if (!limits.canReadNext()) {
             return;
         }
-        mergingProcessor.process(target, source, nodeProvider, this);
+
+        stripType(target, limits.nextForTypeStrip());
 
         List<Node> children = source.getItems();
         if (children != null)
@@ -66,7 +67,6 @@ public class Merger implements NodeResolver {
                 if (l == Limits.END_LIMITS) {
                     targetChildren.get(i).blueId(BlueIdCalculator.calculateBlueId(sourceChildren.get(i)));
                 } else
-//                    merge(targetChildren.get(i), sourceChildren.get(i), l);
                     targetChildren.set(i, resolve(sourceChildren.get(i), l));
             }
         }
@@ -89,11 +89,28 @@ public class Merger implements NodeResolver {
             mergeObject(targetValue, node, limits.next(sourceKey));
     }
 
+    private void stripType(Node target, Limits limits) {
+        if (target.getType() == null || limits == Limits.NO_LIMITS) {
+            return;
+        }
+        if (limits == Limits.END_LIMITS) {
+            Node resultNode = new Node();
+            resultNode.blueId(BlueIdCalculator.calculateBlueId(target.getType()));
+            target.type(resultNode);
+        } else {
+            stripType(target.getType(), limits.nextForTypeStrip());
+        }
+    }
+
     @Override
     public Node resolve(Node node, Limits limits) {
         Node resultNode = new Node();
         if (limits == Limits.END_LIMITS) {
-            resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
+            if (Nodes.isSingleValueNode(node)) {
+                resultNode.value(node.getValue());
+            } else {
+                resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
+            }
         } else {
             merge(resultNode, node, limits);
             if (limits.canCopyMetadata()) {

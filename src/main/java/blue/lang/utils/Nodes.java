@@ -24,4 +24,12 @@ public class Nodes {
         node.getFeatures().add(feature);
     }
 
+    public static boolean isSingleValueNode(Node node) {
+        Object value = node.getValue();
+        if (value != null && (value instanceof String || value instanceof Number || value instanceof Boolean)) {
+            return node.getName() == null && node.getType() == null && node.getItems() == null && node.getProperties() == null;
+        }
+        return false;
+    }
+
 }

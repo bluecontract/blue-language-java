@@ -39,7 +39,7 @@ name: Xyz
 a:
   blueId: (..)
 b:
-  blueId: (..)
+  value: 4
 c:
   blueId: (..)
 ---
@@ -53,7 +53,7 @@ a:
   a1:
     blueId: (..)
   a2:
-    blueId: (..)
+    value: 3
 b:
   value: 4
 ---
@@ -147,3 +147,7 @@ c:
             value: 4
           year:
             value: 2022
+
+
+-----
+resolvowanie itemów które są zapisane w blueId

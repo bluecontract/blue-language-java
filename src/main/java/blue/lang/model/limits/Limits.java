@@ -36,6 +36,10 @@ public interface Limits {
     default Limits next(String pathName) {
         return next(false);
     }
+
+    default Limits nextForTypeStrip() {
+        return next(false);
+    }
     boolean filter(String name);
     default Limits and(Limits other) {
         return this;

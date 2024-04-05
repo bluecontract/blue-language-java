@@ -69,8 +69,7 @@ public class QueryLimits implements Limits {
         if (depth == Limits.END_LIMITS) {
             return Limits.END_LIMITS;
         }
-        return QueryLimits.pathLimits(paths,
-                depthLimits.next(pathName));
+        return QueryLimits.pathLimits(paths, depth);
     }
 
     @Override
@@ -83,6 +82,22 @@ public class QueryLimits implements Limits {
     public boolean canReadIndex(int index) {
         return pathLimits.stream()
                 .anyMatch(e -> e.canReadIndex(index));
+    }
+
+    @Override
+    public Limits nextForTypeStrip() {
+        List<Limits> paths = pathLimits.stream()
+                .map(e -> e.nextForTypeStrip())
+                .filter(e -> e != Limits.END_LIMITS)
+                .collect(Collectors.toList());
+        if (paths.isEmpty()) {
+            return Limits.END_LIMITS;
+        }
+        Limits depth = depthLimits.nextForTypeStrip();
+        if (depth == Limits.END_LIMITS) {
+            return Limits.END_LIMITS;
+        }
+        return QueryLimits.pathLimits(paths, depth);
     }
 
     @Override

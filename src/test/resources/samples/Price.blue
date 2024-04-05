@@ -1,6 +1,6 @@
 name: Price
-blueId: 3btmrZz5nKr3yFkaVmhFhKDyLg7BexpmnH2pnzQSmB3D
+blueId: Dz6mgfcLjf6nwRP4MZYj4NF6HguvAeuQ8V6hhnVgCZfC
 amount:
     type: Number
 currency:
-    type: String
+    type: Text
