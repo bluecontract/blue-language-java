@@ -7,6 +7,7 @@ import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToObject;
+import blue.language.utils.Nodes;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,6 +21,11 @@ public class ConstraintsVerifier implements MergingProcessor {
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+        // do nothing
+    }
+
+    @Override
+    public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         Constraints constraints = target.getConstraints();
         if (constraints == null)
             return;
@@ -37,7 +43,7 @@ public class ConstraintsVerifier implements MergingProcessor {
         verifyMinItems(constraints.getMinItemsValue(), target.getItems());
         verifyMaxItems(constraints.getMaxItemsValue(), target.getItems());
         verifyUniqueItems(constraints.getUniqueItemsValue(), target.getItems());
-        verifyOptions(constraints.getOptions(), target);
+        verifyOptions(constraints.getOptions(), target, nodeProvider);
     }
 
     private void verifyRequired(Boolean required, Object value) {
@@ -61,6 +67,13 @@ public class ConstraintsVerifier implements MergingProcessor {
         }
     }
 
+    private void verifyPattern(List<String> pattern, Object value) {
+        if (pattern != null && value instanceof String) {
+            for (String p : pattern) {
+                verifyPattern(p, value);
+            }
+        }
+    }
     private void verifyPattern(String pattern, Object value) {
         if (pattern != null && value instanceof String) {
             if (!Pattern.matches(pattern, (String) value)) {
@@ -140,8 +153,38 @@ public class ConstraintsVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyOptions(List<Node> options, Node node) {
-        // TODO: if node has a value, options should reflect it; if it's an object
+    private void verifyOptions(List<Node> options, Node node, NodeProvider nodeProvider) {
+        if (options == null || node == null || Nodes.isValueLess(node)) {
+            return;
+        }
+
+        if (Nodes.isSingleValueNode(node)) {
+            if (!options.stream()
+                    .map(Node::getValue)
+                    .collect(Collectors.toSet())
+                    .contains(node.getValue())) {
+                throw new IllegalArgumentException("Value is not one of the allowed options.");
+            }
+        }
+
+        String blueId = BlueIdCalculator.calculateBlueId(node, NodeToObject.Strategy.VALUE_MAPPING);
+        Node nodeOptions = options.stream()
+                .map(e -> {
+                    if (e.getBlueId() != null) {
+                        // we have to fetch, because we calculate only VALUE_MAPPING
+                        List<Node> nodes = nodeProvider.fetchByBlueId(e.getBlueId());
+                        if (nodes != null) {
+                            return nodes.stream().findFirst().orElse(e);
+                        }
+                    }
+                    return e;
+                })
+                .filter(n -> BlueIdCalculator.calculateBlueId(n, NodeToObject.Strategy.VALUE_MAPPING).equals(blueId))
+                .findFirst()
+                .orElse(null);
+        if (nodeOptions == null) {
+            throw new IllegalArgumentException("Value is not one of the allowed options.");
+        }
     }
 
 }

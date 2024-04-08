@@ -6,6 +6,7 @@ import blue.language.processor.ConstraintsVerifier;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
 
+import javax.lang.model.type.NullType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,8 +45,6 @@ public class Merger implements NodeResolver {
             return;
         }
 
-        stripType(target, limits.nextForTypeStrip());
-
         List<Node> children = source.getItems();
         if (children != null)
             mergeChildren(target, children, limits);
@@ -53,7 +52,8 @@ public class Merger implements NodeResolver {
         if (properties != null)
             properties.forEach((key, value) -> mergeProperty(target, key, value, limits));
 
-        new ConstraintsVerifier().process(target, source, nodeProvider, this);
+        mergingProcessor.postProcess(target, source, nodeProvider, this);
+        stripType(target, limits.nextForTypeStrip());
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
@@ -118,9 +118,15 @@ public class Merger implements NodeResolver {
     }
 
     private void stripType(Node target, Limits limits) {
-        if (target.getType() == null || limits == Limits.NO_LIMITS) {
+        if (target.getType() == null) {
             return;
         }
+
+        if (Nodes.isEmptyNode(target.getType())) {
+            target.eraseType();
+            return;
+        }
+
         if (limits == Limits.END_LIMITS) {
             Node resultNode = new Node();
             resultNode.blueId(BlueIdCalculator.calculateBlueId(target.getType()));

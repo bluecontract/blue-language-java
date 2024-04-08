@@ -1,8 +1,13 @@
 package blue.language.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static blue.language.utils.TypeUtils.*;
 
@@ -12,7 +17,8 @@ public class Constraints {
     private Node allowMultiple;
     private Node minLength;
     private Node maxLength;
-    private Node pattern;
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+    private List<Node> pattern;
     private Node minimum;
     private Node maximum;
     private Node exclusiveMinimum;
@@ -39,7 +45,7 @@ public class Constraints {
         return maxLength;
     }
 
-    public Node getPattern() {
+    public List<Node> getPattern() {
         return pattern;
     }
 
@@ -95,8 +101,10 @@ public class Constraints {
         return maxLength == null ? null : getIntegerFromObject(maxLength.getValue());
     }
 
-    public String getPatternValue() {
-        return pattern == null ? null : (String) pattern.getValue();
+    public List<String> getPatternValue() {
+        return pattern == null ? null : pattern.stream()
+                .map(e -> (String) e.getValue())
+                .collect(Collectors.toList());
     }
 
     public BigDecimal getMinimumValue() {
@@ -152,7 +160,10 @@ public class Constraints {
     }
 
     public Constraints pattern(Node pattern) {
-        this.pattern = pattern;
+        if (this.pattern == null) {
+            this.pattern = new ArrayList<Node>();
+        }
+        this.pattern.add(pattern);
         return this;
     }
 
@@ -221,8 +232,19 @@ public class Constraints {
         return this;
     }
 
+    public Constraints pattern(List<String> pattern) {
+        if (this.pattern == null) {
+           this.pattern = new ArrayList<Node>();
+        }
+        this.pattern.addAll(pattern.stream().map(e -> new Node().value(e)).collect(Collectors.toList()));
+        return this;
+    }
+
     public Constraints pattern(String pattern) {
-        this.pattern = new Node().value(pattern);
+        if (this.pattern == null) {
+            this.pattern = new ArrayList<Node>();
+        }
+        this.pattern.add(new Node().value(pattern));
         return this;
     }
 

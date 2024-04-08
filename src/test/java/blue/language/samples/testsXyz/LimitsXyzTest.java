@@ -148,8 +148,7 @@ public class LimitsXyzTest {
         assertNotNull(node.getName());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getName());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getType().getName());
-        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getBlueId());
-        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("details").getProperties().get("specification").getBlueId());
+        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("details").getProperties().get("specification").getValue());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getValue());
         assertThrows(IndexOutOfBoundsException.class, () -> {
             node.getProperties().get("c").getItems().get(1);
@@ -183,8 +182,6 @@ public class LimitsXyzTest {
 
         assertNotNull(node.getName());
         assertNull(node.getProperties().get("c").getItems().get(0).getName());
-        assertNotNull(node.getProperties().get("c").getItems().get(0).getType());
-        assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getBlueId());
         assertNull(node.getProperties().get("c").getItems().get(0).getProperties().get("details"));
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("amount").getValue());
         assertNotNull(node.getProperties().get("c").getItems().get(0).getProperties().get("price").getProperties().get("currency").getValue());
