@@ -5,12 +5,20 @@ import blue.language.NodeProvider;
 import blue.language.NodeResolver;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
+import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.LCM;
+import blue.language.utils.NodeToObject;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class ConstraintsPropagator implements MergingProcessor {
     
@@ -53,13 +61,8 @@ public class ConstraintsPropagator implements MergingProcessor {
     }
 
     private void propagatePattern(Constraints source, Constraints target) {
-        String sourcePattern = source.getPatternValue();
-        String targetPattern = target.getPatternValue();
-        if (sourcePattern != null && targetPattern != null) {
-            // TODO: temporary, should be changed so that pattern accepts a list of expressions and it's populated here
-            String mergedPattern = String.format("(%s)|(%s)", sourcePattern, targetPattern);
-            target.pattern(mergedPattern);
-        } else if (sourcePattern != null) {
+        List<String> sourcePattern = source.getPatternValue();
+        if (sourcePattern != null) {
             target.pattern(sourcePattern);
         }
     }
@@ -144,7 +147,23 @@ public class ConstraintsPropagator implements MergingProcessor {
     }
 
     private void propagateOptions(Constraints source, Constraints target) {
-        // TODO: intersection should be taken
+        if (source.getOptions() == null) {
+            return;
+        }
+        if (target.getOptions() == null) {
+            target.options(source.getOptions());
+        } else {
+            Map<String, Node> sourceMap = source.getOptions().stream()
+                    .collect(Collectors.toMap(e -> BlueIdCalculator.calculateBlueId(e, NodeToObject.Strategy.VALUE_MAPPING), Function.identity()));
+            Map<String, Node> targetMap = target.getOptions().stream()
+                    .collect(Collectors.toMap(e -> BlueIdCalculator.calculateBlueId(e, NodeToObject.Strategy.VALUE_MAPPING), Function.identity()));
+            Set<Object> targetSet = new HashSet<>(targetMap.keySet());
+            Set<Object> sourceSet = new HashSet<>(sourceMap.keySet());
+            targetSet.retainAll(sourceSet);
+            target.options(targetSet.stream()
+                    .map(targetMap::get)
+                    .collect(Collectors.toList()));
+        }
     }
 
 }

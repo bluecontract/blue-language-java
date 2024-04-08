@@ -19,4 +19,9 @@ public class SequentialMergingProcessor implements MergingProcessor {
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         mergingProcessors.forEach(e -> e.process(target, source, nodeProvider, nodeResolver));
     }
+
+    @Override
+    public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+        mergingProcessors.forEach(e -> e.postProcess(target, source, nodeProvider, nodeResolver));
+    }
 }

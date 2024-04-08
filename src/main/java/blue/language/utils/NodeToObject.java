@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.NodeToObject.Strategy.DOMAIN_MAPPING;
-import static blue.language.utils.NodeToObject.Strategy.STANDARD;
+import static blue.language.utils.NodeToObject.Strategy.*;
 import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
@@ -17,7 +16,8 @@ public class NodeToObject {
 
     public enum Strategy {
         STANDARD,
-        DOMAIN_MAPPING
+        DOMAIN_MAPPING,
+        VALUE_MAPPING
     }
 
     public static Object get(Node node) {
@@ -37,11 +37,11 @@ public class NodeToObject {
             return items;
 
         Map<String, Object> result = new LinkedHashMap<>();
-        if (node.getName() != null)
+        if (node.getName() != null  && strategy != VALUE_MAPPING)
             result.put(OBJECT_NAME, node.getName());
-        if (node.getDescription() != null)
+        if (node.getDescription() != null && strategy != VALUE_MAPPING)
             result.put(OBJECT_DESCRIPTION, node.getDescription());
-        if (node.getType() != null)
+        if (node.getType() != null && strategy != VALUE_MAPPING)
             result.put(OBJECT_TYPE, get(node.getType()));
         if (node.getValue() != null)
             result.put(OBJECT_VALUE, node.getValue());
@@ -51,7 +51,7 @@ public class NodeToObject {
             result.put(OBJECT_REF, node.getRef());
         if (node.getBlueId() != null)
             result.put(OBJECT_BLUE_ID, node.getBlueId());
-        if (node.getConstraints() != null)
+        if (node.getConstraints() != null  && strategy != VALUE_MAPPING)
             result.put(OBJECT_CONSTRAINTS, YAML_MAPPER.convertValue(node.getConstraints(), new TypeReference<Map<String, Object>>() {}));
         if (node.getProperties() != null)
             node.getProperties().forEach((key, value) -> result.put(key, get(value, strategy)));

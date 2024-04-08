@@ -3,6 +3,7 @@ package blue.language.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import javax.lang.model.type.NullType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
@@ -82,13 +83,24 @@ public class Node implements Cloneable {
         return this;
     }
 
+    public Node eraseType() {
+        this.type = null;
+        return this;
+    }
+
     public Node type(String type) {
         this.type = isBasicType(type) ? new Node().value(type) : new Node().blueId(type);
         return this;
     }
 
     public Node value(Object value) {
-        this.value = value;
+        if (value instanceof Integer || value instanceof Long) {
+            this.value = BigInteger.valueOf((Integer) value);
+        } else if (value instanceof Float || value instanceof Double) {
+            this.value = BigDecimal.valueOf((Double) value);
+        } else {
+            this.value = value;
+        }
         return this;
     }
 

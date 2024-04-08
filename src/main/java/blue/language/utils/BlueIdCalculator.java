@@ -18,6 +18,9 @@ public class BlueIdCalculator {
         this.hashProvider = hashProvider;
     }
 
+    public static String calculateBlueId(Node node, NodeToObject.Strategy strategy) {
+        return BlueIdCalculator.INSTANCE.calculate(NodeToObject.get(node, strategy));
+    }
     public static String calculateBlueId(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToObject.get(node));
     }

@@ -17,7 +17,9 @@ public class LCM {
             return a;
 
         else {
-            return (gcd(b, a.subtract(a.divide(b).setScale(0, RoundingMode.FLOOR).multiply(b))));
+            a = a.setScale(10, RoundingMode.UNNECESSARY);
+            b = b.setScale(10, RoundingMode.UNNECESSARY);
+            return (gcd(b, a.subtract(a.divide(b, RoundingMode.DOWN).setScale(0, RoundingMode.FLOOR).multiply(b))));
         }
     }
     public static BigDecimal lcm(BigDecimal a, BigDecimal b) {

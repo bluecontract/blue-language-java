@@ -25,11 +25,18 @@ public class Nodes {
     }
 
     public static boolean isSingleValueNode(Node node) {
-        Object value = node.getValue();
-        if (value != null && (value instanceof String || value instanceof Number || value instanceof Boolean)) {
+        if (hasSingleValue(node)) {
             return node.getName() == null && node.getType() == null && node.getItems() == null && node.getProperties() == null;
         }
         return false;
     }
 
+    public static boolean hasSingleValue(Node node) {
+        Object value = node.getValue();
+        return (value instanceof String || value instanceof Number || value instanceof Boolean);
+    }
+
+    public static boolean isValueLess(Node node) {
+        return node.getValue() == null && node.getItems() == null && node.getProperties() == null;
+    }
 }
