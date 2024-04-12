@@ -119,9 +119,8 @@ public class Merger implements NodeResolver {
     }
 
     private void stripType(Node target, Limits limits) {
-        if (target.getType() == null) {
+        if (limits == Limits.NO_LIMITS || target.getType() == null)
             return;
-        }
 
         if (Nodes.isEmptyNode(target.getType())) {
             target.eraseType();
