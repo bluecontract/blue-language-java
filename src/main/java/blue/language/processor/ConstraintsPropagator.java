@@ -95,7 +95,7 @@ public class ConstraintsPropagator implements MergingProcessor {
                                                              Supplier<T> targetValueGetter, Consumer<T> targetValueSetter) {
         if (sourceValue != null) {
             T targetValue = targetValueGetter.get();
-            if (targetValue == null || sourceValue.compareTo(targetValue) < 0) {
+            if (targetValue == null || sourceValue.compareTo(targetValue) > 0) {
                 targetValueSetter.accept(sourceValue);
             }
         }
@@ -105,7 +105,7 @@ public class ConstraintsPropagator implements MergingProcessor {
                                                              Supplier<T> targetValueGetter, Consumer<T> targetValueSetter) {
         if (sourceValue != null) {
             T targetValue = targetValueGetter.get();
-            if (targetValue == null || sourceValue.compareTo(targetValue) > 0) {
+            if (targetValue == null || sourceValue.compareTo(targetValue) < 0) {
                 targetValueSetter.accept(sourceValue);
             }
         }
@@ -140,10 +140,7 @@ public class ConstraintsPropagator implements MergingProcessor {
     }
 
     private void propagateUniqueItems(Constraints source, Constraints target) {
-        Boolean sourceUniqueItems = source.getUniqueItemsValue();
-        if (sourceUniqueItems != null) {
-            target.uniqueItems(sourceUniqueItems);
-        }
+        propagateBoolean(source.getUniqueItemsValue(), target::getUniqueItemsValue, target::uniqueItems, true);
     }
 
     private void propagateOptions(Constraints source, Constraints target) {

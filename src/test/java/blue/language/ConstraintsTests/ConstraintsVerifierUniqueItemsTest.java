@@ -20,7 +20,7 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class ConstraintsVerifierMinLengthTest {
+public class ConstraintsVerifierUniqueItemsTest {
 
     private Node node;
     private Constraints constraints;
@@ -30,9 +30,9 @@ public class ConstraintsVerifierMinLengthTest {
 
     @BeforeEach
     public void setUp() {
-        constraints = new Constraints();
+        constraints = new Constraints().allowMultiple(true);
         node = new Node()
-                .value("xyz")
+                .items(Arrays.asList(new Node().value(1), new Node().value(1)))
                 .constraints(constraints);
         mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
@@ -46,32 +46,34 @@ public class ConstraintsVerifierMinLengthTest {
     }
 
     @Test
-    public void testMinLengthPositive() throws Exception {
-        constraints.minLength(3);
+    public void testUniqueItemsPositive() throws Exception {
+        constraints.uniqueItems(false);
         merger.resolve(node);
         // nothing should be thrown
     }
 
     @Test
-    public void testMinLengthNegative() throws Exception {
-        constraints.minLength(4);
+    public void testUniqueItemsNegative() throws Exception {
+        constraints.uniqueItems(true);
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
     }
 
     @Test
-    public void testMinLengthInheritance() throws Exception {
+    public void testUniqueItemsInheritance() throws Exception {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  minLength: 3";
+                "  uniqueItems: true\n" +
+                "  allowMultiple: true";
 
         String b = "name: B\n" +
                 "type:\n" +
                 "  name: A\n" +
                 "  constraints:\n" +
-                "    minLength: 3\n" +
+                "    uniqueItems: true\n" +
+                "    allowMultiple: true\n" +
                 "constraints:\n" +
-                "  minLength: 4";
+                "  allowMultiple: true";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -79,10 +81,14 @@ public class ConstraintsVerifierMinLengthTest {
                 "  type:\n" +
                 "    name: A\n" +
                 "    constraints:\n" +
-                "      minLength: 3\n" +
+                "      uniqueItems: true\n" +
+                "      allowMultiple: true\n" +
                 "  constraints:\n" +
-                "    minLength: 4\n" +
-                "value: Abcd";
+                "    allowMultiple: true\n" +
+                "items:\n" +
+                "  - value: 1\n" +
+                "  - value: 2\n" +
+                "  - value: 3";
 
         Map<String, Node> nodes = Stream.of(a, b, c)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
@@ -91,24 +97,27 @@ public class ConstraintsVerifierMinLengthTest {
         merger = new Merger(mergingProcessor, e -> null);
 
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("C"))).get(0));
-        assertEquals("Abcd", node.getValue());
+        assertEquals(3, node.getItems().size());
 
     }
 
     @Test
-    public void testMinLengthInheritanceStrongestConditionShouldBeUsed() throws Exception {
+    public void testUniqueItemsInheritanceStrongestConditionShouldBeUsed() throws Exception {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  minLength: 3";
+                "  uniqueItems: true\n" +
+                "  allowMultiple: true";
 
         String b = "name: B\n" +
                 "type:\n" +
                 "  name: A\n" +
                 "  constraints:\n" +
-                "    minLength: 3\n" +
+                "    uniqueItems: true\n" +
+                "    allowMultiple: true\n" +
                 "constraints:\n" +
-                "  minLength: 4";
+                "  uniqueItems: false\n" +
+                "  allowMultiple: true";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -116,10 +125,16 @@ public class ConstraintsVerifierMinLengthTest {
                 "  type:\n" +
                 "    name: A\n" +
                 "    constraints:\n" +
-                "      minLength: 3\n" +
+                "      uniqueItems: true\n" +
+                "      allowMultiple: true\n" +
                 "  constraints:\n" +
-                "    minLength: 4\n" +
-                "value: Abc";
+                "    uniqueItems: false\n" +
+                "    allowMultiple: true\n" +
+                "items:\n" +
+                "  - value: 1\n" +
+                "  - value: 1\n" +
+                "  - value: 3\n" +
+                "  - value: 4";
 
         Map<String, Node> nodes = Stream.of(a, b, c)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
@@ -132,30 +147,34 @@ public class ConstraintsVerifierMinLengthTest {
     }
 
     @Test
-    public void testMinLengthSubInheritancePositive1() throws Exception {
+    public void testUniqueItemsSubInheritancePositive1() throws Exception {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  minLength: 3";
+                "  uniqueItems: true\n" +
+                "  allowMultiple: true";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  minLength: 4";
+                "  uniqueItems: false\n" +
+                "  allowMultiple: true";
 
         String x = "name: X\n" +
-                "a:\n" +
-                "  type:\n" +
+                "type:\n" +
                 indent(b, 4) + "\n" +
-                "  constraints:\n" +
-                "    minLength: 5";
+                "constraints:\n" +
+                "  uniqueItems: false\n" +
+                "  allowMultiple: true";
 
         String y = "name: Y\n" +
                 "type:\n" +
                 indent(x, 2) + "\n" +
-                "a:\n" +
-                "  value: Abcde";
+                "items:\n" +
+                "  - value: 1\n" +
+                "  - value: 2\n" +
+                "  - value: 3";
 
         Map<String, Node> nodes = Stream.of(a, b, x, y)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
@@ -164,35 +183,39 @@ public class ConstraintsVerifierMinLengthTest {
         merger = new Merger(mergingProcessor, e -> null);
 
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
-        assertEquals("Abcde", node.getProperties().get("a").getValue());
+        assertEquals(3, node.getItems().size());
 
     }
 
     @Test
-    public void testMinLengthSubInheritancePositive2() throws Exception {
+    public void testUniqueItemsSubInheritancePositive2() throws Exception {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  minLength: 3";
+                "  uniqueItems: true\n" +
+                "  allowMultiple: true";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  minLength: 4";
+                "  uniqueItems: true\n" +
+                "  allowMultiple: true";
 
         String x = "name: X\n" +
                 "a:\n" +
                 "  type:\n" +
                 indent(b, 4) + "\n" +
                 "  constraints:\n" +
-                "    minLength: 2";
+                "    uniqueItems: false\n" +
+                "    allowMultiple: true";
 
         String y = "name: Y\n" +
                 "type:\n" +
                 indent(x, 2) + "\n" +
-                "a:\n" +
-                "  value: Abcd";
+                "items:\n" +
+                "  - value: 1\n" +
+                "  - value: 2";
 
         Map<String, Node> nodes = Stream.of(a, b, x, y)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
@@ -201,37 +224,41 @@ public class ConstraintsVerifierMinLengthTest {
         merger = new Merger(mergingProcessor, e -> null);
 
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
-        assertEquals("Abcd", node.getProperties().get("a").getValue());
+        assertEquals(2, node.getItems().size());
 
     }
 
 
     @Test
-    public void testMinLengthSubInheritanceNegative() throws Exception {
+    public void testUniqueItemsSubInheritanceNegative() throws Exception {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  minLength: 3";
+                "  uniqueItems: true\n" +
+                "  allowMultiple: true";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  minLength: 4";
+                "  uniqueItems: false\n" +
+                "  allowMultiple: true";
 
         String x = "name: X\n" +
-                "a:\n" +
-                "  type:\n" +
+                "type:\n" +
                 indent(b, 4) + "\n" +
-                "  constraints:\n" +
-                "    minLength:\n" +
-                "      value: 2";
+                "constraints:\n" +
+                "  uniqueItems:\n" +
+                "    value: false\n" +
+                "  allowMultiple: true";
 
         String y = "name: Y\n" +
                 "type:\n" +
                 indent(x, 2) + "\n" +
-                "a:\n" +
-                "  value: Abc";
+                "items:\n" +
+                "  - value: 1\n" +
+                "  - value: 2\n" +
+                "  - value: 2";
 
         Map<String, Node> nodes = Stream.of(a, b, x, y)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
