@@ -28,7 +28,7 @@ public class Merger implements NodeResolver {
     }
 
     public void merge(Node target, Node source, Limits limits) {
-        if (limits.canReadNext()) {
+        if (limits != Limits.END_LIMITS) {
             if (source.getType() != null) {
                 Node resolvedType = resolve(source.getType(), limits.next(true));
                 source.type(resolvedType);
@@ -42,6 +42,7 @@ public class Merger implements NodeResolver {
         mergingProcessor.process(target, source, nodeProvider, this);
 
         if (!limits.canReadNext()) {
+            mergingProcessor.postProcess(target, source, nodeProvider, this);
             return;
         }
 
@@ -150,6 +151,8 @@ public class Merger implements NodeResolver {
             if (limits.canCopyMetadata()) {
                 resultNode.name(node.getName());
                 resultNode.description(node.getDescription());
+                resultNode.constraints(node.getConstraints());
+                resultNode.features(node.getFeatures());
             }
         }
 
