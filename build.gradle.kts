@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    `maven-publish`
 }
 
 group = "blue.language"
@@ -27,9 +28,22 @@ dependencies {
 
     testImplementation("org.apache.httpcomponents:httpclient:4.5.14")
 
-
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
 }
