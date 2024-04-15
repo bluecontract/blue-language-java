@@ -3,12 +3,8 @@ package blue.language.utils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/**
- *  Calculates the least common multiple of two numbers
- */
-public class LCM {
-    private static BigDecimal gcd(BigDecimal a, BigDecimal b)
-    {
+public class LeastCommonMultiple {
+    private static BigDecimal gcd(BigDecimal a, BigDecimal b) {
         if (a.compareTo(b) < 0)
             return gcd(b, a);
 
@@ -22,6 +18,7 @@ public class LCM {
             return (gcd(b, a.subtract(a.divide(b, RoundingMode.DOWN).setScale(0, RoundingMode.FLOOR).multiply(b))));
         }
     }
+
     public static BigDecimal lcm(BigDecimal a, BigDecimal b) {
         if (BigDecimal.ZERO.equals(a) || BigDecimal.ZERO.equals(b)) {
             return BigDecimal.ZERO;

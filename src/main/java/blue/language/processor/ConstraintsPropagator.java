@@ -5,20 +5,12 @@ import blue.language.NodeProvider;
 import blue.language.NodeResolver;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.LCM;
-import blue.language.utils.NodeToObject;
+import blue.language.utils.LeastCommonMultiple;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class ConstraintsPropagator implements MergingProcessor {
     
@@ -125,7 +117,7 @@ public class ConstraintsPropagator implements MergingProcessor {
         BigDecimal sourceMultipleOf = source.getMultipleOfValue();
         BigDecimal targetMultipleOf = target.getMultipleOfValue();
         if (sourceMultipleOf != null && targetMultipleOf != null) {
-            target.multipleOf(LCM.lcm(targetMultipleOf, sourceMultipleOf));
+            target.multipleOf(LeastCommonMultiple.lcm(targetMultipleOf, sourceMultipleOf));
         } else if (sourceMultipleOf != null) {
             target.multipleOf(sourceMultipleOf);
         }
