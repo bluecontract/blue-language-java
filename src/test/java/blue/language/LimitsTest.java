@@ -50,7 +50,7 @@ public class LimitsTest {
         print(node);
 
         assertNotNull(node.getProperties().get("purchaseDate").getValue());
-        assertNotNull(node.getProperties().get("availableMenuItems").getBlueId());
+        assertNotNull(node.getProperties().get("availableMenuItems"));
 
         assertThrows(NullPointerException.class, () -> {
             node.getProperties().get("details")
@@ -65,19 +65,17 @@ public class LimitsTest {
 
         print(node);
 
-        assertNotNull(node.getProperties().get("details").getBlueId());
-
-        assertThrows(NullPointerException.class, () -> {
+        assertNotNull(
             node.getProperties().get("details")
                     .getProperties().get("customerSupport")
-                    .getProperties().get("email").getValue();
-        });
+                    .getProperties().get("email").getValue()
+        );
 
-        assertThrows(NullPointerException.class, () -> {
+        assertNotNull(
             node.getProperties().get("details")
                     .getProperties().get("customerSupport")
-                    .getProperties().get("phone").getValue();
-        });
+                    .getProperties().get("phone").getValue()
+        );
 
     }
 

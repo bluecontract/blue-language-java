@@ -158,10 +158,14 @@ public class NodeDeserializerTest {
 
         Constraints constraints = node.getConstraints();
         assertTrue(constraints.getRequiredValue());
-        assertEquals(false, constraints.getAllowMultipleValue());
+
+        // allowMultiple is set true when minItems, maxitems or uniqueItems are set
+        assertEquals(true, constraints.getAllowMultipleValue());
         assertEquals((Integer) 5, constraints.getMinLengthValue());
         assertEquals((Integer) 10, constraints.getMaxLengthValue());
-        assertEquals("^[a-z]+$", constraints.getPatternValue());
+
+        // patters is a list of strings
+        assertEquals("^[a-z]+$", constraints.getPatternValue().get(0));
         assertEquals(new BigDecimal("1.01"), constraints.getMinimumValue());
         assertEquals(new BigDecimal("100.01"), constraints.getMaximumValue());
         assertEquals(new BigDecimal("0.01"), constraints.getExclusiveMinimumValue());

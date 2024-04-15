@@ -150,8 +150,6 @@ public class Merger implements NodeResolver {
             if (limits.canCopyMetadata()) {
                 resultNode.name(node.getName());
                 resultNode.description(node.getDescription());
-                resultNode.constraints(node.getConstraints());
-                resultNode.features(node.getFeatures());
             }
         }
 

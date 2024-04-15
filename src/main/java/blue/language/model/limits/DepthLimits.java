@@ -16,9 +16,10 @@ public class DepthLimits implements Limits {
 
     @Override
     public Limits next(boolean forTypeInference) {
-        if (maxDepth <= 1) { return Limits.END_LIMITS; }
-
-        return forTypeInference ? this : new DepthLimits(maxDepth - 1);
+        if (forTypeInference) {
+            return this;
+        }
+        return maxDepth <= 1 ?  Limits.END_LIMITS : new DepthLimits(maxDepth - 1);
     }
 
     @Override
