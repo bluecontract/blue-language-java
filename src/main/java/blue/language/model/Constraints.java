@@ -90,9 +90,6 @@ public class Constraints {
     }
 
     public Boolean getAllowMultipleValue() {
-        if (minItems != null || maxItems != null || uniqueItems != null) {
-            return true;
-        }
         return allowMultiple == null ? null : getBooleanFromObject(allowMultiple.getValue());
     }
 

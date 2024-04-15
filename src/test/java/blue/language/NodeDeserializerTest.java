@@ -159,8 +159,7 @@ public class NodeDeserializerTest {
         Constraints constraints = node.getConstraints();
         assertTrue(constraints.getRequiredValue());
 
-        // allowMultiple is set true when minItems, maxitems or uniqueItems are set
-        assertEquals(true, constraints.getAllowMultipleValue());
+        assertEquals(false, constraints.getAllowMultipleValue());
         assertEquals((Integer) 5, constraints.getMinLengthValue());
         assertEquals((Integer) 10, constraints.getMaxLengthValue());
 
