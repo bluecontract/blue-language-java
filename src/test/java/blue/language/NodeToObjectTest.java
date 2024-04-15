@@ -212,32 +212,20 @@ public class NodeToObjectTest {
         Object object = NodeToObject.get(node, DOMAIN_MAPPING);
         Node fromObject = JSON_MAPPER.convertValue(object, Node.class);
         Constraints resultConstraints = fromObject.getConstraints();
-        System.out.println(resultConstraints);
 
-        System.out.println(resultConstraints.getMinLengthValue() + " = " + resultConstraints.getMinLengthValue().getClass());
-
-
-//        System.out.println(object);
-//        assertInstanceOf(Map.class, object);
-//        Map<?, ?> result = (Map<?, ?>) object;
-//
-//        Object constraintsObject = result.get(OBJECT_CONSTRAINTS);
-//        assertInstanceOf(Map.class, constraintsObject);
-//        Map<?, ?> constraintsMap = (Map<?, ?>) constraintsObject;
-
-//        assertEquals(true, constraintsMap.get("required"));
-//        assertEquals(false, constraintsMap.get("allowMultiple"));
+        assertEquals(true, resultConstraints.getRequiredValue());
+        assertEquals(false, resultConstraints.getAllowMultipleValue());
         assertEquals(5, resultConstraints.getMinLengthValue());
-//        assertEquals(new BigInteger("10"), constraintsMap.get("maxLength"));
-//        assertEquals("^[a-z]+$", constraintsMap.get("pattern"));
-//        assertEquals(new BigDecimal("1.0"), constraintsMap.get("minimum"));
-//        assertEquals(new BigDecimal("100.0"), constraintsMap.get("maximum"));
-//        assertEquals(new BigDecimal("0.0"), constraintsMap.get("exclusiveMinimum"));
-//        assertEquals(new BigDecimal("101.0"), constraintsMap.get("exclusiveMaximum"));
-//        assertEquals(new BigDecimal("2.0"), constraintsMap.get("multipleOf"));
-//        assertEquals(new BigInteger("1"), constraintsMap.get("minItems"));
-//        assertEquals(new BigInteger("5"), constraintsMap.get("maxItems"));
-//        assertEquals(true, constraintsMap.get("uniqueItems"));
+        assertEquals(10, resultConstraints.getMaxLengthValue());
+        assertEquals("^[a-z]+$", resultConstraints.getPatternValue().get(0));
+        assertEquals(0, new BigDecimal("1.0").compareTo(resultConstraints.getMinimumValue()));
+        assertEquals(0, new BigDecimal("100.0").compareTo(resultConstraints.getMaximumValue()));
+        assertEquals(0, new BigDecimal("0.0").compareTo(resultConstraints.getExclusiveMinimumValue()));
+        assertEquals(0, new BigDecimal("101.0").compareTo(resultConstraints.getExclusiveMaximumValue()));
+        assertEquals(0, new BigDecimal("2.0").compareTo(resultConstraints.getMultipleOfValue()));
+        assertEquals(1, resultConstraints.getMinItemsValue());
+        assertEquals(5, resultConstraints.getMaxItemsValue());
+        assertEquals(true, resultConstraints.getUniqueItemsValue());
     }
     
 }

@@ -144,23 +144,6 @@ public class ConstraintsPropagator implements MergingProcessor {
     }
 
     private void propagateOptions(Constraints source, Constraints target) {
-        if (source.getOptions() == null) {
-            return;
-        }
-        if (target.getOptions() == null) {
-            target.options(source.getOptions());
-        } else {
-            Map<String, Node> sourceMap = source.getOptions().stream()
-                    .collect(Collectors.toMap(e -> BlueIdCalculator.calculateBlueId(e, NodeToObject.Strategy.VALUE_MAPPING), Function.identity()));
-            Map<String, Node> targetMap = target.getOptions().stream()
-                    .collect(Collectors.toMap(e -> BlueIdCalculator.calculateBlueId(e, NodeToObject.Strategy.VALUE_MAPPING), Function.identity()));
-            Set<Object> targetSet = new HashSet<>(targetMap.keySet());
-            Set<Object> sourceSet = new HashSet<>(sourceMap.keySet());
-            targetSet.retainAll(sourceSet);
-            target.options(targetSet.stream()
-                    .map(targetMap::get)
-                    .collect(Collectors.toList()));
-        }
     }
 
 }

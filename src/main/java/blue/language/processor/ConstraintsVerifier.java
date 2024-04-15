@@ -154,37 +154,6 @@ public class ConstraintsVerifier implements MergingProcessor {
     }
 
     private void verifyOptions(List<Node> options, Node node, NodeProvider nodeProvider) {
-        if (options == null || node == null || Nodes.isValueLess(node)) {
-            return;
-        }
-
-        if (Nodes.isSingleValueNode(node)) {
-            if (!options.stream()
-                    .map(Node::getValue)
-                    .collect(Collectors.toSet())
-                    .contains(node.getValue())) {
-                throw new IllegalArgumentException("Value is not one of the allowed options.");
-            }
-        }
-
-        String blueId = BlueIdCalculator.calculateBlueId(node, NodeToObject.Strategy.VALUE_MAPPING);
-        Node nodeOptions = options.stream()
-                .map(e -> {
-                    if (e.getBlueId() != null) {
-                        // we have to fetch, because we calculate only VALUE_MAPPING
-                        List<Node> nodes = nodeProvider.fetchByBlueId(e.getBlueId());
-                        if (nodes != null) {
-                            return nodes.stream().findFirst().orElse(e);
-                        }
-                    }
-                    return e;
-                })
-                .filter(n -> BlueIdCalculator.calculateBlueId(n, NodeToObject.Strategy.VALUE_MAPPING).equals(blueId))
-                .findFirst()
-                .orElse(null);
-        if (nodeOptions == null) {
-            throw new IllegalArgumentException("Value is not one of the allowed options.");
-        }
     }
 
 }
