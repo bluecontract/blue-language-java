@@ -30,7 +30,7 @@ public class ConstraintsVerifierMinItemsTest {
 
     @BeforeEach
     public void setUp() {
-        constraints = new Constraints().allowMultiple(true);
+        constraints = new Constraints();
         node = new Node()
                 .items(Arrays.asList(new Node().value(1), new Node().value(2)))
                 .constraints(constraints);
@@ -64,7 +64,6 @@ public class ConstraintsVerifierMinItemsTest {
         String a = "name: A\n" +
                 "constraints:\n" +
                 "  minItems: 3\n" +
-                "  allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -76,15 +75,13 @@ public class ConstraintsVerifierMinItemsTest {
                 "  name: A\n" +
                 "  constraints:\n" +
                 "    minItems: 3\n" +
-                "    allowMultiple: true\n" +
                 "  items:\n" +
                 "    - value: 1\n" +
                 "    - value: 2\n" +
                 "    - value: 3\n" +
                 "    - value: 4\n" +
                 "constraints:\n" +
-                "  minItems: 4\n" +
-                "  allowMultiple: true";
+                "  minItems: 4\n";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -93,15 +90,13 @@ public class ConstraintsVerifierMinItemsTest {
                 "    name: A\n" +
                 "    constraints:\n" +
                 "      minItems: 3\n" +
-                "      allowMultiple: true\n" +
                 "    items:\n" +
                 "      - value: 1\n" +
                 "      - value: 2\n" +
                 "      - value: 3\n" +
                 "      - value: 4\n" +
                 "  constraints:\n" +
-                "    minItems: 4\n" +
-                "    allowMultiple: true\n";
+                "    minItems: 4\n";
 
 
         Map<String, Node> nodes = Stream.of(a, b, c)
@@ -121,7 +116,6 @@ public class ConstraintsVerifierMinItemsTest {
         String a = "name: A\n" +
                 "constraints:\n" +
                 "  minItems: 3\n" +
-                "  allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -132,14 +126,12 @@ public class ConstraintsVerifierMinItemsTest {
                 "  name: A\n" +
                 "  constraints:\n" +
                 "    minItems: 3\n" +
-                "    allowMultiple: true\n" +
                 "  items:\n" +
                 "    - value: 1\n" +
                 "    - value: 2\n" +
                 "    - value: 3\n" +
                 "constraints:\n" +
-                "  minItems: 4\n" +
-                "  allowMultiple: true";
+                "  minItems: 4\n";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -148,14 +140,12 @@ public class ConstraintsVerifierMinItemsTest {
                 "    name: A\n" +
                 "    constraints:\n" +
                 "      minItems: 3\n" +
-                "      allowMultiple: true\n" +
                 "  items:\n" +
                 "    - value: 1\n" +
                 "    - value: 2\n" +
                 "    - value: 3\n" +
                 "  constraints:\n" +
-                "    minItems: 4\n" +
-                "    allowMultiple: true\n";
+                "    minItems: 4\n";
 
         Map<String, Node> nodes = Stream.of(a, b, c)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
@@ -173,7 +163,6 @@ public class ConstraintsVerifierMinItemsTest {
         String a = "name: A\n" +
                 "constraints:\n" +
                 "  minItems: 3\n" +
-                "  allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -184,7 +173,6 @@ public class ConstraintsVerifierMinItemsTest {
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
                 "  minItems: 4\n" +
-                "  allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -196,7 +184,6 @@ public class ConstraintsVerifierMinItemsTest {
                 indent(b, 4) + "\n" +
                 "constraints:\n" +
                 "  minItems: 5\n" +
-                "  allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -225,7 +212,6 @@ public class ConstraintsVerifierMinItemsTest {
         String a = "name: A\n" +
                 "constraints:\n" +
                 "  minItems: 3\n" +
-                "  allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -236,16 +222,14 @@ public class ConstraintsVerifierMinItemsTest {
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  minItems: 4\n" +
-                "  allowMultiple: true";
+                "  minItems: 4\n";
 
         String x = "name: X\n" +
                 "a:\n" +
                 "  type:\n" +
                 indent(b, 4) + "\n" +
                 "  constraints:\n" +
-                "    minItems: 2\n" +
-                "    allowMultiple: true";
+                "    minItems: 2\n";
 
         String y = "name: Y\n" +
                 "type:\n" +
@@ -258,7 +242,7 @@ public class ConstraintsVerifierMinItemsTest {
         merger = new Merger(mergingProcessor, e -> null);
 
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
-        assertEquals(4, node.getItems().size());
+        assertEquals(4, node.getProperties().get("a").getItems().size());
 
     }
 
@@ -269,7 +253,6 @@ public class ConstraintsVerifierMinItemsTest {
         String a = "name: A\n" +
                 "constraints:\n" +
                 "  minItems: 3\n" +
-                "  allowMultiple: truen\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -279,16 +262,14 @@ public class ConstraintsVerifierMinItemsTest {
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  minItems: 4\n" +
-                "  allowMultiple: true";
+                "  minItems: 4\n";
 
         String x = "name: X\n" +
                 "type:\n" +
                 indent(b, 4) + "\n" +
                 "constraints:\n" +
                 "  minItems:\n" +
-                "    value: 2\n" +
-                "  allowMultiple: true";
+                "    value: 2\n";
 
         String y = "name: Y\n" +
                 "type:\n" +

@@ -30,7 +30,7 @@ public class ConstraintsVerifierMaxItemsTest {
 
     @BeforeEach
     public void setUp() {
-        constraints = new Constraints().allowMultiple(true);
+        constraints = new Constraints();
         node = new Node()
                 .items(Arrays.asList(new Node().value(1), new Node().value(2)))
                 .constraints(constraints);
@@ -63,18 +63,15 @@ public class ConstraintsVerifierMaxItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  maxItems: 3\n" +
-                "  allowMultiple: true";
+                "  maxItems: 3\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 "  name: A\n" +
                 "  constraints:\n" +
-                "    maxItems: 3\n" +
-                "    allowMultiple: true\n" +
+                "    maxItems: 3\n"+
                 "constraints:\n" +
-                "  maxItems: 4\n" +
-                "  allowMultiple: true";
+                "  maxItems: 4\n";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -83,10 +80,8 @@ public class ConstraintsVerifierMaxItemsTest {
                 "    name: A\n" +
                 "    constraints:\n" +
                 "      maxItems: 3\n" +
-                "      allowMultiple: true\n" +
                 "  constraints:\n" +
                 "    maxItems: 4\n" +
-                "    allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -108,18 +103,15 @@ public class ConstraintsVerifierMaxItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  maxItems: 3\n" +
-                "  allowMultiple: true";
+                "  maxItems: 3\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 "  name: A\n" +
                 "  constraints:\n" +
                 "    maxItems: 3\n" +
-                "    allowMultiple: true\n" +
                 "constraints:\n" +
-                "  maxItems: 4\n" +
-                "  allowMultiple: true";
+                "  maxItems: 4\n";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -128,10 +120,8 @@ public class ConstraintsVerifierMaxItemsTest {
                 "    name: A\n" +
                 "    constraints:\n" +
                 "      maxItems: 3\n" +
-                "      allowMultiple: true\n" +
                 "  constraints:\n" +
                 "    maxItems: 4\n" +
-                "    allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -153,22 +143,19 @@ public class ConstraintsVerifierMaxItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  maxItems: 3\n" +
-                "  allowMultiple: true";
+                "  maxItems: 3\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  maxItems: 4\n" +
-                "  allowMultiple: true";
+                "  maxItems: 4\n";
 
         String x = "name: X\n" +
                 "type:\n" +
                 indent(b, 4) + "\n" +
                 "constraints:\n" +
-                "  maxItems: 5\n" +
-                "  allowMultiple: true";
+                "  maxItems: 5\n";
 
         String y = "name: Y\n" +
                 "type:\n" +
@@ -194,23 +181,20 @@ public class ConstraintsVerifierMaxItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  maxItems: 3\n" +
-                "  allowMultiple: true";
+                "  maxItems: 3\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  maxItems: 4\n" +
-                "  allowMultiple: true";
+                "  maxItems: 4\n";
 
         String x = "name: X\n" +
                 "a:\n" +
                 "  type:\n" +
                 indent(b, 4) + "\n" +
                 "  constraints:\n" +
-                "    maxItems: 2\n" +
-                "    allowMultiple: true";
+                "    maxItems: 2\n";
 
         String y = "name: Y\n" +
                 "type:\n" +
@@ -236,23 +220,20 @@ public class ConstraintsVerifierMaxItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  maxItems: 3\n" +
-                "  allowMultiple: true";
+                "  maxItems: 3\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  maxItems: 4\n" +
-                "  allowMultiple: true";
+                "  maxItems: 4\n";
 
         String x = "name: X\n" +
                 "type:\n" +
                 indent(b, 4) + "\n" +
                 "constraints:\n" +
                 "  maxItems:\n" +
-                "    value: 2\n" +
-                "  allowMultiple: true";
+                "    value: 2\n";
 
         String y = "name: Y\n" +
                 "type:\n" +

@@ -30,7 +30,7 @@ public class ConstraintsVerifierUniqueItemsTest {
 
     @BeforeEach
     public void setUp() {
-        constraints = new Constraints().allowMultiple(true);
+        constraints = new Constraints();
         node = new Node()
                 .items(Arrays.asList(new Node().value(1), new Node().value(1)))
                 .constraints(constraints);
@@ -63,17 +63,14 @@ public class ConstraintsVerifierUniqueItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  uniqueItems: true\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: true\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 "  name: A\n" +
                 "  constraints:\n" +
                 "    uniqueItems: true\n" +
-                "    allowMultiple: true\n" +
-                "constraints:\n" +
-                "  allowMultiple: true";
+                "constraints:\n";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -82,9 +79,7 @@ public class ConstraintsVerifierUniqueItemsTest {
                 "    name: A\n" +
                 "    constraints:\n" +
                 "      uniqueItems: true\n" +
-                "      allowMultiple: true\n" +
                 "  constraints:\n" +
-                "    allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 2\n" +
@@ -106,18 +101,15 @@ public class ConstraintsVerifierUniqueItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  uniqueItems: true\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: true\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 "  name: A\n" +
                 "  constraints:\n" +
                 "    uniqueItems: true\n" +
-                "    allowMultiple: true\n" +
                 "constraints:\n" +
-                "  uniqueItems: false\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: false\n";
 
         String c = "name: C\n" +
                 "type:\n" +
@@ -126,10 +118,8 @@ public class ConstraintsVerifierUniqueItemsTest {
                 "    name: A\n" +
                 "    constraints:\n" +
                 "      uniqueItems: true\n" +
-                "      allowMultiple: true\n" +
                 "  constraints:\n" +
                 "    uniqueItems: false\n" +
-                "    allowMultiple: true\n" +
                 "items:\n" +
                 "  - value: 1\n" +
                 "  - value: 1\n" +
@@ -151,22 +141,19 @@ public class ConstraintsVerifierUniqueItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  uniqueItems: true\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: true\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  uniqueItems: false\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: false\n";
 
         String x = "name: X\n" +
                 "type:\n" +
                 indent(b, 4) + "\n" +
                 "constraints:\n" +
-                "  uniqueItems: false\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: false\n";
 
         String y = "name: Y\n" +
                 "type:\n" +
@@ -192,23 +179,20 @@ public class ConstraintsVerifierUniqueItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  uniqueItems: true\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: true\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  uniqueItems: true\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: true\n";
 
         String x = "name: X\n" +
                 "a:\n" +
                 "  type:\n" +
                 indent(b, 4) + "\n" +
                 "  constraints:\n" +
-                "    uniqueItems: false\n" +
-                "    allowMultiple: true";
+                "    uniqueItems: false\n";
 
         String y = "name: Y\n" +
                 "type:\n" +
@@ -234,23 +218,20 @@ public class ConstraintsVerifierUniqueItemsTest {
 
         String a = "name: A\n" +
                 "constraints:\n" +
-                "  uniqueItems: true\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: true\n";
 
         String b = "name: B\n" +
                 "type:\n" +
                 indent(a, 2) + "\n" +
                 "constraints:\n" +
-                "  uniqueItems: false\n" +
-                "  allowMultiple: true";
+                "  uniqueItems: false\n";
 
         String x = "name: X\n" +
                 "type:\n" +
                 indent(b, 4) + "\n" +
                 "constraints:\n" +
                 "  uniqueItems:\n" +
-                "    value: false\n" +
-                "  allowMultiple: true";
+                "    value: false\n";
 
         String y = "name: Y\n" +
                 "type:\n" +
