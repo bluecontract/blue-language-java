@@ -261,7 +261,7 @@ public class BlueIdPreprocessTest {
         Node result =  process(Stream.of(a, b, x, y), "Y");
         System.out.println(YAML_MAPPER.writeValueAsString(NodeToObject.get(result)));
         assertNotNull(result.getProperties().get("b"));
-        assertEquals(2, result.getProperties().get("b").getItems().stream().count());
+        assertEquals(2, result.getProperties().get("b").getItems().size());
         assertNull(result.getType().getItems());
         assertNull(result.getType().getType().getProperties().get("b").getItems());
         assertNotNull(result.getType().getType().getProperties().get("b").getType().getItems());
@@ -285,6 +285,26 @@ public class BlueIdPreprocessTest {
         Node result =  process(Stream.of(a, b), "B");
         System.out.println(YAML_MAPPER.writeValueAsString(NodeToObject.get(result)));
         assertNull(result.getItems());
+        assertNotNull(result.getType().getItems());
+    }
+
+    @Test
+    public void testListPreprocessSmaller() throws Exception {
+
+        String a = "name: A\n" +
+                "items: \n" +
+                "  - 1\n" +
+                "  - 2";
+
+        String b = "name: B\n" +
+                "type:\n" +
+                indent(a, 2) + "\n" +
+                "items: \n" +
+                "  - 1\n";
+
+        Node result =  process(Stream.of(a, b), "B");
+        System.out.println(YAML_MAPPER.writeValueAsString(NodeToObject.get(result)));
+        assertNotNull(result.getItems());
         assertNotNull(result.getType().getItems());
     }
 

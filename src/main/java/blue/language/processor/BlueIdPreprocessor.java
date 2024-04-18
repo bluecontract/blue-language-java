@@ -113,6 +113,9 @@ public class BlueIdPreprocessor {
         List<Node> result = new ArrayList<>();
         List<Node> processedTarget = target.stream().map(this::forceProcess).collect(Collectors.toList());
         List<Node> processedSource = source.stream().map(this::forceProcess).collect(Collectors.toList());
+        if (processedTarget.size() < processedSource.size()) {
+            return processedTarget;
+        }
         String blueId = BlueIdCalculator.calculateBlueId(processedSource);
         String targetBlueId = BlueIdCalculator.calculateBlueId(processedTarget);
         if (targetBlueId.equals(blueId)) {
