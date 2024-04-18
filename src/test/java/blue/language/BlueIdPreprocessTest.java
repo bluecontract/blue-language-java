@@ -191,6 +191,104 @@ public class BlueIdPreprocessTest {
     }
 
     @Test
+    public void testListPreprocess() throws Exception {
+
+        String a = "name: A\n" +
+                "items:\n" +
+                "  - 1\n" +
+                "  - 2\n";
+
+        String b = "name: B\n" +
+                "b: \n" +
+                "  type:\n" +
+                indent(a, 4);
+
+        String x = "name: X\n" +
+                "type:\n" +
+                indent(b, 2);
+
+        String y = "name: Y\n" +
+                "type:\n" +
+                indent(x, 2) + "\n" +
+                "b: \n" +
+                "  type:\n" +
+                indent(a, 4) + "\n" +
+                "  items:\n" +
+                "    - 1\n" +
+                "    - 2\n";
+
+
+        Node result =  process(Stream.of(a, b, x, y), "Y");
+        assertThrows(NullPointerException.class, () -> result.getProperties().get("b"));
+        assertNull(result.getType().getItems());
+        assertNull(result.getType().getType().getProperties().get("b").getItems());
+        assertNotNull(result.getType().getType().getProperties().get("b").getType().getItems());
+    }
+
+    @Test
+    public void testListPreprocess2() throws Exception {
+
+        String a = "name: A\n" +
+                "items:\n" +
+                "  - name: A1\n" +
+                "    value: 1\n" +
+                "  - name: A2\n" +
+                "    value: 2\n";
+
+        String b = "name: B\n" +
+                "b: \n" +
+                "  type:\n" +
+                indent(a, 4);
+
+        String x = "name: X\n" +
+                "type:\n" +
+                indent(b, 2);
+
+        String y = "name: Y\n" +
+                "type:\n" +
+                indent(x, 2) + "\n" +
+                "b: \n" +
+                "  type:\n" +
+                indent(a, 4) + "\n" +
+                "  items:\n" +
+                "    - name: A1\n" +
+                "      value: 1\n" +
+                "    - name: A2\n" +
+                "      value: 2\n" +
+                "    - name: A3\n" +
+                "      value: 3";
+
+        Node result =  process(Stream.of(a, b, x, y), "Y");
+        System.out.println(YAML_MAPPER.writeValueAsString(NodeToObject.get(result)));
+        assertNotNull(result.getProperties().get("b"));
+        assertEquals(2, result.getProperties().get("b").getItems().stream().count());
+        assertNull(result.getType().getItems());
+        assertNull(result.getType().getType().getProperties().get("b").getItems());
+        assertNotNull(result.getType().getType().getProperties().get("b").getType().getItems());
+    }
+
+    @Test
+    public void testListPreprocess1() throws Exception {
+
+        String a = "name: A\n" +
+                "items: \n" +
+                "  - 1\n" +
+                "  - 2";
+
+        String b = "name: B\n" +
+                "type:\n" +
+                indent(a, 2) + "\n" +
+                "items: \n" +
+                "  - 1\n" +
+                "  - 2";
+
+        Node result =  process(Stream.of(a, b), "B");
+        System.out.println(YAML_MAPPER.writeValueAsString(NodeToObject.get(result)));
+        assertNull(result.getItems());
+        assertNotNull(result.getType().getItems());
+    }
+
+    @Test
     public void testEqualBlueId() throws Exception {
 
         String a = "name: A\n" +
@@ -249,6 +347,52 @@ public class BlueIdPreprocessTest {
         String result = "name: Y\n" +
                 "type:\n" +
                 indent(x, 2);
+
+        Node processed = process(Stream.of(a, b, x, y), "Y");
+        Node expected = YAML_MAPPER.readValue(result, Node.class);
+        assertEquals(BlueIdCalculator.calculateBlueId(processed), BlueIdCalculator.calculateBlueId(expected));
+    }
+
+    @Test
+    public void testListBlueId() throws Exception {
+
+        String a = "name: A\n" +
+                "items:\n" +
+                "  - name: A1\n" +
+                "    value: 1\n" +
+                "  - name: A2\n" +
+                "    value: 2\n" +
+                "  - name: A3\n" +
+                "    value: 3";
+
+        String b = "name: B\n" +
+                "b: \n" +
+                "  type:\n" +
+                indent(a, 4);
+
+        String x = "name: X\n" +
+                "type:\n" +
+                indent(b, 2);
+
+        String y = "name: Y\n" +
+                "type:\n" +
+                indent(x, 2) + "\n" +
+                "b: \n" +
+                "  type:\n" +
+                indent(a, 4) + "\n" +
+                "  items:\n" +
+                "    - name: A1\n" +
+                "      value: 1\n" +
+                "    - name: A2\n" +
+                "      value: 2\n" +
+                "    - name: A3\n" +
+                "      value: 3\n" +
+                "c: 1";
+
+        String result = "name: Y\n" +
+                "type:\n" +
+                indent(x, 2) + "\n" +
+                "c: 1";
 
         Node processed = process(Stream.of(a, b, x, y), "Y");
         Node expected = YAML_MAPPER.readValue(result, Node.class);

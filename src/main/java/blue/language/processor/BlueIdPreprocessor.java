@@ -4,10 +4,12 @@ import blue.language.MergingProcessor;
 import blue.language.NodeProvider;
 import blue.language.NodeResolver;
 import blue.language.model.Node;
+import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
 
-import java.util.HashMap;
-import java.util.Optional;
+import java.lang.reflect.Array;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class BlueIdPreprocessor {
     NodeProvider nodeProvider;
@@ -37,6 +39,9 @@ public class BlueIdPreprocessor {
             node = new Node();
             typeNode = null;
             node.value(target.getValue());
+            if (target.getItems() != null) {
+                node.items(target.getItems());
+            }
         }
 
         if (target.getName() != null) {
@@ -90,6 +95,45 @@ public class BlueIdPreprocessor {
             });
         }
 
+        if (target.getItems() != null) {
+            if (source.getItems() == null) {
+                node.items(target.getItems().stream().map(this::forceProcess).collect(Collectors.toList()));
+            } else {
+                List<Node> result = subtractItems(target.getItems(), source.getItems());
+                if (!result.isEmpty()) {
+                    node.items(result);
+                }
+            }
+        }
+
         return node;
+    }
+
+    List<Node> subtractItems(List<Node> target, List<Node> source) {
+        List<Node> result = new ArrayList<>();
+        List<Node> processedTarget = target.stream().map(this::forceProcess).collect(Collectors.toList());
+        List<Node> processedSource = source.stream().map(this::forceProcess).collect(Collectors.toList());
+        String blueId = BlueIdCalculator.calculateBlueId(processedSource);
+        String targetBlueId = BlueIdCalculator.calculateBlueId(processedTarget);
+        if (targetBlueId.equals(blueId)) {
+            return result;
+        }
+        String accumulatedBlueId = null;
+        for (int i = 0; i < processedTarget.size(); i++) {
+            if (accumulatedBlueId == null) {
+                accumulatedBlueId = BlueIdCalculator.calculateBlueId(processedTarget.get(i));
+            } else {
+                Node n = new Node().blueId(accumulatedBlueId);
+                Node rest = new Node().blueId(BlueIdCalculator.calculateBlueId(processedTarget.get(i)));
+                accumulatedBlueId = BlueIdCalculator.calculateBlueId(Arrays.asList(n, rest));
+            }
+            if (accumulatedBlueId.equals(blueId)) {
+                Node blueIdNode = new Node().blueId(blueId);
+                result.add(blueIdNode);
+                result.addAll(target.subList(i + 1, target.size()));
+                break;
+            }
+        }
+        return result;
     }
 }
