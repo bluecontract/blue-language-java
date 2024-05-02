@@ -43,11 +43,11 @@ public class BlueIdCalculatorTest {
         Map<String, Object> map3 = YAML_MAPPER.readValue(yaml3, Map.class);
         String result3 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map3);
 
-        String yaml4 = "blueId: hash({pqr=hash({value=1}), abc=hash({def=hash({value=1}), ghi=hash({jkl=hash({value=2}), mno=hash({value=x})})})})";
+        String yaml4 = "blueId: hash({abc=hash({def=hash({value=1}), ghi=hash({jkl=hash({value=2}), mno=hash({value=x})})}), pqr=hash({value=1})})";
         Map<String, Object> map4 = YAML_MAPPER.readValue(yaml4, Map.class);
         String result4 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map4);
 
-        String expectedResult = "hash({pqr=hash({value=1}), abc=hash({def=hash({value=1}), ghi=hash({jkl=hash({value=2}), mno=hash({value=x})})})})";
+        String expectedResult = "hash({abc=hash({def=hash({value=1}), ghi=hash({jkl=hash({value=2}), mno=hash({value=x})})}), pqr=hash({value=1})})";
         assertEquals(expectedResult, result1);
         assertEquals(expectedResult, result2);
         assertEquals(expectedResult, result3);
