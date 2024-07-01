@@ -1,6 +1,7 @@
 plugins {
-    id("java")
-    `maven-publish`
+    id 'java'
+    id 'maven-publish'
+    id 'org.jreleaser' version '1.12.0'
 }
 
 group = "blue.language"
@@ -27,7 +28,6 @@ dependencies {
     implementation("commons-codec:commons-codec:1.15")
 
     testImplementation("org.apache.httpcomponents:httpclient:4.5.14")
-
 }
 
 tasks.test {
@@ -35,15 +35,28 @@ tasks.test {
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            groupId = project.group.toString()
-            artifactId = project.name
-            version = project.version.toString()
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir('staging-deploy')
         }
     }
-    repositories {
-        mavenLocal()
+    publications {
+        mavenJava(MavenPublication) {
+          from components.java
+        }
     }
+}
+
+jreleaser {
+  deploy {
+    maven {
+      mavenCentral {
+        sonatype {
+          active = 'ALWAYS'
+          url = 'https://central.sonatype.com/api/v1/publisher'
+          stagingRepository('build/staging-deploy')
+        }
+      }
+    }
+  }
 }
