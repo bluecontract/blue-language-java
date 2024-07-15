@@ -1,4 +1,4 @@
-package blue.language.samples.ipfs;
+package blue.language.utils.ipfs;
 
 import blue.language.utils.Base58;
 import org.apache.commons.codec.binary.Base32;

@@ -9,12 +9,12 @@ public class Nodes {
 
     public static boolean isEmptyNode(Node node) {
         return node.getName() == null && node.getType() == null && node.getValue() == null && node.getDescription() == null &&
-                node.getItems() == null && node.getProperties() == null && node.getRef() == null && node.getFeatures() == null;
+                node.getItems() == null && node.getProperties() == null && node.getFeatures() == null;
     }
 
     public static boolean isEmptyNodeWithoutBlueId(Node node) {
         return node.getName() == null && node.getType() == null && node.getValue() == null &&
-                node.getItems() == null && node.getProperties() == null && node.getRef() == null &&
+                node.getItems() == null && node.getProperties() == null &&
                 node.getFeatures() == null && node.getBlueId() == null;
     }
 

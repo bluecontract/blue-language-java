@@ -1,6 +1,6 @@
 package blue.language.model;
 
-import blue.language.utils.BlueId;
+import blue.language.utils.BlueIds;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -28,7 +28,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private Node handleNode(JsonNode node) {
-        if (node.isTextual() && BlueId.isPotentialBlueId(node.asText()))
+        if (node.isTextual() && BlueIds.isPotentialBlueId(node.asText()))
             return new Node().blueId(node.asText());
         else if (node.isObject()) {
             Node obj = new Node();
@@ -53,9 +53,6 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                     case OBJECT_BLUE_ID:
                         obj.blueId(value.asText());
                         break;
-                    case OBJECT_REF:
-                        obj.ref(value.asText());
-                        break;
                     case OBJECT_ITEMS:
                         obj.items(handleArray(value).getItems());
                         break;
@@ -77,7 +74,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
 
     private Node handleType(JsonNode value) {
         if (value.isTextual()) {
-            if (BlueId.isPotentialBlueId(value.asText()))
+            if (BlueIds.isPotentialBlueId(value.asText()))
                 return new Node().blueId(value.asText());
             else
                 return new Node().name(value.asText());
@@ -100,7 +97,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private Node handleArray(JsonNode value) {
-        if (value.isTextual() && BlueId.isPotentialBlueId(value.asText())) {
+        if (value.isTextual() && BlueIds.isPotentialBlueId(value.asText())) {
             List<Node> singleItemList = new ArrayList<>();
             singleItemList.add(new Node().blueId(value.asText()));
             return new Node().items(singleItemList);

@@ -1,17 +1,18 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.model.limits.Limits;
+import blue.language.utils.NodeExtender;
+import blue.language.utils.limits.Limits;
 import blue.language.processor.ConstraintsVerifier;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.Nodes;
+import blue.language.utils.limits.PathLimits;
 
-import javax.lang.model.type.NullType;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static blue.language.utils.Types.isBasicType;
 
 public class Merger implements NodeResolver {
 
@@ -23,17 +24,20 @@ public class Merger implements NodeResolver {
         this.nodeProvider = nodeProvider;
     }
 
-    public void merge(Node target, Node source) {
-        merge(target, source, Limits.NO_LIMITS);
-    }
-
     public void merge(Node target, Node source, Limits limits) {
-        if (limits != Limits.END_LIMITS) {
-            if (source.getType() != null) {
-                Node resolvedType = resolve(source.getType(), limits.next(true));
-                source.type(resolvedType);
-                merge(target, source.getType(), limits.next(true));
+        String typeBlueId = null;
+        if (source.getType() != null) {
+            Node typeNode = source.getType();
+            if (typeNode.getBlueId() != null) {
+                new NodeExtender(nodeProvider).extend(typeNode, PathLimits.withSinglePath("/"));
+                typeBlueId = typeNode.getBlueId();
+            } else if(!isBasicType(typeNode)) {
+                typeBlueId = BlueIdCalculator.calculateBlueId(typeNode);
             }
+
+            Node resolvedType = resolve(typeNode, limits);
+            source.type(resolvedType);
+            merge(target, typeNode, limits);
         }
         mergeObject(target, source, limits);
     }
@@ -41,36 +45,41 @@ public class Merger implements NodeResolver {
     private void mergeObject(Node target, Node source, Limits limits) {
         mergingProcessor.process(target, source, nodeProvider, this);
 
-        if (!limits.canReadNext()) {
-            mergingProcessor.postProcess(target, source, nodeProvider, this);
-            return;
+        List<Node> children = source.getItems();
+        if (children != null) {
+            mergeChildren(target, children, limits);
         }
 
-        List<Node> children = source.getItems();
-        if (children != null)
-            mergeChildren(target, children, limits);
         Map<String, Node> properties = source.getProperties();
-        if (properties != null)
-            properties.forEach((key, value) -> mergeProperty(target, key, value, limits));
+        if (properties != null) {
+            properties.forEach((key, value) -> {
+                if (limits.shouldProcessPathSegment(key)) {
+                    limits.enterPathSegment(key);
+                    mergeProperty(target, key, value, limits);
+                    limits.exitPathSegment();
+                }
+            });
+        }
 
-        mergingProcessor.postProcess(target, source, nodeProvider, this);
-        stripType(target, limits.nextForTypeStrip());
+        if (target.getProperties() == null && source.getProperties() != null && !source.getProperties().isEmpty()) {
+            target.blueId(BlueIdCalculator.calculateBlueId(source));
+        }
+
+        new ConstraintsVerifier().postProcess(target, source, nodeProvider, this);
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
         List<Node> targetChildren = target.getItems();
         if (targetChildren == null) {
-            targetChildren = new ArrayList<>();
-            Limits limitsCopy = limits.copy();
-            for (int i = 0; i < sourceChildren.size(); i++) {
-                if (limits.canReadIndex(i)) {
-                    Limits l = limitsCopy.next(false);
-                    if (l == Limits.END_LIMITS) {
-                        targetChildren.add(new Node().blueId(BlueIdCalculator.calculateBlueId(sourceChildren.get(i))));
-                    } else
-                        targetChildren.add(resolve(sourceChildren.get(i), l));
-                }
-            }
+            targetChildren = sourceChildren.stream()
+                    .filter(child -> limits.shouldProcessPathSegment(String.valueOf(sourceChildren.indexOf(child))))
+                    .map(child -> {
+                        limits.enterPathSegment(String.valueOf(sourceChildren.indexOf(child)));
+                        Node resolvedChild = resolve(child, limits);
+                        limits.exitPathSegment();
+                        return resolvedChild;
+                    })
+                    .collect(Collectors.toList());
             target.items(targetChildren);
             return;
         } else if (sourceChildren.size() < targetChildren.size())
@@ -79,16 +88,14 @@ public class Merger implements NodeResolver {
                     targetChildren.size(), sourceChildren.size()
             ));
 
-        Limits limitsCopy = limits.copy();
         for (int i = 0; i < sourceChildren.size(); i++) {
+            if (!limits.shouldProcessPathSegment(String.valueOf(i))) {
+                continue;
+            }
+            limits.enterPathSegment(String.valueOf(i));
             if (i >= targetChildren.size()) {
-                if (limits.canReadIndex(i)) {
-                    Limits l = limitsCopy.next(false);
-                    if (l == Limits.END_LIMITS) {
-                        targetChildren.add(new Node().blueId(BlueIdCalculator.calculateBlueId(sourceChildren.get(i))));
-                    } else
-                        targetChildren.add(resolve(sourceChildren.get(i), l));
-                }
+                targetChildren.add(sourceChildren.get(i));
+                limits.exitPathSegment();
                 continue;
             }
             String sourceBlueId = BlueIdCalculator.calculateBlueId(sourceChildren.get(i));
@@ -98,16 +105,12 @@ public class Merger implements NodeResolver {
                         "Mismatched items at index %d: source item has blueId '%s', but target item has blueId '%s'.",
                         i, sourceBlueId, targetBlueId
                 ));
+            limits.exitPathSegment();
         }
-        target.getItems().removeIf(Nodes::isEmptyNode);
     }
 
     private void mergeProperty(Node target, String sourceKey, Node sourceValue, Limits limits) {
-        if (!limits.filter(sourceKey)) {
-            return;
-        }
-
-        Node node =  resolve(sourceValue, limits.next(sourceKey));
+        Node node = resolve(sourceValue, limits);
 
         if (target.getProperties() == null)
             target.properties(new HashMap<>());
@@ -115,44 +118,16 @@ public class Merger implements NodeResolver {
         if (targetValue == null)
             target.getProperties().put(sourceKey, node);
         else
-            mergeObject(targetValue, node, limits.next(sourceKey));
-    }
-
-    private void stripType(Node target, Limits limits) {
-        if (limits == Limits.NO_LIMITS || target.getType() == null)
-            return;
-
-        if (Nodes.isEmptyNode(target.getType())) {
-            target.eraseType();
-            return;
-        }
-
-        if (limits == Limits.END_LIMITS) {
-            Node resultNode = new Node();
-            resultNode.blueId(BlueIdCalculator.calculateBlueId(target.getType()));
-            target.type(resultNode);
-        } else {
-            stripType(target.getType(), limits.nextForTypeStrip());
-        }
+            mergeObject(targetValue, node, limits);
     }
 
     @Override
     public Node resolve(Node node, Limits limits) {
         Node resultNode = new Node();
-        if (limits == Limits.END_LIMITS) {
-            if (Nodes.isSingleValueNode(node)) {
-                resultNode.value(node.getValue());
-            } else {
-                resultNode.blueId(BlueIdCalculator.calculateBlueId(node));
-            }
-        } else {
-            merge(resultNode, node, limits);
-            if (limits.canCopyMetadata()) {
-                resultNode.name(node.getName());
-                resultNode.description(node.getDescription());
-            }
-        }
-
+        merge(resultNode, node, limits);
+        resultNode.name(node.getName());
+        resultNode.description(node.getDescription());
+        resultNode.blueId(node.getBlueId());
         return resultNode;
     }
 }

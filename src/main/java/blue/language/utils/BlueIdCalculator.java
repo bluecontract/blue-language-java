@@ -18,9 +18,6 @@ public class BlueIdCalculator {
         this.hashProvider = hashProvider;
     }
 
-    public static String calculateBlueId(Node node, NodeToObject.Strategy strategy) {
-        return BlueIdCalculator.INSTANCE.calculate(NodeToObject.get(node, strategy));
-    }
     public static String calculateBlueId(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToObject.get(node));
     }
@@ -52,7 +49,7 @@ public class BlueIdCalculator {
                         Map.Entry::getKey,
                         entry -> {
                             String key = entry.getKey();
-                            if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_REF.equals(key))
+                            if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key))
                                 return entry.getValue();
                             return calculate(entry.getValue());
                         }

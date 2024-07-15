@@ -1,12 +1,14 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.model.limits.Limits;
+import blue.language.utils.NodeExtender;
+import blue.language.utils.limits.Limits;
 import blue.language.processor.*;
 
 import java.util.Arrays;
 
-import static blue.language.model.limits.Limits.NO_LIMITS;
+import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.utils.limits.Limits.NO_LIMITS;
 
 public class Blue implements NodeResolver {
 
@@ -37,10 +39,18 @@ public class Blue implements NodeResolver {
         return merger.resolve(node, limits);
     }
 
+    public void extend(Node node, Limits limits) {
+        new NodeExtender(nodeProvider).extend(node, limits);
+    }
+
+    public Node objectToNode(Object object) {
+        return YAML_MAPPER.convertValue(object, Node.class);
+    }
+
     private MergingProcessor createDefaultNodeProcessor() {
         return new SequentialMergingProcessor(
                 Arrays.asList(
-                        new BlueIdResolver(),
+//                        new BlueIdResolver(),
                         new ValuePropagator(),
                         new TypeAssigner()
                 )

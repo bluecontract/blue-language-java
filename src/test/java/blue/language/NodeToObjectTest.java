@@ -3,16 +3,13 @@ package blue.language;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.utils.NodeToObject;
-import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.NodeToObject.Strategy.DOMAIN_MAPPING;
-import static blue.language.utils.Properties.OBJECT_CONSTRAINTS;
+import static blue.language.utils.NodeToObject.Strategy.SIMPLE;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -66,7 +63,7 @@ public class NodeToObjectTest {
                         "b", new Node().value("xyz2").description("descriptionXyz2")
                 );
 
-        Object object = NodeToObject.get(node, DOMAIN_MAPPING);
+        Object object = NodeToObject.get(node, SIMPLE);
         assertInstanceOf(Map.class, object);
         Map<String, Object> result = (Map<String, Object>) object;
 
@@ -161,7 +158,7 @@ public class NodeToObjectTest {
                         )
                 );
 
-        Object object = NodeToObject.get(node, DOMAIN_MAPPING);
+        Object object = NodeToObject.get(node, SIMPLE);
         assertInstanceOf(List.class, object);
         List<Object> result = (List<Object>) object;
 
@@ -209,7 +206,7 @@ public class NodeToObjectTest {
                 .description("descriptionA")
                 .constraints(constraints);
 
-        Object object = NodeToObject.get(node, DOMAIN_MAPPING);
+        Object object = NodeToObject.get(node, SIMPLE);
         Node fromObject = JSON_MAPPER.convertValue(object, Node.class);
         Constraints resultConstraints = fromObject.getConstraints();
 

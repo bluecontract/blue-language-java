@@ -1,7 +1,7 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.model.limits.Limits;
+import blue.language.utils.limits.Limits;
 import blue.language.processor.*;
 import blue.language.utils.Types;
 import org.junit.jupiter.api.Test;

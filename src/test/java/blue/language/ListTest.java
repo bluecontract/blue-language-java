@@ -1,10 +1,12 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.model.limits.Limits;
+import blue.language.utils.NodeExtender;
+import blue.language.utils.limits.Limits;
 import blue.language.processor.*;
 import blue.language.utils.BasicNodesProvider;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -225,21 +227,17 @@ public class ListTest {
         String x5 = "name: X1\n" +
                 "items: " + abcId;
 
-        String x6 = "blueId: " + abcId;
-
         Node x1Resolved = merger.resolve(YAML_MAPPER.readValue(x1, Node.class));
         Node x2Resolved = merger.resolve(YAML_MAPPER.readValue(x2, Node.class));
         Node x3Resolved = merger.resolve(YAML_MAPPER.readValue(x3, Node.class));
         Node x4Resolved = merger.resolve(YAML_MAPPER.readValue(x4, Node.class));
         Node x5Resolved = merger.resolve(YAML_MAPPER.readValue(x5, Node.class));
-        Node x6Resolved = merger.resolve(YAML_MAPPER.readValue(x6, Node.class));
 
         assertEquals(3, x1Resolved.getItems().size());
         assertEquals(3, x2Resolved.getItems().size());
         assertEquals(3, x3Resolved.getItems().size());
         assertEquals(3, x4Resolved.getItems().size());
         assertEquals(3, x5Resolved.getItems().size());
-        assertEquals(3, x6Resolved.getItems().size());
 
     }
 

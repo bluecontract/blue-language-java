@@ -8,32 +8,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.NodeToObject.Strategy.DOMAIN_MAPPING;
-import static blue.language.utils.NodeToObject.Strategy.STANDARD;
+import static blue.language.utils.NodeToObject.Strategy.*;
 import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class NodeToObject {
 
     public enum Strategy {
-        STANDARD,
-        DOMAIN_MAPPING
+        OFFICIAL,
+        SIMPLE,
+        SIMPLE_NO_TYPE
     }
 
     public static Object get(Node node) {
-        return get(node, STANDARD);
+        return get(node, OFFICIAL);
     }
 
     public static Object get(Node node, Strategy strategy) {
 
-        if (node.getValue() != null && strategy == DOMAIN_MAPPING)
+        if (node.getValue() != null && isStrategySimple(strategy))
             return node.getValue();
 
         List<Object> items = node.getItems() == null ? null :
                 node.getItems().stream()
                         .map(item -> get(item, strategy))
                         .collect(Collectors.toList());
-        if (items != null && strategy == DOMAIN_MAPPING)
+        if (items != null && isStrategySimple(strategy))
             return items;
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -41,14 +41,12 @@ public class NodeToObject {
             result.put(OBJECT_NAME, node.getName());
         if (node.getDescription() != null)
             result.put(OBJECT_DESCRIPTION, node.getDescription());
-        if (node.getType() != null)
+        if (node.getType() != null && strategy != SIMPLE_NO_TYPE)
             result.put(OBJECT_TYPE, get(node.getType()));
         if (node.getValue() != null)
             result.put(OBJECT_VALUE, node.getValue());
         if (items != null)
             result.put(OBJECT_ITEMS, items);
-        if (node.getRef() != null)
-            result.put(OBJECT_REF, node.getRef());
         if (node.getBlueId() != null)
             result.put(OBJECT_BLUE_ID, node.getBlueId());
         if (node.getConstraints() != null)
@@ -57,6 +55,10 @@ public class NodeToObject {
             node.getProperties().forEach((key, value) -> result.put(key, get(value, strategy)));
         return result;
 
+    }
+
+    private static boolean isStrategySimple(Strategy strategy) {
+        return strategy == SIMPLE || strategy == SIMPLE_NO_TYPE;
     }
 
 }

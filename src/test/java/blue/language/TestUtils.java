@@ -4,15 +4,29 @@ import blue.language.model.Node;
 import blue.language.utils.DirectoryBasedNodeProvider;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TestUtils {
 
     public static DirectoryBasedNodeProvider samplesDirectoryNodeProvider() throws IOException {
         return new DirectoryBasedNodeProvider("samples");
+    }
+
+    public static NodeProvider fakeNameBasedNodeProvider(Collection<Node> nodes) {
+        return new NodeProvider() {
+            private final Map<String, Node> nodeMap = nodes.stream()
+                    .collect(Collectors.toMap(
+                            node -> "blueId-" + node.getName(),
+                            node -> node
+                    ));
+
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                Node node = nodeMap.get(blueId);
+                return node != null ? List.of(node) : List.of();
+            }
+        };
     }
 
     public static NodeProvider useNodeNameAsBlueIdProvider(List<Node> nodes) {

@@ -21,7 +21,13 @@ public class BlueIdSerializer extends StdSerializer<Object> {
         BlueId blueIdAnnotation = value.getClass().getAnnotation(BlueId.class);
         if (blueIdAnnotation != null) {
             gen.writeStartObject();
-            gen.writeStringField(Properties.OBJECT_TYPE, blueIdAnnotation.value());
+
+            String typeBlueId = blueIdAnnotation.defaultValue();
+            if (typeBlueId.isEmpty()) {
+                typeBlueId = blueIdAnnotation.value()[0];
+            }
+            gen.writeStringField(Properties.OBJECT_TYPE, typeBlueId);
+
             defaultSerializer.unwrappingSerializer(null).serialize(value, gen, provider);
             gen.writeEndObject();
         } else {

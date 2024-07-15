@@ -56,7 +56,12 @@ public class Types {
         return type;
     }
 
-    public static boolean isBasicType(String type) {
+    public static boolean isBasicTypeName(String type) {
         return BASIC_TYPES.contains(type);
     }
+
+    public static boolean isBasicType(Node typeNode) {
+        return typeNode.getName() != null && isBasicTypeName(typeNode.getName());
+    }
+
 }

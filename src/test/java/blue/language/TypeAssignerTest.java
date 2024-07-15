@@ -1,7 +1,7 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.model.limits.Limits;
+import blue.language.utils.limits.Limits;
 import blue.language.processor.*;
 import blue.language.utils.BasicNodesProvider;
 import blue.language.utils.DirectoryBasedNodeProvider;

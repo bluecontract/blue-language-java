@@ -1,6 +1,6 @@
 package blue.language.utils;
 
-public class BlueId {
+public class BlueIds {
 
     public static final int BLUE_ID_LENGTH = 44;
 

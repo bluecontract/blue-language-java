@@ -18,7 +18,6 @@ public class NodeDeserializerTest {
                 "description: description\n" +
                 "type: type\n" +
                 "value: value\n" +
-                "ref: ref\n" +
                 "blueId: blueId\n" +
                 "x: x\n" +
                 "y:\n" +
@@ -31,7 +30,6 @@ public class NodeDeserializerTest {
         assertEquals("description", node.getDescription());
         assertEquals("type", node.getType().getName());
         assertEquals("value", node.getValue());
-        assertEquals("ref", node.getRef());
         assertEquals("blueId", node.getBlueId());
         assertEquals("x", node.getProperties().get("x").getValue());
 

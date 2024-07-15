@@ -1,0 +1,15 @@
+name: For Limits
+x:
+  x1:
+    x11: 1
+    x12: 2
+  x2: 3
+y: 4
+availableMenuItems:
+  appetizers:
+    - SakuraSpringSalad:
+        description: "A delicate mix of spring greens, cherry blossoms, and a light yuzu dressing."
+        isVegetarian: true
+    - EdamameWithSeaSalt:
+        description: "Freshly steamed edamame sprinkled with sea salt."
+        isVegetarian: true

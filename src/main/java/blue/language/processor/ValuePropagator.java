@@ -15,5 +15,6 @@ public class ValuePropagator implements MergingProcessor {
                 throw new IllegalArgumentException("Node values conflict. Source node value: " + source.getValue() +
                         ", target node value: " + target.getValue());
         }
+        
     }
 }

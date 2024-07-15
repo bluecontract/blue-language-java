@@ -3,6 +3,7 @@ package blue.language.utils;
 import blue.language.model.Node;
 import blue.language.NodeProvider;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -11,6 +12,10 @@ public class SequentialNodeProvider implements NodeProvider {
 
     public SequentialNodeProvider(List<NodeProvider> nodeProviders) {
         this.nodeProviders = nodeProviders;
+    }
+
+    public SequentialNodeProvider(NodeProvider... nodeProviders) {
+        this.nodeProviders = Arrays.asList(nodeProviders);
     }
 
     @Override

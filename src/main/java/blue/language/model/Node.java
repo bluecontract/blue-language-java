@@ -1,17 +1,19 @@
 package blue.language.model;
 
+import blue.language.utils.NodePathAccessor;
+import blue.language.utils.Types;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import javax.lang.model.type.NullType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.Types.isBasicType;
-
 @JsonDeserialize(using = NodeDeserializer.class)
+@JsonSerialize(using = NodeSerializer.class)
 public class Node implements Cloneable {
 
     public static final Node INTEGER = new Node().name("Integer");
@@ -22,7 +24,6 @@ public class Node implements Cloneable {
     private Object value;
     private List<Node> items;
     private Map<String, Node> properties;
-    private String ref;
     private String blueId;
     private Constraints constraints;
     @JsonIgnore
@@ -50,10 +51,6 @@ public class Node implements Cloneable {
 
     public Map<String, Node> getProperties() {
         return properties;
-    }
-
-    public String getRef() {
-        return ref;
     }
 
     public String getBlueId() {
@@ -89,7 +86,7 @@ public class Node implements Cloneable {
     }
 
     public Node type(String type) {
-        this.type = isBasicType(type) ? new Node().value(type) : new Node().blueId(type);
+        this.type = Types.isBasicTypeName(type) ? new Node().value(type) : new Node().blueId(type);
         return this;
     }
 
@@ -155,11 +152,6 @@ public class Node implements Cloneable {
         return this;
     }
 
-    public Node ref(String ref) {
-        this.ref = ref;
-        return this;
-    }
-
     public Node blueId(String blueId) {
         this.blueId = blueId;
         return this;
@@ -173,6 +165,14 @@ public class Node implements Cloneable {
     public Node features(List<Feature> features) {
         this.features = features;
         return this;
+    }
+
+    public Object get(String path) {
+        return NodePathAccessor.get(this, path);
+    }
+
+    public Object get(String path, Function<Node, Node> linkingProvider) {
+        return NodePathAccessor.get(this, path, linkingProvider);
     }
 
     @Override
@@ -197,6 +197,7 @@ public class Node implements Cloneable {
         }
     }
 
+
     @Override
     public String toString() {
         return "Node{" +
@@ -206,7 +207,6 @@ public class Node implements Cloneable {
                 ", value=" + value +
                 ", items=" + items +
                 ", properties=" + properties +
-                ", ref='" + ref + '\'' +
                 ", blueId='" + blueId + '\'' +
                 ", constraints=" + constraints +
                 '}';
