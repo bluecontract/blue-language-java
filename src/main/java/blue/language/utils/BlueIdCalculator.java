@@ -52,7 +52,9 @@ public class BlueIdCalculator {
                             if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key))
                                 return entry.getValue();
                             return calculate(entry.getValue());
-                        }
+                        },
+                        (oldValue, newValue) -> newValue,
+                        LinkedHashMap::new
                 ));
         return hashProvider.apply(hashes);
     }
