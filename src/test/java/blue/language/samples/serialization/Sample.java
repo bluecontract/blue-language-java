@@ -3,10 +3,10 @@ package blue.language.samples.serialization;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.TestUtils;
-import blue.language.model.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.DirectoryBasedNodeProvider;
 import blue.language.utils.NodeToObject;
+import blue.language.utils.limits.PathLimits;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +23,7 @@ public class Sample {
         Node node = YAML_MAPPER.readValue(new File(filename), Node.class);
         String originalBLueId = BlueIdCalculator.calculateBlueId(node);
 
-        Node result = blue.resolve(node, Limits.path("pets/*"));
+        Node result = blue.resolve(node, PathLimits.withSinglePath("pets/*"));
         System.out.println(YAML_MAPPER.writeValueAsString(NodeToObject.get(result)));
 
 //        Flattener.flatten(result);
