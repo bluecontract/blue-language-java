@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.utils.limits;
 
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.BeforeEach;

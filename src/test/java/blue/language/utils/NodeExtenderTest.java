@@ -87,6 +87,7 @@ public class NodeExtenderTest {
         assertEquals("A", node.get("/forA/name"));
         assertEquals(BigInteger.valueOf(1), node.get("/forA/x"));
         assertEquals(BigInteger.valueOf(1), node.get("/forA/y/z"));
+        assertThrows(IllegalArgumentException.class, () -> node.get("/forX/a"));
     }
 
     @Test
