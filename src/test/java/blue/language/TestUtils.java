@@ -1,6 +1,7 @@
 package blue.language;
 
 import blue.language.model.Node;
+import blue.language.tmp.A;
 import blue.language.utils.DirectoryBasedNodeProvider;
 
 import java.io.IOException;
@@ -24,7 +25,7 @@ public class TestUtils {
             @Override
             public List<Node> fetchByBlueId(String blueId) {
                 Node node = nodeMap.get(blueId);
-                return node != null ? List.of(node) : List.of();
+                return node != null ? Collections.singletonList(node) : new ArrayList<>();
             }
         };
     }
