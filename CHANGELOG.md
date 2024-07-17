@@ -1,3 +1,9 @@
+## v0.2.0 (2024-07-17)
+
+### Feat
+
+- Gradle build - Maven Central
+
 ## v0.1.0 (2024-07-17)
 
 ### Feat
