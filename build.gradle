@@ -1,3 +1,9 @@
+buildscript {
+    dependencies {
+        classpath 'org.apache.groovy:groovy-toml:4.0.22'
+    }
+}
+
 plugins {
     id 'java'
     id 'maven-publish'
@@ -6,7 +12,7 @@ plugins {
 }
 
 group = "blue.language"
-version = "0.0.1"
+version = determineProjectVersion()
 archivesBaseName = "blue-language-java"
 
 repositories {
@@ -133,4 +139,14 @@ jreleaser {
       }
     }
   }
+}
+
+def determineProjectVersion() {
+    def tomlFile = file('.cz.toml')
+    if (tomlFile.exists()) {
+        def toml = new groovy.toml.TomlSlurper().parse(tomlFile)
+        return toml.tool.commitizen.version
+    } else {
+        throw new GradleException(".cz.toml file not found")
+    }
 }
