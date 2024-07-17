@@ -65,7 +65,7 @@ public class Merger implements NodeResolver {
             target.blueId(BlueIdCalculator.calculateBlueId(source));
         }
 
-        new ConstraintsVerifier().postProcess(target, source, nodeProvider, this);
+        mergingProcessor.postProcess(target, source, nodeProvider, this);
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {

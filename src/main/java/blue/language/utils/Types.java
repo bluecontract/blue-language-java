@@ -35,6 +35,21 @@ public class Types {
         return false;
     }
 
+    public static boolean isSubtypeOfBasicType(Node type, NodeProvider nodeProvider) {
+        return BASIC_TYPES.stream()
+                .map(basicTypeName -> new Node().name(basicTypeName))
+                .anyMatch(basicTypeNode -> isSubtype(type, basicTypeNode, nodeProvider));
+    }
+
+    public static String findBasicTypeName(Node type, NodeProvider nodeProvider) {
+        return BASIC_TYPES.stream()
+                .map(basicTypeName -> new Node().name(basicTypeName))
+                .filter(basicTypeNode -> Types.isSubtype(type, basicTypeNode, nodeProvider))
+                .findFirst()
+                .map(Node::getName)
+                .orElseThrow(() -> new IllegalArgumentException("Cannot determine the basic type for node of type \"" + type.getName() + "\"."));
+    }
+
     private static Node getType(Node node, NodeProvider nodeProvider) {
         Node type = node.getType();
         if (type == null) {

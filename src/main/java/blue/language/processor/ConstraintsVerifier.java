@@ -7,7 +7,6 @@ import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToObject;
-import blue.language.utils.Nodes;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -53,17 +52,17 @@ public class ConstraintsVerifier implements MergingProcessor {
 
     private void verifyAllowMultiple(Boolean allowMultiple, List<Node> items) {
         if ((allowMultiple == null || Boolean.FALSE.equals(allowMultiple)) && items != null && items.size() > 1)
-            throw new IllegalArgumentException("Multiple items are not allowed.");
+            throw new IllegalArgumentException("Multiple items are not allowed. Found items: " + items);
     }
 
     private void verifyMinLength(Integer minLength, Object value) {
         if (minLength != null && value instanceof String && ((String) value).length() < minLength)
-            throw new IllegalArgumentException("Value is shorter than the minimum length of " + minLength + ".");
+            throw new IllegalArgumentException("Value \"" + value + "\" is shorter than the minimum length of " + minLength + ".");
     }
 
     private void verifyMaxLength(Integer maxLength, Object value) {
         if (maxLength != null && value instanceof String && ((String) value).length() > maxLength) {
-            throw new IllegalArgumentException("Value is longer than the maximum length of " + maxLength + ".");
+            throw new IllegalArgumentException("Value \"" + value + "\" is longer than the maximum length of " + maxLength + ".");
         }
     }
 
@@ -74,10 +73,11 @@ public class ConstraintsVerifier implements MergingProcessor {
             }
         }
     }
+
     private void verifyPattern(String pattern, Object value) {
         if (pattern != null && value instanceof String) {
             if (!Pattern.matches(pattern, (String) value)) {
-                throw new IllegalArgumentException("Value does not match the required pattern.");
+                throw new IllegalArgumentException("Value \"" + value + "\" does not match the required pattern \"" + pattern + "\".");
             }
         }
     }
@@ -86,7 +86,7 @@ public class ConstraintsVerifier implements MergingProcessor {
         if (minimum != null && value instanceof Number) {
             BigDecimal valueDecimal = new BigDecimal(value.toString());
             if (valueDecimal.compareTo(minimum) < 0) {
-                throw new IllegalArgumentException("Value is less than the minimum value of " + minimum + ".");
+                throw new IllegalArgumentException("Value " + value + " is less than the minimum value of " + minimum + ".");
             }
         }
     }
@@ -95,7 +95,7 @@ public class ConstraintsVerifier implements MergingProcessor {
         if (maximum != null && value instanceof Number) {
             BigDecimal valueDecimal = new BigDecimal(value.toString());
             if (valueDecimal.compareTo(maximum) > 0) {
-                throw new IllegalArgumentException("Value is greater than the maximum value of " + maximum + ".");
+                throw new IllegalArgumentException("Value " + value + " is greater than the maximum value of " + maximum + ".");
             }
         }
     }
@@ -104,7 +104,7 @@ public class ConstraintsVerifier implements MergingProcessor {
         if (exclusiveMinimum != null && value instanceof Number) {
             BigDecimal valueDecimal = new BigDecimal(value.toString());
             if (valueDecimal.compareTo(exclusiveMinimum) <= 0) {
-                throw new IllegalArgumentException("Value is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
+                throw new IllegalArgumentException("Value " + value + " is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
             }
         }
     }
@@ -113,7 +113,7 @@ public class ConstraintsVerifier implements MergingProcessor {
         if (exclusiveMaximum != null && value instanceof Number) {
             BigDecimal valueDecimal = new BigDecimal(value.toString());
             if (valueDecimal.compareTo(exclusiveMaximum) >= 0) {
-                throw new IllegalArgumentException("Value is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
+                throw new IllegalArgumentException("Value " + value + " is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
             }
         }
     }
@@ -123,20 +123,20 @@ public class ConstraintsVerifier implements MergingProcessor {
             BigDecimal valueDecimal = new BigDecimal(value.toString());
             BigDecimal remainder = valueDecimal.remainder(multipleOf);
             if (remainder.compareTo(BigDecimal.ZERO) != 0) {
-                throw new IllegalArgumentException("Value is not a multiple of " + multipleOf + ".");
+                throw new IllegalArgumentException("Value " + value + " is not a multiple of " + multipleOf + ".");
             }
         }
     }
 
     private void verifyMinItems(Integer minItems, List<Node> items) {
         if (minItems != null && (items == null || items.size() < minItems)) {
-            throw new IllegalArgumentException("Number of items is less than the minimum required items of " + minItems + ".");
+            throw new IllegalArgumentException("Number of items " + (items != null ? items.size() : 0) + " is less than the minimum required items of " + minItems + ".");
         }
     }
 
     private void verifyMaxItems(Integer maxItems, List<Node> items) {
         if (maxItems != null && items != null && items.size() > maxItems) {
-            throw new IllegalArgumentException("Number of items is greater than the maximum allowed items of " + maxItems + ".");
+            throw new IllegalArgumentException("Number of items " + items.size() + " is greater than the maximum allowed items of " + maxItems + ".");
         }
     }
 
@@ -149,11 +149,11 @@ public class ConstraintsVerifier implements MergingProcessor {
                     .collect(Collectors.toSet())
                     .size();
             if (items.size() != uniqueItemsCount)
-                throw new IllegalArgumentException("Unique items are required, but some items are identical.");
+                throw new IllegalArgumentException("Unique items are required, but some items are identical. Found items: " + items);
         }
     }
 
     private void verifyOptions(List<Node> options, Node node, NodeProvider nodeProvider) {
+        // Implementation of options verification goes here
     }
-
 }

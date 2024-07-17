@@ -1,5 +1,7 @@
 package blue.language.utils.limits;
 
+import blue.language.model.Node;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
@@ -106,5 +108,9 @@ public class PathLimits implements Limits {
 
     public static PathLimits withSinglePath(String path) {
         return new PathLimits.Builder().addPath(path).build();
+    }
+
+    public static PathLimits fromNode(Node node) {
+        return NodeToPathLimitsConverter.convert(node);
     }
 }
