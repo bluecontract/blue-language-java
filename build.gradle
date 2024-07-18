@@ -1,20 +1,37 @@
+buildscript {
+    dependencies {
+        classpath 'org.apache.groovy:groovy-toml:4.0.22'
+    }
+}
+
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'org.jreleaser' version '1.12.0'
+    id 'signing'
+    id 'org.jreleaser' version '1.13.1'
 }
 
 group = "blue.language"
-version = "1.0-SNAPSHOT"
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-}
+version = determineProjectVersion()
+archivesBaseName = "blue-language-java"
 
 repositories {
     mavenCentral()
 }
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+compileTestJava {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
 
 dependencies {
     // JUnit Jupiter (JUnit 5)
@@ -33,33 +50,103 @@ dependencies {
 
 }
 
-tasks.test {
+test {
     useJUnitPlatform()
+    reports {
+        junitXml.required = false
+        html.required = true
+    }
+}
+
+ext.genResourcesDir = file("$buildDir/generated-resources")
+task generateBuildProperties {
+    ext.buildPropertiesFile = file("$genResourcesDir/blue/language/build.properties")
+    outputs.file(buildPropertiesFile)
+    doLast {
+        buildPropertiesFile.text = """\
+                |blue-language-java.build.version=$project.version
+                |blue-language-java.build.timestamp=${new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")}
+        """.stripMargin().trim()
+    }
+}
+sourceSets.main.output.dir genResourcesDir, builtBy: generateBuildProperties
+
+
+tasks.withType(GenerateModuleMetadata) {
+    enabled = false
 }
 
 publishing {
-    repositories {
-        maven {
-            url = layout.buildDirectory.dir('staging-deploy')
-        }
-    }
-    publications {
-        mavenJava(MavenPublication) {
+  publications {
+      maven(MavenPublication) {
+          groupId = "blue.language"
+          artifactId = 'blue-language-java'
+
           from components.java
-        }
-    }
+
+          pom {
+              name = 'Blue Language Java Library'
+              description = 'Java client library for Blue Language'
+              url = 'https://timeline.blue'
+              licenses {
+                  license {
+                      name = 'MIT license'
+                      url = 'https://github.com/bluecontract/blue-language-java/blob/master/LICENSE'
+                  }
+              }
+              developers {
+                  developer {
+                      name = 'Blue'
+                      email = 'devsupport@timeline.blue'
+                  }
+              }
+              scm {
+                  url = 'https://github.com/bluecontract/blue-language-java.git'
+                  connection = 'scm:git:git@github.com:bluecontract/blue-language-java.git'
+                  developerConnection = 'scm:git:git@github.com:bluecontract/blue-language-java.git'
+              }
+          }
+      }
+  }
+
+  repositories {
+      maven {
+          url = layout.buildDirectory.dir('staging-deploy')
+      }
+  }
 }
 
 jreleaser {
+  signing {
+    active = 'ALWAYS'
+    armored = true
+  }
+  project {
+    description = 'Java client library for Blue Language'
+    copyright = '© 2024 Blue Company. Licensed under the MIT License'
+  }
+
   deploy {
     maven {
       mavenCentral {
         sonatype {
           active = 'ALWAYS'
           url = 'https://central.sonatype.com/api/v1/publisher'
+          applyMavenCentralRules = true
+          snapshotSupported = true
           stagingRepository('build/staging-deploy')
         }
       }
     }
   }
+}
+
+def determineProjectVersion() {
+    def tomlFile = file('.cz.toml')
+    if (tomlFile.exists()) {
+        def toml = new groovy.toml.TomlSlurper().parse(tomlFile)
+        return toml.tool.commitizen.version
+    } else {
+        throw new GradleException(".cz.toml file not found")
+    }
 }

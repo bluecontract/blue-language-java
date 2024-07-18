@@ -1,0 +1,41 @@
+name: Build and validate
+
+on:
+  push:
+    branches:
+      - 'feature/*'
+      - 'fix/*'
+      - 'hotix/*'
+      - 'release/*'
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'corretto'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Execute Gradle build
+        run: ./gradlew clean build
+
+      - name: Archive test results
+        uses: actions/upload-artifact@v3
+        if: always() # run even if build failed
+        with:
+          name: test-results
+          path: build/reports
+
+      - name: Archive libs
+        uses: actions/upload-artifact@v3
+        with:
+          name: libs
+          path: build/libs

@@ -1,0 +1,29 @@
+name: Bump Version
+
+on:
+  workflow_dispatch
+
+jobs:
+  BumpVersion:
+    runs-on: ubuntu-latest
+    name: "Bump version and create changelog with commitizen"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+      - name: Check if branch is master
+        run: |
+          if [[ "${GITHUB_REF##*/}" != "master" ]]; then
+            echo "This workflow can only be triggered for the master branch."
+            exit 1
+          fi
+      - id: cz
+        name: Create bump and changelog
+        uses: commitizen-tools/commitizen-action@master
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+      - name: Print Version
+        run: echo "Bumped to version ${{ steps.cz.outputs.version }}"
