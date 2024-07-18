@@ -1,29 +1,24 @@
 name: Release
 
 on:
-  workflow_dispatch:
-   inputs:
-    tag:
-      description: 'Release tag'
-      required: true
+  workflow_dispatch
 
 jobs:
   Release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
       - name: Validate tag
         run: |
-          TAG=${{ github.event.inputs.tag }}
-          if git show-ref --tags | grep -q "refs/tags/$TAG$"; then
-            echo "Tag $TAG exists."
-          else
-            echo "Tag $TAG does not exist."
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "This workflow cannot be triggered for a tag."
             exit 1
           fi
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag }}
+          ref: ${{ github.ref }}
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
