@@ -11,8 +11,12 @@ public class NodePathAccessor {
     public static Object get(Node node, String path) {
         return get(node, path, null);
     }
-
+    
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider) {
+        return get(node, path, linkingProvider, true);
+    }
+
+    public static Object get(Node node, String path, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
         if (path == null || !path.startsWith("/")) {
             throw new IllegalArgumentException("Invalid path: " + path);
         }
@@ -22,27 +26,38 @@ public class NodePathAccessor {
         }
 
         String[] segments = path.substring(1).split("/");
-        return getRecursive(node, segments, 0, linkingProvider);
+        return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
-    private static Object getRecursive(Node node, String[] segments, int index, Function<Node, Node> linkingProvider) {
+    private static Object getRecursive(Node node, String[] segments, int index, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
+        if (index == segments.length - 1 && !resolveFinalLink) {
+            // Return the node itself for the last segment if we're not resolving the final link
+            return getNodeForSegment(node, segments[index], linkingProvider, false);
+        }
+
         if (index == segments.length) {
             return node.getValue() != null ? node.getValue() : node;
         }
 
         String segment = segments[index];
+        Node nextNode = getNodeForSegment(node, segment, linkingProvider, true);
+        return getRecursive(nextNode, segments, index + 1, linkingProvider, resolveFinalLink);
+    }
+
+    private static Node getNodeForSegment(Node node, String segment, Function<Node, Node> linkingProvider, boolean resolveLink) {
+        Node result;
 
         switch (segment) {
             case "name":
-                return node.getName();
+                return new Node().value(node.getName());
             case "description":
-                return node.getDescription();
+                return new Node().value(node.getDescription());
             case "type":
-                return getRecursive(node.getType(), segments, index + 1, linkingProvider);
+                return node.getType();
             case "value":
-                return node.getValue();
+                return new Node().value(node.getValue());
             case "blueId":
-                return BlueIdCalculator.calculateBlueId(node);
+                return new Node().value(BlueIdCalculator.calculateBlueId(node));
         }
 
         if (segment.matches("\\d+")) {
@@ -51,19 +66,19 @@ public class NodePathAccessor {
             if (items == null || itemIndex >= items.size()) {
                 throw new IllegalArgumentException("Invalid item index: " + itemIndex);
             }
-            return getRecursive(link(items.get(itemIndex), linkingProvider), segments, index + 1, linkingProvider);
+            result = items.get(itemIndex);
         } else {
             Map<String, Node> properties = node.getProperties();
             if (properties == null || !properties.containsKey(segment)) {
                 throw new IllegalArgumentException("Property not found: " + segment);
             }
-            return getRecursive(link(properties.get(segment), linkingProvider), segments, index + 1, linkingProvider);
+            result = properties.get(segment);
         }
+
+        return resolveLink && linkingProvider != null ? link(result, linkingProvider) : result;
     }
 
     private static Node link(Node node, Function<Node, Node> linkingProvider) {
-        if (linkingProvider == null)
-            return node;
         Node linked = linkingProvider.apply(node);
         return linked == null ? node : linked;
     }
