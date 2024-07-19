@@ -7,6 +7,8 @@ jobs:
   BumpVersion:
     runs-on: ubuntu-latest
     name: "Bump version and create changelog with commitizen"
+    env:
+      CI: true
     steps:
       - name: Check out
         uses: actions/checkout@v3
