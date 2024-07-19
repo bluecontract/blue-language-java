@@ -15,7 +15,7 @@ jobs:
       - name: Validate tag
         run: |
           if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
-            echo "This workflow cannot be triggered for a tag."
+            echo "This workflow must be triggered from a tag."
             exit 1
           fi
       - uses: actions/checkout@v4
