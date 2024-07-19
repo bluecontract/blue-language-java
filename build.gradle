@@ -16,6 +16,9 @@ version = determineProjectVersion()
 archivesBaseName = "blue-language-java"
 
 repositories {
+    if (!System.getenv('CI')) {
+        mavenLocal()
+    }
     mavenCentral()
 }
 
@@ -113,6 +116,12 @@ publishing {
       maven {
           url = layout.buildDirectory.dir('staging-deploy')
       }
+      if (!System.getenv('CI')) {
+        maven {
+            name = 'local'
+            url = uri('file:///' + new File(System.getProperty("user.home"), ".m2/repository").absolutePath)
+        }
+      }
   }
 }
 
@@ -145,7 +154,7 @@ def determineProjectVersion() {
     def tomlFile = file('.cz.toml')
     if (tomlFile.exists()) {
         def toml = new groovy.toml.TomlSlurper().parse(tomlFile)
-        return toml.tool.commitizen.version
+        return toml.tool.commitizen.version + (!System.getenv('CI') ? '-SNAPSHOT' : '')
     } else {
         throw new GradleException(".cz.toml file not found")
     }

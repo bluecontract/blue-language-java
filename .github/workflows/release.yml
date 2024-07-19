@@ -6,13 +6,15 @@ on:
 jobs:
   Release:
     runs-on: ubuntu-latest
+    env:
+      CI: true
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
       - name: Validate tag
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
             echo "This workflow cannot be triggered for a tag."
             exit 1
           fi
