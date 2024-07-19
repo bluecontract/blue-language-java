@@ -1,3 +1,10 @@
+## v0.3.0 (2024-07-19)
+
+### Feat
+
+- CICD updates (#5)
+- minor change to Blue
+
 ## v0.2.0 (2024-07-17)
 
 ### Feat
