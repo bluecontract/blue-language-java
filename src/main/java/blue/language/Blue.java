@@ -2,10 +2,7 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.processor.*;
-import blue.language.utils.NodeExtender;
-import blue.language.utils.NodeToObject;
-import blue.language.utils.NodeTypeMatcher;
-import blue.language.utils.TypeClassResolver;
+import blue.language.utils.*;
 import blue.language.utils.limits.Limits;
 
 import java.util.Arrays;
@@ -90,6 +87,10 @@ public class Blue implements NodeResolver {
         Node clone = node.clone();
         clone.type((Node) null);
         return YAML_MAPPER.convertValue(NodeToObject.get(clone, SIMPLE), clazz);
+    }
+
+    public boolean isNodeSubtypeOf(Node candidateNode, Node superTypeNode) {
+        return Types.isSubtype(candidateNode, superTypeNode, nodeProvider);
     }
 
     public NodeProvider getNodeProvider() {
