@@ -175,6 +175,14 @@ public class Node implements Cloneable {
         return NodePathAccessor.get(this, path, linkingProvider);
     }
 
+    public Node getAsNode(String path) {
+        return (Node) get(path);
+    }
+
+    public String getAsText(String path) {
+        return (String) get(path);
+    }
+
     @Override
     public Node clone() {
         try {

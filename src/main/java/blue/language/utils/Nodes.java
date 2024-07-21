@@ -12,6 +12,11 @@ public class Nodes {
                 node.getItems() == null && node.getProperties() == null && node.getFeatures() == null;
     }
 
+    public static boolean hasItemsOnly(Node node) {
+        return node.getName() == null && node.getType() == null && node.getValue() == null && node.getDescription() == null &&
+               node.getProperties() == null && node.getFeatures() == null;
+    }
+
     public static boolean isEmptyNodeWithoutBlueId(Node node) {
         return node.getName() == null && node.getType() == null && node.getValue() == null &&
                 node.getItems() == null && node.getProperties() == null &&

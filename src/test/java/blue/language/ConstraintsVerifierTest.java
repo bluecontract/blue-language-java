@@ -1,23 +1,16 @@
 package blue.language;
 
-import blue.language.Merger;
-import blue.language.MergingProcessor;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.processor.*;
-import blue.language.utils.BasicNodesProvider;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static blue.language.TestUtils.indent;
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -25,7 +18,7 @@ public class ConstraintsVerifierTest {
 
     private Node node;
     private Constraints constraints;
-    private BasicNodesProvider nodeProvider;
+    private BasicNodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
     private Merger merger;
 

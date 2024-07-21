@@ -51,6 +51,8 @@ dependencies {
 
     implementation("org.reflections:reflections:0.10.2")
 
+    implementation("io.github.erdtman:java-json-canonicalization:1.1")
+
 }
 
 test {

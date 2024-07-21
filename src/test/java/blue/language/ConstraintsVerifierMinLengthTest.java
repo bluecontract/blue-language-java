@@ -3,7 +3,7 @@ package blue.language;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.processor.*;
-import blue.language.utils.BasicNodesProvider;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +22,7 @@ public class ConstraintsVerifierMinLengthTest {
 
     private Node node;
     private Constraints constraints;
-    private BasicNodesProvider nodeProvider;
+    private BasicNodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
     private Merger merger;
 
@@ -85,7 +85,7 @@ public class ConstraintsVerifierMinLengthTest {
         Map<String, Node> nodes = Stream.of(a, b, c)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         merger = new Merger(mergingProcessor, e -> null);
 
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("C"))).get(0));
@@ -122,7 +122,7 @@ public class ConstraintsVerifierMinLengthTest {
         Map<String, Node> nodes = Stream.of(a, b, c)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         merger = new Merger(mergingProcessor, e -> null);
 
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("C"))).get(0)));
@@ -158,7 +158,7 @@ public class ConstraintsVerifierMinLengthTest {
         Map<String, Node> nodes = Stream.of(a, b, x, y)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         merger = new Merger(mergingProcessor, e -> null);
 
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
@@ -195,7 +195,7 @@ public class ConstraintsVerifierMinLengthTest {
         Map<String, Node> nodes = Stream.of(a, b, x, y)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         merger = new Merger(mergingProcessor, e -> null);
 
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
@@ -234,7 +234,7 @@ public class ConstraintsVerifierMinLengthTest {
         Map<String, Node> nodes = Stream.of(a, b, x, y)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         merger = new Merger(mergingProcessor, e -> null);
 
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0)));

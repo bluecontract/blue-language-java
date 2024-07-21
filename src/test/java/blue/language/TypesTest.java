@@ -1,7 +1,7 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.utils.BasicNodesProvider;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -64,7 +64,7 @@ public class TypesTest {
         Map<String, Node> nodes = Stream.of(person, alice, alice2, alice3)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodesProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodesProvider = new BasicNodeProvider(nodes.values());
 
         assertTrue(isSubtype(nodes.get("Alice"), nodes.get("Alice"), nodesProvider));
         assertFalse(isSubtype(nodes.get("Person"), nodes.get("Alice"), nodesProvider));

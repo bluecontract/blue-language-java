@@ -1,7 +1,7 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.utils.DirectoryBasedNodeProvider;
+import blue.language.provider.DirectoryBasedNodeProvider;
 
 import java.io.IOException;
 import java.util.*;

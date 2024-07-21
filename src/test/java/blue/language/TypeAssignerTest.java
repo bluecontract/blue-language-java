@@ -3,8 +3,8 @@ package blue.language;
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
 import blue.language.processor.*;
-import blue.language.utils.BasicNodesProvider;
-import blue.language.utils.DirectoryBasedNodeProvider;
+import blue.language.provider.BasicNodeProvider;
+import blue.language.provider.DirectoryBasedNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -46,7 +46,7 @@ public class TypeAssignerTest {
                 )
         );
 
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes);
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
 
@@ -79,7 +79,7 @@ public class TypeAssignerTest {
                 )
         );
 
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes);
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
 
@@ -122,10 +122,9 @@ public class TypeAssignerTest {
         Map<String, Node> nodes = Stream.of(a, b, c, x, y)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new BlueIdResolver(),
                         new TypeAssigner()
                 )
         );
@@ -143,14 +142,14 @@ public class TypeAssignerTest {
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new BlueIdResolver(),
                         new ValuePropagator(),
                         new TypeAssigner()
                 )
         );
 
         Merger merger = new Merger(mergingProcessor, dirNodeProvider);
-        Node source = dirNodeProvider.getNodes().stream().filter(e -> "My Voucher".equals(e.getName())).findAny().get();
+
+        Node source = dirNodeProvider.findNodeByName("My Voucher").orElse(null);
 
         Node node = merger.resolve(source);
 

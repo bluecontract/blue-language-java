@@ -1,12 +1,10 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.utils.NodeExtender;
 import blue.language.utils.limits.Limits;
 import blue.language.processor.*;
-import blue.language.utils.BasicNodesProvider;
+import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +21,7 @@ public class ListTest {
 
     private Node a, b, c, x, y;
     private String aId, bId, cId, xId, yId;
-    private BasicNodesProvider nodeProvider;
+    private BasicNodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
     private Merger merger;
 
@@ -37,7 +35,7 @@ public class ListTest {
         cId = calculateBlueId(c);
 
         List<Node> nodes = asList(a, b, c);
-        nodeProvider = new BasicNodesProvider(nodes);
+        nodeProvider = new BasicNodeProvider(nodes);
         mergingProcessor = new SequentialMergingProcessor(
                 asList(
                         new BlueIdResolver(),
@@ -193,7 +191,7 @@ public class ListTest {
         Node bNode = YAML_MAPPER.readValue(b, Node.class);
         Node cNode = YAML_MAPPER.readValue(c, Node.class);
 
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(aNode, bNode, cNode);
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(aNode, bNode, cNode);
         merger = new Merger(mergingProcessor, nodeProvider);
 
         List<Node> ab = Arrays.asList(aNode, bNode);

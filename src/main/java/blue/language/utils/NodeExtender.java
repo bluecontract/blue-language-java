@@ -43,7 +43,6 @@ public class NodeExtender {
                 currentNode.items(resolvedNode.getItems());
                 currentNode.properties(resolvedNode.getProperties());
                 currentNode.constraints(resolvedNode.getConstraints());
-                currentNode.blueId(null);
             }
         }
 

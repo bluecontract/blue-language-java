@@ -2,6 +2,7 @@ package blue.language.utils;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -73,7 +74,7 @@ public class NodeTypeMatcherTest {
         Map<String, Node> nodes = Stream.of(a, b, bInst, c)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         Blue blue = new Blue(nodeProvider);
 
         Node aInstNode = nodes.get("B Instance");

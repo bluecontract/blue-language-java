@@ -3,7 +3,7 @@ package blue.language;
 import blue.language.model.Node;
 import blue.language.processor.SequentialMergingProcessor;
 import blue.language.processor.ValuePropagator;
-import blue.language.utils.BasicNodesProvider;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -32,7 +32,7 @@ public class ValuePropagatorTest {
         Map<String, Node> nodes = Stream.of(a, b)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new ValuePropagator()
@@ -60,7 +60,7 @@ public class ValuePropagatorTest {
         Map<String, Node> nodes = Stream.of(a, b)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodesProvider nodeProvider = new BasicNodesProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new ValuePropagator()

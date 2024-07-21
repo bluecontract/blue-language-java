@@ -1,4 +1,4 @@
-package blue.language.utils.ipfs;
+package blue.language.provider.ipfs;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
