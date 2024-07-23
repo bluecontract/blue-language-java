@@ -1,3 +1,13 @@
+## v0.4.0 (2024-07-23)
+
+### Feat
+
+- support for self-referring nodes
+
+### Fix
+
+- DirectoryBasedNodeProvider didn't process plain-text files properly
+
 ## v0.3.0 (2024-07-19)
 
 ### Feat
