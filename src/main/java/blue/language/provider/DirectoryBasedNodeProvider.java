@@ -19,7 +19,9 @@ import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
 
-    private Map<String, JsonNode> blueIdToContentMap;
+    private static final String BLUE_FILE_EXTENSION = ".blue";
+
+    private Map<String, Object> blueIdToContentMap;
     private Map<String, Boolean> blueIdToMultipleDocumentsMap;
 
     public DirectoryBasedNodeProvider(String... directories) throws IOException {
@@ -42,7 +44,13 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
                         .collect(Collectors.toList());
                 for (Path p : pathList) {
                     String content = new String(Files.readAllBytes(p));
-                    processContent(content);
+                    if (p.toString().endsWith(BLUE_FILE_EXTENSION)) {
+                        processContent(content);
+                    } else {
+                        String blueId = BlueIdCalculator.calculateBlueId(new Node().value(content));
+                        blueIdToContentMap.put(blueId, content);
+                        blueIdToMultipleDocumentsMap.put(blueId, false);
+                    }
                 }
             }
         }
@@ -81,15 +89,19 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
 
     @Override
     protected JsonNode fetchContentByBlueId(String baseBlueId) {
-        JsonNode content = blueIdToContentMap.get(baseBlueId);
+        Object content = blueIdToContentMap.get(baseBlueId);
         Boolean isMultipleDocuments = blueIdToMultipleDocumentsMap.get(baseBlueId);
         if (content != null && isMultipleDocuments != null) {
-            return NodeContentHandler.resolveThisReferences(content, baseBlueId, isMultipleDocuments);
+            if (content instanceof JsonNode) {
+                return NodeContentHandler.resolveThisReferences((JsonNode) content, baseBlueId, isMultipleDocuments);
+            } else if (content instanceof String) {
+                return JSON_MAPPER.valueToTree(content);
+            }
         }
         return null;
     }
 
-    public Map<String, JsonNode> getBlueIdToContentMap() {
+    public Map<String, Object> getBlueIdToContentMap() {
         return new HashMap<>(blueIdToContentMap);
     }
 }
