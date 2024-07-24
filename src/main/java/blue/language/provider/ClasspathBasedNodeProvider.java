@@ -6,10 +6,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
@@ -40,7 +41,7 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
                     if (inputStream == null) {
                         continue;
                     }
-                    String content = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+                    String content = readInputStream(inputStream);
                     if (resource.endsWith(BLUE_FILE_EXTENSION)) {
                         processContent(content);
                     } else {
@@ -64,7 +65,7 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
                     java.nio.file.Files.walk(path)
                             .filter(java.nio.file.Files::isRegularFile)
                             .forEach(file -> resources.add(directory + "/" + path.relativize(file)));
-                } catch (java.net.URISyntaxException e) {
+                } catch (URISyntaxException e) {
                     throw new IOException("Failed to convert URL to URI", e);
                 }
             } else if (url.getProtocol().equals("jar")) {
@@ -83,11 +84,15 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
         return resources;
     }
 
-    private List<String> getResourcesFromFileSystem(String directory) throws IOException {
-        return java.nio.file.Files.walk(java.nio.file.Paths.get(directory))
-                .filter(java.nio.file.Files::isRegularFile)
-                .map(path -> directory + "/" + path.getFileName().toString())
-                .collect(Collectors.toList());
+    private String readInputStream(InputStream inputStream) throws IOException {
+        try (ByteArrayOutputStream result = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) != -1) {
+                result.write(buffer, 0, length);
+            }
+            return result.toString(StandardCharsets.UTF_8.name());
+        }
     }
 
     private void processContent(String content) {
