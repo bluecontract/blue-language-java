@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.NodeProvider;

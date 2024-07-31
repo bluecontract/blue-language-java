@@ -1,5 +1,6 @@
-package blue.language;
+package blue.language.merge;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 
 public interface MergingProcessor {

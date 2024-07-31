@@ -5,10 +5,6 @@ import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +13,8 @@ public class NodeTypeMatcherTest {
 
     @Test
     public void testBasic() throws Exception {
+
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A\n" +
                    "type: Text\n" +
@@ -30,14 +28,18 @@ public class NodeTypeMatcherTest {
                    "    type: Text\n" +
                    "    constraints:\n" +
                    "      minLength: 3";
-        String bId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(b, Node.class));
 
         String c = "name: C";
+
+        nodeProvider.addSingleDocs(a, b, c);
+        String bId = nodeProvider.getBlueIdByName("B");
+        String cId = nodeProvider.getBlueIdByName("C");
 
         String bInst = "name: B Instance\n" +
                    "type:\n" +
                    "  blueId: " + bId + "\n" +
                    "x: ABC";
+        nodeProvider.addSingleDocs(bInst);
 
         String typeOK1 = "x:\n" +
                    "  constraints:\n" +
@@ -63,7 +65,7 @@ public class NodeTypeMatcherTest {
                         "    required: true";
 
         String typeFail3 = "type:\n" +
-                         "  blueId: " + BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(c, Node.class)) + "\n" +
+                         "  blueId: " + cId + "\n" +
                          "x: ABC";
 
         String typeFail4 = "type:\n" +
@@ -71,19 +73,15 @@ public class NodeTypeMatcherTest {
                          "x: ABC\n" +
                          "y: d";
 
-        Map<String, Node> nodes = Stream.of(a, b, bInst, c)
-                .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
-                .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         Blue blue = new Blue(nodeProvider);
+        Node bInstNode = nodeProvider.findNodeByName("B Instance").orElseThrow(() -> new IllegalArgumentException("No \"B Instance\" available."));
 
-        Node aInstNode = nodes.get("B Instance");
-        assertTrue(blue.nodeMatchesType(aInstNode, blue.yamlToNode(typeOK1)));
-        assertTrue(blue.nodeMatchesType(aInstNode, blue.yamlToNode(typeOK2)));
-        assertFalse(blue.nodeMatchesType(aInstNode, blue.yamlToNode(typeFail1)));
-        assertFalse(blue.nodeMatchesType(aInstNode, blue.yamlToNode(typeFail2)));
-        assertFalse(blue.nodeMatchesType(aInstNode, blue.yamlToNode(typeFail3)));
-        assertFalse(blue.nodeMatchesType(aInstNode, blue.yamlToNode(typeFail4)));
+        assertTrue(blue.nodeMatchesType(bInstNode, blue.yamlToNode(typeOK1)));
+        assertTrue(blue.nodeMatchesType(bInstNode, blue.yamlToNode(typeOK2)));
+        assertFalse(blue.nodeMatchesType(bInstNode, blue.yamlToNode(typeFail1)));
+        assertFalse(blue.nodeMatchesType(bInstNode, blue.yamlToNode(typeFail2)));
+        assertFalse(blue.nodeMatchesType(bInstNode, blue.yamlToNode(typeFail3)));
+        assertFalse(blue.nodeMatchesType(bInstNode, blue.yamlToNode(typeFail4)));
 
     }
 

@@ -1,8 +1,14 @@
 package blue.language;
 
+import blue.language.merge.Merger;
+import blue.language.merge.MergingProcessor;
+import blue.language.merge.processor.SequentialMergingProcessor;
+import blue.language.merge.processor.TypeAssigner;
+import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
+import blue.language.preprocess.Preprocessor;
+import blue.language.utils.NodeExtender;
 import blue.language.utils.limits.Limits;
-import blue.language.processor.*;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +30,8 @@ public class ListTest {
     private BasicNodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
     private Merger merger;
+    private Preprocessor preprocessor;
+    private NodeExtender extender;
 
     @BeforeEach
     public void setUp() {
@@ -38,13 +46,14 @@ public class ListTest {
         nodeProvider = new BasicNodeProvider(nodes);
         mergingProcessor = new SequentialMergingProcessor(
                 asList(
-                        new BlueIdResolver(),
-                        new ListBlueIdResolver(),
+//                        new ListBlueIdResolver(),
                         new ValuePropagator(),
                         new TypeAssigner()
                 )
         );
         merger = new Merger(mergingProcessor, nodeProvider);
+        preprocessor = new Preprocessor(nodeProvider);
+        extender = new NodeExtender(nodeProvider);
     }
 
 
@@ -130,7 +139,6 @@ public class ListTest {
                         b,
                         c
                 );
-        String x1Id = calculateBlueId(x1);
 
         Node x2 = new Node()
                 .name("X")
@@ -138,14 +146,12 @@ public class ListTest {
                         new Node().blueId(calculateBlueId(asList(a, b))),
                         c
                 );
-        String x2Id = calculateBlueId(x2);
 
         Node x3 = new Node()
                 .name("X")
                 .items(
                         new Node().blueId(calculateBlueId(asList(a, b, c)))
                 );
-        String x3Id = calculateBlueId(x3);
 
         Node x4 = new Node()
                 .name("X")
@@ -158,26 +164,20 @@ public class ListTest {
                                         )
                                 ))
                 );
-        String x4Id = calculateBlueId(x4);
 
         nodeProvider.addSingleNodes(x1, x2, x3, x4);
-        nodeProvider.addNodesList(asList(a, b));
-        nodeProvider.addNodesList(asList(a, b, c));
+        nodeProvider.addListAndItsItems(asList(a, b));
+        nodeProvider.addListAndItsItems(asList(a, b, c));
 
-        Node x1Node = nodeProvider.fetchByBlueId(x1Id).get(0);
-        Node x2Node = nodeProvider.fetchByBlueId(x2Id).get(0);
-        Node x3Node = nodeProvider.fetchByBlueId(x3Id).get(0);
-        Node x4Node = nodeProvider.fetchByBlueId(x4Id).get(0);
+        Node x1Extended = preprocessAndExtend(x1);
+        Node x2Extended = preprocessAndExtend(x2);
+        Node x3Extended = preprocessAndExtend(x3);
+        Node x4Extended = preprocessAndExtend(x4);
 
-        Node x1Resolved = merger.resolve(x1Node, Limits.NO_LIMITS);
-        Node x2Resolved = merger.resolve(x2Node, Limits.NO_LIMITS);
-        Node x3Resolved = merger.resolve(x3Node, Limits.NO_LIMITS);
-        Node x4Resolved = merger.resolve(x4Node, Limits.NO_LIMITS);
-
-        assertEquals(3, x1Resolved.getItems().size());
-        assertEquals(3, x2Resolved.getItems().size());
-        assertEquals(3, x3Resolved.getItems().size());
-        assertEquals(3, x4Resolved.getItems().size());
+        assertEquals(3, x1Extended.getItems().size());
+        assertEquals(3, x2Extended.getItems().size());
+        assertEquals(3, x3Extended.getItems().size());
+        assertEquals(3, x4Extended.getItems().size());
     }
 
     @Test
@@ -191,16 +191,15 @@ public class ListTest {
         Node bNode = YAML_MAPPER.readValue(b, Node.class);
         Node cNode = YAML_MAPPER.readValue(c, Node.class);
 
-        BasicNodeProvider nodeProvider = new BasicNodeProvider(aNode, bNode, cNode);
-        merger = new Merger(mergingProcessor, nodeProvider);
+        nodeProvider.addSingleNodes(aNode, bNode, cNode);
 
         List<Node> ab = Arrays.asList(aNode, bNode);
         String abId = BlueIdCalculator.calculateBlueId(ab);
-        nodeProvider.addNodesList(ab);
+        nodeProvider.addListAndItsItems(ab);
 
         List<Node> abc = Arrays.asList(aNode, bNode, cNode);
         String abcId = BlueIdCalculator.calculateBlueId(abc);
-        nodeProvider.addNodesList(abc);
+        nodeProvider.addListAndItsItems(abc);
 
         String x1 = "name: X1\n" +
                 "items:\n" +
@@ -225,18 +224,28 @@ public class ListTest {
         String x5 = "name: X1\n" +
                 "items: " + abcId;
 
-        Node x1Resolved = merger.resolve(YAML_MAPPER.readValue(x1, Node.class));
-        Node x2Resolved = merger.resolve(YAML_MAPPER.readValue(x2, Node.class));
-        Node x3Resolved = merger.resolve(YAML_MAPPER.readValue(x3, Node.class));
-        Node x4Resolved = merger.resolve(YAML_MAPPER.readValue(x4, Node.class));
-        Node x5Resolved = merger.resolve(YAML_MAPPER.readValue(x5, Node.class));
+        Node x1Extended = preprocessAndExtend(x1);
+        Node x2Extended = preprocessAndExtend(x2);
+        Node x3Extended = preprocessAndExtend(x3);
+        Node x4Extended = preprocessAndExtend(x4);
+        Node x5Extended = preprocessAndExtend(x5);
 
-        assertEquals(3, x1Resolved.getItems().size());
-        assertEquals(3, x2Resolved.getItems().size());
-        assertEquals(3, x3Resolved.getItems().size());
-        assertEquals(3, x4Resolved.getItems().size());
-        assertEquals(3, x5Resolved.getItems().size());
+        assertEquals(3, x1Extended.getItems().size());
+        assertEquals(3, x2Extended.getItems().size());
+        assertEquals(3, x3Extended.getItems().size());
+        assertEquals(3, x4Extended.getItems().size());
+        assertEquals(3, x5Extended.getItems().size());
 
+    }
+
+    private Node preprocessAndExtend(String doc) {
+        return preprocessAndExtend(YAML_MAPPER.readValue(doc, Node.class));
+    }
+
+    private Node preprocessAndExtend(Node node) {
+        Node result = preprocessor.preprocessWithDefaultBlue(node);
+        extender.extend(result, Limits.NO_LIMITS);
+        return result;
     }
 
 }

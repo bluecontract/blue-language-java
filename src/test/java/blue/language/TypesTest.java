@@ -6,13 +6,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static blue.language.TestUtils.useNodeNameAsBlueIdProvider;
 import static blue.language.utils.Types.isSubtype;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,8 +18,8 @@ public class TypesTest {
     public void testBasic() throws Exception {
 
         Node a = new Node().name("A");
-        Node b = new Node().name("B").type("A");
-        Node c = new Node().name("C").type("B");
+        Node b = new Node().name("B").type(a);
+        Node c = new Node().name("C").type(b);
 
         List<Node> nodes = Arrays.asList(a, b, c);
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
@@ -39,19 +35,22 @@ public class TypesTest {
     @Test
     public void testDifferentSubtypeVariations() throws Exception {
 
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+
         String person = "name: Person\n" +
                 "surname:\n" +
                 "  type: Text\n" +
                 "age:\n" +
                 "  type: Integer";
+        nodeProvider.addSingleDocs(person);
 
         String alice = "name: Alice\n" +
-                "type: 9ZMxNv72wXjcMoa5FZG2J52aSH4ofF27c3mHdxZQWE8e";
+                "type: " + nodeProvider.getBlueIdByName("Person");
 
         String alice2 = "name: Alice2\n" +
                 "type:\n" +
                 "  name: Person\n" +
-                "  blueId: 9ZMxNv72wXjcMoa5FZG2J52aSH4ofF27c3mHdxZQWE8e";
+                "  blueId: " + nodeProvider.getBlueIdByName("Person");
 
         String alice3 = "name: Alice3\n" +
                 "type:\n" +
@@ -60,18 +59,14 @@ public class TypesTest {
                 "    type: Text\n" +
                 "  age:\n" +
                 "    type: Integer";
+        nodeProvider.addSingleDocs(alice, alice2, alice3);
 
-        Map<String, Node> nodes = Stream.of(person, alice, alice2, alice3)
-                .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
-                .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodeProvider nodesProvider = new BasicNodeProvider(nodes.values());
+        assertTrue(isSubtype(nodeProvider.getNodeByName("Alice"), nodeProvider.getNodeByName("Alice"), nodeProvider));
+        assertFalse(isSubtype(nodeProvider.getNodeByName("Person"), nodeProvider.getNodeByName("Alice"), nodeProvider));
 
-        assertTrue(isSubtype(nodes.get("Alice"), nodes.get("Alice"), nodesProvider));
-        assertFalse(isSubtype(nodes.get("Person"), nodes.get("Alice"), nodesProvider));
-
-        assertTrue(isSubtype(nodes.get("Alice"), nodes.get("Person"), nodesProvider));
-        assertTrue(isSubtype(nodes.get("Alice2"), nodes.get("Person"), nodesProvider));
-        assertTrue(isSubtype(nodes.get("Alice3"), nodes.get("Person"), nodesProvider));
+        assertTrue(isSubtype(nodeProvider.getNodeByName("Alice"), nodeProvider.getNodeByName("Person"), nodeProvider));
+        assertTrue(isSubtype(nodeProvider.getNodeByName("Alice2"), nodeProvider.getNodeByName("Person"), nodeProvider));
+        assertTrue(isSubtype(nodeProvider.getNodeByName("Alice3"), nodeProvider.getNodeByName("Person"), nodeProvider));
     }
 
 }

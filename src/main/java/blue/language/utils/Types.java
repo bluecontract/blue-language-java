@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
-import static blue.language.utils.Properties.BASIC_TYPES;
+import static blue.language.utils.Properties.*;
 
 public class Types {
 
@@ -24,6 +24,17 @@ public class Types {
         String supertypeBlueId = calculateBlueId(supertype);
         if (subtypeBlueId.equals(supertypeBlueId))
             return true;
+
+        if (CORE_TYPE_BLUE_IDS.contains(subtypeBlueId)) {
+            Node current = supertype;
+            while (current != null) {
+                String currentBlueId = calculateBlueId(current);
+                if (currentBlueId.equals(subtypeBlueId))
+                    return true;
+                current = getType(current, nodeProvider);
+            }
+            return false;
+        }
 
         Node current = getType(subtype, nodeProvider);
         while (current != null) {
@@ -57,6 +68,10 @@ public class Types {
         }
 
         if (type.getBlueId() != null) {
+            // tmp code
+            if (CORE_TYPE_BLUE_IDS.contains(type.getBlueId())) {
+                return new Node().blueId(type.getBlueId()).name(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(type.getBlueId()));
+            }
             List<Node> typeNodes = nodeProvider.fetchByBlueId(type.getBlueId());
             if (typeNodes == null || typeNodes.isEmpty())
                 return null;
@@ -67,7 +82,7 @@ public class Types {
                 ));
             return typeNodes.get(0);
         }
-        
+
         return type;
     }
 
@@ -75,8 +90,35 @@ public class Types {
         return BASIC_TYPES.contains(type);
     }
 
-    public static boolean isBasicType(Node typeNode) {
-        return typeNode.getName() != null && isBasicTypeName(typeNode.getName());
+    public static boolean isBasicType(Node typeNode, NodeProvider nodeProvider) {
+        return BASIC_TYPE_BLUE_IDS.stream()
+                .map(blueId -> new Node().blueId(blueId))
+                .anyMatch(basicTypeNode -> isSubtype(typeNode, basicTypeNode, nodeProvider));
+    }
+
+    public static boolean isTextType(Node typeNode, NodeProvider nodeProvider) {
+        return isSubtype(typeNode, new Node().blueId(TEXT_TYPE_BLUE_ID), nodeProvider);
+    }
+
+    public static boolean isNumberType(Node typeNode, NodeProvider nodeProvider) {
+        return isSubtype(typeNode, new Node().blueId(NUMBER_TYPE_BLUE_ID), nodeProvider);
+    }
+
+    public static boolean isIntegerType(Node typeNode, NodeProvider nodeProvider) {
+        return isSubtype(typeNode, new Node().blueId(INTEGER_TYPE_BLUE_ID), nodeProvider);
+    }
+
+    public static boolean isBooleanType(Node typeNode, NodeProvider nodeProvider) {
+        return isSubtype(typeNode, new Node().blueId(BOOLEAN_TYPE_BLUE_ID), nodeProvider);
+    }
+
+
+    public static boolean isListType(Node typeNode) {
+        return typeNode.getBlueId() != null && LIST_TYPE_BLUE_ID.equals(typeNode.getBlueId());
+    }
+
+    public static boolean isDictionaryType(Node typeNode) {
+        return typeNode.getBlueId() != null && DICTIONARY_TYPE_BLUE_ID.equals(typeNode.getBlueId());
     }
 
 }

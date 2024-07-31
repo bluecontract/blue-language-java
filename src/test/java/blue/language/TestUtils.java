@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.provider.DirectoryBasedNodeProvider;
 

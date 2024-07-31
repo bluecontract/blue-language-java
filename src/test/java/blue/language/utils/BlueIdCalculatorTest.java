@@ -1,10 +1,14 @@
 package blue.language.utils;
 
+import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.function.Function;
 
+import static blue.language.utils.Base58Sha256Provider.sha256;
+import static blue.language.utils.Properties.*;
+import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -97,6 +101,156 @@ public class BlueIdCalculatorTest {
         String expectedResult = "hash({abc=hash({value=x})})";
         assertEquals(expectedResult, result1);
         assertEquals(expectedResult, result2);
+    }
+
+    @Test
+    public void testSortingOfObjectProperties() {
+        String yaml =
+                "€: Euro Sign\n" +
+                "\\r: Carriage Return\n" +
+                "\\n: Newline\n" +
+                "\"1\": One\n" +
+                "\uD83D\uDE02: Smiley\n" +
+                "ö: Latin Small Letter O With Diaeresis\n" +
+                "דּ: Hebrew Letter Dalet With Dagesh\n" +
+                "</script>: Browser Challenge";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"1\":\"One\",\"</script>\":\"Browser Challenge\",\"\\\\n\":\"Newline\",\"\\\\r\":\"Carriage Return\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\",\"€\":\"Euro Sign\",\"\uD83D\uDE02\":\"Smiley\"}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testInteger() {
+        String yaml =
+                "num: 36";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID +"\"},\"value\":36}}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testDecimal() {
+        String yaml =
+                "num: 36.55";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + NUMBER_TYPE_BLUE_ID +"\"},\"value\":36.55}}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testBigIntegerV1() {
+        String yaml =
+                "num: 36928735469874359687345908673940586739458679548679034857690345876905238476903485769";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID +"\"},\"value\":\"36928735469874359687345908673940586739458679548679034857690345876905238476903485769\"}}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testBigIntegerV2() {
+        String yaml =
+                "num:\n" +
+                "  value: '36928735469874359687345908673940586739458679548679034857690345876905238476903485769'\n" +
+                "  type:\n" +
+                "    blueId: " + INTEGER_TYPE_BLUE_ID;
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID +"\"},\"value\":\"36928735469874359687345908673940586739458679548679034857690345876905238476903485769\"}}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testBigIntegerText() {
+        String yaml =
+                "num:\n" +
+                "  value: '36928735469874359687345908673940586739458679548679034857690345876905238476903485769'";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + TEXT_TYPE_BLUE_ID +"\"},\"value\":\"36928735469874359687345908673940586739458679548679034857690345876905238476903485769\"}}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testBigDecimal() {
+        String yaml =
+                "num: 36928735469874359687345908673940586739458679548679034857690345876905238476903485769.36928735469874359687345908673940586739458679548679034857690345876905238476903485769";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + NUMBER_TYPE_BLUE_ID + "\"},\"value\":3.692873546987436e+82}}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testMultilineText1() {
+        String yaml =
+                "text: |\n" +
+                "  abc\n" +
+                "  def";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"text\":{\"type\":{\"blueId\":\"F92yo19rCcbBoBSpUA5LRxpfDejJDAaP1PRxxbWAraVP\"},\"value\":\"abc\\ndef\"}}";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
+    }
+
+    @Test
+    public void testMultilineText2() {
+        String yaml =
+                "text: >\n" +
+                "  abc\n" +
+                "  def";
+
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        String blueId = BlueIdCalculator.calculateBlueId(node);
+
+        String json = "{\"text\":{\"type\":{\"blueId\":\"F92yo19rCcbBoBSpUA5LRxpfDejJDAaP1PRxxbWAraVP\"},\"value\":\"abc def\"}}\n";
+        Node node2 = JSON_MAPPER.readValue(json, Node.class);
+        String blueId2 = BlueIdCalculator.calculateBlueId(node2);
+
+        assertEquals(blueId2, blueId);
     }
 
     private static Function<Object, String> fakeHashValueProvider() {

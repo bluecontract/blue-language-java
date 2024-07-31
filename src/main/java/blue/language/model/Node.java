@@ -2,7 +2,6 @@ package blue.language.model;
 
 import blue.language.utils.NodePathAccessor;
 import blue.language.utils.Types;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -16,18 +15,19 @@ import java.util.stream.Collectors;
 @JsonSerialize(using = NodeSerializer.class)
 public class Node implements Cloneable {
 
-    public static final Node INTEGER = new Node().name("Integer");
-
     private String name;
     private String description;
     private Node type;
+    private Node itemType;
+    private Node keyType;
+    private Node valueType;
     private Object value;
     private List<Node> items;
     private Map<String, Node> properties;
     private String blueId;
     private Constraints constraints;
-    @JsonIgnore
-    private List<Feature> features;
+    private Node blue;
+    private boolean inlineValue;
 
     public String getName() {
         return name;
@@ -39,6 +39,18 @@ public class Node implements Cloneable {
 
     public Node getType() {
         return type;
+    }
+
+    public Node getItemType() {
+        return itemType;
+    }
+    
+    public Node getKeyType() {
+        return keyType;
+    }
+
+    public Node getValueType() {
+        return valueType;
     }
 
     public Object getValue() {
@@ -61,8 +73,12 @@ public class Node implements Cloneable {
         return constraints;
     }
 
-    public List<Feature> getFeatures() {
-        return features;
+    public Node getBlue() {
+        return blue;
+    }
+    
+    public boolean isInlineValue() {
+        return inlineValue;
     }
 
     public Node name(String name) {
@@ -80,13 +96,38 @@ public class Node implements Cloneable {
         return this;
     }
 
-    public Node eraseType() {
-        this.type = null;
+    public Node type(String type) {
+        this.type = new Node().value(type).inlineValue(true);
         return this;
     }
 
-    public Node type(String type) {
-        this.type = Types.isBasicTypeName(type) ? new Node().value(type) : new Node().blueId(type);
+    public Node itemType(Node itemType) {
+        this.itemType = itemType;
+        return this;
+    }
+
+    public Node itemType(String itemType) {
+        this.itemType = new Node().value(itemType).inlineValue(true);
+        return this;
+    }
+
+    public Node keyType(Node keyType) {
+        this.keyType = keyType;
+        return this;
+    }
+
+    public Node keyType(String keyType) {
+        this.keyType = new Node().value(keyType).inlineValue(true);
+        return this;
+    }
+
+    public Node valueType(Node valueType) {
+        this.valueType = valueType;
+        return this;
+    }
+
+    public Node valueType(String valueType) {
+        this.valueType = new Node().value(valueType).inlineValue(true);
         return this;
     }
 
@@ -162,8 +203,13 @@ public class Node implements Cloneable {
         return this;
     }
 
-    public Node features(List<Feature> features) {
-        this.features = features;
+    public Node blue(Node blue) {
+        this.blue = blue;
+        return this;
+    }
+    
+    public Node inlineValue(boolean inlineValue) {
+        this.inlineValue = inlineValue;
         return this;
     }
 
@@ -183,10 +229,38 @@ public class Node implements Cloneable {
         return (String) get(path);
     }
 
+    public Integer getAsInteger(String path) {
+        Object value = get(path);
+        if (value instanceof BigInteger) {
+            return ((BigInteger) value).intValue();
+        } else if (value instanceof BigDecimal) {
+            BigDecimal bdValue = (BigDecimal) value;
+            if (bdValue.scale() == 0) {
+                return bdValue.intValueExact();
+            } else {
+                throw new IllegalArgumentException("Value at path " + path + " is not an integer: " + bdValue);
+            }
+        } else {
+            throw new IllegalArgumentException("Value at path " + path + " is not a BigInteger or BigDecimal: " + value);
+        }
+    }
+
     @Override
     public Node clone() {
         try {
             Node cloned = (Node) super.clone();
+            if (this.type != null) {
+                cloned.type = this.type.clone();
+            }
+            if (this.itemType != null) {
+                cloned.itemType = this.itemType.clone();
+            }
+            if (this.keyType != null) {
+                cloned.keyType = this.keyType.clone();
+            }
+            if (this.valueType != null) {
+                cloned.valueType = this.valueType.clone();
+            }
             if (this.items != null) {
                 cloned.items = this.items.stream()
                         .map(Node::clone)
@@ -199,24 +273,32 @@ public class Node implements Cloneable {
                                 entry -> entry.getValue().clone()
                         ));
             }
+            if (this.blue != null) {
+                cloned.blue = this.blue.clone();
+            }
+            cloned.inlineValue = this.inlineValue;
             return cloned;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError("BasicNode must be cloneable", e);
         }
     }
 
-
     @Override
     public String toString() {
         return "Node{" +
-                "name='" + name + '\'' +
-                ", description='" + description + '\'' +
-                ", type=" + type +
-                ", value=" + value +
-                ", items=" + items +
-                ", properties=" + properties +
-                ", blueId='" + blueId + '\'' +
-                ", constraints=" + constraints +
-                '}';
+               "name='" + name + '\'' +
+               ", description='" + description + '\'' +
+               ", type=" + type +
+               ", itemType=" + itemType +
+               ", keyType=" + keyType +
+               ", valueType=" + valueType +
+               ", value=" + value +
+               ", items=" + items +
+               ", properties=" + properties +
+               ", blueId='" + blueId + '\'' +
+               ", constraints=" + constraints +
+               ", blue=" + blue +
+               ", inlineValue=" + inlineValue +
+               '}';
     }
 }

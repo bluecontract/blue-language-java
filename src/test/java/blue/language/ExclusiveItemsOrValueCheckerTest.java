@@ -1,7 +1,8 @@
 package blue.language;
 
+import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
-import blue.language.processor.ExclusiveItemsOrValueChecker;
+import blue.language.merge.processor.ExclusiveItemsOrValueChecker;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;

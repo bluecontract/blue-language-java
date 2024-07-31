@@ -1,8 +1,12 @@
 package blue.language;
 
+import blue.language.merge.Merger;
+import blue.language.merge.MergingProcessor;
+import blue.language.merge.processor.ListItemsTypeChecker;
+import blue.language.merge.processor.SequentialMergingProcessor;
+import blue.language.merge.processor.TypeAssigner;
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
-import blue.language.processor.*;
 import blue.language.utils.Types;
 import org.junit.jupiter.api.Test;
 
@@ -18,16 +22,16 @@ public class ListItemsTypeCheckerTest {
     @Test
     public void testSuccess() throws Exception {
         Node a = new Node().name("A").blueId("A");
-        Node b = new Node().name("B").blueId("B").type("A");
-        Node c = new Node().name("C").blueId("C").type("B");
+        Node b = new Node().name("B").blueId("B").type(a);
+        Node c = new Node().name("C").blueId("C").type(b);
 
         Node x = new Node().name("X").blueId("X").properties(
-                "a", new Node().type("B")
+                "a", new Node().type(b)
         );
-        Node y = new Node().name("Y").blueId("Y").type("X").properties(
+        Node y = new Node().name("Y").blueId("Y").type(x).properties(
                 "a", new Node().items(
-                        new Node().type("B"),
-                        new Node().type("C")
+                        new Node().type(b),
+                        new Node().type(b)
                 )
         );
 
@@ -35,7 +39,6 @@ public class ListItemsTypeCheckerTest {
         Types types = new Types(nodes);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new BlueIdResolver(),
                         new TypeAssigner(),
                         new ListItemsTypeChecker(types)
                 )
@@ -53,16 +56,16 @@ public class ListItemsTypeCheckerTest {
     @Test
     public void testFailure() throws Exception {
         Node a = new Node().name("A");
-        Node b = new Node().name("B").type("A");
-        Node c = new Node().name("C").type("B");
+        Node b = new Node().name("B").type(a);
+        Node c = new Node().name("C").type(b);
 
         Node x = new Node().name("X").properties(
-                "a", new Node().type("B")
+                "a", new Node().type(b)
         );
-        Node y = new Node().name("Y").type("X").properties(
+        Node y = new Node().name("Y").type(x).properties(
                 "a", new Node().items(
-                        new Node().type("A"),
-                        new Node().type("C")
+                        new Node().type(a),
+                        new Node().type(c)
                 )
         );
 
@@ -70,7 +73,6 @@ public class ListItemsTypeCheckerTest {
         Types types = new Types(nodes);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new BlueIdResolver(),
                         new TypeAssigner(),
                         new ListItemsTypeChecker(types)
                 )

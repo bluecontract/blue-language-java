@@ -3,6 +3,7 @@ package blue.language.utils;
 import blue.language.NodeProvider;
 import blue.language.TestUtils;
 import blue.language.model.Node;
+import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.limits.PathLimits;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -133,15 +135,93 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void testExtendNonExistentPath() {
-        Node node = nodes.get("Y").clone();
+    public void testExtendList() throws Exception {
+
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+
+        String a = "name: A\nvalue: 1";
+        String b = "name: B\nvalue: 2";
+        String c = "name: C\nvalue: 3";
+
+        Node nodeA = YAML_MAPPER.readValue(a, Node.class);
+        Node nodeB = YAML_MAPPER.readValue(b, Node.class);
+        Node nodeC = YAML_MAPPER.readValue(c, Node.class);
+
+        nodeProvider.addSingleNodes(nodeA, nodeB, nodeC);
+
+        String listBlueId = BlueIdCalculator.calculateBlueId(Arrays.asList(nodeA, nodeB));
+        nodeProvider.addListAndItsItems(Arrays.asList(nodeA, nodeB));
+
+        String listNode = "name: ListNode\n" +
+                          "items:\n" +
+                          "  - blueId: " + listBlueId + "\n" +
+                          "  - blueId: " + nodeProvider.getBlueIdByName("C");
+
+        Node node = YAML_MAPPER.readValue(listNode, Node.class);
+        nodeProvider.addSingleNodes(node);
+
+        NodeExtender nodeExtender = new NodeExtender(nodeProvider);
+
         Limits limits = new PathLimits.Builder()
-                .addPath("/nonexistent")
+                .addPath("/*")
                 .build();
         nodeExtender.extend(node, limits);
 
-        assertEquals("Y", node.get("/name"));
-        assertThrows(IllegalArgumentException.class, () -> node.get("/nonexistent"));
+        assertEquals("ListNode", node.getName());
+        assertEquals(3, node.getItems().size());
+
+        assertEquals("A", node.get("/0/name"));
+        assertEquals(1, node.getAsInteger("/0/value"));
+
+        assertEquals("B", node.get("/1/name"));
+        assertEquals(2, node.getAsInteger("/1/value"));
+
+        assertEquals("C", node.get("/2/name"));
+        assertEquals(3, node.getAsInteger("/2/value"));
+    }
+
+    @Test
+    public void testExtendListDirectly() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+
+        String a = "name: A\nvalue: 1";
+        String b = "name: B\nvalue: 2";
+        String c = "name: C\nvalue: 3";
+
+        Node nodeA = YAML_MAPPER.readValue(a, Node.class);
+        Node nodeB = YAML_MAPPER.readValue(b, Node.class);
+        Node nodeC = YAML_MAPPER.readValue(c, Node.class);
+
+        nodeProvider.addSingleNodes(nodeA, nodeB, nodeC);
+
+        String listABBlueId = BlueIdCalculator.calculateBlueId(Arrays.asList(nodeA, nodeB));
+        nodeProvider.addList(Arrays.asList(nodeA, nodeB));
+
+        String ab = "blueId: " + listABBlueId;
+        Node nodeAB = YAML_MAPPER.readValue(ab, Node.class);
+        nodeProvider.addList(Arrays.asList(nodeAB, nodeC));
+
+        String listABCBlueId = BlueIdCalculator.calculateBlueId(Arrays.asList(nodeAB, nodeC));
+        String abc = "blueId: " + listABCBlueId;
+        Node nodeABC = YAML_MAPPER.readValue(abc, Node.class);
+
+        NodeExtender nodeExtender = new NodeExtender(nodeProvider);
+
+        Limits limits = new PathLimits.Builder()
+                .addPath("/*")
+                .build();
+        nodeExtender.extend(nodeABC, limits);
+
+        assertEquals(3, nodeABC.getItems().size());
+
+        assertEquals("A", nodeABC.get("/0/name"));
+        assertEquals(1, nodeABC.getAsInteger("/0/value"));
+
+        assertEquals("B", nodeABC.get("/1/name"));
+        assertEquals(2, nodeABC.getAsInteger("/1/value"));
+
+        assertEquals("C", nodeABC.get("/2/name"));
+        assertEquals(3, nodeABC.getAsInteger("/2/value"));
     }
 
 }

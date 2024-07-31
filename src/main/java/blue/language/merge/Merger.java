@@ -1,9 +1,11 @@
-package blue.language;
+package blue.language.merge;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.preprocess.Preprocessor;
 import blue.language.utils.NodeExtender;
+import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
-import blue.language.processor.ConstraintsVerifier;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.limits.PathLimits;
 
@@ -12,8 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.Types.isBasicType;
-
 public class Merger implements NodeResolver {
 
     private MergingProcessor mergingProcessor;
@@ -21,18 +21,18 @@ public class Merger implements NodeResolver {
 
     public Merger(MergingProcessor mergingProcessor, NodeProvider nodeProvider) {
         this.mergingProcessor = mergingProcessor;
-        this.nodeProvider = nodeProvider;
+        this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
     }
 
     public void merge(Node target, Node source, Limits limits) {
-        String typeBlueId = null;
+        if (source.getBlue() != null) {
+             throw new IllegalArgumentException("Document contains \"blue\" attribute. Preprocess document before merging.");
+        }
+
         if (source.getType() != null) {
             Node typeNode = source.getType();
             if (typeNode.getBlueId() != null) {
                 new NodeExtender(nodeProvider).extend(typeNode, PathLimits.withSinglePath("/"));
-                typeBlueId = typeNode.getBlueId();
-            } else if(!isBasicType(typeNode)) {
-                typeBlueId = BlueIdCalculator.calculateBlueId(typeNode);
             }
 
             Node resolvedType = resolve(typeNode, limits);

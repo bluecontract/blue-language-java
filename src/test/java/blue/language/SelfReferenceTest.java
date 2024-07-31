@@ -42,6 +42,7 @@ public class SelfReferenceTest {
 
     @Test
     public void testTwoInterconnectedDocs() throws Exception {
+
         String ab = "- name: A\n" +
                     "  x:\n" +
                     "    type:\n" +
@@ -84,7 +85,7 @@ public class SelfReferenceTest {
                           "    bVal: abcd";
 
         Blue blue = new Blue(nodeProvider);
-        Node result = blue.resolve(blue.yamlToNode(instance), PathLimits.withSinglePath("/*/*/*"));
+        Node result = blue.resolve(blue.preprocess(blue.yamlToNode(instance)), PathLimits.withSinglePath("/*/*/*"));
         assertEquals("xyz", result.getAsText("/a/x/bConst"));
 
 
@@ -98,7 +99,7 @@ public class SelfReferenceTest {
                                "      aVal: TOO_LONG";
 
         assertThrows(IllegalArgumentException.class,
-                () -> blue.resolve(blue.yamlToNode(errorInstance), PathLimits.withSinglePath("/*/*/*/*")));
+                () -> blue.resolve(blue.preprocess(blue.yamlToNode(errorInstance)), PathLimits.withSinglePath("/*/*/*/*")));
     }
 
 }

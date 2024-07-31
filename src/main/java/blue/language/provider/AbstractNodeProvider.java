@@ -43,10 +43,7 @@ public abstract class AbstractNodeProvider implements NodeProvider {
 
         if (resolvedContent.isArray()) {
             return IntStream.range(0, resolvedContent.size())
-                    .mapToObj(i -> {
-                        Node node = JSON_MAPPER.convertValue(resolvedContent.get(i), Node.class);
-                        return node.blueId(baseBlueId + "#" + i);
-                    })
+                    .mapToObj(i -> JSON_MAPPER.convertValue(resolvedContent.get(i), Node.class))
                     .collect(Collectors.toList());
         } else {
             Node node = JSON_MAPPER.convertValue(resolvedContent, Node.class);

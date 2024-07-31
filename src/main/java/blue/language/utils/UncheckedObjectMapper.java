@@ -4,6 +4,7 @@ import blue.language.model.*;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -14,6 +15,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS;
 import static com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_INTEGER_FOR_INTS;
@@ -44,6 +46,18 @@ public class UncheckedObjectMapper extends ObjectMapper {
 
         SimpleModule module = new SimpleModule();
         module.setSerializerModifier(new BlueIdBeanSerializerModifier());
+        module.addSerializer(BigInteger.class, new JsonSerializer<BigInteger>() {
+            @Override
+            public void serialize(BigInteger value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
+                BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
+                if (value.compareTo(lowerBound) >= 0 && value.compareTo(upperBound) <= 0) {
+                    gen.writeNumber(value);
+                } else {
+                    gen.writeString(value.toString());
+                }
+            }
+        });
         registerModule(module);
     }
 

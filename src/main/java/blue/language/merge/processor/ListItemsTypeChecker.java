@@ -1,6 +1,8 @@
-package blue.language.processor;
+package blue.language.merge.processor;
 
 import blue.language.*;
+import blue.language.merge.MergingProcessor;
+import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.utils.Types;
 

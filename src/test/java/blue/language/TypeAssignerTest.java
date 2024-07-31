@@ -1,8 +1,12 @@
 package blue.language;
 
+import blue.language.merge.Merger;
+import blue.language.merge.MergingProcessor;
+import blue.language.merge.processor.SequentialMergingProcessor;
+import blue.language.merge.processor.TypeAssigner;
+import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
-import blue.language.processor.*;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.DirectoryBasedNodeProvider;
 import org.junit.jupiter.api.Test;
@@ -41,7 +45,6 @@ public class TypeAssignerTest {
         List<Node> nodes = Arrays.asList(a, b, c, x, y);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new BlueIdResolver(),
                         new TypeAssigner()
                 )
         );
@@ -74,7 +77,6 @@ public class TypeAssignerTest {
         List<Node> nodes = Arrays.asList(a, b, c, x, y);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
-                        new BlueIdResolver(),
                         new TypeAssigner()
                 )
         );

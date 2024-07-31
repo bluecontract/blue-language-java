@@ -1,6 +1,7 @@
 package blue.language.provider;
 
 import blue.language.model.Node;
+import blue.language.preprocess.Preprocessor;
 import blue.language.utils.BlueIdCalculator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -11,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -21,12 +23,18 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
 
     private static final String BLUE_FILE_EXTENSION = ".blue";
 
-    private Map<String, Object> blueIdToContentMap;
-    private Map<String, Boolean> blueIdToMultipleDocumentsMap;
+    private Map<String, Object> blueIdToContentMap = new HashMap<>();;
+    private Map<String, Boolean> blueIdToMultipleDocumentsMap = new HashMap<>();
+    private Function<Node, Node> preprocessor;
 
     public DirectoryBasedNodeProvider(String... directories) throws IOException {
-        this.blueIdToContentMap = new HashMap<>();
-        this.blueIdToMultipleDocumentsMap = new HashMap<>();
+        Preprocessor defaultPreprocessor = new Preprocessor(this);
+        this.preprocessor = defaultPreprocessor::preprocessWithDefaultBlue;
+        load(directories);
+    }
+
+    public DirectoryBasedNodeProvider(Function<Node, Node> preprocessor, String... directories) throws IOException {
+        this.preprocessor = preprocessor;
         load(directories);
     }
 
@@ -57,12 +65,15 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private void processContent(String content) {
-        NodeContentHandler.ParsedContent parsedContent = NodeContentHandler.parseAndCalculateBlueId(content);
+        NodeContentHandler.ParsedContent parsedContent = NodeContentHandler.parseAndCalculateBlueId(content, preprocessor);
         blueIdToContentMap.put(parsedContent.blueId, parsedContent.content);
         blueIdToMultipleDocumentsMap.put(parsedContent.blueId, parsedContent.isMultipleDocuments);
 
         if (parsedContent.content.isArray()) {
-            processNodeList(JSON_MAPPER.convertValue(parsedContent.content, List.class));
+            List<Node> nodeList = new ArrayList<>();
+            for (JsonNode element : parsedContent.content) {
+                nodeList.add(JSON_MAPPER.treeToValue(element, Node.class));
+            }
             IntStream.range(0, parsedContent.content.size()).forEach(i -> {
                 JsonNode node = parsedContent.content.get(i);
                 addNodeToNameMap(node, parsedContent.blueId + "#" + i);

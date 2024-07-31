@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -31,7 +32,7 @@ public class NodeContentHandler {
         }
     }
 
-    public static ParsedContent parseAndCalculateBlueId(String content) {
+    public static ParsedContent parseAndCalculateBlueId(String content, Function<Node, Node> preprocessor) {
         JsonNode jsonNode;
         try {
             jsonNode = YAML_MAPPER.readTree(content);
@@ -49,12 +50,41 @@ public class NodeContentHandler {
         if (isMultipleDocuments) {
             List<Node> nodes = StreamSupport.stream(jsonNode.spliterator(), false)
                     .map(item -> JSON_MAPPER.convertValue(item, Node.class))
+                    .map(preprocessor)
                     .collect(Collectors.toList());
             blueId = BlueIdCalculator.calculateBlueId(nodes);
+            jsonNode = JSON_MAPPER.valueToTree(nodes);
         } else {
             Node node = JSON_MAPPER.convertValue(jsonNode, Node.class);
+            node = preprocessor.apply(node);
             blueId = BlueIdCalculator.calculateBlueId(node);
+            jsonNode = JSON_MAPPER.valueToTree(node);
         }
+
+        return new ParsedContent(blueId, jsonNode, isMultipleDocuments);
+    }
+
+    public static ParsedContent parseAndCalculateBlueId(Node node, Function<Node, Node> preprocessor) {
+        String blueId;
+        Node preprocessedNode = preprocessor.apply(node);
+        blueId = BlueIdCalculator.calculateBlueId(preprocessedNode);
+        JsonNode jsonNode = JSON_MAPPER.valueToTree(preprocessedNode);
+
+        return new ParsedContent(blueId, jsonNode, false);
+    }
+
+    public static ParsedContent parseAndCalculateBlueId(List<Node> nodes, Function<Node, Node> preprocessor) {
+        if (nodes == null || nodes.isEmpty()) {
+            throw new IllegalArgumentException("List of nodes cannot be null or empty");
+        }
+
+        List<Node> preprocessedNodes = nodes.stream()
+                .map(preprocessor)
+                .collect(Collectors.toList());
+
+        String blueId = BlueIdCalculator.calculateBlueId(preprocessedNodes);
+        JsonNode jsonNode = JSON_MAPPER.valueToTree(preprocessedNodes);
+        boolean isMultipleDocuments = nodes.size() > 1;
 
         return new ParsedContent(blueId, jsonNode, isMultipleDocuments);
     }

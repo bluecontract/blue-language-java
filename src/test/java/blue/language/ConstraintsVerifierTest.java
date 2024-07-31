@@ -1,8 +1,10 @@
 package blue.language;
 
+import blue.language.merge.Merger;
+import blue.language.merge.MergingProcessor;
+import blue.language.merge.processor.*;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
-import blue.language.processor.*;
 import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

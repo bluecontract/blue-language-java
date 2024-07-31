@@ -28,14 +28,20 @@ public class NodeDeserializerTest {
 
         assertEquals("name", node.getName());
         assertEquals("description", node.getDescription());
-        assertEquals("type", node.getType().getName());
+        assertEquals("type", node.getType().getValue());
         assertEquals("value", node.getValue());
         assertEquals("blueId", node.getBlueId());
         assertEquals("x", node.getProperties().get("x").getValue());
 
         Node y = node.getProperties().get("y");
-        assertEquals("y1", y.getProperties().get("y1").getValue());
-        assertEquals("y2", y.getProperties().get("y2").getValue());
+        Node y1 = y.getProperties().get("y1");
+        assertEquals("y1", y1.getValue());
+        assertTrue(y1.isInlineValue());
+
+        Node y2 = y.getProperties().get("y2");
+        assertEquals("y2", y2.getValue());
+        assertFalse(y2.isInlineValue());
+
     }
 
     @Test
@@ -52,12 +58,14 @@ public class NodeDeserializerTest {
     @Test
     public void testType() throws Exception {
         String doc = "a:\n" +
-                "  type: Integer\n" +
+                "  type:\n" +
+                "    name: Integer\n" +
                 "b:\n" +
                 "  type:\n" +
                 "    name: Integer\n" +
                 "c:\n" +
-                "  type: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                "  type:\n" +
+                "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
                 "d:\n" +
                 "  type:\n" +
                 "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
@@ -80,7 +88,7 @@ public class NodeDeserializerTest {
 
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getName());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getDescription());
-        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("x").getBlueId());
+        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("x").getValue());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("y").getValue());
     }
 
@@ -114,22 +122,6 @@ public class NodeDeserializerTest {
         Node node = YAML_MAPPER.readValue(doc, Node.class);
         assertEquals(2, node.getItems().size());
     }
-
-    @Test
-    public void testItemsAsBlueId() throws Exception {
-        String doc = "name: Abc\n" +
-                "items: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
-        Node node = YAML_MAPPER.readValue(doc, Node.class);
-        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getItems().get(0).getBlueId());
-    }
-
-    @Test
-    public void testItemsAsBlueIdThrowIfNotBlueId() throws Exception {
-        String doc = "name: Abc\n" +
-                "items: illegal";
-        assertThrows(IllegalArgumentException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
-    }
-
 
     @Test
     public void testConstraints() throws Exception {

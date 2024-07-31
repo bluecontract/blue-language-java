@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.merge;
 
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
