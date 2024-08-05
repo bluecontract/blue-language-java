@@ -9,11 +9,14 @@ import java.util.Map;
 
 public class ReplaceInlineValuesForTypeAttributesWithImports implements TransformationProcessor {
 
+    public static final String MAPPINGS = "mappings";
     private Map<String, String> mappings = new HashMap<>();
 
     public ReplaceInlineValuesForTypeAttributesWithImports(Node transformation) {
-        transformation.getProperties().get("mappings").getProperties().forEach((key, node) ->
-                mappings.put(key, (String) node.getValue()));
+        if (transformation.getProperties() != null && transformation.getProperties().containsKey(MAPPINGS)) {
+            transformation.getProperties().get(MAPPINGS).getProperties().forEach((key, node) ->
+                    mappings.put(key, (String) node.getValue()));
+        }
     }
 
     @Override

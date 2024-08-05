@@ -26,4 +26,8 @@ public class SequentialNodeProvider implements NodeProvider {
                 .findFirst()
                 .orElse(null);
     }
+
+    public List<NodeProvider> getNodeProviders() {
+        return nodeProviders;
+    }
 }
