@@ -14,7 +14,7 @@ class BlueIdsTest {
 
         assertFalse(isPotentialBlueId(null));
         assertFalse(isPotentialBlueId(""));
-        assertFalse(isPotentialBlueId("4Yj5XZbpuS1quJHsLbxsAnNHTV1XbhgQar2zQBDzrat"));
+        assertFalse(isPotentialBlueId("4Yj5XZbpuS1quJHsLbxsAnNHTV1XbhgQar2zQBDzr"));
         assertFalse(isPotentialBlueId("4Yj5XZbpuS1quJHsLbxsAnNHTV1XbhgQar2zQBDzrat7A"));
         assertFalse(isPotentialBlueId("4Yj5XZbpuS1quJHsLbxsAnNHTV1XbhgQar2zQBDzrat7#"));
         assertFalse(isPotentialBlueId("4Yj5XZbpuS1quJHsLbxsAnNHTV1XbhgQar2zQBDzrat7#-1"));
