@@ -53,15 +53,15 @@ public class NodeToObject {
                 result.put(OBJECT_TYPE, map);
             }
         } else if (node.getType() != null && strategy != SIMPLE_NO_TYPE) {
-            result.put(OBJECT_TYPE, get(node.getType()));
+            result.put(OBJECT_TYPE, get(node.getType(), strategy));
         }
 
         if (node.getItemType() != null && strategy != SIMPLE_NO_TYPE)
-            result.put(OBJECT_ITEM_TYPE, get(node.getItemType()));
+            result.put(OBJECT_ITEM_TYPE, get(node.getItemType(), strategy));
         if (node.getKeyType() != null && strategy != SIMPLE_NO_TYPE)
-            result.put(OBJECT_KEY_TYPE, get(node.getKeyType()));
+            result.put(OBJECT_KEY_TYPE, get(node.getKeyType(), strategy));
         if (node.getValueType() != null && strategy != SIMPLE_NO_TYPE)
-            result.put(OBJECT_VALUE_TYPE, get(node.getValueType()));
+            result.put(OBJECT_VALUE_TYPE, get(node.getValueType(), strategy));
         if (node.getValue() != null)
             result.put(OBJECT_VALUE, handleValue(node.getValue()));
         if (items != null)
