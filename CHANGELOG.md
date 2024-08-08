@@ -1,3 +1,16 @@
+## v0.5.0 (2024-08-08)
+
+### Feat
+
+- List and Dictionary support, Preprocessor
+- ClasspathBasedNodeProvider
+
+### Fix
+
+- Disable core node provider
+- Minor changes
+- Java8 comp
+
 ## v0.4.0 (2024-07-23)
 
 ### Feat
