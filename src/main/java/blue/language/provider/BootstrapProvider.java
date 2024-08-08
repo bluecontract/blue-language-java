@@ -17,8 +17,8 @@ public class BootstrapProvider implements NodeProvider {
     private BootstrapProvider() {
         try {
             ClasspathBasedNodeProvider transformation = new ClasspathBasedNodeProvider(NO_PREPROCESSING, "transformation");
-            ClasspathBasedNodeProvider core = new ClasspathBasedNodeProvider("core");
-            this.nodeProvider = new SequentialNodeProvider(transformation, core);
+            //ClasspathBasedNodeProvider core = new ClasspathBasedNodeProvider("core");
+            this.nodeProvider = new SequentialNodeProvider(transformation);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
