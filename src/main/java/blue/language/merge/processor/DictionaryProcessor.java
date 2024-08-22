@@ -4,7 +4,7 @@ import blue.language.*;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.utils.NodeToObject;
+import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.Types;
 
 import java.util.Map;
@@ -48,7 +48,7 @@ public class DictionaryProcessor implements MergingProcessor {
             boolean isSubtype = isSubtype(sourceKeyType, targetKeyType, nodeProvider);
             if (!isSubtype) {
                 String errorMessage = String.format("The source key type '%s' is not a subtype of the target key type '%s'.",
-                        NodeToObject.get(sourceKeyType), NodeToObject.get(targetKeyType));
+                        NodeToMapListOrValue.get(sourceKeyType), NodeToMapListOrValue.get(targetKeyType));
                 throw new IllegalArgumentException(errorMessage);
             }
             target.keyType(sourceKeyType);
@@ -67,7 +67,7 @@ public class DictionaryProcessor implements MergingProcessor {
             boolean isSubtype = isSubtype(sourceValueType, targetValueType, nodeProvider);
             if (!isSubtype) {
                 String errorMessage = String.format("The source value type '%s' is not a subtype of the target value type '%s'.",
-                        NodeToObject.get(sourceValueType), NodeToObject.get(targetValueType));
+                        NodeToMapListOrValue.get(sourceValueType), NodeToMapListOrValue.get(targetValueType));
                 throw new IllegalArgumentException(errorMessage);
             }
             target.valueType(sourceValueType);
@@ -109,7 +109,7 @@ public class DictionaryProcessor implements MergingProcessor {
     private void validateValueType(Node value, Node valueType, NodeProvider nodeProvider) {
         if (value.getType() != null && !isSubtype(value.getType(), valueType, nodeProvider)) {
             String errorMessage = String.format("Value of type '%s' is not a subtype of the dictionary's value type '%s'.",
-                    NodeToObject.get(value.getType()), NodeToObject.get(valueType));
+                    NodeToMapListOrValue.get(value.getType()), NodeToMapListOrValue.get(valueType));
             throw new IllegalArgumentException(errorMessage);
         }
     }

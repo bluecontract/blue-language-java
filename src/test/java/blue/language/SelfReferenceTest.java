@@ -79,7 +79,8 @@ public class SelfReferenceTest {
 
         String instance = "name: Some\n" +
                           "a:\n" +
-                          "  type: " + aNodeBlueId + "\n" +
+                          "  type:\n" +
+                          "    blueId: " + aNodeBlueId + "\n" +
                           "  aVal: abcd\n" +
                           "  x:\n" +
                           "    bVal: abcd";
@@ -91,7 +92,8 @@ public class SelfReferenceTest {
 
         String errorInstance = "name: Some\n" +
                                "a:\n" +
-                               "  type: " + aNodeBlueId + "\n" +
+                               "  type: \n" +
+                               "    blueId: " + aNodeBlueId + "\n" +
                                "  aVal: abcd\n" +
                                "  x:\n" +
                                "    bVal: abcd\n" +

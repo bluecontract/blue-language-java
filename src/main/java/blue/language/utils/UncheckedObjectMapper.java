@@ -45,7 +45,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
         enable(USE_BIG_INTEGER_FOR_INTS);
 
         SimpleModule module = new SimpleModule();
-        module.setSerializerModifier(new BlueIdBeanSerializerModifier());
+        module.setSerializerModifier(new BlueAnnotationsBeanSerializerModifier());
         module.addSerializer(BigInteger.class, new JsonSerializer<BigInteger>() {
             @Override
             public void serialize(BigInteger value, JsonGenerator gen, SerializerProvider serializers) throws IOException {

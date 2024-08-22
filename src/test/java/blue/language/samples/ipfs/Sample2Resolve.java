@@ -3,7 +3,7 @@ package blue.language.samples.ipfs;
 import blue.language.*;
 import blue.language.model.Node;
 import blue.language.provider.ipfs.IPFSNodeProvider;
-import blue.language.utils.NodeToObject;
+import blue.language.utils.NodeToMapListOrValue;
 
 import java.io.IOException;
 
@@ -18,7 +18,7 @@ public class Sample2Resolve {
 
         Blue blue = new Blue(new IPFSNodeProvider());
         Node node = YAML_MAPPER.readValue(doc, Node.class);
-        Object result = NodeToObject.get(blue.resolve(node));
+        Object result = NodeToMapListOrValue.get(blue.resolve(node));
         System.out.println(result);
     }
 

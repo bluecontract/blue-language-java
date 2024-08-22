@@ -6,11 +6,11 @@ import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase;
 
-public class BlueIdBeanSerializerModifier extends BeanSerializerModifier {
+public class BlueAnnotationsBeanSerializerModifier extends BeanSerializerModifier {
     @Override
     public JsonSerializer<?> modifySerializer(SerializationConfig config, BeanDescription beanDesc, JsonSerializer<?> serializer) {
-        if (beanDesc.getBeanClass().isAnnotationPresent(BlueId.class) && serializer instanceof BeanSerializerBase)
-            return new BlueIdSerializer((BeanSerializerBase) serializer);
+        if (beanDesc.getBeanClass().isAnnotationPresent(TypeBlueId.class) && serializer instanceof BeanSerializerBase)
+            return new BlueAnnotationsSerializer((BeanSerializerBase) serializer);
         return serializer;
     }
 }

@@ -1,7 +1,6 @@
 package blue.language.model;
 
 import blue.language.utils.NodePathAccessor;
-import blue.language.utils.Types;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -10,6 +9,8 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static blue.language.utils.Properties.*;
 
 @JsonDeserialize(using = NodeDeserializer.class)
 @JsonSerialize(using = NodeSerializer.class)
@@ -54,6 +55,18 @@ public class Node implements Cloneable {
     }
 
     public Object getValue() {
+        if (this.type != null && this.type.getBlueId() != null && this.value != null) {
+            String typeBlueId = this.type.getBlueId();
+            if (INTEGER_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
+                return new BigInteger((String) this.value);
+            } else if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
+                BigDecimal parsed = new BigDecimal((String) this.value);
+                double doubleValue = parsed.doubleValue();
+                return new BigDecimal(Double.toString(doubleValue));
+            } else if (BOOLEAN_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
+                return Boolean.parseBoolean((String) this.value);
+            }
+        }
         return value;
     }
 
@@ -163,7 +176,11 @@ public class Node implements Cloneable {
     }
 
     public Node properties(Map<String, Node> properties) {
-        this.properties = properties;
+        if (properties != null) {
+            this.properties = new HashMap<>(properties);
+        } else {
+            this.properties = null;
+        }
         return this;
     }
 

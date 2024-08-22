@@ -2,8 +2,8 @@ package blue.language.preprocess;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
-import blue.language.preprocess.processor.ReplaceValuesMatchingBlueIdWithBlueId;
 import blue.language.provider.BootstrapProvider;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
@@ -17,6 +17,9 @@ import java.util.Optional;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Preprocessor {
+
+    public static final String DEFAULT_BLUE_BLUE_ID = "5y7V3sYaj72uet7gc3WFjADBUhFe4bGWzQtmZ8v3wr8z";
+
     private TransformationProcessorProvider processorProvider;
     private NodeProvider nodeProvider;
     private Node defaultSimpleBlue;
@@ -76,16 +79,16 @@ public class Preprocessor {
 
     public static TransformationProcessorProvider getStandardProvider() {
         return new TransformationProcessorProvider() {
-            private static final String REPLACE_INLINE_TYPES = "31WTDXxg5afqBNT8mpidmAxeuBs6SV1YXeaSrzjXzWdu";
-            private static final String REPLACE_INLINE_VALUES = "HZm8C6u7WsowF4Ef5iT2jVhsW2doAVogGz8ZziZbbqzK";
+            private static final String REPLACE_INLINE_TYPES = "648mybP3oHoi8kx6HvYzw6Jtuz6BjUpGPk1r2DpCq7e4";
+            private static final String INFER_BASIC_TYPES = "45nboJisxsXXE2UBA2cY7V56roZ13u9MtCMcvv4iYrFp";
 
             @Override
             public Optional<TransformationProcessor> getProcessor(Node transformation) {
                 String blueId = transformation.getAsText("/type/blueId");
                 if (REPLACE_INLINE_TYPES.equals(blueId))
                     return Optional.of(new ReplaceInlineValuesForTypeAttributesWithImports(transformation));
-                else if (REPLACE_INLINE_VALUES.equals(blueId))
-                    return Optional.of(new ReplaceValuesMatchingBlueIdWithBlueId());
+                else if (INFER_BASIC_TYPES.equals(blueId))
+                    return Optional.of(new InferBasicTypesForUntypedValues());
                 return Optional.empty();
             }
         };

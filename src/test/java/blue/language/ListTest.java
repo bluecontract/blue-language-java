@@ -202,37 +202,31 @@ public class ListTest {
         nodeProvider.addListAndItsItems(abc);
 
         String x1 = "name: X1\n" +
-                "items:\n" +
-                "  - A\n" +
-                "  - B\n" +
-                "  - C";
+                    "items:\n" +
+                    "  - A\n" +
+                    "  - B\n" +
+                    "  - C";
 
         String x2 = "name: X1\n" +
-                "items:\n" +
-                "  - blueId: " + abId + "\n" +
-                "  - C";
-
-        String x3 = "name: X1\n" +
-                "items:\n" +
-                "  - " + abId + "\n" +
-                "  - C";
+                    "items:\n" +
+                    "  - blueId: " + abId + "\n" +
+                    "  - C";
 
         String x4 = "name: X1\n" +
-                "items:\n" +
-                "  - " + abcId;
+                    "items:\n" +
+                    "  - blueId: " + abcId;
 
         String x5 = "name: X1\n" +
-                "items: " + abcId;
+                    "items:\n" +
+                    "  blueId: " + abcId;
 
         Node x1Extended = preprocessAndExtend(x1);
         Node x2Extended = preprocessAndExtend(x2);
-        Node x3Extended = preprocessAndExtend(x3);
         Node x4Extended = preprocessAndExtend(x4);
         Node x5Extended = preprocessAndExtend(x5);
 
         assertEquals(3, x1Extended.getItems().size());
         assertEquals(3, x2Extended.getItems().size());
-        assertEquals(3, x3Extended.getItems().size());
         assertEquals(3, x4Extended.getItems().size());
         assertEquals(3, x5Extended.getItems().size());
 

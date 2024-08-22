@@ -38,27 +38,28 @@ public class TypesTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String person = "name: Person\n" +
-                "surname:\n" +
-                "  type: Text\n" +
-                "age:\n" +
-                "  type: Integer";
+                        "surname:\n" +
+                        "  type: Text\n" +
+                        "age:\n" +
+                        "  type: Integer";
         nodeProvider.addSingleDocs(person);
 
         String alice = "name: Alice\n" +
-                "type: " + nodeProvider.getBlueIdByName("Person");
+                       "type:\n" +
+                       "  blueId: " + nodeProvider.getBlueIdByName("Person");
 
         String alice2 = "name: Alice2\n" +
-                "type:\n" +
-                "  name: Person\n" +
-                "  blueId: " + nodeProvider.getBlueIdByName("Person");
+                        "type:\n" +
+                        "  name: Person\n" +
+                        "  blueId: " + nodeProvider.getBlueIdByName("Person");
 
         String alice3 = "name: Alice3\n" +
-                "type:\n" +
-                "  name: Person\n" +
-                "  surname:\n" +
-                "    type: Text\n" +
-                "  age:\n" +
-                "    type: Integer";
+                        "type:\n" +
+                        "  name: Person\n" +
+                        "  surname:\n" +
+                        "    type: Text\n" +
+                        "  age:\n" +
+                        "    type: Integer";
         nodeProvider.addSingleDocs(alice, alice2, alice3);
 
         assertTrue(isSubtype(nodeProvider.getNodeByName("Alice"), nodeProvider.getNodeByName("Alice"), nodeProvider));

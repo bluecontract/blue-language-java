@@ -85,4 +85,52 @@ public class NodeTypeMatcherTest {
 
     }
 
+    @Test
+    public void testNodeTransformer() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        Blue blue = new Blue(nodeProvider);
+
+        String personType = "name: Person\n" +
+                            "age:\n" +
+                            "  type: Integer\n" +
+                            "secretCode:\n" +
+                            "  type: Text";
+
+        nodeProvider.addSingleDocs(personType);
+        String personTypeId = nodeProvider.getBlueIdByName("Person");
+
+        String personInstance = "name: John Doe\n" +
+                                "type:\n" +
+                                "  blueId: " + personTypeId + "\n" +
+                                "age: 30\n" +
+                                "secretCode: ABC123";
+
+        Node personNode = blue.yamlToNode(personInstance);
+
+        String matchTypeWithWrongSecret = "type:\n" +
+                                     "  blueId: " + personTypeId + "\n" +
+                                     "secretCode: ABC987";
+
+        String matchTypeWithoutSecret = "type:\n" +
+                                        "  blueId: " + personTypeId + "\n" +
+                                        "age: 30";
+
+        NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
+
+        assertFalse(matcher.matchesType(personNode, blue.yamlToNode(matchTypeWithWrongSecret)));
+        assertTrue(matcher.matchesType(personNode, blue.yamlToNode(matchTypeWithoutSecret)));
+
+        NodeTypeMatcher.TargetTypeTransformer transformer = (targetType) -> {
+            if (targetType.getProperties() != null) {
+                Node result = targetType.clone();
+                result.getProperties().remove("secretCode");
+                return result;
+            }
+            return targetType;
+        };
+
+        assertTrue(matcher.matchesType(personNode, blue.yamlToNode(matchTypeWithoutSecret), transformer));
+        assertTrue(matcher.matchesType(personNode, blue.yamlToNode(matchTypeWithWrongSecret), transformer));
+    }
+
 }

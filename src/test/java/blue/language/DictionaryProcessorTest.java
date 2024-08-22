@@ -51,7 +51,8 @@ public class DictionaryProcessorTest {
         nodeProvider.addSingleDocs(a);
 
         String b = "name: B\n" +
-                   "type: " + nodeProvider.getBlueIdByName("A");
+                   "type:\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A");
         nodeProvider.addSingleDocs(b);
 
         String dictOfAToB = "name: DictOfAToB\n" +
@@ -60,9 +61,11 @@ public class DictionaryProcessorTest {
                             "valueType: \n" +
                             "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
                             "key1:\n" +
-                            "  type: " + nodeProvider.getBlueIdByName("A") + "\n" +
+                            "  type:\n" +
+                            "    blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
                             "key2:\n" +
-                            "  type: " + nodeProvider.getBlueIdByName("B");
+                            "  type:\n" +
+                            "    blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(dictOfAToB);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(

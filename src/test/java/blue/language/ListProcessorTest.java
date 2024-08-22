@@ -8,6 +8,7 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.NodeExtender;
+import blue.language.utils.Properties;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
 
@@ -52,19 +53,25 @@ public class ListProcessorTest {
         nodeProvider.addSingleDocs(a);
 
         String b = "name: B\n" +
-                   "type: " + nodeProvider.getBlueIdByName("A");
+                   "type:\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A");
         nodeProvider.addSingleDocs(b);
 
         String c = "name: C\n" +
-                   "type: " + nodeProvider.getBlueIdByName("B");
+                   "type:\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(c);
 
         String listOfB = "name: ListOfB\n" +
-                         "type: List\n" +
-                         "itemType: " +  nodeProvider.getBlueIdByName("B") + "\n" +
+                         "type:\n" +
+                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "itemType:\n" +
+                         "  blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                          "items:\n" +
-                         "  - type: " + nodeProvider.getBlueIdByName("B") + "\n" +
-                         "  - type: " + nodeProvider.getBlueIdByName("C");
+                         "  - type:\n" +
+                         "      blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
+                         "  - type:\n" +
+                         "      blueId: " + nodeProvider.getBlueIdByName("C");
         nodeProvider.addSingleDocs(listOfB);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
@@ -98,7 +105,7 @@ public class ListProcessorTest {
 
         String listOfB = "name: ListOfB\n" +
                          "type: List\n" +
-                         "itemType: " +  nodeProvider.getBlueIdByName("B") + "\n" +
+                         "itemType: " + nodeProvider.getBlueIdByName("B") + "\n" +
                          "items:\n" +
                          "  - type: " + nodeProvider.getBlueIdByName("B") + "\n" +
                          "  - type: " + nodeProvider.getBlueIdByName("A");  // This should cause an error
@@ -126,23 +133,30 @@ public class ListProcessorTest {
         nodeProvider.addSingleDocs(a);
 
         String b = "name: B\n" +
-                   "type: " + nodeProvider.getBlueIdByName("A");
+                   "type:\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A");
         nodeProvider.addSingleDocs(b);
 
         String c = "name: C\n" +
-                   "type: " + nodeProvider.getBlueIdByName("B");
+                   "type:\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(c);
 
         String listOfB = "name: ListOfB\n" +
-                         "type: List\n" +
-                         "itemType: " +  nodeProvider.getBlueIdByName("B");
+                         "type:\n" +
+                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "itemType:\n" +
+                         "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(listOfB);
 
         String inheritedList = "name: InheritedList\n" +
-                               "type: " + nodeProvider.getBlueIdByName("ListOfB") + "\n" +
+                               "type:\n" +
+                               "  blueId: " + nodeProvider.getBlueIdByName("ListOfB") + "\n" +
                                "items:\n" +
-                               "  - type: " + nodeProvider.getBlueIdByName("B") + "\n" +
-                               "  - type: " + nodeProvider.getBlueIdByName("C");
+                               "  - type:\n" +
+                               "      blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
+                               "  - type:\n" +
+                               "      blueId: " + nodeProvider.getBlueIdByName("C");
         nodeProvider.addSingleDocs(inheritedList);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
@@ -171,19 +185,25 @@ public class ListProcessorTest {
         nodeProvider.addSingleDocs(a);
 
         String b = "name: B\n" +
-                   "type: " + nodeProvider.getBlueIdByName("A");
+                   "type:\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A");
         nodeProvider.addSingleDocs(b);
 
         String listOfB = "name: ListOfB\n" +
-                         "type: List\n" +
-                         "itemType: " +  nodeProvider.getBlueIdByName("B");
+                         "type:\n" +
+                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "itemType:\n" +
+                         "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(listOfB);
 
         String inheritedList = "name: InheritedList\n" +
-                               "type: " + nodeProvider.getBlueIdByName("ListOfB") + "\n" +
+                               "type:\n" +
+                               "  blueId: " + nodeProvider.getBlueIdByName("ListOfB") + "\n" +
                                "items:\n" +
-                               "  - type: " + nodeProvider.getBlueIdByName("B") + "\n" +
-                               "  - type: " + nodeProvider.getBlueIdByName("A");  // This should cause an error
+                               "  - type:\n" +
+                               "      blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
+                               "  - type:\n" +
+                               "      blueId: " + nodeProvider.getBlueIdByName("A");  // This should cause an error
         nodeProvider.addSingleDocs(inheritedList);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
@@ -208,9 +228,11 @@ public class ListProcessorTest {
         nodeProvider.addSingleDocs(a);
 
         String listWithNoItemType = "name: ListWithNoItemType\n" +
-                                    "type: List\n" +
+                                    "type:\n" +
+                                    "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
                                     "items:\n" +
-                                    "  - type: " + nodeProvider.getBlueIdByName("A");
+                                    "  - type:\n" +
+                                    "      blueId: " + nodeProvider.getBlueIdByName("A");
         nodeProvider.addSingleDocs(listWithNoItemType);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(

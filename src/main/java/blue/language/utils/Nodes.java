@@ -13,5 +13,11 @@ public class Nodes {
         return node.getName() == null && node.getType() == null && node.getValue() == null && node.getDescription() == null &&
                node.getProperties() == null;
     }
+
+    public static boolean hasBlueIdOnly(Node node) {
+        return node.getName() == null && node.getType() == null && node.getValue() == null && node.getDescription() == null &&
+               node.getProperties() == null && node.getBlue() == null && node.getItems() == null && node.getConstraints() == null &&
+               node.getKeyType() == null && node.getValueType() == null && node.getItemType() == null;
+    }
     
 }

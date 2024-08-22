@@ -2,11 +2,14 @@ package blue.language;
 
 import blue.language.model.Constraints;
 import blue.language.model.Node;
+import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,15 +18,15 @@ public class NodeDeserializerTest {
     @Test
     public void testBasics() throws Exception {
         String doc = "name: name\n" +
-                "description: description\n" +
-                "type: type\n" +
-                "value: value\n" +
-                "blueId: blueId\n" +
-                "x: x\n" +
-                "y:\n" +
-                "  y1: y1\n" +
-                "  y2:\n" +
-                "    value: y2";
+                     "description: description\n" +
+                     "type: type\n" +
+                     "value: value\n" +
+                     "blueId: blueId\n" +
+                     "x: x\n" +
+                     "y:\n" +
+                     "  y1: y1\n" +
+                     "  y2:\n" +
+                     "    value: y2";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
         assertEquals("name", node.getName());
@@ -46,29 +49,40 @@ public class NodeDeserializerTest {
 
     @Test
     public void testNumbers() throws Exception {
-        String doc = "int: 132452345234524739582739458723948572934875\n" +
-                "dec: 132452345234524739582739458723948572934875.132452345234524739582739458723948572934875";
+        String doc = "int1: 9007199254740991\n" +
+                     "int2: 132452345234524739582739458723948572934875\n" +
+                     "int3:\n" +
+                     "  type:\n" +
+                     "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
+                     "  value: \"132452345234524739582739458723948572934875\"\n" +
+                     "dec1: 132452345234524739582739458723948572934875.132452345234524739582739458723948572934875\n" +
+                     "dec2:\n" +
+                     "  type:\n" +
+                     "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                     "  value: \"132452345234524739582739458723948572934875.132452345234524739582739458723948572934875\"\n";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
-        assertEquals(new BigInteger("132452345234524739582739458723948572934875"), node.getProperties().get("int").getValue());
-        assertEquals(new BigDecimal("132452345234524739582739458723948572934875.132452345234524739582739458723948572934875"),
-                node.getProperties().get("dec").getValue());
+        assertEquals(new BigInteger("9007199254740991"), node.getProperties().get("int1").getValue());
+        assertEquals(new BigInteger("9007199254740991"), node.getProperties().get("int2").getValue());
+        assertEquals(new BigInteger("132452345234524739582739458723948572934875"), node.getProperties().get("int3").getValue());
+        assertEquals(new BigDecimal("1.3245234523452473E+41"), node.getProperties().get("dec1").getValue());
+        assertEquals(new BigDecimal("1.3245234523452473E+41"), node.getProperties().get("dec2").getValue());
     }
 
     @Test
     public void testType() throws Exception {
         String doc = "a:\n" +
-                "  type:\n" +
-                "    name: Integer\n" +
-                "b:\n" +
-                "  type:\n" +
-                "    name: Integer\n" +
-                "c:\n" +
-                "  type:\n" +
-                "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
-                "d:\n" +
-                "  type:\n" +
-                "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
+                     "  type:\n" +
+                     "    name: Integer\n" +
+                     "b:\n" +
+                     "  type:\n" +
+                     "    name: Integer\n" +
+                     "c:\n" +
+                     "  type:\n" +
+                     "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                     "d:\n" +
+                     "  type:\n" +
+                     "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
         assertEquals("Integer", node.getProperties().get("a").getType().getName());
@@ -80,10 +94,10 @@ public class NodeDeserializerTest {
     @Test
     public void testBlueId() throws Exception {
         String doc = "name: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
-                "description: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
-                "x: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
-                "y:\n" +
-                "  value: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
+                     "description: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                     "x: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                     "y:\n" +
+                     "  value: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getName());
@@ -95,13 +109,13 @@ public class NodeDeserializerTest {
     @Test
     public void testItems() throws Exception {
         String doc = "name: Abc\n" +
-                "props1:\n" +
-                "  items:\n" +
-                "    - name: A\n" +
-                "    - name: B\n" +
-                "props2:\n" +
-                "  - name: A\n" +
-                "  - name: B";
+                     "props1:\n" +
+                     "  items:\n" +
+                     "    - name: A\n" +
+                     "    - name: B\n" +
+                     "props2:\n" +
+                     "  - name: A\n" +
+                     "  - name: B";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
         assertEquals(2, node.getProperties().get("props1").getItems().size());
@@ -118,7 +132,7 @@ public class NodeDeserializerTest {
     @Test
     public void testList() throws Exception {
         String doc = "- A\n" +
-                "- B";
+                     "- B";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
         assertEquals(2, node.getItems().size());
     }
@@ -126,24 +140,24 @@ public class NodeDeserializerTest {
     @Test
     public void testConstraints() throws Exception {
         String doc = "name: name\n" +
-                "constraints:\n" +
-                "  required: true\n" +
-                "  allowMultiple: false\n" +
-                "  minLength: 5\n" +
-                "  maxLength: 10\n" +
-                "  pattern: \"^[a-z]+$\"\n" +
-                "  minimum: 1.01\n" +
-                "  maximum: 100.01\n" +
-                "  exclusiveMinimum: 0.01\n" +
-                "  exclusiveMaximum: 101.01\n" +
-                "  multipleOf: 2.01\n" +
-                "  minItems: 1\n" +
-                "  maxItems: 5\n" +
-                "  uniqueItems: true\n" +
-                "  options:\n" +
-                "    - blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
-                "    - name: name2\n" +
-                "      description: description2";
+                     "constraints:\n" +
+                     "  required: true\n" +
+                     "  allowMultiple: false\n" +
+                     "  minLength: 5\n" +
+                     "  maxLength: 10\n" +
+                     "  pattern: \"^[a-z]+$\"\n" +
+                     "  minimum: 1.01\n" +
+                     "  maximum: 100.01\n" +
+                     "  exclusiveMinimum: 0.01\n" +
+                     "  exclusiveMaximum: 101.01\n" +
+                     "  multipleOf: 2.01\n" +
+                     "  minItems: 1\n" +
+                     "  maxItems: 5\n" +
+                     "  uniqueItems: true\n" +
+                     "  options:\n" +
+                     "    - blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                     "    - name: name2\n" +
+                     "      description: description2";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
         Constraints constraints = node.getConstraints();

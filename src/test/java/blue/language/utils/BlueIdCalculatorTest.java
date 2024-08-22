@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.function.Function;
 
-import static blue.language.utils.Base58Sha256Provider.sha256;
 import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
@@ -148,7 +147,7 @@ public class BlueIdCalculatorTest {
         Node node = YAML_MAPPER.readValue(yaml, Node.class);
         String blueId = BlueIdCalculator.calculateBlueId(node);
 
-        String json = "{\"num\":{\"type\":{\"blueId\":\"" + NUMBER_TYPE_BLUE_ID +"\"},\"value\":36.55}}";
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + DOUBLE_TYPE_BLUE_ID + "\"},\"value\":36.55}}";
         Node node2 = JSON_MAPPER.readValue(json, Node.class);
         String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
@@ -163,7 +162,7 @@ public class BlueIdCalculatorTest {
         Node node = YAML_MAPPER.readValue(yaml, Node.class);
         String blueId = BlueIdCalculator.calculateBlueId(node);
 
-        String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID +"\"},\"value\":\"36928735469874359687345908673940586739458679548679034857690345876905238476903485769\"}}";
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID +"\"},\"value\":\"9007199254740991\"}}";
         Node node2 = JSON_MAPPER.readValue(json, Node.class);
         String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
@@ -212,7 +211,7 @@ public class BlueIdCalculatorTest {
         Node node = YAML_MAPPER.readValue(yaml, Node.class);
         String blueId = BlueIdCalculator.calculateBlueId(node);
 
-        String json = "{\"num\":{\"type\":{\"blueId\":\"" + NUMBER_TYPE_BLUE_ID + "\"},\"value\":3.692873546987436e+82}}";
+        String json = "{\"num\":{\"type\":{\"blueId\":\"" + DOUBLE_TYPE_BLUE_ID + "\"},\"value\":3.692873546987436e+82}}";
         Node node2 = JSON_MAPPER.readValue(json, Node.class);
         String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 

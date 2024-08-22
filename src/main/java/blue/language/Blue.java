@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.mapping.NodeToObjectConverter;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
@@ -7,6 +8,7 @@ import blue.language.merge.processor.*;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.*;
+import blue.language.utils.NodeTypeMatcher.TargetTypeTransformer;
 import blue.language.utils.limits.Limits;
 
 import java.util.Arrays;
@@ -14,7 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import static blue.language.utils.NodeToObject.Strategy.SIMPLE;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.utils.limits.Limits.NO_LIMITS;
@@ -66,19 +67,24 @@ public class Blue implements NodeResolver {
     }
 
     public Node objectToNode(Object object) {
-        return YAML_MAPPER.convertValue(object, Node.class);
+        String json = JSON_MAPPER.writeValueAsString(object);
+        return jsonToNode(json);
     }
 
     public boolean nodeMatchesType(Node node, Node type) {
         return new NodeTypeMatcher(this).matchesType(node, type);
     }
 
+    public boolean nodeMatchesType(Node node, Node type, TargetTypeTransformer transformer) {
+        return new NodeTypeMatcher(this).matchesType(node, type, transformer);
+    }
+
     public Node yamlToNode(String yaml) {
-        return YAML_MAPPER.readValue(yaml, Node.class);
+        return preprocess(YAML_MAPPER.readValue(yaml, Node.class));
     }
 
     public Node jsonToNode(String json) {
-        return JSON_MAPPER.readValue(json, Node.class);
+        return preprocess(JSON_MAPPER.readValue(json, Node.class));
     }
 
     public void addPreprocessingAliases(Map<String, String> aliases) {
@@ -115,9 +121,7 @@ public class Blue implements NodeResolver {
     }
 
     public <T> T nodeToObject(Node node, Class<T> clazz) {
-        Node clone = node.clone();
-        clone.type((Node) null);
-        return YAML_MAPPER.convertValue(NodeToObject.get(clone, SIMPLE), clazz);
+        return new NodeToObjectConverter(typeClassResolver).convert(node, clazz);
     }
 
     public boolean isNodeSubtypeOf(Node candidateNode, Node superTypeNode) {
@@ -132,11 +136,41 @@ public class Blue implements NodeResolver {
         return mergingProcessor;
     }
 
+    public TypeClassResolver getTypeClassResolver() {
+        return typeClassResolver;
+    }
+
+    public Map<String, String> getPreprocessingAliases() {
+        return preprocessingAliases;
+    }
+
+    public Blue nodeProvider(NodeProvider nodeProvider) {
+        this.nodeProvider = nodeProvider;
+        return this;
+    }
+
+    public Blue mergingProcessor(MergingProcessor mergingProcessor) {
+        this.mergingProcessor = mergingProcessor;
+        return this;
+    }
+
+    public Blue typeClassResolver(TypeClassResolver typeClassResolver) {
+        this.typeClassResolver = typeClassResolver;
+        return this;
+    }
+
+    public Blue preprocessingAliases(Map<String, String> preprocessingAliases) {
+        this.preprocessingAliases = preprocessingAliases;
+        return this;
+    }
+
     private MergingProcessor createDefaultNodeProcessor() {
         return new SequentialMergingProcessor(
                 Arrays.asList(
                         new ValuePropagator(),
                         new TypeAssigner(),
+                        new ListProcessor(),
+                        new DictionaryProcessor(),
                         new ConstraintsPropagator(),
                         new ConstraintsVerifier(),
                         new BasicTypesVerifier()

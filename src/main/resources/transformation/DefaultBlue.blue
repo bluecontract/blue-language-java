@@ -1,7 +1,5 @@
 - type:
-    blueId: HZm8C6u7WsowF4Ef5iT2jVhsW2doAVogGz8ZziZbbqzK
-- type:
-    blueId: 31WTDXxg5afqBNT8mpidmAxeuBs6SV1YXeaSrzjXzWdu
+    blueId: 648mybP3oHoi8kx6HvYzw6Jtuz6BjUpGPk1r2DpCq7e4
   mappings:
     Text: F92yo19rCcbBoBSpUA5LRxpfDejJDAaP1PRxxbWAraVP
     Number: 68ryJtnmui4j5rCZWUnkZ3DChtmEb7Z9F8atn1mBSM3L
@@ -9,3 +7,5 @@
     Boolean: EL6AjrbJsxTWRTPzY8WR8Y2zAMXRbydQj83PcZwuAHbo
     List: G8wmfjEqugPEEXByMYWJXiEdbLToPRWNQEekNxrxfQWB
     Dictionary: 294NBTj2mFRL3RB4kDRUSckwGg7Kzj6T8CTAFeR1kcSA
+- type:
+    blueId: 45nboJisxsXXE2UBA2cY7V56roZ13u9MtCMcvv4iYrFp

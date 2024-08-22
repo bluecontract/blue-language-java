@@ -11,16 +11,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.NodeToObject.Strategy.*;
+import static blue.language.utils.NodeToMapListOrValue.Strategy.*;
 import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
-public class NodeToObject {
+public class NodeToMapListOrValue {
 
     public enum Strategy {
         OFFICIAL,
-        SIMPLE,
-        SIMPLE_NO_TYPE
+        SIMPLE
     }
 
     public static Object get(Node node) {
@@ -29,14 +28,14 @@ public class NodeToObject {
 
     public static Object get(Node node, Strategy strategy) {
 
-        if (node.getValue() != null && isStrategySimple(strategy))
+        if (node.getValue() != null && strategy == SIMPLE)
             return node.getValue();
 
         List<Object> items = node.getItems() == null ? null :
                 node.getItems().stream()
                         .map(item -> get(item, strategy))
                         .collect(Collectors.toList());
-        if (items != null && isStrategySimple(strategy))
+        if (items != null && strategy == SIMPLE)
             return items;
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -52,15 +51,15 @@ public class NodeToObject {
                 map.put(OBJECT_BLUE_ID, inferredTypeBlueId);
                 result.put(OBJECT_TYPE, map);
             }
-        } else if (node.getType() != null && strategy != SIMPLE_NO_TYPE) {
+        } else if (node.getType() != null) {
             result.put(OBJECT_TYPE, get(node.getType()));
         }
 
-        if (node.getItemType() != null && strategy != SIMPLE_NO_TYPE)
+        if (node.getItemType() != null)
             result.put(OBJECT_ITEM_TYPE, get(node.getItemType()));
-        if (node.getKeyType() != null && strategy != SIMPLE_NO_TYPE)
+        if (node.getKeyType() != null)
             result.put(OBJECT_KEY_TYPE, get(node.getKeyType()));
-        if (node.getValueType() != null && strategy != SIMPLE_NO_TYPE)
+        if (node.getValueType() != null)
             result.put(OBJECT_VALUE_TYPE, get(node.getValueType()));
         if (node.getValue() != null)
             result.put(OBJECT_VALUE, handleValue(node.getValue()));
@@ -96,14 +95,11 @@ public class NodeToObject {
         } else if (value instanceof BigInteger) {
             return INTEGER_TYPE_BLUE_ID;
         } else if (value instanceof BigDecimal) {
-            return NUMBER_TYPE_BLUE_ID;
+            return DOUBLE_TYPE_BLUE_ID;
         } else if (value instanceof Boolean) {
             return BOOLEAN_TYPE_BLUE_ID;
         }
         return null;
     }
 
-    private static boolean isStrategySimple(Strategy strategy) {
-        return strategy == SIMPLE || strategy == SIMPLE_NO_TYPE;
-    }
 }

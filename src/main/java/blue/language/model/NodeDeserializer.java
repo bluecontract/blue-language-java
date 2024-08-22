@@ -45,25 +45,25 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         obj.description(value.asText());
                         break;
                     case OBJECT_TYPE:
-                        obj.type(handleTypeNode(value));
+                        obj.type(handleNode(value));
                         break;
                     case OBJECT_ITEM_TYPE:
-                        obj.itemType(handleTypeNode(value));
+                        obj.itemType(handleNode(value));
                         break;
                     case OBJECT_KEY_TYPE:
-                        obj.keyType(handleTypeNode(value));
+                        obj.keyType(handleNode(value));
                         break;
                     case OBJECT_VALUE_TYPE:
-                        obj.valueType(handleTypeNode(value));
+                        obj.valueType(handleNode(value));
                         break;
                     case OBJECT_VALUE:
-                        obj.value(handleValueWithType(value, obj.getType()));
+                        obj.value(handleValue(value));
                         break;
                     case OBJECT_BLUE_ID:
                         obj.blueId(value.asText());
                         break;
                     case OBJECT_ITEMS:
-                        obj.items(handleArray(value).getItems());
+                        obj.items(handleArray(value));
                         break;
                     case OBJECT_BLUE:
                         obj.blue(handleNode(value));
@@ -76,75 +76,56 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         break;
                 }
             }
-            obj.properties(properties);
-            obj.inlineValue(false);
+            if (!properties.isEmpty()) {
+                obj.properties(properties);
+            }
             return obj;
         } else if (node.isArray()) {
-            return handleArray(node);
+            return new Node().items(handleArray(node));
         } else {
             return new Node().value(handleValue(node)).inlineValue(true);
         }
     }
 
-    private Node handleTypeNode(JsonNode typeNode) {
-        if (typeNode.isTextual()) {
-            String typeValue = typeNode.asText();
-            if (CORE_TYPES.contains(typeValue)) {
-                return new Node().blueId(CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(typeValue));
-            } else {
-                return new Node().value(typeValue).inlineValue(true);
-            }
-        } else {
-            return handleNode(typeNode);
-        }
-    }
-
-    private Object handleValueWithType(JsonNode valueNode, Node typeNode) {
-        if (typeNode == null || typeNode.getBlueId() == null) {
-            return handleValue(valueNode);
-        }
-
-        String typeBlueId = typeNode.getBlueId();
-        if (TEXT_TYPE_BLUE_ID.equals(typeBlueId)) {
-            return valueNode.asText();
-        } else if (INTEGER_TYPE_BLUE_ID.equals(typeBlueId)) {
-            return valueNode.isTextual() ? new BigInteger(valueNode.asText()) : valueNode.bigIntegerValue();
-        } else if (NUMBER_TYPE_BLUE_ID.equals(typeBlueId)) {
-            return valueNode.isTextual() ? new BigDecimal(valueNode.asText()) : valueNode.decimalValue();
-        } else if (BOOLEAN_TYPE_BLUE_ID.equals(typeBlueId)) {
-            return valueNode.isTextual() ? Boolean.parseBoolean(valueNode.asText()) : valueNode.booleanValue();
-        } else {
-            return handleValue(valueNode);
-        }
-    }
-
     private Object handleValue(JsonNode node) {
-        if (node.isTextual())
+        if (node.isTextual()) {
             return node.asText();
-        else if (node.isBigInteger() || node.isInt() || node.isLong())
-            return node.bigIntegerValue();
-        else if (node.isFloatingPointNumber())
-            return node.decimalValue();
-        else if (node.isBoolean())
+        } else if (node.isBigInteger() || node.isInt() || node.isLong()) {
+            BigInteger value = node.bigIntegerValue();
+            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
+            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
+
+            if (value.compareTo(lowerBound) < 0) {
+                return lowerBound;
+            } else if (value.compareTo(upperBound) > 0) {
+                return upperBound;
+            } else {
+                return value;
+            }
+        } else if (node.isFloatingPointNumber()) {
+            double doubleValue = node.doubleValue();
+            return new BigDecimal(Double.toString(doubleValue));
+        } else if (node.isBoolean()) {
             return node.asBoolean();
-        else if (node.isNull())
+        } else if (node.isNull()) {
             return null;
+        }
         throw new IllegalArgumentException("Can't handle node: " + node);
     }
 
-    private Node handleArray(JsonNode value) {
-        if (value.isTextual()) {
+    private List<Node> handleArray(JsonNode value) {
+        if (value.isObject()) {
             List<Node> singleItemList = new ArrayList<>();
-            singleItemList.add(new Node().value(value.asText()).inlineValue(true));
-            return new Node().items(singleItemList).inlineValue(false);
+            singleItemList.add(handleNode(value));
+            return singleItemList;
         } else if (value.isArray()) {
             ArrayNode arrayNode = (ArrayNode) value;
-            List<Node> result = StreamSupport.stream(arrayNode.spliterator(), false)
+            return StreamSupport.stream(arrayNode.spliterator(), false)
                     .map(this::handleNode)
                     .collect(Collectors.toList());
-            return new Node().items(result).inlineValue(false);
-        } else
-            throw new IllegalArgumentException("The 'items' field must be an array or a blueId.");
+        } else {
+            throw new IllegalArgumentException("Expected an array node");
+        }
     }
 
     private Constraints handleConstraints(JsonNode constraintsNode) {

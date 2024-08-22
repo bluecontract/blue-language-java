@@ -19,12 +19,12 @@ public class BlueIdCalculator {
     }
 
     public static String calculateBlueId(Node node) {
-        return BlueIdCalculator.INSTANCE.calculate(NodeToObject.get(node));
+        return BlueIdCalculator.INSTANCE.calculate(NodeToMapListOrValue.get(node));
     }
 
     public static String calculateBlueId(List<Node> nodes) {
         List<Object> objects = nodes.stream()
-                .map(NodeToObject::get)
+                .map(NodeToMapListOrValue::get)
                 .collect(Collectors.toList());
         return BlueIdCalculator.INSTANCE.calculate(objects);
     }

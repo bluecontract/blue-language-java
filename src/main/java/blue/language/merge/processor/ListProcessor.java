@@ -4,7 +4,7 @@ import blue.language.*;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.utils.NodeToObject;
+import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.Types;
 
 import static blue.language.utils.Types.isSubtype;
@@ -29,7 +29,7 @@ public class ListProcessor implements MergingProcessor {
             boolean isSubtype = isSubtype(sourceItemType, targetItemType, nodeProvider);
             if (!isSubtype) {
                 String errorMessage = String.format("The source item type '%s' is not a subtype of the target item type '%s'.",
-                        NodeToObject.get(sourceItemType), NodeToObject.get(targetItemType));
+                        NodeToMapListOrValue.get(sourceItemType), NodeToMapListOrValue.get(targetItemType));
                 throw new IllegalArgumentException(errorMessage);
             }
             target.itemType(sourceItemType);
@@ -39,7 +39,7 @@ public class ListProcessor implements MergingProcessor {
             for (Node item : source.getItems()) {
                 if (item.getType() != null && !isSubtype(item.getType(), target.getItemType(), nodeProvider)) {
                     String errorMessage = String.format("Item of type '%s' is not a subtype of the list's item type '%s'.",
-                            NodeToObject.get(item.getType()), NodeToObject.get(target.getItemType()));
+                            NodeToMapListOrValue.get(item.getType()), NodeToMapListOrValue.get(target.getItemType()));
                     throw new IllegalArgumentException(errorMessage);
                 }
             }

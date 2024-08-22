@@ -5,6 +5,7 @@ import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
+import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.limits.PathLimits;
@@ -13,6 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Merger implements NodeResolver {
 
@@ -43,6 +46,7 @@ public class Merger implements NodeResolver {
     }
 
     private void mergeObject(Node target, Node source, Limits limits) {
+
         mergingProcessor.process(target, source, nodeProvider, this);
 
         List<Node> children = source.getItems();
@@ -61,8 +65,8 @@ public class Merger implements NodeResolver {
             });
         }
 
-        if (target.getProperties() == null && source.getProperties() != null && !source.getProperties().isEmpty()) {
-            target.blueId(BlueIdCalculator.calculateBlueId(source));
+        if (source.getBlueId() != null) {
+            target.blueId(source.getBlueId());
         }
 
         mergingProcessor.postProcess(target, source, nodeProvider, this);

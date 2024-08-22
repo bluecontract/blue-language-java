@@ -6,7 +6,7 @@ import blue.language.merge.NodeResolver;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeToObject;
+import blue.language.utils.NodeToMapListOrValue;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -143,7 +143,7 @@ public class ConstraintsVerifier implements MergingProcessor {
     private void verifyUniqueItems(Boolean uniqueItems, List<Node> items) {
         if (Boolean.TRUE.equals(uniqueItems) && items != null) {
             int uniqueItemsCount = items.stream()
-                    .map(NodeToObject::get)
+                    .map(NodeToMapListOrValue::get)
                     .map(doc -> YAML_MAPPER.convertValue(doc, Node.class))
                     .map(BlueIdCalculator::calculateBlueId)
                     .collect(Collectors.toSet())

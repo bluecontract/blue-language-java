@@ -101,7 +101,7 @@ public class Types {
     }
 
     public static boolean isNumberType(Node typeNode, NodeProvider nodeProvider) {
-        return isSubtype(typeNode, new Node().blueId(NUMBER_TYPE_BLUE_ID), nodeProvider);
+        return isSubtype(typeNode, new Node().blueId(DOUBLE_TYPE_BLUE_ID), nodeProvider);
     }
 
     public static boolean isIntegerType(Node typeNode, NodeProvider nodeProvider) {

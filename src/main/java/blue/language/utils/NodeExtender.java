@@ -122,6 +122,8 @@ public class NodeExtender {
         target.description(source.getDescription());
         target.type(source.getType());
         target.itemType(source.getItemType());
+        target.keyType(source.getKeyType());
+        target.valueType(source.getValueType());
         target.value(source.getValue());
         target.items(source.getItems());
         target.properties(source.getProperties());

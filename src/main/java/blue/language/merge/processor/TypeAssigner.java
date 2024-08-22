@@ -4,7 +4,7 @@ import blue.language.*;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.utils.NodeToObject;
+import blue.language.utils.NodeToMapListOrValue;
 
 import static blue.language.utils.Types.isSubtype;
 
@@ -20,7 +20,7 @@ public class TypeAssigner implements MergingProcessor {
             boolean isSubtype = isSubtype(sourceType, targetType, nodeProvider);
             if (!isSubtype) {
                 String errorMessage = String.format("The source type '%s' is not a subtype of the target type '%s'.",
-                        NodeToObject.get(sourceType), NodeToObject.get(targetType));
+                        NodeToMapListOrValue.get(sourceType), NodeToMapListOrValue.get(targetType));
                 throw new IllegalArgumentException(errorMessage);
             }
             target.type(sourceType);

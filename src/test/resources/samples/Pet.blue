@@ -3,7 +3,7 @@ description: A domestic animal kept for companionship and enjoyment.
 age:
   type: Integer
 weightKg:
-  type: Number
+  type: Double
 favouriteToys:
   type:
     name: Toy

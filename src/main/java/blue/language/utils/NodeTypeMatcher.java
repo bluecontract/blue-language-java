@@ -18,14 +18,24 @@ public class NodeTypeMatcher {
         this.blue = blue;
     }
 
+    @FunctionalInterface
+    public interface TargetTypeTransformer {
+        Node transform(Node targetType);
+    }
+
     public boolean matchesType(Node node, Node targetType) {
+        return matchesType(node, targetType, null);
+    }
+
+    public boolean matchesType(Node node, Node targetType, TargetTypeTransformer transformer) {
         PathLimits limits = PathLimits.fromNode(targetType);
-        return verifyMatch(node, targetType, limits) && recursiveMatchCheck(node, targetType);
+        Node transformedTargetType = (transformer != null) ? transformer.transform(targetType) : targetType;
+        return verifyMatch(node, transformedTargetType, limits) && recursiveMatchCheck(node, transformedTargetType, transformer);
     }
 
     private boolean verifyMatch(Node node, Node type, Limits limits) {
+        blue.extend(node, limits);
         Node extendedNode = node.clone();
-        blue.extend(extendedNode, limits);
         Node resolvedNode = blue.resolve(extendedNode, limits);
 
         resolvedNode.type(type.clone());
@@ -37,29 +47,31 @@ public class NodeTypeMatcher {
         return true;
     }
 
-    private boolean recursiveMatchCheck(Node node, Node targetType) {
-        if (targetType.getType() != null &&
-            (node.getType() == null || !Types.isSubtype(node.getType(), targetType.getType(), blue.getNodeProvider()))) {
+    private boolean recursiveMatchCheck(Node node, Node targetType, TargetTypeTransformer transformer) {
+        final Node transformedTargetType = (transformer != null) ? transformer.transform(targetType) : targetType;
+
+        if (transformedTargetType.getType() != null &&
+            (node.getType() == null || !Types.isSubtype(node.getType(), transformedTargetType.getType(), blue.getNodeProvider()))) {
             return false;
         }
 
-        if (targetType.getValue() != null && !targetType.getValue().equals(node.getValue())) {
+        if (transformedTargetType.getValue() != null && !transformedTargetType.getValue().equals(node.getValue())) {
             return false;
         }
 
-        if (targetType.getItems() != null) {
+        if (transformedTargetType.getItems() != null) {
             List<Node> nodeItems = node.getItems() != null ? node.getItems() : Collections.emptyList();
-            return IntStream.range(0, targetType.getItems().size())
+            return IntStream.range(0, transformedTargetType.getItems().size())
                     .allMatch(i -> i < nodeItems.size()
-                            ? recursiveMatchCheck(nodeItems.get(i), targetType.getItems().get(i))
-                            : !hasValueInNestedStructure(targetType.getItems().get(i)));
+                            ? recursiveMatchCheck(nodeItems.get(i), transformedTargetType.getItems().get(i), transformer)
+                            : !hasValueInNestedStructure(transformedTargetType.getItems().get(i)));
         }
 
-        if (targetType.getProperties() != null) {
+        if (transformedTargetType.getProperties() != null) {
             Map<String, Node> nodeProperties = node.getProperties() != null ? node.getProperties() : Collections.emptyMap();
-            return targetType.getProperties().entrySet().stream()
+            return transformedTargetType.getProperties().entrySet().stream()
                     .allMatch(entry -> nodeProperties.containsKey(entry.getKey())
-                            ? recursiveMatchCheck(nodeProperties.get(entry.getKey()), entry.getValue())
+                            ? recursiveMatchCheck(nodeProperties.get(entry.getKey()), entry.getValue(), transformer)
                             : !hasValueInNestedStructure(entry.getValue()));
         }
 
