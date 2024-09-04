@@ -23,7 +23,7 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
 
     private static final String BLUE_FILE_EXTENSION = ".blue";
 
-    private Map<String, Object> blueIdToContentMap = new HashMap<>();;
+    private Map<String, Object> blueIdToContentMap = new HashMap<>();
     private Map<String, Boolean> blueIdToMultipleDocumentsMap = new HashMap<>();
     private Function<Node, Node> preprocessor;
 
@@ -40,11 +40,9 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
 
     private void load(String... directories) throws IOException {
         for (String directory : directories) {
-            Path path;
-            try {
-                path = Paths.get(ClassLoader.getSystemResource(directory).toURI());
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
+            Path path = Paths.get(directory);
+            if (!Files.exists(path) || !Files.isDirectory(path)) {
+                throw new IOException("Directory does not exist or is not a directory: " + directory);
             }
             try (Stream<Path> paths = Files.walk(path)) {
                 List<Path> pathList = paths

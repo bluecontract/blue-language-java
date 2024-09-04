@@ -39,10 +39,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                 JsonNode value = entry.getValue();
                 switch (key) {
                     case OBJECT_NAME:
-                        obj.name(value.asText());
+                        obj.name(value.isNull() ? null : value.asText());
                         break;
                     case OBJECT_DESCRIPTION:
-                        obj.description(value.asText());
+                        obj.description(value.isNull() ? null : value.asText());
                         break;
                     case OBJECT_TYPE:
                         obj.type(handleNode(value));
@@ -114,7 +114,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private List<Node> handleArray(JsonNode value) {
-        if (value.isObject()) {
+        if (value.isNull()) {
+            return null;
+        } else if (value.isObject()) {
             List<Node> singleItemList = new ArrayList<>();
             singleItemList.add(handleNode(value));
             return singleItemList;

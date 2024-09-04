@@ -18,4 +18,6 @@ public class Y {
     public Map<String, X2> x2MapField;
     public X[] xArrayField;
     public List<? extends X> wildcardXListField;
+    public List<XSubscription> subscriptions;
+
 }

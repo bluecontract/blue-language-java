@@ -13,12 +13,12 @@ public class NodeToObjectConverter {
     }
 
     public <T> T convert(Node node, Class<T> targetClass) {
-        return convertWithType(node, targetClass);
+        return convertWithType(node, targetClass, true);
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T convertWithType(Node node, Type targetType) {
-        Converter<?> converter = converterFactory.getConverter(node, targetType);
-        return (T) converter.convert(node, targetType);
+    public <T> T convertWithType(Node node, Type targetType, boolean prioritizeTargetType) {
+        Converter<?> converter = converterFactory.getConverter(node, targetType, prioritizeTargetType);
+        return (T) converter.convert(node, targetType, prioritizeTargetType);
     }
 }

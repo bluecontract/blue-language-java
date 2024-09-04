@@ -734,4 +734,30 @@ public class NodeToObjectConverterTest {
         assertEquals("Z1 implementation", secondZ1.getAbstractMethod());
     }
 
+    @Test
+    public void testXSubscriptionConversion() throws Exception {
+        String yaml = "type:\n" +
+                      "  blueId: Y-BlueId\n" +
+                      "subscriptions:\n" +
+                      "  - type:\n" +
+                      "      blueId: XSubscription-BlueId\n" +
+                      "    subscriptionId: 1\n" +
+                      "  - type:\n" +
+                      "      blueId: XSubscription-BlueId\n" +
+                      "    subscriptionId: 5";
+
+        Node node = blue.yamlToNode(yaml);
+        Y y = converter.convert(node, Y.class);
+
+        assertNotNull(y);
+        assertNotNull(y.subscriptions);
+        assertEquals(2, y.subscriptions.size());
+
+        XSubscription subscription1 = y.subscriptions.get(0);
+        XSubscription subscription2 = y.subscriptions.get(1);
+
+        assertEquals(Integer.valueOf(1), subscription1.getSubscriptionId());
+        assertEquals(Integer.valueOf(5), subscription2.getSubscriptionId());
+    }
+
 }

@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.utils.TypeClassResolver;
 
 import java.lang.reflect.*;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +20,7 @@ public class MapConverter implements Converter<Map<?, ?>> {
 
     @Override
     public Map<?, ?> convert(Node node, Type targetType) {
-        if (node.getProperties() == null) {
+        if (node == null || node.getProperties() == null) {
             return null;
         }
 
@@ -45,9 +46,7 @@ public class MapConverter implements Converter<Map<?, ?>> {
         for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
             Object key = convertKey(entry.getKey(), keyType);
             Object value = convertValue(entry.getValue(), valueType);
-            if (value != null) {
-                result.put(key, value);
-            }
+            result.put(key, value);
         }
 
         return result;
@@ -61,6 +60,10 @@ public class MapConverter implements Converter<Map<?, ?>> {
     }
 
     private Object convertValue(Node valueNode, Type valueType) {
+        if (valueNode == null) {
+            return null;
+        }
+
         Class<?> resolvedClass = typeClassResolver.resolveClass(valueNode);
         if (resolvedClass != null && isAssignableToValueType(resolvedClass, valueType)) {
             Converter<?> converter = converterFactory.getConverter(valueNode, resolvedClass);

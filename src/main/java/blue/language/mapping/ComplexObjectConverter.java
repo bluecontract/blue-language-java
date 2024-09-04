@@ -5,10 +5,11 @@ import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 
 import java.lang.reflect.*;
-import java.util.Map;
+import java.util.*;
 
 public class ComplexObjectConverter implements Converter<Object> {
     private final ConverterFactory converterFactory;
@@ -21,8 +22,23 @@ public class ComplexObjectConverter implements Converter<Object> {
 
     @Override
     public Object convert(Node node, Type targetType) {
+        return convert(node, targetType, false);
+    }
+
+    @Override
+    public Object convert(Node node, Type targetType, boolean prioritizeTargetType) {
+        if (node == null) {
+            return null;
+        }
+
         Class<?> resolvedClass = typeClassResolver.resolveClass(node);
-        Class<?> classToInstantiate = resolvedClass != null ? resolvedClass : getRawType(targetType);
+        Class<?> classToInstantiate;
+
+        if (prioritizeTargetType) {
+            classToInstantiate = getRawType(targetType);
+        } else {
+            classToInstantiate = resolvedClass != null ? resolvedClass : getRawType(targetType);
+        }
 
         if (classToInstantiate.isPrimitive() || ValueConverter.isSupportedType(classToInstantiate)) {
             return ValueConverter.convertValue(node, classToInstantiate);
@@ -55,19 +71,25 @@ public class ComplexObjectConverter implements Converter<Object> {
                 } else if (field.isAnnotationPresent(BlueDescription.class)) {
                     fieldValue = handleBlueDescriptionAnnotation(node, field);
                 } else {
-                    Node fieldNode = node.getProperties().get(fieldName);
-                    if (fieldNode != null) {
-                        Type fieldType = field.getGenericType();
-                        Class<?> resolvedFieldClass = typeClassResolver.resolveClass(fieldNode);
+                    Node fieldNode = node.getProperties() != null ? node.getProperties().get(fieldName) : null;
 
-                        if (resolvedFieldClass != null && field.getType().isAssignableFrom(resolvedFieldClass)) {
-                            Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, resolvedFieldClass);
-                            fieldValue = fieldConverter.convert(fieldNode, resolvedFieldClass);
-                        } else if (Map.class.isAssignableFrom(field.getType())) {
-                            fieldValue = converterFactory.convertMap(fieldNode, fieldType);
+                    if (fieldNode != null) {
+                        if (Nodes.isEmptyNode(fieldNode)) {
+                            // Set to null for explicitly defined null fields
+                            fieldValue = null;
                         } else {
-                            Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, field.getType());
-                            fieldValue = fieldConverter.convert(fieldNode, fieldType);
+                            Type fieldType = field.getGenericType();
+                            Class<?> resolvedFieldClass = typeClassResolver.resolveClass(fieldNode);
+
+                            if (resolvedFieldClass != null && field.getType().isAssignableFrom(resolvedFieldClass)) {
+                                Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, resolvedFieldClass);
+                                fieldValue = fieldConverter.convert(fieldNode, resolvedFieldClass);
+                            } else if (Map.class.isAssignableFrom(field.getType())) {
+                                fieldValue = converterFactory.convertMap(fieldNode, fieldType);
+                            } else {
+                                Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, field.getType());
+                                fieldValue = fieldConverter.convert(fieldNode, fieldType);
+                            }
                         }
                     } else if ("name".equals(fieldName)) {
                         fieldValue = node.getName();
@@ -76,9 +98,11 @@ public class ComplexObjectConverter implements Converter<Object> {
                     }
                 }
 
-                if (fieldValue != null) {
-                    field.set(instance, fieldValue);
+                if (fieldValue == null && field.getType().isPrimitive()) {
+                    fieldValue = ValueConverter.getDefaultPrimitiveValue(field.getType());
                 }
+
+                field.set(instance, fieldValue);
             } catch (Exception e) {
                 throw new RuntimeException("Error converting field: " + fieldName + " of type: " + field.getGenericType(), e);
             }

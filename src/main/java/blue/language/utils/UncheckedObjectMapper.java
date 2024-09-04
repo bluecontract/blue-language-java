@@ -3,6 +3,8 @@ package blue.language.utils;
 import blue.language.model.*;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -12,25 +14,31 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 
-import static com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS;
-import static com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_INTEGER_FOR_INTS;
+import static com.fasterxml.jackson.databind.DeserializationFeature.*;
 import static com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT;
+import static com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.MINIMIZE_QUOTES;
+import static com.fasterxml.jackson.dataformat.yaml.YAMLParser.Feature.EMPTY_STRING_AS_NULL;
 
 public class UncheckedObjectMapper extends ObjectMapper {
 
-    public static final UncheckedObjectMapper YAML_MAPPER = new UncheckedObjectMapper(
-            new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
+    public static final UncheckedObjectMapper YAML_MAPPER =  new UncheckedObjectMapper(
+            new YAMLFactory()
+                    .enable(MINIMIZE_QUOTES)
+                    .enable(EMPTY_STRING_AS_NULL));
 
     public static final UncheckedObjectMapper JSON_MAPPER = new UncheckedObjectMapper(
             new JsonFactory());
 
     private UncheckedObjectMapper(JsonFactory jsonFactory) {
         super(jsonFactory);
+
+        setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.AS_EMPTY));
 
         setVisibility(getSerializationConfig().getDefaultVisibilityChecker()
                 .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
@@ -43,6 +51,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
         setSerializationInclusion(Include.NON_NULL);
         enable(USE_BIG_DECIMAL_FOR_FLOATS);
         enable(USE_BIG_INTEGER_FOR_INTS);
+        enable(ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
 
         SimpleModule module = new SimpleModule();
         module.setSerializerModifier(new BlueAnnotationsBeanSerializerModifier());

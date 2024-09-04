@@ -1,6 +1,7 @@
 package blue.language.mapping;
 
 import blue.language.model.Node;
+import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 
 import java.lang.reflect.*;
@@ -17,7 +18,7 @@ public class CollectionConverter implements Converter<Object> {
 
     @Override
     public Object convert(Node node, Type targetType) {
-        if (node.getItems() == null) {
+        if (node == null) {
             return null;
         }
 
@@ -32,6 +33,14 @@ public class CollectionConverter implements Converter<Object> {
     }
 
     private Object convertToCollection(Node node, Type targetType, Class<?> rawType) {
+        if (node == null || Nodes.isEmptyNode(node)) {
+            return null;
+        }
+
+        if (rawType.isArray()) {
+            return convertToArray(node, getComponentType(targetType));
+        }
+
         Collection<Object> result;
         try {
             result = (Collection<Object>) TypeCreatorRegistry.createInstance(rawType);
@@ -39,18 +48,84 @@ public class CollectionConverter implements Converter<Object> {
             result = new ArrayList<>();
         }
 
+        if (node.getItems() == null) {
+            return result;
+        }
+
         Type itemType = getItemType(targetType);
 
         for (Node item : node.getItems()) {
-            Class<?> resolvedClass = typeClassResolver.resolveClass(item);
-            if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
-                Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
-                Object convertedItem = itemConverter.convert(item, resolvedClass);
-                result.add(convertedItem);
+            if (item == null) {
+                result.add(null);
             } else {
-                Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
-                Object convertedItem = itemConverter.convert(item, itemType);
+                Class<?> resolvedClass = typeClassResolver.resolveClass(item);
+                Object convertedItem;
+                if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
+                    Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
+                    convertedItem = itemConverter.convert(item, resolvedClass);
+                } else {
+                    Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
+                    convertedItem = itemConverter.convert(item, itemType);
+                }
                 result.add(convertedItem);
+            }
+        }
+
+        return result;
+    }
+
+    private Object convertToArray(Node node, Type componentType) {
+        if (node == null || node.getItems() == null) {
+            return null;
+        }
+        List<Object> list = convertToList(node, componentType);
+        Class<?> componentClass = getRawType(componentType);
+        Object array = Array.newInstance(componentClass, list.size());
+        for (int i = 0; i < list.size(); i++) {
+            Object value = list.get(i);
+            if (value == null && componentClass.isPrimitive()) {
+                // Set default value for primitive types
+                if (componentClass == int.class) {
+                    Array.setInt(array, i, 0);
+                } else if (componentClass == long.class) {
+                    Array.setLong(array, i, 0L);
+                } else if (componentClass == double.class) {
+                    Array.setDouble(array, i, 0.0);
+                } else if (componentClass == float.class) {
+                    Array.setFloat(array, i, 0.0f);
+                } else if (componentClass == boolean.class) {
+                    Array.setBoolean(array, i, false);
+                } else if (componentClass == byte.class) {
+                    Array.setByte(array, i, (byte) 0);
+                } else if (componentClass == short.class) {
+                    Array.setShort(array, i, (short) 0);
+                } else if (componentClass == char.class) {
+                    Array.setChar(array, i, '\u0000');
+                }
+            } else {
+                Array.set(array, i, value);
+            }
+        }
+        return array;
+    }
+
+    private List<Object> convertToList(Node node, Type itemType) {
+        List<Object> result = new ArrayList<>();
+        if (node.getItems() == null) {
+            return result;
+        }
+        for (Node item : node.getItems()) {
+            if (item == null) {
+                result.add(null);
+            } else {
+                Class<?> resolvedClass = typeClassResolver.resolveClass(item);
+                if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
+                    Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
+                    result.add(itemConverter.convert(item, resolvedClass));
+                } else {
+                    Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
+                    result.add(itemConverter.convert(item, itemType));
+                }
             }
         }
         return result;
@@ -82,31 +157,6 @@ public class CollectionConverter implements Converter<Object> {
             return ((Class<?>) type).getComponentType();
         }
         return Object.class;
-    }
-
-    private Object convertToArray(Node node, Type componentType) {
-        List<Object> list = convertToList(node, componentType);
-        Class<?> componentClass = getRawType(componentType);
-        Object array = Array.newInstance(componentClass, list.size());
-        for (int i = 0; i < list.size(); i++) {
-            Array.set(array, i, list.get(i));
-        }
-        return array;
-    }
-
-    private List<Object> convertToList(Node node, Type itemType) {
-        List<Object> result = new ArrayList<>();
-        for (Node item : node.getItems()) {
-            Class<?> resolvedClass = typeClassResolver.resolveClass(item);
-            if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
-                Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
-                result.add(itemConverter.convert(item, resolvedClass));
-            } else {
-                Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
-                result.add(itemConverter.convert(item, itemType));
-            }
-        }
-        return result;
     }
 
     private Class<?> getRawType(Type type) {

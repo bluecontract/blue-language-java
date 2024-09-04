@@ -26,13 +26,18 @@ public class PathLimits implements Limits {
     }
 
     @Override
-    public boolean shouldProcessPathSegment(String pathSegment) {
+    public boolean shouldExtendPathSegment(String pathSegment, Node node) {
         if (currentPath.size() >= maxDepth) {
             return false;
         }
 
         String potentialPath = normalizePath(getCurrentFullPath() + "/" + pathSegment);
         return isAllowedPath(potentialPath);
+    }
+
+    @Override
+    public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
+        return shouldExtendPathSegment(pathSegment, currentNode);
     }
 
     private boolean isAllowedPath(String path) {
@@ -62,7 +67,7 @@ public class PathLimits implements Limits {
     }
 
     @Override
-    public void enterPathSegment(String pathSegment) {
+    public void enterPathSegment(String pathSegment, Node noe) {
         currentPath.push(pathSegment);
     }
 

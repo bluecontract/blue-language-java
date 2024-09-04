@@ -30,14 +30,15 @@ public class BlueIdCalculator {
     }
 
     public String calculate(Object object) {
-        if (object instanceof String || object instanceof Number || object instanceof Boolean) {
-            return hashProvider.apply(object.toString());
-        } else if (object instanceof Map) {
-            return calculateMap((Map<String, Object>) object);
-        } else if (object instanceof List) {
-            return calculateList((List<Object>) object);
+        Object cleanedObject = cleanStructure(object);
+        if (cleanedObject instanceof String || cleanedObject instanceof Number || cleanedObject instanceof Boolean) {
+            return hashProvider.apply(cleanedObject.toString());
+        } else if (cleanedObject instanceof Map) {
+            return calculateMap((Map<String, Object>) cleanedObject);
+        } else if (cleanedObject instanceof List) {
+            return calculateList((List<Object>) cleanedObject);
         }
-        throw new IllegalArgumentException("Object must be a String, Number, Boolean, List or Map - found " + object.getClass());
+        throw new IllegalArgumentException("Object must be a String, Number, Boolean, List or Map - found " + cleanedObject.getClass());
     }
 
     private String calculateMap(Map<String, Object> map) {
@@ -58,10 +59,9 @@ public class BlueIdCalculator {
     }
 
     private String calculateList(List<Object> list) {
-        if (list.isEmpty())
-            throw new IllegalArgumentException("List must not be empty.");
-        if (list.size() == 1)
+        if (list.size() == 1) {
             return calculate(list.get(0));
+        }
 
         List<Object> subList = list.subList(0, list.size() - 1);
         String hashOfSubList = calculateList(subList);
@@ -70,6 +70,34 @@ public class BlueIdCalculator {
         String hashOfLastElement = calculate(lastElement);
 
         return hashProvider.apply(Arrays.asList(hashOfSubList, hashOfLastElement));
+    }
+
+    private Object cleanStructure(Object obj) {
+        if (obj == null) {
+            return null;
+        } else if (obj instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) obj;
+            Map<String, Object> cleanedMap = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                Object cleanedValue = cleanStructure(entry.getValue());
+                if (cleanedValue != null) {
+                    cleanedMap.put(entry.getKey(), cleanedValue);
+                }
+            }
+            return cleanedMap.isEmpty() ? null : cleanedMap;
+        } else if (obj instanceof List) {
+            List<Object> list = (List<Object>) obj;
+            List<Object> cleanedList = new ArrayList<>();
+            for (Object item : list) {
+                Object cleanedItem = cleanStructure(item);
+                if (cleanedItem != null) {
+                    cleanedList.add(cleanedItem);
+                }
+            }
+            return cleanedList.isEmpty() ? null : cleanedList;
+        } else {
+            return obj;
+        }
     }
 
 }

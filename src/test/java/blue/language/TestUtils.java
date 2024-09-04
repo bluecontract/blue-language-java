@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 public class TestUtils {
 
     public static DirectoryBasedNodeProvider samplesDirectoryNodeProvider() throws IOException {
-        return new DirectoryBasedNodeProvider("samples");
+        return new DirectoryBasedNodeProvider("src/test/resources/samples");
     }
 
     public static NodeProvider fakeNameBasedNodeProvider(Collection<Node> nodes) {

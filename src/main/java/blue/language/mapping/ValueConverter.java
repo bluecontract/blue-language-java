@@ -12,7 +12,10 @@ import static blue.language.utils.Properties.*;
 public class ValueConverter {
 
     public static Object convertValue(Node node, Class<?> targetClass) {
-        if (node.getValue() == null) {
+        if (node == null || node.getValue() == null) {
+            if (targetClass.isPrimitive()) {
+                return getDefaultPrimitiveValue(targetClass);
+            }
             return null;
         }
 
@@ -21,11 +24,11 @@ public class ValueConverter {
 
         if (TEXT_TYPE_BLUE_ID.equals(typeBlueId)) {
             return convertFromString((String) value, targetClass);
-        } else if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId)) {
+        } else if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId) || value instanceof BigDecimal) {
             return convertFromBigDecimal((BigDecimal) value, targetClass);
-        } else if (INTEGER_TYPE_BLUE_ID.equals(typeBlueId)) {
+        } else if (INTEGER_TYPE_BLUE_ID.equals(typeBlueId) || value instanceof BigInteger) {
             return convertFromBigInteger((BigInteger) value, targetClass);
-        } else if (BOOLEAN_TYPE_BLUE_ID.equals(typeBlueId)) {
+        } else if (BOOLEAN_TYPE_BLUE_ID.equals(typeBlueId) || value instanceof Boolean) {
             return convertFromBoolean((Boolean) value, targetClass);
         }
 
@@ -60,6 +63,7 @@ public class ValueConverter {
         if (targetClass == AtomicInteger.class) return new AtomicInteger(value.intValue());
         if (targetClass == AtomicLong.class) return new AtomicLong(value.longValue());
         if (targetClass == Number.class) return value;
+        if (targetClass == String.class) return value.toPlainString();
         throw new IllegalArgumentException("Cannot convert BigDecimal to " + targetClass);
     }
 
@@ -72,11 +76,13 @@ public class ValueConverter {
         if (targetClass == AtomicInteger.class) return new AtomicInteger(value.intValue());
         if (targetClass == AtomicLong.class) return new AtomicLong(value.longValue());
         if (targetClass == Number.class) return value;
+        if (targetClass == String.class) return value.toString();
         throw new IllegalArgumentException("Cannot convert BigInteger to " + targetClass);
     }
 
     private static Object convertFromBoolean(Boolean value, Class<?> targetClass) {
         if (targetClass == boolean.class || targetClass == Boolean.class) return value;
+        if (targetClass == String.class) return value.toString();
         throw new IllegalArgumentException("Cannot convert Boolean to " + targetClass);
     }
 
@@ -88,5 +94,17 @@ public class ValueConverter {
                targetClass == AtomicInteger.class ||
                targetClass == AtomicLong.class ||
                targetClass.isPrimitive();
+    }
+
+    public static Object getDefaultPrimitiveValue(Class<?> targetClass) {
+        if (targetClass == int.class) return 0;
+        if (targetClass == long.class) return 0L;
+        if (targetClass == double.class) return 0.0;
+        if (targetClass == float.class) return 0.0f;
+        if (targetClass == boolean.class) return false;
+        if (targetClass == byte.class) return (byte) 0;
+        if (targetClass == short.class) return (short) 0;
+        if (targetClass == char.class) return '\u0000';
+        throw new IllegalArgumentException("Unsupported primitive type: " + targetClass);
     }
 }

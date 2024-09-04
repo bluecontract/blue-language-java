@@ -252,6 +252,39 @@ public class BlueIdCalculatorTest {
         assertEquals(blueId2, blueId);
     }
 
+    @Test
+    public void testNullAndEmptyRemoval() {
+        String yaml1 = "a: 1\n" +
+                       "b: null";
+        String yaml2 = "a: 1";
+        String yaml3 = "a: 1\n" +
+                       "b: null\n" +
+                       "c: null";
+        String yaml4 = "a: 1\n" +
+                       "b: null\n" +
+                       "c: []\n" +
+                       "d: null";
+        String yaml5 = "a: 1\n" +
+                       "d: {}";
+
+        Node node1 = YAML_MAPPER.readValue(yaml1, Node.class);
+        Node node2 = YAML_MAPPER.readValue(yaml2, Node.class);
+        Node node3 = YAML_MAPPER.readValue(yaml3, Node.class);
+        Node node4 = YAML_MAPPER.readValue(yaml4, Node.class);
+        Node node5 = YAML_MAPPER.readValue(yaml5, Node.class);
+
+        String result1 = BlueIdCalculator.calculateBlueId(node1);
+        String result2 = BlueIdCalculator.calculateBlueId(node2);
+        String result3 = BlueIdCalculator.calculateBlueId(node3);
+        String result4 = BlueIdCalculator.calculateBlueId(node4);
+        String result5 = BlueIdCalculator.calculateBlueId(node5);
+
+        assertEquals(result1, result2);
+        assertEquals(result1, result3);
+        assertEquals(result1, result4);
+        assertEquals(result1, result5);
+    }
+
     private static Function<Object, String> fakeHashValueProvider() {
         return obj -> "hash(" + obj + ")";
     }

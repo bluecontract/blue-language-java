@@ -2,10 +2,8 @@ package blue.language.merge;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
-import blue.language.preprocess.Preprocessor;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
-import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.limits.PathLimits;
@@ -14,8 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Merger implements NodeResolver {
 
@@ -29,7 +25,7 @@ public class Merger implements NodeResolver {
 
     public void merge(Node target, Node source, Limits limits) {
         if (source.getBlue() != null) {
-             throw new IllegalArgumentException("Document contains \"blue\" attribute. Preprocess document before merging.");
+            throw new IllegalArgumentException("Document contains \"blue\" attribute. Preprocess document before merging.");
         }
 
         if (source.getType() != null) {
@@ -57,8 +53,8 @@ public class Merger implements NodeResolver {
         Map<String, Node> properties = source.getProperties();
         if (properties != null) {
             properties.forEach((key, value) -> {
-                if (limits.shouldProcessPathSegment(key)) {
-                    limits.enterPathSegment(key);
+                if (limits.shouldMergePathSegment(key, value)) {
+                    limits.enterPathSegment(key, value);
                     mergeProperty(target, key, value, limits);
                     limits.exitPathSegment();
                 }
@@ -76,9 +72,9 @@ public class Merger implements NodeResolver {
         List<Node> targetChildren = target.getItems();
         if (targetChildren == null) {
             targetChildren = sourceChildren.stream()
-                    .filter(child -> limits.shouldProcessPathSegment(String.valueOf(sourceChildren.indexOf(child))))
+                    .filter(child -> limits.shouldMergePathSegment(String.valueOf(sourceChildren.indexOf(child)), target))
                     .map(child -> {
-                        limits.enterPathSegment(String.valueOf(sourceChildren.indexOf(child)));
+                        limits.enterPathSegment(String.valueOf(sourceChildren.indexOf(child)), target);
                         Node resolvedChild = resolve(child, limits);
                         limits.exitPathSegment();
                         return resolvedChild;
@@ -93,10 +89,10 @@ public class Merger implements NodeResolver {
             ));
 
         for (int i = 0; i < sourceChildren.size(); i++) {
-            if (!limits.shouldProcessPathSegment(String.valueOf(i))) {
+            if (!limits.shouldMergePathSegment(String.valueOf(i), sourceChildren.get(i))) {
                 continue;
             }
-            limits.enterPathSegment(String.valueOf(i));
+            limits.enterPathSegment(String.valueOf(i), sourceChildren.get(i));
             if (i >= targetChildren.size()) {
                 targetChildren.add(sourceChildren.get(i));
                 limits.exitPathSegment();

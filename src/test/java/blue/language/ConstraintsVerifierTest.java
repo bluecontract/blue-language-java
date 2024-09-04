@@ -239,4 +239,39 @@ public class ConstraintsVerifierTest {
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
     }
 
+
+//
+//    @Test
+//    public void testConstraintsAndBlueIdSimpler() throws Exception {
+//
+//        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+//
+//        String a = "name: A\n" +
+//                   "x:\n" +
+//                   "  constraints:\n" +
+//                   "    maxLength: 4\n" +
+//                   "y:\n" +
+//                   "  constraints:\n" +
+//                   "    maxLength: 4";
+//        Node aNode = YAML_MAPPER.readValue(a, Node.class);
+//        nodeProvider.addSingleNodes(aNode);
+//
+//        String b = "name: B\n" +
+//                   "type:\n" +
+//                   "  blueId: " + calculateBlueId(aNode) + "\n" +
+//                   "x: asdf\n" +
+//                   "y: abcd";
+//        Node bNode = YAML_MAPPER.readValue(b, Node.class);
+//        nodeProvider.addSingleNodes(bNode);
+//
+//        Blue blue = new Blue(nodeProvider);
+//
+////        System.out.println(blue.nodeToYaml(bNode));
+//
+//
+//        Node result = blue.resolve(bNode);
+//        System.out.println(blue.nodeToYaml(result));
+//
+//    }
+
 }

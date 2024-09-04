@@ -2,6 +2,7 @@ package blue.language.utils;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.limits.PathLimits;
 
@@ -11,67 +12,71 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 public class NodeTypeMatcher {
-
     private Blue blue;
 
     public NodeTypeMatcher(Blue blue) {
         this.blue = blue;
     }
 
-    @FunctionalInterface
-    public interface TargetTypeTransformer {
-        Node transform(Node targetType);
-    }
-
     public boolean matchesType(Node node, Node targetType) {
-        return matchesType(node, targetType, null);
+        return matchesType(node, targetType, Limits.NO_LIMITS);
     }
 
-    public boolean matchesType(Node node, Node targetType, TargetTypeTransformer transformer) {
-        PathLimits limits = PathLimits.fromNode(targetType);
-        Node transformedTargetType = (transformer != null) ? transformer.transform(targetType) : targetType;
-        return verifyMatch(node, transformedTargetType, limits) && recursiveMatchCheck(node, transformedTargetType, transformer);
+    public boolean matchesType(Node node, Node targetType, Limits globalLimits) {
+        PathLimits pathLimits = PathLimits.fromNode(targetType);
+        CompositeLimits compositeLimits = new CompositeLimits(globalLimits, pathLimits);
+
+        Node resolvedNode = extendAndResolve(node, compositeLimits);
+        Node resolvedType = blue.resolve(targetType, compositeLimits);
+
+        return verifyMatch(resolvedNode, targetType, compositeLimits) &&
+               recursiveValueComparison(resolvedNode, resolvedType);
     }
 
-    private boolean verifyMatch(Node node, Node type, Limits limits) {
-        blue.extend(node, limits);
+    private Node extendAndResolve(Node node, Limits limits) {
         Node extendedNode = node.clone();
-        Node resolvedNode = blue.resolve(extendedNode, limits);
+        blue.extend(extendedNode, limits);
+        return blue.resolve(extendedNode, limits);
+    }
 
-        resolvedNode.type(type.clone());
+    private boolean verifyMatch(Node resolvedNode, Node targetType, Limits limits) {
+        Node testNode = resolvedNode.clone();
+        testNode.type(targetType.clone());
         try {
-            blue.resolve(resolvedNode, limits);
+            blue.resolve(testNode, limits);
         } catch (IllegalArgumentException ex) {
             return false;
         }
         return true;
     }
 
-    private boolean recursiveMatchCheck(Node node, Node targetType, TargetTypeTransformer transformer) {
-        final Node transformedTargetType = (transformer != null) ? transformer.transform(targetType) : targetType;
+    private boolean recursiveValueComparison(Node node, Node targetType) {
+        if (targetType.getType() != null) {
+            if (node.getType() == null || !Types.isSubtype(node.getType(), targetType.getType(), blue.getNodeProvider())) {
+                return false;
+            }
+        }
 
-        if (transformedTargetType.getType() != null &&
-            (node.getType() == null || !Types.isSubtype(node.getType(), transformedTargetType.getType(), blue.getNodeProvider()))) {
+        if (targetType.getBlueId() != null && !targetType.getBlueId().equals(node.getBlueId())) {
+            return false;
+        }
+        if (targetType.getValue() != null && !targetType.getValue().equals(node.getValue())) {
             return false;
         }
 
-        if (transformedTargetType.getValue() != null && !transformedTargetType.getValue().equals(node.getValue())) {
-            return false;
-        }
-
-        if (transformedTargetType.getItems() != null) {
+        if (targetType.getItems() != null) {
             List<Node> nodeItems = node.getItems() != null ? node.getItems() : Collections.emptyList();
-            return IntStream.range(0, transformedTargetType.getItems().size())
+            return IntStream.range(0, targetType.getItems().size())
                     .allMatch(i -> i < nodeItems.size()
-                            ? recursiveMatchCheck(nodeItems.get(i), transformedTargetType.getItems().get(i), transformer)
-                            : !hasValueInNestedStructure(transformedTargetType.getItems().get(i)));
+                            ? recursiveValueComparison(nodeItems.get(i), targetType.getItems().get(i))
+                            : !hasValueInNestedStructure(targetType.getItems().get(i)));
         }
 
-        if (transformedTargetType.getProperties() != null) {
+        if (targetType.getProperties() != null) {
             Map<String, Node> nodeProperties = node.getProperties() != null ? node.getProperties() : Collections.emptyMap();
-            return transformedTargetType.getProperties().entrySet().stream()
+            return targetType.getProperties().entrySet().stream()
                     .allMatch(entry -> nodeProperties.containsKey(entry.getKey())
-                            ? recursiveMatchCheck(nodeProperties.get(entry.getKey()), entry.getValue(), transformer)
+                            ? recursiveValueComparison(nodeProperties.get(entry.getKey()), entry.getValue())
                             : !hasValueInNestedStructure(entry.getValue()));
         }
 
@@ -101,5 +106,4 @@ public class NodeTypeMatcher {
 
         return false;
     }
-
 }

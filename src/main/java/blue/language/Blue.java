@@ -8,7 +8,7 @@ import blue.language.merge.processor.*;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.*;
-import blue.language.utils.NodeTypeMatcher.TargetTypeTransformer;
+import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.Limits;
 
 import java.util.Arrays;
@@ -26,6 +26,8 @@ public class Blue implements NodeResolver {
     private MergingProcessor mergingProcessor;
     private TypeClassResolver typeClassResolver;
     private Map<String, String> preprocessingAliases = new HashMap<>();
+    private Limits globalLimits = NO_LIMITS;
+
 
 
     public Blue() {
@@ -58,12 +60,14 @@ public class Blue implements NodeResolver {
 
     @Override
     public Node resolve(Node node, Limits limits) {
+        Limits effectiveLimits = combineWithGlobalLimits(limits);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        return merger.resolve(node, limits);
+        return merger.resolve(node, effectiveLimits);
     }
 
     public void extend(Node node, Limits limits) {
-        new NodeExtender(nodeProvider).extend(node, limits);
+        Limits effectiveLimits = combineWithGlobalLimits(limits);
+        new NodeExtender(nodeProvider).extend(node, effectiveLimits);
     }
 
     public Node objectToNode(Object object) {
@@ -71,12 +75,16 @@ public class Blue implements NodeResolver {
         return jsonToNode(json);
     }
 
+    public <T> T convertObject(Object object, Class<T> clazz) {
+        return nodeToObject(objectToNode(object).clone(), clazz);
+    }
+
     public boolean nodeMatchesType(Node node, Node type) {
         return new NodeTypeMatcher(this).matchesType(node, type);
     }
 
-    public boolean nodeMatchesType(Node node, Node type, TargetTypeTransformer transformer) {
-        return new NodeTypeMatcher(this).matchesType(node, type, transformer);
+    public void setGlobalLimits(Limits globalLimits) {
+        this.globalLimits = globalLimits != null ? globalLimits : NO_LIMITS;
     }
 
     public Node yamlToNode(String yaml) {
@@ -85,6 +93,61 @@ public class Blue implements NodeResolver {
 
     public Node jsonToNode(String json) {
         return preprocess(JSON_MAPPER.readValue(json, Node.class));
+    }
+
+    public String nodeToYaml(Node node) {
+        return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
+    }
+
+    public String nodeToSimpleYaml(Node node) {
+        return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node, NodeToMapListOrValue.Strategy.SIMPLE));
+    }
+
+    public String nodeToJson(Node node) {
+        return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
+    }
+
+    public String nodeToSimpleJson(Node node) {
+        return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node, NodeToMapListOrValue.Strategy.SIMPLE));
+    }
+
+    public String objectToYaml(Object object) {
+        return nodeToYaml(objectToNode(object));
+    }
+
+    public String objectToSimpleYaml(Object object) {
+        return nodeToSimpleYaml(objectToNode(object));
+    }
+
+    public String objectToJson(Object object) {
+        return nodeToJson(objectToNode(object));
+    }
+
+    public String objectToSimpleJson(Object object) {
+        return nodeToSimpleJson(objectToNode(object));
+    }
+
+    public <T> T clone(T object) {
+        if (object == null) {
+            return null;
+        }
+
+        if (object instanceof Node) {
+            return (T) ((Node) object).clone();
+        }
+
+        Class<T> clazz = (Class<T>) object.getClass();
+        Node node = objectToNode(object);
+        Node clonedNode = node.clone();
+        return nodeToObject(clonedNode, clazz);
+    }
+
+    public String calculateBlueId(Node node) {
+        return BlueIdCalculator.calculateBlueId(node);
+    }
+
+    public String calculateBlueId(Object object) {
+        return calculateBlueId(objectToNode(object));
     }
 
     public void addPreprocessingAliases(Map<String, String> aliases) {
@@ -162,6 +225,18 @@ public class Blue implements NodeResolver {
     public Blue preprocessingAliases(Map<String, String> preprocessingAliases) {
         this.preprocessingAliases = preprocessingAliases;
         return this;
+    }
+
+    private Limits combineWithGlobalLimits(Limits methodLimits) {
+        if (globalLimits == NO_LIMITS) {
+            return methodLimits;
+        }
+
+        if (methodLimits == NO_LIMITS) {
+            return globalLimits;
+        }
+
+        return new CompositeLimits(globalLimits, methodLimits);
     }
 
     private MergingProcessor createDefaultNodeProcessor() {

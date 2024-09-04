@@ -43,8 +43,17 @@ public class ConverterFactory {
 
     }
 
-    @SuppressWarnings("unchecked")
     public Converter<?> getConverter(Node node, Type targetType) {
+        return getConverter(node, targetType, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Converter<?> getConverter(Node node, Type targetType, boolean prioritizeTargetType) {
+
+        if (node == null) {
+            return new NullConverter();
+        }
+
         Class<?> rawType = getRawType(targetType);
 
         if (rawType.isEnum()) {
@@ -61,7 +70,7 @@ public class ConverterFactory {
         }
         Converter<?> converter = converters.get(rawType);
         if (converter == null) {
-            converter = converters.get(Object.class);
+            return new ComplexObjectConverter(this, typeClassResolver);
         }
         return converter;
     }
