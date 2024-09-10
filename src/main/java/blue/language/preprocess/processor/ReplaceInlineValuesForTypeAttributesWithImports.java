@@ -19,6 +19,10 @@ public class ReplaceInlineValuesForTypeAttributesWithImports implements Transfor
         }
     }
 
+    public ReplaceInlineValuesForTypeAttributesWithImports(Map<String, String> mappings) {
+        this.mappings = mappings;
+    }
+
     @Override
     public Node process(Node document) {
         return NodeTransformer.transform(document, this::transformNode);
