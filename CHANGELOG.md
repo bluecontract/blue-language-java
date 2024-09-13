@@ -1,3 +1,15 @@
+## v0.6.0 (2024-09-13)
+
+### Feat
+
+- null mapping, updated limits
+- object mapping
+
+### Fix
+
+- explicit mappings
+- object mapping
+
 ## v0.5.0 (2024-08-08)
 
 ### Feat
