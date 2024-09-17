@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 import static blue.language.utils.TypeUtils.*;
 
-public class Constraints {
+public class Constraints implements Cloneable {
 
     private Node required;
     private Node allowMultiple;
@@ -286,6 +286,41 @@ public class Constraints {
     public Constraints uniqueItems(Boolean uniqueItems) {
         this.uniqueItems = new Node().value(uniqueItems);
         return this;
+    }
+
+    @Override
+    public Constraints clone() {
+        try {
+            Constraints cloned = (Constraints) super.clone();
+
+            if (this.required != null) cloned.required = this.required.clone();
+            if (this.allowMultiple != null) cloned.allowMultiple = this.allowMultiple.clone();
+            if (this.minLength != null) cloned.minLength = this.minLength.clone();
+            if (this.maxLength != null) cloned.maxLength = this.maxLength.clone();
+            if (this.minimum != null) cloned.minimum = this.minimum.clone();
+            if (this.maximum != null) cloned.maximum = this.maximum.clone();
+            if (this.exclusiveMinimum != null) cloned.exclusiveMinimum = this.exclusiveMinimum.clone();
+            if (this.exclusiveMaximum != null) cloned.exclusiveMaximum = this.exclusiveMaximum.clone();
+            if (this.multipleOf != null) cloned.multipleOf = this.multipleOf.clone();
+            if (this.minItems != null) cloned.minItems = this.minItems.clone();
+            if (this.maxItems != null) cloned.maxItems = this.maxItems.clone();
+            if (this.uniqueItems != null) cloned.uniqueItems = this.uniqueItems.clone();
+
+            if (this.pattern != null) {
+                cloned.pattern = this.pattern.stream()
+                        .map(Node::clone)
+                        .collect(Collectors.toList());
+            }
+            if (this.options != null) {
+                cloned.options = this.options.stream()
+                        .map(Node::clone)
+                        .collect(Collectors.toList());
+            }
+
+            return cloned;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Constraints must be cloneable", e);
+        }
     }
 
     @Override

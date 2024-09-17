@@ -6,6 +6,7 @@ import blue.language.mapping.model.*;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Properties;
 import blue.language.utils.TypeClassResolver;
+import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -758,6 +759,29 @@ public class NodeToObjectConverterTest {
 
         assertEquals(Integer.valueOf(1), subscription1.getSubscriptionId());
         assertEquals(Integer.valueOf(5), subscription2.getSubscriptionId());
+    }
+
+    @Test
+    public void testObjectSimple() throws Exception {
+        String personTestDataYaml = "type:\n" +
+                                    "  blueId: Nurse-BlueId\n" +
+                                    "name: Alice\n" +
+                                    "surname: Smith\n" +
+                                    "age: 25\n" +
+                                    "yearsOfExperience: 4";
+
+        Node node = blue.yamlToNode(personTestDataYaml);
+
+        Person data = converter.convert(node, Person.class);
+
+        assertNotNull(data);
+
+        assertInstanceOf(Nurse.class, data);
+        Nurse nurse = (Nurse) data;
+        assertEquals("Alice", nurse.getName());
+        assertEquals("Smith", nurse.getSurname());
+        assertEquals(Integer.valueOf(25), nurse.getAge());
+        assertEquals(Integer.valueOf(4), nurse.yearsOfExperience);
     }
 
 }

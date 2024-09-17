@@ -80,11 +80,15 @@ public class Blue implements NodeResolver {
     }
 
     public boolean nodeMatchesType(Node node, Node type) {
-        return new NodeTypeMatcher(this).matchesType(node, type);
+        return new NodeTypeMatcher(this).matchesType(node, type, globalLimits);
     }
 
     public void setGlobalLimits(Limits globalLimits) {
         this.globalLimits = globalLimits != null ? globalLimits : NO_LIMITS;
+    }
+
+    public Limits getGlobalLimits() {
+        return globalLimits;
     }
 
     public Node yamlToNode(String yaml) {

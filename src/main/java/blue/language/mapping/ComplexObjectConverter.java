@@ -44,6 +44,10 @@ public class ComplexObjectConverter implements Converter<Object> {
             return ValueConverter.convertValue(node, classToInstantiate);
         }
 
+        if (resolvedClass != null && getRawType(targetType).isAssignableFrom(resolvedClass)) {
+            classToInstantiate = resolvedClass;
+        }
+
         try {
             Object instance = classToInstantiate.getDeclaredConstructor().newInstance();
             convertFields(node, classToInstantiate, instance);

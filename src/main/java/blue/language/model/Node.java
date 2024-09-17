@@ -262,8 +262,7 @@ public class Node implements Cloneable {
         }
     }
 
-    @Override
-    public Node clone() {
+    public Node clone2() {
         try {
             Node cloned = (Node) super.clone();
             if (this.type != null) {
@@ -297,6 +296,61 @@ public class Node implements Cloneable {
             return cloned;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError("BasicNode must be cloneable", e);
+        }
+    }
+
+    @Override
+    public Node clone() {
+        try {
+            Node cloned = (Node) super.clone();
+
+            cloned.name = this.name;
+            cloned.description = this.description;
+            cloned.value = this.value;
+
+            if (this.type != null) {
+                cloned.type = this.type.clone();
+            }
+
+            if (this.itemType != null) {
+                cloned.itemType = this.itemType.clone();
+            }
+
+            if (this.keyType != null) {
+                cloned.keyType = this.keyType.clone();
+            }
+
+            if (this.valueType != null) {
+                cloned.valueType = this.valueType.clone();
+            }
+
+            if (this.items != null) {
+                cloned.items = this.items.stream()
+                        .map(Node::clone)
+                        .collect(Collectors.toCollection(ArrayList::new));
+            }
+
+            if (this.properties != null) {
+                cloned.properties = this.properties.entrySet().stream()
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                entry -> entry.getValue().clone(),
+                                (e1, e2) -> e1,
+                                HashMap::new
+                        ));
+            }
+
+            if (this.constraints != null) {
+                cloned.constraints = this.constraints.clone();
+            }
+
+            if (this.blue != null) {
+                cloned.blue = this.blue.clone();
+            }
+
+            return cloned;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Node must be cloneable", e);
         }
     }
 
