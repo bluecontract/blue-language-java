@@ -65,6 +65,14 @@ public class Blue implements NodeResolver {
         return merger.resolve(node, effectiveLimits);
     }
 
+    public Node reverse(Node node) {
+        return new MergeReverser().reverse(node);
+    }
+
+    public Node reverse(Object object) {
+        return reverse(objectToNode(object));
+    }
+
     public void extend(Node node, Limits limits) {
         Limits effectiveLimits = combineWithGlobalLimits(limits);
         new NodeExtender(nodeProvider).extend(node, effectiveLimits);

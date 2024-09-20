@@ -36,7 +36,7 @@ public class NodePathAccessor {
         }
 
         if (index == segments.length) {
-            return node.getValue() != null ? node.getValue() : node;
+            return node != null && node.getValue() != null ? node.getValue() : node;
         }
 
         String segment = segments[index];
@@ -54,6 +54,12 @@ public class NodePathAccessor {
                 return new Node().value(node.getDescription());
             case "type":
                 return node.getType();
+            case "itemType":
+                return node.getItemType();
+            case "keyType":
+                return node.getKeyType();
+            case "valueType":
+                return node.getValueType();
             case "value":
                 return new Node().value(node.getValue());
             case "blueId":

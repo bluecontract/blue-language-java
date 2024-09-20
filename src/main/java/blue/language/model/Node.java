@@ -262,43 +262,6 @@ public class Node implements Cloneable {
         }
     }
 
-    public Node clone2() {
-        try {
-            Node cloned = (Node) super.clone();
-            if (this.type != null) {
-                cloned.type = this.type.clone();
-            }
-            if (this.itemType != null) {
-                cloned.itemType = this.itemType.clone();
-            }
-            if (this.keyType != null) {
-                cloned.keyType = this.keyType.clone();
-            }
-            if (this.valueType != null) {
-                cloned.valueType = this.valueType.clone();
-            }
-            if (this.items != null) {
-                cloned.items = this.items.stream()
-                        .map(Node::clone)
-                        .collect(Collectors.toCollection(ArrayList::new));
-            }
-            if (this.properties != null) {
-                cloned.properties = this.properties.entrySet().stream()
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                entry -> entry.getValue().clone()
-                        ));
-            }
-            if (this.blue != null) {
-                cloned.blue = this.blue.clone();
-            }
-            cloned.inlineValue = this.inlineValue;
-            return cloned;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError("BasicNode must be cloneable", e);
-        }
-    }
-
     @Override
     public Node clone() {
         try {

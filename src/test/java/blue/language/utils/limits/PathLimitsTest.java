@@ -162,6 +162,9 @@ public class PathLimitsTest {
 
     @Test
     public void testConstraintsAndBlueId() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        Blue blue = new Blue(nodeProvider);
+
         String a = "name: A\n" +
                    "x:\n" +
                    "  description: aa\n" +
@@ -170,7 +173,8 @@ public class PathLimitsTest {
                    "y:\n" +
                    "  constraints:\n" +
                    "    maxLength: 4";
-        Node aNode = YAML_MAPPER.readValue(a, Node.class);
+        Node aNode = blue.yamlToNode(a);
+        nodeProvider.addSingleNodes(aNode);
 
         String b = "name: B\n" +
                    "type:\n" +
@@ -178,7 +182,8 @@ public class PathLimitsTest {
                    "x:\n" +
                    "  blueId: some-blue-id\n" +
                    "y: abcd";
-        Node bNode = YAML_MAPPER.readValue(b, Node.class);
+        Node bNode = blue.yamlToNode(b);
+        nodeProvider.addSingleNodes(bNode);
 
         String bInst = "name: B Inst\n" +
                        "type:\n" +
@@ -186,10 +191,8 @@ public class PathLimitsTest {
                        "x:\n" +
                        "  blueId: some-blue-id\n" +
                        "y: abcd";
-        Node bInstNode = YAML_MAPPER.readValue(bInst, Node.class);
-
-        BasicNodeProvider nodeProvider = new BasicNodeProvider(aNode, bNode, bInstNode);
-        Blue blue = new Blue(nodeProvider);
+        Node bInstNode = blue.yamlToNode(bInst);
+        nodeProvider.addSingleNodes(bInstNode);
 
         String typeBlueId = calculateBlueId(bNode);
         Set<String> ignoredProperties = new HashSet<>(Collections.singletonList("x"));
