@@ -42,19 +42,25 @@ public class BlueIdCalculator {
     }
 
     private String calculateMap(Map<String, Object> map) {
-        if (map.containsKey(OBJECT_BLUE_ID))
+        if (map.containsKey(OBJECT_BLUE_ID)) {
             return (String) map.get(OBJECT_BLUE_ID);
+        }
 
-        Map<String, Object> hashes = map.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> {
-                            String key = entry.getKey();
-                            if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key))
-                                return entry.getValue();
-                            return calculate(entry.getValue());
-                        }
-                ));
+        Map<String, Object> hashes = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key)) {
+                hashes.put(key, value);
+            } else if (value instanceof Map) {
+                hashes.put(key, calculateMap((Map<String, Object>) value));
+            } else if (value instanceof List) {
+                hashes.put(key, calculateList((List<Object>) value));
+            } else {
+                hashes.put(key, calculate(value));
+            }
+        }
         return hashProvider.apply(hashes);
     }
 

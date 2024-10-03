@@ -1,9 +1,11 @@
 package blue.language.samples.ipfs;
 
 import blue.language.model.Node;
+import blue.language.utils.BlueIdCalculator;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,7 +24,7 @@ public class PrintAllBlueIdsAndCanonicalJsons {
             if (value instanceof Map) {
                 print((Map) value);
                 Node node = JSON_MAPPER.convertValue(value, Node.class);
-                flat.put(key, calculateBlueId(node));
+                flat.put(key, Collections.singletonMap("blueId", calculateBlueId(node)));
             } else {
                 flat.put(key, value);
             }

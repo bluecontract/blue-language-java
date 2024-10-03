@@ -13,7 +13,7 @@ public class MergeReverser {
 
     public Node reverse(Node mergedNode) {
         Node minimalNode = new Node();
-        reverseNode(minimalNode, mergedNode, null);
+        reverseNode(minimalNode, mergedNode, mergedNode.getType());
         return minimalNode;
     }
 
@@ -65,12 +65,16 @@ public class MergeReverser {
         if (merged.getProperties() != null) {
             Map<String, Node> minimalProperties = new HashMap<>();
             for (Map.Entry<String, Node> entry : merged.getProperties().entrySet()) {
+                String key = entry.getKey();
+                Node mergedProperty = entry.getValue();
+                Node fromTypeProperty = null;
+                if (fromType != null && fromType.getProperties() != null) {
+                    fromTypeProperty = fromType.getProperties().get(key);
+                }
                 Node minimalProperty = new Node();
-                Node typeProperty = (merged.getType() != null && merged.getType().getProperties() != null) ?
-                        merged.getType().getProperties().get(entry.getKey()) : null;
-                reverseNode(minimalProperty, entry.getValue(), typeProperty);
+                reverseNode(minimalProperty, mergedProperty, fromTypeProperty);
                 if (!Nodes.isEmptyNode(minimalProperty)) {
-                    minimalProperties.put(entry.getKey(), minimalProperty);
+                    minimalProperties.put(key, minimalProperty);
                 }
             }
             if (!minimalProperties.isEmpty()) {
