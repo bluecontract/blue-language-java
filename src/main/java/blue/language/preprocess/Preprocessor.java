@@ -18,7 +18,7 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Preprocessor {
 
-    public static final String DEFAULT_BLUE_BLUE_ID = "8Na7RPBKK2rkDR1iUBhMjmUg5BAku3YfihLCeN3SYcuD";
+    public static final String DEFAULT_BLUE_BLUE_ID = "FREHAAGDZSzpnoTUoCQ86bBmxbVCULMjvx9JZM6fyqT1";
 
     private TransformationProcessorProvider processorProvider;
     private NodeProvider nodeProvider;
@@ -79,8 +79,8 @@ public class Preprocessor {
 
     public static TransformationProcessorProvider getStandardProvider() {
         return new TransformationProcessorProvider() {
-            private static final String REPLACE_INLINE_TYPES = "648mybP3oHoi8kx6HvYzw6Jtuz6BjUpGPk1r2DpCq7e4";
-            private static final String INFER_BASIC_TYPES = "45nboJisxsXXE2UBA2cY7V56roZ13u9MtCMcvv4iYrFp";
+            private static final String REPLACE_INLINE_TYPES = "27B7fuxQCS1VAptiCPc2RMkKoutP5qxkh3uDxZ7dr6Eo";
+            private static final String INFER_BASIC_TYPES = "FGYuTXwaoSKfZmpTysLTLsb8WzSqf43384rKZDkXhxD4";
 
             @Override
             public Optional<TransformationProcessor> getProcessor(Node transformation) {

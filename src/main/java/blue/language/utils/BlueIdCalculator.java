@@ -38,7 +38,8 @@ public class BlueIdCalculator {
         } else if (cleanedObject instanceof List) {
             return calculateList((List<Object>) cleanedObject);
         }
-        throw new IllegalArgumentException("Object must be a String, Number, Boolean, List or Map - found " + cleanedObject.getClass());
+        throw new IllegalArgumentException(
+                "Object must be a String, Number, Boolean, List or Map - found " + cleanedObject.getClass());
     }
 
     private String calculateMap(Map<String, Object> map) {
@@ -49,16 +50,11 @@ public class BlueIdCalculator {
         Map<String, Object> hashes = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             String key = entry.getKey();
-            Object value = entry.getValue();
-
             if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key)) {
-                hashes.put(key, value);
-            } else if (value instanceof Map) {
-                hashes.put(key, calculateMap((Map<String, Object>) value));
-            } else if (value instanceof List) {
-                hashes.put(key, calculateList((List<Object>) value));
+                hashes.put(key, entry.getValue());
             } else {
-                hashes.put(key, calculate(value));
+                String blueId = calculate(entry.getValue());
+                hashes.put(key, Collections.singletonMap("blueId", blueId));
             }
         }
         return hashProvider.apply(hashes);
@@ -75,7 +71,10 @@ public class BlueIdCalculator {
         Object lastElement = list.get(list.size() - 1);
         String hashOfLastElement = calculate(lastElement);
 
-        return hashProvider.apply(Arrays.asList(hashOfSubList, hashOfLastElement));
+        List<Map<String, String>> result = Arrays.asList(
+                Collections.singletonMap("blueId", hashOfSubList),
+                Collections.singletonMap("blueId", hashOfLastElement));
+        return hashProvider.apply(result);
     }
 
     private Object cleanStructure(Object obj) {
