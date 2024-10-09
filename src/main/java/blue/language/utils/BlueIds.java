@@ -7,9 +7,9 @@ import java.util.regex.Pattern;
 
 public class BlueIds {
 
-    private static final int MIN_BLUE_ID_LENGTH = 43;
+    private static final int MIN_BLUE_ID_LENGTH = 41;
     private static final int MAX_BLUE_ID_LENGTH = 45;
-    private static final Pattern BLUE_ID_PATTERN = Pattern.compile("^[1-9A-HJ-NP-Za-km-z]{43,45}(?:#\\d+)?$");
+    private static final Pattern BLUE_ID_PATTERN = Pattern.compile("^[1-9A-HJ-NP-Za-km-z]{41,45}(?:#\\d+)?$");
 
     public static boolean isPotentialBlueId(String value) {
         if (value == null || value.isEmpty()) {
