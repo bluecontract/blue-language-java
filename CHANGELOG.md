@@ -1,3 +1,9 @@
+## v0.7.3 (2024-10-09)
+
+### Fix
+
+- BlueId calculation for nested structures (#7)
+
 ## v0.7.2 (2024-10-07)
 
 ### Fix
