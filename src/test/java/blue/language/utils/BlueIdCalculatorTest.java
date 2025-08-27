@@ -10,6 +10,7 @@ import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class BlueIdCalculatorTest {
 
@@ -280,6 +281,30 @@ public class BlueIdCalculatorTest {
                 assertEquals(result1, result3);
                 assertEquals(result1, result4);
                 assertEquals(result1, result5);
+        }
+
+        @Test
+        public void testKeepNullsInLists() {
+            String yaml1 = "a:\n" +
+                    "- 1";
+            String yaml2 = "a:\n" +
+                    "- 1" +
+                    "- null";
+            String yaml3 = "a:\n" +
+                    "- null" +
+                    "- 1";
+
+            Node node1 = YAML_MAPPER.readValue(yaml1, Node.class);
+            Node node2 = YAML_MAPPER.readValue(yaml2, Node.class);
+            Node node3 = YAML_MAPPER.readValue(yaml3, Node.class);
+
+            String result1 = BlueIdCalculator.calculateBlueId(node1);
+            String result2 = BlueIdCalculator.calculateBlueId(node2);
+            String result3 = BlueIdCalculator.calculateBlueId(node3);
+
+            assertNotEquals(result1, result2);
+            assertNotEquals(result1, result3);
+            assertNotEquals(result2, result3);
         }
 
         private static Function<Object, String> fakeHashValueProvider() {

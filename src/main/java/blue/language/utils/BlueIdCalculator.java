@@ -77,6 +77,7 @@ public class BlueIdCalculator {
         return hashProvider.apply(result);
     }
 
+    // Recursively removes all null and empty items from Maps and replaces empty Lists with null.
     private Object cleanStructure(Object obj) {
         if (obj == null) {
             return null;
@@ -95,9 +96,7 @@ public class BlueIdCalculator {
             List<Object> cleanedList = new ArrayList<>();
             for (Object item : list) {
                 Object cleanedItem = cleanStructure(item);
-                if (cleanedItem != null) {
-                    cleanedList.add(cleanedItem);
-                }
+                cleanedList.add(cleanedItem);
             }
             return cleanedList.isEmpty() ? null : cleanedList;
         } else {
