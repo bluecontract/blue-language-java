@@ -1,8 +1,11 @@
 package blue.language.utils;
 
 import blue.language.model.Node;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -60,6 +63,7 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
+        @Disabled // TODO: remove, list extension is not supported anymore
         public void testList() {
 
                 String list1 = "abc:\n" +
@@ -87,6 +91,7 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
+        @Disabled // TODO: remove, list extension is not supported anymore
         public void testObjectVsList() {
 
                 String list1 = "abc:\n" +
@@ -102,6 +107,56 @@ public class BlueIdCalculatorTest {
                 String expectedResult = "hash({abc={blueId=hash({value=x})}})";
                 assertEquals(expectedResult, result1);
                 assertEquals(expectedResult, result2);
+        }
+
+        @Test
+        public void testList_noExtension() {
+                List<String> lists = new ArrayList<>();
+                lists.add("abc:\n" +
+                        "  - 1\n" +
+                        "  - 2\n" +
+                        "  - 3");
+                lists.add("abc:\n" +
+                        "  - 1\n" +
+                        "  - blueId: hash(2)\n" +
+                        "  - 3");
+                lists.add("abc:\n" +
+                        "  - blueId: hash(1)\n" +
+                        "  - blueId: hash(2)\n" +
+                        "  - blueId: hash(3)");
+                for(String list: lists) {
+                        String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(list, Map.class));
+                        assertEquals("hash({abc={blueId=hash([hash(1), hash(2), hash(3)])}})", result);
+                }
+        }
+
+        @Test
+        public void testSublist_noExtension() {
+                List<String> lists = new ArrayList<>();
+                lists.add("abc:\n" +
+                        "  - [1,2]\n" +
+                        "  - [3,4]\n");
+                lists.add("abc:\n" +
+                        "  -\n" +
+                        "    - 1\n" +
+                        "    - 2\n" +
+                        "  -\n" +
+                        "    - 3\n" +
+                        "    - 4\n");
+                lists.add("abc:\n" +
+                        "  -\n" +
+                        "    - blueId: hash(1)\n" +
+                        "    - blueId: hash(2)\n" +
+                        "  -\n" +
+                        "    - blueId: hash(3)\n" +
+                        "    - 4\n");
+                lists.add("abc:\n" +
+                        "  - blueId: hash([hash(1), hash(2)])\n" +
+                        "  - blueId: hash([hash(3), hash(4)])\n");
+                for(String list: lists) {
+                        String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(list, Map.class));
+                        assertEquals("hash({abc={blueId=hash([hash([hash(1), hash(2)]), hash([hash(3), hash(4)])])}})", result);
+                }
         }
 
         @Test

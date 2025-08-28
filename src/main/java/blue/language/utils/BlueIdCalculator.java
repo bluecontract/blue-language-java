@@ -65,20 +65,11 @@ public class BlueIdCalculator {
     }
 
     private String calculateList(List<Object> list) {
-        if (list.size() == 1) {
-            return calculateCleanedObject(list.get(0));
+        List<String> hashes = new ArrayList<>(list.size());
+        for (Object obj : list) {
+            hashes.add(calculateCleanedObject(obj));
         }
-
-        List<Object> subList = list.subList(0, list.size() - 1);
-        String hashOfSubList = calculateList(subList);
-
-        Object lastElement = list.get(list.size() - 1);
-        String hashOfLastElement = calculateCleanedObject(lastElement);
-
-        List<Map<String, String>> result = Arrays.asList(
-                Collections.singletonMap("blueId", hashOfSubList),
-                Collections.singletonMap("blueId", hashOfLastElement));
-        return hashProvider.apply(result);
+        return hashProvider.apply(hashes);
     }
 
     // Recursively removes all null and empty items from Maps and replaces empty Lists with null.

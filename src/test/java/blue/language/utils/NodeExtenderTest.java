@@ -9,6 +9,7 @@ import blue.language.utils.limits.PathLimits;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -135,6 +136,7 @@ public class NodeExtenderTest {
     }
 
     @Test
+    @Disabled // TODO: rmove, list extension is not supported anymore
     public void testExtendList() throws Exception {
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
@@ -181,6 +183,7 @@ public class NodeExtenderTest {
     }
 
     @Test
+    @Disabled // TODO: remove, list extension is not supported anymore
     public void testExtendListDirectly() throws Exception {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 

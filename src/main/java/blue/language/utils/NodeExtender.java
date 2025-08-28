@@ -86,7 +86,6 @@ public class NodeExtender {
 
             List<Node> items = currentNode.getItems();
             if (items != null && !items.isEmpty()) {
-                reconstructList(items);
                 for (int i = 0; i < items.size(); i++) {
                     extendNode(items.get(i), currentLimits, String.valueOf(i), false);
                 }
@@ -105,22 +104,6 @@ public class NodeExtender {
             return "/" + segment;
         } else {
             return currentPath + "/" + segment;
-        }
-    }
-
-    private void reconstructList(List<Node> items) {
-        while (!items.isEmpty()) {
-            Node firstItem = items.get(0);
-            String blueId = firstItem.getBlueId();
-            if (blueId == null) {
-                break;
-            }
-            List<Node> resolved = nodeProvider.fetchByBlueId(blueId);
-            if (resolved == null || resolved.size() == 1) {
-                break;
-            }
-            items.remove(0);
-            items.addAll(0, resolved);
         }
     }
 

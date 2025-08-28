@@ -20,7 +20,7 @@ class ClasspathBasedNodeProviderTest {
 
     @Test
     void testFetchByBlueId() {
-        String knownBlueId = "8RTziohyZKuSMrybq9NfH1RroL91uwmAahV5KwfgiXKX";
+        String knownBlueId = "BCfD7QCZV6XgcCV27Ex1rspiMwzxKx24YMWtu2P4iGUZ"; // Hattori1.blue
         List<Node> nodes = provider.fetchByBlueId(knownBlueId);
         assertNotNull(nodes);
         assertFalse(nodes.isEmpty());
