@@ -30,7 +30,11 @@ public class BlueIdCalculator {
     }
 
     public String calculate(Object object) {
-        Object cleanedObject = cleanStructure(object);
+        // we invoke calculateCleanedObject method only once (for root)
+        return calculateCleanedObject(cleanStructure(object));
+    }
+
+    private String calculateCleanedObject(Object cleanedObject) {
         if (cleanedObject instanceof String || cleanedObject instanceof Number || cleanedObject instanceof Boolean) {
             return hashProvider.apply(cleanedObject.toString());
         } else if (cleanedObject instanceof Map) {
@@ -53,7 +57,7 @@ public class BlueIdCalculator {
             if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key)) {
                 hashes.put(key, entry.getValue());
             } else {
-                String blueId = calculate(entry.getValue());
+                String blueId = calculateCleanedObject(entry.getValue());
                 hashes.put(key, Collections.singletonMap("blueId", blueId));
             }
         }
@@ -62,14 +66,14 @@ public class BlueIdCalculator {
 
     private String calculateList(List<Object> list) {
         if (list.size() == 1) {
-            return calculate(list.get(0));
+            return calculateCleanedObject(list.get(0));
         }
 
         List<Object> subList = list.subList(0, list.size() - 1);
         String hashOfSubList = calculateList(subList);
 
         Object lastElement = list.get(list.size() - 1);
-        String hashOfLastElement = calculate(lastElement);
+        String hashOfLastElement = calculateCleanedObject(lastElement);
 
         List<Map<String, String>> result = Arrays.asList(
                 Collections.singletonMap("blueId", hashOfSubList),
