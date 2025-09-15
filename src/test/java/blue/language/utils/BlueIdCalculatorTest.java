@@ -125,6 +125,13 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
+        public void testLexicographicSorting() {
+                Map map = JSON_MAPPER.readValue("{\"z\":1,\"aa\":65,\"q\":3,\"12\":3.5,\"a\":55,\"ab\":\"sad\"}", Map.class);
+                String expectedBlueId = "hash({12={blueId=hash(3.5)}, a={blueId=hash(55)}, aa={blueId=hash(65)}, ab={blueId=hash(sad)}, q={blueId=hash(3)}, z={blueId=hash(1)}})";
+                assertEquals(expectedBlueId, new BlueIdCalculator(fakeHashValueProvider()).calculate(map));
+        }
+
+        @Test
         public void testInteger() {
                 String yaml = "num: 36";
 

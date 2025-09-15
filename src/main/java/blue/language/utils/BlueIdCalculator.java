@@ -51,7 +51,7 @@ public class BlueIdCalculator {
             return (String) map.get(OBJECT_BLUE_ID);
         }
 
-        Map<String, Object> hashes = new LinkedHashMap<>();
+        Map<String, Object> hashes = new TreeMap<>(String::compareTo);
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             String key = entry.getKey();
             if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key)) {
