@@ -113,12 +113,12 @@ public class Types {
     }
 
 
-    public static boolean isListType(Node typeNode) {
-        return typeNode.getBlueId() != null && LIST_TYPE_BLUE_ID.equals(typeNode.getBlueId());
+    public static boolean isListType(Node typeNode, NodeProvider nodeProvider) {
+        return isSubtype(typeNode, new Node().blueId(LIST_TYPE_BLUE_ID), nodeProvider);
     }
 
-    public static boolean isDictionaryType(Node typeNode) {
-        return typeNode.getBlueId() != null && DICTIONARY_TYPE_BLUE_ID.equals(typeNode.getBlueId());
+    public static boolean isDictionaryType(Node typeNode, NodeProvider nodeProvider) {
+        return isSubtype(typeNode, new Node().blueId(DICTIONARY_TYPE_BLUE_ID), nodeProvider);
     }
 
 }

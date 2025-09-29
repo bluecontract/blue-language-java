@@ -15,7 +15,7 @@ public class DictionaryProcessor implements MergingProcessor {
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        if ((source.getKeyType() != null || source.getValueType() != null) && !Types.isDictionaryType(source.getType())) {
+        if ((source.getKeyType() != null || source.getValueType() != null) && !Types.isDictionaryType(source.getType(), nodeProvider)) {
             throw new IllegalArgumentException("Source node with keyType or valueType must have a Dictionary type");
         }
 
