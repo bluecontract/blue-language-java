@@ -14,7 +14,7 @@ public class ListProcessor implements MergingProcessor {
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
 
-        if (source.getItemType() != null && !Types.isListType(source.getType())) {
+        if (source.getItemType() != null && !Types.isListType(source.getType(), nodeProvider)) {
             throw new IllegalArgumentException("Source node with itemType must have a List type");
         }
 

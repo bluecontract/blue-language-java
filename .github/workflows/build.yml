@@ -30,14 +30,14 @@ jobs:
         run: ./gradlew clean build
 
       - name: Archive test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always() # run even if build failed
         with:
           name: test-results
           path: build/reports
 
       - name: Archive libs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libs
           path: build/libs
