@@ -75,9 +75,19 @@ public class NodeTypeMatcher {
         if (targetType.getProperties() != null) {
             Map<String, Node> nodeProperties = node.getProperties() != null ? node.getProperties() : Collections.emptyMap();
             return targetType.getProperties().entrySet().stream()
-                    .allMatch(entry -> nodeProperties.containsKey(entry.getKey())
-                            ? recursiveValueComparison(nodeProperties.get(entry.getKey()), entry.getValue())
-                            : !hasValueInNestedStructure(entry.getValue()));
+                    .allMatch(entry -> {
+                        Node targetProperty = entry.getValue();
+                        if (nodeProperties.containsKey(entry.getKey())) {
+                            return recursiveValueComparison(nodeProperties.get(entry.getKey()), targetProperty);
+                        }
+
+                        if (targetProperty.getConstraints() != null &&
+                                Boolean.TRUE.equals(targetProperty.getConstraints().getRequiredValue())) {
+                            return false;
+                        }
+
+                        return !hasValueInNestedStructure(targetProperty);
+                    });
         }
 
         return true;

@@ -6,6 +6,10 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.merge.processor.*;
 import blue.language.model.Node;
+import blue.language.processor.DocumentProcessingResult;
+import blue.language.processor.ContractProcessor;
+import blue.language.processor.DocumentProcessor;
+import blue.language.processor.model.Contract;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
@@ -27,6 +31,7 @@ public class Blue implements NodeResolver {
     private TypeClassResolver typeClassResolver;
     private Map<String, String> preprocessingAliases = new HashMap<>();
     private Limits globalLimits = NO_LIMITS;
+    private DocumentProcessor documentProcessor;
 
 
 
@@ -37,6 +42,7 @@ public class Blue implements NodeResolver {
     public Blue(NodeProvider nodeProvider) {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = createDefaultNodeProcessor();
+        this.documentProcessor = createDefaultDocumentProcessor();
     }
 
     public Blue(NodeProvider nodeProvider, MergingProcessor mergingProcessor) {
@@ -52,6 +58,7 @@ public class Blue implements NodeResolver {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = mergingProcessor;
         this.typeClassResolver = typeClassResolver;
+        this.documentProcessor = createDefaultDocumentProcessor();
     }
 
     public Node resolve(Node node) {
@@ -166,6 +173,41 @@ public class Blue implements NodeResolver {
         preprocessingAliases.putAll(aliases);
     }
 
+    public Blue registerContractProcessor(ContractProcessor<? extends Contract> processor) {
+        if (processor == null) {
+            throw new IllegalArgumentException("processor must not be null");
+        }
+        if (documentProcessor == null) {
+            documentProcessor = createDefaultDocumentProcessor();
+        }
+        documentProcessor.registerContractProcessor(processor);
+        return this;
+    }
+
+    public DocumentProcessingResult processDocument(Node document, Node event) {
+        return ensureDocumentProcessor().processDocument(document, event);
+    }
+
+    public DocumentProcessor getDocumentProcessor() {
+        return ensureDocumentProcessor();
+    }
+
+    public Blue documentProcessor(DocumentProcessor documentProcessor) {
+        if (documentProcessor == null) {
+            throw new IllegalArgumentException("documentProcessor must not be null");
+        }
+        this.documentProcessor = documentProcessor;
+        return this;
+    }
+
+    public DocumentProcessingResult initializeDocument(Node document) {
+        return ensureDocumentProcessor().initializeDocument(document);
+    }
+
+    public boolean isInitialized(Node document) {
+        return ensureDocumentProcessor().isInitialized(document);
+    }
+
     public Node preprocess(Node node) {
         if (node.getBlue() != null && node.getBlue().getValue() instanceof String) {
             String blueValue = (String) node.getBlue().getValue();
@@ -237,6 +279,17 @@ public class Blue implements NodeResolver {
     public Blue preprocessingAliases(Map<String, String> preprocessingAliases) {
         this.preprocessingAliases = preprocessingAliases;
         return this;
+    }
+
+    private DocumentProcessor ensureDocumentProcessor() {
+        if (documentProcessor == null) {
+            documentProcessor = createDefaultDocumentProcessor();
+        }
+        return documentProcessor;
+    }
+
+    private DocumentProcessor createDefaultDocumentProcessor() {
+        return new DocumentProcessor();
     }
 
     private Limits combineWithGlobalLimits(Limits methodLimits) {
