@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -18,12 +19,12 @@ public final class DocumentProcessingResult {
     private final String failureReason;
 
     private DocumentProcessingResult(Node document,
-                                     List<Node> triggeredEvents,
-                                     long totalGas,
-                                     boolean capabilityFailure,
-                                     String failureReason) {
+            List<Node> triggeredEvents,
+            long totalGas,
+            boolean capabilityFailure,
+            String failureReason) {
         this.document = document;
-        this.triggeredEvents = Collections.unmodifiableList(triggeredEvents);
+        this.triggeredEvents = Collections.unmodifiableList(new ArrayList<>(triggeredEvents));
         this.totalGas = totalGas;
         this.capabilityFailure = capabilityFailure;
         this.failureReason = failureReason;
@@ -32,12 +33,12 @@ public final class DocumentProcessingResult {
     public static DocumentProcessingResult of(Node document, List<Node> triggeredEvents, long totalGas) {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(triggeredEvents, "triggeredEvents");
-        return new DocumentProcessingResult(document, List.copyOf(triggeredEvents), totalGas, false, null);
+        return new DocumentProcessingResult(document, new ArrayList<>(triggeredEvents), totalGas, false, null);
     }
 
     public static DocumentProcessingResult capabilityFailure(Node document, String reason) {
         Objects.requireNonNull(document, "document");
-        return new DocumentProcessingResult(document, List.of(), 0L, true, reason);
+        return new DocumentProcessingResult(document, Collections.emptyList(), 0L, true, reason);
     }
 
     public Node document() {
