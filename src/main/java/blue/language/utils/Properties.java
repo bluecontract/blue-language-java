@@ -31,12 +31,12 @@ public class Properties {
             Arrays.asList(TEXT_TYPE, DOUBLE_TYPE, INTEGER_TYPE, BOOLEAN_TYPE, LIST_TYPE, DICTIONARY_TYPE);
 
 
-    public static final String TEXT_TYPE_BLUE_ID = "F92yo19rCcbBoBSpUA5LRxpfDejJDAaP1PRxxbWAraVP";
-    public static final String DOUBLE_TYPE_BLUE_ID = "68ryJtnmui4j5rCZWUnkZ3DChtmEb7Z9F8atn1mBSM3L";
-    public static final String INTEGER_TYPE_BLUE_ID = "DHmxTkFbXePZHCHCYmQr2dSzcNLcryFVjXVHkdQrrZr8";
-    public static final String BOOLEAN_TYPE_BLUE_ID = "EL6AjrbJsxTWRTPzY8WR8Y2zAMXRbydQj83PcZwuAHbo";
-    public static final String LIST_TYPE_BLUE_ID = "G8wmfjEqugPEEXByMYWJXiEdbLToPRWNQEekNxrxfQWB";
-    public static final String DICTIONARY_TYPE_BLUE_ID = "294NBTj2mFRL3RB4kDRUSckwGg7Kzj6T8CTAFeR1kcSA";
+    public static final String TEXT_TYPE_BLUE_ID = "DLRQwz7MQeCrzjy9bohPNwtCxKEBbKaMK65KBrwjfG6K";
+    public static final String DOUBLE_TYPE_BLUE_ID = "7pwXmXYCJtWnd348c2JQGBkm9C4renmZRwxbfaypsx5y";
+    public static final String INTEGER_TYPE_BLUE_ID = "5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1";
+    public static final String BOOLEAN_TYPE_BLUE_ID = "4EzhSubEimSQD3zrYHRtobfPPWntUuhEz8YcdxHsi12u";
+    public static final String LIST_TYPE_BLUE_ID = "3MhWSaTRoPQidNkFJqRkYcFwNcAwYjLRTYu44Y5DeFh7";
+    public static final String DICTIONARY_TYPE_BLUE_ID = "G7fBT9PSod1RfHLHkpafAGBDVAJMrMhAMY51ERcyXNrj";
     public static final List<String> BASIC_TYPE_BLUE_IDS = Arrays.asList(TEXT_TYPE_BLUE_ID, DOUBLE_TYPE_BLUE_ID, INTEGER_TYPE_BLUE_ID, BOOLEAN_TYPE_BLUE_ID);
     public static final List<String> CORE_TYPE_BLUE_IDS =
             Arrays.asList(TEXT_TYPE_BLUE_ID, DOUBLE_TYPE_BLUE_ID, INTEGER_TYPE_BLUE_ID, BOOLEAN_TYPE_BLUE_ID, LIST_TYPE_BLUE_ID, DICTIONARY_TYPE_BLUE_ID);

@@ -38,8 +38,9 @@ compileTestJava {
 
 dependencies {
     // JUnit Jupiter (JUnit 5)
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.mockito:mockito-core:3.12.4")
 
     // Jackson
@@ -61,6 +62,10 @@ test {
     reports {
         junitXml.required = false
         html.required = true
+    }
+    testLogging {
+        events 'PASSED', 'FAILED', 'SKIPPED'
+        showStandardStreams = true
     }
 }
 
