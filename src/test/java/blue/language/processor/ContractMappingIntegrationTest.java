@@ -16,8 +16,9 @@ import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.utils.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,7 +27,10 @@ class ContractMappingIntegrationTest {
 
     @Test
     void loadsAllContractsFromBlueYaml() throws Exception {
-        String yaml = Files.readString(Path.of("src/test/resources/processor/contracts/all-contracts.blue"));
+        String yaml = new String(
+                Files.readAllBytes(Paths.get("src/test/resources/processor/contracts/all-contracts.blue")),
+                StandardCharsets.UTF_8
+        );
 
         Blue blue = new Blue();
         Node document = blue.yamlToNode(yaml);
