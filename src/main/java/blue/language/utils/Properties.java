@@ -35,7 +35,7 @@ public class Properties {
     public static final String DOUBLE_TYPE_BLUE_ID = "7pwXmXYCJtWnd348c2JQGBkm9C4renmZRwxbfaypsx5y";
     public static final String INTEGER_TYPE_BLUE_ID = "5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1";
     public static final String BOOLEAN_TYPE_BLUE_ID = "4EzhSubEimSQD3zrYHRtobfPPWntUuhEz8YcdxHsi12u";
-    public static final String LIST_TYPE_BLUE_ID = "3MhWSaTRoPQidNkFJqRkYcFwNcAwYjLRTYu44Y5DeFh7";
+    public static final String LIST_TYPE_BLUE_ID = "6aehfNAxHLC1PHHoDr3tYtFH3RWNbiWdFancJ1bypXEY";
     public static final String DICTIONARY_TYPE_BLUE_ID = "G7fBT9PSod1RfHLHkpafAGBDVAJMrMhAMY51ERcyXNrj";
     public static final List<String> BASIC_TYPE_BLUE_IDS = Arrays.asList(TEXT_TYPE_BLUE_ID, DOUBLE_TYPE_BLUE_ID, INTEGER_TYPE_BLUE_ID, BOOLEAN_TYPE_BLUE_ID);
     public static final List<String> CORE_TYPE_BLUE_IDS =

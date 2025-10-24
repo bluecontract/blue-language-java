@@ -18,7 +18,7 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Preprocessor {
 
-    public static final String DEFAULT_BLUE_BLUE_ID = "5r24T2gs9no9mDhjgf4sD6j43JeYSwndXmyMz4H8wSMV";
+    public static final String DEFAULT_BLUE_BLUE_ID = "6sqUywMoBRyj9hgQxSu2nDPnqcyiSM7xu9AB9sN98YJK";
 
     private TransformationProcessorProvider processorProvider;
     private NodeProvider nodeProvider;
