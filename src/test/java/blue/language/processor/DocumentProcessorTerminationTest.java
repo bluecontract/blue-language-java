@@ -61,7 +61,7 @@ class DocumentProcessorTerminationTest {
     }
 
     @Test
-    void rootFatalTerminationRecordsFatalOutbox() {
+    void rootFatalTerminationEmitsTerminationEvent() {
         Node document = blue.yamlToNode("name: Root Fatal\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
@@ -79,13 +79,11 @@ class DocumentProcessorTerminationTest {
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
         List<Node> triggeredEvents = result.triggeredEvents();
-        assertEquals(2, triggeredEvents.size(), "Fatal run should emit terminated and fatal error events");
-        assertEquals("Document Processing Terminated", stringProperty(triggeredEvents.get(0), "type"));
-        assertEquals("fatal", stringProperty(triggeredEvents.get(0), "cause"));
-        assertEquals("Document Processing Fatal Error", stringProperty(triggeredEvents.get(1), "type"));
-        assertEquals("/", stringProperty(triggeredEvents.get(1), "domain"));
-        assertEquals("RuntimeFatal", stringProperty(triggeredEvents.get(1), "code"));
-        assertEquals("panic", stringProperty(triggeredEvents.get(1), "reason"));
+        assertEquals(1, triggeredEvents.size(), "Fatal run should emit the terminated lifecycle event only");
+        Node terminatedEvent = triggeredEvents.get(0);
+        assertEquals("Document Processing Terminated", stringProperty(terminatedEvent, "type"));
+        assertEquals("fatal", stringProperty(terminatedEvent, "cause"));
+        assertEquals("panic", stringProperty(terminatedEvent, "reason"));
     }
 
     @Test
