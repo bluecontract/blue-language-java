@@ -3,6 +3,8 @@ package blue.language.utils;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -10,6 +12,7 @@ import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class BlueIdCalculatorTest {
 
@@ -68,25 +71,21 @@ public class BlueIdCalculatorTest {
                 Map<String, Object> map1 = YAML_MAPPER.readValue(list1, Map.class);
                 String result1 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map1);
 
-                String list2 = "abc:\n" +
-                                "  - blueId: hash([{blueId=hash(1)}, {blueId=hash(2)}])\n" +
-                                "  - 3";
-                Map<String, Object> map2 = YAML_MAPPER.readValue(list2, Map.class);
-                String result2 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map2);
-
-                String list3 = "abc:\n" +
-                                "  - blueId: hash([{blueId=hash([{blueId=hash(1)}, {blueId=hash(2)}])}, {blueId=hash(3)}])";
-                Map<String, Object> map3 = YAML_MAPPER.readValue(list3, Map.class);
-                String result3 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map3);
-
-                String expectedResult = "hash({abc={blueId=hash([{blueId=hash([{blueId=hash(1)}, {blueId=hash(2)}])}, {blueId=hash(3)}])}})";
+                String expectedResult = "hash({abc={blueId=" + fakeListHash("hash(1)", "hash(2)", "hash(3)") + "}})";
                 assertEquals(expectedResult, result1);
-                assertEquals(expectedResult, result2);
-                assertEquals(expectedResult, result3);
         }
 
         @Test
-        public void testObjectVsList() {
+        public void testEmptyListIsPreserved() {
+                Map<String, Object> map = YAML_MAPPER.readValue("abc: []", Map.class);
+
+                String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(map);
+
+                assertEquals("hash({abc={blueId=hash({$list=empty})}})", result);
+        }
+
+        @Test
+        public void testSingletonListIsDifferentFromScalar() {
 
                 String list1 = "abc:\n" +
                                 "  value: x";
@@ -98,9 +97,45 @@ public class BlueIdCalculatorTest {
                 Map<String, Object> map2 = YAML_MAPPER.readValue(list2, Map.class);
                 String result2 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map2);
 
-                String expectedResult = "hash({abc={blueId=hash({value=x})}})";
-                assertEquals(expectedResult, result1);
-                assertEquals(expectedResult, result2);
+                assertEquals("hash({abc={blueId=hash({value=x})}})", result1);
+                assertEquals("hash({abc={blueId=" + fakeListHash("hash({value=x})") + "}})", result2);
+                assertNotEquals(result1, result2);
+        }
+
+        @Test
+        public void testNestedListIsDifferentFromFlatList() {
+                String flat = "abc:\n" +
+                                "  - 1\n" +
+                                "  - 2";
+                String nested = "abc:\n" +
+                                "  - - 1\n" +
+                                "  - 2";
+
+                String flatResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(flat, Map.class));
+                String nestedResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(nested, Map.class));
+
+                assertEquals("hash({abc={blueId=" + fakeListHash("hash(1)", "hash(2)") + "}})", flatResult);
+                assertEquals("hash({abc={blueId=" + fakeListHash(fakeListHash("hash(1)"), "hash(2)") + "}})", nestedResult);
+                assertNotEquals(flatResult, nestedResult);
+        }
+
+        @Test
+        public void testPureReferenceShortCircuit() {
+                Map<String, Object> pureReference = YAML_MAPPER.readValue("blueId: asserted-id", Map.class);
+                Map<String, Object> mixedNode = YAML_MAPPER.readValue("blueId: asserted-id\nvalue: x", Map.class);
+
+                BlueIdCalculator calculator = new BlueIdCalculator(fakeHashValueProvider());
+
+                assertEquals("asserted-id", calculator.calculate(pureReference));
+                assertNotEquals("asserted-id", calculator.calculate(mixedNode));
+        }
+
+        @Test
+        public void testScalarNumbersAndStringsHashAsDifferentJsonTypes() {
+                BlueIdCalculator calculator = BlueIdCalculator.INSTANCE;
+
+                assertNotEquals(calculator.calculate(BigInteger.ONE), calculator.calculate("1"));
+                assertNotEquals(calculator.calculate(true), calculator.calculate("true"));
         }
 
         @Test
@@ -160,6 +195,57 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
+        public void testDoubleIntegerDecimalAndStringFormsHaveSameBlueId() {
+                String integerYaml = "num:\n" +
+                                "  type:\n" +
+                                "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                                "  value: 1";
+                String decimalYaml = "num:\n" +
+                                "  type:\n" +
+                                "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                                "  value: 1.0";
+                String stringYaml = "num:\n" +
+                                "  type:\n" +
+                                "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                                "  value: \"1\"";
+
+                String integerBlueId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(integerYaml, Node.class));
+                String decimalBlueId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(decimalYaml, Node.class));
+                String stringBlueId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(stringYaml, Node.class));
+
+                assertEquals(integerBlueId, decimalBlueId);
+                assertEquals(integerBlueId, stringBlueId);
+        }
+
+        @Test
+        public void testDoubleOneThirdCanonicalizesAcrossComputedAndAuthoredForms() {
+                Node computed = new Node().properties(
+                                "num", new Node()
+                                                .type(new Node().blueId(DOUBLE_TYPE_BLUE_ID))
+                                                .value(1.0 / 3.0)
+                );
+                String authoredNumber = "num:\n" +
+                                "  type:\n" +
+                                "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                                "  value: 0.3333333333333333";
+                String authoredString = "num:\n" +
+                                "  type:\n" +
+                                "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                                "  value: \"0.333333333333333333333333333333\"";
+                String inferredDouble = "num: 0.333333333333333333333333333333";
+
+                String computedBlueId = BlueIdCalculator.calculateBlueId(computed);
+
+                assertEquals(computedBlueId, BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(authoredNumber, Node.class)));
+                assertEquals(computedBlueId, BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(authoredString, Node.class)));
+                assertEquals(computedBlueId, BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(inferredDouble, Node.class)));
+
+                Map<String, Object> serialized = (Map<String, Object>) NodeToMapListOrValue.get(computed);
+                Map<String, Object> num = (Map<String, Object>) serialized.get("num");
+                assertEquals(new BigDecimal("0.3333333333333333"), num.get("value"));
+        }
+
+        @Test
         public void testBigIntegerV1() {
                 String yaml = "num: 36928735469874359687345908673940586739458679548679034857690345876905238476903485769";
 
@@ -167,7 +253,7 @@ public class BlueIdCalculatorTest {
                 String blueId = BlueIdCalculator.calculateBlueId(node);
 
                 String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID
-                                + "\"},\"value\":\"9007199254740991\"}}";
+                                + "\"},\"value\":\"36928735469874359687345908673940586739458679548679034857690345876905238476903485769\"}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
@@ -285,12 +371,20 @@ public class BlueIdCalculatorTest {
 
                 assertEquals(result1, result2);
                 assertEquals(result1, result3);
-                assertEquals(result1, result4);
                 assertEquals(result1, result5);
+                assertNotEquals(result1, result4);
         }
 
         private static Function<Object, String> fakeHashValueProvider() {
                 return obj -> "hash(" + obj + ")";
+        }
+
+        private static String fakeListHash(String... elementHashes) {
+                String accumulator = "hash({$list=empty})";
+                for (String elementHash : elementHashes) {
+                        accumulator = "hash({$listCons=[{blueId=" + accumulator + "}, {blueId=" + elementHash + "}]})";
+                }
+                return accumulator;
         }
 
 }

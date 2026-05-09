@@ -32,6 +32,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         if (node.isObject()) {
             Node obj = new Node();
             Map<String, Node> properties = new LinkedHashMap<>();
+            boolean hasValuePayload = false;
+            boolean hasItemsPayload = false;
+            boolean hasSchema = false;
 
             for (Iterator<Map.Entry<String, JsonNode>> it = node.fields(); it.hasNext(); ) {
                 Map.Entry<String, JsonNode> entry = it.next();
@@ -57,24 +60,44 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         obj.valueType(handleNode(value));
                         break;
                     case OBJECT_VALUE:
+                        hasValuePayload = true;
                         obj.value(handleValue(value));
                         break;
                     case OBJECT_BLUE_ID:
+                        if (node.size() != 1) {
+                            throw new IllegalArgumentException("\"blueId\" nodes must be reference-only and cannot contain sibling fields.");
+                        }
                         obj.blueId(value.asText());
                         break;
                     case OBJECT_ITEMS:
+                        hasItemsPayload = true;
                         obj.items(handleArray(value));
                         break;
                     case OBJECT_BLUE:
                         obj.blue(handleNode(value));
                         break;
-                    case OBJECT_CONSTRAINTS:
-                        obj.constraints(handleConstraints(value));
+                    case OBJECT_SCHEMA:
+                    case "constraints":
+                        if (hasSchema) {
+                            throw new IllegalArgumentException("A Blue node cannot contain both \"schema\" and legacy \"constraints\".");
+                        }
+                        hasSchema = true;
+                        obj.schema(handleSchema(value));
                         break;
                     default:
+                        if ("properties".equals(key)) {
+                            throw new IllegalArgumentException("\"properties\" is an internal field and must not appear in Blue documents.");
+                        }
                         properties.put(key, handleNode(value));
                         break;
                 }
+            }
+            int payloadKinds = 0;
+            if (hasValuePayload) payloadKinds++;
+            if (hasItemsPayload) payloadKinds++;
+            if (!properties.isEmpty()) payloadKinds++;
+            if (payloadKinds > 1) {
+                throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields.");
             }
             if (!properties.isEmpty()) {
                 obj.properties(properties);
@@ -91,20 +114,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         if (node.isTextual()) {
             return node.asText();
         } else if (node.isBigInteger() || node.isInt() || node.isLong()) {
-            BigInteger value = node.bigIntegerValue();
-            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-
-            if (value.compareTo(lowerBound) < 0) {
-                return lowerBound;
-            } else if (value.compareTo(upperBound) > 0) {
-                return upperBound;
-            } else {
-                return value;
-            }
+            return node.bigIntegerValue();
         } else if (node.isFloatingPointNumber()) {
-            double doubleValue = node.doubleValue();
-            return new BigDecimal(Double.toString(doubleValue));
+            return node.decimalValue();
         } else if (node.isBoolean()) {
             return node.asBoolean();
         } else if (node.isNull()) {
@@ -130,7 +142,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         }
     }
 
-    private Constraints handleConstraints(JsonNode constraintsNode) {
-        return UncheckedObjectMapper.YAML_MAPPER.convertValue(constraintsNode, Constraints.class);
+    private Schema handleSchema(JsonNode schemaNode) {
+        return UncheckedObjectMapper.YAML_MAPPER.convertValue(schemaNode, Schema.class);
     }
 }

@@ -69,8 +69,8 @@ public class NodeToObjectConverterTest {
         assertEquals(Short.valueOf((short) -32768), x.shortObjectField);
         assertEquals(2147483647, x.intField);
         assertEquals(Integer.valueOf(-2147483648), x.integerField);
-        assertEquals(9007199254740991L, x.longField);
-        assertEquals(Long.valueOf(-9007199254740991L), x.longObjectField);
+        assertEquals(9223372036854775807L, x.longField);
+        assertEquals(Long.valueOf(-9223372036854775808L), x.longObjectField);
         assertEquals(3.14f, x.floatField, 0.0001);
         assertEquals(-3.14f, x.floatObjectField, 0.0001);
         assertEquals(3.141592653589793, x.doubleField, 0.0000000000000001);

@@ -161,17 +161,17 @@ public class PathLimitsTest {
     }
 
     @Test
-    public void testConstraintsAndBlueId() throws Exception {
+    public void testSchemaAndBlueId() throws Exception {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);
 
         String a = "name: A\n" +
                    "x:\n" +
                    "  description: aa\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    maxLength: 4\n" +
                    "y:\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    maxLength: 4";
         Node aNode = blue.yamlToNode(a);
         nodeProvider.addSingleNodes(aNode);

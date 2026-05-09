@@ -81,8 +81,8 @@ public class NodeTypeMatcher {
                             return recursiveValueComparison(nodeProperties.get(entry.getKey()), targetProperty);
                         }
 
-                        if (targetProperty.getConstraints() != null &&
-                                Boolean.TRUE.equals(targetProperty.getConstraints().getRequiredValue())) {
+                        if (targetProperty.getSchema() != null &&
+                                Boolean.TRUE.equals(targetProperty.getSchema().getRequiredValue())) {
                             return false;
                         }
 

@@ -1,6 +1,6 @@
 package blue.language;
 
-import blue.language.model.Constraints;
+import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
@@ -20,8 +20,6 @@ public class NodeDeserializerTest {
         String doc = "name: name\n" +
                      "description: description\n" +
                      "type: type\n" +
-                     "value: value\n" +
-                     "blueId: blueId\n" +
                      "x: x\n" +
                      "y:\n" +
                      "  y1: y1\n" +
@@ -32,8 +30,6 @@ public class NodeDeserializerTest {
         assertEquals("name", node.getName());
         assertEquals("description", node.getDescription());
         assertEquals("type", node.getType().getValue());
-        assertEquals("value", node.getValue());
-        assertEquals("blueId", node.getBlueId());
         assertEquals("x", node.getProperties().get("x").getValue());
 
         Node y = node.getProperties().get("y");
@@ -45,6 +41,60 @@ public class NodeDeserializerTest {
         assertEquals("y2", y2.getValue());
         assertFalse(y2.isInlineValue());
 
+    }
+
+    @Test
+    public void testValuePayloadWithMetadata() throws Exception {
+        String doc = "name: name\n" +
+                     "description: description\n" +
+                     "type: Text\n" +
+                     "value: value";
+
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        assertEquals("name", node.getName());
+        assertEquals("description", node.getDescription());
+        assertEquals("Text", node.getType().getValue());
+        assertEquals("value", node.getValue());
+    }
+
+    @Test
+    public void testReferenceOnlyBlueId() throws Exception {
+        Node node = YAML_MAPPER.readValue("blueId: abc", Node.class);
+
+        assertTrue(node.isReferenceOnly());
+        assertEquals("abc", node.getBlueId());
+    }
+
+    @Test
+    public void testBlueIdWithSiblingFieldsIsRejected() {
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "blueId: abc\n" +
+                "name: Invalid", Node.class));
+    }
+
+    @Test
+    public void testPayloadKindExclusivity() {
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "value: abc\n" +
+                "child: value", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - abc\n" +
+                "child: value", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "value: abc\n" +
+                "items:\n" +
+                "  - def", Node.class));
+    }
+
+    @Test
+    public void testInternalPropertiesFieldIsRejected() {
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "properties:\n" +
+                "  x: y", Node.class));
     }
 
     @Test
@@ -63,10 +113,44 @@ public class NodeDeserializerTest {
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
         assertEquals(new BigInteger("9007199254740991"), node.getProperties().get("int1").getValue());
-        assertEquals(new BigInteger("9007199254740991"), node.getProperties().get("int2").getValue());
+        assertEquals(new BigInteger("132452345234524739582739458723948572934875"), node.getProperties().get("int2").getValue());
         assertEquals(new BigInteger("132452345234524739582739458723948572934875"), node.getProperties().get("int3").getValue());
-        assertEquals(new BigDecimal("1.3245234523452473E+41"), node.getProperties().get("dec1").getValue());
+        assertEquals(new BigDecimal("132452345234524739582739458723948572934875.132452345234524739582739458723948572934875"), node.getProperties().get("dec1").getValue());
         assertEquals(new BigDecimal("1.3245234523452473E+41"), node.getProperties().get("dec2").getValue());
+    }
+
+    @Test
+    public void testTypedDoubleCanonicalizesNumericFormsToBinary64() throws Exception {
+        String doc = "fromInteger:\n" +
+                     "  type:\n" +
+                     "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                     "  value: 1\n" +
+                     "fromDecimal:\n" +
+                     "  type:\n" +
+                     "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                     "  value: 1.0\n" +
+                     "fromString:\n" +
+                     "  type:\n" +
+                     "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                     "  value: \"1\"";
+
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        assertEquals(new BigDecimal("1.0"), node.getProperties().get("fromInteger").getValue());
+        assertEquals(new BigDecimal("1.0"), node.getProperties().get("fromDecimal").getValue());
+        assertEquals(new BigDecimal("1.0"), node.getProperties().get("fromString").getValue());
+    }
+
+    @Test
+    public void testTypedDoubleRejectsNonFiniteStrings() throws Exception {
+        String doc = "x:\n" +
+                     "  type:\n" +
+                     "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
+                     "  value: NaN";
+
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        assertThrows(IllegalArgumentException.class, () -> node.getProperties().get("x").getValue());
     }
 
     @Test
@@ -138,9 +222,9 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void testConstraints() throws Exception {
+    public void testSchema() throws Exception {
         String doc = "name: name\n" +
-                     "constraints:\n" +
+                     "schema:\n" +
                      "  required: true\n" +
                      "  allowMultiple: false\n" +
                      "  minLength: 5\n" +
@@ -160,27 +244,49 @@ public class NodeDeserializerTest {
                      "      description: description2";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
-        Constraints constraints = node.getConstraints();
-        assertTrue(constraints.getRequiredValue());
+        Schema schema = node.getSchema();
+        assertTrue(schema.getRequiredValue());
 
-        assertEquals(false, constraints.getAllowMultipleValue());
-        assertEquals((Integer) 5, constraints.getMinLengthValue());
-        assertEquals((Integer) 10, constraints.getMaxLengthValue());
+        assertEquals(false, schema.getAllowMultipleValue());
+        assertEquals((Integer) 5, schema.getMinLengthValue());
+        assertEquals((Integer) 10, schema.getMaxLengthValue());
 
         // patters is a list of strings
-        assertEquals("^[a-z]+$", constraints.getPatternValue().get(0));
-        assertEquals(new BigDecimal("1.01"), constraints.getMinimumValue());
-        assertEquals(new BigDecimal("100.01"), constraints.getMaximumValue());
-        assertEquals(new BigDecimal("0.01"), constraints.getExclusiveMinimumValue());
-        assertEquals(new BigDecimal("101.01"), constraints.getExclusiveMaximumValue());
-        assertEquals(new BigDecimal("2.01"), constraints.getMultipleOfValue());
-        assertEquals((Integer) 1, constraints.getMinItemsValue());
-        assertEquals((Integer) 5, constraints.getMaxItemsValue());
-        assertEquals(true, constraints.getUniqueItemsValue());
-        assertEquals(2, constraints.getOptions().size());
-        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", constraints.getOptions().get(0).getBlueId());
-        assertEquals("name2", constraints.getOptions().get(1).getName());
-        assertEquals("description2", constraints.getOptions().get(1).getDescription());
+        assertEquals("^[a-z]+$", schema.getPatternValue().get(0));
+        assertEquals(new BigDecimal("1.01"), schema.getMinimumValue());
+        assertEquals(new BigDecimal("100.01"), schema.getMaximumValue());
+        assertEquals(new BigDecimal("0.01"), schema.getExclusiveMinimumValue());
+        assertEquals(new BigDecimal("101.01"), schema.getExclusiveMaximumValue());
+        assertEquals(new BigDecimal("2.01"), schema.getMultipleOfValue());
+        assertEquals((Integer) 1, schema.getMinItemsValue());
+        assertEquals((Integer) 5, schema.getMaxItemsValue());
+        assertEquals(true, schema.getUniqueItemsValue());
+        assertEquals(2, schema.getOptions().size());
+        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", schema.getOptions().get(0).getBlueId());
+        assertEquals("name2", schema.getOptions().get(1).getName());
+        assertEquals("description2", schema.getOptions().get(1).getDescription());
+    }
+
+    @Test
+    public void testLegacyConstraintsMigratesToSchema() throws Exception {
+        String doc = "name: name\n" +
+                     "constraints:\n" +
+                     "  minLength: 5";
+
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        assertNotNull(node.getSchema());
+        assertEquals((Integer) 5, node.getSchema().getMinLengthValue());
+        assertNull(node.getProperties());
+    }
+
+    @Test
+    public void testSchemaAndConstraintsConflictIsRejected() {
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "schema:\n" +
+                "  minLength: 5\n" +
+                "constraints:\n" +
+                "  maxLength: 10", Node.class));
     }
 
 }

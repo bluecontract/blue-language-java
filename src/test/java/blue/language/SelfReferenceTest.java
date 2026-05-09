@@ -3,7 +3,6 @@ package blue.language;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.NodeExtender;
-import blue.language.utils.Types;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;
 
@@ -30,13 +29,14 @@ public class SelfReferenceTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
 
         Node aNode = nodeProvider.findNodeByName("A").orElseThrow(() -> new IllegalArgumentException("No A node found"));
+        String aNodeBlueId = nodeProvider.getBlueIdByName("A");
         Node extended = aNode.clone();
         new NodeExtender(nodeProvider).extend(extended, PathLimits.withSinglePath("/x/x/x/x"));
 
-        assertTrue(Types.isSubtype(extended, extended.getAsNode("/x/type"), nodeProvider));
-        assertTrue(Types.isSubtype(aNode, extended.getAsNode("/x/type"), nodeProvider));
-        assertTrue(Types.isSubtype(extended.getAsNode("/x/type"), aNode, nodeProvider));
-        assertTrue(Types.isSubtype(extended.getAsNode("/x/type/x/type/x/type/x/type"), aNode, nodeProvider));
+        assertEquals(aNodeBlueId, extended.getAsNode("/x/type").getBlueId());
+        assertEquals("A", extended.getAsText("/x/type/name"));
+        assertEquals(aNodeBlueId, extended.getAsNode("/x/type/x/type").getBlueId());
+        assertEquals("A", extended.getAsText("/x/type/x/type/name"));
 
     }
 
@@ -48,14 +48,14 @@ public class SelfReferenceTest {
                     "    type:\n" +
                     "      blueId: this#1\n" +
                     "  aVal:\n" +
-                    "    constraints:\n" +
+                    "    schema:\n" +
                     "      maxLength: 4\n" +
                     "- name: B\n" +
                     "  y:\n" +
                     "    type:\n" +
                     "      blueId: this#0\n" +
                     "  bVal:\n" +
-                    "    constraints:\n" +
+                    "    schema:\n" +
                     "      maxLength: 4\n" +
                     "  bConst: xyz";
 
@@ -64,17 +64,19 @@ public class SelfReferenceTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(my);
 
         Node aNode = nodeProvider.findNodeByName("A").orElseThrow(() -> new IllegalArgumentException("No A node found"));
-        Node bNode = nodeProvider.findNodeByName("B").orElseThrow(() -> new IllegalArgumentException("No B node found"));
-        String aNodeBlueId = aNode.getAsText("/blueId");
-        String bNodeBlueId = bNode.getAsText("/blueId");
+        String aNodeBlueId = nodeProvider.getBlueIdByName("A");
+        String bNodeBlueId = nodeProvider.getBlueIdByName("B");
 
         Node extendedA = aNode.clone();
-        Node extendedB = bNode.clone();
+        Node extendedB = nodeProvider.findNodeByName("B").orElseThrow(() -> new IllegalArgumentException("No B node found")).clone();
         new NodeExtender(nodeProvider).extend(extendedA, PathLimits.withSinglePath("/x/y/x/y"));
         new NodeExtender(nodeProvider).extend(extendedB, PathLimits.withSinglePath("/y/x/y/x"));
 
-        assertTrue(Types.isSubtype(extendedA, extendedB.getAsNode("/y/type"), nodeProvider));
-        assertTrue(Types.isSubtype(extendedB, extendedA.getAsNode("/x/type/y/type/x/type"), nodeProvider));
+        assertEquals(bNodeBlueId, extendedA.getAsNode("/x/type").getBlueId());
+        assertEquals("B", extendedA.getAsText("/x/type/name"));
+        assertEquals(aNodeBlueId, extendedB.getAsNode("/y/type").getBlueId());
+        assertEquals("A", extendedB.getAsText("/y/type/name"));
+        assertEquals(aNodeBlueId, extendedA.getAsNode("/x/type/y/type").getBlueId());
 
 
         String instance = "name: Some\n" +

@@ -146,6 +146,6 @@ public class NodeExtender {
         target.value(source.getValue());
         target.items(source.getItems());
         target.properties(source.getProperties());
-        target.constraints(source.getConstraints());
+        target.schema(source.getSchema());
     }
 }

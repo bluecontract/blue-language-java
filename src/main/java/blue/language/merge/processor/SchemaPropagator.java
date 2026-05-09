@@ -3,7 +3,7 @@ package blue.language.merge.processor;
 import blue.language.merge.MergingProcessor;
 import blue.language.NodeProvider;
 import blue.language.merge.NodeResolver;
-import blue.language.model.Constraints;
+import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.LeastCommonMultiple;
 
@@ -12,74 +12,74 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class ConstraintsPropagator implements MergingProcessor {
+public class SchemaPropagator implements MergingProcessor {
     
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        Constraints sourceConstraints = source.getConstraints();
-        if (sourceConstraints == null) {
+        Schema sourceSchema = source.getSchema();
+        if (sourceSchema == null) {
             return;
         }
 
-        Constraints targetConstraints = target.getConstraints();
-        if (targetConstraints == null) {
-            targetConstraints = new Constraints();
-            target.constraints(targetConstraints);
+        Schema targetSchema = target.getSchema();
+        if (targetSchema == null) {
+            targetSchema = new Schema();
+            target.schema(targetSchema);
         }
 
-        propagateRequired(sourceConstraints, targetConstraints);
-        propagateAllowMultiple(sourceConstraints, targetConstraints);
-        propagateMinLength(sourceConstraints, targetConstraints);
-        propagateMaxLength(sourceConstraints, targetConstraints);
-        propagatePattern(sourceConstraints, targetConstraints);
-        propagateMinimum(sourceConstraints, targetConstraints);
-        propagateMaximum(sourceConstraints, targetConstraints);
-        propagateExclusiveMinimum(sourceConstraints, targetConstraints);
-        propagateExclusiveMaximum(sourceConstraints, targetConstraints);
-        propagateMultipleOf(sourceConstraints, targetConstraints);
-        propagateMinItems(sourceConstraints, targetConstraints);
-        propagateMaxItems(sourceConstraints, targetConstraints);
-        propagateUniqueItems(sourceConstraints, targetConstraints);
-        propagateOptions(sourceConstraints, targetConstraints);
+        propagateRequired(sourceSchema, targetSchema);
+        propagateAllowMultiple(sourceSchema, targetSchema);
+        propagateMinLength(sourceSchema, targetSchema);
+        propagateMaxLength(sourceSchema, targetSchema);
+        propagatePattern(sourceSchema, targetSchema);
+        propagateMinimum(sourceSchema, targetSchema);
+        propagateMaximum(sourceSchema, targetSchema);
+        propagateExclusiveMinimum(sourceSchema, targetSchema);
+        propagateExclusiveMaximum(sourceSchema, targetSchema);
+        propagateMultipleOf(sourceSchema, targetSchema);
+        propagateMinItems(sourceSchema, targetSchema);
+        propagateMaxItems(sourceSchema, targetSchema);
+        propagateUniqueItems(sourceSchema, targetSchema);
+        propagateOptions(sourceSchema, targetSchema);
     }
 
 
-    private void propagateMinLength(Constraints source, Constraints target) {
+    private void propagateMinLength(Schema source, Schema target) {
         propagateMinValue(source.getMinLengthValue(), target::getMinLengthValue, target::minLength);
     }
 
-    private void propagateMaxLength(Constraints source, Constraints target) {
+    private void propagateMaxLength(Schema source, Schema target) {
         propagateMaxValue(source.getMaxLengthValue(), target::getMaxLengthValue, target::maxLength);
     }
 
-    private void propagatePattern(Constraints source, Constraints target) {
+    private void propagatePattern(Schema source, Schema target) {
         List<String> sourcePattern = source.getPatternValue();
         if (sourcePattern != null) {
             target.pattern(sourcePattern);
         }
     }
 
-    private void propagateMinimum(Constraints source, Constraints target) {
+    private void propagateMinimum(Schema source, Schema target) {
         propagateMinValue(source.getMinimumValue(), target::getMinimumValue, target::minimum);
     }
 
-    private void propagateMaximum(Constraints source, Constraints target) {
+    private void propagateMaximum(Schema source, Schema target) {
         propagateMaxValue(source.getMaximumValue(), target::getMaximumValue, target::maximum);
     }
 
-    private void propagateExclusiveMinimum(Constraints source, Constraints target) {
+    private void propagateExclusiveMinimum(Schema source, Schema target) {
         propagateMinValue(source.getExclusiveMinimumValue(), target::getExclusiveMinimumValue, target::exclusiveMinimum);
     }
 
-    private void propagateExclusiveMaximum(Constraints source, Constraints target) {
+    private void propagateExclusiveMaximum(Schema source, Schema target) {
         propagateMaxValue(source.getExclusiveMaximumValue(), target::getExclusiveMaximumValue, target::exclusiveMaximum);
     }
 
-    private void propagateRequired(Constraints source, Constraints target) {
+    private void propagateRequired(Schema source, Schema target) {
         propagateBoolean(source.getRequiredValue(), target::getRequiredValue, target::required, true);
     }
 
-    private void propagateAllowMultiple(Constraints source, Constraints target) {
+    private void propagateAllowMultiple(Schema source, Schema target) {
         propagateBoolean(source.getAllowMultipleValue(), target::getAllowMultipleValue, target::allowMultiple, true);
     }
 
@@ -113,7 +113,7 @@ public class ConstraintsPropagator implements MergingProcessor {
         }
     }
 
-    private void propagateMultipleOf(Constraints source, Constraints target) {
+    private void propagateMultipleOf(Schema source, Schema target) {
         BigDecimal sourceMultipleOf = source.getMultipleOfValue();
         BigDecimal targetMultipleOf = target.getMultipleOfValue();
         if (sourceMultipleOf != null && targetMultipleOf != null) {
@@ -123,19 +123,19 @@ public class ConstraintsPropagator implements MergingProcessor {
         }
     }
 
-    private void propagateMinItems(Constraints source, Constraints target) {
+    private void propagateMinItems(Schema source, Schema target) {
         propagateMinValue(source.getMinItemsValue(), target::getMinItemsValue, target::minItems);
     }
 
-    private void propagateMaxItems(Constraints source, Constraints target) {
+    private void propagateMaxItems(Schema source, Schema target) {
         propagateMaxValue(source.getMaxItemsValue(), target::getMaxItemsValue, target::maxItems);
     }
 
-    private void propagateUniqueItems(Constraints source, Constraints target) {
+    private void propagateUniqueItems(Schema source, Schema target) {
         propagateBoolean(source.getUniqueItemsValue(), target::getUniqueItemsValue, target::uniqueItems, true);
     }
 
-    private void propagateOptions(Constraints source, Constraints target) {
+    private void propagateOptions(Schema source, Schema target) {
     }
 
 }

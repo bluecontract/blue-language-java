@@ -133,10 +133,9 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private void processNodeList(List<Node> nodes) {
-        String listBlueId = BlueIdCalculator.calculateBlueId(nodes);
-        JsonNode listContent = JSON_MAPPER.valueToTree(nodes);
-        blueIdToContentMap.put(listBlueId, listContent);
-        blueIdToMultipleDocumentsMap.put(listBlueId, true);
+        NodeContentHandler.ParsedContent parsedContent = NodeContentHandler.parseAndCalculateBlueId(nodes, preprocessor);
+        blueIdToContentMap.put(parsedContent.blueId, parsedContent.content);
+        blueIdToMultipleDocumentsMap.put(parsedContent.blueId, true);
     }
 
     @Override

@@ -3,7 +3,7 @@ package blue.language;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.*;
-import blue.language.model.Constraints;
+import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,26 +20,26 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class ConstraintsVerifierMinLengthTest {
+public class SchemaVerifierMinLengthTest {
 
     private Node node;
-    private Constraints constraints;
+    private Schema schema;
     private BasicNodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
     private Merger merger;
 
     @BeforeEach
     public void setUp() {
-        constraints = new Constraints();
+        schema = new Schema();
         node = new Node()
                 .value("xyz")
-                .constraints(constraints);
+                .schema(schema);
         mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new ValuePropagator(),
                         new TypeAssigner(),
-                        new ConstraintsPropagator(),
-                        new ConstraintsVerifier()
+                        new SchemaPropagator(),
+                        new SchemaVerifier()
                 )
         );
         merger = new Merger(mergingProcessor, e -> null);
@@ -47,14 +47,14 @@ public class ConstraintsVerifierMinLengthTest {
 
     @Test
     public void testMinLengthPositive() throws Exception {
-        constraints.minLength(3);
+        schema.minLength(3);
         merger.resolve(node);
         // nothing should be thrown
     }
 
     @Test
     public void testMinLengthNegative() throws Exception {
-        constraints.minLength(4);
+        schema.minLength(4);
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
     }
 
@@ -62,15 +62,15 @@ public class ConstraintsVerifierMinLengthTest {
     public void testMinLengthInheritance() throws Exception {
 
         String a = "name: A\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 3";
 
         String b = "name: B\n" +
                    "type:\n" +
                    "  name: A\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    minLength: 3\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 4";
 
         String c = "name: C\n" +
@@ -78,9 +78,9 @@ public class ConstraintsVerifierMinLengthTest {
                    "  name: B\n" +
                    "  type:\n" +
                    "    name: A\n" +
-                   "    constraints:\n" +
+                   "    schema:\n" +
                    "      minLength: 3\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    minLength: 4\n" +
                    "value: Abcd";
 
@@ -99,15 +99,15 @@ public class ConstraintsVerifierMinLengthTest {
     public void testMinLengthInheritanceStrongestConditionShouldBeUsed() throws Exception {
 
         String a = "name: A\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 3";
 
         String b = "name: B\n" +
                    "type:\n" +
                    "  name: A\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    minLength: 3\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 4";
 
         String c = "name: C\n" +
@@ -115,9 +115,9 @@ public class ConstraintsVerifierMinLengthTest {
                    "  name: B\n" +
                    "  type:\n" +
                    "    name: A\n" +
-                   "    constraints:\n" +
+                   "    schema:\n" +
                    "      minLength: 3\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    minLength: 4\n" +
                    "value: Abc";
 
@@ -136,20 +136,20 @@ public class ConstraintsVerifierMinLengthTest {
 
         String a = "name: A\n" +
                    "type: Text\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 3";
 
         String b = "name: B\n" +
                    "type:\n" +
                    indent(a, 2) + "\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 4";
 
         String x = "name: X\n" +
                    "a:\n" +
                    "  type:\n" +
                    indent(b, 4) + "\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    minLength: 5";
 
         String y = "name: Y\n" +
@@ -172,20 +172,20 @@ public class ConstraintsVerifierMinLengthTest {
 
         String a = "name: A\n" +
                    "type: Text\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 3";
 
         String b = "name: B\n" +
                    "type:\n" +
                    indent(a, 2) + "\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 4";
 
         String x = "name: X\n" +
                    "a:\n" +
                    "  type:\n" +
                    indent(b, 4) + "\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    minLength: 2";
 
         String y = "name: Y\n" +
@@ -208,20 +208,20 @@ public class ConstraintsVerifierMinLengthTest {
     public void testMinLengthSubInheritanceNegative() throws Exception {
 
         String a = "name: A\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 3";
 
         String b = "name: B\n" +
                    "type:\n" +
                    indent(a, 2) + "\n" +
-                   "constraints:\n" +
+                   "schema:\n" +
                    "  minLength: 4";
 
         String x = "name: X\n" +
                    "a:\n" +
                    "  type:\n" +
                    indent(b, 4) + "\n" +
-                   "  constraints:\n" +
+                   "  schema:\n" +
                    "    minLength:\n" +
                    "      value: 2";
 

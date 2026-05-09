@@ -27,9 +27,18 @@ public class NodeToMapListOrValue {
     }
 
     public static Object get(Node node, Strategy strategy) {
+        validatePayloadKind(node);
 
-        if (node.getValue() != null && strategy == SIMPLE)
-            return node.getValue();
+        if (node.isReferenceOnly()) {
+            Map<String, Object> reference = new LinkedHashMap<>();
+            reference.put(OBJECT_BLUE_ID, node.getBlueId());
+            return reference;
+        }
+
+        Object value = node.getValue();
+
+        if (value != null && strategy == SIMPLE)
+            return value;
 
         List<Object> items = node.getItems() == null ? null :
                 node.getItems().stream()
@@ -44,14 +53,17 @@ public class NodeToMapListOrValue {
         if (node.getDescription() != null)
             result.put(OBJECT_DESCRIPTION, node.getDescription());
 
-        if (strategy == OFFICIAL && node.getValue() != null && node.getType() == null) {
-            String inferredTypeBlueId = inferTypeBlueId(node.getValue());
+        String valueTypeBlueId = null;
+        if (strategy == OFFICIAL && value != null && node.getType() == null) {
+            String inferredTypeBlueId = inferTypeBlueId(value);
             if (inferredTypeBlueId != null) {
+                valueTypeBlueId = inferredTypeBlueId;
                 Map<String, String> map = new HashMap<>();
                 map.put(OBJECT_BLUE_ID, inferredTypeBlueId);
                 result.put(OBJECT_TYPE, map);
             }
         } else if (node.getType() != null) {
+            valueTypeBlueId = node.getType().getBlueId();
             result.put(OBJECT_TYPE, get(node.getType()));
         }
 
@@ -61,22 +73,33 @@ public class NodeToMapListOrValue {
             result.put(OBJECT_KEY_TYPE, get(node.getKeyType()));
         if (node.getValueType() != null)
             result.put(OBJECT_VALUE_TYPE, get(node.getValueType()));
-        if (node.getValue() != null)
-            result.put(OBJECT_VALUE, handleValue(node.getValue()));
+        if (value != null)
+            result.put(OBJECT_VALUE, handleValue(value, valueTypeBlueId));
         if (items != null)
             result.put(OBJECT_ITEMS, items);
-        if (node.getBlueId() != null)
-            result.put(OBJECT_BLUE_ID, node.getBlueId());
-        if (node.getConstraints() != null)
-            result.put(OBJECT_CONSTRAINTS, YAML_MAPPER.convertValue(node.getConstraints(), new TypeReference<Map<String, Object>>() {}));
+        if (node.getSchema() != null)
+            result.put(OBJECT_SCHEMA, YAML_MAPPER.convertValue(node.getSchema(), new TypeReference<Map<String, Object>>() {}));
         if (node.getBlue() != null)
             result.put(OBJECT_BLUE, node.getBlue());
         if (node.getProperties() != null)
-            node.getProperties().forEach((key, value) -> result.put(key, get(value, strategy)));
+            node.getProperties().forEach((key, propertyValue) -> result.put(key, get(propertyValue, strategy)));
         return result;
     }
 
-    private static Object handleValue(Object value) {
+    private static void validatePayloadKind(Node node) {
+        int payloadKinds = 0;
+        if (node.getValue() != null) payloadKinds++;
+        if (node.getItems() != null) payloadKinds++;
+        if (node.getProperties() != null && !node.getProperties().isEmpty()) payloadKinds++;
+        if (payloadKinds > 1) {
+            throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields.");
+        }
+    }
+
+    private static Object handleValue(Object value, String valueTypeBlueId) {
+        if (DOUBLE_TYPE_BLUE_ID.equals(valueTypeBlueId)) {
+            return BlueNumbers.toCanonicalDoubleValue(value);
+        }
         if (value instanceof BigInteger) {
             BigInteger bigIntValue = (BigInteger) value;
             BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);

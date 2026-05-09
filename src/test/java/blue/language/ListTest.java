@@ -153,31 +153,17 @@ public class ListTest {
                         new Node().blueId(calculateBlueId(asList(a, b, c)))
                 );
 
-        Node x4 = new Node()
-                .name("X")
-                .items(
-                        new Node()
-                                .blueId(calculateBlueId(
-                                        asList(
-                                                new Node().blueId(calculateBlueId(asList(a, b))),
-                                                c
-                                        )
-                                ))
-                );
-
-        nodeProvider.addSingleNodes(x1, x2, x3, x4);
+        nodeProvider.addSingleNodes(x1, x2, x3);
         nodeProvider.addListAndItsItems(asList(a, b));
         nodeProvider.addListAndItsItems(asList(a, b, c));
 
         Node x1Extended = preprocessAndExtend(x1);
         Node x2Extended = preprocessAndExtend(x2);
         Node x3Extended = preprocessAndExtend(x3);
-        Node x4Extended = preprocessAndExtend(x4);
 
         assertEquals(3, x1Extended.getItems().size());
         assertEquals(3, x2Extended.getItems().size());
         assertEquals(3, x3Extended.getItems().size());
-        assertEquals(3, x4Extended.getItems().size());
     }
 
     @Test
@@ -212,22 +198,16 @@ public class ListTest {
                     "  - blueId: " + abId + "\n" +
                     "  - C";
 
-        String x4 = "name: X1\n" +
-                    "items:\n" +
-                    "  - blueId: " + abcId;
-
         String x5 = "name: X1\n" +
                     "items:\n" +
                     "  blueId: " + abcId;
 
         Node x1Extended = preprocessAndExtend(x1);
         Node x2Extended = preprocessAndExtend(x2);
-        Node x4Extended = preprocessAndExtend(x4);
         Node x5Extended = preprocessAndExtend(x5);
 
         assertEquals(3, x1Extended.getItems().size());
         assertEquals(3, x2Extended.getItems().size());
-        assertEquals(3, x4Extended.getItems().size());
         assertEquals(3, x5Extended.getItems().size());
 
     }

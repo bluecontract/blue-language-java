@@ -1,6 +1,6 @@
 package blue.language;
 
-import blue.language.model.Constraints;
+import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.Test;
@@ -183,8 +183,8 @@ public class NodeToMapListOrValueTest {
     }
 
     @Test
-    public void testNodeWithConstraintsMappingStrategy() throws Exception {
-        Constraints constraints = new Constraints()
+    public void testNodeWithSchemaMappingStrategy() throws Exception {
+        Schema schema = new Schema()
                 .required(true)
                 .allowMultiple(false)
                 .minLength(
@@ -204,25 +204,46 @@ public class NodeToMapListOrValueTest {
         Node node = new Node()
                 .name("nameA")
                 .description("descriptionA")
-                .constraints(constraints);
+                .schema(schema);
 
         Object object = NodeToMapListOrValue.get(node, SIMPLE);
         Node fromObject = JSON_MAPPER.convertValue(object, Node.class);
-        Constraints resultConstraints = fromObject.getConstraints();
+        Schema resultSchema = fromObject.getSchema();
 
-        assertEquals(true, resultConstraints.getRequiredValue());
-        assertEquals(false, resultConstraints.getAllowMultipleValue());
-        assertEquals(5, resultConstraints.getMinLengthValue());
-        assertEquals(10, resultConstraints.getMaxLengthValue());
-        assertEquals("^[a-z]+$", resultConstraints.getPatternValue().get(0));
-        assertEquals(0, new BigDecimal("1.0").compareTo(resultConstraints.getMinimumValue()));
-        assertEquals(0, new BigDecimal("100.0").compareTo(resultConstraints.getMaximumValue()));
-        assertEquals(0, new BigDecimal("0.0").compareTo(resultConstraints.getExclusiveMinimumValue()));
-        assertEquals(0, new BigDecimal("101.0").compareTo(resultConstraints.getExclusiveMaximumValue()));
-        assertEquals(0, new BigDecimal("2.0").compareTo(resultConstraints.getMultipleOfValue()));
-        assertEquals(1, resultConstraints.getMinItemsValue());
-        assertEquals(5, resultConstraints.getMaxItemsValue());
-        assertEquals(true, resultConstraints.getUniqueItemsValue());
+        assertEquals(true, resultSchema.getRequiredValue());
+        assertEquals(false, resultSchema.getAllowMultipleValue());
+        assertEquals(5, resultSchema.getMinLengthValue());
+        assertEquals(10, resultSchema.getMaxLengthValue());
+        assertEquals("^[a-z]+$", resultSchema.getPatternValue().get(0));
+        assertEquals(0, new BigDecimal("1.0").compareTo(resultSchema.getMinimumValue()));
+        assertEquals(0, new BigDecimal("100.0").compareTo(resultSchema.getMaximumValue()));
+        assertEquals(0, new BigDecimal("0.0").compareTo(resultSchema.getExclusiveMinimumValue()));
+        assertEquals(0, new BigDecimal("101.0").compareTo(resultSchema.getExclusiveMaximumValue()));
+        assertEquals(0, new BigDecimal("2.0").compareTo(resultSchema.getMultipleOfValue()));
+        assertEquals(1, resultSchema.getMinItemsValue());
+        assertEquals(5, resultSchema.getMaxItemsValue());
+        assertEquals(true, resultSchema.getUniqueItemsValue());
+    }
+
+    @Test
+    public void testReferenceOnlyBlueIdSerialization() {
+        Object object = NodeToMapListOrValue.get(new Node().blueId("abc"));
+
+        assertEquals(Map.of("blueId", "abc"), object);
+    }
+
+    @Test
+    public void testProgrammaticPayloadKindExclusivity() {
+        Node invalidValueAndProperties = new Node()
+                .value("abc")
+                .properties("child", new Node().value("def"));
+
+        Node invalidItemsAndProperties = new Node()
+                .items(new Node().value("abc"))
+                .properties("child", new Node().value("def"));
+
+        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalidValueAndProperties));
+        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalidItemsAndProperties));
     }
 
 }

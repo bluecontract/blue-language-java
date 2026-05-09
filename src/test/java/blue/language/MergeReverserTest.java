@@ -89,7 +89,7 @@ public class MergeReverserTest {
         assertFalse(reversed.getProperties().containsKey("y"));
         assertFalse(reversed.getProperties().containsKey("z"));
 
-        assertEquals(BlueIdCalculator.calculateBlueId(cNode), BlueIdCalculator.calculateBlueId(reversed));
+        assertEquals(nodeProvider.getBlueIdByName("C"), BlueIdCalculator.calculateBlueId(reversed));
     }
 
     @Test

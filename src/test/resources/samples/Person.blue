@@ -5,5 +5,4 @@ age:
   type: Integer
 pets:
   type:
-    name: Pet
     blueId: GwjPFDPV5Ay9tSrAjk8W8ENfRUuLJ9QC9kdNp48YAo9M

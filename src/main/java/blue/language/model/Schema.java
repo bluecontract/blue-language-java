@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 import static blue.language.utils.TypeUtils.*;
 
-public class Constraints implements Cloneable {
+public class Schema implements Cloneable {
 
     private Node required;
     private Node allowMultiple;
@@ -139,27 +139,27 @@ public class Constraints implements Cloneable {
         return uniqueItems == null ? null : getBooleanFromObject(uniqueItems.getValue());
     }
 
-    public Constraints required(Node required) {
+    public Schema required(Node required) {
         this.required = required;
         return this;
     }
 
-    public Constraints allowMultiple(Node allowMultiple) {
+    public Schema allowMultiple(Node allowMultiple) {
         this.allowMultiple = allowMultiple;
         return this;
     }
 
-    public Constraints minLength(Node minLength) {
+    public Schema minLength(Node minLength) {
         this.minLength = minLength;
         return this;
     }
 
-    public Constraints maxLength(Node maxLength) {
+    public Schema maxLength(Node maxLength) {
         this.maxLength = maxLength;
         return this;
     }
 
-    public Constraints pattern(Node pattern) {
+    public Schema pattern(Node pattern) {
         if (this.pattern == null) {
             this.pattern = new ArrayList<Node>();
         }
@@ -167,72 +167,72 @@ public class Constraints implements Cloneable {
         return this;
     }
 
-    public Constraints minimum(Node minimum) {
+    public Schema minimum(Node minimum) {
         this.minimum = minimum;
         return this;
     }
 
-    public Constraints maximum(Node maximum) {
+    public Schema maximum(Node maximum) {
         this.maximum = maximum;
         return this;
     }
 
-    public Constraints exclusiveMinimum(Node exclusiveMinimum) {
+    public Schema exclusiveMinimum(Node exclusiveMinimum) {
         this.exclusiveMinimum = exclusiveMinimum;
         return this;
     }
 
-    public Constraints exclusiveMaximum(Node exclusiveMaximum) {
+    public Schema exclusiveMaximum(Node exclusiveMaximum) {
         this.exclusiveMaximum = exclusiveMaximum;
         return this;
     }
 
-    public Constraints multipleOf(Node multipleOf) {
+    public Schema multipleOf(Node multipleOf) {
         this.multipleOf = multipleOf;
         return this;
     }
 
-    public Constraints minItems(Node minItems) {
+    public Schema minItems(Node minItems) {
         this.minItems = minItems;
         return this;
     }
 
-    public Constraints maxItems(Node maxItems) {
+    public Schema maxItems(Node maxItems) {
         this.maxItems = maxItems;
         return this;
     }
 
-    public Constraints uniqueItems(Node uniqueItems) {
+    public Schema uniqueItems(Node uniqueItems) {
         this.uniqueItems = uniqueItems;
         return this;
     }
 
-    public Constraints options(List<Node> options) {
+    public Schema options(List<Node> options) {
         this.options = options;
         return this;
     }
 
-    public Constraints required(Boolean required) {
+    public Schema required(Boolean required) {
         this.required = new Node().value(required);
         return this;
     }
 
-    public Constraints allowMultiple(Boolean allowMultiple) {
+    public Schema allowMultiple(Boolean allowMultiple) {
         this.allowMultiple = new Node().value(allowMultiple);
         return this;
     }
 
-    public Constraints minLength(Integer minLength) {
+    public Schema minLength(Integer minLength) {
         this.minLength = new Node().value(BigInteger.valueOf(minLength));
         return this;
     }
 
-    public Constraints maxLength(Integer maxLength) {
+    public Schema maxLength(Integer maxLength) {
         this.maxLength = new Node().value(BigInteger.valueOf(maxLength));
         return this;
     }
 
-    public Constraints pattern(List<String> pattern) {
+    public Schema pattern(List<String> pattern) {
         if (this.pattern == null) {
            this.pattern = new ArrayList<Node>();
         }
@@ -240,7 +240,7 @@ public class Constraints implements Cloneable {
         return this;
     }
 
-    public Constraints pattern(String pattern) {
+    public Schema pattern(String pattern) {
         if (this.pattern == null) {
             this.pattern = new ArrayList<Node>();
         }
@@ -248,50 +248,50 @@ public class Constraints implements Cloneable {
         return this;
     }
 
-    public Constraints minimum(BigDecimal minimum) {
+    public Schema minimum(BigDecimal minimum) {
         this.minimum = new Node().value(minimum);
         return this;
     }
 
-    public Constraints maximum(BigDecimal maximum) {
+    public Schema maximum(BigDecimal maximum) {
         this.maximum = new Node().value(maximum);
         return this;
     }
 
-    public Constraints exclusiveMinimum(BigDecimal exclusiveMinimum) {
+    public Schema exclusiveMinimum(BigDecimal exclusiveMinimum) {
         this.exclusiveMinimum = new Node().value(exclusiveMinimum);
         return this;
     }
 
-    public Constraints exclusiveMaximum(BigDecimal exclusiveMaximum) {
+    public Schema exclusiveMaximum(BigDecimal exclusiveMaximum) {
         this.exclusiveMaximum = new Node().value(exclusiveMaximum);
         return this;
     }
 
-    public Constraints multipleOf(BigDecimal multipleOf) {
+    public Schema multipleOf(BigDecimal multipleOf) {
         this.multipleOf = new Node().value(multipleOf);
         return this;
     }
 
-    public Constraints minItems(Integer minItems) {
+    public Schema minItems(Integer minItems) {
         this.minItems = new Node().value(BigInteger.valueOf(minItems));
         return this;
     }
 
-    public Constraints maxItems(Integer maxItems) {
+    public Schema maxItems(Integer maxItems) {
         this.maxItems = new Node().value(BigInteger.valueOf(maxItems));
         return this;
     }
 
-    public Constraints uniqueItems(Boolean uniqueItems) {
+    public Schema uniqueItems(Boolean uniqueItems) {
         this.uniqueItems = new Node().value(uniqueItems);
         return this;
     }
 
     @Override
-    public Constraints clone() {
+    public Schema clone() {
         try {
-            Constraints cloned = (Constraints) super.clone();
+            Schema cloned = (Schema) super.clone();
 
             if (this.required != null) cloned.required = this.required.clone();
             if (this.allowMultiple != null) cloned.allowMultiple = this.allowMultiple.clone();
@@ -319,13 +319,13 @@ public class Constraints implements Cloneable {
 
             return cloned;
         } catch (CloneNotSupportedException e) {
-            throw new AssertionError("Constraints must be cloneable", e);
+            throw new AssertionError("Schema must be cloneable", e);
         }
     }
 
     @Override
     public String toString() {
-        return "Constraints{" +
+        return "Schema{" +
                 "required=" + getRequiredValue() +
                 ", allowMultiple=" + getAllowMultipleValue() +
                 ", minLength=" + getMinLengthValue() +

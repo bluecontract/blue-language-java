@@ -311,8 +311,8 @@ public class Blue implements NodeResolver {
                         new TypeAssigner(),
                         new ListProcessor(),
                         new DictionaryProcessor(),
-                        new ConstraintsPropagator(),
-                        new ConstraintsVerifier(),
+                        new SchemaPropagator(),
+                        new SchemaVerifier(),
                         new BasicTypesVerifier()
                 )
         );

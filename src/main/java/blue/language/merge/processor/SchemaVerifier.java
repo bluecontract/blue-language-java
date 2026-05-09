@@ -3,7 +3,7 @@ package blue.language.merge.processor;
 import blue.language.merge.MergingProcessor;
 import blue.language.NodeProvider;
 import blue.language.merge.NodeResolver;
-import blue.language.model.Constraints;
+import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.lang.Boolean.TRUE;
 
-public class ConstraintsVerifier implements MergingProcessor {
+public class SchemaVerifier implements MergingProcessor {
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
@@ -25,24 +25,24 @@ public class ConstraintsVerifier implements MergingProcessor {
 
     @Override
     public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        Constraints constraints = target.getConstraints();
-        if (constraints == null)
+        Schema schema = target.getSchema();
+        if (schema == null)
             return;
 
-        verifyRequired(constraints.getRequiredValue(), target.getValue());
-        verifyAllowMultiple(constraints.getAllowMultipleValue(), target.getItems());
-        verifyMinLength(constraints.getMinLengthValue(), target.getValue());
-        verifyMaxLength(constraints.getMaxLengthValue(), target.getValue());
-        verifyPattern(constraints.getPatternValue(), target.getValue());
-        verifyMinimum(constraints.getMinimumValue(), target.getValue());
-        verifyMaximum(constraints.getMaximumValue(), target.getValue());
-        verifyExclusiveMinimum(constraints.getExclusiveMinimumValue(), target.getValue());
-        verifyExclusiveMaximum(constraints.getExclusiveMaximumValue(), target.getValue());
-        verifyMultipleOf(constraints.getMultipleOfValue(), target.getValue());
-        verifyMinItems(constraints.getMinItemsValue(), target.getItems());
-        verifyMaxItems(constraints.getMaxItemsValue(), target.getItems());
-        verifyUniqueItems(constraints.getUniqueItemsValue(), target.getItems());
-        verifyOptions(constraints.getOptions(), target, nodeProvider);
+        verifyRequired(schema.getRequiredValue(), target.getValue());
+        verifyAllowMultiple(schema.getAllowMultipleValue(), target.getItems());
+        verifyMinLength(schema.getMinLengthValue(), target.getValue());
+        verifyMaxLength(schema.getMaxLengthValue(), target.getValue());
+        verifyPattern(schema.getPatternValue(), target.getValue());
+        verifyMinimum(schema.getMinimumValue(), target.getValue());
+        verifyMaximum(schema.getMaximumValue(), target.getValue());
+        verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target.getValue());
+        verifyExclusiveMaximum(schema.getExclusiveMaximumValue(), target.getValue());
+        verifyMultipleOf(schema.getMultipleOfValue(), target.getValue());
+        verifyMinItems(schema.getMinItemsValue(), target.getItems());
+        verifyMaxItems(schema.getMaxItemsValue(), target.getItems());
+        verifyUniqueItems(schema.getUniqueItemsValue(), target.getItems());
+        verifyOptions(schema.getOptions(), target, nodeProvider);
     }
 
     private void verifyRequired(Boolean required, Object value) {

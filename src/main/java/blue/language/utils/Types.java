@@ -70,7 +70,7 @@ public class Types {
         if (type.getBlueId() != null) {
             // tmp code
             if (CORE_TYPE_BLUE_IDS.contains(type.getBlueId())) {
-                return new Node().blueId(type.getBlueId()).name(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(type.getBlueId()));
+                return new Node().blueId(type.getBlueId());
             }
             List<Node> typeNodes = nodeProvider.fetchByBlueId(type.getBlueId());
             if (typeNodes == null || typeNodes.isEmpty())

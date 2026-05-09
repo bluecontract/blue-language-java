@@ -20,7 +20,7 @@ public class NodeTypeMatcherTest {
 
     //     String a = "name: A\n" +
     //                "type: Text\n" +
-    //                "constraints:\n" +
+    //                "schema:\n" +
     //                "  minLength: 3";
 
     //     String b = "name: B\n" +
@@ -28,7 +28,7 @@ public class NodeTypeMatcherTest {
     //                "  type:\n" +
     //                "    name: A\n" +
     //                "    type: Text\n" +
-    //                "    constraints:\n" +
+    //                "    schema:\n" +
     //                "      minLength: 3";
 
     //     String c = "name: C";
@@ -44,23 +44,23 @@ public class NodeTypeMatcherTest {
     //     nodeProvider.addSingleDocs(bInst);
 
     //     String typeOK1 = "x:\n" +
-    //                "  constraints:\n" +
+    //                "  schema:\n" +
     //                "    minLength: 3\n" +
     //                "y:\n" +
-    //                "  constraints:\n" +
+    //                "  schema:\n" +
     //                "    minLength: 5";
 
     //     String typeOK2 = "x: ABC";
 
     //     String typeFail1 = "x:\n" +
-    //                        "  constraints:\n" +
+    //                        "  schema:\n" +
     //                        "    minLength: 4";
 
     //     String typeFail2 = "x:\n" +
-    //                     "  constraints:\n" +
+    //                     "  schema:\n" +
     //                     "    minLength: 3\n" +
     //                     "y:\n" +
-    //                     "  constraints:\n" +
+    //                     "  schema:\n" +
     //                     "    minLength: 5\n" +
     //                     "    required: true";
 
@@ -86,7 +86,7 @@ public class NodeTypeMatcherTest {
     // }
 
     // @Test
-    // public void testBasicTypeValueShapeNoConstraints() throws Exception {
+    // public void testBasicTypeValueShapeNoSchema() throws Exception {
 
     //     BasicNodeProvider nodeProvider = new BasicNodeProvider();
 

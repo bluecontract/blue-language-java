@@ -8,7 +8,6 @@ import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.provider.DirectoryBasedNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -17,7 +16,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static blue.language.TestUtils.samplesDirectoryNodeProvider;
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -140,7 +138,30 @@ public class TypeAssignerTest {
     @Test
     public void testDifferentSubtypeVariations2() throws Exception {
 
-        DirectoryBasedNodeProvider dirNodeProvider = samplesDirectoryNodeProvider();
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+
+        String generalVoucher = "name: General Hattori Hanzo Voucher\n" +
+                "details:\n" +
+                "  restaurantName: Hattori Hanzo\n" +
+                "  customerSupport:\n" +
+                "    phone: \"+1234567890\"\n" +
+                "    email: \"support@hattorihanzo.com\"";
+        nodeProvider.addSingleDocs(generalVoucher);
+
+        String anniversaryVoucher = "name: Celebrating Kill Bill Anniversary 2024\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("General Hattori Hanzo Voucher") + "\n" +
+                "availableMenuItems:\n" +
+                "  appetizers:\n" +
+                "    - Sakura Spring Salad";
+        nodeProvider.addSingleDocs(anniversaryVoucher);
+
+        String myVoucher = "name: My Voucher\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Celebrating Kill Bill Anniversary 2024") + "\n" +
+                "serialNumber: 30902345235\n" +
+                "purchaseDate: 2024-04-01";
+        nodeProvider.addSingleDocs(myVoucher);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
@@ -149,9 +170,9 @@ public class TypeAssignerTest {
                 )
         );
 
-        Merger merger = new Merger(mergingProcessor, dirNodeProvider);
+        Merger merger = new Merger(mergingProcessor, nodeProvider);
 
-        Node source = dirNodeProvider.findNodeByName("My Voucher").orElse(null);
+        Node source = nodeProvider.findNodeByName("My Voucher").orElse(null);
 
         Node node = merger.resolve(source);
 

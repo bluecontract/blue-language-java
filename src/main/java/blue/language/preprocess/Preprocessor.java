@@ -5,6 +5,7 @@ import blue.language.model.Node;
 import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
 import blue.language.provider.BootstrapProvider;
+import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.PathLimits;
@@ -18,7 +19,7 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Preprocessor {
 
-    public static final String DEFAULT_BLUE_BLUE_ID = "6sqUywMoBRyj9hgQxSu2nDPnqcyiSM7xu9AB9sN98YJK";
+    public static final String DEFAULT_BLUE_BLUE_ID = calculateDefaultBlueBlueId();
 
     private TransformationProcessorProvider processorProvider;
     private NodeProvider nodeProvider;
@@ -100,6 +101,21 @@ public class Preprocessor {
                 throw new RuntimeException("Unable to find DefaultBlue.blue in classpath");
             }
             this.defaultSimpleBlue = YAML_MAPPER.readValue(inputStream, Node.class);
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading DefaultBlue.blue from classpath", e);
+        }
+    }
+
+    private static String calculateDefaultBlueBlueId() {
+        try (InputStream inputStream = Preprocessor.class.getClassLoader().getResourceAsStream("transformation/DefaultBlue.blue")) {
+            if (inputStream == null) {
+                throw new RuntimeException("Unable to find DefaultBlue.blue in classpath");
+            }
+            Node defaultBlue = YAML_MAPPER.readValue(inputStream, Node.class);
+            if (defaultBlue.getItems() != null) {
+                return BlueIdCalculator.calculateBlueId(defaultBlue.getItems());
+            }
+            return BlueIdCalculator.calculateBlueId(defaultBlue);
         } catch (IOException e) {
             throw new RuntimeException("Error loading DefaultBlue.blue from classpath", e);
         }

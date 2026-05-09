@@ -6,5 +6,4 @@ weightKg:
   type: Double
 favouriteToys:
   type:
-    name: Toy
     blueId: ESXYrxrWjvNT5tgdpHPhVVUAqjDq6dnToxxec5zU65gf

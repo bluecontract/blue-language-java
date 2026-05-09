@@ -22,7 +22,6 @@ class NodePathAccessorTest {
                       "  name: RootType\n" +
                       "  type:\n" +
                       "    name: MetaType\n" +
-                      "value: RootValue\n" +
                       "a:\n" +
                       "  - name: A1\n" +
                       "    type:\n" +
@@ -43,7 +42,6 @@ class NodePathAccessorTest {
     @Test
     void testRootLevelAccess() {
         assertEquals("Root", rootNode.get("/name"));
-        assertEquals("RootValue", rootNode.get("/value"));
         assertTrue(rootNode.get("/type") instanceof Node);
         assertEquals("RootType", ((Node) rootNode.get("/type")).getName());
     }

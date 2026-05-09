@@ -17,7 +17,17 @@ public class Base58Sha256Provider implements Function<Object, String> {
 
         String canonized = null;
         try {
-            canonized = new JsonCanonicalizer(JSON_MAPPER.writeValueAsString(object)).getEncodedString();
+            String json = JSON_MAPPER.writeValueAsString(object);
+            try {
+                canonized = new JsonCanonicalizer(json).getEncodedString();
+            } catch (IOException e) {
+                if (object instanceof String || object instanceof Number || object instanceof Boolean || object == null) {
+                    String wrapped = new JsonCanonicalizer("[" + json + "]").getEncodedString();
+                    canonized = wrapped.substring(1, wrapped.length() - 1);
+                } else {
+                    throw e;
+                }
+            }
         } catch (IOException e) {
             throw new IllegalArgumentException("Problem when generating canonized json.");
         }

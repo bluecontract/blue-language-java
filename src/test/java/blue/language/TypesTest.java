@@ -51,7 +51,10 @@ public class TypesTest {
         String alice2 = "name: Alice2\n" +
                         "type:\n" +
                         "  name: Person\n" +
-                        "  blueId: " + nodeProvider.getBlueIdByName("Person");
+                        "  surname:\n" +
+                        "    type: Text\n" +
+                        "  age:\n" +
+                        "    type: Integer";
 
         String alice3 = "name: Alice3\n" +
                         "type:\n" +

@@ -31,12 +31,16 @@ public class BlueIdCalculator {
 
     public String calculate(Object object) {
         // we invoke calculateCleanedObject method only once (for root)
-        return calculateCleanedObject(cleanStructure(object));
+        Object cleaned = cleanStructure(object);
+        if (cleaned == null) {
+            return hashProvider.apply(Collections.emptyMap());
+        }
+        return calculateCleanedObject(cleaned);
     }
 
     private String calculateCleanedObject(Object cleanedObject) {
         if (cleanedObject instanceof String || cleanedObject instanceof Number || cleanedObject instanceof Boolean) {
-            return hashProvider.apply(cleanedObject.toString());
+            return hashProvider.apply(cleanedObject);
         } else if (cleanedObject instanceof Map) {
             return calculateMap((Map<String, Object>) cleanedObject);
         } else if (cleanedObject instanceof List) {
@@ -47,7 +51,7 @@ public class BlueIdCalculator {
     }
 
     private String calculateMap(Map<String, Object> map) {
-        if (map.containsKey(OBJECT_BLUE_ID)) {
+        if (map.size() == 1 && map.containsKey(OBJECT_BLUE_ID)) {
             return (String) map.get(OBJECT_BLUE_ID);
         }
 
@@ -65,20 +69,15 @@ public class BlueIdCalculator {
     }
 
     private String calculateList(List<Object> list) {
-        if (list.size() == 1) {
-            return calculateCleanedObject(list.get(0));
+        String accumulator = hashProvider.apply(Collections.singletonMap("$list", "empty"));
+        for (Object element : list) {
+            String elementHash = calculateCleanedObject(element);
+            List<Map<String, String>> pair = Arrays.asList(
+                    Collections.singletonMap("blueId", accumulator),
+                    Collections.singletonMap("blueId", elementHash));
+            accumulator = hashProvider.apply(Collections.singletonMap("$listCons", pair));
         }
-
-        List<Object> subList = list.subList(0, list.size() - 1);
-        String hashOfSubList = calculateList(subList);
-
-        Object lastElement = list.get(list.size() - 1);
-        String hashOfLastElement = calculateCleanedObject(lastElement);
-
-        List<Map<String, String>> result = Arrays.asList(
-                Collections.singletonMap("blueId", hashOfSubList),
-                Collections.singletonMap("blueId", hashOfLastElement));
-        return hashProvider.apply(result);
+        return accumulator;
     }
 
     private Object cleanStructure(Object obj) {
@@ -103,7 +102,7 @@ public class BlueIdCalculator {
                     cleanedList.add(cleanedItem);
                 }
             }
-            return cleanedList.isEmpty() ? null : cleanedList;
+            return cleanedList;
         } else {
             return obj;
         }

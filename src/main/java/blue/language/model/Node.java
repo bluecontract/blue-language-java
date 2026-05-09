@@ -1,6 +1,7 @@
 package blue.language.model;
 
 import blue.language.utils.NodePathAccessor;
+import blue.language.utils.BlueNumbers;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -26,7 +27,7 @@ public class Node implements Cloneable {
     private List<Node> items;
     private Map<String, Node> properties;
     private String blueId;
-    private Constraints constraints;
+    private Schema schema;
     private Node blue;
     private boolean inlineValue;
 
@@ -59,10 +60,8 @@ public class Node implements Cloneable {
             String typeBlueId = this.type.getBlueId();
             if (INTEGER_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
                 return new BigInteger((String) this.value);
-            } else if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
-                BigDecimal parsed = new BigDecimal((String) this.value);
-                double doubleValue = parsed.doubleValue();
-                return new BigDecimal(Double.toString(doubleValue));
+            } else if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId)) {
+                return BlueNumbers.toCanonicalDoubleValue(this.value);
             } else if (BOOLEAN_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
                 return Boolean.parseBoolean((String) this.value);
             }
@@ -82,8 +81,23 @@ public class Node implements Cloneable {
         return blueId;
     }
 
-    public Constraints getConstraints() {
-        return constraints;
+    public boolean isReferenceOnly() {
+        return blueId != null
+                && name == null
+                && description == null
+                && type == null
+                && itemType == null
+                && keyType == null
+                && valueType == null
+                && value == null
+                && items == null
+                && properties == null
+                && schema == null
+                && blue == null;
+    }
+
+    public Schema getSchema() {
+        return schema;
     }
 
     public Node getBlue() {
@@ -146,9 +160,9 @@ public class Node implements Cloneable {
 
     public Node value(Object value) {
         if (value instanceof Integer || value instanceof Long) {
-            this.value = BigInteger.valueOf((Integer) value);
+            this.value = BigInteger.valueOf(((Number) value).longValue());
         } else if (value instanceof Float || value instanceof Double) {
-            this.value = BigDecimal.valueOf((Double) value);
+            this.value = BigDecimal.valueOf(((Number) value).doubleValue());
         } else {
             this.value = value;
         }
@@ -215,8 +229,8 @@ public class Node implements Cloneable {
         return this;
     }
 
-    public Node constraints(Constraints constraints) {
-        this.constraints = constraints;
+    public Node schema(Schema schema) {
+        this.schema = schema;
         return this;
     }
 
@@ -303,8 +317,8 @@ public class Node implements Cloneable {
                         ));
             }
 
-            if (this.constraints != null) {
-                cloned.constraints = this.constraints.clone();
+            if (this.schema != null) {
+                cloned.schema = this.schema.clone();
             }
 
             if (this.blue != null) {
@@ -330,7 +344,7 @@ public class Node implements Cloneable {
                ", items=" + items +
                ", properties=" + properties +
                ", blueId='" + blueId + '\'' +
-               ", constraints=" + constraints +
+               ", schema=" + schema +
                ", blue=" + blue +
                ", inlineValue=" + inlineValue +
                '}';

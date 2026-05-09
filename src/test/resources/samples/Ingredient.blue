@@ -1,6 +1,6 @@
 name: Ingredient
 type: Text
-constraints:
+schema:
   options:
     - Salt
     - Pepper
