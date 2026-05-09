@@ -182,4 +182,43 @@ public class MergeReverserTest {
         assertEquals("value3", reversed.getAsText("/map/key3/value"));
     }
 
+    @Test
+    public void preservesScalarOverrideThatDiffersFromType() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "status: draft");
+        Node resolved = new Blue(nodeProvider).yamlToNode(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "status: draft");
+        resolved = new Blue(nodeProvider).resolve(resolved);
+        resolved.getProperties().get("status").value("published");
+        Node reversed = new MergeReverser().reverse(resolved);
+
+        assertEquals("published", reversed.getAsText("/status/value"));
+    }
+
+    @Test
+    public void preservesSchemaOverrideThatDiffersFromType() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "schema:\n" +
+                "  minLength: 2");
+        nodeProvider.addSingleDocs(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "schema:\n" +
+                "  minLength: 3");
+
+        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Node reversed = new MergeReverser().reverse(resolved);
+
+        assertNotNull(reversed.getSchema());
+        assertEquals(3, reversed.getSchema().getMinLengthValue());
+    }
+
 }

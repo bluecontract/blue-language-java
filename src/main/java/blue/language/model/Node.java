@@ -277,6 +277,41 @@ public class Node implements Cloneable {
         return this;
     }
 
+    public Node replaceWith(Node source) {
+        if (source == null) {
+            throw new IllegalArgumentException("source must not be null");
+        }
+
+        this.name = source.name;
+        this.description = source.description;
+        this.value = source.value;
+        this.blueId = source.blueId;
+        this.mergePolicy = source.mergePolicy;
+        this.previousBlueId = source.previousBlueId;
+        this.position = source.position;
+        this.inlineValue = source.inlineValue;
+
+        this.type = source.type != null ? source.type.clone() : null;
+        this.itemType = source.itemType != null ? source.itemType.clone() : null;
+        this.keyType = source.keyType != null ? source.keyType.clone() : null;
+        this.valueType = source.valueType != null ? source.valueType.clone() : null;
+        this.items = source.items != null
+                ? source.items.stream().map(Node::clone).collect(Collectors.toCollection(ArrayList::new))
+                : null;
+        this.properties = source.properties != null
+                ? source.properties.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            entry -> entry.getValue().clone(),
+                            (e1, e2) -> e1,
+                            HashMap::new
+                    ))
+                : null;
+        this.schema = source.schema != null ? source.schema.clone() : null;
+        this.blue = source.blue != null ? source.blue.clone() : null;
+        return this;
+    }
+
     public Object get(String path) {
         return NodePathAccessor.get(this, path);
     }
@@ -314,55 +349,7 @@ public class Node implements Cloneable {
         try {
             Node cloned = (Node) super.clone();
 
-            cloned.name = this.name;
-            cloned.description = this.description;
-            cloned.value = this.value;
-            cloned.blueId = this.blueId;
-            cloned.mergePolicy = this.mergePolicy;
-            cloned.previousBlueId = this.previousBlueId;
-            cloned.position = this.position;
-
-            if (this.type != null) {
-                cloned.type = this.type.clone();
-            }
-
-            if (this.itemType != null) {
-                cloned.itemType = this.itemType.clone();
-            }
-
-            if (this.keyType != null) {
-                cloned.keyType = this.keyType.clone();
-            }
-
-            if (this.valueType != null) {
-                cloned.valueType = this.valueType.clone();
-            }
-
-            if (this.items != null) {
-                cloned.items = this.items.stream()
-                        .map(Node::clone)
-                        .collect(Collectors.toCollection(ArrayList::new));
-            }
-
-            if (this.properties != null) {
-                cloned.properties = this.properties.entrySet().stream()
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                entry -> entry.getValue().clone(),
-                                (e1, e2) -> e1,
-                                HashMap::new
-                        ));
-            }
-
-            if (this.schema != null) {
-                cloned.schema = this.schema.clone();
-            }
-
-            if (this.blue != null) {
-                cloned.blue = this.blue.clone();
-            }
-
-            return cloned;
+            return cloned.replaceWith(this);
         } catch (CloneNotSupportedException e) {
             throw new AssertionError("Node must be cloneable", e);
         }

@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import java.util.List;
@@ -15,13 +16,19 @@ public final class DocumentProcessingRuntime {
     private final PatchEngine patchEngine;
     private final EmissionRegistry emissionRegistry;
     private final GasMeter gasMeter;
+    private final ConformanceEngine conformanceEngine;
     private boolean runTerminated;
 
     public DocumentProcessingRuntime(Node document) {
+        this(document, null);
+    }
+
+    public DocumentProcessingRuntime(Node document, ConformanceEngine conformanceEngine) {
         this.document = Objects.requireNonNull(document, "document");
         this.patchEngine = new PatchEngine(this.document);
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
+        this.conformanceEngine = conformanceEngine;
     }
 
     public Node document() {
@@ -133,13 +140,28 @@ public final class DocumentProcessingRuntime {
     }
 
     public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch) {
-        PatchEngine.PatchResult result = patchEngine.applyPatch(originScopePath, patch);
+        Node rollback = document.clone();
+        PatchEngine.PatchResult result;
+        try {
+            result = patchEngine.applyPatch(originScopePath, patch);
+            if (conformanceEngine != null && document.getType() != null) {
+                conformanceEngine.generalizeChangedPath(document, result.path());
+            }
+        } catch (RuntimeException ex) {
+            document.replaceWith(rollback);
+            throw ex;
+        }
+        Node after = result.op() == JsonPatch.Op.REMOVE ? null : cloneNode(patchEngine.read(result.path()));
         return new DocumentUpdateData(result.path(),
                 result.before(),
-                result.after(),
+                after,
                 result.op(),
                 result.originScope(),
                 result.cascadeScopes());
+    }
+
+    private Node cloneNode(Node node) {
+        return node != null ? node.clone() : null;
     }
 
     static final class DocumentUpdateData {

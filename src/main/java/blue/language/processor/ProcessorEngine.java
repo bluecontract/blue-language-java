@@ -232,7 +232,7 @@ final class ProcessorEngine {
 
         Execution(DocumentProcessor owner, Node document) {
             this.owner = owner;
-            this.runtime = new DocumentProcessingRuntime(document);
+            this.runtime = new DocumentProcessingRuntime(document, owner.conformanceEngine());
             this.checkpointManager = new CheckpointManager(runtime, ProcessorEngine::canonicalSignature);
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);

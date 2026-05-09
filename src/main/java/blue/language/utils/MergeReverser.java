@@ -1,6 +1,7 @@
 package blue.language.utils;
 
 import blue.language.model.Node;
+import blue.language.model.Schema;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -23,7 +24,10 @@ public class MergeReverser {
             return;
         }
 
-        if (merged.getValue() != null && (fromType == null || fromType.getValue() == null)) {
+        if (merged.getValue() != null
+                && (fromType == null
+                || fromType.getValue() == null
+                || !Objects.equals(merged.getValue(), fromType.getValue()))) {
             minimal.value(merged.getValue());
         }
 
@@ -44,6 +48,9 @@ public class MergeReverser {
         }
         if (merged.getMergePolicy() != null && (fromType == null || !merged.getMergePolicy().equals(fromType.getMergePolicy()))) {
             minimal.mergePolicy(merged.getMergePolicy());
+        }
+        if (merged.getSchema() != null && (fromType == null || !sameSchema(merged.getSchema(), fromType.getSchema()))) {
+            minimal.schema(merged.getSchema().clone());
         }
 
         if (merged.getItems() != null) {
@@ -85,6 +92,17 @@ public class MergeReverser {
             }
         }
 
+    }
+
+    private boolean sameSchema(Schema left, Schema right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null) {
+            return false;
+        }
+        return BlueIdCalculator.calculateBlueId(new Node().schema(left))
+                .equals(BlueIdCalculator.calculateBlueId(new Node().schema(right)));
     }
 
     private void setTypeIfDifferent(Node merged, Node fromType, Node minimal,

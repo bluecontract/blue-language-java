@@ -1,6 +1,7 @@
 package blue.language;
 
 import blue.language.mapping.NodeToObjectConverter;
+import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
@@ -11,6 +12,7 @@ import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.model.Contract;
 import blue.language.preprocess.Preprocessor;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.Limits;
@@ -88,6 +90,27 @@ public class Blue implements NodeResolver {
 
     public Node canonicalize(Object object) {
         return canonicalize(objectToNode(object));
+    }
+
+    public ResolvedSnapshot resolveToSnapshot(Node node) {
+        Node preprocessed = preprocess(node.clone());
+        Node resolved = resolve(preprocessed.clone());
+        Node canonical = reverse(resolved.clone());
+        return new ResolvedSnapshot(canonical, resolved, BlueIdCalculator.calculateBlueId(canonical));
+    }
+
+    public ResolvedSnapshot resolveToSnapshot(Object object) {
+        return resolveToSnapshot(objectToNode(object));
+    }
+
+    public ResolvedSnapshot loadSnapshot(Node canonical) {
+        Node canonicalClone = canonical.clone();
+        Node resolved = resolve(canonicalClone.clone());
+        return new ResolvedSnapshot(canonicalClone, resolved, BlueIdCalculator.calculateBlueId(canonicalClone));
+    }
+
+    public ConformanceEngine conformanceEngine() {
+        return new ConformanceEngine(nodeProvider, mergingProcessor);
     }
 
     public void extend(Node node, Limits limits) {
@@ -307,7 +330,7 @@ public class Blue implements NodeResolver {
     }
 
     private DocumentProcessor createDefaultDocumentProcessor() {
-        return new DocumentProcessor();
+        return new DocumentProcessor(conformanceEngine());
     }
 
     private Limits combineWithGlobalLimits(Limits methodLimits) {

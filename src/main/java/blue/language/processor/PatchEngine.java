@@ -53,6 +53,11 @@ final class PatchEngine {
         return new PatchResult(targetPath, before, after, op, normalizedScope, cascadeScopes);
     }
 
+    Node read(String path) {
+        String normalized = PointerUtils.normalizePointer(path);
+        return readNode(document, splitPointer(normalized), LookupMode.AFTER, normalized);
+    }
+
     void directWrite(String path, Node value) {
         String normalized = PointerUtils.normalizePointer(path);
         if ("/".equals(normalized)) {

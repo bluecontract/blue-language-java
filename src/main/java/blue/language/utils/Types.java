@@ -22,14 +22,14 @@ public class Types {
     public static boolean isSubtype(Node subtype, Node supertype, NodeProvider nodeProvider) {
         String subtypeBlueId = calculateBlueId(subtype);
         String supertypeBlueId = calculateBlueId(supertype);
-        if (subtypeBlueId.equals(supertypeBlueId))
+        if (sameType(subtype, supertype, subtypeBlueId, supertypeBlueId))
             return true;
 
         if (CORE_TYPE_BLUE_IDS.contains(subtypeBlueId)) {
             Node current = supertype;
             while (current != null) {
                 String currentBlueId = calculateBlueId(current);
-                if (currentBlueId.equals(subtypeBlueId))
+                if (sameType(current, subtype, currentBlueId, subtypeBlueId))
                     return true;
                 current = getType(current, nodeProvider);
             }
@@ -39,11 +39,18 @@ public class Types {
         Node current = getType(subtype, nodeProvider);
         while (current != null) {
             String blueId = calculateBlueId(current);
-            if (blueId.equals(supertypeBlueId))
+            if (sameType(current, supertype, blueId, supertypeBlueId))
                 return true;
             current = getType(current, nodeProvider);
         }
         return false;
+    }
+
+    private static boolean sameType(Node left, Node right, String leftBlueId, String rightBlueId) {
+        if (leftBlueId.equals(rightBlueId)) {
+            return true;
+        }
+        return left.getName() != null && left.getName().equals(right.getName());
     }
 
     public static boolean isSubtypeOfBasicType(Node type, NodeProvider nodeProvider) {

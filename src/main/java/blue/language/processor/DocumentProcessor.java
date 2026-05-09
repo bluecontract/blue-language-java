@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.conformance.ConformanceEngine;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
@@ -19,6 +20,7 @@ public class DocumentProcessor {
     private final ContractProcessorRegistry contractRegistry;
     private final NodeToObjectConverter contractConverter;
     private final ContractLoader contractLoader;
+    private final ConformanceEngine conformanceEngine;
 
     public DocumentProcessor() {
         this(ContractProcessorRegistryBuilder.create().registerDefaults().build());
@@ -28,10 +30,22 @@ public class DocumentProcessor {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
         this.contractConverter = new NodeToObjectConverter(CONTRACT_TYPE_RESOLVER);
         this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
+        this.conformanceEngine = null;
+    }
+
+    public DocumentProcessor(ConformanceEngine conformanceEngine) {
+        this(ContractProcessorRegistryBuilder.create().registerDefaults().build(), conformanceEngine);
+    }
+
+    public DocumentProcessor(ContractProcessorRegistry registry, ConformanceEngine conformanceEngine) {
+        this.contractRegistry = Objects.requireNonNull(registry, "registry");
+        this.contractConverter = new NodeToObjectConverter(CONTRACT_TYPE_RESOLVER);
+        this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
+        this.conformanceEngine = conformanceEngine;
     }
 
     private DocumentProcessor(Builder builder) {
-        this(builder.contractRegistry);
+        this(builder.contractRegistry, builder.conformanceEngine);
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
@@ -67,6 +81,10 @@ public class DocumentProcessor {
         return contractLoader;
     }
 
+    ConformanceEngine conformanceEngine() {
+        return conformanceEngine;
+    }
+
     public Map<String, MarkerContract> markersFor(Node scopeNode, String scopePath) {
         ContractBundle bundle = contractLoader.load(scopeNode, scopePath);
         return bundle.markers();
@@ -78,9 +96,15 @@ public class DocumentProcessor {
 
     static final class Builder {
         private ContractProcessorRegistry contractRegistry = ContractProcessorRegistryBuilder.create().registerDefaults().build();
+        private ConformanceEngine conformanceEngine;
 
         public Builder withRegistry(ContractProcessorRegistry registry) {
             this.contractRegistry = Objects.requireNonNull(registry, "registry");
+            return this;
+        }
+
+        public Builder withConformanceEngine(ConformanceEngine conformanceEngine) {
+            this.conformanceEngine = conformanceEngine;
             return this;
         }
 
