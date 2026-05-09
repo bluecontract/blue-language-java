@@ -2,7 +2,6 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
-import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -10,7 +9,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class BasicNodeProvider extends PreloadedNodeProvider {
@@ -50,15 +48,16 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
 
     private void processNodeWithItems(Node node) {
         List<Node> items = node.getItems();
-        processNodeList(items);
-
         NodeContentHandler.ParsedContent parsedContent = NodeContentHandler.parseAndCalculateBlueId(items, preprocessor);
         blueIdToContentMap.put(parsedContent.blueId, parsedContent.content);
         blueIdToMultipleDocumentsMap.put(parsedContent.blueId, true);
 
-        IntStream.range(0, items.size()).forEach(i -> {
-            Node item = items.get(i);
-            addToNameMap(item.getName(), parsedContent.blueId + "#" + i);
+        IntStream.range(0, parsedContent.content.size()).forEach(i -> {
+            JsonNode item = parsedContent.content.get(i);
+            JsonNode name = item.get("name");
+            if (name != null && !name.isNull()) {
+                addToNameMap(name.asText(), parsedContent.blueId + "#" + i);
+            }
         });
     }
 

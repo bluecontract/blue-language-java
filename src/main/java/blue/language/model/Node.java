@@ -317,6 +317,7 @@ public class Node implements Cloneable {
             cloned.name = this.name;
             cloned.description = this.description;
             cloned.value = this.value;
+            cloned.blueId = this.blueId;
             cloned.mergePolicy = this.mergePolicy;
             cloned.previousBlueId = this.previousBlueId;
             cloned.position = this.position;

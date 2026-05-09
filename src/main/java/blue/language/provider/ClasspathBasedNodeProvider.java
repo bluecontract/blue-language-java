@@ -110,11 +110,6 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
         blueIdToMultipleDocumentsMap.put(parsedContent.blueId, parsedContent.isMultipleDocuments);
 
         if (parsedContent.content.isArray()) {
-            List<Node> nodeList = new ArrayList<>();
-            for (JsonNode element : parsedContent.content) {
-                nodeList.add(JSON_MAPPER.treeToValue(element, Node.class));
-            }
-            processNodeList(nodeList);
             for (int i = 0; i < parsedContent.content.size(); i++) {
                 JsonNode node = parsedContent.content.get(i);
                 addNodeToNameMap(node, parsedContent.blueId + "#" + i);
