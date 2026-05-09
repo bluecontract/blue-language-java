@@ -91,6 +91,71 @@ public class NodeDeserializerTest {
     }
 
     @Test
+    public void testListControlMetadata() throws Exception {
+        String doc = "type: List\n" +
+                     "mergePolicy: append-only\n" +
+                     "items:\n" +
+                     "  - $previous:\n" +
+                     "      blueId: prevHash\n" +
+                     "  - $pos: 2\n" +
+                     "    value: C\n" +
+                     "  - $empty: true";
+
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        assertEquals("append-only", node.getMergePolicy());
+        assertEquals("prevHash", node.getItems().get(0).getPreviousBlueId());
+        assertEquals((Integer) 2, node.getItems().get(1).getPosition());
+        assertEquals("C", node.getItems().get(1).getValue());
+        assertEquals(true, node.getItems().get(2).getProperties().get("$empty").getValue());
+    }
+
+    @Test
+    public void testPreviousControlWithSiblingsIsRejected() {
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$previous:\n" +
+                "  blueId: prevHash\n" +
+                "value: C", Node.class));
+    }
+
+    @Test
+    public void testInvalidListControlMetadataIsRejected() {
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "mergePolicy: replace-all", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$previous: prevHash", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$previous:\n" +
+                "  blueId: prevHash\n" +
+                "  extra: value", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$pos: -1\n" +
+                "value: C", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$pos: 1.5\n" +
+                "value: C", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$pos: \"1\"\n" +
+                "value: C", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$pos: 2147483648\n" +
+                "value: C", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$pos: 0", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "$previous:\n" +
+                "  blueId: 123", Node.class));
+    }
+
+    @Test
     public void testInternalPropertiesFieldIsRejected() {
         assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
                 "properties:\n" +

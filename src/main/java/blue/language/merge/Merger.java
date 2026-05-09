@@ -4,14 +4,22 @@ import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
+import blue.language.utils.Types;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.limits.PathLimits;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
+
+import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
+import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
+import static blue.language.utils.Properties.LIST_TYPE;
+import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
 
 public class Merger implements NodeResolver {
 
@@ -70,42 +78,289 @@ public class Merger implements NodeResolver {
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
         List<Node> targetChildren = target.getItems();
+        String mergePolicy = effectiveMergePolicy(target);
+
+        validateListControlScope(target, sourceChildren);
+        validateListControls(sourceChildren, mergePolicy);
+
         if (targetChildren == null) {
-            targetChildren = sourceChildren.stream()
-                    .filter(child -> limits.shouldMergePathSegment(String.valueOf(sourceChildren.indexOf(child)), target))
-                    .map(child -> {
-                        limits.enterPathSegment(String.valueOf(sourceChildren.indexOf(child)), target);
-                        Node resolvedChild = resolve(child, limits);
-                        limits.exitPathSegment();
-                        return resolvedChild;
-                    })
-                    .collect(Collectors.toList());
+            if (startsWithPrevious(sourceChildren)) {
+                targetChildren = resolvePreviousAnchor(sourceChildren.get(0), limits);
+                target.items(targetChildren);
+                validatePreviousAnchor(targetChildren, sourceChildren.get(0));
+                if (LIST_MERGE_POLICY_APPEND_ONLY.equals(mergePolicy)) {
+                    mergeAppendOnlyChildren(targetChildren, sourceChildren, limits);
+                } else {
+                    mergePositionalChildren(targetChildren, sourceChildren, limits);
+                }
+                return;
+            }
+            targetChildren = resolveInitialChildren(sourceChildren, limits);
             target.items(targetChildren);
             return;
-        } else if (sourceChildren.size() < targetChildren.size())
+        }
+
+        if (startsWithPrevious(sourceChildren)) {
+            validatePreviousAnchor(targetChildren, sourceChildren.get(0));
+        }
+
+        if (LIST_MERGE_POLICY_APPEND_ONLY.equals(mergePolicy)) {
+            mergeAppendOnlyChildren(targetChildren, sourceChildren, limits);
+        } else {
+            mergePositionalChildren(targetChildren, sourceChildren, limits);
+        }
+    }
+
+    private List<Node> resolveInitialChildren(List<Node> sourceChildren, Limits limits) {
+        List<Node> result = new ArrayList<>();
+        int start = startsWithPrevious(sourceChildren) ? 1 : 0;
+        for (int i = start; i < sourceChildren.size(); i++) {
+            Node child = sourceChildren.get(i);
+            if (child.getPosition() != null) {
+                int position = child.getPosition();
+                if (position != result.size()) {
+                    throw new IllegalArgumentException("\"$pos\" is out of range for a list without inherited items.");
+                }
+                child = withoutPosition(child);
+            }
+            Node resolvedChild = resolveListChild(child, limits, String.valueOf(result.size()));
+            if (resolvedChild != null) {
+                result.add(resolvedChild);
+            }
+        }
+        return result;
+    }
+
+    private void mergeAppendOnlyChildren(List<Node> targetChildren, List<Node> sourceChildren, Limits limits) {
+        if (startsWithPrevious(sourceChildren)) {
+            appendChildren(targetChildren, sourceChildren, 1, limits);
+            return;
+        }
+
+        if (sourceChildren.size() < targetChildren.size())
             throw new IllegalArgumentException(String.format(
                     "Subtype of element must not have more items (%d) than the element itself (%d).",
                     targetChildren.size(), sourceChildren.size()
             ));
 
         for (int i = 0; i < sourceChildren.size(); i++) {
-            if (!limits.shouldMergePathSegment(String.valueOf(i), sourceChildren.get(i))) {
-                continue;
-            }
-            limits.enterPathSegment(String.valueOf(i), sourceChildren.get(i));
             if (i >= targetChildren.size()) {
-                targetChildren.add(sourceChildren.get(i));
-                limits.exitPathSegment();
+                Node resolvedChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i));
+                if (resolvedChild != null) {
+                    targetChildren.add(resolvedChild);
+                }
                 continue;
             }
-            String sourceBlueId = BlueIdCalculator.calculateBlueId(sourceChildren.get(i));
+            Node sourceChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i));
+            if (sourceChild == null) {
+                continue;
+            }
+            String sourceBlueId = BlueIdCalculator.calculateBlueId(sourceChild);
             String targetBlueId = BlueIdCalculator.calculateBlueId(targetChildren.get(i));
             if (!sourceBlueId.equals(targetBlueId))
                 throw new IllegalArgumentException(String.format(
-                        "Mismatched items at index %d: source item has blueId '%s', but target item has blueId '%s'.",
+                        "Append-only list cannot modify inherited item at index %d: source item has blueId '%s', but target item has blueId '%s'.",
                         i, sourceBlueId, targetBlueId
                 ));
+        }
+    }
+
+    private void mergePositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, Limits limits) {
+        boolean hasPositionControls = sourceChildren.stream().anyMatch(child -> child.getPosition() != null);
+        int start = startsWithPrevious(sourceChildren) ? 1 : 0;
+
+        if (!hasPositionControls) {
+            if (startsWithPrevious(sourceChildren)) {
+                appendChildren(targetChildren, sourceChildren, start, limits);
+                return;
+            }
+            mergeLegacyPositionalChildren(targetChildren, sourceChildren, start, limits);
+            return;
+        }
+
+        Set<Integer> positions = new HashSet<>();
+        for (int i = start; i < sourceChildren.size(); i++) {
+            Node sourceChild = sourceChildren.get(i);
+            if (sourceChild.getPosition() != null) {
+                int position = sourceChild.getPosition();
+                if (position >= targetChildren.size()) {
+                    throw new IllegalArgumentException("\"$pos\" is out of range: " + position);
+                }
+                if (!positions.add(position)) {
+                    throw new IllegalArgumentException("Duplicate \"$pos\" value in list: " + position);
+                }
+                mergeOrReplacePosition(targetChildren, position, withoutPosition(sourceChild), limits);
+            } else {
+                Node resolvedChild = resolveListChild(sourceChild, limits, String.valueOf(targetChildren.size()));
+                if (resolvedChild != null) {
+                    targetChildren.add(resolvedChild);
+                }
+            }
+        }
+    }
+
+    private void mergeLegacyPositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits) {
+        int sourceLength = sourceChildren.size() - start;
+        if (sourceLength < targetChildren.size()) {
+            throw new IllegalArgumentException(String.format(
+                    "Subtype of element must not have more items (%d) than the element itself (%d).",
+                    targetChildren.size(), sourceLength
+            ));
+        }
+
+        for (int i = 0; i < sourceLength; i++) {
+            Node sourceChild = sourceChildren.get(start + i);
+            if (i >= targetChildren.size()) {
+                Node resolvedChild = resolveListChild(sourceChild, limits, String.valueOf(i));
+                if (resolvedChild != null) {
+                    targetChildren.add(resolvedChild);
+                }
+            } else {
+                merge(targetChildren.get(i), sourceChild, limits);
+            }
+        }
+    }
+
+    private void mergeOrReplacePosition(List<Node> targetChildren, int position, Node overlay, Limits limits) {
+        if (isEmptyPlaceholder(targetChildren.get(position)) || overlay.getValue() != null || overlay.getItems() != null) {
+            Node resolvedChild = resolveListChild(overlay, limits, String.valueOf(position));
+            if (resolvedChild != null) {
+                targetChildren.set(position, resolvedChild);
+            }
+            return;
+        }
+        if (overlay.getType() != null) {
+            Node resolvedOverlay = resolveListChild(overlay, limits, String.valueOf(position));
+            if (resolvedOverlay != null) {
+                mergeObject(targetChildren.get(position), resolvedOverlay, limits);
+            }
+            return;
+        }
+        merge(targetChildren.get(position), overlay, limits);
+    }
+
+    private void appendChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits) {
+        for (int i = start; i < sourceChildren.size(); i++) {
+            Node resolvedChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(targetChildren.size()));
+            if (resolvedChild != null) {
+                targetChildren.add(resolvedChild);
+            }
+        }
+    }
+
+    private List<Node> resolvePreviousAnchor(Node previousAnchor, Limits limits) {
+        List<Node> fetched = nodeProvider.fetchByBlueId(previousAnchor.getPreviousBlueId());
+        if (fetched == null || fetched.isEmpty()) {
+            throw new IllegalArgumentException("No content found for $previous blueId: " + previousAnchor.getPreviousBlueId());
+        }
+
+        List<Node> previousChildren = fetched.size() == 1 && fetched.get(0).getItems() != null
+                ? fetched.get(0).getItems()
+                : fetched;
+        List<Node> resolved = new ArrayList<>();
+        for (int i = 0; i < previousChildren.size(); i++) {
+            Node resolvedChild = resolveListChild(previousChildren.get(i), limits, String.valueOf(i));
+            if (resolvedChild != null) {
+                resolved.add(resolvedChild);
+            }
+        }
+        return resolved;
+    }
+
+    private void validatePreviousAnchor(List<Node> targetChildren, Node previousAnchor) {
+        String actualBlueId = BlueIdCalculator.calculateBlueId(targetChildren);
+        if (!actualBlueId.equals(previousAnchor.getPreviousBlueId())) {
+            throw new IllegalArgumentException("\"$previous\" blueId does not match the inherited list. Expected "
+                    + actualBlueId + " but found " + previousAnchor.getPreviousBlueId() + ".");
+        }
+    }
+
+    private boolean isEmptyPlaceholder(Node node) {
+        Map<String, Node> properties = node.getProperties();
+        if (properties == null || properties.size() != 1 || !properties.containsKey("$empty")) {
+            return false;
+        }
+        Node marker = properties.get("$empty");
+        return Boolean.TRUE.equals(marker.getValue())
+                && node.getValue() == null
+                && node.getItems() == null
+                && node.getType() == null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null;
+    }
+
+    private Node resolveListChild(Node child, Limits limits, String segment) {
+        if (child.getPreviousBlueId() != null || child.getPosition() != null) {
+            throw new IllegalArgumentException("List control items must be consumed before resolving list children.");
+        }
+        if (!limits.shouldMergePathSegment(segment, child)) {
+            return null;
+        }
+        limits.enterPathSegment(segment, child);
+        try {
+            return resolve(child, limits);
+        } finally {
             limits.exitPathSegment();
+        }
+    }
+
+    private Node withoutPosition(Node node) {
+        Node clone = node.clone();
+        clone.position(null);
+        return clone;
+    }
+
+    private boolean startsWithPrevious(List<Node> children) {
+        return !children.isEmpty() && children.get(0).getPreviousBlueId() != null;
+    }
+
+    private String effectiveMergePolicy(Node node) {
+        return node.getMergePolicy() == null ? LIST_MERGE_POLICY_POSITIONAL : node.getMergePolicy();
+    }
+
+    private void validateListControlScope(Node target, List<Node> sourceChildren) {
+        boolean hasControls = sourceChildren.stream()
+                .anyMatch(child -> child.getPreviousBlueId() != null || child.getPosition() != null);
+        if (hasControls && !isListTyped(target)) {
+            throw new IllegalArgumentException("List control forms require a node of type List.");
+        }
+    }
+
+    private boolean isListTyped(Node node) {
+        Node type = node.getType();
+        if (type == null) {
+            return false;
+        }
+        if (LIST_TYPE_BLUE_ID.equals(type.getBlueId())) {
+            return true;
+        }
+        if (LIST_TYPE.equals(type.getName())) {
+            return true;
+        }
+        Object typeValue = type.getValue();
+        return LIST_TYPE.equals(typeValue) || Types.isListType(type, nodeProvider);
+    }
+
+    private void validateListControls(List<Node> sourceChildren, String mergePolicy) {
+        boolean previousSeen = false;
+        Set<Integer> positions = new HashSet<>();
+        for (int i = 0; i < sourceChildren.size(); i++) {
+            Node child = sourceChildren.get(i);
+            if (child.getPreviousBlueId() != null) {
+                if (i != 0 || previousSeen) {
+                    throw new IllegalArgumentException("\"$previous\" must appear only as the first list item.");
+                }
+                previousSeen = true;
+            }
+            if (child.getPosition() != null) {
+                if (LIST_MERGE_POLICY_APPEND_ONLY.equals(mergePolicy)) {
+                    throw new IllegalArgumentException("\"$pos\" is not allowed for append-only lists.");
+                }
+                if (!positions.add(child.getPosition())) {
+                    throw new IllegalArgumentException("Duplicate \"$pos\" value in list: " + child.getPosition());
+                }
+            }
         }
     }
 

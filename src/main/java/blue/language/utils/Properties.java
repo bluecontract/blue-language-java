@@ -15,10 +15,16 @@ public class Properties {
     public static final String OBJECT_KEY_TYPE = "keyType";
     public static final String OBJECT_VALUE_TYPE = "valueType";
     public static final String OBJECT_SCHEMA = "schema";
+    public static final String OBJECT_MERGE_POLICY = "mergePolicy";
     public static final String OBJECT_VALUE = "value";
     public static final String OBJECT_ITEMS = "items";
     public static final String OBJECT_BLUE_ID = "blueId";
     public static final String OBJECT_BLUE = "blue";
+    public static final String LIST_MERGE_POLICY_POSITIONAL = "positional";
+    public static final String LIST_MERGE_POLICY_APPEND_ONLY = "append-only";
+    public static final String LIST_CONTROL_PREVIOUS = "$previous";
+    public static final String LIST_CONTROL_POS = "$pos";
+    public static final String LIST_CONTROL_EMPTY = "$empty";
 
     public static final String TEXT_TYPE = "Text";
     public static final String DOUBLE_TYPE = "Double";

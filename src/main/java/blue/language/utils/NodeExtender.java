@@ -147,5 +147,8 @@ public class NodeExtender {
         target.items(source.getItems());
         target.properties(source.getProperties());
         target.schema(source.getSchema());
+        target.mergePolicy(source.getMergePolicy());
+        target.previousBlueId(source.getPreviousBlueId());
+        target.position(source.getPosition());
     }
 }

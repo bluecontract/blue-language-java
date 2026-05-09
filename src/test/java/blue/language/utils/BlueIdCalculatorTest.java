@@ -13,6 +13,7 @@ import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BlueIdCalculatorTest {
 
@@ -117,6 +118,119 @@ public class BlueIdCalculatorTest {
                 assertEquals("hash({abc={blueId=" + fakeListHash("hash(1)", "hash(2)") + "}})", flatResult);
                 assertEquals("hash({abc={blueId=" + fakeListHash(fakeListHash("hash(1)"), "hash(2)") + "}})", nestedResult);
                 assertNotEquals(flatResult, nestedResult);
+        }
+
+        @Test
+        public void testPreviousListAnchorSeedsListHash() {
+                String anchored = "abc:\n" +
+                                "  - $previous:\n" +
+                                "      blueId: prevHash\n" +
+                                "  - value: x";
+
+                String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(anchored, Map.class));
+
+                assertEquals("hash({abc={blueId=hash({$listCons={elem={blueId=hash({value=x})}, prev={blueId=prevHash}}})}})", result);
+        }
+
+        @Test
+        public void testPreviousListAnchorWithoutAppendsReturnsPreviousBlueId() {
+                String anchored = "abc:\n" +
+                                "  - $previous:\n" +
+                                "      blueId: prevHash";
+
+                String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(anchored, Map.class));
+
+                assertEquals("hash({abc={blueId=prevHash}})", result);
+        }
+
+        @Test
+        public void testPositionControlsAreConsumedBeforeHashing() {
+                String withPosition = "abc:\n" +
+                                "  - $pos: 0\n" +
+                                "    value: A\n" +
+                                "  - value: B";
+                String normalized = "abc:\n" +
+                                "  - value: A\n" +
+                                "  - value: B";
+
+                String positionedResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(withPosition, Map.class));
+                String normalizedResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(normalized, Map.class));
+
+                assertEquals(normalizedResult, positionedResult);
+        }
+
+        @Test
+        public void testPositionControlsAreOrderIndependentBeforeHashing() {
+                String outOfOrder = "abc:\n" +
+                                "  - $pos: 1\n" +
+                                "    value: B\n" +
+                                "  - $pos: 0\n" +
+                                "    value: A\n" +
+                                "  - value: C";
+                String normalized = "abc:\n" +
+                                "  - value: A\n" +
+                                "  - value: B\n" +
+                                "  - value: C";
+
+                String outOfOrderResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(outOfOrder, Map.class));
+                String normalizedResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(normalized, Map.class));
+
+                assertEquals(normalizedResult, outOfOrderResult);
+        }
+
+        @Test
+        public void testInvalidListControlsAreRejectedDuringHashing() {
+                BlueIdCalculator calculator = new BlueIdCalculator(fakeHashValueProvider());
+
+                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "abc:\n" +
+                                "  - value: A\n" +
+                                "  - $previous:\n" +
+                                "      blueId: prevHash", Map.class)));
+
+                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "abc:\n" +
+                                "  - $pos: 0\n" +
+                                "    value: A\n" +
+                                "  - $pos: 0\n" +
+                                "    value: B", Map.class)));
+
+                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "abc:\n" +
+                                "  - $pos: 1.5\n" +
+                                "    value: A", Map.class)));
+
+                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "abc:\n" +
+                                "  - $pos: 2147483648\n" +
+                                "    value: A", Map.class)));
+
+                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "abc:\n" +
+                                "  - $pos: 0", Map.class)));
+
+                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "abc:\n" +
+                                "  - $previous:\n" +
+                                "      blueId: 123", Map.class)));
+
+                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "abc:\n" +
+                                "  - $previous:\n" +
+                                "      blueId: prevHash\n" +
+                                "      extra: value", Map.class)));
+        }
+
+        @Test
+        public void testEmptyPlaceholderHashesAsContent() {
+                String placeholder = "abc:\n" +
+                                "  - $empty: true";
+                String empty = "abc: []";
+
+                String placeholderResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(placeholder, Map.class));
+                String emptyResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(empty, Map.class));
+
+                assertNotEquals(emptyResult, placeholderResult);
         }
 
         @Test
@@ -382,7 +496,7 @@ public class BlueIdCalculatorTest {
         private static String fakeListHash(String... elementHashes) {
                 String accumulator = "hash({$list=empty})";
                 for (String elementHash : elementHashes) {
-                        accumulator = "hash({$listCons=[{blueId=" + accumulator + "}, {blueId=" + elementHash + "}]})";
+                        accumulator = "hash({$listCons={elem={blueId=" + elementHash + "}, prev={blueId=" + accumulator + "}}})";
                 }
                 return accumulator;
         }

@@ -42,13 +42,16 @@ public class MergeReverser {
         if (merged.getBlueId() != null && (fromType == null || !merged.getBlueId().equals(fromType.getBlueId()))) {
             minimal.blueId(merged.getBlueId());
         }
+        if (merged.getMergePolicy() != null && (fromType == null || !merged.getMergePolicy().equals(fromType.getMergePolicy()))) {
+            minimal.mergePolicy(merged.getMergePolicy());
+        }
 
         if (merged.getItems() != null) {
             int start = 0;
             List<Node> minimalItems = new ArrayList<>();
             if (fromType != null && fromType.getItems() != null) {
                 String itemsBlueId = BlueIdCalculator.calculateBlueId(fromType.getItems());
-                minimalItems.add(new Node().blueId(itemsBlueId));
+                minimalItems.add(new Node().previousBlueId(itemsBlueId));
                 start = fromType.getItems().size();
             }
             if (merged.getItems().size() > start) {

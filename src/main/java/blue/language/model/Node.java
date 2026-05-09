@@ -28,6 +28,9 @@ public class Node implements Cloneable {
     private Map<String, Node> properties;
     private String blueId;
     private Schema schema;
+    private String mergePolicy;
+    private String previousBlueId;
+    private Integer position;
     private Node blue;
     private boolean inlineValue;
 
@@ -93,11 +96,26 @@ public class Node implements Cloneable {
                 && items == null
                 && properties == null
                 && schema == null
+                && mergePolicy == null
+                && previousBlueId == null
+                && position == null
                 && blue == null;
     }
 
     public Schema getSchema() {
         return schema;
+    }
+
+    public String getMergePolicy() {
+        return mergePolicy;
+    }
+
+    public String getPreviousBlueId() {
+        return previousBlueId;
+    }
+
+    public Integer getPosition() {
+        return position;
     }
 
     public Node getBlue() {
@@ -234,6 +252,21 @@ public class Node implements Cloneable {
         return this;
     }
 
+    public Node mergePolicy(String mergePolicy) {
+        this.mergePolicy = mergePolicy;
+        return this;
+    }
+
+    public Node previousBlueId(String previousBlueId) {
+        this.previousBlueId = previousBlueId;
+        return this;
+    }
+
+    public Node position(Integer position) {
+        this.position = position;
+        return this;
+    }
+
     public Node blue(Node blue) {
         this.blue = blue;
         return this;
@@ -284,6 +317,9 @@ public class Node implements Cloneable {
             cloned.name = this.name;
             cloned.description = this.description;
             cloned.value = this.value;
+            cloned.mergePolicy = this.mergePolicy;
+            cloned.previousBlueId = this.previousBlueId;
+            cloned.position = this.position;
 
             if (this.type != null) {
                 cloned.type = this.type.clone();
@@ -345,6 +381,9 @@ public class Node implements Cloneable {
                ", properties=" + properties +
                ", blueId='" + blueId + '\'' +
                ", schema=" + schema +
+               ", mergePolicy='" + mergePolicy + '\'' +
+               ", previousBlueId='" + previousBlueId + '\'' +
+               ", position=" + position +
                ", blue=" + blue +
                ", inlineValue=" + inlineValue +
                '}';

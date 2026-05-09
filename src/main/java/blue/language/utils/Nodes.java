@@ -23,7 +23,10 @@ public class Nodes {
         PROPERTIES,
         BLUE,
         ITEMS,
-        SCHEMA
+        SCHEMA,
+        MERGE_POLICY,
+        PREVIOUS_BLUE_ID,
+        POSITION
     }
 
     public static boolean isEmptyNode(Node node) {
@@ -79,6 +82,9 @@ public class Nodes {
             case BLUE: return node.getBlue();
             case ITEMS: return node.getItems();
             case SCHEMA: return node.getSchema();
+            case MERGE_POLICY: return node.getMergePolicy();
+            case PREVIOUS_BLUE_ID: return node.getPreviousBlueId();
+            case POSITION: return node.getPosition();
             case KEY_TYPE: return node.getKeyType();
             case VALUE_TYPE: return node.getValueType();
             case ITEM_TYPE: return node.getItemType();

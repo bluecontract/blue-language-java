@@ -8,11 +8,14 @@ import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.Types;
 
 import static blue.language.utils.Types.isSubtype;
+import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
+import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
 
 public class ListProcessor implements MergingProcessor {
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+        processMergePolicy(target, source);
 
         if (source.getItemType() != null && !Types.isListType(source.getType(), nodeProvider)) {
             throw new IllegalArgumentException("Source node with itemType must have a List type");
@@ -43,6 +46,28 @@ public class ListProcessor implements MergingProcessor {
                     throw new IllegalArgumentException(errorMessage);
                 }
             }
+        }
+    }
+
+    private void processMergePolicy(Node target, Node source) {
+        String sourceMergePolicy = source.getMergePolicy();
+        String targetMergePolicy = target.getMergePolicy();
+        validateMergePolicy(sourceMergePolicy);
+        validateMergePolicy(targetMergePolicy);
+
+        if (targetMergePolicy == null) {
+            target.mergePolicy(sourceMergePolicy);
+        } else if (sourceMergePolicy != null && !targetMergePolicy.equals(sourceMergePolicy)) {
+            throw new IllegalArgumentException("Conflicting list mergePolicy values: target is \""
+                    + targetMergePolicy + "\" but source is \"" + sourceMergePolicy + "\".");
+        }
+    }
+
+    private void validateMergePolicy(String mergePolicy) {
+        if (mergePolicy != null
+                && !LIST_MERGE_POLICY_POSITIONAL.equals(mergePolicy)
+                && !LIST_MERGE_POLICY_APPEND_ONLY.equals(mergePolicy)) {
+            throw new IllegalArgumentException("mergePolicy must be either \"positional\" or \"append-only\".");
         }
     }
 

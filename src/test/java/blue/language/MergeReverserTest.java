@@ -176,7 +176,7 @@ public class MergeReverserTest {
                         blue.yamlToNode("value: A\ntype: Text"),
                         blue.yamlToNode("value: B\ntype: Text")
                 )
-        ), reversed.getAsNode("/list").getItems().get(0).getBlueId());
+        ), reversed.getAsNode("/list").getItems().get(0).getPreviousBlueId());
         assertEquals("C", reversed.getAsNode("/list").getItems().get(1).getValue());
         assertEquals(1, reversed.getAsNode("/map").getProperties().size());
         assertEquals("value3", reversed.getAsText("/map/key3/value"));

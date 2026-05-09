@@ -35,6 +35,14 @@ public class NodeToMapListOrValue {
             return reference;
         }
 
+        if (node.getPreviousBlueId() != null) {
+            Map<String, Object> previous = new LinkedHashMap<>();
+            previous.put(OBJECT_BLUE_ID, node.getPreviousBlueId());
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put(LIST_CONTROL_PREVIOUS, previous);
+            return result;
+        }
+
         Object value = node.getValue();
 
         if (value != null && strategy == SIMPLE)
@@ -73,6 +81,10 @@ public class NodeToMapListOrValue {
             result.put(OBJECT_KEY_TYPE, get(node.getKeyType()));
         if (node.getValueType() != null)
             result.put(OBJECT_VALUE_TYPE, get(node.getValueType()));
+        if (node.getMergePolicy() != null)
+            result.put(OBJECT_MERGE_POLICY, node.getMergePolicy());
+        if (node.getPosition() != null)
+            result.put(LIST_CONTROL_POS, BigInteger.valueOf(node.getPosition()));
         if (value != null)
             result.put(OBJECT_VALUE, handleValue(value, valueTypeBlueId));
         if (items != null)
@@ -93,6 +105,33 @@ public class NodeToMapListOrValue {
         if (node.getProperties() != null && !node.getProperties().isEmpty()) payloadKinds++;
         if (payloadKinds > 1) {
             throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields.");
+        }
+        if (node.getPreviousBlueId() != null && (payloadKinds > 0
+                || node.getName() != null
+                || node.getDescription() != null
+                || node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getSchema() != null
+                || node.getMergePolicy() != null
+                || node.getPosition() != null
+                || node.getBlue() != null
+                || node.getBlueId() != null)) {
+            throw new IllegalArgumentException("\"$previous\" list anchors must be single-key list items.");
+        }
+        if (node.getPosition() != null && payloadKinds == 0
+                && node.getName() == null
+                && node.getDescription() == null
+                && node.getType() == null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null
+                && node.getSchema() == null
+                && node.getMergePolicy() == null
+                && node.getBlue() == null
+                && node.getBlueId() == null) {
+            throw new IllegalArgumentException("\"$pos\" items must contain an overlay.");
         }
     }
 

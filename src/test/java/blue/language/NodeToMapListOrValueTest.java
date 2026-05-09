@@ -6,6 +6,7 @@ import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -238,6 +239,40 @@ public class NodeToMapListOrValueTest {
         Object object = NodeToMapListOrValue.get(new Node().blueId("abc"));
 
         assertEquals(Map.of("blueId", "abc"), object);
+    }
+
+    @Test
+    public void testListControlSerialization() {
+        Object previous = NodeToMapListOrValue.get(new Node().previousBlueId("prevHash"));
+        assertEquals(Map.of("$previous", Map.of("blueId", "prevHash")), previous);
+
+        Object positioned = NodeToMapListOrValue.get(new Node()
+                .position(2)
+                .value("C"));
+        assertEquals(new BigInteger("2"), ((Map<?, ?>) positioned).get("$pos"));
+        assertEquals("C", ((Map<?, ?>) positioned).get("value"));
+
+        Object list = NodeToMapListOrValue.get(new Node()
+                .type(new Node().blueId("6aehfNAxHLC1PHHoDr3tYtFH3RWNbiWdFancJ1bypXEY"))
+                .mergePolicy("append-only")
+                .items(new Node().value("A")));
+        assertEquals("append-only", ((Map<?, ?>) list).get("mergePolicy"));
+    }
+
+    @Test
+    public void testInvalidProgrammaticPreviousControlSerializationIsRejected() {
+        Node invalid = new Node()
+                .previousBlueId("prevHash")
+                .value("C");
+
+        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalid));
+    }
+
+    @Test
+    public void testInvalidProgrammaticPositionControlSerializationIsRejected() {
+        Node invalid = new Node().position(0);
+
+        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalid));
     }
 
     @Test
