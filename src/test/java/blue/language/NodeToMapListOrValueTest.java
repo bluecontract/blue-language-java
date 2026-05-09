@@ -6,6 +6,7 @@ import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -199,7 +200,10 @@ public class NodeToMapListOrValueTest {
                 .multipleOf(new BigDecimal("2.0"))
                 .minItems(1)
                 .maxItems(5)
-                .uniqueItems(true);
+                .uniqueItems(true)
+                .minFields(1)
+                .maxFields(3)
+                .enumValues(Arrays.asList(new Node().value("red"), new Node().value("blue")));
 
         Node node = new Node()
                 .name("nameA")
@@ -223,6 +227,10 @@ public class NodeToMapListOrValueTest {
         assertEquals(1, resultSchema.getMinItemsValue());
         assertEquals(5, resultSchema.getMaxItemsValue());
         assertEquals(true, resultSchema.getUniqueItemsValue());
+        assertEquals(1, resultSchema.getMinFieldsValue());
+        assertEquals(3, resultSchema.getMaxFieldsValue());
+        assertEquals("red", resultSchema.getEnum().get(0).getValue());
+        assertEquals("blue", resultSchema.getEnum().get(1).getValue());
     }
 
     @Test

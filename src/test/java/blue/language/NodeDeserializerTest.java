@@ -238,7 +238,9 @@ public class NodeDeserializerTest {
                      "  minItems: 1\n" +
                      "  maxItems: 5\n" +
                      "  uniqueItems: true\n" +
-                     "  options:\n" +
+                     "  minFields: 1\n" +
+                     "  maxFields: 3\n" +
+                     "  enum:\n" +
                      "    - blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
                      "    - name: name2\n" +
                      "      description: description2";
@@ -261,10 +263,28 @@ public class NodeDeserializerTest {
         assertEquals((Integer) 1, schema.getMinItemsValue());
         assertEquals((Integer) 5, schema.getMaxItemsValue());
         assertEquals(true, schema.getUniqueItemsValue());
-        assertEquals(2, schema.getOptions().size());
-        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", schema.getOptions().get(0).getBlueId());
-        assertEquals("name2", schema.getOptions().get(1).getName());
-        assertEquals("description2", schema.getOptions().get(1).getDescription());
+        assertEquals((Integer) 1, schema.getMinFieldsValue());
+        assertEquals((Integer) 3, schema.getMaxFieldsValue());
+        assertEquals(2, schema.getEnum().size());
+        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", schema.getEnum().get(0).getBlueId());
+        assertEquals("name2", schema.getEnum().get(1).getName());
+        assertEquals("description2", schema.getEnum().get(1).getDescription());
+    }
+
+    @Test
+    public void testLegacySchemaOptionsMigratesToEnum() throws Exception {
+        String doc = "name: name\n" +
+                     "schema:\n" +
+                     "  options:\n" +
+                     "    - value: red\n" +
+                     "    - value: blue";
+
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        assertNotNull(node.getSchema().getEnum());
+        assertEquals(2, node.getSchema().getEnum().size());
+        assertEquals("red", node.getSchema().getEnum().get(0).getValue());
+        assertSame(node.getSchema().getEnum(), node.getSchema().getOptions());
     }
 
     @Test

@@ -5,12 +5,17 @@ import blue.language.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.LeastCommonMultiple;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class SchemaPropagator implements MergingProcessor {
     
@@ -40,7 +45,9 @@ public class SchemaPropagator implements MergingProcessor {
         propagateMinItems(sourceSchema, targetSchema);
         propagateMaxItems(sourceSchema, targetSchema);
         propagateUniqueItems(sourceSchema, targetSchema);
-        propagateOptions(sourceSchema, targetSchema);
+        propagateMinFields(sourceSchema, targetSchema);
+        propagateMaxFields(sourceSchema, targetSchema);
+        propagateEnum(sourceSchema, targetSchema);
     }
 
 
@@ -135,7 +142,48 @@ public class SchemaPropagator implements MergingProcessor {
         propagateBoolean(source.getUniqueItemsValue(), target::getUniqueItemsValue, target::uniqueItems, true);
     }
 
-    private void propagateOptions(Schema source, Schema target) {
+    private void propagateMinFields(Schema source, Schema target) {
+        propagateMinValue(source.getMinFieldsValue(), target::getMinFieldsValue, target::minFields);
+    }
+
+    private void propagateMaxFields(Schema source, Schema target) {
+        propagateMaxValue(source.getMaxFieldsValue(), target::getMaxFieldsValue, target::maxFields);
+    }
+
+    private void propagateEnum(Schema source, Schema target) {
+        List<Node> sourceEnum = source.getEnum();
+        if (sourceEnum == null) {
+            return;
+        }
+
+        List<Node> targetEnum = target.getEnum();
+        if (targetEnum == null) {
+            target.enumValues(cloneNodes(sourceEnum));
+            return;
+        }
+
+        Map<String, Node> targetValuesByBlueId = targetEnum.stream()
+                .collect(Collectors.toMap(this::enumComparableBlueId, Function.identity(), (left, right) -> left));
+        List<Node> intersection = new ArrayList<>();
+        for (Node sourceValue : sourceEnum) {
+            Node targetValue = targetValuesByBlueId.get(enumComparableBlueId(sourceValue));
+            if (targetValue != null) {
+                intersection.add(targetValue.clone());
+            }
+        }
+        target.enumValues(intersection);
+    }
+
+    private List<Node> cloneNodes(List<Node> nodes) {
+        return nodes.stream()
+                .map(Node::clone)
+                .collect(Collectors.toList());
+    }
+
+    private String enumComparableBlueId(Node node) {
+        Node comparable = node.clone();
+        comparable.schema(null);
+        return BlueIdCalculator.calculateBlueId(comparable);
     }
 
 }

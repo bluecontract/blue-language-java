@@ -80,6 +80,16 @@ public class Blue implements NodeResolver {
         return reverse(objectToNode(object));
     }
 
+    public Node canonicalize(Node node) {
+        Node preprocessed = preprocess(node.clone());
+        Node resolved = resolve(preprocessed.clone());
+        return reverse(resolved);
+    }
+
+    public Node canonicalize(Object object) {
+        return canonicalize(objectToNode(object));
+    }
+
     public void extend(Node node, Limits limits) {
         Limits effectiveLimits = combineWithGlobalLimits(limits);
         new NodeExtender(nodeProvider).extend(node, effectiveLimits);
@@ -167,6 +177,14 @@ public class Blue implements NodeResolver {
 
     public String calculateBlueId(Object object) {
         return calculateBlueId(objectToNode(object));
+    }
+
+    public String calculateSemanticBlueId(Node node) {
+        return BlueIdCalculator.calculateBlueId(canonicalize(node));
+    }
+
+    public String calculateSemanticBlueId(Object object) {
+        return calculateSemanticBlueId(objectToNode(object));
     }
 
     public void addPreprocessingAliases(Map<String, String> aliases) {

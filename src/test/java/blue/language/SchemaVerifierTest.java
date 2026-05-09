@@ -86,6 +86,13 @@ public class SchemaVerifierTest {
     }
 
     @Test
+    public void testMinLengthCountsUnicodeCodePoints() throws Exception {
+        schema.minLength(2);
+        node.value("\uD83D\uDE00");
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
     public void testMaxLengthPositive() throws Exception {
         schema.maxLength(3);
         node.value("xyz");
@@ -98,6 +105,14 @@ public class SchemaVerifierTest {
         schema.maxLength(2);
         node.value("xyz");
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
+    public void testMaxLengthCountsUnicodeCodePoints() throws Exception {
+        schema.maxLength(1);
+        node.value("\uD83D\uDE00");
+        merger.resolve(node);
+        // nothing should be thrown
     }
 
     @Test
@@ -237,6 +252,86 @@ public class SchemaVerifierTest {
         schema.allowMultiple(true);
         node.items(Arrays.asList(new Node().name("Name 1"), new Node().name("Name 1")));
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
+    public void testMinFieldsPositive() throws Exception {
+        schema.minFields(2);
+        node.properties(
+                "a", new Node().value("A"),
+                "b", new Node().value("B"));
+
+        merger.resolve(node);
+        // nothing should be thrown
+    }
+
+    @Test
+    public void testMinFieldsNegative() throws Exception {
+        schema.minFields(2);
+        node.properties("a", new Node().value("A"));
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
+    public void testMaxFieldsPositive() throws Exception {
+        schema.maxFields(2);
+        node.properties(
+                "a", new Node().value("A"),
+                "b", new Node().value("B"));
+
+        merger.resolve(node);
+        // nothing should be thrown
+    }
+
+    @Test
+    public void testMaxFieldsNegative() throws Exception {
+        schema.maxFields(1);
+        node.properties(
+                "a", new Node().value("A"),
+                "b", new Node().value("B"));
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
+    public void testEnumPositive() throws Exception {
+        schema.enumValues(Arrays.asList(new Node().value("red"), new Node().value("blue")));
+        node.value("red");
+
+        merger.resolve(node);
+        // nothing should be thrown
+    }
+
+    @Test
+    public void testEnumNegative() throws Exception {
+        schema.enumValues(Arrays.asList(new Node().value("red"), new Node().value("blue")));
+        node.value("green");
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
+    public void testEnumIgnoresPropagatedSchemaMetadata() throws Exception {
+        schema.enumValues(Arrays.asList(new Node().value("red")));
+        node.value("red");
+
+        Node resolved = merger.resolve(node);
+
+        assertEquals("red", resolved.getValue());
+    }
+
+    @Test
+    public void testSchemaWellFormedness() throws Exception {
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minLength(-1))
+                .value("abc")));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minItems(2).maxItems(1))
+                .items(new Node().value("A"))));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().multipleOf(BigDecimal.ZERO))
+                .value(BigDecimal.ONE)));
     }
 
 

@@ -1,7 +1,8 @@
 package blue.language.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -27,7 +28,12 @@ public class Schema implements Cloneable {
     private Node minItems;
     private Node maxItems;
     private Node uniqueItems;
-    private List<Node> options;
+    private Node minFields;
+    private Node maxFields;
+    @JsonProperty("enum")
+    @JsonAlias("options")
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+    private List<Node> enumValues;
 
     public Node getRequired() {
         return required;
@@ -79,10 +85,6 @@ public class Schema implements Cloneable {
 
     public Node getUniqueItems() {
         return uniqueItems;
-    }
-
-    public List<Node> getOptions() {
-        return options;
     }
 
     public Boolean getRequiredValue() {
@@ -137,6 +139,31 @@ public class Schema implements Cloneable {
 
     public Boolean getUniqueItemsValue() {
         return uniqueItems == null ? null : getBooleanFromObject(uniqueItems.getValue());
+    }
+
+    public Node getMinFields() {
+        return minFields;
+    }
+
+    public Node getMaxFields() {
+        return maxFields;
+    }
+
+    @JsonProperty("enum")
+    public List<Node> getEnum() {
+        return enumValues;
+    }
+
+    public List<Node> getOptions() {
+        return enumValues;
+    }
+
+    public Integer getMinFieldsValue() {
+        return minFields == null ? null : getIntegerFromObject(minFields.getValue());
+    }
+
+    public Integer getMaxFieldsValue() {
+        return maxFields == null ? null : getIntegerFromObject(maxFields.getValue());
     }
 
     public Schema required(Node required) {
@@ -207,8 +234,23 @@ public class Schema implements Cloneable {
         return this;
     }
 
+    public Schema minFields(Node minFields) {
+        this.minFields = minFields;
+        return this;
+    }
+
+    public Schema maxFields(Node maxFields) {
+        this.maxFields = maxFields;
+        return this;
+    }
+
+    public Schema enumValues(List<Node> enumValues) {
+        this.enumValues = enumValues;
+        return this;
+    }
+
     public Schema options(List<Node> options) {
-        this.options = options;
+        this.enumValues = options;
         return this;
     }
 
@@ -288,6 +330,16 @@ public class Schema implements Cloneable {
         return this;
     }
 
+    public Schema minFields(Integer minFields) {
+        this.minFields = new Node().value(BigInteger.valueOf(minFields));
+        return this;
+    }
+
+    public Schema maxFields(Integer maxFields) {
+        this.maxFields = new Node().value(BigInteger.valueOf(maxFields));
+        return this;
+    }
+
     @Override
     public Schema clone() {
         try {
@@ -305,14 +357,16 @@ public class Schema implements Cloneable {
             if (this.minItems != null) cloned.minItems = this.minItems.clone();
             if (this.maxItems != null) cloned.maxItems = this.maxItems.clone();
             if (this.uniqueItems != null) cloned.uniqueItems = this.uniqueItems.clone();
+            if (this.minFields != null) cloned.minFields = this.minFields.clone();
+            if (this.maxFields != null) cloned.maxFields = this.maxFields.clone();
 
             if (this.pattern != null) {
                 cloned.pattern = this.pattern.stream()
                         .map(Node::clone)
                         .collect(Collectors.toList());
             }
-            if (this.options != null) {
-                cloned.options = this.options.stream()
+            if (this.enumValues != null) {
+                cloned.enumValues = this.enumValues.stream()
                         .map(Node::clone)
                         .collect(Collectors.toList());
             }
@@ -339,7 +393,9 @@ public class Schema implements Cloneable {
                 ", minItems=" + getMinItemsValue() +
                 ", maxItems=" + getMaxItemsValue() +
                 ", uniqueItems=" + getUniqueItemsValue() +
-                ", options=" + options +
+                ", minFields=" + getMinFieldsValue() +
+                ", maxFields=" + getMaxFieldsValue() +
+                ", enum=" + enumValues +
                 '}';
     }
 
