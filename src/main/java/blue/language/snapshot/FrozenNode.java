@@ -194,6 +194,10 @@ public final class FrozenNode {
         return value;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
     public FrozenNode getType() {
         return type;
     }
@@ -216,6 +220,26 @@ public final class FrozenNode {
 
     public FrozenNode getBlue() {
         return blue;
+    }
+
+    public Schema getSchema() {
+        return schema != null ? schema.clone() : null;
+    }
+
+    public String getMergePolicy() {
+        return mergePolicy;
+    }
+
+    public String getPreviousBlueId() {
+        return previousBlueId;
+    }
+
+    public Integer getPosition() {
+        return position;
+    }
+
+    public boolean isInlineValue() {
+        return inlineValue;
     }
 
     public List<FrozenNode> getItems() {

@@ -1,9 +1,11 @@
 package blue.language.utils.limits;
 
 import blue.language.model.Node;
+import blue.language.utils.JsonPointer;
 import org.junit.jupiter.api.Test;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class NodeToPathLimitsConverterTest {
@@ -13,17 +15,15 @@ class NodeToPathLimitsConverterTest {
     @Test
     void testEmptyNode() {
         Node node = new Node();
-        PathLimits limits = NodeToPathLimitsConverter.convert(node);
-        assertTrue(limits.shouldExtendPathSegment("/", mockNode));
-        assertFalse(limits.shouldExtendPathSegment("/anyOtherPath", mockNode));
+        assertAllows(node, "/");
+        assertRejects(node, "/anyOtherPath");
     }
 
     @Test
     void testNodeWithSingleProperty() {
         Node node = new Node().properties("prop", new Node());
-        PathLimits limits = NodeToPathLimitsConverter.convert(node);
-        assertTrue(limits.shouldExtendPathSegment("/prop", mockNode));
-        assertFalse(limits.shouldExtendPathSegment("/anyOtherPath", mockNode));
+        assertAllows(node, "/prop");
+        assertRejects(node, "/anyOtherPath");
     }
 
     @Test
@@ -32,21 +32,19 @@ class NodeToPathLimitsConverterTest {
                 "prop1", new Node().properties("nested", new Node()),
                 "prop2", new Node()
         );
-        PathLimits limits = NodeToPathLimitsConverter.convert(node);
-        assertTrue(limits.shouldExtendPathSegment("/prop1", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/prop1/nested", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/prop2", mockNode));
-        assertFalse(limits.shouldExtendPathSegment("/prop1/nonexistent", mockNode));
+        assertAllows(node, "/prop1");
+        assertAllows(node, "/prop1/nested");
+        assertAllows(node, "/prop2");
+        assertRejects(node, "/prop1/nonexistent");
     }
 
     @Test
     void testNodeWithItems() {
         Node node = new Node().items(new Node(), new Node().properties("itemProp", new Node()));
-        PathLimits limits = NodeToPathLimitsConverter.convert(node);
-        assertTrue(limits.shouldExtendPathSegment("/0", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/1", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/1/itemProp", mockNode));
-        assertFalse(limits.shouldExtendPathSegment("/2", mockNode));
+        assertAllows(node, "/0");
+        assertAllows(node, "/1");
+        assertAllows(node, "/1/itemProp");
+        assertRejects(node, "/2");
     }
 
     @Test
@@ -55,22 +53,53 @@ class NodeToPathLimitsConverterTest {
                 "prop1", new Node().items(new Node(), new Node().properties("nestedItemProp", new Node())),
                 "prop2", new Node().properties("nestedProp", new Node())
         );
-        PathLimits limits = NodeToPathLimitsConverter.convert(node);
-        assertTrue(limits.shouldExtendPathSegment("/prop1", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/prop1/0", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/prop1/1", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/prop1/1/nestedItemProp", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/prop2", mockNode));
-        assertTrue(limits.shouldExtendPathSegment("/prop2/nestedProp", mockNode));
-        assertFalse(limits.shouldExtendPathSegment("/prop2/nestedProp/xyz", mockNode));
-        assertFalse(limits.shouldExtendPathSegment("/nonexistent", mockNode));
+        assertAllows(node, "/prop1");
+        assertAllows(node, "/prop1/0");
+        assertAllows(node, "/prop1/1");
+        assertAllows(node, "/prop1/1/nestedItemProp");
+        assertAllows(node, "/prop2");
+        assertAllows(node, "/prop2/nestedProp");
+        assertRejects(node, "/prop2/nestedProp/xyz");
+        assertRejects(node, "/nonexistent");
+    }
+
+    @Test
+    void testEscapedPropertyNames() {
+        Node node = new Node().properties(
+                "a/b", new Node().properties("c~d", new Node())
+        );
+
+        assertAllows(node, "/a~1b");
+        assertAllows(node, "/a~1b/c~0d");
+        assertRejects(node, "/a/b");
     }
 
     @Test
     void testNullNode() {
-        PathLimits limits = NodeToPathLimitsConverter.convert(null);
-        assertFalse(limits.shouldExtendPathSegment("/", mockNode));
-        assertFalse(limits.shouldExtendPathSegment("/anyPath", mockNode));
+        assertRejects(null, "/");
+        assertRejects(null, "/anyPath");
     }
 
+    private void assertAllows(Node node, String pointer) {
+        assertTrue(allows(node, pointer), pointer);
+    }
+
+    private void assertRejects(Node node, String pointer) {
+        assertFalse(allows(node, pointer), pointer);
+    }
+
+    private boolean allows(Node node, String pointer) {
+        PathLimits limits = NodeToPathLimitsConverter.convert(node);
+        List<String> segments = JsonPointer.split(pointer);
+        if (segments.isEmpty()) {
+            return limits.shouldExtendPathSegment("", mockNode);
+        }
+        for (String segment : segments) {
+            if (!limits.shouldExtendPathSegment(segment, mockNode)) {
+                return false;
+            }
+            limits.enterPathSegment(segment, mockNode);
+        }
+        return true;
+    }
 }

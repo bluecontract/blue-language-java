@@ -233,6 +233,14 @@ public class Blue implements NodeResolver {
         return new NodeTypeMatcher(this).matchesType(node, type, globalLimits);
     }
 
+    public boolean nodeMatchesType(FrozenNode resolvedNode, FrozenNode resolvedType) {
+        return new NodeTypeMatcher(this).matchesResolvedType(resolvedNode, resolvedType);
+    }
+
+    public boolean nodeMatchesType(ResolvedSnapshot snapshot, String pointer, FrozenNode resolvedType) {
+        return new NodeTypeMatcher(this).matchesResolvedType(snapshot, pointer, resolvedType);
+    }
+
     public void setGlobalLimits(Limits globalLimits) {
         this.globalLimits = globalLimits != null ? globalLimits : NO_LIMITS;
     }

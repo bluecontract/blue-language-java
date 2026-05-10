@@ -1,12 +1,14 @@
 package blue.language.utils.limits;
 
 import blue.language.model.Node;
+import blue.language.utils.JsonPointer;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Supported features:
@@ -18,11 +20,15 @@ public class PathLimits implements Limits {
     private final Set<String> allowedPaths;
     private final int maxDepth;
     private final Stack<String> currentPath;
+    private final Stack<Boolean> enteredPathSegment;
 
     public PathLimits(Set<String> allowedPaths, int maxDepth) {
-        this.allowedPaths = allowedPaths;
+        this.allowedPaths = allowedPaths.stream()
+                .map(PathLimits::canonicalAllowedPath)
+                .collect(Collectors.toSet());
         this.maxDepth = maxDepth;
         this.currentPath = new Stack<>();
+        this.enteredPathSegment = new Stack<>();
     }
 
     @Override
@@ -31,7 +37,10 @@ public class PathLimits implements Limits {
             return false;
         }
 
-        String potentialPath = normalizePath(getCurrentFullPath() + "/" + pathSegment);
+        List<String> potentialPath = new ArrayList<>(currentPath);
+        if (pathSegment != null && !pathSegment.isEmpty()) {
+            potentialPath.add(pathSegment);
+        }
         return isAllowedPath(potentialPath);
     }
 
@@ -40,7 +49,7 @@ public class PathLimits implements Limits {
         return shouldExtendPathSegment(pathSegment, currentNode);
     }
 
-    private boolean isAllowedPath(String path) {
+    private boolean isAllowedPath(List<String> path) {
         for (String allowedPath : allowedPaths) {
             if (matchesAllowedPath(allowedPath, path)) {
                 return true;
@@ -49,43 +58,47 @@ public class PathLimits implements Limits {
         return false;
     }
 
-    private boolean matchesAllowedPath(String allowedPath, String path) {
-        String[] allowedParts = allowedPath.split("/");
-        String[] pathParts = path.split("/");
-
-        if (pathParts.length > allowedParts.length) {
+    private boolean matchesAllowedPath(String allowedPath, List<String> path) {
+        if ("*".equals(allowedPath)) {
+            return true;
+        }
+        List<String> allowedParts = JsonPointer.split(allowedPath);
+        if (path.size() > allowedParts.size()) {
             return false;
         }
-
-        for (int i = 1; i < pathParts.length; i++) {
-            if (!allowedParts[i].equals("*") && !allowedParts[i].equals(pathParts[i])) {
+        for (int i = 0; i < path.size(); i++) {
+            String allowedPart = allowedParts.get(i);
+            if (!allowedPart.equals("*") && !allowedPart.equals(path.get(i))) {
                 return false;
             }
         }
-
         return true;
     }
 
     @Override
     public void enterPathSegment(String pathSegment, Node noe) {
-        currentPath.push(pathSegment);
+        boolean realSegment = pathSegment != null && !pathSegment.isEmpty();
+        enteredPathSegment.push(realSegment);
+        if (realSegment) {
+            currentPath.push(pathSegment);
+        }
     }
 
     @Override
     public void exitPathSegment() {
-        if (!currentPath.isEmpty()) {
+        if (enteredPathSegment.isEmpty()) {
+            return;
+        }
+        if (enteredPathSegment.pop() && !currentPath.isEmpty()) {
             currentPath.pop();
         }
     }
 
-    private String getCurrentFullPath() {
-        return "/" + String.join("/", currentPath);
-    }
-
-    private String normalizePath(String path) {
-        return "/" + Stream.of(path.split("/"))
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.joining("/"));
+    private static String canonicalAllowedPath(String path) {
+        if ("*".equals(path)) {
+            return path;
+        }
+        return JsonPointer.canonicalize(path);
     }
 
     public static class Builder {

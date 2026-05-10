@@ -132,6 +132,23 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testEscapedJsonPointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/x/a~1b/c~0d")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+        pathLimits.enterPathSegment("x");
+
+        assertTrue(pathLimits.shouldExtendPathSegment("a/b", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("a~1b", mockNode));
+        pathLimits.enterPathSegment("a/b");
+
+        assertTrue(pathLimits.shouldExtendPathSegment("c~d", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("c/d", mockNode));
+    }
+
+    @Test
     public void testTwoLevelWildcard() {
         assertTrue(pathLimits.shouldExtendPathSegment("f", mockNode));
         pathLimits.enterPathSegment("f");

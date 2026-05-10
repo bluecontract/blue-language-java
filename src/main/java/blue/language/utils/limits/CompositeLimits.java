@@ -23,6 +23,11 @@ public class CompositeLimits implements blue.language.utils.limits.Limits {
     }
 
     @Override
+    public boolean shouldReconstructList(Node currentNode, List<Node> items) {
+        return limitsList.stream().allMatch(l -> l.shouldReconstructList(currentNode, items));
+    }
+
+    @Override
     public void enterPathSegment(String pathSegment, Node node) {
         limitsList.forEach(l -> l.enterPathSegment(pathSegment, node));
     }

@@ -79,7 +79,90 @@ public class Types {
         if (leftBlueId.equals(rightBlueId)) {
             return true;
         }
-        return left.getName() != null && left.getName().equals(right.getName());
+        return compatibilityBlueId(left).equals(compatibilityBlueId(right));
+    }
+
+    private static String compatibilityBlueId(Node node) {
+        if (node.getBlueId() != null && node.isReferenceOnly()) {
+            return node.getBlueId();
+        }
+        if (node.getBlueId() != null && CORE_TYPE_BLUE_IDS.contains(node.getBlueId())) {
+            return node.getBlueId();
+        }
+        if (isBareCoreTypeName(node)) {
+            return CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(node.getName());
+        }
+        Node stripped = node.clone();
+        stripLabels(stripped);
+        return calculateBlueId(stripped);
+    }
+
+    private static boolean isBareCoreTypeName(Node node) {
+        return node.getName() != null
+                && CORE_TYPE_NAME_TO_BLUE_ID_MAP.containsKey(node.getName())
+                && node.getDescription() == null
+                && node.getType() == null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null
+                && node.getValue() == null
+                && node.getItems() == null
+                && node.getProperties() == null
+                && node.getBlueId() == null
+                && node.getSchema() == null
+                && node.getMergePolicy() == null
+                && node.getPreviousBlueId() == null
+                && node.getPosition() == null
+                && node.getBlue() == null;
+    }
+
+    private static void stripLabels(Node node) {
+        if (node == null) {
+            return;
+        }
+        node.name(null);
+        node.description(null);
+        if (node.getBlueId() != null && !node.isReferenceOnly()) {
+            node.blueId(null);
+        }
+        stripLabels(node.getType());
+        stripLabels(node.getItemType());
+        stripLabels(node.getKeyType());
+        stripLabels(node.getValueType());
+        stripLabels(node.getBlue());
+        if (node.getItems() != null) {
+            node.getItems().forEach(Types::stripLabels);
+        }
+        if (node.getProperties() != null) {
+            node.getProperties().values().forEach(Types::stripLabels);
+        }
+        stripSchemaLabels(node.getSchema());
+    }
+
+    private static void stripSchemaLabels(blue.language.model.Schema schema) {
+        if (schema == null) {
+            return;
+        }
+        stripLabels(schema.getRequired());
+        stripLabels(schema.getAllowMultiple());
+        stripLabels(schema.getMinLength());
+        stripLabels(schema.getMaxLength());
+        stripLabels(schema.getMinimum());
+        stripLabels(schema.getMaximum());
+        stripLabels(schema.getExclusiveMinimum());
+        stripLabels(schema.getExclusiveMaximum());
+        stripLabels(schema.getMultipleOf());
+        stripLabels(schema.getMinItems());
+        stripLabels(schema.getMaxItems());
+        stripLabels(schema.getUniqueItems());
+        stripLabels(schema.getMinFields());
+        stripLabels(schema.getMaxFields());
+        if (schema.getPattern() != null) {
+            schema.getPattern().forEach(Types::stripLabels);
+        }
+        if (schema.getEnum() != null) {
+            schema.getEnum().forEach(Types::stripLabels);
+        }
     }
 
     public static boolean isSubtypeOfBasicType(Node type, NodeProvider nodeProvider) {

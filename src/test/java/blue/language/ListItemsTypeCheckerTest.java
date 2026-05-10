@@ -55,14 +55,14 @@ public class ListItemsTypeCheckerTest {
 
     @Test
     public void testFailure() throws Exception {
-        Node a = new Node().name("A");
-        Node b = new Node().name("B").type(a);
-        Node c = new Node().name("C").type(b);
+        Node a = new Node().name("A").blueId("A");
+        Node b = new Node().name("B").blueId("B").type(a);
+        Node c = new Node().name("C").blueId("C").type(b);
 
-        Node x = new Node().name("X").properties(
+        Node x = new Node().name("X").blueId("X").properties(
                 "a", new Node().type(b)
         );
-        Node y = new Node().name("Y").type(x).properties(
+        Node y = new Node().name("Y").blueId("Y").type(x).properties(
                 "a", new Node().items(
                         new Node().type(a),
                         new Node().type(c)

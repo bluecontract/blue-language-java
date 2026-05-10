@@ -28,8 +28,33 @@ public class TypesTest {
         assertTrue(isSubtype(c, a, nodeProvider));
         assertTrue(isSubtype(a, a, nodeProvider));
         assertTrue(isSubtype(b, b, nodeProvider));
-        assertFalse(isSubtype(b, c, nodeProvider));
+        assertTrue(isSubtype(b, c, nodeProvider));
 
+    }
+
+    @Test
+    public void subtypeCompatibilityIgnoresNameAndDescriptionButNotStructure() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        Blue blue = new Blue(nodeProvider);
+        Node left = blue.yamlToNode(
+                "name: Left label\n" +
+                "description: Left description\n" +
+                "x:\n" +
+                "  type: Integer");
+        Node right = blue.yamlToNode(
+                "name: Right label\n" +
+                "description: Right description\n" +
+                "x:\n" +
+                "  type: Integer");
+        Node differentStructure = blue.yamlToNode(
+                "name: Left label\n" +
+                "description: Left description\n" +
+                "x:\n" +
+                "  type: Text");
+
+        assertTrue(isSubtype(left, right, nodeProvider));
+        assertTrue(isSubtype(right, left, nodeProvider));
+        assertFalse(isSubtype(left, differentStructure, nodeProvider));
     }
 
     @Test

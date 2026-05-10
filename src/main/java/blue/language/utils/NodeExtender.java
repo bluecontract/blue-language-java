@@ -86,7 +86,9 @@ public class NodeExtender {
 
             List<Node> items = currentNode.getItems();
             if (items != null && !items.isEmpty()) {
-                reconstructList(items);
+                if (currentLimits.shouldReconstructList(currentNode, items)) {
+                    reconstructList(items);
+                }
                 for (int i = 0; i < items.size(); i++) {
                     extendNode(items.get(i), currentLimits, String.valueOf(i), false);
                 }
