@@ -5,6 +5,7 @@ import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.JacksonPropertyNames;
 import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 
@@ -65,17 +66,18 @@ public class ComplexObjectConverter implements Converter<Object> {
         for (Field field : clazz.getDeclaredFields()) {
             field.setAccessible(true);
             String fieldName = field.getName();
+            String propertyName = JacksonPropertyNames.propertyName(field);
             Object fieldValue = null;
 
             try {
                 if (field.isAnnotationPresent(BlueId.class)) {
-                    fieldValue = handleBlueIdAnnotation(node, fieldName);
+                    fieldValue = handleBlueIdAnnotation(node, propertyName);
                 } else if (field.isAnnotationPresent(BlueName.class)) {
-                    fieldValue = handleBlueNameAnnotation(node, field);
+                    fieldValue = handleBlueNameAnnotation(node, clazz, field);
                 } else if (field.isAnnotationPresent(BlueDescription.class)) {
-                    fieldValue = handleBlueDescriptionAnnotation(node, field);
+                    fieldValue = handleBlueDescriptionAnnotation(node, clazz, field);
                 } else {
-                    Node fieldNode = node.getProperties() != null ? node.getProperties().get(fieldName) : null;
+                    Node fieldNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
 
                     if (fieldNode != null) {
                         if (Nodes.isEmptyNode(fieldNode)) {
@@ -95,9 +97,9 @@ public class ComplexObjectConverter implements Converter<Object> {
                                 fieldValue = fieldConverter.convert(fieldNode, fieldType);
                             }
                         }
-                    } else if ("name".equals(fieldName)) {
+                    } else if ("name".equals(propertyName)) {
                         fieldValue = node.getName();
-                    } else if ("description".equals(fieldName)) {
+                    } else if ("description".equals(propertyName)) {
                         fieldValue = node.getDescription();
                     }
                 }
@@ -113,25 +115,25 @@ public class ComplexObjectConverter implements Converter<Object> {
         }
     }
 
-    private String handleBlueIdAnnotation(Node node, String fieldName) {
-        Node targetNode = node.getProperties().get(fieldName);
+    private String handleBlueIdAnnotation(Node node, String propertyName) {
+        Node targetNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
         if (targetNode == null) {
             return null;
         }
         return BlueIdCalculator.calculateBlueId(targetNode);
     }
 
-    private String handleBlueNameAnnotation(Node node, Field field) {
+    private String handleBlueNameAnnotation(Node node, Class<?> clazz, Field field) {
         BlueName annotation = field.getAnnotation(BlueName.class);
-        String propertyName = annotation.value();
-        Node targetNode = node.getProperties().get(propertyName);
+        String propertyName = JacksonPropertyNames.resolveTargetPropertyName(clazz, annotation.value());
+        Node targetNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
         return targetNode != null ? targetNode.getName() : null;
     }
 
-    private String handleBlueDescriptionAnnotation(Node node, Field field) {
+    private String handleBlueDescriptionAnnotation(Node node, Class<?> clazz, Field field) {
         BlueDescription annotation = field.getAnnotation(BlueDescription.class);
-        String propertyName = annotation.value();
-        Node targetNode = node.getProperties().get(propertyName);
+        String propertyName = JacksonPropertyNames.resolveTargetPropertyName(clazz, annotation.value());
+        Node targetNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
         return targetNode != null ? targetNode.getDescription() : null;
     }
 

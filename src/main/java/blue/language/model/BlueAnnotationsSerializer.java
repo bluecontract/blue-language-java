@@ -1,6 +1,7 @@
 package blue.language.model;
 
 import blue.language.utils.BlueIdResolver;
+import blue.language.utils.JacksonPropertyNames;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase;
@@ -35,7 +36,7 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
 
             for (Field field : getAllFields(clazz)) {
                 field.setAccessible(true);
-                String fieldName = field.getName();
+                String propertyName = JacksonPropertyNames.propertyName(field);
                 Object fieldValue;
                 try {
                     fieldValue = field.get(value);
@@ -45,18 +46,19 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
 
                 if (field.isAnnotationPresent(BlueId.class)) {
                     if (fieldValue != null) {
-                        gen.writeObjectFieldStart(fieldName);
+                        gen.writeObjectFieldStart(propertyName);
                         gen.writeStringField("blueId", fieldValue.toString());
                         gen.writeEndObject();
                     }
-                    processedFields.add(fieldName);
+                    processedFields.add(propertyName);
                 } else if (field.isAnnotationPresent(BlueName.class) || field.isAnnotationPresent(BlueDescription.class)) {
-                    String targetField = field.isAnnotationPresent(BlueName.class)
+                    String targetFieldName = field.isAnnotationPresent(BlueName.class)
                             ? field.getAnnotation(BlueName.class).value()
                             : field.getAnnotation(BlueDescription.class).value();
+                    String targetPropertyName = JacksonPropertyNames.resolveTargetPropertyName(clazz, targetFieldName);
 
-                    blueFields.putIfAbsent(targetField, new HashMap<>());
-                    Map<String, Object> blueFieldMap = blueFields.get(targetField);
+                    blueFields.putIfAbsent(targetPropertyName, new HashMap<>());
+                    Map<String, Object> blueFieldMap = blueFields.get(targetPropertyName);
 
                     if (field.isAnnotationPresent(BlueName.class)) {
                         blueFieldMap.put("name", fieldValue);
@@ -64,7 +66,7 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
                         blueFieldMap.put("description", fieldValue);
                     }
 
-                    Field targetFieldObj = findField(clazz, targetField);
+                    Field targetFieldObj = JacksonPropertyNames.findField(clazz, targetFieldName);
                     if (targetFieldObj != null) {
                         targetFieldObj.setAccessible(true);
                         try {
@@ -78,8 +80,8 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
                             throw new RuntimeException(e);
                         }
                     }
-                    processedFields.add(targetField);
-                    processedFields.add(fieldName);
+                    processedFields.add(targetPropertyName);
+                    processedFields.add(propertyName);
                 }
             }
 
@@ -93,11 +95,11 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
 
             for (Field field : getAllFields(clazz)) {
                 field.setAccessible(true);
-                String fieldName = field.getName();
-                if (!processedFields.contains(fieldName)) {
+                String propertyName = JacksonPropertyNames.propertyName(field);
+                if (!processedFields.contains(propertyName)) {
                     try {
                         Object fieldValue = field.get(value);
-                        gen.writeObjectField(fieldName, fieldValue);
+                        gen.writeObjectField(propertyName, fieldValue);
                     } catch (IllegalAccessException e) {
                         throw new RuntimeException(e);
                     }
@@ -118,16 +120,5 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
             clazz = clazz.getSuperclass();
         }
         return fields;
-    }
-
-    private Field findField(Class<?> clazz, String fieldName) {
-        while (clazz != null) {
-            try {
-                return clazz.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                clazz = clazz.getSuperclass();
-            }
-        }
-        return null;
     }
 }

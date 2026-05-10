@@ -1,6 +1,7 @@
 package blue.language.mapping;
 
 import blue.language.model.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +68,29 @@ class BlueAnnotationsSerializerTest {
         assertEquals(expected, json);
     }
 
+    @Test
+    void serializesJsonPropertyNamesForGeneratedKeywordFields() throws Exception {
+        JsonPropertyExample obj = new JsonPropertyExample();
+        obj.packageValue = "Conversation";
+        obj.classBlueId = "Class-BlueId";
+
+        String json = mapper.writeValueAsString(obj);
+        String expected = "{\"type\":{\"blueId\":\"JsonProperty-Example\"},\"class\":{\"blueId\":\"Class-BlueId\"},\"package\":\"Conversation\"}";
+        assertEquals(expected, json);
+    }
+
+    @Test
+    void serializesBlueNameAndDescriptionToJsonPropertyTarget() throws Exception {
+        JsonPropertyMetadataExample obj = new JsonPropertyMetadataExample();
+        obj.packageName = "Package label";
+        obj.packageDescription = "Package description";
+        obj.packageValue = "Conversation";
+
+        String json = mapper.writeValueAsString(obj);
+        String expected = "{\"type\":{\"blueId\":\"JsonProperty-Metadata-Example\"},\"package\":{\"name\":\"Package label\",\"description\":\"Package description\",\"value\":\"Conversation\"}}";
+        assertEquals(expected, json);
+    }
+
     @TypeBlueId("Example-BlueId")
     public static class TypeBlueIdExample {
         public String field;
@@ -94,5 +118,24 @@ class BlueAnnotationsSerializerTest {
         @BlueDescription("field")
         public String fieldDescription;
         public String field;
+    }
+
+    @TypeBlueId("JsonProperty-Example")
+    public static class JsonPropertyExample {
+        @JsonProperty("package")
+        public String packageValue;
+        @JsonProperty("class")
+        @BlueId
+        public String classBlueId;
+    }
+
+    @TypeBlueId("JsonProperty-Metadata-Example")
+    public static class JsonPropertyMetadataExample {
+        @BlueName("packageValue")
+        public String packageName;
+        @BlueDescription("packageValue")
+        public String packageDescription;
+        @JsonProperty("package")
+        public String packageValue;
     }
 }

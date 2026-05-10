@@ -83,12 +83,11 @@ public class Blue implements NodeResolver {
 
     public Blue(NodeProvider nodeProvider, TypeClassResolver typeClassResolver) {
         this(nodeProvider, null, typeClassResolver);
-        this.mergingProcessor = createDefaultNodeProcessor();
     }
 
     public Blue(NodeProvider nodeProvider, MergingProcessor mergingProcessor, TypeClassResolver typeClassResolver) {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
-        this.mergingProcessor = mergingProcessor;
+        this.mergingProcessor = mergingProcessor != null ? mergingProcessor : createDefaultNodeProcessor();
         this.typeClassResolver = typeClassResolver;
         this.documentProcessor = createDefaultDocumentProcessor();
     }
