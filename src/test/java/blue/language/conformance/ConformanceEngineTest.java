@@ -29,8 +29,9 @@ public class ConformanceEngineTest {
         ConformanceEngine engine = blue.conformanceEngine();
         assertFalse(engine.conforms(document));
 
-        engine.generalizeChangedPath(document, "/price/currency");
+        boolean generalized = engine.generalizeChangedPath(document, "/price/currency");
 
+        assertTrue(generalized);
         assertTrue(engine.conforms(document));
         assertEquals("Price", document.getAsNode("/price/type").getName());
         assertEquals("Global Product", document.getType().getName());
@@ -48,8 +49,9 @@ public class ConformanceEngineTest {
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
 
-        blue.conformanceEngine().generalizeChangedPath(document, "/price/amount");
+        boolean generalized = blue.conformanceEngine().generalizeChangedPath(document, "/price/amount");
 
+        assertFalse(generalized);
         assertEquals("Price in EUR", document.getAsNode("/price/type").getName());
         assertEquals("European Product", document.getType().getName());
     }

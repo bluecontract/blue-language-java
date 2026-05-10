@@ -56,30 +56,35 @@ public final class ConformanceEngine {
         }
     }
 
-    public void generalizeChangedPath(Node root, String changedPath) {
+    public boolean generalizeChangedPath(Node root, String changedPath) {
         Objects.requireNonNull(root, "root");
         String normalized = PointerUtils.normalizePointer(changedPath);
         List<Node> path = existingPathToNearestNode(root, normalized);
+        boolean generalized = false;
         for (int i = path.size() - 1; i >= 0; i--) {
-            generalizeNode(path.get(i));
+            generalized |= generalizeNode(path.get(i));
         }
         requireConformant(root);
+        return generalized;
     }
 
-    private void generalizeNode(Node node) {
+    private boolean generalizeNode(Node node) {
         if (node == null || node.getType() == null) {
-            return;
+            return false;
         }
 
         ConformanceResult result = check(node);
+        boolean generalized = false;
         while (!result.isConformant()) {
             Node parentType = parentType(node.getType());
             if (parentType == null) {
                 throw new IllegalArgumentException("Node cannot be generalized to a conforming type: " + result.getMessage());
             }
             node.replaceWith(generalizedNode(node, parentType));
+            generalized = true;
             result = check(node);
         }
+        return generalized;
     }
 
     private Node generalizedNode(Node node, Node parentType) {

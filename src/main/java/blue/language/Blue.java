@@ -10,6 +10,7 @@ import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.Preprocessor;
@@ -24,10 +25,13 @@ import blue.language.utils.limits.Limits;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -36,6 +40,20 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.utils.limits.Limits.NO_LIMITS;
 
 public class Blue implements NodeResolver {
+
+    private static final Set<String> PROCESSOR_MANAGED_TYPE_BLUE_IDS = new HashSet<>(Arrays.asList(
+            "ChannelEventCheckpoint",
+            "DocumentUpdate",
+            "DocumentUpdateChannel",
+            "EmbeddedNodeChannel",
+            "InitializationMarker",
+            "JsonPatch",
+            "LifecycleChannel",
+            "ProcessEmbedded",
+            "ProcessingFailureMarker",
+            "ProcessingTerminatedMarker",
+            "TriggeredEventChannel"
+    ));
 
     private NodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
@@ -301,7 +319,7 @@ public class Blue implements NodeResolver {
     }
 
     public DocumentProcessingResult processDocument(Node document, Node event) {
-        return ensureDocumentProcessor().processDocument(document, event);
+        return attachProcessingSnapshot(ensureDocumentProcessor().processDocument(document, event));
     }
 
     public DocumentProcessor getDocumentProcessor() {
@@ -317,7 +335,7 @@ public class Blue implements NodeResolver {
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
-        return ensureDocumentProcessor().initializeDocument(document);
+        return attachProcessingSnapshot(ensureDocumentProcessor().initializeDocument(document));
     }
 
     public boolean isInitialized(Node document) {
@@ -409,13 +427,70 @@ public class Blue implements NodeResolver {
     }
 
     private DocumentProcessor createDefaultDocumentProcessor() {
-        return new DocumentProcessor(conformanceEngine());
+        return new DocumentProcessor(conformanceEngine(), processingSnapshotManager());
+    }
+
+    private DocumentProcessingResult attachProcessingSnapshot(DocumentProcessingResult result) {
+        if (result == null || result.capabilityFailure() || result.snapshot() != null) {
+            return result;
+        }
+        return result.withSnapshot(resolveProcessingSnapshot(result.document()));
     }
 
     private void refreshDocumentProcessorConformanceEngine() {
         if (documentProcessor != null) {
-            documentProcessor = new DocumentProcessor(documentProcessor.getContractRegistry(), conformanceEngine());
+            documentProcessor = new DocumentProcessor(documentProcessor.getContractRegistry(),
+                    conformanceEngine(),
+                    processingSnapshotManager());
         }
+    }
+
+    private ProcessingSnapshotManager processingSnapshotManager() {
+        return new ProcessingSnapshotManager() {
+            @Override
+            public ResolvedSnapshot fromDocument(Node document) {
+                return resolveProcessingSnapshot(document);
+            }
+
+            @Override
+            public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+                return applyProcessingCanonicalPatch(snapshot, patch);
+            }
+        };
+    }
+
+    private ResolvedSnapshot resolveProcessingSnapshot(Node node) {
+        Node preprocessed = preprocess(node.clone());
+        Node resolved = new Merger(mergingProcessor, processorSnapshotNodeProvider(), resolvedReferenceCache)
+                .resolve(preprocessed.clone(), NO_LIMITS);
+        Node canonical = reverse(resolved.clone());
+        FrozenNode canonicalRoot = FrozenNode.fromNode(canonical);
+        return cacheSnapshot(new ResolvedSnapshot(canonicalRoot, resolvedReferenceCache.freezeResolved(resolved), canonicalRoot.blueId()));
+    }
+
+    private ResolvedSnapshot applyProcessingCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+        CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
+        ResolvedSnapshot cached = resolvedSnapshotsByBlueId.get(patched.blueId());
+        if (cached != null) {
+            return cached;
+        }
+        Node canonical = patched.root().toNode();
+        Node resolved = new Merger(mergingProcessor, processorSnapshotNodeProvider(), resolvedReferenceCache)
+                .resolve(canonical.clone(), NO_LIMITS);
+        return cacheSnapshot(new ResolvedSnapshot(patched.root(), resolvedReferenceCache.freezeResolved(resolved), patched.blueId()));
+    }
+
+    private NodeProvider processorSnapshotNodeProvider() {
+        Set<String> processorTypeBlueIds = new HashSet<>(PROCESSOR_MANAGED_TYPE_BLUE_IDS);
+        if (documentProcessor != null) {
+            processorTypeBlueIds.addAll(documentProcessor.getContractRegistry().processors().keySet());
+        }
+        return blueId -> {
+            if (processorTypeBlueIds.contains(blueId) || !BlueIds.isPotentialBlueId(blueId)) {
+                return Collections.singletonList(new Node().name(blueId));
+            }
+            return nodeProvider.fetchByBlueId(blueId);
+        };
     }
 
     private ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {

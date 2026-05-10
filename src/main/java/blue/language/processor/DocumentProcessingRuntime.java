@@ -4,6 +4,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
+import blue.language.snapshot.ResolvedSnapshot;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -18,18 +19,27 @@ public final class DocumentProcessingRuntime {
     private final EmissionRegistry emissionRegistry;
     private final GasMeter gasMeter;
     private final ConformanceEngine conformanceEngine;
+    private final ProcessingSnapshotManager snapshotManager;
+    private ResolvedSnapshot snapshot;
     private boolean runTerminated;
 
     public DocumentProcessingRuntime(Node document) {
-        this(document, null);
+        this(document, null, null);
     }
 
     public DocumentProcessingRuntime(Node document, ConformanceEngine conformanceEngine) {
+        this(document, conformanceEngine, null);
+    }
+
+    public DocumentProcessingRuntime(Node document,
+                                     ConformanceEngine conformanceEngine,
+                                     ProcessingSnapshotManager snapshotManager) {
         this.document = Objects.requireNonNull(document, "document");
         this.patchEngine = new PatchEngine(this.document);
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
         this.conformanceEngine = conformanceEngine;
+        this.snapshotManager = snapshotManager;
     }
 
     public Node document() {
@@ -136,18 +146,41 @@ public final class DocumentProcessingRuntime {
         return emissionRegistry.isScopeTerminated(scopePath);
     }
 
+    public ResolvedSnapshot snapshot() {
+        if (snapshot == null && snapshotManager != null) {
+            snapshot = snapshotManager.fromDocument(document);
+        }
+        return snapshot;
+    }
+
     public void directWrite(String path, Node value) {
-        patchEngine.directWrite(path, value);
+        Node rollback = document.clone();
+        ResolvedSnapshot snapshotRollback = snapshot;
+        try {
+            Node before = cloneNode(patchEngine.read(path));
+            patchEngine.directWrite(path, value);
+            JsonPatch snapshotPatch = directWritePatch(path, before, value);
+            if (snapshotPatch != null) {
+                updateSnapshotFromPatch(snapshotPatch, rollback, false);
+            }
+        } catch (RuntimeException ex) {
+            document.replaceWith(rollback);
+            snapshot = snapshotRollback;
+            throw ex;
+        }
     }
 
     public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch) {
         Node rollback = document.clone();
+        ResolvedSnapshot snapshotRollback = snapshot;
         PatchEngine.PatchResult result;
         try {
             result = patchEngine.applyPatch(originScopePath, patch);
-            enforceConformanceFromPatchScope(result);
+            boolean generalized = enforceConformanceFromPatchScope(result);
+            updateSnapshotFromPatch(patch, rollback, generalized);
         } catch (RuntimeException ex) {
             document.replaceWith(rollback);
+            snapshot = snapshotRollback;
             throw ex;
         }
         Node after = result.op() == JsonPatch.Op.REMOVE ? null : cloneNode(patchEngine.read(result.path()));
@@ -159,16 +192,42 @@ public final class DocumentProcessingRuntime {
                 result.cascadeScopes());
     }
 
-    private void enforceConformanceFromPatchScope(PatchEngine.PatchResult result) {
+    private boolean enforceConformanceFromPatchScope(PatchEngine.PatchResult result) {
         if (conformanceEngine == null) {
-            return;
+            return false;
         }
         Node scopeNode = patchEngine.read(result.originScope());
         if (scopeNode == null || scopeNode.getType() == null) {
-            return;
+            return false;
         }
         String relativePath = PointerUtils.relativizePointer(result.originScope(), result.path());
-        conformanceEngine.generalizeChangedPath(scopeNode, relativePath);
+        return conformanceEngine.generalizeChangedPath(scopeNode, relativePath);
+    }
+
+    private JsonPatch directWritePatch(String path, Node before, Node value) {
+        if (value == null) {
+            return before == null ? null : JsonPatch.remove(path);
+        }
+        return before == null
+                ? JsonPatch.add(path, value.clone())
+                : JsonPatch.replace(path, value.clone());
+    }
+
+    private void updateSnapshotFromPatch(JsonPatch patch, Node rollback, boolean generalized) {
+        if (snapshotManager == null) {
+            return;
+        }
+        if (generalized) {
+            snapshot = snapshotManager.fromDocument(document);
+            return;
+        }
+
+        ResolvedSnapshot base = snapshot != null ? snapshot : snapshotManager.fromDocument(rollback);
+        try {
+            snapshot = snapshotManager.applyPatch(base, patch);
+        } catch (RuntimeException patchFailure) {
+            snapshot = snapshotManager.fromDocument(document);
+        }
     }
 
     private Node cloneNode(Node node) {

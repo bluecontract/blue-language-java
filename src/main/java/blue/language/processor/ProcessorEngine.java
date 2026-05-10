@@ -8,6 +8,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
@@ -232,7 +233,7 @@ final class ProcessorEngine {
 
         Execution(DocumentProcessor owner, Node document) {
             this.owner = owner;
-            this.runtime = new DocumentProcessingRuntime(document, owner.conformanceEngine());
+            this.runtime = new DocumentProcessingRuntime(document, owner.conformanceEngine(), owner.snapshotManager());
             this.checkpointManager = new CheckpointManager(runtime, ProcessorEngine::canonicalSignature);
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
@@ -281,7 +282,11 @@ final class ProcessorEngine {
         }
 
         DocumentProcessingResult result() {
-            return DocumentProcessingResult.of(runtime.document(), runtime.rootEmissions(), runtime.totalGas());
+            DocumentProcessingResult result = DocumentProcessingResult.of(runtime.document(),
+                    runtime.rootEmissions(),
+                    runtime.totalGas());
+            ResolvedSnapshot snapshot = runtime.snapshot();
+            return snapshot != null ? result.withSnapshot(snapshot) : result;
         }
 
         DocumentProcessingRuntime runtime() {

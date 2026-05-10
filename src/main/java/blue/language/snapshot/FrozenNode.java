@@ -105,14 +105,7 @@ public final class FrozenNode {
                 .items(node.getItems() != null
                         ? node.getItems().stream().map(item -> fromNode(item, strictCanonical, interner)).collect(Collectors.toList())
                         : null)
-                .properties(node.getProperties() != null
-                        ? node.getProperties().entrySet().stream()
-                            .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    entry -> fromNode(entry.getValue(), strictCanonical, interner),
-                                    (left, right) -> left,
-                                    LinkedHashMap::new))
-                        : null)
+                .properties(freezeProperties(node.getProperties(), strictCanonical, interner))
                 .referenceBlueId(node.getBlueId())
                 .schema(node.getSchema())
                 .mergePolicy(node.getMergePolicy())
@@ -135,6 +128,23 @@ public final class FrozenNode {
         return Collections.unmodifiableList(nodes.stream()
                 .map(FrozenNode::fromNode)
                 .collect(Collectors.toList()));
+    }
+
+    private static Map<String, FrozenNode> freezeProperties(Map<String, Node> source,
+                                                            boolean strictCanonical,
+                                                            ResolvedReferenceInterner interner) {
+        if (source == null || source.isEmpty()) {
+            return null;
+        }
+        Map<String, FrozenNode> result = new LinkedHashMap<>();
+        for (Map.Entry<String, Node> entry : source.entrySet()) {
+            FrozenNode child = fromNode(entry.getValue(), strictCanonical, interner);
+            if (strictCanonical && child.isEmptyNode()) {
+                continue;
+            }
+            result.put(entry.getKey(), child);
+        }
+        return result.isEmpty() ? null : result;
     }
 
     public static String calculateBlueId(List<FrozenNode> nodes) {
@@ -274,11 +284,29 @@ public final class FrozenNode {
         return strictCanonical;
     }
 
+    public boolean isEmptyNode() {
+        return name == null
+                && description == null
+                && type == null
+                && itemType == null
+                && keyType == null
+                && valueType == null
+                && value == null
+                && items == null
+                && properties == null
+                && referenceBlueId == null
+                && schema == null
+                && mergePolicy == null
+                && previousBlueId == null
+                && position == null
+                && blue == null;
+    }
+
     public FrozenNode withProperty(String key, FrozenNode child) {
         Map<String, FrozenNode> next = properties != null
                 ? new LinkedHashMap<>(properties)
                 : new LinkedHashMap<>();
-        if (child == null) {
+        if (child == null || (strictCanonical && child.isEmptyNode())) {
             next.remove(key);
         } else {
             next.put(key, child);

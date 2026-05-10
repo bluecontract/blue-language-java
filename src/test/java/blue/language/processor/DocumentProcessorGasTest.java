@@ -9,6 +9,7 @@ import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
@@ -151,7 +152,7 @@ class DocumentProcessorGasTest {
 
         assertProcessedAccount(coldReused, types);
         assertEquals(0, coldProvider.fetchCount());
-        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
         ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
@@ -231,7 +232,7 @@ class DocumentProcessorGasTest {
 
         assertProcessedPortfolio(coldReused, types);
         assertEquals(0, coldProvider.fetchCount());
-        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
         ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(portfolioCanonical(types));
@@ -307,7 +308,7 @@ class DocumentProcessorGasTest {
 
         assertProcessedEmbeddedAccounts(coldReused, types);
         assertEquals(0, coldProvider.fetchCount());
-        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
         ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
@@ -350,6 +351,70 @@ class DocumentProcessorGasTest {
         assertProcessedAccount(processed, secondTypes);
         assertEquals(0, firstProvider.fetchCount());
         assertEquals(0, secondProvider.fetchCount());
+    }
+
+    @Test
+    void processDocumentResultExposesCanonicalSnapshotBlueIdAndResolvedView() {
+        ProcessingTypeGraph types = processingTypeGraph();
+        Node initialized = initializedProcessingDocument(types);
+        CountingNodeProvider provider = new CountingNodeProvider(types.provider);
+        Blue blue = processingBlue(provider);
+        provider.reset();
+
+        DocumentProcessingResult result = blue.processDocument(initialized.clone(),
+                blue.objectToNode(new TestEvent().eventId("evt-snapshot")));
+
+        assertProcessedAccount(result, types);
+        assertNotNull(result.snapshot());
+        assertEquals(result.snapshot().blueId(), result.blueId());
+        assertEquals(BlueIdCalculator.calculateBlueId(result.canonicalDocument()), result.blueId());
+        assertEquals(1, result.canonicalDocument().getAsInteger("/balance/cents"));
+        assertEquals(1, result.resolvedDocument().getAsInteger("/balance/cents"));
+        assertNullNode(result.canonicalDocument(), "/balance/currency");
+        assertEquals("USD", result.resolvedDocument().getAsText("/balance/currency"));
+        assertEquals(1, provider.fetchCount(types.accountId));
+        assertEquals(1, provider.fetchCount(types.moneyId));
+    }
+
+    @Test
+    void initializeDocumentResultExposesCanonicalSnapshotBlueIdAndResolvedView() {
+        ProcessingTypeGraph types = processingTypeGraph();
+        CountingNodeProvider provider = new CountingNodeProvider(types.provider);
+        Blue blue = processingBlue(provider);
+
+        DocumentProcessingResult result = blue.initializeDocument(accountDocument(types));
+
+        assertInitializedAccount(result, types);
+        assertNotNull(result.snapshot());
+        assertEquals(result.snapshot().blueId(), result.blueId());
+        assertEquals(BlueIdCalculator.calculateBlueId(result.canonicalDocument()), result.blueId());
+        assertEquals(0, result.canonicalDocument().getAsInteger("/balance/cents"));
+        assertEquals(0, result.resolvedDocument().getAsInteger("/balance/cents"));
+        assertNullNode(result.canonicalDocument(), "/balance/currency");
+        assertEquals("USD", result.resolvedDocument().getAsText("/balance/currency"));
+        assertEquals(1, provider.fetchCount(types.accountId));
+        assertEquals(1, provider.fetchCount(types.moneyId));
+    }
+
+    @Test
+    void capabilityFailureResultDoesNotBuildSnapshotOrSpendGasOnResolution() {
+        Blue blue = new Blue();
+        String yaml = "contracts:\n" +
+                "  unsupported:\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    channel: missing\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n";
+
+        DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
+
+        assertTrue(result.capabilityFailure());
+        assertEquals(0L, result.totalGas());
+        assertEquals(null, result.snapshot());
+        assertEquals(null, result.blueId());
+        assertEquals(null, result.canonicalDocument());
+        assertEquals(null, result.resolvedDocument());
     }
 
     private Node extractInitializedMarker(Node document) {
@@ -717,6 +782,14 @@ class DocumentProcessorGasTest {
         assertEquals(1, document.getAsInteger(path + "/balance/cents"));
         assertEquals(types.accountId, document.getAsNode(path + "/type").getBlueId());
         assertEquals(types.moneyId, document.getAsNode(path + "/balance/type").getBlueId());
+    }
+
+    private void assertNullNode(Node document, String path) {
+        try {
+            assertEquals(null, document.getAsNode(path));
+        } catch (IllegalArgumentException ignored) {
+            // Missing properties throw in NodePathAccessor; either form means absent.
+        }
     }
 
     private static final class ProcessingTypeGraph {

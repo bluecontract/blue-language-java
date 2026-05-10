@@ -32,6 +32,23 @@ class FrozenNodeTest {
     }
 
     @Test
+    void strictCanonicalModeDropsEmptyObjectPropertiesLikeMutableCalculator() {
+        Node node = YAML_MAPPER.readValue(
+                "a: 1\n" +
+                "empty: {}\n" +
+                "nested:\n" +
+                "  empty: {}\n" +
+                "  label: ok", Node.class);
+
+        FrozenNode frozen = FrozenNode.fromNode(node);
+
+        assertEquals(BlueIdCalculator.calculateBlueId(node), frozen.blueId());
+        assertEquals(null, frozen.property("empty"));
+        assertEquals(null, frozen.property("nested").property("empty"));
+        assertEquals(BlueIdCalculator.calculateBlueId(frozen.toNode()), frozen.blueId());
+    }
+
+    @Test
     void blueIdMatchesMutableCalculatorForEmptySingletonAndNestedLists() {
         Node empty = YAML_MAPPER.readValue("items: []", Node.class);
         Node singleton = YAML_MAPPER.readValue("items:\n  - one", Node.class);

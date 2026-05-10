@@ -21,6 +21,7 @@ public class DocumentProcessor {
     private final NodeToObjectConverter contractConverter;
     private final ContractLoader contractLoader;
     private final ConformanceEngine conformanceEngine;
+    private final ProcessingSnapshotManager snapshotManager;
 
     public DocumentProcessor() {
         this(ContractProcessorRegistryBuilder.create().registerDefaults().build());
@@ -31,21 +32,33 @@ public class DocumentProcessor {
         this.contractConverter = new NodeToObjectConverter(CONTRACT_TYPE_RESOLVER);
         this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
         this.conformanceEngine = null;
+        this.snapshotManager = null;
     }
 
     public DocumentProcessor(ConformanceEngine conformanceEngine) {
-        this(ContractProcessorRegistryBuilder.create().registerDefaults().build(), conformanceEngine);
+        this(ContractProcessorRegistryBuilder.create().registerDefaults().build(), conformanceEngine, null);
+    }
+
+    public DocumentProcessor(ConformanceEngine conformanceEngine, ProcessingSnapshotManager snapshotManager) {
+        this(ContractProcessorRegistryBuilder.create().registerDefaults().build(), conformanceEngine, snapshotManager);
     }
 
     public DocumentProcessor(ContractProcessorRegistry registry, ConformanceEngine conformanceEngine) {
+        this(registry, conformanceEngine, null);
+    }
+
+    public DocumentProcessor(ContractProcessorRegistry registry,
+                             ConformanceEngine conformanceEngine,
+                             ProcessingSnapshotManager snapshotManager) {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
         this.contractConverter = new NodeToObjectConverter(CONTRACT_TYPE_RESOLVER);
         this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
         this.conformanceEngine = conformanceEngine;
+        this.snapshotManager = snapshotManager;
     }
 
     private DocumentProcessor(Builder builder) {
-        this(builder.contractRegistry, builder.conformanceEngine);
+        this(builder.contractRegistry, builder.conformanceEngine, builder.snapshotManager);
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
@@ -85,6 +98,10 @@ public class DocumentProcessor {
         return conformanceEngine;
     }
 
+    ProcessingSnapshotManager snapshotManager() {
+        return snapshotManager;
+    }
+
     public Map<String, MarkerContract> markersFor(Node scopeNode, String scopePath) {
         ContractBundle bundle = contractLoader.load(scopeNode, scopePath);
         return bundle.markers();
@@ -97,6 +114,7 @@ public class DocumentProcessor {
     static final class Builder {
         private ContractProcessorRegistry contractRegistry = ContractProcessorRegistryBuilder.create().registerDefaults().build();
         private ConformanceEngine conformanceEngine;
+        private ProcessingSnapshotManager snapshotManager;
 
         public Builder withRegistry(ContractProcessorRegistry registry) {
             this.contractRegistry = Objects.requireNonNull(registry, "registry");
@@ -105,6 +123,11 @@ public class DocumentProcessor {
 
         public Builder withConformanceEngine(ConformanceEngine conformanceEngine) {
             this.conformanceEngine = conformanceEngine;
+            return this;
+        }
+
+        public Builder withSnapshotManager(ProcessingSnapshotManager snapshotManager) {
+            this.snapshotManager = snapshotManager;
             return this;
         }
 
