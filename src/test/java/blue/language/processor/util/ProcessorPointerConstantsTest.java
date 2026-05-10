@@ -18,12 +18,14 @@ class ProcessorPointerConstantsTest {
     @Test
     void contractsEntryAppendsKeyWithoutDuplicatingSeparators() {
         assertEquals("/contracts/custom", ProcessorPointerConstants.relativeContractsEntry("custom"));
+        assertEquals("/contracts/a~1b~0c", ProcessorPointerConstants.relativeContractsEntry("a/b~c"));
     }
 
     @Test
     void checkpointLastEventPointerIncludesChannelKey() {
         String pointer = ProcessorPointerConstants.relativeCheckpointLastEvent("checkpoint", "channelA");
         assertEquals("/contracts/checkpoint/lastEvents/channelA", pointer);
+        assertEquals("/contracts/check~1point/lastEvents/channel~0A",
+                ProcessorPointerConstants.relativeCheckpointLastEvent("check/point", "channel~A"));
     }
 }
-

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -238,13 +240,15 @@ public class NodeToMapListOrValueTest {
     public void testReferenceOnlyBlueIdSerialization() {
         Object object = NodeToMapListOrValue.get(new Node().blueId("abc"));
 
-        assertEquals(Map.of("blueId", "abc"), object);
+        assertEquals(Collections.singletonMap("blueId", "abc"), object);
     }
 
     @Test
     public void testListControlSerialization() {
         Object previous = NodeToMapListOrValue.get(new Node().previousBlueId("prevHash"));
-        assertEquals(Map.of("$previous", Map.of("blueId", "prevHash")), previous);
+        Map<String, Object> previousReference = new LinkedHashMap<>();
+        previousReference.put("blueId", "prevHash");
+        assertEquals(Collections.singletonMap("$previous", previousReference), previous);
 
         Object positioned = NodeToMapListOrValue.get(new Node()
                 .position(2)
@@ -257,6 +261,22 @@ public class NodeToMapListOrValueTest {
                 .mergePolicy("append-only")
                 .items(new Node().value("A")));
         assertEquals("append-only", ((Map<?, ?>) list).get("mergePolicy"));
+    }
+
+    @Test
+    public void canonicalSchemaSerializationEmitsEnumAndNotLegacyOptions() throws Exception {
+        Node node = new Blue().yamlToNode(
+                "schema:\n" +
+                "  options:\n" +
+                "    - red\n" +
+                "    - blue");
+
+        String json = JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
+
+        assertTrue(json.contains("\"enum\""));
+        assertFalse(json.contains("\"options\""));
+        assertEquals("red", node.getSchema().getEnum().get(0).getValue());
+        assertEquals("blue", node.getSchema().getEnum().get(1).getValue());
     }
 
     @Test

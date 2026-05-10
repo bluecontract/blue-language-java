@@ -23,6 +23,7 @@ import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.Limits;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -152,8 +153,24 @@ public class Blue implements NodeResolver {
         if (nodes == null || nodes.isEmpty()) {
             throw new IllegalArgumentException("No content found for blueId: " + blueId);
         }
-        Node canonical = nodes.size() == 1 ? nodes.get(0) : new Node().items(nodes);
+        Node canonical = nodes.size() == 1 ? providerContentWithoutRootIdentity(nodes.get(0)) : new Node().items(providerContentWithoutRootIdentity(nodes));
         return loadSnapshot(canonical);
+    }
+
+    private Node providerContentWithoutRootIdentity(Node node) {
+        Node canonical = node.clone();
+        if (canonical.getBlueId() != null && !canonical.isReferenceOnly()) {
+            canonical.blueId(null);
+        }
+        return canonical;
+    }
+
+    private List<Node> providerContentWithoutRootIdentity(List<Node> nodes) {
+        List<Node> canonical = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            canonical.add(providerContentWithoutRootIdentity(node));
+        }
+        return canonical;
     }
 
     public CanonicalOverlayPatchEngine canonicalPatchEngine(Node canonical) {
@@ -526,11 +543,9 @@ public class Blue implements NodeResolver {
         if (path == null || path.isEmpty() || "/".equals(path)) {
             return false;
         }
-        String[] segments = path.charAt(0) == '/'
-                ? path.substring(1).split("/", -1)
-                : path.split("/", -1);
+        List<String> segments = JsonPointer.split(path);
         for (String segment : segments) {
-            if ("-".equals(segment) || (!segment.isEmpty() && segment.chars().allMatch(Character::isDigit))) {
+            if (JsonPointer.isArrayIndexSegment(segment)) {
                 return false;
             }
         }

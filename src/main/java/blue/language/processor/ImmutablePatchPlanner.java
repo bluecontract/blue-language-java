@@ -7,6 +7,7 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,7 +86,7 @@ final class ImmutablePatchPlanner {
 
     private static FrozenNode read(FrozenNode root, String path, LookupMode mode) {
         String normalized = PointerUtils.normalizePointer(path);
-        List<String> segments = splitPointer(normalized);
+        List<String> segments = JsonPointer.split(normalized);
         FrozenNode current = root;
         for (int i = 0; i < segments.size(); i++) {
             if (current == null) {
@@ -116,28 +117,10 @@ final class ImmutablePatchPlanner {
             if ("/".equals(current)) {
                 break;
             }
-            int idx = current.lastIndexOf('/');
-            if (idx <= 0) {
-                current = "/";
-            } else {
-                current = current.substring(0, idx);
-            }
+            List<String> segments = JsonPointer.split(current);
+            current = JsonPointer.toPointer(segments.subList(0, segments.size() - 1));
         }
         return Collections.unmodifiableList(scopes);
-    }
-
-    private static List<String> splitPointer(String path) {
-        if ("/".equals(path)) {
-            return new ArrayList<>();
-        }
-        String raw = path.substring(1);
-        if (raw.isEmpty()) {
-            return new ArrayList<>();
-        }
-        String[] parts = raw.split("/", -1);
-        List<String> segments = new ArrayList<>(parts.length);
-        Collections.addAll(segments, parts);
-        return segments;
     }
 
     private static int parseArrayIndex(String segment, String path) {

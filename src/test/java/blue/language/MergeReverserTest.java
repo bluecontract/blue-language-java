@@ -183,6 +183,187 @@ public class MergeReverserTest {
     }
 
     @Test
+    public void omitsUnchangedInheritedListDuringReverseMinimization() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - A\n" +
+                "    - B");
+        nodeProvider.addSingleDocs(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base"));
+
+        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Node reversed = new MergeReverser().reverse(resolved);
+
+        assertTrue(reversed.getProperties() == null || !reversed.getProperties().containsKey("list"));
+    }
+
+    @Test
+    public void preservesInheritedListPositionalReplacementDuringReverseMinimization() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - A\n" +
+                "    - B");
+        Blue blue = new Blue(nodeProvider);
+        Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        nodeProvider.addListAndItsItems(inheritedList.getItems());
+        nodeProvider.addSingleDocs(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - $previous:\n" +
+                "        blueId: " + previousBlueId + "\n" +
+                "    - $pos: 1\n" +
+                "      value: C");
+
+        Node resolved = blue.resolve(nodeProvider.getNodeByName("Derived"));
+        Node reversed = new MergeReverser().reverse(resolved);
+        Node reversedList = reversed.getAsNode("/list");
+
+        assertEquals(2, reversedList.getItems().size());
+        assertEquals(previousBlueId, reversedList.getItems().get(0).getPreviousBlueId());
+        assertEquals(Integer.valueOf(1), reversedList.getItems().get(1).getPosition());
+        assertEquals("C", reversedList.getItems().get(1).getValue());
+        assertEquals("C", blue.resolve(reversed).getAsNode("/list").getItems().get(1).getValue());
+    }
+
+    @Test
+    public void preservesMultipleInheritedListReplacementsAndAppendsDuringReverseMinimization() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - A\n" +
+                "    - B\n" +
+                "    - C");
+        Blue blue = new Blue(nodeProvider);
+        Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        nodeProvider.addListAndItsItems(inheritedList.getItems());
+        nodeProvider.addSingleDocs(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - $previous:\n" +
+                "        blueId: " + previousBlueId + "\n" +
+                "    - $pos: 0\n" +
+                "      value: X\n" +
+                "    - $pos: 2\n" +
+                "      value: Z\n" +
+                "    - D");
+
+        Node reversed = new MergeReverser().reverse(blue.resolve(nodeProvider.getNodeByName("Derived")));
+        Node reversedList = reversed.getAsNode("/list");
+
+        assertEquals(4, reversedList.getItems().size());
+        assertEquals(previousBlueId, reversedList.getItems().get(0).getPreviousBlueId());
+        assertEquals(Integer.valueOf(0), reversedList.getItems().get(1).getPosition());
+        assertEquals("X", reversedList.getItems().get(1).getValue());
+        assertEquals(Integer.valueOf(2), reversedList.getItems().get(2).getPosition());
+        assertEquals("Z", reversedList.getItems().get(2).getValue());
+        assertEquals("D", reversedList.getItems().get(3).getValue());
+
+        Node roundTripped = blue.resolve(reversed);
+        assertEquals(Arrays.asList("X", "B", "Z", "D"), Arrays.asList(
+                roundTripped.getAsNode("/list").getItems().get(0).getValue(),
+                roundTripped.getAsNode("/list").getItems().get(1).getValue(),
+                roundTripped.getAsNode("/list").getItems().get(2).getValue(),
+                roundTripped.getAsNode("/list").getItems().get(3).getValue()));
+    }
+
+    @Test
+    public void preservesNestedInheritedListItemOverlayDuringReverseMinimization() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - name: first\n" +
+                "      details:\n" +
+                "        size: M\n" +
+                "    - name: second");
+        Blue blue = new Blue(nodeProvider);
+        Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        nodeProvider.addListAndItsItems(inheritedList.getItems());
+        nodeProvider.addSingleDocs(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - $previous:\n" +
+                "        blueId: " + previousBlueId + "\n" +
+                "    - $pos: 0\n" +
+                "      details:\n" +
+                "        color: red");
+
+        Node reversed = new MergeReverser().reverse(blue.resolve(nodeProvider.getNodeByName("Derived")));
+        Node overlay = reversed.getAsNode("/list").getItems().get(1);
+
+        assertEquals(Integer.valueOf(0), overlay.getPosition());
+        assertEquals("red", overlay.getAsText("/details/color/value"));
+        assertFalse(overlay.getProperties().containsKey("name"));
+        assertFalse(overlay.getAsNode("/details").getProperties().containsKey("size"));
+        assertEquals("red", blue.resolve(reversed).getAsText("/list/0/details/color/value"));
+        assertEquals("M", blue.resolve(reversed).getAsText("/list/0/details/size/value"));
+    }
+
+    @Test
+    public void preservesReplacementOfInheritedEmptyListPlaceholder() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - $empty: true\n" +
+                "    - B");
+        Blue blue = new Blue(nodeProvider);
+        Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        nodeProvider.addListAndItsItems(inheritedList.getItems());
+        nodeProvider.addSingleDocs(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - $previous:\n" +
+                "        blueId: " + previousBlueId + "\n" +
+                "    - $pos: 0\n" +
+                "      value: A");
+
+        Node reversed = new MergeReverser().reverse(blue.resolve(nodeProvider.getNodeByName("Derived")));
+        Node overlay = reversed.getAsNode("/list").getItems().get(1);
+
+        assertEquals(Integer.valueOf(0), overlay.getPosition());
+        assertEquals("A", overlay.getValue());
+        assertEquals("A", blue.resolve(reversed).getAsNode("/list").getItems().get(0).getValue());
+    }
+
+    @Test
     public void preservesScalarOverrideThatDiffersFromType() throws Exception {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(

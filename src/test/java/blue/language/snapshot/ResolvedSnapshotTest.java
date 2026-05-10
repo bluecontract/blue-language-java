@@ -16,6 +16,7 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -254,6 +255,24 @@ class ResolvedSnapshotTest {
         assertSame(precomputed, loaded);
         assertSame(precomputed.frozenResolvedRoot(), loaded.frozenResolvedRoot());
         assertEquals(0, countingProvider.fetchCount());
+    }
+
+    @Test
+    void loadSnapshotByBlueIdStripsProviderRootIdentityOnCacheMiss() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Product\n" +
+                "label: inherited");
+        String blueId = nodeProvider.getBlueIdByName("Product");
+        Blue blue = new Blue(nodeProvider);
+        blue.clearResolvedSnapshotCache();
+
+        ResolvedSnapshot snapshot = blue.loadSnapshot(blueId);
+
+        assertEquals(blueId, snapshot.blueId());
+        assertEquals("Product", snapshot.canonicalRoot().getName());
+        assertNull(snapshot.canonicalRoot().getBlueId());
+        assertEquals("inherited", snapshot.resolvedRoot().getAsText("/label"));
     }
 
     @Test

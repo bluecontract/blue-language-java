@@ -417,15 +417,24 @@ public class Merger implements NodeResolver {
     }
 
     private void mergeProperty(Node target, String sourceKey, Node sourceValue, Limits limits) {
-        Node node = resolve(sourceValue, limits);
-
         if (target.getProperties() == null)
             target.properties(new HashMap<>());
         Node targetValue = target.getProperties().get(sourceKey);
-        if (targetValue == null)
+        if (targetValue == null) {
+            Node node = resolve(sourceValue, limits);
             target.getProperties().put(sourceKey, node);
-        else
+        } else if (hasListControls(sourceValue)) {
+            merge(targetValue, sourceValue, limits);
+        } else {
+            Node node = resolve(sourceValue, limits);
             mergeObject(targetValue, node, limits);
+        }
+    }
+
+    private boolean hasListControls(Node node) {
+        List<Node> items = node.getItems();
+        return items != null && items.stream()
+                .anyMatch(item -> item.getPreviousBlueId() != null || item.getPosition() != null);
     }
 
     private void resolveTypeMetadata(Node source, Limits limits) {

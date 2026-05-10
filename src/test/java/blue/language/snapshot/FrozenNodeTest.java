@@ -122,6 +122,22 @@ class FrozenNodeTest {
     }
 
     @Test
+    void pathIndexAndAtUseJsonPointerEscapingForSlashAndTildeKeys() throws Exception {
+        FrozenNode frozen = FrozenNode.fromNode(YAML_MAPPER.readValue(
+                "\"a/b\": slash\n" +
+                "\"a~b\": tilde\n" +
+                "nested:\n" +
+                "  \"x/y\": value", Node.class));
+
+        assertEquals("slash", frozen.at("/a~1b").getValue());
+        assertEquals("tilde", frozen.at("/a~0b").getValue());
+        assertEquals("value", frozen.at("/nested/x~1y").getValue());
+        assertEquals(frozen.property("a/b"), frozen.pathIndex().get("/a~1b"));
+        assertEquals(frozen.property("a~b"), frozen.pathIndex().get("/a~0b"));
+        assertEquals(frozen.property("nested").property("x/y"), frozen.pathIndex().get("/nested/x~1y"));
+    }
+
+    @Test
     void listBlueIdUsesCachedElementHashes() {
         FrozenNode one = FrozenNode.fromNode(new Node().value("one"));
         FrozenNode two = FrozenNode.fromNode(new Node().value("two"));

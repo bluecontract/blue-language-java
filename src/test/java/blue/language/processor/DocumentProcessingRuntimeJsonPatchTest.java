@@ -207,15 +207,18 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
-    void tildeSegmentsAreNotUnescaped() {
+    void jsonPointerEscapesAddressLiteralSlashAndTildeKeys() {
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        runtime.applyPatch("/", JsonPatch.add("/tilde/~1key", new Node().value("value")));
+        runtime.applyPatch("/", JsonPatch.add("/tilde/a~1b", new Node().value("slash")));
+        runtime.applyPatch("/", JsonPatch.add("/tilde/a~0b", new Node().value("tilde")));
+        runtime.applyPatch("/", JsonPatch.add("/tilde/~01key", new Node().value("literal")));
 
         Node tilde = property(document, "tilde");
-        Node literal = property(tilde, "~1key");
-        assertEquals("value", literal.getValue());
+        assertEquals("slash", property(tilde, "a/b").getValue());
+        assertEquals("tilde", property(tilde, "a~b").getValue());
+        assertEquals("literal", property(tilde, "~1key").getValue());
     }
 
     @Test

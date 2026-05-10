@@ -8,6 +8,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.JsonPointer;
 import blue.language.utils.MergeReverser;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
@@ -181,8 +182,8 @@ final class FrozenConformancePlanner {
         if ("/".equals(pointer)) {
             return Collections.emptyList();
         }
-        String[] requested = pointer.substring(1).split("/", -1);
-        List<String> existing = new ArrayList<>(requested.length);
+        List<String> requested = JsonPointer.split(pointer);
+        List<String> existing = new ArrayList<>(requested.size());
         FrozenNode current = root;
         for (String segment : requested) {
             if (current == null) {
@@ -225,7 +226,7 @@ final class FrozenConformancePlanner {
             return root;
         }
         FrozenNode current = root;
-        for (String segment : pointer.substring(1).split("/", -1)) {
+        for (String segment : JsonPointer.split(pointer)) {
             current = child(current, segment);
             if (current == null) {
                 return null;
@@ -240,7 +241,7 @@ final class FrozenConformancePlanner {
         if ("/".equals(pointer)) {
             return replacement;
         }
-        List<String> segments = splitPointer(pointer);
+        List<String> segments = JsonPointer.split(pointer);
         return replaceAt(root, segments, 0, replacement, pointer);
     }
 
@@ -273,25 +274,8 @@ final class FrozenConformancePlanner {
         return node.withProperty(segment, nextChild);
     }
 
-    private List<String> splitPointer(String pointer) {
-        if ("/".equals(pointer)) {
-            return Collections.emptyList();
-        }
-        String[] raw = pointer.substring(1).split("/", -1);
-        List<String> segments = new ArrayList<>(raw.length);
-        Collections.addAll(segments, raw);
-        return segments;
-    }
-
     private String pointer(List<String> segments, int length) {
-        if (length == 0) {
-            return "/";
-        }
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            builder.append('/').append(segments.get(i));
-        }
-        return builder.toString();
+        return JsonPointer.toPointer(segments.subList(0, length));
     }
 
     private FrozenNode reuseUnchangedSubtrees(FrozenNode previous, FrozenNode candidate) {
@@ -335,7 +319,7 @@ final class FrozenConformancePlanner {
     }
 
     private String metadataPointer(String nodePath, String metadataField) {
-        return "/".equals(nodePath) ? "/" + metadataField : nodePath + "/" + metadataField;
+        return JsonPointer.append(nodePath, metadataField);
     }
 
     private int parseArrayIndex(String segment) {

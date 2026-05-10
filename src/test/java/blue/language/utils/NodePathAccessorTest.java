@@ -89,4 +89,17 @@ class NodePathAccessorTest {
         assertTrue(NodePathAccessor.get(nodeWithoutValue, "/") instanceof Node);
         assertEquals("Test", NodePathAccessor.get(nodeWithoutValue, "/name"));
     }
+
+    @Test
+    void testJsonPointerEscaping() throws Exception {
+        Node node = YAML_MAPPER.readValue(
+                "\"a/b\": slash\n" +
+                "\"a~b\": tilde\n" +
+                "nested:\n" +
+                "  \"x/y\": value", Node.class);
+
+        assertEquals("slash", node.get("/a~1b/value"));
+        assertEquals("tilde", node.get("/a~0b/value"));
+        assertEquals("value", node.get("/nested/x~1y/value"));
+    }
 }

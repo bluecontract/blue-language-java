@@ -5,6 +5,7 @@ import blue.language.model.Schema;
 import blue.language.utils.Base58Sha256Provider;
 import blue.language.utils.BlueNumbers;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.JsonPointer;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.math.BigInteger;
@@ -237,12 +238,11 @@ public final class FrozenNode {
     }
 
     public FrozenNode at(String pointer) {
-        String normalized = normalizePointer(pointer);
-        if ("/".equals(normalized)) {
+        List<String> segments = JsonPointer.split(pointer);
+        if (segments.isEmpty()) {
             return this;
         }
         FrozenNode current = this;
-        String[] segments = normalized.substring(1).split("/", -1);
         for (String segment : segments) {
             if (current == null) {
                 return null;
@@ -385,26 +385,12 @@ public final class FrozenNode {
         index.put(path, this);
         if (items != null) {
             for (int i = 0; i < items.size(); i++) {
-                items.get(i).indexPaths(childPointer(path, String.valueOf(i)), index);
+                items.get(i).indexPaths(JsonPointer.append(path, String.valueOf(i)), index);
             }
         }
         if (properties != null) {
-            properties.forEach((key, child) -> child.indexPaths(childPointer(path, key), index));
+            properties.forEach((key, child) -> child.indexPaths(JsonPointer.append(path, key), index));
         }
-    }
-
-    private String childPointer(String parent, String child) {
-        if ("/".equals(parent)) {
-            return "/" + child;
-        }
-        return parent + "/" + child;
-    }
-
-    private String normalizePointer(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return "/";
-        }
-        return pointer.charAt(0) == '/' ? pointer : "/" + pointer;
     }
 
     private int parseArrayIndex(String segment) {

@@ -47,6 +47,25 @@ class CanonicalOverlayPatchEngineTest {
     }
 
     @Test
+    void patchPathsDecodeJsonPointerEscapesForObjectKeys() {
+        FrozenNode root = FrozenNode.empty();
+
+        FrozenNode patched = new CanonicalOverlayPatchEngine(root)
+                .apply(JsonPatch.add("/a~1b/c~0d", new Node().value("escaped")))
+                .root();
+        FrozenNode replaced = new CanonicalOverlayPatchEngine(patched)
+                .apply(JsonPatch.replace("/a~1b/c~0d", new Node().value("updated")))
+                .root();
+        FrozenNode removed = new CanonicalOverlayPatchEngine(replaced)
+                .apply(JsonPatch.remove("/a~1b/c~0d"))
+                .root();
+
+        assertEquals("escaped", patched.property("a/b").property("c~d").getValue());
+        assertEquals("updated", replaced.property("a/b").property("c~d").getValue());
+        assertNull(removed.property("a/b"));
+    }
+
+    @Test
     void removeDeletesObjectPropertyAndReturnsNullAfterSnapshot() {
         FrozenNode root = FrozenNode.fromNode(YAML_MAPPER.readValue(
                 "a: 1\n" +

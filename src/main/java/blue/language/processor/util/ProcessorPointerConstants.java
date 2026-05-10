@@ -1,5 +1,7 @@
 package blue.language.processor.util;
 
+import blue.language.utils.JsonPointer;
+
 /**
  * Shared relative pointer constants for processor-managed contract paths.
  *
@@ -22,14 +24,14 @@ public final class ProcessorPointerConstants {
     }
 
     public static String relativeContractsEntry(String key) {
-        return RELATIVE_CONTRACTS + "/" + key;
+        return JsonPointer.append(RELATIVE_CONTRACTS, key);
     }
 
     public static String relativeCheckpointLastEvent(String markerKey, String channelKey) {
-        return relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX + "/" + channelKey;
+        return JsonPointer.append(relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX, channelKey);
     }
 
     public static String relativeCheckpointLastSignature(String markerKey, String channelKey) {
-        return relativeContractsEntry(markerKey) + LAST_SIGNATURES_SUFFIX + "/" + channelKey;
+        return JsonPointer.append(relativeContractsEntry(markerKey) + LAST_SIGNATURES_SUFFIX, channelKey);
     }
 }

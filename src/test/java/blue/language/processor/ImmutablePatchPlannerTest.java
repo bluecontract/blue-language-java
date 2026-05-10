@@ -47,4 +47,20 @@ class ImmutablePatchPlannerTest {
         assertEquals("a", root.at("/values/0").getValue());
         assertEquals("b", plan.root().at("/values/1").getValue());
     }
+
+    @Test
+    void plannerReadsAndReportsJsonPointerEscapedPaths() throws Exception {
+        FrozenNode root = FrozenNode.fromNode(YAML_MAPPER.readValue(
+                "\"scope/one\":\n" +
+                "  \"field~two\": old\n", Node.class));
+
+        ImmutablePatchPlanner.PatchPlan plan = new ImmutablePatchPlanner(root)
+                .plan("/scope~1one", JsonPatch.replace("/scope~1one/field~0two", new Node().value("new")));
+
+        assertEquals("old", plan.beforeNode().getValue());
+        assertEquals("new", plan.afterNode().getValue());
+        assertEquals("new", plan.root().at("/scope~1one/field~0two").getValue());
+        assertEquals("/scope~1one/field~0two", plan.path());
+        assertEquals(Arrays.asList("/scope~1one", "/"), plan.cascadeScopes());
+    }
 }

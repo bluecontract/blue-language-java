@@ -25,21 +25,21 @@ public class NodePathAccessor {
             return node.getValue() != null ? node.getValue() : node;
         }
 
-        String[] segments = path.substring(1).split("/");
+        List<String> segments = JsonPointer.split(path);
         return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
-    private static Object getRecursive(Node node, String[] segments, int index, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
-        if (index == segments.length - 1 && !resolveFinalLink) {
+    private static Object getRecursive(Node node, List<String> segments, int index, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
+        if (index == segments.size() - 1 && !resolveFinalLink) {
             // Return the node itself for the last segment if we're not resolving the final link
-            return getNodeForSegment(node, segments[index], linkingProvider, false);
+            return getNodeForSegment(node, segments.get(index), linkingProvider, false);
         }
 
-        if (index == segments.length) {
+        if (index == segments.size()) {
             return node != null && node.getValue() != null ? node.getValue() : node;
         }
 
-        String segment = segments[index];
+        String segment = segments.get(index);
         Node nextNode = getNodeForSegment(node, segment, linkingProvider, true);
         return getRecursive(nextNode, segments, index + 1, linkingProvider, resolveFinalLink);
     }

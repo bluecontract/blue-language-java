@@ -2,6 +2,7 @@ package blue.language.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
@@ -154,6 +155,7 @@ public class Schema implements Cloneable {
         return enumValues;
     }
 
+    @JsonIgnore
     public List<Node> getOptions() {
         return enumValues;
     }

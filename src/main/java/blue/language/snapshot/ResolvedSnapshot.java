@@ -2,6 +2,7 @@ package blue.language.snapshot;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.utils.JsonPointer;
 
 import java.util.Map;
 import java.util.Objects;
@@ -50,11 +51,11 @@ public final class ResolvedSnapshot {
     }
 
     public FrozenNode canonicalAt(String pointer) {
-        return canonicalIndex.get(normalizePointer(pointer));
+        return canonicalIndex.get(JsonPointer.canonicalize(pointer));
     }
 
     public FrozenNode resolvedAt(String pointer) {
-        return resolvedIndex.get(normalizePointer(pointer));
+        return resolvedIndex.get(JsonPointer.canonicalize(pointer));
     }
 
     public Node canonicalNodeAt(String pointer) {
@@ -87,10 +88,4 @@ public final class ResolvedSnapshot {
         return canonicalPatchEngine().apply(patch);
     }
 
-    private String normalizePointer(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return "/";
-        }
-        return pointer.charAt(0) == '/' ? pointer : "/" + pointer;
-    }
 }

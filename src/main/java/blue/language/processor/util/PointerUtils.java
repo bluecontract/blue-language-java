@@ -1,5 +1,10 @@
 package blue.language.processor.util;
 
+import blue.language.utils.JsonPointer;
+
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Utility helpers for normalising and composing JSON Pointer / scope strings.
  */
@@ -9,25 +14,31 @@ public final class PointerUtils {
     }
 
     public static String normalizeScope(String scopePath) {
-        if (scopePath == null || scopePath.isEmpty()) {
-            return "/";
-        }
-        String result = scopePath;
-        if (result.charAt(0) != '/') {
-            result = "/" + result;
-        }
-        return result;
+        return JsonPointer.canonicalize(scopePath);
     }
 
     public static String normalizePointer(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return "/";
-        }
-        String result = pointer;
-        if (result.charAt(0) != '/') {
-            result = "/" + result;
-        }
-        return result;
+        return JsonPointer.canonicalize(pointer);
+    }
+
+    public static String canonicalizePointer(String pointer) {
+        return JsonPointer.canonicalize(pointer);
+    }
+
+    public static List<String> splitPointer(String pointer) {
+        return JsonPointer.split(pointer);
+    }
+
+    public static String toPointer(List<String> segments) {
+        return JsonPointer.toPointer(segments);
+    }
+
+    public static String appendPointer(String parent, String childSegment) {
+        return JsonPointer.append(parent, childSegment);
+    }
+
+    public static String escapeSegment(String segment) {
+        return JsonPointer.escape(segment);
     }
 
     public static String stripSlashes(String value) {
@@ -45,18 +56,9 @@ public final class PointerUtils {
     }
 
     public static String joinRelativePointers(String base, String tail) {
-        String basePart = stripSlashes(base);
-        String tailPart = stripSlashes(tail);
-        if (basePart.isEmpty() && tailPart.isEmpty()) {
-            return "/";
-        }
-        if (basePart.isEmpty()) {
-            return "/" + tailPart;
-        }
-        if (tailPart.isEmpty()) {
-            return "/" + basePart;
-        }
-        return "/" + basePart + "/" + tailPart;
+        List<String> segments = new ArrayList<>(JsonPointer.split(base));
+        segments.addAll(JsonPointer.split(tail));
+        return JsonPointer.toPointer(segments);
     }
 
     public static String resolvePointer(String scopePath, String relativePointer) {
@@ -71,25 +73,28 @@ public final class PointerUtils {
         if (normalizedPointer.length() == 1) { // "/"
             return normalizedScope;
         }
-        return normalizedScope + normalizedPointer;
+        List<String> segments = new ArrayList<>(JsonPointer.split(normalizedScope));
+        segments.addAll(JsonPointer.split(normalizedPointer));
+        return JsonPointer.toPointer(segments);
     }
 
     public static String relativizePointer(String scopePath, String absolutePath) {
-        String normalizedScope = normalizeScope(scopePath);
-        String normalizedAbsolute = normalizePointer(absolutePath);
-        if ("/".equals(normalizedScope)) {
-            return normalizedAbsolute;
+        List<String> scopeSegments = JsonPointer.split(normalizeScope(scopePath));
+        List<String> absoluteSegments = JsonPointer.split(normalizePointer(absolutePath));
+        if (scopeSegments.isEmpty()) {
+            return JsonPointer.toPointer(absoluteSegments);
         }
-        if (!normalizedAbsolute.startsWith(normalizedScope)) {
-            return normalizedAbsolute;
+        if (absoluteSegments.size() < scopeSegments.size()) {
+            return JsonPointer.toPointer(absoluteSegments);
         }
-        if (normalizedAbsolute.length() == normalizedScope.length()) {
+        for (int i = 0; i < scopeSegments.size(); i++) {
+            if (!scopeSegments.get(i).equals(absoluteSegments.get(i))) {
+                return JsonPointer.toPointer(absoluteSegments);
+            }
+        }
+        if (absoluteSegments.size() == scopeSegments.size()) {
             return "/";
         }
-        String remainder = normalizedAbsolute.substring(normalizedScope.length());
-        if (remainder.isEmpty()) {
-            return "/";
-        }
-        return remainder.startsWith("/") ? remainder : "/" + remainder;
+        return JsonPointer.toPointer(absoluteSegments.subList(scopeSegments.size(), absoluteSegments.size()));
     }
 }

@@ -3,6 +3,7 @@ package blue.language.snapshot;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
+import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,8 +27,8 @@ public final class CanonicalOverlayPatchEngine {
 
     public CanonicalPatchResult apply(JsonPatch patch) {
         Objects.requireNonNull(patch, "patch");
-        String path = PointerUtils.normalizePointer(patch.getPath());
-        List<String> segments = splitPointer(path);
+        String path = PointerUtils.canonicalizePointer(patch.getPath());
+        List<String> segments = JsonPointer.split(path);
         if (segments.isEmpty()) {
             throw new IllegalArgumentException("Canonical overlay patches cannot target the root document");
         }
@@ -94,7 +95,7 @@ public final class CanonicalOverlayPatchEngine {
 
         FrozenNode child = node.property(segment);
         if (child == null) {
-            if (isArrayIndexSegment(segment)) {
+            if (JsonPointer.isArrayIndexSegment(segment)) {
                 throw new IllegalStateException("Expected array element to exist at path: " + path);
             }
             child = FrozenNode.empty();
@@ -169,7 +170,7 @@ public final class CanonicalOverlayPatchEngine {
                 if ("-".equals(segment)) {
                     return beforeAdd && last ? null : current.item(current.getItems().size() - 1);
                 }
-                current = current.item(parseArrayIndex(segment, "/" + String.join("/", segments)));
+                current = current.item(parseArrayIndex(segment, JsonPointer.toPointer(segments)));
             } else {
                 current = current.property(segment);
             }
@@ -187,26 +188,6 @@ public final class CanonicalOverlayPatchEngine {
         } catch (NumberFormatException ex) {
             throw new IllegalStateException("Expected numeric array index in path: " + path);
         }
-    }
-
-    private boolean isArrayIndexSegment(String segment) {
-        return "-".equals(segment) || (!segment.isEmpty() && segment.chars().allMatch(Character::isDigit));
-    }
-
-    private List<String> splitPointer(String path) {
-        if ("/".equals(path)) {
-            return new ArrayList<>();
-        }
-        String raw = path.substring(1);
-        if (raw.isEmpty()) {
-            return new ArrayList<>();
-        }
-        String[] parts = raw.split("/", -1);
-        List<String> segments = new ArrayList<>(parts.length);
-        for (String part : parts) {
-            segments.add(part);
-        }
-        return segments;
     }
 
     private enum WriteMode {

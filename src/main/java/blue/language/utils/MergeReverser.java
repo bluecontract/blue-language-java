@@ -55,16 +55,40 @@ public class MergeReverser {
         }
 
         if (merged.getItems() != null) {
-            int start = 0;
             List<Node> minimalItems = new ArrayList<>();
             if (fromType != null && fromType.getItems() != null) {
-                String itemsBlueId = BlueIdCalculator.calculateBlueId(fromType.getItems());
-                minimalItems.add(new Node().previousBlueId(itemsBlueId));
-                start = fromType.getItems().size();
-            }
-            if (merged.getItems().size() > start) {
-                for (int i = start; i < merged.getItems().size(); i++) {
-                    Node item = merged.getItems().get(i);
+                List<Node> inheritedItems = fromType.getItems();
+                int inheritedSize = inheritedItems.size();
+                if (merged.getItems().size() < inheritedSize) {
+                    throw new IllegalStateException("Cannot reverse-minimize a list shorter than its inherited list without an explicit list-deletion control.");
+                }
+                int commonSize = Math.min(merged.getItems().size(), inheritedSize);
+
+                for (int i = 0; i < commonSize; i++) {
+                    if (sameNodeBlueId(merged.getItems().get(i), inheritedItems.get(i))) {
+                        continue;
+                    }
+                    Node minimalItem = new Node();
+                    reverseNode(minimalItem, merged.getItems().get(i), inheritedItems.get(i));
+                    if (!Nodes.isEmptyNode(minimalItem)) {
+                        minimalItem.position(i);
+                        minimalItems.add(minimalItem);
+                    }
+                }
+
+                for (int i = inheritedSize; i < merged.getItems().size(); i++) {
+                    Node minimalItem = new Node();
+                    reverseNode(minimalItem, merged.getItems().get(i), null);
+                    minimalItems.add(minimalItem);
+                }
+
+                if (!minimalItems.isEmpty()) {
+                    String itemsBlueId = BlueIdCalculator.calculateBlueId(inheritedItems);
+                    minimalItems.add(0, new Node().previousBlueId(itemsBlueId));
+                    minimal.items(minimalItems);
+                }
+            } else {
+                for (Node item : merged.getItems()) {
                     Node minimalItem = new Node();
                     reverseNode(minimalItem, item, null);
                     minimalItems.add(minimalItem);
@@ -81,6 +105,9 @@ public class MergeReverser {
                 Node fromTypeProperty = null;
                 if (fromType != null && fromType.getProperties() != null) {
                     fromTypeProperty = fromType.getProperties().get(key);
+                }
+                if (sameNodeBlueId(mergedProperty, fromTypeProperty)) {
+                    continue;
                 }
                 Node minimalProperty = new Node();
                 reverseNode(minimalProperty, mergedProperty, fromTypeProperty);
@@ -104,6 +131,16 @@ public class MergeReverser {
         }
         return BlueIdCalculator.calculateBlueId(new Node().schema(left))
                 .equals(BlueIdCalculator.calculateBlueId(new Node().schema(right)));
+    }
+
+    private boolean sameNodeBlueId(Node left, Node right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null) {
+            return false;
+        }
+        return BlueIdCalculator.calculateBlueId(left).equals(BlueIdCalculator.calculateBlueId(right));
     }
 
     private void setTypeIfDifferent(Node merged, Node fromType, Node minimal,

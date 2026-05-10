@@ -10,6 +10,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import java.util.LinkedHashMap;
@@ -221,9 +222,8 @@ final class ProcessorEngine {
         if (pointer.equals("/")) {
             return root;
         }
-        String[] segments = pointer.substring(1).split("/");
         Node current = root;
-        for (String segment : segments) {
+        for (String segment : JsonPointer.split(pointer)) {
             if (segment.isEmpty()) {
                 continue;
             }
