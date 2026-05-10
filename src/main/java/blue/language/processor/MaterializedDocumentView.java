@@ -31,7 +31,7 @@ final class MaterializedDocumentView {
     }
 
     Node nodeAt(String path) {
-        return cloneNode(new PatchEngine(root).read(PointerUtils.normalizePointer(path)));
+        return cloneNode(ImmutablePatchPlanner.readNode(root, PointerUtils.normalizePointer(path)));
     }
 
     void replaceWith(Node nextRoot) {

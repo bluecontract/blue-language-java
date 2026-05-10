@@ -73,4 +73,19 @@ public class TypesTest {
         assertTrue(isSubtype(nodeProvider.getNodeByName("Alice3"), nodeProvider.getNodeByName("Person"), nodeProvider));
     }
 
+    @Test
+    public void referenceOnlyCustomSubtypeTraversesFetchedTypeHierarchy() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs("name: A");
+        nodeProvider.addSingleDocs(
+                "name: B\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("A"));
+
+        assertTrue(isSubtype(
+                new Node().blueId(nodeProvider.getBlueIdByName("B")),
+                nodeProvider.getNodeByName("A"),
+                nodeProvider));
+    }
+
 }

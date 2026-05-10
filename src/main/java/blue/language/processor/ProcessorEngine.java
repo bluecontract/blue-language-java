@@ -40,6 +40,22 @@ final class ProcessorEngine {
         return execution.result();
     }
 
+    static DocumentProcessingResult initializeDocument(DocumentProcessor owner, ResolvedSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        if (isInitialized(owner, snapshot)) {
+            throw new IllegalStateException("Document already initialized");
+        }
+        Execution execution = new Execution(owner, snapshot);
+        try {
+            execution.initializeScope("/", true);
+        } catch (RunTerminationException ignored) {
+            // Initialization run terminated early (e.g., graceful root termination).
+        } catch (MustUnderstandFailureException ex) {
+            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage());
+        }
+        return execution.result();
+    }
+
     static DocumentProcessingResult processDocument(DocumentProcessor owner, Node document, Node event) {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(event, "event");
@@ -59,6 +75,24 @@ final class ProcessorEngine {
         return execution.result();
     }
 
+    static DocumentProcessingResult processDocument(DocumentProcessor owner, ResolvedSnapshot snapshot, Node event) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(event, "event");
+        if (!isInitialized(owner, snapshot)) {
+            throw new IllegalStateException("Document not initialized");
+        }
+        Execution execution = new Execution(owner, snapshot);
+        try {
+            execution.loadBundles("/");
+            execution.processExternalEvent("/", event);
+        } catch (RunTerminationException ignored) {
+            // Processing terminated early; result still returned.
+        } catch (MustUnderstandFailureException ex) {
+            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage());
+        }
+        return execution.result();
+    }
+
     static boolean isInitialized(DocumentProcessor owner, Node document) {
         Objects.requireNonNull(document, "document");
         String pointer = resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
@@ -67,6 +101,17 @@ final class ProcessorEngine {
             marker = nodeAt(document, pointer);
         } catch (Exception ignored) {
         }
+        if (marker == null) {
+            return false;
+        }
+        validateInitializationMarker(marker, pointer);
+        return true;
+    }
+
+    static boolean isInitialized(DocumentProcessor owner, ResolvedSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        String pointer = resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        Node marker = snapshot.canonicalNodeAt(pointer);
         if (marker == null) {
             return false;
         }
@@ -240,6 +285,15 @@ final class ProcessorEngine {
             this.scopeExecutor = new ScopeExecutor(owner, this, runtime, bundles, channelRunner);
         }
 
+        Execution(DocumentProcessor owner, ResolvedSnapshot snapshot) {
+            this.owner = owner;
+            this.runtime = new DocumentProcessingRuntime(snapshot, owner.conformanceEngine(), owner.snapshotManager());
+            this.checkpointManager = new CheckpointManager(runtime, ProcessorEngine::canonicalSignature);
+            this.terminationService = new TerminationService(runtime);
+            this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
+            this.scopeExecutor = new ScopeExecutor(owner, this, runtime, bundles, channelRunner);
+        }
+
         void initializeScope(String scopePath, boolean chargeScopeEntry) {
             scopeExecutor.initializeScope(scopePath, chargeScopeEntry);
         }
@@ -282,11 +336,13 @@ final class ProcessorEngine {
         }
 
         DocumentProcessingResult result() {
-            DocumentProcessingResult result = DocumentProcessingResult.of(runtime.document(),
+            ResolvedSnapshot snapshot = runtime.snapshot();
+            if (snapshot != null) {
+                return DocumentProcessingResult.of(snapshot, runtime.rootEmissions(), runtime.totalGas());
+            }
+            return DocumentProcessingResult.of(runtime.document(),
                     runtime.rootEmissions(),
                     runtime.totalGas());
-            ResolvedSnapshot snapshot = runtime.snapshot();
-            return snapshot != null ? result.withSnapshot(snapshot) : result;
         }
 
         DocumentProcessingRuntime runtime() {

@@ -6,6 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.TypeClassResolver;
 import java.util.Map;
 import java.util.Objects;
@@ -66,12 +67,26 @@ public class DocumentProcessor {
         return ProcessorEngine.initializeDocument(this, document);
     }
 
+    public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
+        requireSnapshotManager();
+        return ProcessorEngine.initializeDocument(this, snapshot);
+    }
+
     public DocumentProcessingResult processDocument(Node document, Node event) {
         return ProcessorEngine.processDocument(this, document, event);
     }
 
+    public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event) {
+        requireSnapshotManager();
+        return ProcessorEngine.processDocument(this, snapshot, event);
+    }
+
     public boolean isInitialized(Node document) {
         return ProcessorEngine.isInitialized(this, document);
+    }
+
+    public boolean isInitialized(ResolvedSnapshot snapshot) {
+        return ProcessorEngine.isInitialized(this, snapshot);
     }
 
     public DocumentProcessor registerContractProcessor(ContractProcessor<? extends Contract> processor) {
@@ -106,6 +121,12 @@ public class DocumentProcessor {
     public Map<String, MarkerContract> markersFor(Node scopeNode, String scopePath) {
         ContractBundle bundle = contractLoader.load(FrozenNode.fromResolvedNode(scopeNode), scopePath);
         return bundle.markers();
+    }
+
+    private void requireSnapshotManager() {
+        if (snapshotManager == null) {
+            throw new IllegalStateException("Snapshot-native processing requires a ProcessingSnapshotManager");
+        }
     }
 
     public static Builder builder() {

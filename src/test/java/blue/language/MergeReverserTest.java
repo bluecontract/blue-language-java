@@ -50,7 +50,7 @@ public class MergeReverserTest {
 
         assertFalse(reversed.getProperties().containsKey("x"));
         assertEquals(2, reversed.getAsInteger("/y/value"));
-        assertNull(reversed.get("/z/type"));
+        assertEquals(Properties.LIST_TYPE_BLUE_ID, reversed.getAsText("/z/type/blueId"));
         assertEquals(Properties.TEXT_TYPE_BLUE_ID, reversed.getAsText("/z/itemType/blueId"));
     }
 

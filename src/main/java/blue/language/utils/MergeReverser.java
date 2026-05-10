@@ -35,6 +35,7 @@ public class MergeReverser {
         setTypeIfDifferent(merged, fromType, minimal, Node::getItemType, Node::itemType);
         setTypeIfDifferent(merged, fromType, minimal, Node::getKeyType, Node::keyType);
         setTypeIfDifferent(merged, fromType, minimal, Node::getValueType, Node::valueType);
+        preservePayloadTypeForMetadataOverride(merged, minimal);
 
         if (merged.getName() != null && (fromType == null || !merged.getName().equals(fromType.getName()))) {
             minimal.name(merged.getName());
@@ -114,5 +115,20 @@ public class MergeReverser {
             Node typeNode = new Node().blueId(mergedType.getBlueId());
             typeSetter.accept(minimal, typeNode);
         }
+    }
+
+    private void preservePayloadTypeForMetadataOverride(Node merged, Node minimal) {
+        if (minimal.getType() != null || merged.getType() == null) {
+            return;
+        }
+        if (minimal.getItemType() == null && minimal.getKeyType() == null && minimal.getValueType() == null) {
+            return;
+        }
+
+        Node mergedType = merged.getType();
+        Node typeNode = mergedType.getBlueId() != null
+                ? new Node().blueId(mergedType.getBlueId())
+                : mergedType.clone();
+        minimal.type(typeNode);
     }
 }

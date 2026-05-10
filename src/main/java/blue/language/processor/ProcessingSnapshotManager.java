@@ -12,4 +12,8 @@ public interface ProcessingSnapshotManager {
     ResolvedSnapshot fromDocument(Node document);
 
     ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch);
+
+    default ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+        return snapshot;
+    }
 }

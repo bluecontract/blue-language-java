@@ -315,6 +315,10 @@ public class Blue implements NodeResolver {
         return attachProcessingSnapshot(ensureDocumentProcessor().processDocument(document, event));
     }
 
+    public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event) {
+        return ensureDocumentProcessor().processDocument(snapshot, event);
+    }
+
     public DocumentProcessor getDocumentProcessor() {
         return ensureDocumentProcessor();
     }
@@ -331,8 +335,16 @@ public class Blue implements NodeResolver {
         return attachProcessingSnapshot(ensureDocumentProcessor().initializeDocument(document));
     }
 
+    public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
+        return ensureDocumentProcessor().initializeDocument(snapshot);
+    }
+
     public boolean isInitialized(Node document) {
         return ensureDocumentProcessor().isInitialized(document);
+    }
+
+    public boolean isInitialized(ResolvedSnapshot snapshot) {
+        return ensureDocumentProcessor().isInitialized(snapshot);
     }
 
     public Node preprocess(Node node) {
@@ -448,6 +460,11 @@ public class Blue implements NodeResolver {
             @Override
             public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
                 return applyProcessingCanonicalPatch(snapshot, patch);
+            }
+
+            @Override
+            public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+                return Blue.this.cacheSnapshot(snapshot);
             }
         };
     }

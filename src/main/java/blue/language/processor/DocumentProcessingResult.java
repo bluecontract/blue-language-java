@@ -40,6 +40,17 @@ public final class DocumentProcessingResult {
         return new DocumentProcessingResult(document, new ArrayList<>(triggeredEvents), totalGas, false, null, null);
     }
 
+    public static DocumentProcessingResult of(ResolvedSnapshot snapshot, List<Node> triggeredEvents, long totalGas) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(triggeredEvents, "triggeredEvents");
+        return new DocumentProcessingResult(snapshot.canonicalRoot(),
+                new ArrayList<>(triggeredEvents),
+                totalGas,
+                false,
+                null,
+                snapshot);
+    }
+
     public static DocumentProcessingResult capabilityFailure(Node document, String reason) {
         Objects.requireNonNull(document, "document");
         return new DocumentProcessingResult(document, Collections.emptyList(), 0L, true, reason, null);
@@ -47,7 +58,7 @@ public final class DocumentProcessingResult {
 
     public DocumentProcessingResult withSnapshot(ResolvedSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        return new DocumentProcessingResult(document,
+        return new DocumentProcessingResult(snapshot.canonicalRoot(),
                 triggeredEvents,
                 totalGas,
                 capabilityFailure,

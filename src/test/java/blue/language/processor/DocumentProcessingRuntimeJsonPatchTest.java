@@ -58,7 +58,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         assertEquals("value", data.before().getValue());
         assertNull(data.after());
-        assertNull(document.getProperties().get("key"));
+        assertTrue(document.getProperties() == null || !document.getProperties().containsKey("key"));
     }
 
     @Test
@@ -203,8 +203,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node foo = property(document, "foo");
         Node emptyKey = property(foo, "");
         Map<String, Node> props = emptyKey.getProperties();
-        assertNotNull(props);
-        assertFalse(props.containsKey("bar"));
+        assertTrue(props == null || !props.containsKey("bar"));
     }
 
     @Test

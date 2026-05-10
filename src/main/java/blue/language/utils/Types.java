@@ -20,6 +20,9 @@ public class Types {
     }
 
     public static boolean isSubtype(Node subtype, Node supertype, NodeProvider nodeProvider) {
+        if (subtype == null || supertype == null) {
+            return false;
+        }
         String subtypeBlueId = calculateBlueId(subtype);
         String supertypeBlueId = calculateBlueId(supertype);
         if (sameType(subtype, supertype, subtypeBlueId, supertypeBlueId))
@@ -36,7 +39,7 @@ public class Types {
             return false;
         }
 
-        Node current = getType(subtype, nodeProvider);
+        Node current = firstSubtypeTraversalNode(subtype, nodeProvider);
         while (current != null) {
             String blueId = calculateBlueId(current);
             if (sameType(current, supertype, blueId, supertypeBlueId))
@@ -44,6 +47,23 @@ public class Types {
             current = getType(current, nodeProvider);
         }
         return false;
+    }
+
+    private static Node firstSubtypeTraversalNode(Node subtype, NodeProvider nodeProvider) {
+        if (subtype.getBlueId() != null && subtype.isReferenceOnly() && !CORE_TYPE_BLUE_IDS.contains(subtype.getBlueId())) {
+            List<Node> referencedNodes = nodeProvider.fetchByBlueId(subtype.getBlueId());
+            if (referencedNodes == null || referencedNodes.isEmpty()) {
+                return null;
+            }
+            if (referencedNodes.size() > 1) {
+                throw new IllegalStateException(String.format(
+                        "Expected a single node for type with blueId '%s', but found multiple.",
+                        subtype.getBlueId()
+                ));
+            }
+            return referencedNodes.get(0);
+        }
+        return getType(subtype, nodeProvider);
     }
 
     private static boolean sameType(Node left, Node right, String leftBlueId, String rightBlueId) {
