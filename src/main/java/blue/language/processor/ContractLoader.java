@@ -84,7 +84,7 @@ final class ContractLoader {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: " + typeBlueId);
                 }
-                builder.addChannel(key, channel);
+                builder.addChannel(key, channel, entry.getValue());
             } else if (contract instanceof HandlerContract) {
                 HandlerContract handler = (HandlerContract) contract;
                 Optional<HandlerProcessor<? extends HandlerContract>> processor = registry.lookupHandler(handler);
@@ -100,11 +100,11 @@ final class ContractLoader {
                         contractTypeBlueIds);
                 handler.setChannelKey(channelKey);
                 requireRegisteredChannel(key, channelKey, contractNodes, contractTypeBlueIds);
-                builder.addHandler(key, handler);
+                builder.addHandler(key, handler, entry.getValue());
             } else if (contract instanceof ProcessEmbedded) {
-                builder.setEmbedded((ProcessEmbedded) contract);
+                builder.setEmbedded((ProcessEmbedded) contract, entry.getValue());
             } else if (contract instanceof MarkerContract) {
-                builder.addMarker(key, (MarkerContract) contract);
+                builder.addMarker(key, (MarkerContract) contract, entry.getValue());
             }
         }
 

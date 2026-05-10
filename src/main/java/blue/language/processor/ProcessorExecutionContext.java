@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.Objects;
 
@@ -13,6 +14,8 @@ public final class ProcessorExecutionContext {
     private final ProcessorEngine.Execution execution;
     private final ContractBundle bundle;
     private final String scopePath;
+    private final String contractKey;
+    private final FrozenNode contractNode;
     private final Node event;
     private final boolean allowTerminatedWork;
     private final boolean allowReservedMutation;
@@ -20,15 +23,31 @@ public final class ProcessorExecutionContext {
     ProcessorExecutionContext(ProcessorEngine.Execution execution,
                               ContractBundle bundle,
                               String scopePath,
+                              String contractKey,
+                              FrozenNode contractNode,
                               Node event,
                               boolean allowTerminatedWork,
                               boolean allowReservedMutation) {
         this.execution = Objects.requireNonNull(execution, "execution");
         this.bundle = Objects.requireNonNull(bundle, "bundle");
         this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
+        this.contractKey = contractKey;
+        this.contractNode = contractNode;
         this.event = Objects.requireNonNull(event, "event");
         this.allowTerminatedWork = allowTerminatedWork;
         this.allowReservedMutation = allowReservedMutation;
+    }
+
+    public String contractKey() {
+        return contractKey;
+    }
+
+    public Node contractNode() {
+        return contractNode != null ? contractNode.toNode() : null;
+    }
+
+    public FrozenNode frozenContractNode() {
+        return contractNode;
     }
 
     public Node event() {

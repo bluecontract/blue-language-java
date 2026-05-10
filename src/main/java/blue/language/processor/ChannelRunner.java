@@ -141,7 +141,13 @@ final class ChannelRunner {
                 continue;
             }
             runtime.chargeHandlerOverhead();
-            ProcessorExecutionContext context = execution.createContext(scopePath, bundle, event, allowTerminatedWork);
+            ProcessorExecutionContext context = execution.createContext(scopePath,
+                    bundle,
+                    event,
+                    handler.key(),
+                    handler.node(),
+                    allowTerminatedWork,
+                    false);
             ProcessorEngine.executeHandler(owner, handler.contract(), context);
             if (execution.isScopeInactive(scopePath) && !allowTerminatedWork) {
                 break;

@@ -1,6 +1,11 @@
 package blue.language.processor;
 
+import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.SetProperty;
+import blue.language.processor.model.TestEvent;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,6 +30,10 @@ final class ProcessorExecutionContextTest {
         execution.loadBundles("/");
 
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertNull(context.contractKey());
+        assertNull(context.contractNode());
+        assertNull(context.frozenContractNode());
 
         Node snapshot = context.documentAt("/nested/inner");
         assertNotNull(snapshot);
@@ -54,5 +63,65 @@ final class ProcessorExecutionContextTest {
         ScopeRuntimeContext scopeRuntime = execution.runtime().scope("/");
         assertEquals(1, scopeRuntime.triggeredQueue().size());
         assertTrue(execution.runtime().totalGas() >= 20L);
+    }
+
+    @Test
+    void executingHandlerContextExposesContractKeyAndOriginalContractNode() {
+        MetadataProbeProcessor processor = new MetadataProbeProcessor();
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(processor);
+
+        Node document = blue.yamlToNode("name: Context Metadata\n" +
+                "contracts:\n" +
+                "  events:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  probe:\n" +
+                "    name: Probe Handler\n" +
+                "    description: Captures execution context metadata\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    channel: events\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n");
+        Node initialized = blue.initializeDocument(document).document();
+
+        blue.processDocument(initialized, blue.objectToNode(new TestEvent().eventId("evt-1")));
+
+        assertEquals("probe", processor.contractKey.get());
+        Node contractNode = processor.contractNode.get();
+        assertNotNull(contractNode);
+        assertEquals("Probe Handler", contractNode.getName());
+        assertEquals("Captures execution context metadata", contractNode.getDescription());
+        assertEquals("/x", contractNode.get("/propertyKey"));
+        assertNotNull(processor.frozenContractNode.get());
+        assertEquals("Probe Handler", processor.frozenContractNode.get().toNode().getName());
+        assertEquals("Probe Handler", processor.secondContractNode.get().getName(),
+                "contractNode() must return a defensive materialization");
+    }
+
+    private static final class MetadataProbeProcessor implements HandlerProcessor<SetProperty> {
+        private final AtomicReference<String> contractKey = new AtomicReference<>();
+        private final AtomicReference<Node> contractNode = new AtomicReference<>();
+        private final AtomicReference<Node> secondContractNode = new AtomicReference<>();
+        private final AtomicReference<blue.language.snapshot.FrozenNode> frozenContractNode = new AtomicReference<>();
+
+        @Override
+        public Class<SetProperty> contractType() {
+            return SetProperty.class;
+        }
+
+        @Override
+        public void execute(SetProperty contract, ProcessorExecutionContext context) {
+            contractKey.set(context.contractKey());
+            Node first = context.contractNode();
+            contractNode.set(first != null ? first.clone() : null);
+            if (first != null) {
+                first.name("Mutated");
+            }
+            secondContractNode.set(context.contractNode());
+            frozenContractNode.set(context.frozenContractNode());
+        }
     }
 }

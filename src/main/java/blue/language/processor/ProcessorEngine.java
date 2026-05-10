@@ -8,6 +8,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.JsonPointer;
@@ -344,7 +345,18 @@ final class ProcessorEngine {
                                                 Node event,
                                                 boolean allowTerminatedWork,
                                                 boolean allowReservedMutation) {
+            return createContext(scopePath, bundle, event, null, null, allowTerminatedWork, allowReservedMutation);
+        }
+
+        ProcessorExecutionContext createContext(String scopePath,
+                                                ContractBundle bundle,
+                                                Node event,
+                                                String contractKey,
+                                                FrozenNode contractNode,
+                                                boolean allowTerminatedWork,
+                                                boolean allowReservedMutation) {
             return new ProcessorExecutionContext(this, bundle, scopePath,
+                    contractKey, contractNode,
                     cloneEvent(event), allowTerminatedWork, allowReservedMutation);
         }
 

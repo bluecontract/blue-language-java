@@ -121,6 +121,11 @@ class ContractMappingIntegrationTest {
         assertEquals(Arrays.asList("/payment", "/shipping"), bundle.embeddedPaths());
         assertTrue(bundle.hasCheckpoint());
         assertTrue(bundle.marker("initialized") instanceof InitializationMarker);
+        assertNotNull(bundle.contractNode("setProperty"));
+        assertNotNull(bundle.contractNode("lifecycleChannel"));
+        assertSame(bundle.contractNode("setProperty"), bundle.handlersFor("lifecycleChannel").get(0).node());
+        assertSame(bundle.contractNode("lifecycleChannel"), bundle.channelBinding("lifecycleChannel").node());
+        assertTrue(bundle.contractNodes().containsKey("setProperty"));
         assertEquals(1, bundle.channelsOfType(LifecycleChannel.class).size());
         assertEquals(1, bundle.handlersFor("lifecycleChannel").size());
         SetProperty setProperty = (SetProperty) bundle.handlersFor("lifecycleChannel").get(0).contract();
