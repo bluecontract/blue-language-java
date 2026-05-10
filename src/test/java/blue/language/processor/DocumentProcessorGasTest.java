@@ -567,18 +567,20 @@ class DocumentProcessorGasTest {
     private void assertProcessedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
         assertFalse(result.capabilityFailure(), result.failureReason());
         Node document = result.document();
+        Node resolved = result.resolvedDocument();
         assertEquals(1, document.getAsInteger("/balance/cents"));
-        assertEquals(types.moneyId, document.getAsNode("/balance/type").getBlueId());
-        assertEquals(types.accountId, document.getType().getBlueId());
+        assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/balance/type").getName());
+        assertEquals(typeName(types.provider, types.accountId), resolved.getType().getName());
     }
 
     private void assertInitializedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
         assertFalse(result.capabilityFailure(), result.failureReason());
         Node document = result.document();
+        Node resolved = result.resolvedDocument();
         assertNotNull(document.getAsNode("/contracts/initialized"));
         assertEquals(0, document.getAsInteger("/balance/cents"));
-        assertEquals(types.moneyId, document.getAsNode("/balance/type").getBlueId());
-        assertEquals(types.accountId, document.getType().getBlueId());
+        assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/balance/type").getName());
+        assertEquals(typeName(types.provider, types.accountId), resolved.getType().getName());
     }
 
     private RepeatedTypeGraph repeatedTypeGraph() {
@@ -659,13 +661,14 @@ class DocumentProcessorGasTest {
     private void assertProcessedPortfolio(DocumentProcessingResult result, RepeatedTypeGraph types) {
         assertFalse(result.capabilityFailure(), result.failureReason());
         Node document = result.document();
+        Node resolved = result.resolvedDocument();
         assertEquals(0, document.getAsInteger("/primary/balance/cents"));
         assertEquals(1, document.getAsInteger("/secondary/balance/cents"));
-        assertEquals(types.portfolioId, document.getType().getBlueId());
-        assertEquals(types.accountId, document.getAsNode("/primary/type").getBlueId());
-        assertEquals(types.accountId, document.getAsNode("/secondary/type").getBlueId());
-        assertEquals(types.moneyId, document.getAsNode("/primary/balance/type").getBlueId());
-        assertEquals(types.moneyId, document.getAsNode("/secondary/balance/type").getBlueId());
+        assertEquals(typeName(types.provider, types.portfolioId), resolved.getType().getName());
+        assertEquals(typeName(types.provider, types.accountId), resolved.getAsNode("/primary/type").getName());
+        assertEquals(typeName(types.provider, types.accountId), resolved.getAsNode("/secondary/type").getName());
+        assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/primary/balance/type").getName());
+        assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/secondary/balance/type").getName());
     }
 
     private Node embeddedAccountsDocument(ProcessingTypeGraph types) {
@@ -758,30 +761,37 @@ class DocumentProcessorGasTest {
     private void assertInitializedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
         assertFalse(result.capabilityFailure(), result.failureReason());
         Node document = result.document();
+        Node resolved = result.resolvedDocument();
         assertNotNull(document.getAsNode("/contracts/initialized"));
-        assertInitializedEmbeddedAccount(document, "/primary", types);
-        assertInitializedEmbeddedAccount(document, "/secondary", types);
+        assertInitializedEmbeddedAccount(document, resolved, "/primary", types);
+        assertInitializedEmbeddedAccount(document, resolved, "/secondary", types);
     }
 
-    private void assertInitializedEmbeddedAccount(Node document, String path, ProcessingTypeGraph types) {
+    private void assertInitializedEmbeddedAccount(Node document, Node resolved, String path, ProcessingTypeGraph types) {
         assertNotNull(document.getAsNode(path + "/contracts/initialized"));
         assertEquals(0, document.getAsInteger(path + "/balance/cents"));
-        assertEquals(types.accountId, document.getAsNode(path + "/type").getBlueId());
-        assertEquals(types.moneyId, document.getAsNode(path + "/balance/type").getBlueId());
+        assertEquals(typeName(types.provider, types.accountId), resolved.getAsNode(path + "/type").getName());
+        assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode(path + "/balance/type").getName());
     }
 
     private void assertProcessedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
         assertFalse(result.capabilityFailure(), result.failureReason());
         Node document = result.document();
-        assertProcessedEmbeddedAccount(document, "/primary", types);
-        assertProcessedEmbeddedAccount(document, "/secondary", types);
+        Node resolved = result.resolvedDocument();
+        assertProcessedEmbeddedAccount(document, resolved, "/primary", types);
+        assertProcessedEmbeddedAccount(document, resolved, "/secondary", types);
     }
 
-    private void assertProcessedEmbeddedAccount(Node document, String path, ProcessingTypeGraph types) {
+    private void assertProcessedEmbeddedAccount(Node document, Node resolved, String path, ProcessingTypeGraph types) {
         assertNotNull(document.getAsNode(path + "/contracts/initialized"));
         assertEquals(1, document.getAsInteger(path + "/balance/cents"));
-        assertEquals(types.accountId, document.getAsNode(path + "/type").getBlueId());
-        assertEquals(types.moneyId, document.getAsNode(path + "/balance/type").getBlueId());
+        assertEquals(typeName(types.provider, types.accountId), resolved.getAsNode(path + "/type").getName());
+        assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode(path + "/balance/type").getName());
+    }
+
+    private String typeName(BasicNodeProvider provider, String blueId) {
+        Node node = provider.fetchFirstByBlueId(blueId);
+        return node != null ? node.getName() : null;
     }
 
     private void assertNullNode(Node document, String path) {

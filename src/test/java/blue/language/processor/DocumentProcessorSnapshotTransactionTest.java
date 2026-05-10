@@ -53,6 +53,35 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
+    void resolvedNodeReadKeepsMutableViewCanonicalWhileUsingSnapshotIndex() {
+        Node canonical = YAML_MAPPER.readValue("local: yes", Node.class);
+        Node resolved = YAML_MAPPER.readValue("local: yes\ninherited: from-type", Node.class);
+        CountingSnapshotManager manager = new CountingSnapshotManager(canonical, resolved);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(canonical.clone(), null, manager);
+
+        assertEquals("from-type", runtime.resolvedNodeAt("/inherited").getValue());
+
+        assertMissing(runtime.document(), "/inherited");
+        assertEquals(1, manager.fromDocumentCalls);
+    }
+
+    @Test
+    void snapshotPlanIsAuthoritativeAndPatchEngineOnlyValidatesCompatibility() {
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        manager.returnCurrentSnapshotOnApplyPatch = true;
+        Node document = YAML_MAPPER.readValue("x: 1", Node.class);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
+
+        runtime.applyPatch("/", JsonPatch.replace("/x", new Node().value(2)));
+
+        assertEquals(1, document.getAsInteger("/x"));
+        assertEquals(1, runtime.snapshot().resolvedRoot().getAsInteger("/x"));
+        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(1, manager.applyPatchCalls);
+        assertSnapshotConsistent(runtime.snapshot());
+    }
+
+    @Test
     void runtimeSnapshotTracksMixedAddReplaceRemoveAndArrayAppendPatches() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = YAML_MAPPER.readValue(
@@ -95,8 +124,7 @@ class DocumentProcessorSnapshotTransactionTest {
 
         runtime.applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
 
-        assertEquals("Price", document.getAsNode("/price/type").getName());
-        assertEquals("Global Product", document.getType().getName());
+        assertEquals("USD", document.getAsText("/price/currency"));
         assertEquals(2, manager.fromDocumentCalls);
         assertEquals(1, manager.applyPatchCalls);
         assertEquals("Price", runtime.snapshot().resolvedRoot().getAsNode("/price/type").getName());
@@ -289,6 +317,39 @@ class DocumentProcessorSnapshotTransactionTest {
 
         assertEquals(0, processed.resolvedDocument().getAsInteger("/balance/cents"));
         assertMissing(processed.canonicalDocument(), "/balance/cents");
+        assertSnapshotConsistent(processed.snapshot());
+    }
+
+    @Test
+    void contractLoadingUsesSnapshotResolvedViewForInheritedContracts() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Event Driven Type\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  setter:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 42\n");
+        Blue blue = new Blue(provider);
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = YAML_MAPPER.readValue(
+                "name: Inherits Runtime Contracts\n" +
+                "type:\n" +
+                "  blueId: " + provider.getBlueIdByName("Event Driven Type") + "\n", Node.class);
+
+        DocumentProcessingResult initialized = blue.initializeDocument(document);
+        DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
+                new TestEvent().eventId("evt-inherited-contract").toNode());
+
+        assertEquals(42, processed.resolvedDocument().getAsInteger("/x"));
+        assertEquals(42, processed.canonicalDocument().getAsInteger("/x"));
+        assertEquals("Event Driven Type", processed.resolvedDocument().getType().getName());
         assertSnapshotConsistent(processed.snapshot());
     }
 

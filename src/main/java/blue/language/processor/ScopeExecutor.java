@@ -55,13 +55,14 @@ final class ScopeExecutor {
         }
 
         while (true) {
-            Node scopeNode = runtime.nodeAt(normalizedScope);
+            Node scopeNode = runtime.resolvedNodeAt(normalizedScope);
             if (scopeNode == null) {
                 return;
             }
 
             if (preInitSnapshot == null) {
-                preInitSnapshot = scopeNode.clone();
+                Node canonicalScopeNode = runtime.canonicalNodeAt(normalizedScope);
+                preInitSnapshot = (canonicalScopeNode != null ? canonicalScopeNode : scopeNode).clone();
             }
 
             bundle = owner.contractLoader().load(scopeNode, normalizedScope);
@@ -81,7 +82,7 @@ final class ScopeExecutor {
 
             processedEmbedded.add(nextEmbedded);
             String childScope = ProcessorEngine.resolvePointer(normalizedScope, nextEmbedded);
-            Node childNode = runtime.nodeAt(childScope);
+            Node childNode = runtime.resolvedNodeAt(childScope);
             if (childNode != null) {
                 initializeScope(childScope, true);
             }
@@ -113,7 +114,7 @@ final class ScopeExecutor {
         if (bundles.containsKey(normalizedScope)) {
             return;
         }
-        Node scopeNode = runtime.nodeAt(normalizedScope);
+        Node scopeNode = runtime.resolvedNodeAt(normalizedScope);
         ContractBundle bundle = scopeNode != null
                 ? owner.contractLoader().load(scopeNode, normalizedScope)
                 : ContractBundle.empty();
@@ -250,7 +251,7 @@ final class ScopeExecutor {
                 bundle = refreshBundle(normalizedScope);
                 continue;
             }
-            Node childNode = runtime.nodeAt(childScope);
+            Node childNode = runtime.resolvedNodeAt(childScope);
             if (childNode != null) {
                 initializeScope(childScope, false);
                 processExternalEvent(childScope, event);
@@ -262,7 +263,7 @@ final class ScopeExecutor {
 
     private ContractBundle refreshBundle(String scopePath) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        Node scopeNode = runtime.nodeAt(normalizedScope);
+        Node scopeNode = runtime.resolvedNodeAt(normalizedScope);
         if (scopeNode == null) {
             bundles.remove(normalizedScope);
             return null;

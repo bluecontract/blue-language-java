@@ -15,8 +15,7 @@ import java.util.Objects;
  */
 public final class DocumentProcessingRuntime {
 
-    private final Node document;
-    private final PatchEngine patchEngine;
+    private final MaterializedDocumentView materializedView;
     private final EmissionRegistry emissionRegistry;
     private final GasMeter gasMeter;
     private final ConformanceEngine conformanceEngine;
@@ -35,8 +34,7 @@ public final class DocumentProcessingRuntime {
     public DocumentProcessingRuntime(Node document,
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager) {
-        this.document = Objects.requireNonNull(document, "document");
-        this.patchEngine = new PatchEngine(this.document);
+        this.materializedView = new MaterializedDocumentView(Objects.requireNonNull(document, "document"));
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
         this.conformanceEngine = conformanceEngine;
@@ -44,7 +42,7 @@ public final class DocumentProcessingRuntime {
     }
 
     public Node document() {
-        return document;
+        return materializedView.root();
     }
 
     public Map<String, ScopeRuntimeContext> scopes() {
@@ -149,9 +147,28 @@ public final class DocumentProcessingRuntime {
 
     public ResolvedSnapshot snapshot() {
         if (snapshot == null && snapshotManager != null) {
-            snapshot = snapshotManager.fromDocument(document);
+            snapshot = snapshotManager.fromDocument(materializedView.root());
+            materializedView.replaceWithSnapshot(snapshot);
         }
         return snapshot;
+    }
+
+    public Node resolvedNodeAt(String path) {
+        String normalized = PointerUtils.normalizePointer(path);
+        ResolvedSnapshot current = snapshot();
+        if (current != null) {
+            return current.resolvedNodeAt(normalized);
+        }
+        return materializedView.nodeAt(normalized);
+    }
+
+    public Node canonicalNodeAt(String path) {
+        String normalized = PointerUtils.normalizePointer(path);
+        ResolvedSnapshot current = snapshot();
+        if (current != null) {
+            return current.canonicalNodeAt(normalized);
+        }
+        return materializedView.nodeAt(normalized);
     }
 
     public Node nodeAt(String path) {
@@ -162,7 +179,7 @@ public final class DocumentProcessingRuntime {
                 return resolved;
             }
         }
-        return cloneNode(patchEngine.read(normalized));
+        return materializedView.nodeAt(normalized);
     }
 
     public boolean contains(String path) {
@@ -171,7 +188,7 @@ public final class DocumentProcessingRuntime {
 
     public boolean hasInitializationMarker(String scopePath) {
         String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
-        Node marker = nodeAt(pointer);
+        Node marker = canonicalNodeAt(pointer);
         if (marker == null) {
             return false;
         }
@@ -180,40 +197,46 @@ public final class DocumentProcessingRuntime {
     }
 
     public void directWrite(String path, Node value) {
-        Node rollback = document.clone();
+        Node rollback = materializedView.copyRoot();
         ResolvedSnapshot snapshotRollback = snapshot;
         try {
-            Node before = cloneNode(patchEngine.read(path));
+            Node before = cloneNode(new PatchEngine(rollback.clone()).read(path));
             JsonPatch snapshotPatch = directWritePatch(path, before, value);
             SnapshotPatchPlan snapshotPatchPlan = snapshotPatch != null
                     ? prepareSnapshotPatch(rollback, snapshotPatch)
                     : null;
-            patchEngine.directWrite(path, value);
+            Node compatibilityRoot = rollback.clone();
+            new PatchEngine(compatibilityRoot).directWrite(path, value);
+            materializeCommittedPatch(snapshotPatchPlan, compatibilityRoot);
             if (snapshotPatch != null) {
                 commitSnapshotPatch(snapshotPatchPlan, false);
             }
         } catch (RuntimeException ex) {
-            document.replaceWith(rollback);
+            materializedView.replaceWith(rollback);
             snapshot = snapshotRollback;
             throw ex;
         }
     }
 
     public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch) {
-        Node rollback = document.clone();
+        Node rollback = materializedView.copyRoot();
         ResolvedSnapshot snapshotRollback = snapshot;
         PatchEngine.PatchResult result;
         try {
             SnapshotPatchPlan snapshotPatchPlan = prepareSnapshotPatch(rollback, patch);
-            result = patchEngine.applyPatch(originScopePath, patch);
+            Node compatibilityRoot = rollback.clone();
+            result = new PatchEngine(compatibilityRoot).applyPatch(originScopePath, patch);
+            materializedView.replaceWith(compatibilityRoot);
             boolean generalized = enforceConformanceFromPatchScope(result);
             commitSnapshotPatch(snapshotPatchPlan, generalized);
         } catch (RuntimeException ex) {
-            document.replaceWith(rollback);
+            materializedView.replaceWith(rollback);
             snapshot = snapshotRollback;
             throw ex;
         }
-        Node after = result.op() == JsonPatch.Op.REMOVE ? null : cloneNode(patchEngine.read(result.path()));
+        Node after = result.op() == JsonPatch.Op.REMOVE
+                ? null
+                : materializedView.nodeAt(result.path());
         return new DocumentUpdateData(result.path(),
                 result.before(),
                 after,
@@ -226,7 +249,7 @@ public final class DocumentProcessingRuntime {
         if (conformanceEngine == null) {
             return false;
         }
-        Node scopeNode = patchEngine.read(result.originScope());
+        Node scopeNode = new PatchEngine(materializedView.root()).read(result.originScope());
         if (scopeNode == null || scopeNode.getType() == null) {
             return false;
         }
@@ -255,19 +278,30 @@ public final class DocumentProcessingRuntime {
         }
     }
 
+    private void materializeCommittedPatch(SnapshotPatchPlan plan, Node compatibilityRoot) {
+        if (snapshotManager != null && plan != null && plan.next != null) {
+            materializedView.replaceWithSnapshot(plan.next);
+            return;
+        }
+        materializedView.replaceWith(compatibilityRoot);
+    }
+
     private void commitSnapshotPatch(SnapshotPatchPlan plan, boolean generalized) {
         if (snapshotManager == null || plan == null) {
             return;
         }
         if (generalized) {
-            snapshot = snapshotManager.fromDocument(document);
+            snapshot = snapshotManager.fromDocument(materializedView.root());
+            materializedView.replaceWithSnapshot(snapshot);
             return;
         }
 
         if (plan.next != null) {
             snapshot = plan.next;
+            materializedView.replaceWithSnapshot(snapshot);
         } else {
-            snapshot = snapshotManager.fromDocument(document);
+            snapshot = snapshotManager.fromDocument(materializedView.root());
+            materializedView.replaceWithSnapshot(snapshot);
         }
     }
 
