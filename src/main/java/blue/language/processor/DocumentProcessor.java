@@ -5,6 +5,7 @@ import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
+import blue.language.snapshot.FrozenNode;
 import blue.language.utils.TypeClassResolver;
 import java.util.Map;
 import java.util.Objects;
@@ -103,7 +104,7 @@ public class DocumentProcessor {
     }
 
     public Map<String, MarkerContract> markersFor(Node scopeNode, String scopePath) {
-        ContractBundle bundle = contractLoader.load(scopeNode, scopePath);
+        ContractBundle bundle = contractLoader.load(FrozenNode.fromResolvedNode(scopeNode), scopePath);
         return bundle.markers();
     }
 

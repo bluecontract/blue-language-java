@@ -13,12 +13,16 @@ import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ProcessingFailureMarker;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TriggeredEventChannel;
+import blue.language.processor.contracts.SetPropertyContractProcessor;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -86,6 +90,38 @@ class ContractMappingIntegrationTest {
         assertEquals(SetProperty.class, setPropertyContract.getClass());
         SetProperty setProperty = (SetProperty) setPropertyContract;
         assertEquals("lifecycleChannel", setProperty.getChannelKey());
+        assertEquals("/x", setProperty.getPropertyKey());
+        assertEquals(7, setProperty.getPropertyValue());
+        assertEquals("/custom/path/", setProperty.getPath());
+    }
+
+    @Test
+    void contractLoaderLoadsBundleFromResolvedSnapshotWithoutScopeNodeTraversal() throws Exception {
+        String yaml = new String(
+                Files.readAllBytes(Paths.get("src/test/resources/processor/contracts/all-contracts.blue")),
+                StandardCharsets.UTF_8
+        );
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+        FrozenNode canonicalRoot = FrozenNode.fromNode(document);
+        ResolvedSnapshot snapshot = new ResolvedSnapshot(canonicalRoot,
+                FrozenNode.fromResolvedNode(document),
+                canonicalRoot.blueId());
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(new SetPropertyContractProcessor())
+                .build();
+        ContractLoader loader = new ContractLoader(registry,
+                new NodeToObjectConverter(new TypeClassResolver("blue.language.processor.model")));
+
+        ContractBundle bundle = loader.load(snapshot, "/");
+
+        assertEquals(Arrays.asList("/payment", "/shipping"), bundle.embeddedPaths());
+        assertTrue(bundle.hasCheckpoint());
+        assertTrue(bundle.marker("initialized") instanceof InitializationMarker);
+        assertEquals(1, bundle.channelsOfType(LifecycleChannel.class).size());
+        assertEquals(1, bundle.handlersFor("lifecycleChannel").size());
+        SetProperty setProperty = (SetProperty) bundle.handlersFor("lifecycleChannel").get(0).contract();
         assertEquals("/x", setProperty.getPropertyKey());
         assertEquals(7, setProperty.getPropertyValue());
         assertEquals("/custom/path/", setProperty.getPath());

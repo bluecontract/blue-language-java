@@ -1,13 +1,14 @@
 package blue.language.processor;
 
 import blue.language.mapping.NodeToObjectConverter;
-import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 
 import java.util.Map;
 import java.util.Objects;
@@ -25,20 +26,28 @@ final class ContractLoader {
         this.converter = Objects.requireNonNull(converter, "converter");
     }
 
-    ContractBundle load(Node scopeNode, String scopePath) {
+    ContractBundle load(ResolvedSnapshot snapshot, String scopePath) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        return load(snapshot.resolvedAt(scopePath), scopePath);
+    }
+
+    ContractBundle load(FrozenNode scopeNode, String scopePath) {
         ContractBundle.Builder builder = ContractBundle.builder();
-        Map<String, Node> properties = scopeNode.getProperties();
+        if (scopeNode == null) {
+            return builder.build();
+        }
+        Map<String, FrozenNode> properties = scopeNode.getProperties();
         if (properties == null) {
             return builder.build();
         }
-        Node contractsNode = properties.get("contracts");
+        FrozenNode contractsNode = properties.get("contracts");
         if (contractsNode == null || contractsNode.getProperties() == null) {
             return builder.build();
         }
 
-        for (Map.Entry<String, Node> entry : contractsNode.getProperties().entrySet()) {
+        for (Map.Entry<String, FrozenNode> entry : contractsNode.getProperties().entrySet()) {
             String key = entry.getKey();
-            Contract contract = converter.convertWithType(entry.getValue(), Contract.class, false);
+            Contract contract = converter.convertWithType(entry.getValue().toNode(), Contract.class, false);
             if (contract == null) {
                 continue;
             }

@@ -5,6 +5,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import java.util.List;
 import java.util.Map;
@@ -162,6 +163,16 @@ public final class DocumentProcessingRuntime {
         return materializedView.nodeAt(normalized);
     }
 
+    public FrozenNode resolvedFrozenAt(String path) {
+        String normalized = PointerUtils.normalizePointer(path);
+        ResolvedSnapshot current = snapshot();
+        if (current != null) {
+            return current.resolvedAt(normalized);
+        }
+        Node node = materializedView.nodeAt(normalized);
+        return node != null ? FrozenNode.fromResolvedNode(node) : null;
+    }
+
     public Node canonicalNodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
@@ -169,6 +180,16 @@ public final class DocumentProcessingRuntime {
             return current.canonicalNodeAt(normalized);
         }
         return materializedView.nodeAt(normalized);
+    }
+
+    public FrozenNode canonicalFrozenAt(String path) {
+        String normalized = PointerUtils.normalizePointer(path);
+        ResolvedSnapshot current = snapshot();
+        if (current != null) {
+            return current.canonicalAt(normalized);
+        }
+        Node node = materializedView.nodeAt(normalized);
+        return node != null ? FrozenNode.fromResolvedNode(node) : null;
     }
 
     public Node nodeAt(String path) {

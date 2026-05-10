@@ -9,6 +9,7 @@ import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
 
 import java.util.LinkedHashSet;
@@ -55,14 +56,14 @@ final class ScopeExecutor {
         }
 
         while (true) {
-            Node scopeNode = runtime.resolvedNodeAt(normalizedScope);
+            FrozenNode scopeNode = runtime.resolvedFrozenAt(normalizedScope);
             if (scopeNode == null) {
                 return;
             }
 
             if (preInitSnapshot == null) {
-                Node canonicalScopeNode = runtime.canonicalNodeAt(normalizedScope);
-                preInitSnapshot = (canonicalScopeNode != null ? canonicalScopeNode : scopeNode).clone();
+                FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
+                preInitSnapshot = (canonicalScopeNode != null ? canonicalScopeNode : scopeNode).toNode();
             }
 
             bundle = owner.contractLoader().load(scopeNode, normalizedScope);
@@ -82,7 +83,7 @@ final class ScopeExecutor {
 
             processedEmbedded.add(nextEmbedded);
             String childScope = ProcessorEngine.resolvePointer(normalizedScope, nextEmbedded);
-            Node childNode = runtime.resolvedNodeAt(childScope);
+            FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
                 initializeScope(childScope, true);
             }
@@ -114,7 +115,7 @@ final class ScopeExecutor {
         if (bundles.containsKey(normalizedScope)) {
             return;
         }
-        Node scopeNode = runtime.resolvedNodeAt(normalizedScope);
+        FrozenNode scopeNode = runtime.resolvedFrozenAt(normalizedScope);
         ContractBundle bundle = scopeNode != null
                 ? owner.contractLoader().load(scopeNode, normalizedScope)
                 : ContractBundle.empty();
@@ -251,7 +252,7 @@ final class ScopeExecutor {
                 bundle = refreshBundle(normalizedScope);
                 continue;
             }
-            Node childNode = runtime.resolvedNodeAt(childScope);
+            FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
                 initializeScope(childScope, false);
                 processExternalEvent(childScope, event);
@@ -263,7 +264,7 @@ final class ScopeExecutor {
 
     private ContractBundle refreshBundle(String scopePath) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        Node scopeNode = runtime.resolvedNodeAt(normalizedScope);
+        FrozenNode scopeNode = runtime.resolvedFrozenAt(normalizedScope);
         if (scopeNode == null) {
             bundles.remove(normalizedScope);
             return null;
