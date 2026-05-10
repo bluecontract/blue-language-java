@@ -106,6 +106,22 @@ class FrozenNodeTest {
     }
 
     @Test
+    void pathIndexAndAtResolveObjectAndListPointersWithoutMaterializingWholeTree() {
+        FrozenNode frozen = FrozenNode.fromNode(YAML_MAPPER.readValue(
+                "profile:\n" +
+                "  label: Ana\n" +
+                "rows:\n" +
+                "  - id: a\n" +
+                "  - id: b", Node.class));
+
+        assertEquals(frozen.property("profile").property("label"), frozen.at("/profile/label"));
+        assertEquals(frozen.property("rows").item(1).property("id"), frozen.at("/rows/1/id"));
+        assertEquals(frozen.at("/rows/1/id"), frozen.pathIndex().get("/rows/1/id"));
+        assertEquals(null, frozen.at("/rows/nope"));
+        assertEquals(null, frozen.at("/rows/9"));
+    }
+
+    @Test
     void listBlueIdUsesCachedElementHashes() {
         FrozenNode one = FrozenNode.fromNode(new Node().value("one"));
         FrozenNode two = FrozenNode.fromNode(new Node().value("two"));

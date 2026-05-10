@@ -4,6 +4,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.ResolvedSnapshot;
 import java.util.List;
 import java.util.Map;
@@ -153,15 +154,43 @@ public final class DocumentProcessingRuntime {
         return snapshot;
     }
 
+    public Node nodeAt(String path) {
+        String normalized = PointerUtils.normalizePointer(path);
+        if (snapshot != null) {
+            Node resolved = snapshot.resolvedNodeAt(normalized);
+            if (resolved != null) {
+                return resolved;
+            }
+        }
+        return cloneNode(patchEngine.read(normalized));
+    }
+
+    public boolean contains(String path) {
+        return nodeAt(path) != null;
+    }
+
+    public boolean hasInitializationMarker(String scopePath) {
+        String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        Node marker = nodeAt(pointer);
+        if (marker == null) {
+            return false;
+        }
+        ProcessorEngine.validateInitializationMarker(marker, pointer);
+        return true;
+    }
+
     public void directWrite(String path, Node value) {
         Node rollback = document.clone();
         ResolvedSnapshot snapshotRollback = snapshot;
         try {
             Node before = cloneNode(patchEngine.read(path));
-            patchEngine.directWrite(path, value);
             JsonPatch snapshotPatch = directWritePatch(path, before, value);
+            SnapshotPatchPlan snapshotPatchPlan = snapshotPatch != null
+                    ? prepareSnapshotPatch(rollback, snapshotPatch)
+                    : null;
+            patchEngine.directWrite(path, value);
             if (snapshotPatch != null) {
-                updateSnapshotFromPatch(snapshotPatch, rollback, false);
+                commitSnapshotPatch(snapshotPatchPlan, false);
             }
         } catch (RuntimeException ex) {
             document.replaceWith(rollback);
@@ -175,9 +204,10 @@ public final class DocumentProcessingRuntime {
         ResolvedSnapshot snapshotRollback = snapshot;
         PatchEngine.PatchResult result;
         try {
+            SnapshotPatchPlan snapshotPatchPlan = prepareSnapshotPatch(rollback, patch);
             result = patchEngine.applyPatch(originScopePath, patch);
             boolean generalized = enforceConformanceFromPatchScope(result);
-            updateSnapshotFromPatch(patch, rollback, generalized);
+            commitSnapshotPatch(snapshotPatchPlan, generalized);
         } catch (RuntimeException ex) {
             document.replaceWith(rollback);
             snapshot = snapshotRollback;
@@ -213,8 +243,20 @@ public final class DocumentProcessingRuntime {
                 : JsonPatch.replace(path, value.clone());
     }
 
-    private void updateSnapshotFromPatch(JsonPatch patch, Node rollback, boolean generalized) {
+    private SnapshotPatchPlan prepareSnapshotPatch(Node rollback, JsonPatch patch) {
         if (snapshotManager == null) {
+            return null;
+        }
+        ResolvedSnapshot base = snapshot != null ? snapshot : snapshotManager.fromDocument(rollback);
+        try {
+            return new SnapshotPatchPlan(snapshotManager.applyPatch(base, patch));
+        } catch (RuntimeException ex) {
+            return new SnapshotPatchPlan(null);
+        }
+    }
+
+    private void commitSnapshotPatch(SnapshotPatchPlan plan, boolean generalized) {
+        if (snapshotManager == null || plan == null) {
             return;
         }
         if (generalized) {
@@ -222,10 +264,9 @@ public final class DocumentProcessingRuntime {
             return;
         }
 
-        ResolvedSnapshot base = snapshot != null ? snapshot : snapshotManager.fromDocument(rollback);
-        try {
-            snapshot = snapshotManager.applyPatch(base, patch);
-        } catch (RuntimeException patchFailure) {
+        if (plan.next != null) {
+            snapshot = plan.next;
+        } else {
             snapshot = snapshotManager.fromDocument(document);
         }
     }
@@ -278,6 +319,14 @@ public final class DocumentProcessingRuntime {
 
         List<String> cascadeScopes() {
             return cascadeScopes;
+        }
+    }
+
+    private static final class SnapshotPatchPlan {
+        private final ResolvedSnapshot next;
+
+        private SnapshotPatchPlan(ResolvedSnapshot next) {
+            this.next = next;
         }
     }
 }

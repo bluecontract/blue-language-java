@@ -91,6 +91,32 @@ class ResolvedSnapshotTest {
     }
 
     @Test
+    void exposesCanonicalAndResolvedPathIndexes() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Product\n" +
+                "inherited: inherited-value");
+        Blue blue = new Blue(nodeProvider);
+        Node canonical = YAML_MAPPER.readValue(
+                "name: Instance\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Product") + "\n" +
+                "local:\n" +
+                "  nested: value\n" +
+                "rows:\n" +
+                "  - a", Node.class);
+
+        ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
+
+        assertEquals("value", snapshot.canonicalNodeAt("/local/nested").getValue());
+        assertEquals("value", snapshot.resolvedNodeAt("/local/nested").getValue());
+        assertEquals("inherited-value", snapshot.resolvedNodeAt("/inherited").getValue());
+        assertEquals(null, snapshot.canonicalAt("/inherited"));
+        assertEquals(snapshot.frozenResolvedRoot().at("/rows/0"), snapshot.resolvedAt("/rows/0"));
+        assertTrue(snapshot.resolvedIndex().containsKey("/"));
+    }
+
+    @Test
     void blueCanApplyCanonicalPatchAndReturnNextResolvedSnapshot() {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
@@ -110,6 +136,71 @@ class ResolvedSnapshotTest {
         assertEquals("new", next.canonicalRoot().getAsText("/local/value"));
         assertEquals("inherited", next.resolvedRoot().getAsText("/label"));
         assertEquals(next.frozenCanonicalRoot().blueId(), next.blueId());
+    }
+
+    @Test
+    void canonicalPatchRemovesRedundantOverrideWhenValueMatchesInheritedResolvedState() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Money\n" +
+                "currency: USD\n" +
+                "cents: 0");
+        Blue blue = new Blue(nodeProvider);
+        Node canonical = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Money"), Node.class);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
+
+        ResolvedSnapshot next = blue.applyCanonicalPatch(snapshot,
+                JsonPatch.add("/currency", new Node().value("USD")));
+
+        assertEquals(snapshot.blueId(), next.blueId());
+        assertEquals(null, next.canonicalAt("/currency"));
+        assertEquals("USD", next.resolvedNodeAt("/currency").getValue());
+    }
+
+    @Test
+    void canonicalReplaceRemovesExistingRedundantOverrideWhenItMatchesInheritedResolvedState() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Money\n" +
+                "currency: USD\n" +
+                "cents: 0");
+        Blue blue = new Blue(nodeProvider);
+        Node canonical = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Money") + "\n" +
+                "currency: USD", Node.class);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
+
+        ResolvedSnapshot next = blue.applyCanonicalPatch(snapshot,
+                JsonPatch.replace("/currency", new Node().value("USD")));
+
+        assertFalse(snapshot.blueId().equals(next.blueId()));
+        assertEquals(null, next.canonicalAt("/currency"));
+        assertEquals("USD", next.resolvedNodeAt("/currency").getValue());
+    }
+
+    @Test
+    void canonicalPatchKeepsOverrideWhenValueDiffersFromInheritedResolvedState() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Money\n" +
+                "currency:\n" +
+                "  type: Text\n" +
+                "cents: 0");
+        Blue blue = new Blue(nodeProvider);
+        Node canonical = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Money"), Node.class);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
+
+        ResolvedSnapshot next = blue.applyCanonicalPatch(snapshot,
+                JsonPatch.add("/currency", new Node().value("EUR")));
+
+        assertFalse(snapshot.blueId().equals(next.blueId()));
+        assertEquals("EUR", next.canonicalNodeAt("/currency").getValue());
+        assertEquals("EUR", next.resolvedNodeAt("/currency").getValue());
     }
 
     @Test

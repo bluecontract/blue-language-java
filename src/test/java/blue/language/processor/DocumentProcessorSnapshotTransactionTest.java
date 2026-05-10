@@ -39,6 +39,20 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
+    void runtimeReadsUseResolvedSnapshotIndexWhenSnapshotIsAvailable() {
+        Node canonical = YAML_MAPPER.readValue("local: yes", Node.class);
+        Node resolved = YAML_MAPPER.readValue("local: yes\ninherited: from-type", Node.class);
+        CountingSnapshotManager manager = new CountingSnapshotManager(canonical, resolved);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(canonical.clone(), null, manager);
+
+        runtime.snapshot();
+
+        assertEquals("from-type", runtime.nodeAt("/inherited").getValue());
+        assertTrue(runtime.contains("/inherited"));
+        assertEquals(1, manager.fromDocumentCalls);
+    }
+
+    @Test
     void runtimeSnapshotTracksMixedAddReplaceRemoveAndArrayAppendPatches() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = YAML_MAPPER.readValue(
@@ -83,8 +97,8 @@ class DocumentProcessorSnapshotTransactionTest {
 
         assertEquals("Price", document.getAsNode("/price/type").getName());
         assertEquals("Global Product", document.getType().getName());
-        assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(2, manager.fromDocumentCalls);
+        assertEquals(1, manager.applyPatchCalls);
         assertEquals("Price", runtime.snapshot().resolvedRoot().getAsNode("/price/type").getName());
         assertEquals("Global Product", runtime.snapshot().resolvedRoot().getType().getName());
         assertSnapshotConsistent(runtime.snapshot());
@@ -167,7 +181,24 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals("a", document.getAsText("/rows/0"));
         assertEquals(before.blueId(), runtime.snapshot().blueId());
         assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(1, manager.applyPatchCalls);
+    }
+
+    @Test
+    void successfulSnapshotPlanIsRolledBackWhenMutableCompatibilityPatchFails() {
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        manager.returnCurrentSnapshotOnApplyPatch = true;
+        Node document = YAML_MAPPER.readValue("rows:\n  items:\n    - a", Node.class);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
+        ResolvedSnapshot before = runtime.snapshot();
+
+        assertThrows(IllegalStateException.class,
+                () -> runtime.applyPatch("/", JsonPatch.remove("/rows/5")));
+
+        assertEquals("a", document.getAsText("/rows/0"));
+        assertEquals(before.blueId(), runtime.snapshot().blueId());
+        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(1, manager.applyPatchCalls);
     }
 
     @Test
@@ -205,6 +236,62 @@ class DocumentProcessorSnapshotTransactionTest {
         assertSnapshotConsistent(processed.snapshot());
     }
 
+    @Test
+    void executionContextReadsUseResolvedSnapshotIndexWhenSnapshotIsAvailable() {
+        Node canonical = YAML_MAPPER.readValue("local: yes", Node.class);
+        Node resolved = YAML_MAPPER.readValue("local: yes\ninherited: from-type", Node.class);
+        CountingSnapshotManager manager = new CountingSnapshotManager(canonical, resolved);
+        DocumentProcessor processor = new DocumentProcessor(null, manager);
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, canonical.clone());
+        execution.loadBundles("/");
+        execution.runtime().snapshot();
+        ProcessorExecutionContext context = execution.createContext("/",
+                execution.bundleForScope("/"),
+                new Node(),
+                false,
+                false);
+
+        assertEquals("from-type", context.documentAt("/inherited").getValue());
+        assertTrue(context.documentContains("/inherited"));
+        assertEquals(1, manager.fromDocumentCalls);
+    }
+
+    @Test
+    void processorPatchToInheritedValueIsMinimizedOutOfCanonicalSnapshot() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Money\n" +
+                "cents: 0");
+        String moneyId = provider.getBlueIdByName("Money");
+        Blue blue = new Blue(provider);
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = YAML_MAPPER.readValue(
+                "name: Wallet\n" +
+                "balance:\n" +
+                "  type:\n" +
+                "    blueId: " + moneyId + "\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  setter:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    path: /balance\n" +
+                "    propertyKey: cents\n" +
+                "    propertyValue: 0\n", Node.class);
+        DocumentProcessingResult initialized = blue.initializeDocument(document);
+
+        DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
+                blue.objectToNode(new TestEvent().eventId("evt-inherited")));
+
+        assertEquals(0, processed.resolvedDocument().getAsInteger("/balance/cents"));
+        assertMissing(processed.canonicalDocument(), "/balance/cents");
+        assertSnapshotConsistent(processed.snapshot());
+    }
+
     private static void assertMissing(Node node, String path) {
         assertThrows(IllegalArgumentException.class, () -> node.getAsNode(path));
     }
@@ -215,17 +302,30 @@ class DocumentProcessorSnapshotTransactionTest {
 
     private static final class CountingSnapshotManager implements ProcessingSnapshotManager {
         private final Blue blue;
+        private final Node canonical;
+        private final Node resolved;
         private int fromDocumentCalls;
         private int applyPatchCalls;
         private boolean failApplyPatch;
+        private boolean returnCurrentSnapshotOnApplyPatch;
         private int failFromDocumentOnCall;
 
         private CountingSnapshotManager() {
-            this.blue = null;
+            this(null, null, null);
         }
 
         private CountingSnapshotManager(Blue blue) {
+            this(blue, null, null);
+        }
+
+        private CountingSnapshotManager(Node canonical, Node resolved) {
+            this(null, canonical, resolved);
+        }
+
+        private CountingSnapshotManager(Blue blue, Node canonical, Node resolved) {
             this.blue = blue;
+            this.canonical = canonical;
+            this.resolved = resolved;
         }
 
         @Override
@@ -237,9 +337,11 @@ class DocumentProcessorSnapshotTransactionTest {
             if (blue != null) {
                 return blue.resolveToSnapshot(document);
             }
-            FrozenNode canonicalRoot = FrozenNode.fromNode(document.clone());
+            Node canonicalSource = canonical != null ? canonical.clone() : document.clone();
+            Node resolvedSource = resolved != null ? resolved.clone() : document.clone();
+            FrozenNode canonicalRoot = FrozenNode.fromNode(canonicalSource);
             return new ResolvedSnapshot(canonicalRoot,
-                    FrozenNode.fromResolvedNode(document.clone()),
+                    FrozenNode.fromResolvedNode(resolvedSource),
                     canonicalRoot.blueId());
         }
 
@@ -248,6 +350,9 @@ class DocumentProcessorSnapshotTransactionTest {
             applyPatchCalls++;
             if (failApplyPatch) {
                 throw new IllegalStateException("canonical overlay failed");
+            }
+            if (returnCurrentSnapshotOnApplyPatch) {
+                return snapshot;
             }
             CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
             Node resolved = patched.root().toNode();

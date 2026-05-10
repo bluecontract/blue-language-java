@@ -165,14 +165,7 @@ public class Blue implements NodeResolver {
     }
 
     public ResolvedSnapshot applyCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
-        CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
-        ResolvedSnapshot cached = resolvedSnapshotsByBlueId.get(patched.blueId());
-        if (cached != null) {
-            return cached;
-        }
-        Node canonical = patched.root().toNode();
-        Node resolved = resolve(canonical.clone());
-        return cacheSnapshot(new ResolvedSnapshot(patched.root(), resolvedReferenceCache.freezeResolved(resolved), patched.blueId()));
+        return applyCanonicalPatch(snapshot, patch, nodeProvider);
     }
 
     public Blue cacheResolvedSnapshot(ResolvedSnapshot snapshot) {
@@ -469,15 +462,62 @@ public class Blue implements NodeResolver {
     }
 
     private ResolvedSnapshot applyProcessingCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+        return applyCanonicalPatch(snapshot, patch, processorSnapshotNodeProvider());
+    }
+
+    private ResolvedSnapshot applyCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch, NodeProvider snapshotNodeProvider) {
         CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
-        ResolvedSnapshot cached = resolvedSnapshotsByBlueId.get(patched.blueId());
+        ResolvedSnapshot patchedSnapshot = snapshotFromCanonical(patched.root(), snapshotNodeProvider);
+        if (!canMinimizePatchedOverride(patch)) {
+            return patchedSnapshot;
+        }
+
+        CanonicalPatchResult withoutOverride;
+        try {
+            withoutOverride = new CanonicalOverlayPatchEngine(patched.root()).apply(JsonPatch.remove(patched.path()));
+        } catch (RuntimeException ignored) {
+            return patchedSnapshot;
+        }
+
+        ResolvedSnapshot inheritedSnapshot = snapshotFromCanonical(withoutOverride.root(), snapshotNodeProvider);
+        FrozenNode patchedEffective = patchedSnapshot.resolvedAt(patched.path());
+        FrozenNode inheritedEffective = inheritedSnapshot.resolvedAt(patched.path());
+        if (patchedEffective != null
+                && inheritedEffective != null
+                && patchedEffective.blueId().equals(inheritedEffective.blueId())) {
+            return inheritedSnapshot;
+        }
+        return patchedSnapshot;
+    }
+
+    private ResolvedSnapshot snapshotFromCanonical(FrozenNode canonicalRoot, NodeProvider snapshotNodeProvider) {
+        ResolvedSnapshot cached = resolvedSnapshotsByBlueId.get(canonicalRoot.blueId());
         if (cached != null) {
             return cached;
         }
-        Node canonical = patched.root().toNode();
-        Node resolved = new Merger(mergingProcessor, processorSnapshotNodeProvider(), resolvedReferenceCache)
+        Node canonical = canonicalRoot.toNode();
+        Node resolved = new Merger(mergingProcessor, snapshotNodeProvider, resolvedReferenceCache)
                 .resolve(canonical.clone(), NO_LIMITS);
-        return cacheSnapshot(new ResolvedSnapshot(patched.root(), resolvedReferenceCache.freezeResolved(resolved), patched.blueId()));
+        return cacheSnapshot(new ResolvedSnapshot(canonicalRoot, resolvedReferenceCache.freezeResolved(resolved), canonicalRoot.blueId()));
+    }
+
+    private boolean canMinimizePatchedOverride(JsonPatch patch) {
+        if (patch == null || patch.getOp() == JsonPatch.Op.REMOVE) {
+            return false;
+        }
+        String path = patch.getPath();
+        if (path == null || path.isEmpty() || "/".equals(path)) {
+            return false;
+        }
+        String[] segments = path.charAt(0) == '/'
+                ? path.substring(1).split("/", -1)
+                : path.split("/", -1);
+        for (String segment : segments) {
+            if ("-".equals(segment) || (!segment.isEmpty() && segment.chars().allMatch(Character::isDigit))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private NodeProvider processorSnapshotNodeProvider() {

@@ -55,7 +55,7 @@ final class ScopeExecutor {
         }
 
         while (true) {
-            Node scopeNode = ProcessorEngine.nodeAt(runtime.document(), normalizedScope);
+            Node scopeNode = runtime.nodeAt(normalizedScope);
             if (scopeNode == null) {
                 return;
             }
@@ -81,7 +81,7 @@ final class ScopeExecutor {
 
             processedEmbedded.add(nextEmbedded);
             String childScope = ProcessorEngine.resolvePointer(normalizedScope, nextEmbedded);
-            Node childNode = ProcessorEngine.nodeAt(runtime.document(), childScope);
+            Node childNode = runtime.nodeAt(childScope);
             if (childNode != null) {
                 initializeScope(childScope, true);
             }
@@ -91,7 +91,7 @@ final class ScopeExecutor {
             return;
         }
 
-        boolean initialized = ProcessorEngine.hasInitializationMarker(runtime.document(), normalizedScope);
+        boolean initialized = runtime.hasInitializationMarker(normalizedScope);
         if (!initialized && bundle.hasCheckpoint()) {
             throw new IllegalStateException("Reserved key 'checkpoint' must not appear before initialization at scope " + normalizedScope);
         }
@@ -113,7 +113,7 @@ final class ScopeExecutor {
         if (bundles.containsKey(normalizedScope)) {
             return;
         }
-        Node scopeNode = ProcessorEngine.nodeAt(runtime.document(), normalizedScope);
+        Node scopeNode = runtime.nodeAt(normalizedScope);
         ContractBundle bundle = scopeNode != null
                 ? owner.contractLoader().load(scopeNode, normalizedScope)
                 : ContractBundle.empty();
@@ -250,7 +250,7 @@ final class ScopeExecutor {
                 bundle = refreshBundle(normalizedScope);
                 continue;
             }
-            Node childNode = ProcessorEngine.nodeAt(runtime.document(), childScope);
+            Node childNode = runtime.nodeAt(childScope);
             if (childNode != null) {
                 initializeScope(childScope, false);
                 processExternalEvent(childScope, event);
@@ -262,7 +262,7 @@ final class ScopeExecutor {
 
     private ContractBundle refreshBundle(String scopePath) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        Node scopeNode = ProcessorEngine.nodeAt(runtime.document(), normalizedScope);
+        Node scopeNode = runtime.nodeAt(normalizedScope);
         if (scopeNode == null) {
             bundles.remove(normalizedScope);
             return null;

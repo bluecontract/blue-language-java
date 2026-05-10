@@ -77,16 +77,14 @@ public final class ProcessorExecutionContext {
         if (absolutePointer == null || absolutePointer.isEmpty()) {
             return null;
         }
-        Node node = ProcessorEngine.nodeAt(runtime().document(), ProcessorEngine.normalizePointer(absolutePointer));
-        return node != null ? node.clone() : null;
+        return runtime().nodeAt(absolutePointer);
     }
 
     public boolean documentContains(String absolutePointer) {
         if (absolutePointer == null || absolutePointer.isEmpty()) {
             return false;
         }
-        Node node = ProcessorEngine.nodeAt(runtime().document(), ProcessorEngine.normalizePointer(absolutePointer));
-        return node != null;
+        return runtime().contains(absolutePointer);
     }
 
     public void terminateGracefully(String reason) {

@@ -236,6 +236,32 @@ public final class FrozenNode {
         return items.get(index);
     }
 
+    public FrozenNode at(String pointer) {
+        String normalized = normalizePointer(pointer);
+        if ("/".equals(normalized)) {
+            return this;
+        }
+        FrozenNode current = this;
+        String[] segments = normalized.substring(1).split("/", -1);
+        for (String segment : segments) {
+            if (current == null) {
+                return null;
+            }
+            if (current.items != null) {
+                current = current.item(parseArrayIndex(segment));
+            } else {
+                current = current.property(segment);
+            }
+        }
+        return current;
+    }
+
+    public Map<String, FrozenNode> pathIndex() {
+        Map<String, FrozenNode> index = new LinkedHashMap<>();
+        indexPaths("/", index);
+        return Collections.unmodifiableMap(index);
+    }
+
     public boolean hasItems() {
         return items != null;
     }
@@ -352,6 +378,41 @@ public final class FrozenNode {
                 && blue == null
                 && referenceBlueId == null) {
             throw new IllegalArgumentException("\"$pos\" items must contain an overlay.");
+        }
+    }
+
+    private void indexPaths(String path, Map<String, FrozenNode> index) {
+        index.put(path, this);
+        if (items != null) {
+            for (int i = 0; i < items.size(); i++) {
+                items.get(i).indexPaths(childPointer(path, String.valueOf(i)), index);
+            }
+        }
+        if (properties != null) {
+            properties.forEach((key, child) -> child.indexPaths(childPointer(path, key), index));
+        }
+    }
+
+    private String childPointer(String parent, String child) {
+        if ("/".equals(parent)) {
+            return "/" + child;
+        }
+        return parent + "/" + child;
+    }
+
+    private String normalizePointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return "/";
+        }
+        return pointer.charAt(0) == '/' ? pointer : "/" + pointer;
+    }
+
+    private int parseArrayIndex(String segment) {
+        try {
+            int index = Integer.parseInt(segment);
+            return index >= 0 ? index : -1;
+        } catch (NumberFormatException ex) {
+            return -1;
         }
     }
 
