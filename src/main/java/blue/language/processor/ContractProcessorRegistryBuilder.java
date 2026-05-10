@@ -29,6 +29,11 @@ public final class ContractProcessorRegistryBuilder {
         return this;
     }
 
+    public ContractProcessorRegistryBuilder register(String blueId, ContractProcessor<? extends Contract> processor) {
+        registry.register(blueId, processor);
+        return this;
+    }
+
     public ContractProcessorRegistry build() {
         return registry;
     }

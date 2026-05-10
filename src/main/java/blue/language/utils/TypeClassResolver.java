@@ -17,30 +17,67 @@ public class TypeClassResolver {
 
     private final Map<String, Class<?>> blueIdMap = new HashMap<>();
 
+    public TypeClassResolver() {
+    }
+
     public TypeClassResolver(String... packagesToScan) {
         for (String packageName : packagesToScan) {
-            Reflections reflections = new Reflections(new ConfigurationBuilder()
-                    .setUrls(ClasspathHelper.forPackage(packageName))
-                    .filterInputsBy(new FilterBuilder().includePackage(packageName))
-                    .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes));
-
-            Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(TypeBlueId.class);
-
-            for (Class<?> clazz : annotatedClasses) {
-                TypeBlueId annotation = clazz.getAnnotation(TypeBlueId.class);
-                registerClass(clazz, annotation);
-            }
+            scanPackage(packageName);
         }
     }
 
-    private void registerClass(Class<?> clazz, TypeBlueId annotation) {
-        String blueId = BlueIdResolver.resolveBlueId(clazz);
-        if (blueId != null) {
-            if (blueIdMap.containsKey(blueId)) {
-                throw new IllegalStateException("Duplicate BlueId value: " + blueId);
-            }
-            blueIdMap.put(blueId, clazz);
+    public TypeClassResolver scanPackage(String packageName) {
+        Reflections reflections = new Reflections(new ConfigurationBuilder()
+                .setUrls(ClasspathHelper.forPackage(packageName))
+                .filterInputsBy(new FilterBuilder().includePackage(packageName))
+                .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes));
+
+        Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(TypeBlueId.class);
+
+        for (Class<?> clazz : annotatedClasses) {
+            registerAnnotatedClass(clazz);
         }
+        return this;
+    }
+
+    public TypeClassResolver registerAnnotatedClass(Class<?> clazz) {
+        TypeBlueId annotation = clazz.getAnnotation(TypeBlueId.class);
+        if (annotation == null) {
+            throw new IllegalArgumentException("Class lacks @TypeBlueId: " + clazz.getName());
+        }
+        boolean registered = false;
+        if (!annotation.defaultValue().isEmpty()) {
+            register(annotation.defaultValue(), clazz);
+            registered = true;
+        }
+        for (String blueId : annotation.value()) {
+            if (blueId != null && !blueId.isEmpty()) {
+                register(blueId, clazz);
+                registered = true;
+            }
+        }
+        if (!registered) {
+            String blueId = BlueIdResolver.resolveBlueId(clazz);
+            if (blueId != null) {
+                register(blueId, clazz);
+            }
+        }
+        return this;
+    }
+
+    public TypeClassResolver register(String blueId, Class<?> clazz) {
+        if (blueId == null || blueId.isEmpty()) {
+            throw new IllegalArgumentException("blueId must not be empty");
+        }
+        if (clazz == null) {
+            throw new IllegalArgumentException("clazz must not be null");
+        }
+        Class<?> existing = blueIdMap.get(blueId);
+        if (existing != null && !existing.equals(clazz)) {
+            throw new IllegalStateException("Duplicate BlueId value: " + blueId);
+        }
+        blueIdMap.put(blueId, clazz);
+        return this;
     }
 
     public Class<?> resolveClass(Node node) {
@@ -49,6 +86,10 @@ public class TypeClassResolver {
             return null;
         }
 
+        return resolveClass(blueId);
+    }
+
+    public Class<?> resolveClass(String blueId) {
         return blueIdMap.get(blueId);
     }
 

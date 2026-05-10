@@ -328,6 +328,17 @@ public class Blue implements NodeResolver {
         return this;
     }
 
+    public Blue registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
+        if (processor == null) {
+            throw new IllegalArgumentException("processor must not be null");
+        }
+        if (documentProcessor == null) {
+            documentProcessor = createDefaultDocumentProcessor();
+        }
+        documentProcessor.registerContractProcessor(blueId, processor);
+        return this;
+    }
+
     public DocumentProcessingResult processDocument(Node document, Node event) {
         return attachProcessingSnapshot(ensureDocumentProcessor().processDocument(document, event));
     }
@@ -462,6 +473,7 @@ public class Blue implements NodeResolver {
     private void refreshDocumentProcessorConformanceEngine() {
         if (documentProcessor != null) {
             documentProcessor = new DocumentProcessor(documentProcessor.getContractRegistry(),
+                    documentProcessor.getContractTypeResolver(),
                     conformanceEngine(),
                     processingSnapshotManager());
         }

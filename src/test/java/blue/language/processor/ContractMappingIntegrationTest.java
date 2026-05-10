@@ -111,8 +111,10 @@ class ContractMappingIntegrationTest {
         ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
                 .register(new SetPropertyContractProcessor())
                 .build();
+        TypeClassResolver resolver = new TypeClassResolver("blue.language.processor.model");
         ContractLoader loader = new ContractLoader(registry,
-                new NodeToObjectConverter(new TypeClassResolver("blue.language.processor.model")));
+                new NodeToObjectConverter(resolver),
+                resolver);
 
         ContractBundle bundle = loader.load(snapshot, "/");
 

@@ -6,6 +6,7 @@ package blue.language.processor.model;
 public abstract class Contract {
 
     private String key;
+    private String typeBlueId;
     private Integer order;
 
     public String getKey() {
@@ -14,6 +15,14 @@ public abstract class Contract {
 
     public void setKey(String key) {
         this.key = key;
+    }
+
+    public String getTypeBlueId() {
+        return typeBlueId;
+    }
+
+    public void setTypeBlueId(String typeBlueId) {
+        this.typeBlueId = typeBlueId;
     }
 
     public Integer getOrder() {

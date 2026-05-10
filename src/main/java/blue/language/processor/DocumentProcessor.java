@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.snapshot.FrozenNode;
@@ -16,10 +17,8 @@ import java.util.Objects;
  */
 public class DocumentProcessor {
 
-    private static final TypeClassResolver CONTRACT_TYPE_RESOLVER =
-            new TypeClassResolver("blue.language.processor.model");
-
     private final ContractProcessorRegistry contractRegistry;
+    private final TypeClassResolver contractTypeResolver;
     private final NodeToObjectConverter contractConverter;
     private final ContractLoader contractLoader;
     private final ConformanceEngine conformanceEngine;
@@ -30,11 +29,7 @@ public class DocumentProcessor {
     }
 
     public DocumentProcessor(ContractProcessorRegistry registry) {
-        this.contractRegistry = Objects.requireNonNull(registry, "registry");
-        this.contractConverter = new NodeToObjectConverter(CONTRACT_TYPE_RESOLVER);
-        this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
-        this.conformanceEngine = null;
-        this.snapshotManager = null;
+        this(registry, defaultContractTypeResolver(), null, null);
     }
 
     public DocumentProcessor(ConformanceEngine conformanceEngine) {
@@ -52,15 +47,23 @@ public class DocumentProcessor {
     public DocumentProcessor(ContractProcessorRegistry registry,
                              ConformanceEngine conformanceEngine,
                              ProcessingSnapshotManager snapshotManager) {
+        this(registry, defaultContractTypeResolver(), conformanceEngine, snapshotManager);
+    }
+
+    public DocumentProcessor(ContractProcessorRegistry registry,
+                             TypeClassResolver contractTypeResolver,
+                             ConformanceEngine conformanceEngine,
+                             ProcessingSnapshotManager snapshotManager) {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
-        this.contractConverter = new NodeToObjectConverter(CONTRACT_TYPE_RESOLVER);
-        this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
+        this.contractTypeResolver = Objects.requireNonNull(contractTypeResolver, "contractTypeResolver");
+        this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
+        this.contractLoader = new ContractLoader(contractRegistry, contractConverter, this.contractTypeResolver);
         this.conformanceEngine = conformanceEngine;
         this.snapshotManager = snapshotManager;
     }
 
     private DocumentProcessor(Builder builder) {
-        this(builder.contractRegistry, builder.conformanceEngine, builder.snapshotManager);
+        this(builder.contractRegistry, builder.contractTypeResolver, builder.conformanceEngine, builder.snapshotManager);
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
@@ -90,12 +93,25 @@ public class DocumentProcessor {
     }
 
     public DocumentProcessor registerContractProcessor(ContractProcessor<? extends Contract> processor) {
+        Objects.requireNonNull(processor, "processor");
         contractRegistry.register(processor);
+        registerAnnotatedContractType(processor.contractType());
+        return this;
+    }
+
+    public DocumentProcessor registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
+        Objects.requireNonNull(processor, "processor");
+        contractRegistry.register(blueId, processor);
+        contractTypeResolver.register(blueId, processor.contractType());
         return this;
     }
 
     public ContractProcessorRegistry getContractRegistry() {
         return contractRegistry;
+    }
+
+    public TypeClassResolver getContractTypeResolver() {
+        return contractTypeResolver;
     }
 
     ContractProcessorRegistry registry() {
@@ -133,13 +149,56 @@ public class DocumentProcessor {
         return new Builder();
     }
 
-    static final class Builder {
+    private static TypeClassResolver defaultContractTypeResolver() {
+        return new TypeClassResolver("blue.language.processor.model");
+    }
+
+    private void registerAnnotatedContractType(Class<? extends Contract> contractType) {
+        if (contractType != null && contractType.isAnnotationPresent(TypeBlueId.class)) {
+            contractTypeResolver.registerAnnotatedClass(contractType);
+        }
+    }
+
+    public static final class Builder {
         private ContractProcessorRegistry contractRegistry = ContractProcessorRegistryBuilder.create().registerDefaults().build();
+        private TypeClassResolver contractTypeResolver = defaultContractTypeResolver();
         private ConformanceEngine conformanceEngine;
         private ProcessingSnapshotManager snapshotManager;
 
         public Builder withRegistry(ContractProcessorRegistry registry) {
             this.contractRegistry = Objects.requireNonNull(registry, "registry");
+            return this;
+        }
+
+        public Builder withContractTypeResolver(TypeClassResolver resolver) {
+            this.contractTypeResolver = Objects.requireNonNull(resolver, "resolver");
+            return this;
+        }
+
+        public Builder scanContractTypes(String packageName) {
+            this.contractTypeResolver.scanPackage(packageName);
+            return this;
+        }
+
+        public Builder registerContractType(String blueId, Class<? extends Contract> contractType) {
+            this.contractTypeResolver.register(blueId, contractType);
+            return this;
+        }
+
+        public Builder registerContractProcessor(ContractProcessor<? extends Contract> processor) {
+            Objects.requireNonNull(processor, "processor");
+            this.contractRegistry.register(processor);
+            Class<? extends Contract> contractType = processor.contractType();
+            if (contractType != null && contractType.isAnnotationPresent(TypeBlueId.class)) {
+                this.contractTypeResolver.registerAnnotatedClass(contractType);
+            }
+            return this;
+        }
+
+        public Builder registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
+            Objects.requireNonNull(processor, "processor");
+            this.contractRegistry.register(blueId, processor);
+            this.contractTypeResolver.register(blueId, processor.contractType());
             return this;
         }
 

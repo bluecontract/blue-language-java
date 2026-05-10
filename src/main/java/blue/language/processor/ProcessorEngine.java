@@ -151,7 +151,7 @@ final class ProcessorEngine {
                                             String scopePath,
                                             Node event) {
         ChannelProcessor<? extends ChannelContract> processor =
-                owner.registry().lookupChannel((Class<? extends ChannelContract>) contract.getClass()).orElse(null);
+                owner.registry().lookupChannel(contract).orElse(null);
         if (processor == null) {
             return ChannelMatch.noMatch();
         }
@@ -447,9 +447,9 @@ final class ProcessorEngine {
     @SuppressWarnings("unchecked")
     static void executeHandler(DocumentProcessor owner, HandlerContract contract, ProcessorExecutionContext context) {
         HandlerProcessor<? extends HandlerContract> processor = owner.registry()
-                .lookupHandler((Class<? extends HandlerContract>) contract.getClass())
+                .lookupHandler(contract)
                 .orElseThrow(() -> new IllegalStateException(
-                        "No processor registered for contract type " + contract.getClass().getName()));
+                        "No processor registered for contract type " + contract.getTypeBlueId()));
         HandlerProcessor<HandlerContract> typed = (HandlerProcessor<HandlerContract>) processor;
         typed.execute(contract, context);
     }
