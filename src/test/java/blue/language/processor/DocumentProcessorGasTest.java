@@ -1,11 +1,14 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.contracts.EmitEventsContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.provider.BasicNodeProvider;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
@@ -13,10 +16,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessorGasTest {
 
@@ -119,6 +127,231 @@ class DocumentProcessorGasTest {
         assertEquals(expected, result.totalGas());
     }
 
+    @Test
+    void processDocumentReusesResolvedTypeCacheWithoutChangingGas() {
+        ProcessingTypeGraph types = processingTypeGraph();
+        Node initialized = initializedProcessingDocument(types);
+
+        CountingNodeProvider coldProvider = new CountingNodeProvider(types.provider);
+        Blue coldBlue = processingBlue(coldProvider);
+        Node coldEvent = coldBlue.objectToNode(new TestEvent().eventId("evt-cold"));
+        coldProvider.reset();
+
+        DocumentProcessingResult cold = coldBlue.processDocument(initialized.clone(), coldEvent);
+
+        assertProcessedAccount(cold, types);
+        assertEquals(1, coldProvider.fetchCount(types.accountId));
+        assertEquals(1, coldProvider.fetchCount(types.moneyId));
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
+
+        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        coldProvider.reset();
+        DocumentProcessingResult coldReused = coldBlue.processDocument(initialized.clone(),
+                coldBlue.objectToNode(new TestEvent().eventId("evt-cold-reused")));
+
+        assertProcessedAccount(coldReused, types);
+        assertEquals(0, coldProvider.fetchCount());
+        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertEquals(cold.totalGas(), coldReused.totalGas());
+
+        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
+        int warmCacheSizeBeforeProcessing = warmBlue.resolvedReferenceCacheSize();
+        Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-warm"));
+        warmProvider.reset();
+
+        DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
+
+        assertProcessedAccount(warm, types);
+        assertEquals(0, warmProvider.fetchCount());
+        assertTrue(warmBlue.resolvedReferenceCacheSize() >= warmCacheSizeBeforeProcessing);
+        assertEquals(cold.totalGas(), warm.totalGas());
+    }
+
+    @Test
+    void initializeDocumentReusesResolvedTypeCacheWithoutChangingGas() {
+        ProcessingTypeGraph types = processingTypeGraph();
+        Node original = accountDocument(types);
+
+        CountingNodeProvider coldProvider = new CountingNodeProvider(types.provider);
+        Blue coldBlue = processingBlue(coldProvider);
+
+        DocumentProcessingResult cold = coldBlue.initializeDocument(original.clone());
+
+        assertInitializedAccount(cold, types);
+        assertEquals(1, coldProvider.fetchCount(types.accountId));
+        assertEquals(1, coldProvider.fetchCount(types.moneyId));
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
+
+        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        coldProvider.reset();
+        DocumentProcessingResult coldReused = coldBlue.initializeDocument(original.clone());
+
+        assertInitializedAccount(coldReused, types);
+        assertEquals(0, coldProvider.fetchCount());
+        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertEquals(cold.totalGas(), coldReused.totalGas());
+
+        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
+        Node warmOriginal = accountDocument(types);
+        warmProvider.reset();
+
+        DocumentProcessingResult warm = warmBlue.initializeDocument(warmOriginal);
+
+        assertInitializedAccount(warm, types);
+        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(cold.totalGas(), warm.totalGas());
+    }
+
+    @Test
+    void processDocumentCachesRepeatedNestedTypeReferencesOnlyOnceWithoutChangingGas() {
+        RepeatedTypeGraph types = repeatedTypeGraph();
+        Node initialized = initializedPortfolioDocument(types);
+
+        CountingNodeProvider coldProvider = new CountingNodeProvider(types.provider);
+        Blue coldBlue = processingBlue(coldProvider);
+        Node coldEvent = coldBlue.objectToNode(new TestEvent().eventId("evt-repeated-cold"));
+        coldProvider.reset();
+
+        DocumentProcessingResult cold = coldBlue.processDocument(initialized.clone(), coldEvent);
+
+        assertProcessedPortfolio(cold, types);
+        assertEquals(1, coldProvider.fetchCount(types.portfolioId));
+        assertEquals(1, coldProvider.fetchCount(types.accountId));
+        assertEquals(1, coldProvider.fetchCount(types.moneyId));
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 3);
+
+        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        coldProvider.reset();
+        DocumentProcessingResult coldReused = coldBlue.processDocument(initialized.clone(),
+                coldBlue.objectToNode(new TestEvent().eventId("evt-repeated-reused")));
+
+        assertProcessedPortfolio(coldReused, types);
+        assertEquals(0, coldProvider.fetchCount());
+        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertEquals(cold.totalGas(), coldReused.totalGas());
+
+        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(portfolioCanonical(types));
+        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
+        Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-repeated-warm"));
+        warmProvider.reset();
+
+        DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
+
+        assertProcessedPortfolio(warm, types);
+        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(cold.totalGas(), warm.totalGas());
+    }
+
+    @Test
+    void embeddedInitializationSharesResolvedTypeCacheAcrossChildScopesWithoutChangingGas() {
+        ProcessingTypeGraph types = processingTypeGraph();
+        Node original = embeddedAccountsDocument(types);
+
+        CountingNodeProvider coldProvider = new CountingNodeProvider(types.provider);
+        Blue coldBlue = processingBlue(coldProvider);
+
+        DocumentProcessingResult cold = coldBlue.initializeDocument(original.clone());
+
+        assertInitializedEmbeddedAccounts(cold, types);
+        assertEquals(1, coldProvider.fetchCount(types.accountId));
+        assertEquals(1, coldProvider.fetchCount(types.moneyId));
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
+
+        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        coldProvider.reset();
+        DocumentProcessingResult coldReused = coldBlue.initializeDocument(original.clone());
+
+        assertInitializedEmbeddedAccounts(coldReused, types);
+        assertEquals(0, coldProvider.fetchCount());
+        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertEquals(cold.totalGas(), coldReused.totalGas());
+
+        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
+        warmProvider.reset();
+
+        DocumentProcessingResult warm = warmBlue.initializeDocument(original.clone());
+
+        assertInitializedEmbeddedAccounts(warm, types);
+        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(cold.totalGas(), warm.totalGas());
+    }
+
+    @Test
+    void embeddedProcessingSharesResolvedTypeCacheAcrossChildScopesWithoutChangingGas() {
+        ProcessingTypeGraph types = processingTypeGraph();
+        Node initialized = initializedEmbeddedProcessingDocument(types);
+
+        CountingNodeProvider coldProvider = new CountingNodeProvider(types.provider);
+        Blue coldBlue = processingBlue(coldProvider);
+        Node coldEvent = coldBlue.objectToNode(new TestEvent().eventId("evt-embedded-cold"));
+        coldProvider.reset();
+
+        DocumentProcessingResult cold = coldBlue.processDocument(initialized.clone(), coldEvent);
+
+        assertProcessedEmbeddedAccounts(cold, types);
+        assertEquals(1, coldProvider.fetchCount(types.accountId));
+        assertEquals(1, coldProvider.fetchCount(types.moneyId));
+        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
+
+        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        coldProvider.reset();
+        DocumentProcessingResult coldReused = coldBlue.processDocument(initialized.clone(),
+                coldBlue.objectToNode(new TestEvent().eventId("evt-embedded-reused")));
+
+        assertProcessedEmbeddedAccounts(coldReused, types);
+        assertEquals(0, coldProvider.fetchCount());
+        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
+        assertEquals(cold.totalGas(), coldReused.totalGas());
+
+        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
+        Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-embedded-warm"));
+        warmProvider.reset();
+
+        DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
+
+        assertProcessedEmbeddedAccounts(warm, types);
+        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(cold.totalGas(), warm.totalGas());
+    }
+
+    @Test
+    void changingNodeProviderRefreshesProcessorConformanceCacheAndKeepsRegisteredProcessors() {
+        ProcessingTypeGraph firstTypes = processingTypeGraph("First");
+        ProcessingTypeGraph secondTypes = processingTypeGraph("Second");
+        CountingNodeProvider firstProvider = new CountingNodeProvider(firstTypes.provider);
+        CountingNodeProvider secondProvider = new CountingNodeProvider(secondTypes.provider);
+        Blue blue = processingBlue(firstProvider);
+
+        blue.nodeProvider(secondProvider);
+        firstProvider.reset();
+        secondProvider.reset();
+        Node document = processingDocument(secondTypes);
+
+        DocumentProcessingResult initialized = blue.initializeDocument(document);
+
+        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
+        assertEquals(0, firstProvider.fetchCount());
+        assertEquals(1, secondProvider.fetchCount(secondTypes.accountId));
+        assertEquals(1, secondProvider.fetchCount(secondTypes.moneyId));
+
+        secondProvider.reset();
+        DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
+                blue.objectToNode(new TestEvent().eventId("evt-provider-swap")));
+
+        assertProcessedAccount(processed, secondTypes);
+        assertEquals(0, firstProvider.fetchCount());
+        assertEquals(0, secondProvider.fetchCount());
+    }
+
     private Node extractInitializedMarker(Node document) {
         Map<String, Node> contracts = document.getProperties();
         assertNotNull(contracts);
@@ -181,6 +414,380 @@ class DocumentProcessorGasTest {
             return canonicalJson.getBytes(StandardCharsets.UTF_8).length;
         } catch (Exception ex) {
             throw new IllegalStateException("Failed to canonicalize node", ex);
+        }
+    }
+
+    private Blue processingBlue(NodeProvider provider) {
+        Blue result = new Blue(provider);
+        result.registerContractProcessor(new TestEventChannelProcessor());
+        result.registerContractProcessor(new SetPropertyContractProcessor());
+        result.registerContractProcessor(new EmitEventsContractProcessor());
+        return result;
+    }
+
+    private ProcessingTypeGraph processingTypeGraph() {
+        return processingTypeGraph("");
+    }
+
+    private ProcessingTypeGraph processingTypeGraph(String prefix) {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        String moneyName = prefix.isEmpty() ? "Money" : prefix + " Money";
+        String accountName = prefix.isEmpty() ? "Account" : prefix + " Account";
+        provider.addSingleDocs(
+                "name: " + moneyName + "\n" +
+                "currency: USD\n" +
+                "cents:\n" +
+                "  type: Integer");
+        String moneyId = provider.getBlueIdByName(moneyName);
+        provider.addSingleDocs(
+                "name: " + accountName + "\n" +
+                "balance:\n" +
+                "  type:\n" +
+                "    blueId: " + moneyId);
+        String accountId = provider.getBlueIdByName(accountName);
+        return new ProcessingTypeGraph(provider, moneyId, accountId);
+    }
+
+    private Node initializedProcessingDocument(ProcessingTypeGraph types) {
+        Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
+        Node document = setupBlue.preprocess(processingDocument(types));
+        DocumentProcessingResult initialized = setupBlue.initializeDocument(document);
+        assertTrue(setupBlue.isInitialized(initialized.document()));
+        return initialized.document().clone();
+    }
+
+    private Node processingDocument(ProcessingTypeGraph types) {
+        return UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "name: Wallet\n" +
+                "type:\n" +
+                "  blueId: " + types.accountId + "\n" +
+                "balance:\n" +
+                "  type:\n" +
+                "    blueId: " + types.moneyId + "\n" +
+                "  currency: USD\n" +
+                "  cents: 0\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  setter:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    path: /balance\n" +
+                "    propertyKey: cents\n" +
+                "    propertyValue: 1\n", Node.class);
+    }
+
+    private Node accountCanonical(ProcessingTypeGraph types) {
+        return UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "name: Account\n" +
+                "balance:\n" +
+                "  type:\n" +
+                "    blueId: " + types.moneyId, Node.class);
+    }
+
+    private Node accountDocument(ProcessingTypeGraph types) {
+        return UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "name: Wallet\n" +
+                "type:\n" +
+                "  blueId: " + types.accountId + "\n" +
+                "balance:\n" +
+                "  type:\n" +
+                "    blueId: " + types.moneyId + "\n" +
+                "  currency: USD\n" +
+                "  cents: 0", Node.class);
+    }
+
+    private void assertProcessedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        Node document = result.document();
+        assertEquals(1, document.getAsInteger("/balance/cents"));
+        assertEquals(types.moneyId, document.getAsNode("/balance/type").getBlueId());
+        assertEquals(types.accountId, document.getType().getBlueId());
+    }
+
+    private void assertInitializedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        Node document = result.document();
+        assertNotNull(document.getAsNode("/contracts/initialized"));
+        assertEquals(0, document.getAsInteger("/balance/cents"));
+        assertEquals(types.moneyId, document.getAsNode("/balance/type").getBlueId());
+        assertEquals(types.accountId, document.getType().getBlueId());
+    }
+
+    private RepeatedTypeGraph repeatedTypeGraph() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Money\n" +
+                "currency: USD\n" +
+                "cents:\n" +
+                "  type: Integer");
+        String moneyId = provider.getBlueIdByName("Money");
+        provider.addSingleDocs(
+                "name: Account\n" +
+                "balance:\n" +
+                "  type:\n" +
+                "    blueId: " + moneyId);
+        String accountId = provider.getBlueIdByName("Account");
+        provider.addSingleDocs(
+                "name: Portfolio\n" +
+                "primary:\n" +
+                "  type:\n" +
+                "    blueId: " + accountId + "\n" +
+                "secondary:\n" +
+                "  type:\n" +
+                "    blueId: " + accountId);
+        String portfolioId = provider.getBlueIdByName("Portfolio");
+        return new RepeatedTypeGraph(provider, moneyId, accountId, portfolioId);
+    }
+
+    private Node initializedPortfolioDocument(RepeatedTypeGraph types) {
+        Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
+        Node document = setupBlue.yamlToNode(
+                "name: Portfolio Instance\n" +
+                "type:\n" +
+                "  blueId: " + types.portfolioId + "\n" +
+                "primary:\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId + "\n" +
+                "  balance:\n" +
+                "    type:\n" +
+                "      blueId: " + types.moneyId + "\n" +
+                "    currency: USD\n" +
+                "    cents: 0\n" +
+                "secondary:\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId + "\n" +
+                "  balance:\n" +
+                "    type:\n" +
+                "      blueId: " + types.moneyId + "\n" +
+                "    currency: USD\n" +
+                "    cents: 0\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  setter:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    path: /secondary/balance\n" +
+                "    propertyKey: cents\n" +
+                "    propertyValue: 1\n");
+        DocumentProcessingResult initialized = setupBlue.initializeDocument(document);
+        assertTrue(setupBlue.isInitialized(initialized.document()));
+        return initialized.document().clone();
+    }
+
+    private Node portfolioCanonical(RepeatedTypeGraph types) {
+        return UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "name: Portfolio\n" +
+                "primary:\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId + "\n" +
+                "secondary:\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId, Node.class);
+    }
+
+    private void assertProcessedPortfolio(DocumentProcessingResult result, RepeatedTypeGraph types) {
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        Node document = result.document();
+        assertEquals(0, document.getAsInteger("/primary/balance/cents"));
+        assertEquals(1, document.getAsInteger("/secondary/balance/cents"));
+        assertEquals(types.portfolioId, document.getType().getBlueId());
+        assertEquals(types.accountId, document.getAsNode("/primary/type").getBlueId());
+        assertEquals(types.accountId, document.getAsNode("/secondary/type").getBlueId());
+        assertEquals(types.moneyId, document.getAsNode("/primary/balance/type").getBlueId());
+        assertEquals(types.moneyId, document.getAsNode("/secondary/balance/type").getBlueId());
+    }
+
+    private Node embeddedAccountsDocument(ProcessingTypeGraph types) {
+        return UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "primary:\n" +
+                "  name: Primary Wallet\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId + "\n" +
+                "  balance:\n" +
+                "    type:\n" +
+                "      blueId: " + types.moneyId + "\n" +
+                "    currency: USD\n" +
+                "    cents: 0\n" +
+                "secondary:\n" +
+                "  name: Secondary Wallet\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId + "\n" +
+                "  balance:\n" +
+                "    type:\n" +
+                "      blueId: " + types.moneyId + "\n" +
+                "    currency: USD\n" +
+                "    cents: 0\n" +
+                "contracts:\n" +
+                "  embedded:\n" +
+                "    type:\n" +
+                "      blueId: ProcessEmbedded\n" +
+                "    paths:\n" +
+                "      - /primary\n" +
+                "      - /secondary\n", Node.class);
+    }
+
+    private Node initializedEmbeddedProcessingDocument(ProcessingTypeGraph types) {
+        Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
+        Node initialized = setupBlue.initializeDocument(embeddedAccountsProcessingDocument(types)).document();
+        assertTrue(setupBlue.isInitialized(initialized));
+        return new Blue(types.provider).reverse(initialized);
+    }
+
+    private Node embeddedAccountsProcessingDocument(ProcessingTypeGraph types) {
+        return UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "primary:\n" +
+                "  name: Primary Wallet\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId + "\n" +
+                "  balance:\n" +
+                "    type:\n" +
+                "      blueId: " + types.moneyId + "\n" +
+                "    currency: USD\n" +
+                "    cents: 0\n" +
+                "  contracts:\n" +
+                "    testChannel:\n" +
+                "      type:\n" +
+                "        blueId: TestEventChannel\n" +
+                "    setter:\n" +
+                "      channel: testChannel\n" +
+                "      type:\n" +
+                "        blueId: SetProperty\n" +
+                "      path: /balance\n" +
+                "      propertyKey: cents\n" +
+                "      propertyValue: 1\n" +
+                "secondary:\n" +
+                "  name: Secondary Wallet\n" +
+                "  type:\n" +
+                "    blueId: " + types.accountId + "\n" +
+                "  balance:\n" +
+                "    type:\n" +
+                "      blueId: " + types.moneyId + "\n" +
+                "    currency: USD\n" +
+                "    cents: 0\n" +
+                "  contracts:\n" +
+                "    testChannel:\n" +
+                "      type:\n" +
+                "        blueId: TestEventChannel\n" +
+                "    setter:\n" +
+                "      channel: testChannel\n" +
+                "      type:\n" +
+                "        blueId: SetProperty\n" +
+                "      path: /balance\n" +
+                "      propertyKey: cents\n" +
+                "      propertyValue: 1\n" +
+                "contracts:\n" +
+                "  embedded:\n" +
+                "    type:\n" +
+                "      blueId: ProcessEmbedded\n" +
+                "    paths:\n" +
+                "      - /primary\n" +
+                "      - /secondary\n", Node.class);
+    }
+
+    private void assertInitializedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        Node document = result.document();
+        assertNotNull(document.getAsNode("/contracts/initialized"));
+        assertInitializedEmbeddedAccount(document, "/primary", types);
+        assertInitializedEmbeddedAccount(document, "/secondary", types);
+    }
+
+    private void assertInitializedEmbeddedAccount(Node document, String path, ProcessingTypeGraph types) {
+        assertNotNull(document.getAsNode(path + "/contracts/initialized"));
+        assertEquals(0, document.getAsInteger(path + "/balance/cents"));
+        assertEquals(types.accountId, document.getAsNode(path + "/type").getBlueId());
+        assertEquals(types.moneyId, document.getAsNode(path + "/balance/type").getBlueId());
+    }
+
+    private void assertProcessedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        Node document = result.document();
+        assertProcessedEmbeddedAccount(document, "/primary", types);
+        assertProcessedEmbeddedAccount(document, "/secondary", types);
+    }
+
+    private void assertProcessedEmbeddedAccount(Node document, String path, ProcessingTypeGraph types) {
+        assertNotNull(document.getAsNode(path + "/contracts/initialized"));
+        assertEquals(1, document.getAsInteger(path + "/balance/cents"));
+        assertEquals(types.accountId, document.getAsNode(path + "/type").getBlueId());
+        assertEquals(types.moneyId, document.getAsNode(path + "/balance/type").getBlueId());
+    }
+
+    private static final class ProcessingTypeGraph {
+        private final BasicNodeProvider provider;
+        private final String moneyId;
+        private final String accountId;
+
+        private ProcessingTypeGraph(BasicNodeProvider provider,
+                                    String moneyId,
+                                    String accountId) {
+            this.provider = provider;
+            this.moneyId = moneyId;
+            this.accountId = accountId;
+        }
+    }
+
+    private static final class RepeatedTypeGraph {
+        private final BasicNodeProvider provider;
+        private final String moneyId;
+        private final String accountId;
+        private final String portfolioId;
+
+        private RepeatedTypeGraph(BasicNodeProvider provider,
+                                  String moneyId,
+                                  String accountId,
+                                  String portfolioId) {
+            this.provider = provider;
+            this.moneyId = moneyId;
+            this.accountId = accountId;
+            this.portfolioId = portfolioId;
+        }
+    }
+
+    private static final class CountingNodeProvider implements NodeProvider {
+        private final NodeProvider delegate;
+        private int fetchCount;
+        private final Map<String, Integer> fetchCountsByBlueId = new HashMap<>();
+
+        private CountingNodeProvider(NodeProvider delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public List<Node> fetchByBlueId(String blueId) {
+            if (isProcessorTypeStub(blueId)) {
+                return Collections.singletonList(new Node().name(blueId));
+            }
+            fetchCount++;
+            fetchCountsByBlueId.merge(blueId, 1, Integer::sum);
+            return delegate.fetchByBlueId(blueId);
+        }
+
+        private int fetchCount() {
+            return fetchCount;
+        }
+
+        private int fetchCount(String blueId) {
+            return fetchCountsByBlueId.getOrDefault(blueId, 0);
+        }
+
+        private void reset() {
+            fetchCount = 0;
+            fetchCountsByBlueId.clear();
+        }
+
+        private boolean isProcessorTypeStub(String blueId) {
+            return "InitializationMarker".equals(blueId)
+                    || "ChannelEventCheckpoint".equals(blueId)
+                    || "TestEventChannel".equals(blueId)
+                    || "SetProperty".equals(blueId)
+                    || "ProcessEmbedded".equals(blueId);
         }
     }
 }

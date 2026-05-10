@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.util.PointerUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -144,9 +145,7 @@ public final class DocumentProcessingRuntime {
         PatchEngine.PatchResult result;
         try {
             result = patchEngine.applyPatch(originScopePath, patch);
-            if (conformanceEngine != null && document.getType() != null) {
-                conformanceEngine.generalizeChangedPath(document, result.path());
-            }
+            enforceConformanceFromPatchScope(result);
         } catch (RuntimeException ex) {
             document.replaceWith(rollback);
             throw ex;
@@ -158,6 +157,18 @@ public final class DocumentProcessingRuntime {
                 result.op(),
                 result.originScope(),
                 result.cascadeScopes());
+    }
+
+    private void enforceConformanceFromPatchScope(PatchEngine.PatchResult result) {
+        if (conformanceEngine == null) {
+            return;
+        }
+        Node scopeNode = patchEngine.read(result.originScope());
+        if (scopeNode == null || scopeNode.getType() == null) {
+            return;
+        }
+        String relativePath = PointerUtils.relativizePointer(result.originScope(), result.path());
+        conformanceEngine.generalizeChangedPath(scopeNode, relativePath);
     }
 
     private Node cloneNode(Node node) {

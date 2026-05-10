@@ -47,6 +47,15 @@ public class Types {
     }
 
     private static boolean sameType(Node left, Node right, String leftBlueId, String rightBlueId) {
+        if (left.getBlueId() != null && left.getBlueId().equals(right.getBlueId())) {
+            return true;
+        }
+        if (left.getBlueId() != null && left.getBlueId().equals(rightBlueId)) {
+            return true;
+        }
+        if (right.getBlueId() != null && right.getBlueId().equals(leftBlueId)) {
+            return true;
+        }
         if (leftBlueId.equals(rightBlueId)) {
             return true;
         }
@@ -75,7 +84,9 @@ public class Types {
         }
 
         if (type.getBlueId() != null) {
-            // tmp code
+            if (!type.isReferenceOnly()) {
+                return type;
+            }
             if (CORE_TYPE_BLUE_IDS.contains(type.getBlueId())) {
                 return new Node().blueId(type.getBlueId());
             }

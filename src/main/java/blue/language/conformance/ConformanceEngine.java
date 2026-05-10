@@ -5,6 +5,7 @@ import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
+import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.MergeReverser;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
@@ -18,10 +19,18 @@ public final class ConformanceEngine {
 
     private final NodeProvider nodeProvider;
     private final MergingProcessor mergingProcessor;
+    private final ResolvedReferenceCache resolvedReferenceCache;
 
     public ConformanceEngine(NodeProvider nodeProvider, MergingProcessor mergingProcessor) {
+        this(nodeProvider, mergingProcessor, null);
+    }
+
+    public ConformanceEngine(NodeProvider nodeProvider,
+                             MergingProcessor mergingProcessor,
+                             ResolvedReferenceCache resolvedReferenceCache) {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = Objects.requireNonNull(mergingProcessor, "mergingProcessor");
+        this.resolvedReferenceCache = resolvedReferenceCache;
     }
 
     public ConformanceResult check(Node node) {
@@ -29,7 +38,7 @@ public final class ConformanceEngine {
             return ConformanceResult.conformant();
         }
         try {
-            new Merger(mergingProcessor, nodeProvider).resolve(node.clone(), Limits.NO_LIMITS);
+            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(node.clone(), Limits.NO_LIMITS);
             return ConformanceResult.conformant();
         } catch (RuntimeException ex) {
             return ConformanceResult.nonConformant(ex.getMessage());
@@ -76,7 +85,7 @@ public final class ConformanceEngine {
     private Node generalizedNode(Node node, Node parentType) {
         Node canonical = new MergeReverser().reverse(node.clone());
         canonical.type(parentType);
-        return new Merger(mergingProcessor, nodeProvider).resolve(canonical, Limits.NO_LIMITS);
+        return new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(canonical, Limits.NO_LIMITS);
     }
 
     private Node parentType(Node type) {
@@ -90,7 +99,7 @@ public final class ConformanceEngine {
     }
 
     private Node resolveType(Node type) {
-        return new Merger(mergingProcessor, nodeProvider).resolve(type.clone(), Limits.NO_LIMITS);
+        return new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(type.clone(), Limits.NO_LIMITS);
     }
 
     private List<Node> existingPathToNearestNode(Node root, String pointer) {

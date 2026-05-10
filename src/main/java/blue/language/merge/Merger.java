@@ -2,12 +2,12 @@ package blue.language.merge;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.NodeExtender;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.Types;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.limits.PathLimits;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -20,15 +20,22 @@ import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
 import static blue.language.utils.Properties.LIST_TYPE;
 import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
+import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
 
 public class Merger implements NodeResolver {
 
     private MergingProcessor mergingProcessor;
     private NodeProvider nodeProvider;
+    private ResolvedReferenceCache resolvedReferenceCache;
 
     public Merger(MergingProcessor mergingProcessor, NodeProvider nodeProvider) {
+        this(mergingProcessor, nodeProvider, null);
+    }
+
+    public Merger(MergingProcessor mergingProcessor, NodeProvider nodeProvider, ResolvedReferenceCache resolvedReferenceCache) {
         this.mergingProcessor = mergingProcessor;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
+        this.resolvedReferenceCache = resolvedReferenceCache;
     }
 
     public void merge(Node target, Node source, Limits limits) {
@@ -38,19 +45,64 @@ public class Merger implements NodeResolver {
 
         if (source.getType() != null) {
             Node typeNode = source.getType();
-            if (typeNode.getBlueId() != null) {
-                new NodeExtender(nodeProvider).extend(typeNode, PathLimits.withSinglePath("/"));
-            }
+            String typeBlueId = typeNode.getBlueId();
+            FrozenNode cachedResolvedType = cachedResolvedReference(typeBlueId, limits);
+            if (cachedResolvedType != null) {
+                Node resolvedType = cachedResolvedType.toNode();
+                if (resolvedType.getBlueId() == null) {
+                    resolvedType.blueId(typeBlueId);
+                }
+                source.type(resolvedType);
+                mergeObject(target, resolvedType, limits);
+            } else {
+                if (typeBlueId != null) {
+                    extendTypeReference(typeNode, typeBlueId);
+                }
 
-            Node resolvedType = resolve(typeNode, limits);
-            source.type(resolvedType);
-            merge(target, typeNode, limits);
+                Node resolvedType = resolve(typeNode, limits);
+                cacheResolvedReference(typeBlueId, resolvedType, limits);
+                source.type(resolvedType);
+                merge(target, typeNode, limits);
+            }
         }
         mergeObject(target, source, limits);
     }
 
+    private void extendTypeReference(Node typeNode, String blueId) {
+        if (CORE_TYPE_BLUE_IDS.contains(blueId)) {
+            return;
+        }
+        List<Node> typeNodes = nodeProvider.fetchByBlueId(blueId);
+        if (typeNodes == null || typeNodes.isEmpty()) {
+            throw new IllegalArgumentException("No content found for blueId: " + blueId);
+        }
+        if (typeNodes.size() > 1) {
+            throw new IllegalStateException(String.format(
+                    "Expected a single node for type with blueId '%s', but found multiple.",
+                    blueId
+            ));
+        }
+        typeNode.replaceWith(typeNodes.get(0));
+        typeNode.blueId(blueId);
+    }
+
+    private FrozenNode cachedResolvedReference(String blueId, Limits limits) {
+        if (blueId == null || resolvedReferenceCache == null || limits != Limits.NO_LIMITS) {
+            return null;
+        }
+        return resolvedReferenceCache.get(blueId).orElse(null);
+    }
+
+    private void cacheResolvedReference(String blueId, Node resolvedType, Limits limits) {
+        if (blueId == null || resolvedReferenceCache == null || limits != Limits.NO_LIMITS) {
+            return;
+        }
+        resolvedReferenceCache.putIfAbsent(blueId, resolvedReferenceCache.freezeResolved(resolvedType));
+    }
+
     private void mergeObject(Node target, Node source, Limits limits) {
 
+        resolveTypeMetadata(source, limits);
         mergingProcessor.process(target, source, nodeProvider, this);
 
         List<Node> children = source.getItems();
@@ -374,6 +426,30 @@ public class Merger implements NodeResolver {
             target.getProperties().put(sourceKey, node);
         else
             mergeObject(targetValue, node, limits);
+    }
+
+    private void resolveTypeMetadata(Node source, Limits limits) {
+        source.itemType(resolveTypeMetadataNode(source.getItemType(), limits));
+        source.keyType(resolveTypeMetadataNode(source.getKeyType(), limits));
+        source.valueType(resolveTypeMetadataNode(source.getValueType(), limits));
+    }
+
+    private Node resolveTypeMetadataNode(Node metadataType, Limits limits) {
+        if (metadataType == null || metadataType.getBlueId() == null) {
+            return metadataType;
+        }
+        FrozenNode cached = cachedResolvedReference(metadataType.getBlueId(), limits);
+        if (cached != null) {
+            Node resolved = cached.toNode();
+            if (resolved.getBlueId() == null) {
+                resolved.blueId(metadataType.getBlueId());
+            }
+            return resolved;
+        }
+        extendTypeReference(metadataType, metadataType.getBlueId());
+        Node resolved = resolve(metadataType, limits);
+        cacheResolvedReference(metadataType.getBlueId(), resolved, limits);
+        return resolved;
     }
 
     @Override
