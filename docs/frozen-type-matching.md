@@ -313,6 +313,11 @@ Core payload kinds are also checked:
 - `List` requires list payload shape,
 - `Dictionary` requires object/property payload shape.
 
+Untyped programmatic scalar payloads can match core primitive patterns when the
+payload value has the correct Java representation. This matters for processor
+events built directly as `Node` objects rather than parsed through the Blue
+preprocessor.
+
 Untyped list and dictionary payloads can match core `List` and `Dictionary`
 patterns when their payload shape is unambiguous.
 
@@ -502,6 +507,7 @@ The suite covers the behavioral axes that matter for production matching:
 - JSON-array-like event request payloads as implicit lists,
 - dictionary key/value type enforcement,
 - primitive core type payload mismatch rejection,
+- untyped programmatic scalar events matching core primitive patterns,
 - no mutation of input `Node` objects,
 - direct frozen reference matching caching resolved references,
 - direct frozen reference matching caching unresolved reference misses,
@@ -533,8 +539,8 @@ are broader runtime/spec concerns outside this class:
 - regex semantics are still Java regex semantics;
 - cross-language golden fixtures should eventually verify shared matching,
   hashing, and schema behavior;
-- processor-specific hooks such as `deriveChannel`, `channelize`, and
-  `isNewerEvent` still need explicit spec treatment;
+- `deriveChannel`, `channelize`, and `isNewerEvent` now have Java processor SPI
+  hooks, but still need explicit spec treatment;
 - the long-term processor path should pass `ResolvedSnapshot`/`FrozenNode`
   values directly instead of using mutable `Node` adapters.
 

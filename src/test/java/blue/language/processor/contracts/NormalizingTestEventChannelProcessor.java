@@ -1,6 +1,7 @@
 package blue.language.processor.contracts;
 
 import blue.language.model.Node;
+import blue.language.processor.ChannelEvaluation;
 import blue.language.processor.ChannelEvaluationContext;
 import blue.language.processor.model.TestEventChannel;
 
@@ -12,15 +13,15 @@ public class NormalizingTestEventChannelProcessor extends TestEventChannelProces
     public static final String NORMALIZED_KIND = "channelized";
 
     @Override
-    public boolean matches(TestEventChannel contract, ChannelEvaluationContext context) {
-        boolean matches = super.matches(contract, context);
-        if (!matches) {
-            return false;
+    public ChannelEvaluation evaluate(TestEventChannel contract, ChannelEvaluationContext context) {
+        ChannelEvaluation evaluation = super.evaluate(contract, context);
+        if (!evaluation.matches()) {
+            return evaluation;
         }
-        Node event = context.event();
+        Node event = evaluation.event();
         if (event != null) {
             event.properties("kind", new Node().value(NORMALIZED_KIND));
         }
-        return true;
+        return ChannelEvaluation.match(event, evaluation.eventId());
     }
 }

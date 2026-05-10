@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -41,7 +40,7 @@ public final class FrozenTypeMatcher {
     }
 
     FrozenTypeMatcher(Blue blue, boolean resolveCandidateReferences) {
-        this.blue = Objects.requireNonNull(blue, "blue");
+        this.blue = blue;
         this.resolveCandidateReferences = resolveCandidateReferences;
     }
 
@@ -128,6 +127,15 @@ public final class FrozenTypeMatcher {
     private boolean matchesImplicitStructure(FrozenNode node, FrozenNode targetType) {
         if (node.getType() != null) {
             return false;
+        }
+        if (isTextType(targetType)
+                || isIntegerType(targetType)
+                || isDoubleType(targetType)
+                || isBooleanType(targetType)) {
+            return node.getValue() != null
+                    && node.getItems() == null
+                    && node.getProperties() == null
+                    && matchesCorePayloadKind(node, targetType);
         }
         if (isListType(targetType)) {
             return node.getItems() != null && node.getValue() == null && node.getProperties() == null;
@@ -666,6 +674,9 @@ public final class FrozenTypeMatcher {
     }
 
     private FrozenNode rawTypeDefinition(String blueId) {
+        if (blue == null) {
+            return null;
+        }
         try {
             List<Node> nodes = blue.getNodeProvider().fetchByBlueId(blueId);
             if (nodes == null || nodes.size() != 1) {

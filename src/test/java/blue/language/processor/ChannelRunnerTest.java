@@ -152,7 +152,7 @@ final class ChannelRunnerTest {
     }
 
     @Test
-    void deliversChannelizedEventToHandlersAndCheckpoint() {
+    void deliversChannelizedEventToHandlersAndStoresOriginalEventInCheckpoint() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
@@ -195,6 +195,43 @@ final class ChannelRunnerTest {
         assertNotNull(storedEvent);
         Node kindNode = storedEvent.getProperties().get("kind");
         assertNotNull(kindNode);
-        assertEquals(NormalizingTestEventChannelProcessor.NORMALIZED_KIND, kindNode.getValue());
+        assertEquals("original", kindNode.getValue());
+    }
+
+    @Test
+    void duplicateSignatureForChannelizedEventsUsesOriginalExternalEvent() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+        Node first = blue.objectToNode(new TestEvent().kind("first"));
+        Node second = blue.objectToNode(new TestEvent().kind("second"));
+
+        runner.runExternalChannel("/", bundle, channelBinding, first);
+        runner.runExternalChannel("/", bundle, channelBinding, second);
+
+        Node counterNode = execution.runtime().document().getProperties().get("counter");
+        assertNotNull(counterNode);
+        assertEquals(new BigInteger("2"), counterNode.getValue());
     }
 }

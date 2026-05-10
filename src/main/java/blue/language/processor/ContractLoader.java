@@ -12,7 +12,9 @@ import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.TypeClassResolver;
 
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
@@ -50,9 +52,18 @@ final class ContractLoader {
             return builder.build();
         }
 
-        for (Map.Entry<String, FrozenNode> entry : contractsNode.getProperties().entrySet()) {
-            String key = entry.getKey();
+        Map<String, FrozenNode> contractNodes = new LinkedHashMap<>(contractsNode.getProperties());
+        Map<String, String> contractTypeBlueIds = new LinkedHashMap<>();
+        for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
             String typeBlueId = typeBlueId(entry.getValue());
+            if (typeBlueId != null) {
+                contractTypeBlueIds.put(entry.getKey(), typeBlueId);
+            }
+        }
+
+        for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
+            String key = entry.getKey();
+            String typeBlueId = contractTypeBlueIds.get(key);
             if (typeBlueId == null) {
                 continue;
             }
@@ -76,13 +87,19 @@ final class ContractLoader {
                 builder.addChannel(key, channel);
             } else if (contract instanceof HandlerContract) {
                 HandlerContract handler = (HandlerContract) contract;
-                if (!registry.lookupHandler(handler).isPresent()) {
+                Optional<HandlerProcessor<? extends HandlerContract>> processor = registry.lookupHandler(handler);
+                if (!processor.isPresent()) {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: " + typeBlueId);
                 }
-                if (handler.getChannelKey() == null || handler.getChannelKey().isEmpty()) {
-                    throw new IllegalStateException("Handler " + key + " must declare channel");
-                }
+                String channelKey = resolveHandlerChannel(scopePath,
+                        key,
+                        handler,
+                        processor.get(),
+                        contractNodes,
+                        contractTypeBlueIds);
+                handler.setChannelKey(channelKey);
+                requireRegisteredChannel(key, channelKey, contractNodes, contractTypeBlueIds);
                 builder.addHandler(key, handler);
             } else if (contract instanceof ProcessEmbedded) {
                 builder.setEmbedded((ProcessEmbedded) contract);
@@ -92,6 +109,72 @@ final class ContractLoader {
         }
 
         return builder.build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private String resolveHandlerChannel(String scopePath,
+                                         String handlerKey,
+                                         HandlerContract handler,
+                                         HandlerProcessor<? extends HandlerContract> processor,
+                                         Map<String, FrozenNode> contractNodes,
+                                         Map<String, String> contractTypeBlueIds) {
+        String channelKey = trimToNull(handler.getChannelKey());
+        if (channelKey == null) {
+            HandlerRegistrationContext context = new HandlerRegistrationContext(scopePath,
+                    handlerKey,
+                    contractNodes,
+                    contractTypeBlueIds,
+                    converter);
+            HandlerProcessor<HandlerContract> typed = (HandlerProcessor<HandlerContract>) processor;
+            channelKey = trimToNull(typed.deriveChannel(handler, context));
+        }
+        if (channelKey == null) {
+            throw new IllegalStateException(
+                    "Handler " + handlerKey + " must declare channel or derive one from its processor");
+        }
+        return channelKey;
+    }
+
+    private void requireRegisteredChannel(String handlerKey,
+                                          String channelKey,
+                                          Map<String, FrozenNode> contractNodes,
+                                          Map<String, String> contractTypeBlueIds) {
+        FrozenNode channelNode = contractNodes.get(channelKey);
+        if (channelNode == null) {
+            throw new IllegalStateException(
+                    "Handler " + handlerKey + " references unknown channel '" + channelKey + "'");
+        }
+        String channelTypeBlueId = contractTypeBlueIds.get(channelKey);
+        if (channelTypeBlueId == null) {
+            throw new IllegalStateException(
+                    "Handler " + handlerKey + " references contract '" + channelKey + "' without a type");
+        }
+        Class<?> channelClass = typeResolver.resolveClass(channelTypeBlueId);
+        if (channelClass == null || !ChannelContract.class.isAssignableFrom(channelClass)) {
+            throw new IllegalStateException(
+                    "Handler " + handlerKey + " references non-channel contract '" + channelKey + "'");
+        }
+        Contract channelContract = converter.convertWithType(channelNode.toNode(), Contract.class, false);
+        if (!(channelContract instanceof ChannelContract)) {
+            throw new IllegalStateException(
+                    "Handler " + handlerKey + " references non-channel contract '" + channelKey + "'");
+        }
+        ChannelContract channel = (ChannelContract) channelContract;
+        channel.setKey(channelKey);
+        channel.setTypeBlueId(channelTypeBlueId);
+        if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
+                && !registry.lookupChannel(channel).isPresent()) {
+            throw new IllegalStateException(
+                    "Handler " + handlerKey + " references unsupported channel '" + channelKey + "'");
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private String typeBlueId(FrozenNode node) {

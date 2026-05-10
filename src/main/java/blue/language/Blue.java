@@ -9,6 +9,7 @@ import blue.language.merge.processor.*;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
+import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.Contract;
@@ -467,7 +468,11 @@ public class Blue implements NodeResolver {
     }
 
     private DocumentProcessor createDefaultDocumentProcessor() {
-        return new DocumentProcessor(conformanceEngine(), processingSnapshotManager());
+        return DocumentProcessor.builder()
+                .withConformanceEngine(conformanceEngine())
+                .withSnapshotManager(processingSnapshotManager())
+                .withMatchingService(new ContractMatchingService(this))
+                .build();
     }
 
     private DocumentProcessingResult attachProcessingSnapshot(DocumentProcessingResult result) {
@@ -482,7 +487,8 @@ public class Blue implements NodeResolver {
             documentProcessor = new DocumentProcessor(documentProcessor.getContractRegistry(),
                     documentProcessor.getContractTypeResolver(),
                     conformanceEngine(),
-                    processingSnapshotManager());
+                    processingSnapshotManager(),
+                    new ContractMatchingService(this));
         }
     }
 

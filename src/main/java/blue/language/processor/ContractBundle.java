@@ -27,6 +27,7 @@ public final class ContractBundle {
     private final List<String> embeddedPaths;
     private boolean checkpointDeclared;
 
+    private final Map<String, ChannelContract> channelsView;
     private final Map<String, MarkerContract> markersView;
     private final List<String> embeddedPathsView;
 
@@ -41,6 +42,7 @@ public final class ContractBundle {
         this.embeddedPaths = embeddedPaths;
         this.checkpointDeclared = checkpointDeclared;
 
+        this.channelsView = Collections.unmodifiableMap(this.channels);
         this.markersView = Collections.unmodifiableMap(this.markers);
         this.embeddedPathsView = Collections.unmodifiableList(this.embeddedPaths);
     }
@@ -55,6 +57,19 @@ public final class ContractBundle {
 
     public Map<String, MarkerContract> markers() {
         return markersView;
+    }
+
+    public Map<String, ChannelContract> channels() {
+        return channelsView;
+    }
+
+    public ChannelContract channel(String key) {
+        return channels.get(key);
+    }
+
+    public ChannelBinding channelBinding(String key) {
+        ChannelContract contract = channels.get(key);
+        return contract != null ? new ChannelBinding(key, contract) : null;
     }
 
     public MarkerContract marker(String key) {

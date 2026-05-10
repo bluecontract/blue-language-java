@@ -1123,6 +1123,26 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
+    void acceptsUntypedProgrammaticScalarPayloadsForCorePrimitivePatterns() {
+        Blue blue = new Blue(new BasicNodeProvider());
+        Node event = new Node()
+                .properties("kind", new Node().value("allowed"))
+                .properties("amount", new Node().value(new java.math.BigInteger("5")))
+                .properties("enabled", new Node().value(true));
+
+        assertTrue(blue.nodeMatchesType(event, blue.yamlToNode(
+                "kind:\n" +
+                "  type: Text\n" +
+                "amount:\n" +
+                "  type: Integer\n" +
+                "enabled:\n" +
+                "  type: Boolean")));
+        assertFalse(blue.nodeMatchesType(event, blue.yamlToNode(
+                "kind:\n" +
+                "  type: Integer")));
+    }
+
+    @Test
     void compatibilityApiDoesNotMutateInputNodes() {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(

@@ -15,6 +15,9 @@ import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -146,10 +149,11 @@ final class ProcessorEngine {
 
     @SuppressWarnings("unchecked")
     static ChannelMatch evaluateChannel(DocumentProcessor owner,
-                                            ChannelContract contract,
+                                            ContractBundle.ChannelBinding channel,
                                             ContractBundle bundle,
                                             String scopePath,
                                             Node event) {
+        ChannelContract contract = channel.contract();
         ChannelProcessor<? extends ChannelContract> processor =
                 owner.registry().lookupChannel(contract).orElse(null);
         if (processor == null) {
@@ -164,12 +168,21 @@ final class ProcessorEngine {
         @SuppressWarnings("unchecked")
         ChannelProcessor<ChannelContract> typed = (ChannelProcessor<ChannelContract>) processor;
         ChannelEvaluationContext context = new ChannelEvaluationContext(scopePath,
+                channel.key(),
                 clonedEvent,
                 eventObject,
-                bundle.markers());
-        boolean matches = typed.matches(contract, context);
-        String eventId = matches ? typed.eventId(contract, context) : null;
-        return new ChannelMatch(matches, eventId, typed, matches ? context : null);
+                bundle.channels(),
+                bundle.markers(),
+                owner.registry());
+        ChannelEvaluation evaluation = typed.evaluate(contract, context);
+        if (evaluation == null || !evaluation.matches()) {
+            return ChannelMatch.noMatch();
+        }
+        return new ChannelMatch(true,
+                evaluation.eventId(),
+                evaluation.eventForDelivery(),
+                typed,
+                evaluation.deliveries());
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
@@ -454,28 +467,63 @@ final class ProcessorEngine {
         typed.execute(contract, context);
     }
 
+    @SuppressWarnings("unchecked")
+    static boolean matchesHandler(DocumentProcessor owner,
+                                  HandlerContract contract,
+                                  HandlerMatchContext context) {
+        HandlerProcessor<? extends HandlerContract> processor = owner.registry()
+                .lookupHandler(contract)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No processor registered for contract type " + contract.getTypeBlueId()));
+        HandlerProcessor<HandlerContract> typed = (HandlerProcessor<HandlerContract>) processor;
+        return typed.matches(contract, context);
+    }
+
     static final class ChannelMatch {
         final boolean matches;
         final String eventId;
+        final Node event;
         final ChannelProcessor<ChannelContract> processor;
-        final ChannelEvaluationContext context;
+        final List<ChannelDelivery> deliveries;
 
         ChannelMatch(boolean matches,
                      String eventId,
+                     Node event,
                      ChannelProcessor<ChannelContract> processor,
-                     ChannelEvaluationContext context) {
+                     List<ChannelDelivery> deliveries) {
             this.matches = matches;
             this.eventId = eventId;
+            this.event = event != null ? event.clone() : null;
             this.processor = processor;
-            this.context = context;
+            this.deliveries = copyDeliveries(deliveries);
         }
 
         Node eventNode() {
-            return context != null ? context.event() : null;
+            return event != null ? event.clone() : null;
+        }
+
+        List<ChannelDelivery> deliveries() {
+            return deliveries;
         }
 
         static ChannelMatch noMatch() {
-            return new ChannelMatch(false, null, null, null);
+            return new ChannelMatch(false, null, null, null, Collections.emptyList());
+        }
+
+        private static List<ChannelDelivery> copyDeliveries(List<ChannelDelivery> deliveries) {
+            if (deliveries == null || deliveries.isEmpty()) {
+                return Collections.emptyList();
+            }
+            List<ChannelDelivery> copy = new ArrayList<>();
+            for (ChannelDelivery delivery : deliveries) {
+                if (delivery != null) {
+                    copy.add(ChannelDelivery.of(delivery.event(),
+                            delivery.eventId(),
+                            delivery.checkpointKey(),
+                            delivery.shouldProcess()));
+                }
+            }
+            return Collections.unmodifiableList(copy);
         }
     }
 
