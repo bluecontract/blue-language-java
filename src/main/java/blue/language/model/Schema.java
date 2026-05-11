@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,8 +18,6 @@ public class Schema implements Cloneable {
     private Node allowMultiple;
     private Node minLength;
     private Node maxLength;
-    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-    private List<Node> pattern;
     private Node minimum;
     private Node maximum;
     private Node exclusiveMinimum;
@@ -50,10 +47,6 @@ public class Schema implements Cloneable {
 
     public Node getMaxLength() {
         return maxLength;
-    }
-
-    public List<Node> getPattern() {
-        return pattern;
     }
 
     public Node getMinimum() {
@@ -102,12 +95,6 @@ public class Schema implements Cloneable {
 
     public Integer getMaxLengthValue() {
         return maxLength == null ? null : getIntegerFromObject(maxLength.getValue());
-    }
-
-    public List<String> getPatternValue() {
-        return pattern == null ? null : pattern.stream()
-                .map(e -> (String) e.getValue())
-                .collect(Collectors.toList());
     }
 
     public BigDecimal getMinimumValue() {
@@ -185,14 +172,6 @@ public class Schema implements Cloneable {
 
     public Schema maxLength(Node maxLength) {
         this.maxLength = maxLength;
-        return this;
-    }
-
-    public Schema pattern(Node pattern) {
-        if (this.pattern == null) {
-            this.pattern = new ArrayList<Node>();
-        }
-        this.pattern.add(pattern);
         return this;
     }
 
@@ -276,22 +255,6 @@ public class Schema implements Cloneable {
         return this;
     }
 
-    public Schema pattern(List<String> pattern) {
-        if (this.pattern == null) {
-           this.pattern = new ArrayList<Node>();
-        }
-        this.pattern.addAll(pattern.stream().map(e -> new Node().value(e)).collect(Collectors.toList()));
-        return this;
-    }
-
-    public Schema pattern(String pattern) {
-        if (this.pattern == null) {
-            this.pattern = new ArrayList<Node>();
-        }
-        this.pattern.add(new Node().value(pattern));
-        return this;
-    }
-
     public Schema minimum(BigDecimal minimum) {
         this.minimum = new Node().value(minimum);
         return this;
@@ -362,11 +325,6 @@ public class Schema implements Cloneable {
             if (this.minFields != null) cloned.minFields = this.minFields.clone();
             if (this.maxFields != null) cloned.maxFields = this.maxFields.clone();
 
-            if (this.pattern != null) {
-                cloned.pattern = this.pattern.stream()
-                        .map(Node::clone)
-                        .collect(Collectors.toList());
-            }
             if (this.enumValues != null) {
                 cloned.enumValues = this.enumValues.stream()
                         .map(Node::clone)
@@ -386,7 +344,6 @@ public class Schema implements Cloneable {
                 ", allowMultiple=" + getAllowMultipleValue() +
                 ", minLength=" + getMinLengthValue() +
                 ", maxLength=" + getMaxLengthValue() +
-                ", pattern='" + getPatternValue() + '\'' +
                 ", minimum=" + getMinimumValue() +
                 ", maximum=" + getMaximumValue() +
                 ", exclusiveMinimum=" + getExclusiveMinimumValue() +

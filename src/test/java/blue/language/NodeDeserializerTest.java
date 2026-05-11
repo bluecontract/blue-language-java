@@ -294,7 +294,6 @@ public class NodeDeserializerTest {
                      "  allowMultiple: false\n" +
                      "  minLength: 5\n" +
                      "  maxLength: 10\n" +
-                     "  pattern: \"^[a-z]+$\"\n" +
                      "  minimum: 1.01\n" +
                      "  maximum: 100.01\n" +
                      "  exclusiveMinimum: 0.01\n" +
@@ -318,8 +317,6 @@ public class NodeDeserializerTest {
         assertEquals((Integer) 5, schema.getMinLengthValue());
         assertEquals((Integer) 10, schema.getMaxLengthValue());
 
-        // patters is a list of strings
-        assertEquals("^[a-z]+$", schema.getPatternValue().get(0));
         assertEquals(new BigDecimal("1.01"), schema.getMinimumValue());
         assertEquals(new BigDecimal("100.01"), schema.getMaximumValue());
         assertEquals(new BigDecimal("0.01"), schema.getExclusiveMinimumValue());
@@ -334,6 +331,16 @@ public class NodeDeserializerTest {
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", schema.getEnum().get(0).getBlueId());
         assertEquals("name2", schema.getEnum().get(1).getName());
         assertEquals("description2", schema.getEnum().get(1).getDescription());
+    }
+
+    @Test
+    public void testSchemaPatternIsRejected() {
+        String doc = "name: name\n" +
+                     "schema:\n" +
+                     "  pattern: \"^[a-z]+$\"";
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
+        assertTrue(exception.getMessage().contains("schema.pattern"));
     }
 
     @Test

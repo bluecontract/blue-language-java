@@ -265,9 +265,6 @@ public class NodeContentHandler {
         collectThisReferences(schema.getAllowMultiple(), references);
         collectThisReferences(schema.getMinLength(), references);
         collectThisReferences(schema.getMaxLength(), references);
-        if (schema.getPattern() != null) {
-            schema.getPattern().forEach(node -> collectThisReferences(node, references));
-        }
         collectThisReferences(schema.getMinimum(), references);
         collectThisReferences(schema.getMaximum(), references);
         collectThisReferences(schema.getExclusiveMinimum(), references);
@@ -312,9 +309,6 @@ public class NodeContentHandler {
         rewriteThisReferences(schema.getAllowMultiple(), replacement);
         rewriteThisReferences(schema.getMinLength(), replacement);
         rewriteThisReferences(schema.getMaxLength(), replacement);
-        if (schema.getPattern() != null) {
-            schema.getPattern().forEach(node -> rewriteThisReferences(node, replacement));
-        }
         rewriteThisReferences(schema.getMinimum(), replacement);
         rewriteThisReferences(schema.getMaximum(), replacement);
         rewriteThisReferences(schema.getExclusiveMinimum(), replacement);

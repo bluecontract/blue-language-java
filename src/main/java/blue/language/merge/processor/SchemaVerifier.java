@@ -11,7 +11,6 @@ import blue.language.utils.NodeToMapListOrValue;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
@@ -36,7 +35,6 @@ public class SchemaVerifier implements MergingProcessor {
         verifyAllowMultiple(schema.getAllowMultipleValue(), target.getItems());
         verifyMinLength(schema.getMinLengthValue(), target.getValue());
         verifyMaxLength(schema.getMaxLengthValue(), target.getValue());
-        verifyPattern(schema.getPatternValue(), target.getValue());
         verifyMinimum(schema.getMinimumValue(), target.getValue());
         verifyMaximum(schema.getMaximumValue(), target.getValue());
         verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target.getValue());
@@ -127,22 +125,6 @@ public class SchemaVerifier implements MergingProcessor {
 
     private int codePointLength(String value) {
         return value.codePointCount(0, value.length());
-    }
-
-    private void verifyPattern(List<String> pattern, Object value) {
-        if (pattern != null && value instanceof String) {
-            for (String p : pattern) {
-                verifyPattern(p, value);
-            }
-        }
-    }
-
-    private void verifyPattern(String pattern, Object value) {
-        if (pattern != null && value instanceof String) {
-            if (!Pattern.matches(pattern, (String) value)) {
-                throw new IllegalArgumentException("Value \"" + value + "\" does not match the required pattern \"" + pattern + "\".");
-            }
-        }
     }
 
     private void verifyMinimum(BigDecimal minimum, Object value) {

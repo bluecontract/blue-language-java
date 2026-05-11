@@ -21,6 +21,22 @@ public final class ChannelCheckpointContext {
     private final String lastEventSignature;
     private final Map<String, MarkerContract> markers;
 
+    public static ChannelCheckpointContext of(String scopePath,
+                                              String channelKey,
+                                              Node event,
+                                              String eventSignature,
+                                              Node lastEvent,
+                                              String lastEventSignature,
+                                              Map<String, MarkerContract> markers) {
+        return new ChannelCheckpointContext(scopePath,
+                channelKey,
+                event,
+                eventSignature,
+                lastEvent,
+                lastEventSignature,
+                markers);
+    }
+
     ChannelCheckpointContext(String scopePath,
                              String channelKey,
                              Node event,

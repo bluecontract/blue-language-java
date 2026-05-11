@@ -288,7 +288,6 @@ public class NodeTypeMatcherTest {
                 "  schema:\n" +
                 "    minLength: 4\n" +
                 "    maxLength: 4\n" +
-                "    pattern: '^[A-Z]{2}[0-9]{2}$'\n" +
                 "values:\n" +
                 "  type: List\n" +
                 "  schema:\n" +
@@ -864,6 +863,58 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
+    void generatedMultiLevelObjectPatternMatchesByWalkingOnlyObservedReferencePath() {
+        int depth = 7;
+        int ignoredSiblings = 20;
+        BasicNodeProvider delegate = generatedNestedReferenceProvider(false, depth, ignoredSiblings);
+        CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        Blue blue = new Blue(provider);
+
+        assertTrue(blue.nodeMatchesType(
+                generatedNestedCandidate(blue, delegate),
+                generatedNestedPattern(blue, delegate, depth)));
+
+        assertGeneratedNestedFetches(delegate, provider, depth, ignoredSiblings);
+    }
+
+    @Test
+    void generatedMultiLevelObjectPatternRejectsDeepMismatchWithSameBoundedFetches() {
+        int depth = 7;
+        int ignoredSiblings = 20;
+        BasicNodeProvider delegate = generatedNestedReferenceProvider(true, depth, ignoredSiblings);
+        CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        Blue blue = new Blue(provider);
+
+        assertFalse(blue.nodeMatchesType(
+                generatedNestedCandidate(blue, delegate),
+                generatedNestedPattern(blue, delegate, depth)));
+
+        assertGeneratedNestedFetches(delegate, provider, depth, ignoredSiblings);
+    }
+
+    @Test
+    void generatedFrozenMatcherCachesObservedReferencePathAcrossRepeatedMatches() {
+        int depth = 7;
+        int ignoredSiblings = 20;
+        BasicNodeProvider delegate = generatedNestedReferenceProvider(false, depth, ignoredSiblings);
+        CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        Blue blue = new Blue(provider);
+        NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
+        FrozenNode candidate = FrozenNode.fromResolvedNode(generatedNestedCandidate(blue, delegate));
+        FrozenNode pattern = FrozenNode.fromResolvedNode(generatedNestedPattern(blue, delegate, depth));
+
+        assertTrue(matcher.matchesResolvedType(candidate, pattern));
+        assertGeneratedNestedFetches(delegate, provider, depth, ignoredSiblings);
+
+        int fetchesAfterFirstMatch = provider.fetches;
+        for (int i = 0; i < 25; i++) {
+            assertTrue(matcher.matchesResolvedType(candidate, pattern));
+        }
+        assertEquals(fetchesAfterFirstMatch, provider.fetches,
+                "repeated frozen matches should reuse the already-resolved observed path");
+    }
+
+    @Test
     void complexItemTypeConformanceResolvesOnlyItemsAndTypeDefinitionsThatMatter() {
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: USD\nvalue: USD");
@@ -878,7 +929,7 @@ public class NodeTypeMatcherTest {
                 "sku:\n" +
                 "  type: Text\n" +
                 "  schema:\n" +
-                "    pattern: '^SKU-[0-9]+$'\n" +
+                "    minLength: 5\n" +
                 "quantity:\n" +
                 "  type: Integer\n" +
                 "  schema:\n" +
@@ -1341,14 +1392,15 @@ public class NodeTypeMatcherTest {
                 "    id:\n" +
                 "      type: Text\n" +
                 "      schema:\n" +
-                "        pattern: '^C-[0-9]{3}$'\n" +
+                "        minLength: 5\n" +
+                "        maxLength: 5\n" +
                 "    status:\n" +
                 "      blueId: " + activeStatusBlueId + "\n" +
                 "    profile:\n" +
                 "      email:\n" +
                 "        type: Text\n" +
                 "        schema:\n" +
-                "          pattern: '^[^@]+@example\\.com$'\n" +
+                "          minLength: 12\n" +
                 "      preferences:\n" +
                 "        type: Dictionary\n" +
                 "        keyType: Text\n" +
@@ -1361,6 +1413,144 @@ public class NodeTypeMatcherTest {
                 "  metadata:\n" +
                 "    type: Dictionary\n" +
                 "    keyType: Text");
+    }
+
+    private BasicNodeProvider generatedNestedReferenceProvider(boolean invalidLeaf,
+                                                              int depth,
+                                                              int ignoredSiblings) {
+        BasicNodeProvider delegate = new BasicNodeProvider();
+        delegate.addSingleDocs("name: Generated Exact Currency\nvalue: USD");
+        for (int i = 0; i < ignoredSiblings; i++) {
+            delegate.addSingleDocs(
+                    "name: Generated Ignored " + i + "\n" +
+                    "payload:\n" +
+                    "  branch:\n" +
+                    "    very:\n" +
+                    "      deep:\n" +
+                    "        value: ignored-" + i);
+        }
+        delegate.addSingleDocs(generatedLeafYaml(delegate, invalidLeaf, ignoredSiblings));
+
+        String childBlueId = delegate.getBlueIdByName("Generated Leaf");
+        for (int level = depth - 1; level >= 0; level--) {
+            delegate.addSingleDocs(generatedLevelYaml(delegate, level, childBlueId, ignoredSiblings));
+            childBlueId = delegate.getBlueIdByName("Generated Level " + level);
+        }
+        delegate.addSingleDocs(generatedRootYaml(delegate, childBlueId, ignoredSiblings));
+        return delegate;
+    }
+
+    private String generatedLeafYaml(BasicNodeProvider delegate, boolean invalidLeaf, int ignoredSiblings) {
+        StringBuilder yaml = new StringBuilder();
+        yaml.append("name: Generated Leaf\n")
+                .append("kind: package\n")
+                .append("customer:\n")
+                .append("  id: C-123\n")
+                .append("metrics:\n")
+                .append("  score: ").append(invalidLeaf ? 5 : 42).append("\n")
+                .append("  currency:\n")
+                .append("    blueId: ").append(delegate.getBlueIdByName("Generated Exact Currency")).append("\n");
+        appendIgnoredReferences(yaml, delegate, ignoredSiblings, 0);
+        return yaml.toString();
+    }
+
+    private String generatedLevelYaml(BasicNodeProvider delegate,
+                                      int level,
+                                      String childBlueId,
+                                      int ignoredSiblings) {
+        StringBuilder yaml = new StringBuilder();
+        yaml.append("name: Generated Level ").append(level).append("\n")
+                .append("level: ").append(level).append("\n")
+                .append("tracked:\n")
+                .append("  blueId: ").append(childBlueId).append("\n")
+                .append("inlineNoise:\n")
+                .append("  layer:\n")
+                .append("    number: ").append(level).append("\n");
+        appendIgnoredReferences(yaml, delegate, ignoredSiblings, 0);
+        return yaml.toString();
+    }
+
+    private String generatedRootYaml(BasicNodeProvider delegate, String childBlueId, int ignoredSiblings) {
+        StringBuilder yaml = new StringBuilder();
+        yaml.append("name: Generated Root\n")
+                .append("tracked:\n")
+                .append("  blueId: ").append(childBlueId).append("\n")
+                .append("rootNoise:\n")
+                .append("  source: ignored\n");
+        appendIgnoredReferences(yaml, delegate, ignoredSiblings, 0);
+        return yaml.toString();
+    }
+
+    private void appendIgnoredReferences(StringBuilder yaml,
+                                         BasicNodeProvider delegate,
+                                         int ignoredSiblings,
+                                         int indent) {
+        for (int i = 0; i < ignoredSiblings; i++) {
+            appendIndent(yaml, indent).append("ignored").append(i).append(":\n");
+            appendIndent(yaml, indent + 2)
+                    .append("blueId: ")
+                    .append(delegate.getBlueIdByName("Generated Ignored " + i))
+                    .append("\n");
+        }
+    }
+
+    private Node generatedNestedCandidate(Blue blue, BasicNodeProvider delegate) {
+        return blue.yamlToNode(
+                "candidate:\n" +
+                "  blueId: " + delegate.getBlueIdByName("Generated Root"));
+    }
+
+    private Node generatedNestedPattern(Blue blue, BasicNodeProvider delegate, int depth) {
+        StringBuilder yaml = new StringBuilder("candidate:\n");
+        int indent = 2;
+        for (int i = 0; i <= depth; i++) {
+            appendIndent(yaml, indent).append("tracked:\n");
+            indent += 2;
+        }
+        appendIndent(yaml, indent).append("kind: package\n");
+        appendIndent(yaml, indent).append("customer:\n");
+        appendIndent(yaml, indent + 2).append("id:\n");
+        appendIndent(yaml, indent + 4).append("type: Text\n");
+        appendIndent(yaml, indent + 4).append("schema:\n");
+        appendIndent(yaml, indent + 6).append("minLength: 5\n");
+        appendIndent(yaml, indent + 6).append("maxLength: 5\n");
+        appendIndent(yaml, indent).append("metrics:\n");
+        appendIndent(yaml, indent + 2).append("score:\n");
+        appendIndent(yaml, indent + 4).append("type: Integer\n");
+        appendIndent(yaml, indent + 4).append("schema:\n");
+        appendIndent(yaml, indent + 6).append("minimum: 40\n");
+        appendIndent(yaml, indent + 2).append("currency:\n");
+        appendIndent(yaml, indent + 4)
+                .append("blueId: ")
+                .append(delegate.getBlueIdByName("Generated Exact Currency"))
+                .append("\n");
+        return blue.yamlToNode(yaml.toString());
+    }
+
+    private StringBuilder appendIndent(StringBuilder yaml, int indent) {
+        for (int i = 0; i < indent; i++) {
+            yaml.append(' ');
+        }
+        return yaml;
+    }
+
+    private void assertGeneratedNestedFetches(BasicNodeProvider delegate,
+                                              CountingNodeProvider provider,
+                                              int depth,
+                                              int ignoredSiblings) {
+        assertEquals(depth + 2, provider.fetches,
+                "matching should fetch only root, observed levels, and observed leaf");
+        assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Generated Root")));
+        for (int level = 0; level < depth; level++) {
+            assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Generated Level " + level)));
+        }
+        assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Generated Leaf")));
+        assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("Generated Exact Currency")),
+                "exact blueId leaves should be compared by identity without fetching");
+        for (int i = 0; i < ignoredSiblings; i++) {
+            assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("Generated Ignored " + i)),
+                    "unmentioned sibling branch should not be expanded: " + i);
+        }
     }
 
     private BasicNodeProvider explicitListProvider(boolean wrongLastStatus, boolean extraItem) {

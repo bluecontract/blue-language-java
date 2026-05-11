@@ -13,7 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static blue.language.utils.Properties.*;
 
@@ -410,7 +409,6 @@ public final class FrozenTypeMatcher {
                     && verifyAllowMultiple(schema, node)
                     && verifyMinLength(schema, node)
                     && verifyMaxLength(schema, node)
-                    && verifyPattern(schema, node)
                     && verifyMinimum(schema, node)
                     && verifyMaximum(schema, node)
                     && verifyExclusiveMinimum(schema, node)
@@ -486,20 +484,6 @@ public final class FrozenTypeMatcher {
         Object value = node.getValue();
         return maxLength == null || !(value instanceof String)
                 || ((String) value).codePointCount(0, ((String) value).length()) <= maxLength;
-    }
-
-    private boolean verifyPattern(Schema schema, FrozenNode node) {
-        List<String> patterns = schema.getPatternValue();
-        Object value = node.getValue();
-        if (patterns == null || !(value instanceof String)) {
-            return true;
-        }
-        for (String pattern : patterns) {
-            if (!Pattern.matches(pattern, (String) value)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private boolean verifyMinimum(Schema schema, FrozenNode node) {
@@ -773,9 +757,6 @@ public final class FrozenTypeMatcher {
         stripLabels(schema.getUniqueItems());
         stripLabels(schema.getMinFields());
         stripLabels(schema.getMaxFields());
-        if (schema.getPattern() != null) {
-            schema.getPattern().forEach(this::stripLabels);
-        }
         if (schema.getEnum() != null) {
             schema.getEnum().forEach(this::stripLabels);
         }

@@ -157,9 +157,6 @@ public class Types {
         stripLabels(schema.getUniqueItems());
         stripLabels(schema.getMinFields());
         stripLabels(schema.getMaxFields());
-        if (schema.getPattern() != null) {
-            schema.getPattern().forEach(Types::stripLabels);
-        }
         if (schema.getEnum() != null) {
             schema.getEnum().forEach(Types::stripLabels);
         }

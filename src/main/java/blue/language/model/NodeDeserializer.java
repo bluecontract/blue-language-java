@@ -190,6 +190,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private Schema handleSchema(JsonNode schemaNode) {
+        if (schemaNode != null && schemaNode.isObject() && schemaNode.has("pattern")) {
+            throw new IllegalArgumentException("\"schema.pattern\" is not part of the Blue language core; use contract/runtime validation.");
+        }
         return UncheckedObjectMapper.YAML_MAPPER.convertValue(schemaNode, Schema.class);
     }
 }

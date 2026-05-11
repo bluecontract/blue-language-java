@@ -330,7 +330,6 @@ schema verifier:
 - `allowMultiple`
 - `minLength`
 - `maxLength`
-- `pattern`
 - `minimum`
 - `maximum`
 - `exclusiveMinimum`
@@ -343,10 +342,9 @@ schema verifier:
 - `maxFields`
 - `enum`
 
-String length is counted by Unicode code points. Pattern matching currently uses
-Java regex semantics, consistent with the current Java verifier. Cross-runtime
-ECMA-262 regex compatibility remains a broader spec/runtime issue, not a
-matcher-specific behavior.
+String length is counted by Unicode code points. Regex pattern validation is
+intentionally not part of core schema; contract libraries can perform regex
+validation as runtime behavior when they define exact execution semantics.
 
 ### Presence Semantics
 
@@ -437,7 +435,8 @@ order:
     id:
       type: Text
       schema:
-        pattern: '^C-[0-9]{3}$'
+        minLength: 5
+        maxLength: 5
     status:
       blueId: <ActiveStatus>
   lineItems:
@@ -536,7 +535,8 @@ Both pass in the current workspace.
 The matcher is ready for snapshot-backed channel and handler matching, but there
 are broader runtime/spec concerns outside this class:
 
-- regex semantics are still Java regex semantics;
+- `schema.pattern` is intentionally unsupported in the core language; regex
+  validation belongs in contract/runtime code;
 - cross-language golden fixtures should eventually verify shared matching,
   hashing, and schema behavior;
 - `deriveChannel`, `channelize`, and `isNewerEvent` now have Java processor SPI

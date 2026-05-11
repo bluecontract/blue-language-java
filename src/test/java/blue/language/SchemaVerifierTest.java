@@ -115,22 +115,6 @@ public class SchemaVerifierTest {
         // nothing should be thrown
     }
 
-    @Test
-    public void testPatternPositive() throws Exception {
-        schema.pattern("x.*");
-        node.value("xyz");
-        merger.resolve(node);
-        // nothing should be thrown
-    }
-
-    @Test
-    public void testPatternNegative() throws Exception {
-        schema.pattern("a.*");
-        node.value("xyz");
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
-    }
-
-    @Test
     public void testMinimumPositive() throws Exception {
         schema.minimum(new BigDecimal("1.0"));
         node.value(new BigDecimal("1.5"));
@@ -333,7 +317,6 @@ public class SchemaVerifierTest {
                 .schema(new Schema().multipleOf(BigDecimal.ZERO))
                 .value(BigDecimal.ONE)));
     }
-
 
 //
 //    @Test

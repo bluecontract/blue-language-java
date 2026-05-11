@@ -36,7 +36,6 @@ public class SchemaPropagator implements MergingProcessor {
         propagateAllowMultiple(sourceSchema, targetSchema);
         propagateMinLength(sourceSchema, targetSchema);
         propagateMaxLength(sourceSchema, targetSchema);
-        propagatePattern(sourceSchema, targetSchema);
         propagateMinimum(sourceSchema, targetSchema);
         propagateMaximum(sourceSchema, targetSchema);
         propagateExclusiveMinimum(sourceSchema, targetSchema);
@@ -57,13 +56,6 @@ public class SchemaPropagator implements MergingProcessor {
 
     private void propagateMaxLength(Schema source, Schema target) {
         propagateMaxValue(source.getMaxLengthValue(), target::getMaxLengthValue, target::maxLength);
-    }
-
-    private void propagatePattern(Schema source, Schema target) {
-        List<String> sourcePattern = source.getPatternValue();
-        if (sourcePattern != null) {
-            target.pattern(sourcePattern);
-        }
     }
 
     private void propagateMinimum(Schema source, Schema target) {

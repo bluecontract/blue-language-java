@@ -195,7 +195,6 @@ public class NodeToMapListOrValueTest {
                         new Node().name("Min smth").value(5)
                 )
                 .maxLength(10)
-                .pattern("^[a-z]+$")
                 .minimum(new BigDecimal("1.0"))
                 .maximum(new BigDecimal("100.0"))
                 .exclusiveMinimum(new BigDecimal("0.0"))
@@ -221,7 +220,6 @@ public class NodeToMapListOrValueTest {
         assertEquals(false, resultSchema.getAllowMultipleValue());
         assertEquals(5, resultSchema.getMinLengthValue());
         assertEquals(10, resultSchema.getMaxLengthValue());
-        assertEquals("^[a-z]+$", resultSchema.getPatternValue().get(0));
         assertEquals(0, new BigDecimal("1.0").compareTo(resultSchema.getMinimumValue()));
         assertEquals(0, new BigDecimal("100.0").compareTo(resultSchema.getMaximumValue()));
         assertEquals(0, new BigDecimal("0.0").compareTo(resultSchema.getExclusiveMinimumValue()));
