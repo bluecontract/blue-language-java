@@ -21,6 +21,44 @@ This library gives Java applications the foundations needed to work with Blue:
 - run the generic snapshot-backed document processor;
 - register custom channel, handler, and marker processors.
 
+## Installation
+
+Gradle:
+
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "blue.language:blue-language-java:1.0.0"
+}
+```
+
+Maven:
+
+```xml
+<dependency>
+    <groupId>blue.language</groupId>
+    <artifactId>blue-language-java</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+For local development before the `1.0.0` release is available from Maven
+Central, publish this checkout locally and depend on the snapshot version
+reported by Gradle. After the 1.0 bump, that coordinate is:
+
+```bash
+./gradlew publishToMavenLocal
+```
+
+```groovy
+dependencies {
+    implementation "blue.language:blue-language-java:1.0.0-SNAPSHOT"
+}
+```
+
 ## Core Concepts
 
 ### Nodes
