@@ -1,3 +1,13 @@
+## v1.0.0 (2026-05-12)
+
+### Feat
+
+- stabilize Blue language Java 1.0
+
+### Fix
+
+- restore Java 8 CI compatibility
+
 ## v0.8.0 (2025-10-24)
 
 ### Feat
