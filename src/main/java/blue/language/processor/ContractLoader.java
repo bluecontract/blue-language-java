@@ -48,8 +48,14 @@ final class ContractLoader {
             return builder.build();
         }
         FrozenNode contractsNode = properties.get("contracts");
-        if (contractsNode == null || contractsNode.getProperties() == null) {
+        if (contractsNode == null) {
             return builder.build();
+        }
+        if (contractsNode.getProperties() == null) {
+            if (contractsNode.isEmptyNode()) {
+                return builder.build();
+            }
+            throw new MustUnderstandFailureException("Contracts must be an object map");
         }
 
         Map<String, FrozenNode> contractNodes = new LinkedHashMap<>(contractsNode.getProperties());
@@ -65,7 +71,8 @@ final class ContractLoader {
             String key = entry.getKey();
             String typeBlueId = contractTypeBlueIds.get(key);
             if (typeBlueId == null) {
-                continue;
+                throw new MustUnderstandFailureException(
+                        "Contract '" + key + "' must declare a type");
             }
             Class<?> contractClass = typeResolver.resolveClass(typeBlueId);
             if (contractClass == null || !Contract.class.isAssignableFrom(contractClass)) {
