@@ -368,6 +368,75 @@ blue.cacheResolvedSnapshot(first);
 Cache hits improve performance but do not change document identity or processor
 gas accounting.
 
+## Dictionary-Aware Export
+
+A dictionary is a named collection of known Blue type definitions. When you send
+a document to another system, that system may tell you which dictionaries it
+understands. The exporter can then keep supported types as compact BlueId
+references and inline unsupported type definitions so the receiver still gets a
+self-describing document.
+
+Register dictionaries through the generic `TypeDictionary` SPI:
+
+```java
+import blue.language.dictionary.TypeDictionary;
+
+blue.registerTypeDictionary(myDictionary);
+```
+
+Export for a receiver that supports one dictionary version:
+
+```java
+import blue.language.dictionary.ExportContext;
+
+ExportContext context = ExportContext.builder()
+        .dictionary("example.types", "ExampleDictionaryBlueId")
+        .build();
+
+String yaml = blue.nodeToYaml(document, context);
+String json = blue.nodeToJson(document, context);
+```
+
+If a referenced type belongs to `example.types` and is representable by
+`ExampleDictionaryBlueId`, the exported document keeps the compact reference:
+
+```yaml
+request:
+  type:
+    blueId: <SupportedRequestTypeBlueId>
+```
+
+If a referenced type is known locally but not supported by the receiver, the
+exporter inlines the current type definition:
+
+```yaml
+request:
+  type:
+    name: Custom Request
+    amount:
+      type:
+        blueId: <IntegerBlueId>
+    memo:
+      type:
+        blueId: <TextBlueId>
+```
+
+Inlining is recursive and cycle-checked. The exporter transforms only type
+metadata fields: `type`, `itemType`, `keyType`, and `valueType`. Ordinary data
+references remain ordinary data references.
+
+Disable fallback in strict integrations:
+
+```java
+ExportContext strictContext = ExportContext.builder()
+        .dictionary("example.types", "ExampleDictionaryBlueId")
+        .inlineUnsupportedTypes(false)
+        .build();
+```
+
+With fallback disabled, export fails if any known type cannot be represented by
+the requested dictionary context.
+
 ## Matching
 
 Matching answers: does this candidate node conform to this target type or
@@ -682,11 +751,14 @@ Primary facade:
 - `nodeToObject(Node, Class<T>)`
 - `calculateBlueId(Node)`
 - `calculateSemanticBlueId(Node)`
+- `exportNode(Node, ExportContext)`
 - `resolve(Node)`
 - `canonicalize(Node)`
 - `resolveToSnapshot(Node)`
 - `loadSnapshot(String blueId)`
 - `applyCanonicalPatch(ResolvedSnapshot, JsonPatch)`
+- `nodeToJson(Node, ExportContext)`
+- `nodeToYaml(Node, ExportContext)`
 - `nodeMatchesType(Node, Node)`
 - `nodeMatchesType(FrozenNode, FrozenNode)`
 - `nodeMatchesType(ResolvedSnapshot, String, FrozenNode)`
@@ -694,6 +766,7 @@ Primary facade:
 - `processDocument(Node, Node)`
 - `processDocument(ResolvedSnapshot, Node)`
 - `registerContractProcessor(...)`
+- `registerTypeDictionary(...)`
 
 ### `Node`
 

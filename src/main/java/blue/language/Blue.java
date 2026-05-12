@@ -2,6 +2,10 @@ package blue.language;
 
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.conformance.ConformanceEngine;
+import blue.language.dictionary.DictionaryAwareExporter;
+import blue.language.dictionary.DictionaryRegistry;
+import blue.language.dictionary.ExportContext;
+import blue.language.dictionary.TypeDictionary;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
@@ -65,6 +69,7 @@ public class Blue implements NodeResolver {
     private DocumentProcessor documentProcessor;
     private final ConcurrentMap<String, ResolvedSnapshot> resolvedSnapshotsByBlueId = new ConcurrentHashMap<>();
     private final ResolvedReferenceCache resolvedReferenceCache = new ResolvedReferenceCache();
+    private final DictionaryRegistry dictionaryRegistry = new DictionaryRegistry();
 
 
 
@@ -262,12 +267,20 @@ public class Blue implements NodeResolver {
         return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
     }
 
+    public String nodeToYaml(Node node, ExportContext exportContext) {
+        return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(exportNode(node, exportContext)));
+    }
+
     public String nodeToSimpleYaml(Node node) {
         return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node, NodeToMapListOrValue.Strategy.SIMPLE));
     }
 
     public String nodeToJson(Node node) {
         return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
+    }
+
+    public String nodeToJson(Node node, ExportContext exportContext) {
+        return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(exportNode(node, exportContext)));
     }
 
     public String nodeToSimpleJson(Node node) {
@@ -286,8 +299,30 @@ public class Blue implements NodeResolver {
         return nodeToJson(objectToNode(object));
     }
 
+    public String objectToJson(Object object, ExportContext exportContext) {
+        return nodeToJson(objectToNode(object), exportContext);
+    }
+
     public String objectToSimpleJson(Object object) {
         return nodeToSimpleJson(objectToNode(object));
+    }
+
+    public Node exportNode(Node node, ExportContext exportContext) {
+        return new DictionaryAwareExporter(dictionaryRegistry, exportContext).export(node);
+    }
+
+    public Blue registerTypeDictionary(TypeDictionary dictionary) {
+        dictionaryRegistry.register(dictionary);
+        return this;
+    }
+
+    public Blue registerTypeDictionaries(Collection<? extends TypeDictionary> dictionaries) {
+        dictionaryRegistry.registerAll(dictionaries);
+        return this;
+    }
+
+    public DictionaryRegistry dictionaryRegistry() {
+        return dictionaryRegistry;
     }
 
     public <T> T clone(T object) {
