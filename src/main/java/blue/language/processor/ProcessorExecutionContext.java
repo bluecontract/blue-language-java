@@ -85,7 +85,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void throwFatal(String reason) {
-        throw new ProcessorFatalException(reason);
+        throw new ProcessorFatalException(reason, execution.partialResult());
     }
 
     public String resolvePointer(String pointer) {

@@ -3,8 +3,10 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
+import blue.language.snapshot.ResolvedSnapshot;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
@@ -12,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -66,6 +69,84 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
+    void fatalExceptionCarriesPartialResultFromCurrentExecutionState() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("existing", new Node().value(1)));
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        context.applyPatch(JsonPatch.add("/x", new Node().value(7)));
+        context.emitEvent(new Node().properties("message", new Node().value("queued before fatal")));
+        context.consumeGas(123L);
+
+        ProcessorFatalException ex = assertThrows(ProcessorFatalException.class,
+                () -> context.throwFatal("fatal after partial work"));
+
+        assertEquals("fatal after partial work", ex.getMessage());
+        assertNotNull(ex.partialResult());
+        assertEquals(ex.partialResult().totalGas(), ex.totalGas());
+        assertTrue(ex.totalGas() >= 123L);
+        assertEquals("7", String.valueOf(ex.partialResult().document().get("/x")));
+        assertEquals(1, ex.partialResult().triggeredEvents().size());
+        assertEquals("queued before fatal", ex.partialResult().triggeredEvents().get(0).get("/message"));
+        assertNull(ex.partialResult().blueId(), "plain processor executions have no snapshot identity unless one is available");
+    }
+
+    @Test
+    void fatalExceptionCarriesSnapshotBackedPartialResultDuringDocumentProcessing() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new FatalSetPropertyProcessor());
+
+        Node document = blue.yamlToNode("name: Fatal Partial Result\n" +
+                "contracts:\n" +
+                "  events:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  fatal:\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    channel: events\n");
+        DocumentProcessingResult initialized = blue.initializeDocument(document);
+
+        ProcessorFatalException ex = assertThrows(ProcessorFatalException.class,
+                () -> blue.processDocument(initialized.snapshot(), blue.objectToNode(new TestEvent().eventId("evt-fatal"))));
+
+        DocumentProcessingResult partial = ex.partialResult();
+        assertNotNull(partial);
+        assertNotNull(partial.snapshot());
+        assertEquals(partial.totalGas(), ex.totalGas());
+        assertTrue(partial.totalGas() >= 222L);
+        assertNotNull(partial.blueId());
+        assertFalse(initialized.blueId().equals(partial.blueId()),
+                "checkpoint marker creation before handler execution is part of the exposed partial state");
+        assertNotNull(partial.canonicalDocument().get("/contracts/checkpoint"));
+        assertEquals(0, partial.triggeredEvents().size());
+        assertEquals(initialized.canonicalDocument().get("/name"), partial.canonicalDocument().get("/name"));
+    }
+
+    @Test
+    void fatalExceptionFallsBackToMaterializedPartialResultIfSnapshotCaptureFails() {
+        DocumentProcessor owner = DocumentProcessor.builder()
+                .withSnapshotManager(new FailingSnapshotManager())
+                .build();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner,
+                new Node().properties("payload", new Node().value("still visible")));
+        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false, false);
+        context.consumeGas(44L);
+
+        ProcessorFatalException ex = assertThrows(ProcessorFatalException.class,
+                () -> context.throwFatal("fatal reason must not be masked"));
+
+        assertEquals("fatal reason must not be masked", ex.getMessage());
+        assertNotNull(ex.partialResult());
+        assertEquals(44L, ex.totalGas());
+        assertEquals("still visible", ex.partialResult().document().getProperties().get("payload").getValue());
+        assertNull(ex.partialResult().snapshot());
+        assertNull(ex.partialResult().blueId());
+    }
+
+    @Test
     void executingHandlerContextExposesContractKeyAndOriginalContractNode() {
         MetadataProbeProcessor processor = new MetadataProbeProcessor();
         Blue blue = new Blue();
@@ -99,6 +180,31 @@ final class ProcessorExecutionContextTest {
         assertEquals("Probe Handler", processor.frozenContractNode.get().toNode().getName());
         assertEquals("Probe Handler", processor.secondContractNode.get().getName(),
                 "contractNode() must return a defensive materialization");
+    }
+
+    private static final class FatalSetPropertyProcessor implements HandlerProcessor<SetProperty> {
+        @Override
+        public Class<SetProperty> contractType() {
+            return SetProperty.class;
+        }
+
+        @Override
+        public void execute(SetProperty contract, ProcessorExecutionContext context) {
+            context.consumeGas(222L);
+            context.throwFatal("fatal processor stopped");
+        }
+    }
+
+    private static final class FailingSnapshotManager implements ProcessingSnapshotManager {
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            throw new IllegalStateException("snapshot capture failed");
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+            throw new IllegalStateException("snapshot patch failed");
+        }
     }
 
     private static final class MetadataProbeProcessor implements HandlerProcessor<SetProperty> {

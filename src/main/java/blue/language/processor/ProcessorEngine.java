@@ -370,6 +370,16 @@ final class ProcessorEngine {
                     runtime.totalGas());
         }
 
+        DocumentProcessingResult partialResult() {
+            try {
+                return result();
+            } catch (RuntimeException ignored) {
+                return DocumentProcessingResult.of(runtime.document(),
+                        runtime.rootEmissions(),
+                        runtime.totalGas());
+            }
+        }
+
         DocumentProcessingRuntime runtime() {
             return runtime;
         }
