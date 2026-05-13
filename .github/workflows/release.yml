@@ -1,44 +1,27 @@
 name: Release
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
 
 jobs:
-  BumpVersion:
+  Release:
     runs-on: ubuntu-latest
-    name: "Bump version and create changelog with commitizen"
     env:
       CI: true
     steps:
       - name: Check out
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN }}
+
       - name: Check if branch is master
         run: |
           if [[ "${GITHUB_REF##*/}" != "master" ]]; then
             echo "This workflow can only be triggered for the master branch."
             exit 1
           fi
-      - id: cz
-        name: Create bump and changelog
-        uses: commitizen-tools/commitizen-action@master
-        with:
-          github_token: ${{ secrets.GH_TOKEN }}
-      - name: Print Version
-        run: echo "Bumped to version ${{ steps.cz.outputs.version }}"
 
-  Release:
-    needs: BumpVersion
-    runs-on: ubuntu-latest
-    env:
-      CI: true
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
@@ -66,8 +49,10 @@ jobs:
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: artifacts
           path: |
             build/libs
             build/publications
+            build/jreleaser
