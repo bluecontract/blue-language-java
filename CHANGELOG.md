@@ -1,3 +1,9 @@
+## v2.0.0 (2026-05-13)
+
+### Feat
+
+- add partial result support to `ProcessorFatalException`
+
 ## v1.0.0 (2026-05-12)
 
 ### Feat
