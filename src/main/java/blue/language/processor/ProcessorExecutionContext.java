@@ -42,6 +42,10 @@ public final class ProcessorExecutionContext {
         return contractKey;
     }
 
+    public String scopePath() {
+        return scopePath;
+    }
+
     public Node contractNode() {
         return contractNode != null ? contractNode.toNode() : null;
     }
@@ -97,6 +101,20 @@ public final class ProcessorExecutionContext {
             return null;
         }
         return runtime().nodeAt(absolutePointer);
+    }
+
+    public FrozenNode canonicalFrozenAt(String absolutePointer) {
+        if (absolutePointer == null || absolutePointer.isEmpty()) {
+            return null;
+        }
+        return runtime().canonicalFrozenAt(absolutePointer);
+    }
+
+    public FrozenNode resolvedFrozenAt(String absolutePointer) {
+        if (absolutePointer == null || absolutePointer.isEmpty()) {
+            return null;
+        }
+        return runtime().resolvedFrozenAt(absolutePointer);
     }
 
     public boolean documentContains(String absolutePointer) {

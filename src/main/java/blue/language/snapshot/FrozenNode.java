@@ -263,6 +263,11 @@ public final class FrozenNode {
 
     public FrozenNode at(String pointer) {
         List<String> segments = JsonPointer.split(pointer);
+        return at(segments);
+    }
+
+    public FrozenNode at(List<String> pointerSegments) {
+        List<String> segments = pointerSegments != null ? pointerSegments : Collections.emptyList();
         if (segments.isEmpty()) {
             return this;
         }

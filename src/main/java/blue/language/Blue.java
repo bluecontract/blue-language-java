@@ -26,6 +26,7 @@ import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
+import blue.language.utils.limits.ExcludedPathLimits;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
@@ -107,6 +109,52 @@ public class Blue implements NodeResolver {
         Limits effectiveLimits = combineWithGlobalLimits(limits);
         Merger merger = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache);
         return merger.resolve(node, effectiveLimits);
+    }
+
+    public Node resolvePreservingPaths(Node node, Collection<String> preservedPaths) {
+        return resolvePreservingPaths(node, NO_LIMITS, preservedPaths);
+    }
+
+    public Node resolvePreservingPaths(Node node, Limits limits, Collection<String> preservedPaths) {
+        if (node == null) {
+            throw new IllegalArgumentException("node must not be null");
+        }
+        Set<String> canonicalPreservedPaths = canonicalPreservedPaths(preservedPaths);
+        if (canonicalPreservedPaths.isEmpty()) {
+            return resolve(node.clone(), limits);
+        }
+        if (canonicalPreservedPaths.contains("/")) {
+            return node.clone();
+        }
+
+        Limits preservingLimits = limits == NO_LIMITS
+                ? ExcludedPathLimits.excluding(canonicalPreservedPaths)
+                : new CompositeLimits(limits, ExcludedPathLimits.excluding(canonicalPreservedPaths));
+        Node resolved = resolve(node.clone(), preservingLimits);
+        for (String path : canonicalPreservedPaths) {
+            Node preserved = NodePathEditor.getOrNull(node, path);
+            if (preserved != null) {
+                NodePathEditor.put(resolved, path, preserved.clone());
+            }
+        }
+        return resolved;
+    }
+
+    public List<String> selectPaths(Node node, Collection<String> pathPatterns, Predicate<Node> predicate) {
+        return NodePathSelector.select(node, pathPatterns, predicate);
+    }
+
+    public Node resolvePreservingMatchingPaths(Node node,
+                                               Collection<String> pathPatterns,
+                                               Predicate<Node> predicate) {
+        return resolvePreservingMatchingPaths(node, NO_LIMITS, pathPatterns, predicate);
+    }
+
+    public Node resolvePreservingMatchingPaths(Node node,
+                                               Limits limits,
+                                               Collection<String> pathPatterns,
+                                               Predicate<Node> predicate) {
+        return resolvePreservingPaths(node, limits, selectPaths(node, pathPatterns, predicate));
     }
 
     public Node reverse(Node node) {
@@ -610,6 +658,17 @@ public class Blue implements NodeResolver {
             }
         }
         return true;
+    }
+
+    private Set<String> canonicalPreservedPaths(Collection<String> preservedPaths) {
+        if (preservedPaths == null || preservedPaths.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Set<String> canonicalPaths = new HashSet<>();
+        for (String preservedPath : preservedPaths) {
+            canonicalPaths.add(JsonPointer.canonicalize(preservedPath));
+        }
+        return canonicalPaths;
     }
 
     private NodeProvider processorSnapshotNodeProvider() {
