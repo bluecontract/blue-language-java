@@ -72,6 +72,10 @@ public class Node implements Cloneable {
         return value;
     }
 
+    public Object getRawValue() {
+        return value;
+    }
+
     public List<Node> getItems() {
         return items;
     }
@@ -322,6 +326,10 @@ public class Node implements Cloneable {
 
     public Node getAsNode(String path) {
         return (Node) get(path);
+    }
+
+    public Node getNode(String path) {
+        return NodePathAccessor.getNode(this, path);
     }
 
     public String getAsText(String path) {

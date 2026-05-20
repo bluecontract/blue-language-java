@@ -115,8 +115,11 @@ public class Merger implements NodeResolver {
             properties.forEach((key, value) -> {
                 if (limits.shouldMergePathSegment(key, value)) {
                     limits.enterPathSegment(key, value);
-                    mergeProperty(target, key, value, limits);
-                    limits.exitPathSegment();
+                    try {
+                        mergeProperty(target, key, value, limits);
+                    } finally {
+                        limits.exitPathSegment();
+                    }
                 }
             });
         }
@@ -137,17 +140,17 @@ public class Merger implements NodeResolver {
 
         if (targetChildren == null) {
             if (startsWithPrevious(sourceChildren)) {
-                targetChildren = resolvePreviousAnchor(sourceChildren.get(0), limits);
+                targetChildren = resolvePreviousAnchor(sourceChildren.get(0), limits, target.getItemType());
                 target.items(targetChildren);
                 validatePreviousAnchor(targetChildren, sourceChildren.get(0));
                 if (LIST_MERGE_POLICY_APPEND_ONLY.equals(mergePolicy)) {
-                    mergeAppendOnlyChildren(targetChildren, sourceChildren, limits);
+                    mergeAppendOnlyChildren(targetChildren, sourceChildren, limits, target.getItemType());
                 } else {
-                    mergePositionalChildren(targetChildren, sourceChildren, limits);
+                    mergePositionalChildren(targetChildren, sourceChildren, limits, target.getItemType());
                 }
                 return;
             }
-            targetChildren = resolveInitialChildren(sourceChildren, limits);
+            targetChildren = resolveInitialChildren(sourceChildren, limits, target.getItemType());
             target.items(targetChildren);
             return;
         }
@@ -157,13 +160,13 @@ public class Merger implements NodeResolver {
         }
 
         if (LIST_MERGE_POLICY_APPEND_ONLY.equals(mergePolicy)) {
-            mergeAppendOnlyChildren(targetChildren, sourceChildren, limits);
+            mergeAppendOnlyChildren(targetChildren, sourceChildren, limits, target.getItemType());
         } else {
-            mergePositionalChildren(targetChildren, sourceChildren, limits);
+            mergePositionalChildren(targetChildren, sourceChildren, limits, target.getItemType());
         }
     }
 
-    private List<Node> resolveInitialChildren(List<Node> sourceChildren, Limits limits) {
+    private List<Node> resolveInitialChildren(List<Node> sourceChildren, Limits limits, Node itemType) {
         List<Node> result = new ArrayList<>();
         int start = startsWithPrevious(sourceChildren) ? 1 : 0;
         for (int i = start; i < sourceChildren.size(); i++) {
@@ -175,7 +178,7 @@ public class Merger implements NodeResolver {
                 }
                 child = withoutPosition(child);
             }
-            Node resolvedChild = resolveListChild(child, limits, String.valueOf(result.size()));
+            Node resolvedChild = resolveListChild(child, limits, String.valueOf(result.size()), itemType);
             if (resolvedChild != null) {
                 result.add(resolvedChild);
             }
@@ -183,9 +186,9 @@ public class Merger implements NodeResolver {
         return result;
     }
 
-    private void mergeAppendOnlyChildren(List<Node> targetChildren, List<Node> sourceChildren, Limits limits) {
+    private void mergeAppendOnlyChildren(List<Node> targetChildren, List<Node> sourceChildren, Limits limits, Node itemType) {
         if (startsWithPrevious(sourceChildren)) {
-            appendChildren(targetChildren, sourceChildren, 1, limits);
+            appendChildren(targetChildren, sourceChildren, 1, limits, itemType);
             return;
         }
 
@@ -197,13 +200,13 @@ public class Merger implements NodeResolver {
 
         for (int i = 0; i < sourceChildren.size(); i++) {
             if (i >= targetChildren.size()) {
-                Node resolvedChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i));
+                Node resolvedChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i), itemType);
                 if (resolvedChild != null) {
                     targetChildren.add(resolvedChild);
                 }
                 continue;
             }
-            Node sourceChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i));
+            Node sourceChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i), itemType);
             if (sourceChild == null) {
                 continue;
             }
@@ -217,16 +220,16 @@ public class Merger implements NodeResolver {
         }
     }
 
-    private void mergePositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, Limits limits) {
+    private void mergePositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, Limits limits, Node itemType) {
         boolean hasPositionControls = sourceChildren.stream().anyMatch(child -> child.getPosition() != null);
         int start = startsWithPrevious(sourceChildren) ? 1 : 0;
 
         if (!hasPositionControls) {
             if (startsWithPrevious(sourceChildren)) {
-                appendChildren(targetChildren, sourceChildren, start, limits);
+                appendChildren(targetChildren, sourceChildren, start, limits, itemType);
                 return;
             }
-            mergeLegacyPositionalChildren(targetChildren, sourceChildren, start, limits);
+            mergeLegacyPositionalChildren(targetChildren, sourceChildren, start, limits, itemType);
             return;
         }
 
@@ -241,9 +244,9 @@ public class Merger implements NodeResolver {
                 if (!positions.add(position)) {
                     throw new IllegalArgumentException("Duplicate \"$pos\" value in list: " + position);
                 }
-                mergeOrReplacePosition(targetChildren, position, withoutPosition(sourceChild), limits);
+                mergeOrReplacePosition(targetChildren, position, withoutPosition(sourceChild), limits, itemType);
             } else {
-                Node resolvedChild = resolveListChild(sourceChild, limits, String.valueOf(targetChildren.size()));
+                Node resolvedChild = resolveListChild(sourceChild, limits, String.valueOf(targetChildren.size()), itemType);
                 if (resolvedChild != null) {
                     targetChildren.add(resolvedChild);
                 }
@@ -251,7 +254,7 @@ public class Merger implements NodeResolver {
         }
     }
 
-    private void mergeLegacyPositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits) {
+    private void mergeLegacyPositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits, Node itemType) {
         int sourceLength = sourceChildren.size() - start;
         if (sourceLength < targetChildren.size()) {
             throw new IllegalArgumentException(String.format(
@@ -263,7 +266,7 @@ public class Merger implements NodeResolver {
         for (int i = 0; i < sourceLength; i++) {
             Node sourceChild = sourceChildren.get(start + i);
             if (i >= targetChildren.size()) {
-                Node resolvedChild = resolveListChild(sourceChild, limits, String.valueOf(i));
+                Node resolvedChild = resolveListChild(sourceChild, limits, String.valueOf(i), itemType);
                 if (resolvedChild != null) {
                     targetChildren.add(resolvedChild);
                 }
@@ -273,16 +276,19 @@ public class Merger implements NodeResolver {
         }
     }
 
-    private void mergeOrReplacePosition(List<Node> targetChildren, int position, Node overlay, Limits limits) {
+    private void mergeOrReplacePosition(List<Node> targetChildren, int position, Node overlay, Limits limits, Node itemType) {
+        Node effectiveItemType = targetChildren.get(position).getType() != null
+                ? targetChildren.get(position).getType()
+                : itemType;
         if (isEmptyPlaceholder(targetChildren.get(position)) || overlay.getValue() != null || overlay.getItems() != null) {
-            Node resolvedChild = resolveListChild(overlay, limits, String.valueOf(position));
+            Node resolvedChild = resolveListChild(overlay, limits, String.valueOf(position), effectiveItemType);
             if (resolvedChild != null) {
                 targetChildren.set(position, resolvedChild);
             }
             return;
         }
         if (overlay.getType() != null) {
-            Node resolvedOverlay = resolveListChild(overlay, limits, String.valueOf(position));
+            Node resolvedOverlay = resolveListChild(overlay, limits, String.valueOf(position), effectiveItemType);
             if (resolvedOverlay != null) {
                 mergeObject(targetChildren.get(position), resolvedOverlay, limits);
             }
@@ -291,16 +297,16 @@ public class Merger implements NodeResolver {
         merge(targetChildren.get(position), overlay, limits);
     }
 
-    private void appendChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits) {
+    private void appendChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits, Node itemType) {
         for (int i = start; i < sourceChildren.size(); i++) {
-            Node resolvedChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(targetChildren.size()));
+            Node resolvedChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(targetChildren.size()), itemType);
             if (resolvedChild != null) {
                 targetChildren.add(resolvedChild);
             }
         }
     }
 
-    private List<Node> resolvePreviousAnchor(Node previousAnchor, Limits limits) {
+    private List<Node> resolvePreviousAnchor(Node previousAnchor, Limits limits, Node itemType) {
         List<Node> fetched = nodeProvider.fetchByBlueId(previousAnchor.getPreviousBlueId());
         if (fetched == null || fetched.isEmpty()) {
             throw new IllegalArgumentException("No content found for $previous blueId: " + previousAnchor.getPreviousBlueId());
@@ -311,7 +317,7 @@ public class Merger implements NodeResolver {
                 : fetched;
         List<Node> resolved = new ArrayList<>();
         for (int i = 0; i < previousChildren.size(); i++) {
-            Node resolvedChild = resolveListChild(previousChildren.get(i), limits, String.valueOf(i));
+            Node resolvedChild = resolveListChild(previousChildren.get(i), limits, String.valueOf(i), itemType);
             if (resolvedChild != null) {
                 resolved.add(resolvedChild);
             }
@@ -342,7 +348,7 @@ public class Merger implements NodeResolver {
                 && node.getValueType() == null;
     }
 
-    private Node resolveListChild(Node child, Limits limits, String segment) {
+    private Node resolveListChild(Node child, Limits limits, String segment, Node itemType) {
         if (child.getPreviousBlueId() != null || child.getPosition() != null) {
             throw new IllegalArgumentException("List control items must be consumed before resolving list children.");
         }
@@ -351,10 +357,24 @@ public class Merger implements NodeResolver {
         }
         limits.enterPathSegment(segment, child);
         try {
-            return resolve(child, limits);
+            return resolve(applyItemType(child, itemType), limits);
         } finally {
             limits.exitPathSegment();
         }
+    }
+
+    private Node applyItemType(Node child, Node itemType) {
+        if (child.getType() != null || child.getBlueId() != null || itemType == null) {
+            return child;
+        }
+        return child.clone().type(itemTypeReference(itemType));
+    }
+
+    private Node itemTypeReference(Node itemType) {
+        if (itemType.getBlueId() != null) {
+            return new Node().blueId(itemType.getBlueId());
+        }
+        return itemType.clone();
     }
 
     private Node withoutPosition(Node node) {

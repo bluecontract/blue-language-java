@@ -29,6 +29,21 @@ public class NodePathAccessor {
         return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
+    public static Node getNode(Node node, String path) {
+        if (path == null || !path.startsWith("/")) {
+            throw new IllegalArgumentException("Invalid path: " + path);
+        }
+        if (path.equals("/")) {
+            return node;
+        }
+
+        Node current = node;
+        for (String segment : JsonPointer.split(path)) {
+            current = getStructuralNodeForSegment(current, segment);
+        }
+        return current;
+    }
+
     private static Object getRecursive(Node node, List<String> segments, int index, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
         if (index == segments.size() - 1 && !resolveFinalLink) {
             // Return the node itself for the last segment if we're not resolving the final link
@@ -82,6 +97,42 @@ public class NodePathAccessor {
         }
 
         return resolveLink && linkingProvider != null ? link(result, linkingProvider) : result;
+    }
+
+    private static Node getStructuralNodeForSegment(Node node, String segment) {
+        switch (segment) {
+            case "name":
+                return new Node().value(node.getName());
+            case "description":
+                return new Node().value(node.getDescription());
+            case "type":
+                return node.getType();
+            case "itemType":
+                return node.getItemType();
+            case "keyType":
+                return node.getKeyType();
+            case "valueType":
+                return node.getValueType();
+            case "value":
+                return new Node().value(node.getRawValue());
+            case "blueId":
+                return new Node().value(BlueIdCalculator.calculateBlueId(node));
+        }
+
+        if (segment.matches("\\d+")) {
+            int itemIndex = Integer.parseInt(segment);
+            List<Node> items = node.getItems();
+            if (items == null || itemIndex >= items.size()) {
+                throw new IllegalArgumentException("Invalid item index: " + itemIndex);
+            }
+            return items.get(itemIndex);
+        }
+
+        Map<String, Node> properties = node.getProperties();
+        if (properties == null || !properties.containsKey(segment)) {
+            throw new IllegalArgumentException("Property not found: " + segment);
+        }
+        return properties.get(segment);
     }
 
     private static Node link(Node node, Function<Node, Node> linkingProvider) {
