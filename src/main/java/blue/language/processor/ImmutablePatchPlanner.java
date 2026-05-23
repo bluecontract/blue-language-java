@@ -43,6 +43,10 @@ final class ImmutablePatchPlanner {
         return new ImmutablePatchPlanner(FrozenNode.fromResolvedNode(root));
     }
 
+    FrozenNode root() {
+        return root;
+    }
+
     PatchPlan plan(String originScopePath, JsonPatch patch) {
         Objects.requireNonNull(originScopePath, "originScopePath");
         Objects.requireNonNull(patch, "patch");
@@ -167,6 +171,14 @@ final class ImmutablePatchPlanner {
 
         FrozenNode root() {
             return root;
+        }
+
+        FrozenNode before() {
+            return before;
+        }
+
+        FrozenNode after() {
+            return after;
         }
 
         Node rootNode() {

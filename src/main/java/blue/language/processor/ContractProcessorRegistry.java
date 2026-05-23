@@ -24,6 +24,7 @@ public class ContractProcessorRegistry {
     private final Map<String, HandlerProcessor<? extends HandlerContract>> handlerProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ContractProcessor<? extends MarkerContract>> markerProcessorsByBlueId = new LinkedHashMap<>();
+    private long version;
 
     public <T extends HandlerContract> void registerHandler(HandlerProcessor<T> processor) {
         Objects.requireNonNull(processor, "processor");
@@ -129,6 +130,10 @@ public class ContractProcessorRegistry {
         return Collections.unmodifiableMap(processorsByBlueId);
     }
 
+    long version() {
+        return version;
+    }
+
     private <T extends Contract> void registerBlueIds(Class<T> contractType, ContractProcessor<T> processor) {
         Objects.requireNonNull(contractType, "contractType");
 
@@ -152,6 +157,7 @@ public class ContractProcessorRegistry {
 
     private void registerBlueId(String blueId, ContractProcessor<? extends Contract> processor) {
         processorsByBlueId.put(blueId, processor);
+        version++;
         if (processor instanceof HandlerProcessor) {
             @SuppressWarnings("unchecked")
             HandlerProcessor<? extends HandlerContract> handler = (HandlerProcessor<? extends HandlerContract>) processor;

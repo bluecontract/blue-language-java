@@ -35,7 +35,8 @@ class DocumentProcessorSnapshotTransactionTest {
 
         assertEquals(2, document.getAsInteger("/x"));
         assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(1, manager.applyPatchCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(1, manager.cacheSnapshotCalls);
         assertEquals(2, runtime.snapshot().canonicalRoot().getAsInteger("/x"));
         assertEquals("keep", runtime.snapshot().canonicalRoot().getAsText("/other"));
         assertSnapshotConsistent(runtime.snapshot());
@@ -77,10 +78,11 @@ class DocumentProcessorSnapshotTransactionTest {
 
         runtime.applyPatch("/", JsonPatch.replace("/x", new Node().value(2)));
 
-        assertEquals(1, document.getAsInteger("/x"));
-        assertEquals(1, runtime.snapshot().resolvedRoot().getAsInteger("/x"));
+        assertEquals(2, document.getAsInteger("/x"));
+        assertEquals(2, runtime.snapshot().resolvedRoot().getAsInteger("/x"));
         assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(1, manager.applyPatchCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(1, manager.cacheSnapshotCalls);
         assertSnapshotConsistent(runtime.snapshot());
     }
 
@@ -107,7 +109,8 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals("new", canonical.getAsText("/tags/1"));
         assertMissing(canonical, "/obsolete");
         assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(4, manager.applyPatchCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(4, manager.cacheSnapshotCalls);
         assertSnapshotConsistent(runtime.snapshot());
     }
 
@@ -236,7 +239,7 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
-    void canonicalOverlayFailureFallsBackToFullSnapshotRebuildWithoutChangingGasPath() {
+    void runtimePatchCommitsBatchSnapshotWithoutSnapshotPatchManagerFallback() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         manager.failApplyPatch = true;
         Node document = YAML_MAPPER.readValue("x: 1", Node.class);
@@ -245,17 +248,17 @@ class DocumentProcessorSnapshotTransactionTest {
         runtime.applyPatch("/", JsonPatch.replace("/x", new Node().value(2)));
 
         assertEquals(2, document.getAsInteger("/x"));
-        assertEquals(2, manager.fromDocumentCalls);
-        assertEquals(1, manager.applyPatchCalls);
+        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(1, manager.cacheSnapshotCalls);
         assertEquals(2, runtime.snapshot().canonicalRoot().getAsInteger("/x"));
         assertSnapshotConsistent(runtime.snapshot());
     }
 
     @Test
-    void snapshotRebuildFailureRollsBackDocumentAndSnapshotTogether() {
+    void batchSnapshotCacheFailureRollsBackDocumentAndSnapshotTogether() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        manager.failApplyPatch = true;
-        manager.failFromDocumentOnCall = 2;
+        manager.failCacheSnapshot = true;
         Node document = YAML_MAPPER.readValue("x: 1", Node.class);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
 
@@ -263,8 +266,9 @@ class DocumentProcessorSnapshotTransactionTest {
                 () -> runtime.applyPatch("/", JsonPatch.replace("/x", new Node().value(2))));
 
         assertEquals(1, document.getAsInteger("/x"));
-        assertEquals(2, manager.fromDocumentCalls);
-        assertEquals(1, manager.applyPatchCalls);
+        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(1, manager.cacheSnapshotCalls);
     }
 
     @Test
@@ -470,7 +474,7 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
-    void processorPatchToInheritedValueIsMinimizedOutOfCanonicalSnapshot() {
+    void processorPatchToInheritedValueKeepsCanonicalOverrideWhileBatchMinimizationIsDisabled() {
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
                 "name: Money\n" +
@@ -501,7 +505,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 blue.objectToNode(new TestEvent().eventId("evt-inherited")));
 
         assertEquals(0, processed.resolvedDocument().getAsInteger("/balance/cents"));
-        assertMissing(processed.canonicalDocument(), "/balance/cents");
+        assertEquals(0, processed.canonicalDocument().getAsInteger("/balance/cents"));
         assertSnapshotConsistent(processed.snapshot());
     }
 
@@ -554,6 +558,7 @@ class DocumentProcessorSnapshotTransactionTest {
         private int applyPatchCalls;
         private int cacheSnapshotCalls;
         private boolean failApplyPatch;
+        private boolean failCacheSnapshot;
         private boolean returnCurrentSnapshotOnApplyPatch;
         private int failFromDocumentOnCall;
 
@@ -611,6 +616,9 @@ class DocumentProcessorSnapshotTransactionTest {
         @Override
         public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
             cacheSnapshotCalls++;
+            if (failCacheSnapshot) {
+                throw new IllegalStateException("snapshot cache failed");
+            }
             return snapshot;
         }
     }

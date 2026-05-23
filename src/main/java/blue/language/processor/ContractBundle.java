@@ -139,6 +139,33 @@ public final class ContractBundle {
         return result;
     }
 
+    ContractBundle copyWithRuntimeMarkers(Map<String, MarkerContract> runtimeMarkers,
+                                          Map<String, FrozenNode> runtimeMarkerNodes,
+                                          boolean runtimeCheckpointDeclared) {
+        Map<String, List<HandlerBinding>> handlersCopy = new LinkedHashMap<>();
+        for (Map.Entry<String, List<HandlerBinding>> entry : handlersByChannel.entrySet()) {
+            handlersCopy.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        Map<String, FrozenNode> nodesCopy = new LinkedHashMap<>(contractNodes);
+        for (String key : markers.keySet()) {
+            nodesCopy.remove(key);
+        }
+        if (runtimeMarkerNodes != null) {
+            nodesCopy.putAll(runtimeMarkerNodes);
+        }
+        return new ContractBundle(new LinkedHashMap<>(channels),
+                new LinkedHashMap<>(channelNodes),
+                handlersCopy,
+                runtimeMarkers != null ? new LinkedHashMap<>(runtimeMarkers) : new LinkedHashMap<>(),
+                nodesCopy,
+                new ArrayList<>(embeddedPaths),
+                runtimeCheckpointDeclared);
+    }
+
+    boolean hasStaticCheckpointDeclaration() {
+        return checkpointDeclared;
+    }
+
     public static final class ChannelBinding {
         private final String key;
         private final ChannelContract contract;

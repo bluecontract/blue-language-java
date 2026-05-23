@@ -50,6 +50,19 @@ public final class ConformancePlan {
                 canonicalRoot != null);
     }
 
+    public static ConformancePlan generalized(FrozenNode canonicalRoot,
+                                              FrozenNode root,
+                                              List<CanonicalGeneralizationPatch> canonicalPatches,
+                                              List<String> changedPaths,
+                                              boolean fullSnapshotRebuildAvoidable) {
+        return new ConformancePlan(canonicalRoot,
+                root,
+                true,
+                canonicalPatches,
+                changedPaths,
+                fullSnapshotRebuildAvoidable);
+    }
+
     public FrozenNode canonicalRoot() {
         return canonicalRoot;
     }

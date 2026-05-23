@@ -1,7 +1,9 @@
 package blue.language.processor;
 
 import blue.language.mapping.NodeToObjectConverter;
+import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
@@ -15,6 +17,8 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
@@ -24,6 +28,7 @@ final class ContractLoader {
     private final ContractProcessorRegistry registry;
     private final NodeToObjectConverter converter;
     private final TypeClassResolver typeResolver;
+    private final ConcurrentMap<BundleCacheKey, ContractBundle> bundleCache = new ConcurrentHashMap<>();
 
     ContractLoader(ContractProcessorRegistry registry,
                    NodeToObjectConverter converter,
@@ -39,6 +44,50 @@ final class ContractLoader {
     }
 
     ContractBundle load(FrozenNode scopeNode, String scopePath) {
+        return load(scopeNode, scopePath, ProcessingMetricsSink.NOOP);
+    }
+
+    ContractBundle load(FrozenNode scopeNode, String scopePath, ProcessingMetricsSink metricsSink) {
+        ProcessingMetricsSink metrics = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+        long keyStart = System.nanoTime();
+        BundleCacheKey key;
+        try {
+            key = cacheKey(scopeNode, scopePath);
+        } finally {
+            metrics.addBundleLoadCacheKeyBuildNanos(System.nanoTime() - keyStart);
+        }
+        ContractBundle cached = bundleCache.get(key);
+        if (cached != null) {
+            metrics.incrementBundleLoadCacheHits();
+            long reuseStart = System.nanoTime();
+            try {
+                RuntimeMarkers runtimeMarkers = runtimeMarkers(scopeNode);
+                metrics.incrementBundlesReused();
+                return cached.copyWithRuntimeMarkers(runtimeMarkers.markers,
+                        runtimeMarkers.nodes,
+                        runtimeMarkers.checkpointDeclared);
+            } finally {
+                metrics.addBundleLoadReuseNanos(System.nanoTime() - reuseStart);
+            }
+        }
+
+        metrics.incrementBundleLoadCacheMisses();
+        long buildStart = System.nanoTime();
+        ContractBundle built;
+        try {
+            built = build(scopeNode, scopePath);
+        } finally {
+            metrics.addBundleLoadActualBuildNanos(System.nanoTime() - buildStart);
+        }
+        bundleCache.putIfAbsent(key, built);
+        metrics.incrementBundlesBuilt();
+        RuntimeMarkers runtimeMarkers = runtimeMarkers(scopeNode);
+        return built.copyWithRuntimeMarkers(runtimeMarkers.markers,
+                runtimeMarkers.nodes,
+                runtimeMarkers.checkpointDeclared);
+    }
+
+    private ContractBundle build(FrozenNode scopeNode, String scopePath) {
         ContractBundle.Builder builder = ContractBundle.builder();
         if (scopeNode == null) {
             return builder.build();
@@ -118,6 +167,104 @@ final class ContractLoader {
         return builder.build();
     }
 
+    private BundleCacheKey cacheKey(FrozenNode scopeNode, String scopePath) {
+        FrozenNode contractsNode = property(scopeNode, "contracts");
+        FrozenNode channelBindingsNode = property(scopeNode, "channelBindings");
+        return new BundleCacheKey(scopePath != null ? scopePath : "/",
+                registry.version(),
+                contractsSignature(contractsNode),
+                nodeSignature(channelBindingsNode));
+    }
+
+    private String contractsSignature(FrozenNode contractsNode) {
+        if (contractsNode == null) {
+            return "<missing>";
+        }
+        Map<String, FrozenNode> properties = contractsNode.getProperties();
+        if (properties == null || !properties.containsKey(ProcessorContractConstants.KEY_CHECKPOINT)) {
+            return nodeSignature(contractsNode);
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append("contracts{");
+        for (Map.Entry<String, FrozenNode> entry : properties.entrySet()) {
+            builder.append(entry.getKey()).append('=');
+            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(entry.getKey())) {
+                builder.append(checkpointStaticSignature(entry.getValue()));
+            } else {
+                builder.append(nodeSignature(entry.getValue()));
+            }
+            builder.append(';');
+        }
+        builder.append('}');
+        return builder.toString();
+    }
+
+    private String checkpointStaticSignature(FrozenNode checkpointNode) {
+        if (checkpointNode == null) {
+            return "<missing>";
+        }
+        Node node = checkpointNode.toNode();
+        if (node.getProperties() != null) {
+            node.getProperties().remove("lastEvents");
+            node.getProperties().remove("lastSignatures");
+        }
+        return FrozenNode.fromResolvedNode(node).blueId();
+    }
+
+    private String nodeSignature(FrozenNode node) {
+        return node != null ? node.blueId() : "<missing>";
+    }
+
+    private FrozenNode property(FrozenNode node, String key) {
+        return node != null && node.getProperties() != null ? node.getProperties().get(key) : null;
+    }
+
+    private RuntimeMarkers runtimeMarkers(FrozenNode scopeNode) {
+        Map<String, MarkerContract> markers = new LinkedHashMap<>();
+        Map<String, FrozenNode> markerNodes = new LinkedHashMap<>();
+        boolean checkpointDeclared = false;
+        FrozenNode contractsNode = property(scopeNode, "contracts");
+        if (contractsNode == null || contractsNode.getProperties() == null) {
+            return new RuntimeMarkers(markers, markerNodes, false);
+        }
+        for (Map.Entry<String, FrozenNode> entry : contractsNode.getProperties().entrySet()) {
+            String key = entry.getKey();
+            FrozenNode node = entry.getValue();
+            String typeBlueId = typeBlueId(node);
+            if (typeBlueId == null) {
+                continue;
+            }
+            Class<?> contractClass = typeResolver.resolveClass(typeBlueId);
+            if (contractClass == null || !MarkerContract.class.isAssignableFrom(contractClass)) {
+                continue;
+            }
+            Contract contract = converter.convertWithType(node.toNode(), Contract.class, false);
+            if (!(contract instanceof MarkerContract) || contract instanceof ProcessEmbedded) {
+                continue;
+            }
+            MarkerContract marker = (MarkerContract) contract;
+            marker.setKey(key);
+            marker.setTypeBlueId(typeBlueId);
+            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(key) && !(marker instanceof ChannelEventCheckpoint)) {
+                throw new IllegalStateException(
+                        "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
+            }
+            if (marker instanceof ChannelEventCheckpoint) {
+                if (!ProcessorContractConstants.KEY_CHECKPOINT.equals(key)) {
+                    throw new IllegalStateException(
+                            "Channel Event Checkpoint must use reserved key 'checkpoint' at key '" + key + "'");
+                }
+                if (checkpointDeclared) {
+                    throw new IllegalStateException("Duplicate Channel Event Checkpoint markers detected in same contracts map");
+                }
+                checkpointDeclared = true;
+            }
+            markers.put(key, marker);
+            markerNodes.put(key, node);
+        }
+        return new RuntimeMarkers(markers, markerNodes, checkpointDeclared);
+    }
+
     @SuppressWarnings("unchecked")
     private String resolveHandlerChannel(String scopePath,
                                          String handlerKey,
@@ -190,5 +337,56 @@ final class ContractLoader {
         }
         FrozenNode type = node.getType();
         return type.getReferenceBlueId() != null ? type.getReferenceBlueId() : type.blueId();
+    }
+
+    private static final class RuntimeMarkers {
+        final Map<String, MarkerContract> markers;
+        final Map<String, FrozenNode> nodes;
+        final boolean checkpointDeclared;
+
+        RuntimeMarkers(Map<String, MarkerContract> markers,
+                       Map<String, FrozenNode> nodes,
+                       boolean checkpointDeclared) {
+            this.markers = markers;
+            this.nodes = nodes;
+            this.checkpointDeclared = checkpointDeclared;
+        }
+    }
+
+    private static final class BundleCacheKey {
+        private final String scopePath;
+        private final long registryVersion;
+        private final String contractsSignature;
+        private final String channelBindingsSignature;
+
+        BundleCacheKey(String scopePath,
+                       long registryVersion,
+                       String contractsSignature,
+                       String channelBindingsSignature) {
+            this.scopePath = scopePath;
+            this.registryVersion = registryVersion;
+            this.contractsSignature = contractsSignature;
+            this.channelBindingsSignature = channelBindingsSignature;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof BundleCacheKey)) {
+                return false;
+            }
+            BundleCacheKey that = (BundleCacheKey) other;
+            return registryVersion == that.registryVersion
+                    && Objects.equals(scopePath, that.scopePath)
+                    && Objects.equals(contractsSignature, that.contractsSignature)
+                    && Objects.equals(channelBindingsSignature, that.channelBindingsSignature);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(scopePath, registryVersion, contractsSignature, channelBindingsSignature);
+        }
     }
 }

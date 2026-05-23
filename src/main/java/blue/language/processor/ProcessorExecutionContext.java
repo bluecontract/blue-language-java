@@ -4,6 +4,8 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -59,10 +61,20 @@ public final class ProcessorExecutionContext {
     }
 
     public void applyPatch(JsonPatch patch) {
+        if (patch == null) {
+            return;
+        }
+        applyPatches(Collections.singletonList(patch));
+    }
+
+    public void applyPatches(List<JsonPatch> patches) {
         if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
             return;
         }
-        execution.handlePatch(scopePath, bundle, patch, allowReservedMutation);
+        if (patches == null || patches.isEmpty()) {
+            return;
+        }
+        execution.handlePatches(scopePath, bundle, patches, allowReservedMutation);
     }
 
     public void emitEvent(Node emission) {
