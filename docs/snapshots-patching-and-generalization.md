@@ -348,24 +348,60 @@ Changed paths include:
 
 ## Processor Transaction Flow
 
-`DocumentProcessingRuntime.applyPatch(...)` now works roughly like this:
+`DocumentProcessingRuntime.applyPatches(...)` now works roughly like this:
 
 ```text
-rollback = current mutable materialized view
 baseSnapshot = current snapshot or snapshotManager.fromDocument(...)
-canonicalPlan = ImmutablePatchPlanner(baseSnapshot.canonical).plan(...)
-resolvedPlan = ImmutablePatchPlanner(baseSnapshot.resolved).plan(...)
-conformancePlan = ConformanceEngine.planGeneralization(...)
-if generalized:
-    commit generalized snapshot
-else:
-    commit normal canonical patch snapshot
+for each patch:
+    canonicalPlan = ImmutablePatchPlanner(working canonical root).plan(...)
+    resolvedPlan = ImmutablePatchPlanner(working resolved root).plan(...)
+    remember frozen before/after update metadata
+conformancePlan = ConformanceEngine.planGeneralization(..., changedPaths)
+commit final canonical/resolved roots once
 on failure:
-    restore rollback and previous snapshot
+    restore previous snapshot if one was active
 ```
+
+Batch conformance selects changed paths whose final resolved path has typed
+metadata at the changed node or one of its ancestors up to the origin scope.
+This catches typed descendants below an otherwise untyped root, including list
+`itemType` and dictionary `valueType` paths, while leaving unrelated untyped
+processor-managed writes out of the conformance planner.
 
 The mutable `Node` view is now a compatibility adapter generated from the
 canonical snapshot. Snapshot state is authoritative.
+
+## Batch Patch Application
+
+`ProcessorExecutionContext.applyPatches(List<JsonPatch>)` applies a changeset
+atomically.
+
+Semantics:
+
+- patches are applied in order
+- duplicate paths are preserved
+- if any patch fails, the full batch rolls back
+- the mutable materialized root is not deep-copied before a batch; planning runs
+  on frozen roots and the materialized view changes only at commit
+- conformance/generalization is planned over the final working roots
+- the runtime commits once
+- document update events are returned and routed in patch order after the batch
+  commit
+- update `before` values describe the value at the patch path immediately before
+  that patch entry was applied
+- update `after` values normally describe the committed post-conformance value
+  at the patch path; if a later patch in the same batch overlaps that path, the
+  earlier update keeps its patch-time intermediate `after` value so duplicate
+  and add/remove patch-entry order remains observable
+- update before/after values stay frozen-backed and materialize to `Node` only
+  when a matching `DocumentUpdateChannel` needs an event or a caller explicitly
+  reads `before()` / `after()`
+- batch timing and update materialization counters are exposed package-privately
+  for tests and performance investigation
+- `applyPatch` delegates to `applyPatches(singletonList(...))`
+
+This is the preferred path for workflow steps such as `Conversation/Update
+Document` that apply a computed changeset.
 
 ## Gas And Caching
 
@@ -405,4 +441,6 @@ Still missing:
 - `ConformanceEngineTest`
 - `DocumentProcessorSnapshotTransactionTest`
 - `DocumentProcessorGeneralizationTest`
+- `DocumentProcessingRuntimeBatchPatchTest`
+- `DocumentProcessorBatchPatchTest`
 - `DocumentProcessorGasTest`

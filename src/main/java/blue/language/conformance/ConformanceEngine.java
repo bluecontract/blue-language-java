@@ -9,6 +9,8 @@ import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public final class ConformanceEngine {
@@ -59,5 +61,39 @@ public final class ConformanceEngine {
     public ConformancePlan planGeneralization(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
         return new FrozenConformancePlanner(nodeProvider, mergingProcessor, resolvedReferenceCache)
                 .plan(canonicalRoot, resolvedRoot, changedPath);
+    }
+
+    public ConformancePlan planGeneralization(FrozenNode canonicalRoot,
+                                              FrozenNode resolvedRoot,
+                                              List<String> changedPaths) {
+        if (changedPaths == null || changedPaths.isEmpty()) {
+            return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
+        }
+        FrozenNode nextCanonical = canonicalRoot;
+        FrozenNode nextResolved = resolvedRoot;
+        boolean generalized = false;
+        List<CanonicalGeneralizationPatch> canonicalPatches = new ArrayList<>();
+        List<String> allChangedPaths = new ArrayList<>();
+        FrozenConformancePlanner planner = new FrozenConformancePlanner(nodeProvider,
+                mergingProcessor,
+                resolvedReferenceCache);
+        for (String changedPath : changedPaths) {
+            ConformancePlan plan = planner.plan(nextCanonical, nextResolved, changedPath);
+            nextCanonical = plan.canonicalRoot() != null ? plan.canonicalRoot() : nextCanonical;
+            nextResolved = plan.root();
+            if (plan.generalized()) {
+                generalized = true;
+                canonicalPatches.addAll(plan.canonicalPatches());
+                allChangedPaths.addAll(plan.changedPaths());
+            }
+        }
+        if (!generalized) {
+            return ConformancePlan.unchanged(nextCanonical, nextResolved);
+        }
+        return ConformancePlan.generalized(nextCanonical,
+                nextResolved,
+                canonicalPatches,
+                allChangedPaths,
+                nextCanonical != null);
     }
 }

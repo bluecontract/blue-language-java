@@ -24,6 +24,7 @@ public class DocumentProcessor {
     private final ConformanceEngine conformanceEngine;
     private final ProcessingSnapshotManager snapshotManager;
     private final ContractMatchingService matchingService;
+    private ProcessingMetricsSink metricsSink;
 
     public DocumentProcessor() {
         this(ContractProcessorRegistryBuilder.create().registerDefaults().build());
@@ -63,6 +64,15 @@ public class DocumentProcessor {
                              ConformanceEngine conformanceEngine,
                              ProcessingSnapshotManager snapshotManager,
                              ContractMatchingService matchingService) {
+        this(registry, contractTypeResolver, conformanceEngine, snapshotManager, matchingService, null);
+    }
+
+    public DocumentProcessor(ContractProcessorRegistry registry,
+                             TypeClassResolver contractTypeResolver,
+                             ConformanceEngine conformanceEngine,
+                             ProcessingSnapshotManager snapshotManager,
+                             ContractMatchingService matchingService,
+                             ProcessingMetricsSink metricsSink) {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
         this.contractTypeResolver = Objects.requireNonNull(contractTypeResolver, "contractTypeResolver");
         this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
@@ -70,6 +80,7 @@ public class DocumentProcessor {
         this.conformanceEngine = conformanceEngine;
         this.snapshotManager = snapshotManager;
         this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
+        this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
     }
 
     private DocumentProcessor(Builder builder) {
@@ -77,7 +88,8 @@ public class DocumentProcessor {
                 builder.contractTypeResolver,
                 builder.conformanceEngine,
                 builder.snapshotManager,
-                builder.matchingService);
+                builder.matchingService,
+                builder.metricsSink);
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
@@ -152,6 +164,19 @@ public class DocumentProcessor {
         return matchingService;
     }
 
+    ProcessingMetricsSink metricsSink() {
+        return metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+    }
+
+    public ProcessingMetricsSink processingMetricsSink() {
+        return metricsSink();
+    }
+
+    public DocumentProcessor processingMetricsSink(ProcessingMetricsSink metricsSink) {
+        this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+        return this;
+    }
+
     public Map<String, MarkerContract> markersFor(Node scopeNode, String scopePath) {
         ContractBundle bundle = contractLoader.load(FrozenNode.fromResolvedNode(scopeNode), scopePath);
         return bundle.markers();
@@ -183,6 +208,7 @@ public class DocumentProcessor {
         private ConformanceEngine conformanceEngine;
         private ProcessingSnapshotManager snapshotManager;
         private ContractMatchingService matchingService = new ContractMatchingService();
+        private ProcessingMetricsSink metricsSink = ProcessingMetricsSink.NOOP;
 
         public Builder withRegistry(ContractProcessorRegistry registry) {
             this.contractRegistry = Objects.requireNonNull(registry, "registry");
@@ -233,6 +259,11 @@ public class DocumentProcessor {
 
         public Builder withMatchingService(ContractMatchingService matchingService) {
             this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
+            return this;
+        }
+
+        public Builder withProcessingMetricsSink(ProcessingMetricsSink metricsSink) {
+            this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
             return this;
         }
 

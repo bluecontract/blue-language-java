@@ -431,11 +431,23 @@ public class Blue implements NodeResolver {
     }
 
     public DocumentProcessingResult processDocument(Node document, Node event) {
-        return attachProcessingSnapshot(ensureDocumentProcessor().processDocument(document, event));
+        DocumentProcessor processor = ensureDocumentProcessor();
+        long start = System.nanoTime();
+        try {
+            return attachProcessingSnapshot(processor, processor.processDocument(document, event));
+        } finally {
+            processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
+        }
     }
 
     public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event) {
-        return ensureDocumentProcessor().processDocument(snapshot, event);
+        DocumentProcessor processor = ensureDocumentProcessor();
+        long start = System.nanoTime();
+        try {
+            return processor.processDocument(snapshot, event);
+        } finally {
+            processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
+        }
     }
 
     public DocumentProcessor getDocumentProcessor() {
@@ -451,7 +463,8 @@ public class Blue implements NodeResolver {
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
-        return attachProcessingSnapshot(ensureDocumentProcessor().initializeDocument(document));
+        DocumentProcessor processor = ensureDocumentProcessor();
+        return attachProcessingSnapshot(processor, processor.initializeDocument(document));
     }
 
     public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
@@ -558,11 +571,18 @@ public class Blue implements NodeResolver {
                 .build();
     }
 
-    private DocumentProcessingResult attachProcessingSnapshot(DocumentProcessingResult result) {
+    private DocumentProcessingResult attachProcessingSnapshot(DocumentProcessor processor, DocumentProcessingResult result) {
         if (result == null || result.capabilityFailure() || result.snapshot() != null) {
             return result;
         }
-        return result.withSnapshot(resolveProcessingSnapshot(result.document()));
+        long start = System.nanoTime();
+        try {
+            return result.withSnapshot(resolveProcessingSnapshot(result.document()));
+        } finally {
+            long nanos = System.nanoTime() - start;
+            processor.processingMetricsSink().addResultSnapshotAttachNanos(nanos);
+            processor.processingMetricsSink().addBlueIdCalculationNanos(nanos);
+        }
     }
 
     private void refreshDocumentProcessorConformanceEngine() {
@@ -571,7 +591,8 @@ public class Blue implements NodeResolver {
                     documentProcessor.getContractTypeResolver(),
                     conformanceEngine(),
                     processingSnapshotManager(),
-                    new ContractMatchingService(this));
+                    new ContractMatchingService(this),
+                    documentProcessor.processingMetricsSink());
         }
     }
 

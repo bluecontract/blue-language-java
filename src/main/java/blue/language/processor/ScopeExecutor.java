@@ -12,6 +12,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
 
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +67,7 @@ final class ScopeExecutor {
                 preInitSnapshot = (canonicalScopeNode != null ? canonicalScopeNode : scopeNode).toNode();
             }
 
-            bundle = owner.contractLoader().load(scopeNode, normalizedScope);
+            bundle = owner.contractLoader().load(scopeNode, normalizedScope, owner.metricsSink());
             bundles.put(normalizedScope, bundle);
 
             String nextEmbedded = null;
@@ -117,7 +118,7 @@ final class ScopeExecutor {
         }
         FrozenNode scopeNode = runtime.resolvedFrozenAt(normalizedScope);
         ContractBundle bundle = scopeNode != null
-                ? owner.contractLoader().load(scopeNode, normalizedScope)
+                ? owner.contractLoader().load(scopeNode, normalizedScope, owner.metricsSink())
                 : ContractBundle.empty();
         bundles.put(normalizedScope, bundle);
         for (String embeddedPointer : bundle.embeddedPaths()) {
@@ -136,7 +137,9 @@ final class ScopeExecutor {
         if (bundle == null) {
             return;
         }
+        long channelDiscoveryStart = System.nanoTime();
         List<ContractBundle.ChannelBinding> channels = bundle.channelsOfType(ChannelContract.class);
+        owner.metricsSink().addChannelDiscoveryNanos(System.nanoTime() - channelDiscoveryStart);
         if (channels.isEmpty()) {
             finalizeScope(normalizedScope, bundle);
             return;
@@ -157,32 +160,73 @@ final class ScopeExecutor {
                      ContractBundle bundle,
                      JsonPatch patch,
                      boolean allowReservedMutation) {
+        if (patch == null) {
+            return;
+        }
+        handlePatches(scopePath,
+                bundle,
+                Collections.singletonList(patch),
+                allowReservedMutation);
+    }
+
+    void handlePatches(String scopePath,
+                       ContractBundle bundle,
+                       List<JsonPatch> patches,
+                       boolean allowReservedMutation) {
         if (execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        if (patches == null || patches.isEmpty()) {
             return;
         }
         runtime.chargeBoundaryCheck();
         try {
-            validatePatchBoundary(scopePath, bundle, patch);
-            enforceReservedKeyWriteProtection(scopePath, patch, allowReservedMutation);
+            long boundaryStart = System.nanoTime();
+            for (JsonPatch patch : patches) {
+                validatePatchBoundary(scopePath, bundle, patch);
+                enforceReservedKeyWriteProtection(scopePath, patch, allowReservedMutation);
+            }
+            owner.metricsSink().addPatchBoundaryNanos(System.nanoTime() - boundaryStart);
         } catch (ProcessorEngine.BoundaryViolationException ex) {
             execution.enterFatalTermination(scopePath, bundle, execution.fatalReason(ex, "Boundary violation"));
             return;
         }
         try {
-            switch (patch.getOp()) {
-                case ADD:
-                case REPLACE:
-                    runtime.chargePatchAddOrReplace(patch.getVal());
-                    break;
-                case REMOVE:
-                    runtime.chargePatchRemove();
-                    break;
-                default:
-                    break;
+            long gasStart = System.nanoTime();
+            for (JsonPatch patch : patches) {
+                switch (patch.getOp()) {
+                    case ADD:
+                    case REPLACE:
+                        runtime.chargePatchAddOrReplace(patch.getVal());
+                        break;
+                    case REMOVE:
+                        runtime.chargePatchRemove();
+                        break;
+                    default:
+                        break;
+                }
             }
-            DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch(scopePath, patch);
+            owner.metricsSink().addPatchGasNanos(System.nanoTime() - gasStart);
+            List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches(scopePath, patches);
+            long routingStart = System.nanoTime();
+            routeDocumentUpdatesAfterBatch(scopePath, bundle, updates);
+            owner.metricsSink().addDocumentUpdateRoutingNanos(System.nanoTime() - routingStart);
+        } catch (ProcessorEngine.BoundaryViolationException ex) {
+            execution.enterFatalTermination(scopePath, bundle, execution.fatalReason(ex, "Boundary violation"));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            execution.enterFatalTermination(scopePath, bundle, execution.fatalReason(ex, "Runtime fatal"));
+        }
+    }
+
+    private void routeDocumentUpdatesAfterBatch(String scopePath,
+                                                ContractBundle bundle,
+                                                List<DocumentProcessingRuntime.DocumentUpdateData> updates) {
+        if (updates == null || updates.isEmpty()) {
+            return;
+        }
+        for (DocumentProcessingRuntime.DocumentUpdateData data : updates) {
             if (data == null) {
-                return;
+                continue;
             }
             markCutOffChildrenIfNeeded(scopePath, bundle, data);
             runtime.chargeCascadeRouting(data.cascadeScopes().size());
@@ -194,22 +238,24 @@ final class ScopeExecutor {
                 if (execution.isScopeInactive(cascadeScope)) {
                     continue;
                 }
-                Node updateEvent = ProcessorEngine.createDocumentUpdateEvent(data, cascadeScope);
-                for (ContractBundle.ChannelBinding channel : targetBundle.channelsOfType(DocumentUpdateChannel.class)) {
+                List<ContractBundle.ChannelBinding> channels = targetBundle.channelsOfType(DocumentUpdateChannel.class);
+                if (channels.isEmpty()) {
+                    owner.metricsSink().incrementDocumentUpdateEventsSkippedNoChannel();
+                    continue;
+                }
+                for (ContractBundle.ChannelBinding channel : channels) {
                     DocumentUpdateChannel duc = (DocumentUpdateChannel) channel.contract();
                     if (!ProcessorEngine.matchesDocumentUpdate(cascadeScope, duc.getPath(), data.path())) {
                         continue;
                     }
+                    Node updateEvent = ProcessorEngine.createDocumentUpdateEvent(data, cascadeScope);
+                    owner.metricsSink().incrementDocumentUpdateEventsBuilt();
                     channelRunner.runHandlers(cascadeScope, targetBundle, channel.key(), updateEvent, false);
                     if (execution.isScopeInactive(cascadeScope)) {
                         break;
                     }
                 }
             }
-        } catch (ProcessorEngine.BoundaryViolationException ex) {
-            execution.enterFatalTermination(scopePath, bundle, execution.fatalReason(ex, "Boundary violation"));
-        } catch (IllegalArgumentException | IllegalStateException ex) {
-            execution.enterFatalTermination(scopePath, bundle, execution.fatalReason(ex, "Runtime fatal"));
         }
     }
 
@@ -269,7 +315,7 @@ final class ScopeExecutor {
             bundles.remove(normalizedScope);
             return null;
         }
-        ContractBundle refreshed = owner.contractLoader().load(scopeNode, normalizedScope);
+        ContractBundle refreshed = owner.contractLoader().load(scopeNode, normalizedScope, owner.metricsSink());
         bundles.put(normalizedScope, refreshed);
         return refreshed;
     }
@@ -343,32 +389,38 @@ final class ScopeExecutor {
     }
 
     private void drainTriggeredQueue(String scopePath, ContractBundle bundle) {
-        if (execution.isScopeInactive(scopePath)) {
-            return;
-        }
-        ScopeRuntimeContext context = runtime.scope(scopePath);
-        if (context.triggeredQueue().isEmpty()) {
-            return;
-        }
-        List<ContractBundle.ChannelBinding> triggeredChannels = bundle.channelsOfType(TriggeredEventChannel.class);
-        if (triggeredChannels.isEmpty()) {
-            context.triggeredQueue().clear();
-            return;
-        }
-        while (!context.triggeredQueue().isEmpty()) {
-            Node next = context.triggeredQueue().pollFirst();
-            runtime.chargeDrainEvent();
-            for (ContractBundle.ChannelBinding channel : triggeredChannels) {
-                if (execution.isScopeInactive(scopePath)) {
-                    context.triggeredQueue().clear();
-                    return;
-                }
-                channelRunner.runHandlers(scopePath, bundle, channel.key(), next.clone(), false);
-                if (execution.isScopeInactive(scopePath)) {
-                    context.triggeredQueue().clear();
-                    return;
+        long routingStart = System.nanoTime();
+        try {
+            if (execution.isScopeInactive(scopePath)) {
+                return;
+            }
+            ScopeRuntimeContext context = runtime.scope(scopePath);
+            if (context.triggeredQueue().isEmpty()) {
+                return;
+            }
+            List<ContractBundle.ChannelBinding> triggeredChannels = bundle.channelsOfType(TriggeredEventChannel.class);
+            if (triggeredChannels.isEmpty()) {
+                context.triggeredQueue().clear();
+                return;
+            }
+            while (!context.triggeredQueue().isEmpty()) {
+                Node next = context.triggeredQueue().pollFirst();
+                owner.metricsSink().incrementTriggeredEventsRouted();
+                runtime.chargeDrainEvent();
+                for (ContractBundle.ChannelBinding channel : triggeredChannels) {
+                    if (execution.isScopeInactive(scopePath)) {
+                        context.triggeredQueue().clear();
+                        return;
+                    }
+                    channelRunner.runHandlers(scopePath, bundle, channel.key(), next.clone(), false);
+                    if (execution.isScopeInactive(scopePath)) {
+                        context.triggeredQueue().clear();
+                        return;
+                    }
                 }
             }
+        } finally {
+            owner.metricsSink().addTriggeredEventRoutingNanos(System.nanoTime() - routingStart);
         }
     }
 

@@ -64,38 +64,66 @@ final class ProcessorEngine {
     static DocumentProcessingResult processDocument(DocumentProcessor owner, Node document, Node event) {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(event, "event");
-        if (!isInitialized(owner, document)) {
-            throw new IllegalStateException("Document not initialized");
-        }
-        Node cloned = document.clone();
-        Execution execution = new Execution(owner, cloned);
+        ProcessingMetricsSink metrics = owner.metricsSink();
+        long processStart = System.nanoTime();
+        long preprocessStart = System.nanoTime();
+        Execution execution = null;
         try {
+            if (!isInitialized(owner, document)) {
+                throw new IllegalStateException("Document not initialized");
+            }
+            Node cloned = document.clone();
+            execution = new Execution(owner, cloned);
+            metrics.addEventPreprocessNanos(System.nanoTime() - preprocessStart);
+            long bundleStart = System.nanoTime();
             execution.loadBundles("/");
+            metrics.addBundleLoadNanos(System.nanoTime() - bundleStart);
             execution.processExternalEvent("/", event);
         } catch (RunTerminationException ignored) {
             // Processing terminated early; result still returned.
         } catch (MustUnderstandFailureException ex) {
+            metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
             return DocumentProcessingResult.capabilityFailure(document.clone(), ex.getMessage());
         }
-        return execution.result();
+        long postStart = System.nanoTime();
+        try {
+            return execution.result();
+        } finally {
+            metrics.addPostProcessingNanos(System.nanoTime() - postStart);
+            metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
+        }
     }
 
     static DocumentProcessingResult processDocument(DocumentProcessor owner, ResolvedSnapshot snapshot, Node event) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(event, "event");
-        if (!isInitialized(owner, snapshot)) {
-            throw new IllegalStateException("Document not initialized");
-        }
-        Execution execution = new Execution(owner, snapshot);
+        ProcessingMetricsSink metrics = owner.metricsSink();
+        long processStart = System.nanoTime();
+        long preprocessStart = System.nanoTime();
+        Execution execution = null;
         try {
+            if (!isInitialized(owner, snapshot)) {
+                throw new IllegalStateException("Document not initialized");
+            }
+            execution = new Execution(owner, snapshot);
+            metrics.addEventPreprocessNanos(System.nanoTime() - preprocessStart);
+            long bundleStart = System.nanoTime();
             execution.loadBundles("/");
+            metrics.addBundleLoadNanos(System.nanoTime() - bundleStart);
             execution.processExternalEvent("/", event);
         } catch (RunTerminationException ignored) {
             // Processing terminated early; result still returned.
         } catch (MustUnderstandFailureException ex) {
+            metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
             return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage());
         }
-        return execution.result();
+        long postStart = System.nanoTime();
+        try {
+            return execution.result();
+        } finally {
+            metrics.addPostProcessingNanos(System.nanoTime() - postStart);
+            metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
+        }
     }
 
     static boolean isInitialized(DocumentProcessor owner, Node document) {
@@ -292,7 +320,10 @@ final class ProcessorEngine {
 
         Execution(DocumentProcessor owner, Node document) {
             this.owner = owner;
-            this.runtime = new DocumentProcessingRuntime(document, owner.conformanceEngine(), owner.snapshotManager());
+            this.runtime = new DocumentProcessingRuntime(document,
+                    owner.conformanceEngine(),
+                    owner.snapshotManager(),
+                    owner.metricsSink());
             this.checkpointManager = new CheckpointManager(runtime, ProcessorEngine::canonicalSignature);
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
@@ -301,7 +332,10 @@ final class ProcessorEngine {
 
         Execution(DocumentProcessor owner, ResolvedSnapshot snapshot) {
             this.owner = owner;
-            this.runtime = new DocumentProcessingRuntime(snapshot, owner.conformanceEngine(), owner.snapshotManager());
+            this.runtime = new DocumentProcessingRuntime(snapshot,
+                    owner.conformanceEngine(),
+                    owner.snapshotManager(),
+                    owner.metricsSink());
             this.checkpointManager = new CheckpointManager(runtime, ProcessorEngine::canonicalSignature);
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
@@ -324,7 +358,20 @@ final class ProcessorEngine {
                          ContractBundle bundle,
                          JsonPatch patch,
                          boolean allowReservedMutation) {
-            scopeExecutor.handlePatch(scopePath, bundle, patch, allowReservedMutation);
+            if (patch == null) {
+                return;
+            }
+            handlePatches(scopePath,
+                    bundle,
+                    Collections.singletonList(patch),
+                    allowReservedMutation);
+        }
+
+        void handlePatches(String scopePath,
+                           ContractBundle bundle,
+                           List<JsonPatch> patches,
+                           boolean allowReservedMutation) {
+            scopeExecutor.handlePatches(scopePath, bundle, patches, allowReservedMutation);
         }
 
         ProcessorExecutionContext createContext(String scopePath,
