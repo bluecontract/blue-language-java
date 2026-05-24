@@ -1,0 +1,14 @@
+id: R_enum_integer_vs_double
+category: Schema
+operation: parseSource
+description: enum accepts scalar integer and double entries as distinct scalar forms
+source:
+  schema:
+    enum:
+      - 1
+      - 1.0
+expectedParsed:
+  schema:
+    enum:
+      - 1
+      - 1.0

@@ -1,11 +1,8 @@
 package blue.language.utils;
 
 import blue.language.model.Node;
-import com.fasterxml.jackson.core.type.TypeReference;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +10,6 @@ import java.util.stream.Collectors;
 
 import static blue.language.utils.NodeToMapListOrValue.Strategy.*;
 import static blue.language.utils.Properties.*;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class NodeToMapListOrValue {
 
@@ -28,6 +24,12 @@ public class NodeToMapListOrValue {
 
     public static Object get(Node node, Strategy strategy) {
         validatePayloadKind(node);
+
+        if (Nodes.isEmptyPlaceholder(node)) {
+            Map<String, Object> placeholder = new LinkedHashMap<>();
+            placeholder.put(LIST_CONTROL_EMPTY, true);
+            return placeholder;
+        }
 
         if (node.isReferenceOnly()) {
             Map<String, Object> reference = new LinkedHashMap<>();
@@ -66,7 +68,7 @@ public class NodeToMapListOrValue {
             String inferredTypeBlueId = inferTypeBlueId(value);
             if (inferredTypeBlueId != null) {
                 valueTypeBlueId = inferredTypeBlueId;
-                Map<String, String> map = new HashMap<>();
+                Map<String, String> map = new LinkedHashMap<>();
                 map.put(OBJECT_BLUE_ID, inferredTypeBlueId);
                 result.put(OBJECT_TYPE, map);
             }
@@ -90,9 +92,11 @@ public class NodeToMapListOrValue {
         if (items != null)
             result.put(OBJECT_ITEMS, items);
         if (node.getSchema() != null)
-            result.put(OBJECT_SCHEMA, YAML_MAPPER.convertValue(node.getSchema(), new TypeReference<Map<String, Object>>() {}));
+            result.put(OBJECT_SCHEMA, SchemaToMapListOrValue.get(node.getSchema(), child -> get(child, strategy)));
+        if (node.getContracts() != null)
+            result.put(OBJECT_CONTRACTS, get(node.getContracts(), strategy));
         if (node.getBlue() != null)
-            result.put(OBJECT_BLUE, node.getBlue());
+            result.put(OBJECT_BLUE, get(node.getBlue(), strategy));
         if (node.getProperties() != null)
             node.getProperties().forEach((key, propertyValue) -> result.put(key, get(propertyValue, strategy)));
         return result;
@@ -117,6 +121,7 @@ public class NodeToMapListOrValue {
                 || node.getMergePolicy() != null
                 || node.getPosition() != null
                 || node.getBlue() != null
+                || node.getContracts() != null
                 || node.getBlueId() != null)) {
             throw new IllegalArgumentException("\"$previous\" list anchors must be single-key list items.");
         }

@@ -1,0 +1,24 @@
+id: R_blue_imports_type_itemType_keyType_valueType
+category: Resolution
+operation: preprocess
+description: portable blue.imports aliases all type-position fields and is removed
+source:
+  blue:
+    imports:
+      Person:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  type: Person
+  itemType: Person
+  keyType: Person
+  valueType: Person
+  items: []
+expectedPreprocessed:
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  itemType:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  keyType:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  valueType:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  items: []

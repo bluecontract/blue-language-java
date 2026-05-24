@@ -11,6 +11,7 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.merge.processor.*;
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractMatchingService;
@@ -35,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -64,6 +66,7 @@ public class Blue implements NodeResolver {
     ));
 
     private NodeProvider nodeProvider;
+    private NodeProvider originalNodeProvider;
     private MergingProcessor mergingProcessor;
     private TypeClassResolver typeClassResolver;
     private Map<String, String> preprocessingAliases = new HashMap<>();
@@ -80,6 +83,7 @@ public class Blue implements NodeResolver {
     }
 
     public Blue(NodeProvider nodeProvider) {
+        this.originalNodeProvider = nodeProvider;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = createDefaultNodeProcessor();
         this.documentProcessor = createDefaultDocumentProcessor();
@@ -94,6 +98,7 @@ public class Blue implements NodeResolver {
     }
 
     public Blue(NodeProvider nodeProvider, MergingProcessor mergingProcessor, TypeClassResolver typeClassResolver) {
+        this.originalNodeProvider = nodeProvider;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = mergingProcessor != null ? mergingProcessor : createDefaultNodeProcessor();
         this.typeClassResolver = typeClassResolver;
@@ -157,10 +162,22 @@ public class Blue implements NodeResolver {
         return resolvePreservingPaths(node, limits, selectPaths(node, pathPatterns, predicate));
     }
 
+    /**
+     * @deprecated Use {@link #canonicalize(Node)} for Content BlueId identity
+     * or {@link MergeReverser#reverseToMinimizedOverlay(Node)} for author-facing
+     * minimized output.
+     */
+    @Deprecated
     public Node reverse(Node node) {
         return new MergeReverser().reverse(node);
     }
 
+    /**
+     * @deprecated Use {@link #canonicalize(Object)} for Content BlueId identity
+     * or {@link MergeReverser#reverseToMinimizedOverlay(Node)} for author-facing
+     * minimized output.
+     */
+    @Deprecated
     public Node reverse(Object object) {
         return reverse(objectToNode(object));
     }
@@ -168,17 +185,39 @@ public class Blue implements NodeResolver {
     public Node canonicalize(Node node) {
         Node preprocessed = preprocess(node.clone());
         Node resolved = resolve(preprocessed.clone());
-        return reverse(resolved);
+        return new MergeReverser().reverseToCanonicalOverlay(resolved);
     }
 
     public Node canonicalize(Object object) {
         return canonicalize(objectToNode(object));
     }
 
+    public Node expand(Node node) {
+        if (node == null) {
+            throw new IllegalArgumentException("node must not be null");
+        }
+        return expandReferences(node);
+    }
+
+    public Node expand(Object object) {
+        return expand(objectToNode(object));
+    }
+
+    public Node collapse(Node node) {
+        if (node == null) {
+            throw new IllegalArgumentException("node must not be null");
+        }
+        return new Node().blueId(BlueIdCalculator.calculateBlueId(node));
+    }
+
+    public Node collapse(Object object) {
+        return collapse(objectToNode(object));
+    }
+
     public ResolvedSnapshot resolveToSnapshot(Node node) {
         Node preprocessed = preprocess(node.clone());
         Node resolved = resolve(preprocessed.clone());
-        Node canonical = reverse(resolved.clone());
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(resolved.clone());
         FrozenNode canonicalRoot = FrozenNode.fromNode(canonical);
         return cacheSnapshot(new ResolvedSnapshot(canonicalRoot, resolvedReferenceCache.freezeResolved(resolved), canonicalRoot.blueId()));
     }
@@ -226,6 +265,75 @@ public class Blue implements NodeResolver {
         return canonical;
     }
 
+    private Node expandReferences(Node node) {
+        if (node == null) {
+            return null;
+        }
+        if (node.isReferenceOnly()) {
+            List<Node> nodes = nodeProvider.fetchByBlueId(node.getBlueId());
+            if (nodes == null || nodes.isEmpty()) {
+                throw new IllegalArgumentException("No content found for blueId: " + node.getBlueId());
+            }
+            if (nodes.size() == 1) {
+                return expandReferences(providerContentWithoutRootIdentity(nodes.get(0)));
+            }
+            return new Node().items(expandReferences(providerContentWithoutRootIdentity(nodes)));
+        }
+
+        Node expanded = node.clone();
+        expanded.type(expandReferences(expanded.getType()));
+        expanded.itemType(expandReferences(expanded.getItemType()));
+        expanded.keyType(expandReferences(expanded.getKeyType()));
+        expanded.valueType(expandReferences(expanded.getValueType()));
+        expanded.blue(expandReferences(expanded.getBlue()));
+        expanded.contracts(expandReferences(expanded.getContracts()));
+        if (expanded.getItems() != null) {
+            expanded.items(expandReferences(expanded.getItems()));
+        }
+        if (expanded.getProperties() != null) {
+            Map<String, Node> expandedProperties = new LinkedHashMap<>();
+            expanded.getProperties().forEach((key, value) ->
+                    expandedProperties.put(key, expandReferences(value)));
+            expanded.properties(expandedProperties);
+        }
+        if (expanded.getSchema() != null) {
+            expanded.schema(expandReferences(expanded.getSchema()));
+        }
+        return expanded;
+    }
+
+    private List<Node> expandReferences(List<Node> nodes) {
+        List<Node> expanded = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            expanded.add(expandReferences(node));
+        }
+        return expanded;
+    }
+
+    private Schema expandReferences(Schema schema) {
+        if (schema == null) {
+            return null;
+        }
+        Schema expanded = schema.clone();
+        expanded.required(expandReferences(expanded.getRequired()));
+        expanded.minLength(expandReferences(expanded.getMinLength()));
+        expanded.maxLength(expandReferences(expanded.getMaxLength()));
+        expanded.minimum(expandReferences(expanded.getMinimum()));
+        expanded.maximum(expandReferences(expanded.getMaximum()));
+        expanded.exclusiveMinimum(expandReferences(expanded.getExclusiveMinimum()));
+        expanded.exclusiveMaximum(expandReferences(expanded.getExclusiveMaximum()));
+        expanded.multipleOf(expandReferences(expanded.getMultipleOf()));
+        expanded.minItems(expandReferences(expanded.getMinItems()));
+        expanded.maxItems(expandReferences(expanded.getMaxItems()));
+        expanded.uniqueItems(expandReferences(expanded.getUniqueItems()));
+        expanded.minFields(expandReferences(expanded.getMinFields()));
+        expanded.maxFields(expandReferences(expanded.getMaxFields()));
+        if (expanded.getEnum() != null) {
+            expanded.enumValues(expandReferences(expanded.getEnum()));
+        }
+        return expanded;
+    }
+
     public CanonicalOverlayPatchEngine canonicalPatchEngine(Node canonical) {
         return new CanonicalOverlayPatchEngine(FrozenNode.fromNode(canonical));
     }
@@ -269,6 +377,29 @@ public class Blue implements NodeResolver {
         return new ConformanceEngine(nodeProvider, mergingProcessor, resolvedReferenceCache);
     }
 
+    public String languageVersion() {
+        return "1.0";
+    }
+
+    public BlueConformanceReport conformanceReport() {
+        String fixturePackageIdentity = BlueConformanceReport.loadFixturePackageIdentity("blue-language-1.0-fixtures:unavailable");
+        List<String> fixtureIds = BlueConformanceReport.loadFixtureIds();
+        Map<String, BlueFixtureCategory> fixtureCategories = BlueConformanceReport.loadFixtureCategories();
+        return new BlueConformanceReport(
+                languageVersion(),
+                new LinkedHashMap<>(Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP),
+                fixturePackageIdentity,
+                fixtureIds,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                fixtureCategories
+        );
+    }
+
+    public BlueConformanceReport runConformanceSuite() {
+        return BlueConformanceSuiteRunner.run(this);
+    }
+
     public void extend(Node node, Limits limits) {
         Limits effectiveLimits = combineWithGlobalLimits(limits);
         new NodeExtender(nodeProvider).extend(node, effectiveLimits);
@@ -304,11 +435,94 @@ public class Blue implements NodeResolver {
     }
 
     public Node yamlToNode(String yaml) {
-        return preprocess(YAML_MAPPER.readValue(yaml, Node.class));
+        return preprocess(parseSourceYaml(yaml));
     }
 
     public Node jsonToNode(String json) {
-        return preprocess(JSON_MAPPER.readValue(json, Node.class));
+        return preprocess(parseSourceJson(json));
+    }
+
+    public Node parseSourceYaml(String yaml) {
+        return YAML_MAPPER.readValue(yaml, Node.class);
+    }
+
+    public Node parseSourceJson(String json) {
+        return JSON_MAPPER.readValue(json, Node.class);
+    }
+
+    public Node parseBlueIdInputYaml(String yaml) {
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        validateBlueIdInputReferences(node, "/");
+        BlueIdCalculator.calculateBlueId(node);
+        return node;
+    }
+
+    public Node parseBlueIdInputJson(String json) {
+        Node node = JSON_MAPPER.readValue(json, Node.class);
+        validateBlueIdInputReferences(node, "/");
+        BlueIdCalculator.calculateBlueId(node);
+        return node;
+    }
+
+    private void validateBlueIdInputReferences(Node node, String path) {
+        if (node == null) {
+            return;
+        }
+        if (node.getBlueId() != null) {
+            BlueIds.requireNoThisPlaceholderOutsideCyclicApi(node.getBlueId(), path + "/blueId");
+            BlueIds.requireBlueIdOrCyclicMember(node.getBlueId(), path + "/blueId");
+        }
+        if (node.getPreviousBlueId() != null) {
+            BlueIds.requirePlainBlueId(node.getPreviousBlueId(), path + "/$previous/blueId");
+        }
+        validateBlueIdInputReferences(node.getType(), appendPath(path, "type"));
+        validateBlueIdInputReferences(node.getItemType(), appendPath(path, "itemType"));
+        validateBlueIdInputReferences(node.getKeyType(), appendPath(path, "keyType"));
+        validateBlueIdInputReferences(node.getValueType(), appendPath(path, "valueType"));
+        validateBlueIdInputReferences(node.getBlue(), appendPath(path, "blue"));
+        validateBlueIdInputReferences(node.getContracts(), appendPath(path, "contracts"));
+        if (node.getItems() != null) {
+            for (int i = 0; i < node.getItems().size(); i++) {
+                validateBlueIdInputReferences(node.getItems().get(i), appendPath(path, String.valueOf(i)));
+            }
+        }
+        if (node.getProperties() != null) {
+            node.getProperties().forEach((key, value) ->
+                    validateBlueIdInputReferences(value, appendPath(path, key)));
+        }
+        validateBlueIdInputReferences(node.getSchema(), appendPath(path, "schema"));
+    }
+
+    private void validateBlueIdInputReferences(Schema schema, String path) {
+        if (schema == null) {
+            return;
+        }
+        validateBlueIdInputReferences(schema.getRequired(), appendPath(path, "required"));
+        validateBlueIdInputReferences(schema.getMinLength(), appendPath(path, "minLength"));
+        validateBlueIdInputReferences(schema.getMaxLength(), appendPath(path, "maxLength"));
+        validateBlueIdInputReferences(schema.getMinimum(), appendPath(path, "minimum"));
+        validateBlueIdInputReferences(schema.getMaximum(), appendPath(path, "maximum"));
+        validateBlueIdInputReferences(schema.getExclusiveMinimum(), appendPath(path, "exclusiveMinimum"));
+        validateBlueIdInputReferences(schema.getExclusiveMaximum(), appendPath(path, "exclusiveMaximum"));
+        validateBlueIdInputReferences(schema.getMultipleOf(), appendPath(path, "multipleOf"));
+        validateBlueIdInputReferences(schema.getMinItems(), appendPath(path, "minItems"));
+        validateBlueIdInputReferences(schema.getMaxItems(), appendPath(path, "maxItems"));
+        validateBlueIdInputReferences(schema.getUniqueItems(), appendPath(path, "uniqueItems"));
+        validateBlueIdInputReferences(schema.getMinFields(), appendPath(path, "minFields"));
+        validateBlueIdInputReferences(schema.getMaxFields(), appendPath(path, "maxFields"));
+        if (schema.getEnum() != null) {
+            for (int i = 0; i < schema.getEnum().size(); i++) {
+                validateBlueIdInputReferences(schema.getEnum().get(i), appendPath(path, "enum/" + i));
+            }
+        }
+    }
+
+    private String appendPath(String path, String segment) {
+        String prefix = path == null || path.isEmpty() ? "/" : path;
+        if ("/".equals(prefix)) {
+            return "/" + segment.replace("~", "~0").replace("/", "~1");
+        }
+        return prefix + "/" + segment.replace("~", "~0").replace("/", "~1");
     }
 
     public String nodeToYaml(Node node) {
@@ -533,6 +747,7 @@ public class Blue implements NodeResolver {
     }
 
     public Blue nodeProvider(NodeProvider nodeProvider) {
+        this.originalNodeProvider = nodeProvider;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         clearResolvedSnapshotCache();
         refreshDocumentProcessorConformanceEngine();
@@ -619,8 +834,8 @@ public class Blue implements NodeResolver {
         Node preprocessed = preprocess(node.clone());
         Node resolved = new Merger(mergingProcessor, processorSnapshotNodeProvider(), resolvedReferenceCache)
                 .resolve(preprocessed.clone(), NO_LIMITS);
-        Node canonical = reverse(resolved.clone());
-        FrozenNode canonicalRoot = FrozenNode.fromNode(canonical);
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(resolved.clone());
+        FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(canonical);
         return cacheSnapshot(new ResolvedSnapshot(canonicalRoot, resolvedReferenceCache.freezeResolved(resolved), canonicalRoot.blueId()));
     }
 
@@ -697,12 +912,12 @@ public class Blue implements NodeResolver {
         if (documentProcessor != null) {
             processorTypeBlueIds.addAll(documentProcessor.getContractRegistry().processors().keySet());
         }
-        return blueId -> {
+        return NodeProviderWrapper.unverified(blueId -> {
             if (processorTypeBlueIds.contains(blueId) || !BlueIds.isPotentialBlueId(blueId)) {
                 return Collections.singletonList(new Node().name(blueId));
             }
-            return nodeProvider.fetchByBlueId(blueId);
-        };
+            return originalNodeProvider.fetchByBlueId(blueId);
+        });
     }
 
     private ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {

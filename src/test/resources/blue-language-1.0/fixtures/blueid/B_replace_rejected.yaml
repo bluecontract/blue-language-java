@@ -1,0 +1,10 @@
+id: B_replace_rejected
+category: BlueId
+operation: calculateBlueId
+description: direct BlueId Input rejects $replace overlays
+expectError: true
+input:
+  items:
+    - $pos: 0
+      $replace:
+        value: A

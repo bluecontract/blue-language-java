@@ -1,0 +1,18 @@
+id: C_three_document_cycle_stable_order
+category: Circular
+operation: calculateCircularSetBlueIds
+description: three-document circular set returns final IDs in original input order
+documents:
+  - name: A
+    next:
+      blueId: this#1
+  - name: B
+    next:
+      blueId: this#2
+  - name: C
+    next:
+      blueId: this#0
+expectedBlueIds:
+  - "8vSb4nj6vqUPCySQMaVQKbaHKANXpPhucCrEA6hCxHCf#1"
+  - "8vSb4nj6vqUPCySQMaVQKbaHKANXpPhucCrEA6hCxHCf#2"
+  - "8vSb4nj6vqUPCySQMaVQKbaHKANXpPhucCrEA6hCxHCf#0"

@@ -1,8 +1,5 @@
 package blue.language.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
@@ -15,7 +12,6 @@ import static blue.language.utils.TypeUtils.*;
 public class Schema implements Cloneable {
 
     private Node required;
-    private Node allowMultiple;
     private Node minLength;
     private Node maxLength;
     private Node minimum;
@@ -29,16 +25,10 @@ public class Schema implements Cloneable {
     private Node minFields;
     private Node maxFields;
     @JsonProperty("enum")
-    @JsonAlias("options")
-    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<Node> enumValues;
 
     public Node getRequired() {
         return required;
-    }
-
-    public Node getAllowMultiple() {
-        return allowMultiple;
     }
 
     public Node getMinLength() {
@@ -85,16 +75,30 @@ public class Schema implements Cloneable {
         return required == null ? null : getBooleanFromObject(required.getValue());
     }
 
-    public Boolean getAllowMultipleValue() {
-        return allowMultiple == null ? null : getBooleanFromObject(allowMultiple.getValue());
-    }
-
+    /**
+     * @deprecated Blue Language 1.0 count and length schema keywords use the
+     * interoperable JSON integer range. Use {@link #getMinLengthExact()}.
+     */
+    @Deprecated
     public Integer getMinLengthValue() {
         return minLength == null ? null : getIntegerFromObject(minLength.getValue());
     }
 
+    public BigInteger getMinLengthExact() {
+        return minLength == null ? null : getBigIntegerFromObject(minLength.getValue());
+    }
+
+    /**
+     * @deprecated Blue Language 1.0 count and length schema keywords use the
+     * interoperable JSON integer range. Use {@link #getMaxLengthExact()}.
+     */
+    @Deprecated
     public Integer getMaxLengthValue() {
         return maxLength == null ? null : getIntegerFromObject(maxLength.getValue());
+    }
+
+    public BigInteger getMaxLengthExact() {
+        return maxLength == null ? null : getBigIntegerFromObject(maxLength.getValue());
     }
 
     public BigDecimal getMinimumValue() {
@@ -117,12 +121,30 @@ public class Schema implements Cloneable {
         return multipleOf == null ? null : getBigDecimalFromObject(multipleOf.getValue());
     }
 
+    /**
+     * @deprecated Blue Language 1.0 count and length schema keywords use the
+     * interoperable JSON integer range. Use {@link #getMinItemsExact()}.
+     */
+    @Deprecated
     public Integer getMinItemsValue() {
         return minItems == null ? null : getIntegerFromObject(minItems.getValue());
     }
 
+    public BigInteger getMinItemsExact() {
+        return minItems == null ? null : getBigIntegerFromObject(minItems.getValue());
+    }
+
+    /**
+     * @deprecated Blue Language 1.0 count and length schema keywords use the
+     * interoperable JSON integer range. Use {@link #getMaxItemsExact()}.
+     */
+    @Deprecated
     public Integer getMaxItemsValue() {
         return maxItems == null ? null : getIntegerFromObject(maxItems.getValue());
+    }
+
+    public BigInteger getMaxItemsExact() {
+        return maxItems == null ? null : getBigIntegerFromObject(maxItems.getValue());
     }
 
     public Boolean getUniqueItemsValue() {
@@ -142,26 +164,34 @@ public class Schema implements Cloneable {
         return enumValues;
     }
 
-    @JsonIgnore
-    public List<Node> getOptions() {
-        return enumValues;
-    }
-
+    /**
+     * @deprecated Blue Language 1.0 count and length schema keywords use the
+     * interoperable JSON integer range. Use {@link #getMinFieldsExact()}.
+     */
+    @Deprecated
     public Integer getMinFieldsValue() {
         return minFields == null ? null : getIntegerFromObject(minFields.getValue());
     }
 
+    public BigInteger getMinFieldsExact() {
+        return minFields == null ? null : getBigIntegerFromObject(minFields.getValue());
+    }
+
+    /**
+     * @deprecated Blue Language 1.0 count and length schema keywords use the
+     * interoperable JSON integer range. Use {@link #getMaxFieldsExact()}.
+     */
+    @Deprecated
     public Integer getMaxFieldsValue() {
         return maxFields == null ? null : getIntegerFromObject(maxFields.getValue());
     }
 
-    public Schema required(Node required) {
-        this.required = required;
-        return this;
+    public BigInteger getMaxFieldsExact() {
+        return maxFields == null ? null : getBigIntegerFromObject(maxFields.getValue());
     }
 
-    public Schema allowMultiple(Node allowMultiple) {
-        this.allowMultiple = allowMultiple;
+    public Schema required(Node required) {
+        this.required = required;
         return this;
     }
 
@@ -230,18 +260,8 @@ public class Schema implements Cloneable {
         return this;
     }
 
-    public Schema options(List<Node> options) {
-        this.enumValues = options;
-        return this;
-    }
-
     public Schema required(Boolean required) {
         this.required = new Node().value(required);
-        return this;
-    }
-
-    public Schema allowMultiple(Boolean allowMultiple) {
-        this.allowMultiple = new Node().value(allowMultiple);
         return this;
     }
 
@@ -250,8 +270,18 @@ public class Schema implements Cloneable {
         return this;
     }
 
+    public Schema minLength(BigInteger minLength) {
+        this.minLength = new Node().value(minLength);
+        return this;
+    }
+
     public Schema maxLength(Integer maxLength) {
         this.maxLength = new Node().value(BigInteger.valueOf(maxLength));
+        return this;
+    }
+
+    public Schema maxLength(BigInteger maxLength) {
+        this.maxLength = new Node().value(maxLength);
         return this;
     }
 
@@ -285,8 +315,18 @@ public class Schema implements Cloneable {
         return this;
     }
 
+    public Schema minItems(BigInteger minItems) {
+        this.minItems = new Node().value(minItems);
+        return this;
+    }
+
     public Schema maxItems(Integer maxItems) {
         this.maxItems = new Node().value(BigInteger.valueOf(maxItems));
+        return this;
+    }
+
+    public Schema maxItems(BigInteger maxItems) {
+        this.maxItems = new Node().value(maxItems);
         return this;
     }
 
@@ -300,8 +340,18 @@ public class Schema implements Cloneable {
         return this;
     }
 
+    public Schema minFields(BigInteger minFields) {
+        this.minFields = new Node().value(minFields);
+        return this;
+    }
+
     public Schema maxFields(Integer maxFields) {
         this.maxFields = new Node().value(BigInteger.valueOf(maxFields));
+        return this;
+    }
+
+    public Schema maxFields(BigInteger maxFields) {
+        this.maxFields = new Node().value(maxFields);
         return this;
     }
 
@@ -311,7 +361,6 @@ public class Schema implements Cloneable {
             Schema cloned = (Schema) super.clone();
 
             if (this.required != null) cloned.required = this.required.clone();
-            if (this.allowMultiple != null) cloned.allowMultiple = this.allowMultiple.clone();
             if (this.minLength != null) cloned.minLength = this.minLength.clone();
             if (this.maxLength != null) cloned.maxLength = this.maxLength.clone();
             if (this.minimum != null) cloned.minimum = this.minimum.clone();
@@ -341,19 +390,18 @@ public class Schema implements Cloneable {
     public String toString() {
         return "Schema{" +
                 "required=" + getRequiredValue() +
-                ", allowMultiple=" + getAllowMultipleValue() +
-                ", minLength=" + getMinLengthValue() +
-                ", maxLength=" + getMaxLengthValue() +
+                ", minLength=" + getMinLengthExact() +
+                ", maxLength=" + getMaxLengthExact() +
                 ", minimum=" + getMinimumValue() +
                 ", maximum=" + getMaximumValue() +
                 ", exclusiveMinimum=" + getExclusiveMinimumValue() +
                 ", exclusiveMaximum=" + getExclusiveMaximumValue() +
                 ", multipleOf=" + getMultipleOfValue() +
-                ", minItems=" + getMinItemsValue() +
-                ", maxItems=" + getMaxItemsValue() +
+                ", minItems=" + getMinItemsExact() +
+                ", maxItems=" + getMaxItemsExact() +
                 ", uniqueItems=" + getUniqueItemsValue() +
-                ", minFields=" + getMinFieldsValue() +
-                ", maxFields=" + getMaxFieldsValue() +
+                ", minFields=" + getMinFieldsExact() +
+                ", maxFields=" + getMaxFieldsExact() +
                 ", enum=" + enumValues +
                 '}';
     }

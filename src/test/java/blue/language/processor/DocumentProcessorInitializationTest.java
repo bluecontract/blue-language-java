@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.RemovePropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -43,7 +44,7 @@ class DocumentProcessorInitializationTest {
         Blue blue = new Blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
-        String expectedDocumentId = blue.calculateBlueId(original.clone());
+        String expectedDocumentId = BlueIdCalculator.calculateUncheckedBlueId(original.clone());
 
         assertFalse(blue.isInitialized(original));
 
@@ -70,7 +71,7 @@ class DocumentProcessorInitializationTest {
         assertNotNull(xNode, "x should be present after initialization");
         assertEquals(new BigInteger("10"), xNode.getValue());
 
-        Node contractsNode = initializedProps.get("contracts");
+        Node contractsNode = initialized.getContracts();
         assertNotNull(contractsNode);
         Node initializedNode = contractsNode.getProperties().get("initialized");
         assertNotNull(initializedNode, "Initialization marker should be present");
@@ -92,7 +93,7 @@ class DocumentProcessorInitializationTest {
 
         assertTrue(processResult.triggeredEvents().isEmpty());
 
-        assertNull(original.getProperties().get("x"));
+        assertNull(original.getProperties() != null ? original.getProperties().get("x") : null);
     }
 
     @Test
@@ -263,7 +264,7 @@ class DocumentProcessorInitializationTest {
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node processed = result.document();
 
-        assertFalse(processed.getProperties().containsKey("x"));
+        assertFalse(processed.getProperties() != null && processed.getProperties().containsKey("x"));
         assertTrue(result.triggeredEvents().stream()
                 .anyMatch(node -> {
                     Map<String, Node> props = node.getProperties();

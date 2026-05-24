@@ -46,8 +46,7 @@ class DocumentProcessorBoundaryTest {
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
         Node foo = resultDoc.getAsNode("/foo");
         Map<String, Node> fooProps = foo.getProperties();
-        assertNotNull(fooProps);
-        assertFalse(fooProps.containsKey("bar"));
+        assertFalse(fooProps != null && fooProps.containsKey("bar"));
     }
 
     @Test
@@ -72,8 +71,7 @@ class DocumentProcessorBoundaryTest {
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
         Node foo = resultDoc.getAsNode("/foo");
         Map<String, Node> fooProps = foo.getProperties();
-        assertNotNull(fooProps);
-        assertFalse(fooProps.containsKey("child"));
+        assertFalse(fooProps != null && fooProps.containsKey("child"));
     }
 
     @Test
@@ -200,7 +198,7 @@ class DocumentProcessorBoundaryTest {
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
         Node fooNode = resultDoc.getProperties().get("foo");
         assertNotNull(fooNode);
-        assertTrue(fooNode.getProperties().containsKey("contracts"));
+        assertTrue(fooNode.getContracts() != null);
     }
 
     private Node getProperty(Node node, String key) {

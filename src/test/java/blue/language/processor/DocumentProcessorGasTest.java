@@ -367,7 +367,7 @@ class DocumentProcessorGasTest {
         assertProcessedAccount(result, types);
         assertNotNull(result.snapshot());
         assertEquals(result.snapshot().blueId(), result.blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(result.canonicalDocument()), result.blueId());
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalDocument()), result.blueId());
         assertEquals(1, result.canonicalDocument().getAsInteger("/balance/cents"));
         assertEquals(1, result.resolvedDocument().getAsInteger("/balance/cents"));
         assertNullNode(result.canonicalDocument(), "/balance/currency");
@@ -387,7 +387,7 @@ class DocumentProcessorGasTest {
         assertInitializedAccount(result, types);
         assertNotNull(result.snapshot());
         assertEquals(result.snapshot().blueId(), result.blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(result.canonicalDocument()), result.blueId());
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalDocument()), result.blueId());
         assertEquals(0, result.canonicalDocument().getAsInteger("/balance/cents"));
         assertEquals(0, result.resolvedDocument().getAsInteger("/balance/cents"));
         assertNullNode(result.canonicalDocument(), "/balance/currency");
@@ -418,9 +418,7 @@ class DocumentProcessorGasTest {
     }
 
     private Node extractInitializedMarker(Node document) {
-        Map<String, Node> contracts = document.getProperties();
-        assertNotNull(contracts);
-        Node contractsNode = contracts.get("contracts");
+        Node contractsNode = document.getContracts();
         assertNotNull(contractsNode);
         return contractsNode.getProperties().get("initialized");
     }
@@ -432,7 +430,7 @@ class DocumentProcessorGasTest {
     }
 
     private Node extractEmitterEventTemplate(Node document) {
-        Node contracts = document.getProperties().get("contracts");
+        Node contracts = document.getContracts();
         assertNotNull(contracts);
         Node emitter = contracts.getProperties().get("emitter");
         assertNotNull(emitter);

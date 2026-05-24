@@ -190,7 +190,6 @@ public class NodeToMapListOrValueTest {
     public void testNodeWithSchemaMappingStrategy() throws Exception {
         Schema schema = new Schema()
                 .required(true)
-                .allowMultiple(false)
                 .minLength(
                         new Node().name("Min smth").value(5)
                 )
@@ -217,19 +216,18 @@ public class NodeToMapListOrValueTest {
         Schema resultSchema = fromObject.getSchema();
 
         assertEquals(true, resultSchema.getRequiredValue());
-        assertEquals(false, resultSchema.getAllowMultipleValue());
-        assertEquals(5, resultSchema.getMinLengthValue());
-        assertEquals(10, resultSchema.getMaxLengthValue());
+        assertEquals(BigInteger.valueOf(5), resultSchema.getMinLengthExact());
+        assertEquals(BigInteger.valueOf(10), resultSchema.getMaxLengthExact());
         assertEquals(0, new BigDecimal("1.0").compareTo(resultSchema.getMinimumValue()));
         assertEquals(0, new BigDecimal("100.0").compareTo(resultSchema.getMaximumValue()));
         assertEquals(0, new BigDecimal("0.0").compareTo(resultSchema.getExclusiveMinimumValue()));
         assertEquals(0, new BigDecimal("101.0").compareTo(resultSchema.getExclusiveMaximumValue()));
         assertEquals(0, new BigDecimal("2.0").compareTo(resultSchema.getMultipleOfValue()));
-        assertEquals(1, resultSchema.getMinItemsValue());
-        assertEquals(5, resultSchema.getMaxItemsValue());
+        assertEquals(BigInteger.ONE, resultSchema.getMinItemsExact());
+        assertEquals(BigInteger.valueOf(5), resultSchema.getMaxItemsExact());
         assertEquals(true, resultSchema.getUniqueItemsValue());
-        assertEquals(1, resultSchema.getMinFieldsValue());
-        assertEquals(3, resultSchema.getMaxFieldsValue());
+        assertEquals(BigInteger.ONE, resultSchema.getMinFieldsExact());
+        assertEquals(BigInteger.valueOf(3), resultSchema.getMaxFieldsExact());
         assertEquals("red", resultSchema.getEnum().get(0).getValue());
         assertEquals("blue", resultSchema.getEnum().get(1).getValue());
     }
@@ -262,10 +260,42 @@ public class NodeToMapListOrValueTest {
     }
 
     @Test
-    public void canonicalSchemaSerializationEmitsEnumAndNotLegacyOptions() throws Exception {
+    public void nodeToMapSerializesBlueDirectiveRecursively() {
+        Object object = NodeToMapListOrValue.get(new Node()
+                .blue(new Node().properties("imports", new Node().properties(
+                        "Person", new Node().blueId("abc"))))
+                .value("hello"));
+
+        Map<String, Object> result = (Map<String, Object>) object;
+        assertInstanceOf(Map.class, result.get("blue"));
+        Map<String, Object> blue = (Map<String, Object>) result.get("blue");
+        assertInstanceOf(Map.class, blue.get("imports"));
+        assertEquals(Collections.singletonMap("blueId", "abc"),
+                ((Map<?, ?>) blue.get("imports")).get("Person"));
+    }
+
+    @Test
+    public void nodeToMapAllowsContractsAlongsideValueAndItems() {
+        Node valueWithContracts = new Node()
+                .value("abc")
+                .properties("contracts", new Node().properties("audit", new Node().value("on")));
+        Map<String, Object> valueResult = (Map<String, Object>) NodeToMapListOrValue.get(valueWithContracts);
+        assertEquals("abc", valueResult.get("value"));
+        assertTrue(valueResult.containsKey("contracts"));
+
+        Node itemsWithContracts = new Node()
+                .items(new Node().value("abc"))
+                .properties("contracts", new Node().properties("audit", new Node().value("on")));
+        Map<String, Object> itemsResult = (Map<String, Object>) NodeToMapListOrValue.get(itemsWithContracts);
+        assertTrue(itemsResult.containsKey("items"));
+        assertTrue(itemsResult.containsKey("contracts"));
+    }
+
+    @Test
+    public void canonicalSchemaSerializationEmitsEnumAndNoInvalidOptionsKey() throws Exception {
         Node node = new Blue().yamlToNode(
                 "schema:\n" +
-                "  options:\n" +
+                "  enum:\n" +
                 "    - red\n" +
                 "    - blue");
 
@@ -275,6 +305,21 @@ public class NodeToMapListOrValueTest {
         assertFalse(json.contains("\"options\""));
         assertEquals("red", node.getSchema().getEnum().get(0).getValue());
         assertEquals("blue", node.getSchema().getEnum().get(1).getValue());
+    }
+
+    @Test
+    public void schemaToMapPlainScalarDoesNotIgnoreContracts() {
+        Node node = new Node().schema(new Schema().enumValues(Collections.singletonList(
+                new Node()
+                        .value("red")
+                        .contracts(new Node().properties("audit", new Node().value(true))))));
+
+        Map<String, Object> result = (Map<String, Object>) NodeToMapListOrValue.get(node);
+        Map<String, Object> schema = (Map<String, Object>) result.get("schema");
+        List<Object> enumValues = (List<Object>) schema.get("enum");
+
+        assertInstanceOf(Map.class, enumValues.get(0));
+        assertTrue(((Map<String, Object>) enumValues.get(0)).containsKey("contracts"));
     }
 
     @Test

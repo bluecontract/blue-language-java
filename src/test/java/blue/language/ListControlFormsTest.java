@@ -78,6 +78,7 @@ class ListControlFormsTest {
     @Test
     void previousAnchorMustMatchInheritedList() {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        String wrongButValidBlueId = BlueIdCalculator.calculateBlueId(new Node().value("stale"));
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
                 "type:\n" +
@@ -90,7 +91,7 @@ class ListControlFormsTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
                 "items:\n" +
                 "  - $previous:\n" +
-                "      blueId: staleHash\n" +
+                "      blueId: " + wrongButValidBlueId + "\n" +
                 "  - B");
 
         assertThrows(IllegalArgumentException.class,
@@ -107,16 +108,16 @@ class ListControlFormsTest {
                 "mergePolicy: append-only\n" +
                 "items:\n" +
                 "  - A");
-        nodeProvider.addSingleDocs(
+        Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
                 "items:\n" +
                 "  - $pos: 0\n" +
-                "    value: B");
+                "    value: B", Node.class);
 
         assertThrows(IllegalArgumentException.class,
-                () -> new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived")));
+                () -> new Blue(nodeProvider).resolve(derived));
     }
 
     @Test
@@ -172,16 +173,16 @@ class ListControlFormsTest {
                 "items:\n" +
                 "  - $empty: true\n" +
                 "  - B");
-        nodeProvider.addSingleDocs(
+        Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
                 "items:\n" +
                 "  - $pos: 0\n" +
                 "    value: A\n" +
-                "  - C");
+                "  - C", Node.class);
 
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Node resolved = new Blue(nodeProvider).resolve(derived);
 
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
@@ -230,16 +231,16 @@ class ListControlFormsTest {
                 "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
                 "items:\n" +
                 "  - $empty: true");
-        nodeProvider.addSingleDocs(
+        Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
                 "items:\n" +
                 "  - $pos: 0\n" +
                 "    name: Real item\n" +
-                "    x: A");
+                "    x: A", Node.class);
 
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Node resolved = new Blue(nodeProvider).resolve(derived);
         Node item = resolved.getItems().get(0);
 
         assertEquals("Real item", item.getName());
@@ -248,27 +249,14 @@ class ListControlFormsTest {
     }
 
     @Test
-    void falseEmptyPropertyIsNotTreatedAsPlaceholder() {
+    void malformedEmptyPlaceholderIsRejected() {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        nodeProvider.addSingleDocs(
+        assertThrows(IllegalArgumentException.class, () -> nodeProvider.addSingleDocs(
                 "name: Base\n" +
                 "type:\n" +
                 "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
                 "items:\n" +
-                "  - $empty: false");
-        nodeProvider.addSingleDocs(
-                "name: Derived\n" +
-                "type:\n" +
-                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
-                "items:\n" +
-                "  - $pos: 0\n" +
-                "    x: A");
-
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
-        Node item = resolved.getItems().get(0);
-
-        assertEquals(false, item.getProperties().get("$empty").getValue());
-        assertEquals("A", item.getProperties().get("x").getValue());
+                "  - $empty: false"));
     }
 
     @Test
@@ -290,16 +278,16 @@ class ListControlFormsTest {
                 "items:\n" +
                 "  - type:\n" +
                 "      blueId: " + nodeProvider.getBlueIdByName("B"));
-        nodeProvider.addSingleDocs(
+        Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
                 "items:\n" +
                 "  - $pos: 0\n" +
                 "    type:\n" +
-                "      blueId: " + nodeProvider.getBlueIdByName("C"));
+                "      blueId: " + nodeProvider.getBlueIdByName("C"), Node.class);
 
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Node resolved = new Blue(nodeProvider).resolve(derived);
 
         assertEquals("C", resolved.getItems().get(0).getType().getName());
     }
@@ -314,15 +302,15 @@ class ListControlFormsTest {
                 "items:\n" +
                 "  - A\n" +
                 "  - $empty: true");
-        nodeProvider.addSingleDocs(
+        Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
                 "items:\n" +
                 "  - $pos: 1\n" +
-                "    value: B");
+                "    value: B", Node.class);
 
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Node resolved = new Blue(nodeProvider).resolve(derived);
 
         assertEquals(Arrays.asList("A", "B"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
@@ -341,7 +329,7 @@ class ListControlFormsTest {
                 "  - $empty: true");
         Node base = nodeProvider.getNodeByName("Base");
         String baseItemsBlueId = BlueIdCalculator.calculateBlueId(base.getItems());
-        nodeProvider.addSingleDocs(
+        Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
@@ -350,9 +338,9 @@ class ListControlFormsTest {
                 "      blueId: " + baseItemsBlueId + "\n" +
                 "  - $pos: 1\n" +
                 "    value: B\n" +
-                "  - C");
+                "  - C", Node.class);
 
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Node resolved = new Blue(nodeProvider).resolve(derived);
 
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
@@ -361,13 +349,13 @@ class ListControlFormsTest {
     }
 
     @Test
-    void listHashAcceptsSparsePositionControlsForProviderIngestion() {
+    void directListHashRejectsSparsePositionControls() {
         String sparsePosition = "items:\n" +
                 "  - $pos: 1\n" +
                 "    value: B";
 
-        BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(sparsePosition, Node.class));
-        // nothing should be thrown
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(sparsePosition, Node.class)));
     }
 
     @Test
@@ -391,6 +379,147 @@ class ListControlFormsTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> new Blue(nodeProvider).resolve(derived));
+    }
+
+    @Test
+    void posReplaceObjectReplacesInheritedObject() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "type:\n" +
+                "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
+                "items:\n" +
+                "  - inherited: yes\n");
+        Node derived = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    $replace:\n" +
+                "      replacement: replaced", Node.class);
+
+        Node resolved = new Blue(nodeProvider).resolve(derived);
+
+        assertFalse(resolved.getItems().get(0).getProperties().containsKey("inherited"));
+        assertEquals("replaced", resolved.getItems().get(0).getAsText("/replacement"));
+    }
+
+    @Test
+    void posReplaceListReplacesInheritedList() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "type:\n" +
+                "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
+                "items:\n" +
+                "  - items:\n" +
+                "      - A\n");
+        Node derived = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    $replace:\n" +
+                "      items:\n" +
+                "        - B\n" +
+                "        - C", Node.class);
+
+        Node resolved = new Blue(nodeProvider).resolve(derived);
+
+        assertEquals(Arrays.asList("B", "C"), Arrays.asList(
+                resolved.getItems().get(0).getItems().get(0).getValue(),
+                resolved.getItems().get(0).getItems().get(1).getValue()));
+    }
+
+    @Test
+    void posReplacePureReferenceReplacesInheritedReference() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs("name: Referenced\nvalue: R");
+        String referenceBlueId = nodeProvider.getBlueIdByName("Referenced");
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "type:\n" +
+                "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
+                "items:\n" +
+                "  - A\n");
+        Node derived = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    $replace:\n" +
+                "      blueId: " + referenceBlueId, Node.class);
+
+        Node resolved = new Blue(nodeProvider).resolve(derived);
+
+        assertEquals(null, resolved.getItems().get(0).getValue());
+        assertEquals(referenceBlueId, resolved.getItems().get(0).getBlueId());
+    }
+
+    @Test
+    void valueShorthandForScalarWorksAndRejectsCollectionValues() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "type:\n" +
+                "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
+                "items:\n" +
+                "  - A");
+        Node scalarOverlay = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    value: B", Node.class);
+
+        Node resolved = new Blue(nodeProvider).resolve(scalarOverlay);
+
+        assertEquals("B", resolved.getItems().get(0).getValue());
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    value:\n" +
+                "      x: y", Node.class));
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    value:\n" +
+                "      - A", Node.class));
+    }
+
+    @Test
+    void mapOverlayOnScalarInheritedItemIsRejected() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "type:\n" +
+                "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
+                "items:\n" +
+                "  - A");
+        Node objectOverlay = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    x: B", Node.class);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new Blue(nodeProvider).resolve(objectOverlay));
+    }
+
+    @Test
+    void replaceWithoutPosAndReplaceWithSiblingOverlayAreRejected() {
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $replace:\n" +
+                "      value: A", Node.class));
+
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    $replace:\n" +
+                "      value: A\n" +
+                "    sibling: B", Node.class));
     }
 
     @Test

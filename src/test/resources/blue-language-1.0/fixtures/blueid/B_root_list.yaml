@@ -1,0 +1,8 @@
+id: B_root_list
+category: BlueId
+operation: calculateBlueId
+description: root list is valid BlueId Input
+input:
+  - A
+  - B
+expectedNodeBlueId: "HGLd6gvx6YHX2cizkCMnrTPhTngpTeRnSzApLfrGYDWf"

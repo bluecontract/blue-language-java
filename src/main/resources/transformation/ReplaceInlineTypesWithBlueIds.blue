@@ -1,4 +1,4 @@
 name: Replace Inline Types with BlueIds
 type:
-  blueId: Ct1SGRGw1i47qjzm1ruiUdSZofeV6WevPTGuieVvbRS4
-description: This transformation replaces
+  blueId: AFidhDk8aBDwV7J5X2GjujPfVXBuHvHLcrXMBxxoCSf9
+description: Replaces inline type, itemType, keyType, and valueType aliases with canonical BlueId references.

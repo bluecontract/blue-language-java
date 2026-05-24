@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.utils.BlueIdCalculator.calculateUncheckedBlueId;
 import static blue.language.utils.Properties.*;
 
 public class Types {
@@ -23,15 +23,15 @@ public class Types {
         if (subtype == null || supertype == null) {
             return false;
         }
-        String subtypeBlueId = calculateBlueId(subtype);
-        String supertypeBlueId = calculateBlueId(supertype);
+        String subtypeBlueId = typeBlueId(subtype);
+        String supertypeBlueId = typeBlueId(supertype);
         if (sameType(subtype, supertype, subtypeBlueId, supertypeBlueId))
             return true;
 
         if (CORE_TYPE_BLUE_IDS.contains(subtypeBlueId)) {
             Node current = supertype;
             while (current != null) {
-                String currentBlueId = calculateBlueId(current);
+                String currentBlueId = typeBlueId(current);
                 if (sameType(current, subtype, currentBlueId, subtypeBlueId))
                     return true;
                 current = getType(current, nodeProvider);
@@ -41,7 +41,7 @@ public class Types {
 
         Node current = firstSubtypeTraversalNode(subtype, nodeProvider);
         while (current != null) {
-            String blueId = calculateBlueId(current);
+            String blueId = typeBlueId(current);
             if (sameType(current, supertype, blueId, supertypeBlueId))
                 return true;
             current = getType(current, nodeProvider);
@@ -82,6 +82,10 @@ public class Types {
         return compatibilityBlueId(left).equals(compatibilityBlueId(right));
     }
 
+    private static String typeBlueId(Node node) {
+        return node.getBlueId() != null ? node.getBlueId() : calculateUncheckedBlueId(node);
+    }
+
     private static String compatibilityBlueId(Node node) {
         if (node.getBlueId() != null && node.isReferenceOnly()) {
             return node.getBlueId();
@@ -94,7 +98,7 @@ public class Types {
         }
         Node stripped = node.clone();
         stripLabels(stripped);
-        return calculateBlueId(stripped);
+        return calculateUncheckedBlueId(stripped);
     }
 
     private static boolean isBareCoreTypeName(Node node) {
@@ -108,6 +112,7 @@ public class Types {
                 && node.getValue() == null
                 && node.getItems() == null
                 && node.getProperties() == null
+                && node.getContracts() == null
                 && node.getBlueId() == null
                 && node.getSchema() == null
                 && node.getMergePolicy() == null
@@ -130,8 +135,15 @@ public class Types {
         stripLabels(node.getKeyType());
         stripLabels(node.getValueType());
         stripLabels(node.getBlue());
+        stripLabels(node.getContracts());
         if (node.getItems() != null) {
-            node.getItems().forEach(Types::stripLabels);
+            for (int i = 0; i < node.getItems().size(); i++) {
+                Node item = node.getItems().get(i);
+                stripLabels(item);
+                if (Nodes.isEmptyNode(item)) {
+                    node.getItems().set(i, Nodes.emptyPlaceholder());
+                }
+            }
         }
         if (node.getProperties() != null) {
             node.getProperties().values().forEach(Types::stripLabels);
@@ -144,7 +156,6 @@ public class Types {
             return;
         }
         stripLabels(schema.getRequired());
-        stripLabels(schema.getAllowMultiple());
         stripLabels(schema.getMinLength());
         stripLabels(schema.getMaxLength());
         stripLabels(schema.getMinimum());

@@ -406,7 +406,6 @@ public final class FrozenTypeMatcher {
         try {
             verifyWellFormed(schema);
             return verifyRequired(schema, node)
-                    && verifyAllowMultiple(schema, node)
                     && verifyMinLength(schema, node)
                     && verifyMaxLength(schema, node)
                     && verifyMinimum(schema, node)
@@ -426,15 +425,15 @@ public final class FrozenTypeMatcher {
     }
 
     private void verifyWellFormed(Schema schema) {
-        verifyNonNegative(schema.getMinLengthValue());
-        verifyNonNegative(schema.getMaxLengthValue());
-        verifyMinLessThanOrEqualMax(schema.getMinLengthValue(), schema.getMaxLengthValue());
-        verifyNonNegative(schema.getMinItemsValue());
-        verifyNonNegative(schema.getMaxItemsValue());
-        verifyMinLessThanOrEqualMax(schema.getMinItemsValue(), schema.getMaxItemsValue());
-        verifyNonNegative(schema.getMinFieldsValue());
-        verifyNonNegative(schema.getMaxFieldsValue());
-        verifyMinLessThanOrEqualMax(schema.getMinFieldsValue(), schema.getMaxFieldsValue());
+        verifyNonNegative(schema.getMinLengthExact());
+        verifyNonNegative(schema.getMaxLengthExact());
+        verifyMinLessThanOrEqualMax(schema.getMinLengthExact(), schema.getMaxLengthExact());
+        verifyNonNegative(schema.getMinItemsExact());
+        verifyNonNegative(schema.getMaxItemsExact());
+        verifyMinLessThanOrEqualMax(schema.getMinItemsExact(), schema.getMaxItemsExact());
+        verifyNonNegative(schema.getMinFieldsExact());
+        verifyNonNegative(schema.getMaxFieldsExact());
+        verifyMinLessThanOrEqualMax(schema.getMinFieldsExact(), schema.getMaxFieldsExact());
         if (schema.getMinimumValue() != null
                 && schema.getMaximumValue() != null
                 && schema.getMinimumValue().compareTo(schema.getMaximumValue()) > 0) {
@@ -451,14 +450,14 @@ public final class FrozenTypeMatcher {
         }
     }
 
-    private void verifyNonNegative(Integer value) {
-        if (value != null && value < 0) {
+    private void verifyNonNegative(BigInteger value) {
+        if (value != null && value.signum() < 0) {
             throw new IllegalArgumentException("schema value must be non-negative");
         }
     }
 
-    private void verifyMinLessThanOrEqualMax(Integer min, Integer max) {
-        if (min != null && max != null && min > max) {
+    private void verifyMinLessThanOrEqualMax(BigInteger min, BigInteger max) {
+        if (min != null && max != null && min.compareTo(max) > 0) {
             throw new IllegalArgumentException("schema min must be <= max");
         }
     }
@@ -467,23 +466,18 @@ public final class FrozenTypeMatcher {
         return !Boolean.TRUE.equals(schema.getRequiredValue()) || hasPayload(node);
     }
 
-    private boolean verifyAllowMultiple(Schema schema, FrozenNode node) {
-        List<FrozenNode> items = node.getItems();
-        return Boolean.TRUE.equals(schema.getAllowMultipleValue()) || items == null || items.size() <= 1;
-    }
-
     private boolean verifyMinLength(Schema schema, FrozenNode node) {
-        Integer minLength = schema.getMinLengthValue();
+        BigInteger minLength = schema.getMinLengthExact();
         Object value = node.getValue();
         return minLength == null || !(value instanceof String)
-                || ((String) value).codePointCount(0, ((String) value).length()) >= minLength;
+                || BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(minLength) >= 0;
     }
 
     private boolean verifyMaxLength(Schema schema, FrozenNode node) {
-        Integer maxLength = schema.getMaxLengthValue();
+        BigInteger maxLength = schema.getMaxLengthExact();
         Object value = node.getValue();
         return maxLength == null || !(value instanceof String)
-                || ((String) value).codePointCount(0, ((String) value).length()) <= maxLength;
+                || BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(maxLength) <= 0;
     }
 
     private boolean verifyMinimum(Schema schema, FrozenNode node) {
@@ -521,15 +515,15 @@ public final class FrozenTypeMatcher {
     }
 
     private boolean verifyMinItems(Schema schema, FrozenNode node) {
-        Integer minItems = schema.getMinItemsValue();
+        BigInteger minItems = schema.getMinItemsExact();
         int size = node.getItems() != null ? node.getItems().size() : 0;
-        return minItems == null || size >= minItems;
+        return minItems == null || BigInteger.valueOf(size).compareTo(minItems) >= 0;
     }
 
     private boolean verifyMaxItems(Schema schema, FrozenNode node) {
-        Integer maxItems = schema.getMaxItemsValue();
+        BigInteger maxItems = schema.getMaxItemsExact();
         int size = node.getItems() != null ? node.getItems().size() : 0;
-        return maxItems == null || size <= maxItems;
+        return maxItems == null || BigInteger.valueOf(size).compareTo(maxItems) <= 0;
     }
 
     private boolean verifyUniqueItems(Schema schema, FrozenNode node) {
@@ -546,15 +540,15 @@ public final class FrozenTypeMatcher {
     }
 
     private boolean verifyMinFields(Schema schema, FrozenNode node) {
-        Integer minFields = schema.getMinFieldsValue();
+        BigInteger minFields = schema.getMinFieldsExact();
         int size = node.getProperties() != null ? node.getProperties().size() : 0;
-        return minFields == null || size >= minFields;
+        return minFields == null || BigInteger.valueOf(size).compareTo(minFields) >= 0;
     }
 
     private boolean verifyMaxFields(Schema schema, FrozenNode node) {
-        Integer maxFields = schema.getMaxFieldsValue();
+        BigInteger maxFields = schema.getMaxFieldsExact();
         int size = node.getProperties() != null ? node.getProperties().size() : 0;
-        return maxFields == null || size <= maxFields;
+        return maxFields == null || BigInteger.valueOf(size).compareTo(maxFields) <= 0;
     }
 
     private boolean verifyEnum(Schema schema, FrozenNode node) {
@@ -730,6 +724,7 @@ public final class FrozenTypeMatcher {
         stripLabels(node.getKeyType());
         stripLabels(node.getValueType());
         stripLabels(node.getBlue());
+        stripLabels(node.getContracts());
         if (node.getItems() != null) {
             node.getItems().forEach(this::stripLabels);
         }
@@ -744,7 +739,6 @@ public final class FrozenTypeMatcher {
             return;
         }
         stripLabels(schema.getRequired());
-        stripLabels(schema.getAllowMultiple());
         stripLabels(schema.getMinLength());
         stripLabels(schema.getMaxLength());
         stripLabels(schema.getMinimum());

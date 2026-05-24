@@ -77,7 +77,7 @@ public class ComplexObjectConverter implements Converter<Object> {
                 } else if (field.isAnnotationPresent(BlueDescription.class)) {
                     fieldValue = handleBlueDescriptionAnnotation(node, clazz, field);
                 } else {
-                    Node fieldNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
+                    Node fieldNode = propertyNode(node, propertyName);
 
                     if (fieldNode != null) {
                         if (Nodes.isEmptyNode(fieldNode)) {
@@ -116,25 +116,32 @@ public class ComplexObjectConverter implements Converter<Object> {
     }
 
     private String handleBlueIdAnnotation(Node node, String propertyName) {
-        Node targetNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
+        Node targetNode = propertyNode(node, propertyName);
         if (targetNode == null) {
             return null;
         }
-        return BlueIdCalculator.calculateBlueId(targetNode);
+        return BlueIdCalculator.calculateUncheckedBlueId(targetNode);
     }
 
     private String handleBlueNameAnnotation(Node node, Class<?> clazz, Field field) {
         BlueName annotation = field.getAnnotation(BlueName.class);
         String propertyName = JacksonPropertyNames.resolveTargetPropertyName(clazz, annotation.value());
-        Node targetNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
+        Node targetNode = propertyNode(node, propertyName);
         return targetNode != null ? targetNode.getName() : null;
     }
 
     private String handleBlueDescriptionAnnotation(Node node, Class<?> clazz, Field field) {
         BlueDescription annotation = field.getAnnotation(BlueDescription.class);
         String propertyName = JacksonPropertyNames.resolveTargetPropertyName(clazz, annotation.value());
-        Node targetNode = node.getProperties() != null ? node.getProperties().get(propertyName) : null;
+        Node targetNode = propertyNode(node, propertyName);
         return targetNode != null ? targetNode.getDescription() : null;
+    }
+
+    private Node propertyNode(Node node, String propertyName) {
+        if ("contracts".equals(propertyName)) {
+            return node.getContracts();
+        }
+        return node.getProperties() != null ? node.getProperties().get(propertyName) : null;
     }
 
     private Class<?> getRawType(Type type) {

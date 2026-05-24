@@ -40,28 +40,16 @@ public class NodeToObjectConverterNullHandlingTest {
                       "x1SetField: null\n" +
                       "x2MapField: null\n" +
                       "xArrayField: null\n" +
-                      "wildcardXListField: null\n" +
-                      "name: null\n" +
-                      "description: null";
+                      "wildcardXListField: null";
 
         Node node = blue.yamlToNode(yaml);
         Y y = converter.convert(node, Y.class);
 
         assertNotNull(y);
 
-        // Check X field
-        assertNotNull(y.xField);
-        assertEquals(0, y.xField.intField);
-        assertNull(y.xField.stringField);
-
-        assertNotNull(y.x1Field);
-        assertNull(y.x1Field.intArrayField);
-        assertNull(y.x1Field.stringListField);
-        assertNull(y.x1Field.integerSetField);
-
-        // Check X2 field
-        assertNotNull(y.x2Field);
-        assertNull(y.x2Field.stringIntMapField);
+        assertNull(y.xField);
+        assertNull(y.x1Field);
+        assertNull(y.x2Field);
 
         // Check other fields
         assertNull(y.xListField);
@@ -71,7 +59,6 @@ public class NodeToObjectConverterNullHandlingTest {
         assertNull(y.xArrayField);
         assertNull(y.wildcardXListField);
 
-        // Check name and description
         assertNull(node.getName());
         assertNull(node.getDescription());
     }
@@ -91,8 +78,7 @@ public class NodeToObjectConverterNullHandlingTest {
                       "  stringIntMapField:\n" +
                       "    key1: 100\n" +
                       "    key2: null\n" +
-                      "name: \"Test Y\"\n" +
-                      "description: null";
+                      "name: \"Test Y\"";
 
         Node node = blue.yamlToNode(yaml);
         Y y = converter.convert(node, Y.class);
@@ -119,7 +105,6 @@ public class NodeToObjectConverterNullHandlingTest {
         assertEquals(100, y.x2Field.stringIntMapField.get("key1"));
         assertNull(y.x2Field.stringIntMapField.get("key2"));
 
-        // Check name and description
         assertEquals("Test Y", node.getName());
         assertNull(node.getDescription());
     }

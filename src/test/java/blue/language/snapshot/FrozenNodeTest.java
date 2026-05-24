@@ -2,8 +2,13 @@ package blue.language.snapshot;
 
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.Blue;
+import blue.language.utils.NodeToBlueIdInput;
+import blue.language.utils.Nodes;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -11,24 +16,137 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FrozenNodeTest {
 
     @Test
     void blueIdMatchesMutableCalculatorForObjectsScalarsAndPureReferences() {
+        String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node node = YAML_MAPPER.readValue(
                 "name: Product\n" +
                 "count: 1\n" +
                 "nested:\n" +
                 "  label: abc\n" +
                 "ref:\n" +
-                "  blueId: SomeReference", Node.class);
+                "  blueId: " + referenceBlueId, Node.class);
 
         FrozenNode frozen = FrozenNode.fromNode(node);
 
         assertEquals(BlueIdCalculator.calculateBlueId(node), frozen.blueId());
-        assertEquals("SomeReference", FrozenNode.fromNode(new Node().blueId("SomeReference")).blueId());
+        assertEquals(referenceBlueId, FrozenNode.fromNode(new Node().blueId(referenceBlueId)).blueId());
+    }
+
+    @Test
+    void frozenNodeBlueIdMatchesBlueIdCalculatorForEveryBlueIdFixture() throws Exception {
+        JsonNode manifest = readFixtureResource("manifest.yaml");
+        for (JsonNode entry : manifest.get("fixtures")) {
+            JsonNode fixture = readFixtureResource(entry.get("path").asText());
+            if (fixture.path("expectError").asBoolean(false)
+                    || !"calculateBlueId".equals(fixture.path("operation").asText())) {
+                continue;
+            }
+            Node input = YAML_MAPPER.treeToValue(fixture.get("input"), Node.class);
+
+            assertEquals(
+                    BlueIdCalculator.calculateBlueId(input),
+                    FrozenNode.fromNode(input).blueId(),
+                    "Frozen BlueId mismatch for fixture " + fixture.get("id").asText());
+        }
+    }
+
+    @Test
+    void frozenNodeToBlueIdInputMatchesNodeToBlueIdInputForCanonicalShapes() {
+        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
+        Node withSchema = new Node()
+                .schema(new blue.language.model.Schema().minimum(new Node().type(new Node().blueId(
+                        blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID)).value("9007199254740992")));
+
+        for (Node node : Arrays.asList(
+                new Node().value("text"),
+                new Node().items(new Node().value("A"), Nodes.emptyPlaceholder(), new Node().value("B")),
+                new Node().items(new Node().previousBlueId(previousBlueId), new Node().value("A")),
+                new Node().blueId(referenceBlueId),
+                new Node().value("abc").contracts(new Node().properties("audit", new Node().value(true))),
+                withSchema)) {
+            assertEquals(
+                    NodeToBlueIdInput.get(node),
+                    FrozenNodeToBlueIdInput.get(FrozenNode.fromNode(node)),
+                    "Frozen canonical input mismatch for " + node);
+        }
+    }
+
+    @Test
+    void frozenNodeToBlueIdInputHashesLikeNodeToBlueIdInputForEveryValidBlueIdFixture() throws Exception {
+        JsonNode manifest = readFixtureResource("manifest.yaml");
+        for (JsonNode entry : manifest.get("fixtures")) {
+            if (!"BlueId".equals(entry.get("category").asText())) {
+                continue;
+            }
+            JsonNode fixture = readFixtureResource(entry.get("path").asText());
+            if (fixture.path("expectError").asBoolean(false)
+                    || !"calculateBlueId".equals(fixture.path("operation").asText())) {
+                continue;
+            }
+            Node input = YAML_MAPPER.treeToValue(fixture.get("input"), Node.class);
+
+            assertEquals(
+                    BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.get(input)),
+                    BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(FrozenNode.fromNode(input))),
+                    "Frozen canonical input mismatch for fixture " + fixture.get("id").asText());
+        }
+    }
+
+    @Test
+    void frozenNodeRejectsEveryInvalidBlueIdFixtureThatParsesAsNode() throws Exception {
+        JsonNode manifest = readFixtureResource("manifest.yaml");
+        for (JsonNode entry : manifest.get("fixtures")) {
+            if (!"BlueId".equals(entry.get("category").asText())) {
+                continue;
+            }
+            JsonNode fixture = readFixtureResource(entry.get("path").asText());
+            if (!fixture.path("expectError").asBoolean(false)
+                    || !"calculateBlueId".equals(fixture.path("operation").asText())
+                    || !fixture.has("input")) {
+                continue;
+            }
+            Node input;
+            try {
+                input = YAML_MAPPER.treeToValue(fixture.get("input"), Node.class);
+            } catch (RuntimeException parserRejected) {
+                continue;
+            }
+
+            assertThrows(
+                    RuntimeException.class,
+                    () -> BlueIdCalculator.calculateBlueId(input),
+                    "Mutable calculator accepted invalid fixture " + fixture.get("id").asText());
+            assertThrows(
+                    RuntimeException.class,
+                    () -> FrozenNode.fromNode(input).blueId(),
+                    "Frozen calculator accepted invalid fixture " + fixture.get("id").asText());
+        }
+    }
+
+    @Test
+    void repeatedFrozenBlueIdIsCached() {
+        FrozenNode frozen = FrozenNode.fromNode(new Node().properties("a", new Node().value("b")));
+
+        assertSame(frozen.blueId(), frozen.blueId());
+    }
+
+    @Test
+    void repeatedFrozenBlueIdDoesNotRecompute() {
+        FrozenNode frozen = FrozenNode.fromNode(new Node()
+                .properties("a", new Node().value("b"))
+                .properties("nested", new Node().properties("c", new Node().value("d"))));
+        String first = frozen.blueId();
+
+        for (int i = 0; i < 10; i++) {
+            assertSame(first, frozen.blueId());
+        }
     }
 
     @Test
@@ -60,18 +178,76 @@ class FrozenNodeTest {
     }
 
     @Test
-    void blueIdMatchesMutableCalculatorForListControlForms() {
+    void directEmptyObjectInsideListIsRejected() {
+        Node withEmptyObject = YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - {}", Node.class);
+
+        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(withEmptyObject));
+    }
+
+    @Test
+    void sourceEmptyObjectInsideListNormalizesBeforeFreezing() {
+        Node normalized = new Blue().yamlToNode(
+                "items:\n" +
+                "  - {}");
+
+        assertEquals(BlueIdCalculator.calculateBlueId(normalized), FrozenNode.fromNode(normalized).blueId());
+    }
+
+    @Test
+    void positionedListsAreRejectedByDirectFrozenBlueIdInput() {
+        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        Node positioned = YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    value: A", Node.class);
+        Node previous = YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $previous:\n" +
+                "      blueId: " + previousBlueId + "\n" +
+                "  - $empty: true\n" +
+                "  - value: A", Node.class);
+
+        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(positioned));
+        assertEquals(BlueIdCalculator.calculateBlueId(previous), FrozenNode.fromNode(previous).blueId());
+    }
+
+    @Test
+    void directFrozenBlueIdRejectsPositionControls() {
+        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
         Node node = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - $previous:\n" +
-                "      blueId: PrevListHash\n" +
-                "  - $pos: 2\n" +
-                "    value: C\n" +
-                "  - $pos: 0\n" +
-                "    value: A\n" +
+                "      blueId: " + previousBlueId + "\n" +
                 "  - value: D", Node.class);
+        Node positioned = YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $pos: 0\n" +
+                "    value: A", Node.class);
 
         assertEquals(BlueIdCalculator.calculateBlueId(node), FrozenNode.fromNode(node).blueId());
+        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(positioned));
+    }
+
+    @Test
+    void frozenStrictRejectsRootPreviousOnlyNode() {
+        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromNode(new Node().previousBlueId(previousBlueId)));
+    }
+
+    @Test
+    void frozenStrictAllowsPreviousOnlyOnlyAsFirstListElement() {
+        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        Node anchored = YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - $previous:\n" +
+                "      blueId: " + previousBlueId + "\n" +
+                "  - value: A", Node.class);
+
+        assertEquals(BlueIdCalculator.calculateBlueId(anchored), FrozenNode.fromNode(anchored).blueId());
     }
 
     @Test
@@ -82,6 +258,34 @@ class FrozenNodeTest {
                 "value: 0.33333333333333333333333333333333333333", Node.class);
 
         assertEquals(BlueIdCalculator.calculateBlueId(node), FrozenNode.fromNode(node).blueId());
+    }
+
+    @Test
+    void strictCanonicalAllowsContractsAlongsideScalarAndListPayloads() {
+        Node scalar = YAML_MAPPER.readValue(
+                "value: abc\n" +
+                "contracts:\n" +
+                "  audit:\n" +
+                "    value: enabled", Node.class);
+        Node list = YAML_MAPPER.readValue(
+                "items:\n" +
+                "  - abc\n" +
+                "contracts:\n" +
+                "  audit:\n" +
+                "    value: enabled", Node.class);
+
+        assertEquals(BlueIdCalculator.calculateBlueId(scalar), FrozenNode.fromNode(scalar).blueId());
+        assertEquals(BlueIdCalculator.calculateBlueId(list), FrozenNode.fromNode(list).blueId());
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromNode(new Node().value("abc").properties(
+                        "contracts", new Node().properties("audit", new Node().value("enabled")),
+                        "child", new Node().value("not allowed"))));
+    }
+
+    @Test
+    void strictCanonicalRejectsInvalidReferenceBlueIds() {
+        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(new Node().blueId("invalid")));
+        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(new Node().previousBlueId("invalid")));
     }
 
     @Test
@@ -161,6 +365,16 @@ class FrozenNodeTest {
     }
 
     @Test
+    void strictCanonicalModeRejectsBlueDirective() {
+        Node node = YAML_MAPPER.readValue(
+                "blue:\n" +
+                "  items: []\n" +
+                "value: hello", Node.class);
+
+        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(node));
+    }
+
+    @Test
     void rejectsInvalidListControlFormsDuringHashing() {
         Node duplicatePosition = YAML_MAPPER.readValue(
                 "items:\n" +
@@ -186,7 +400,18 @@ class FrozenNodeTest {
 
         FrozenNode resolved = FrozenNode.fromResolvedNode(resolvedLike);
 
-        assertEquals(BlueIdCalculator.calculateBlueId(resolved.toNode()), resolved.blueId());
+        assertEquals(BlueIdCalculator.INSTANCE.calculate(Collections.singletonMap("name", "Expanded node")), resolved.blueId());
+        assertThrows(IllegalArgumentException.class, () -> BlueIdCalculator.calculateBlueId(resolved.toNode()));
         assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(resolvedLike));
+    }
+
+    private JsonNode readFixtureResource(String path) throws Exception {
+        try (InputStream stream = getClass().getClassLoader()
+                .getResourceAsStream("blue-language-1.0/fixtures/" + path)) {
+            if (stream == null) {
+                throw new IllegalArgumentException("Missing fixture resource: " + path);
+            }
+            return YAML_MAPPER.readTree(stream);
+        }
     }
 }

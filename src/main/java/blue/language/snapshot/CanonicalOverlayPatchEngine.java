@@ -34,7 +34,7 @@ public final class CanonicalOverlayPatchEngine {
         }
 
         FrozenNode before = read(root, segments, patch.getOp() == JsonPatch.Op.ADD);
-        FrozenNode value = patch.getOp() == JsonPatch.Op.REMOVE ? null : FrozenNode.fromNode(patch.getVal());
+        FrozenNode value = patch.getOp() == JsonPatch.Op.REMOVE ? null : freezePatchValue(patch.getVal());
         FrozenNode nextRoot;
         switch (patch.getOp()) {
             case ADD:
@@ -52,6 +52,24 @@ public final class CanonicalOverlayPatchEngine {
 
         FrozenNode after = patch.getOp() == JsonPatch.Op.REMOVE ? null : read(nextRoot, segments, false);
         return new CanonicalPatchResult(nextRoot, before, after, patch.getOp(), path);
+    }
+
+    private FrozenNode freezePatchValue(Node value) {
+        if (root.isStrictCanonical()) {
+            return root.isStrictBlueIdValidation()
+                    ? FrozenNode.fromNode(value)
+                    : FrozenNode.fromUncheckedCanonicalNode(value);
+        }
+        return FrozenNode.fromResolvedNode(value);
+    }
+
+    private FrozenNode emptyNodeForRootMode() {
+        if (root.isStrictCanonical()) {
+            return root.isStrictBlueIdValidation()
+                    ? FrozenNode.empty()
+                    : FrozenNode.fromUncheckedCanonicalNode(new Node());
+        }
+        return FrozenNode.fromResolvedNode(new Node());
     }
 
     private FrozenNode add(FrozenNode node, List<String> segments, FrozenNode value, String path) {
@@ -98,7 +116,7 @@ public final class CanonicalOverlayPatchEngine {
             if (JsonPointer.isArrayIndexSegment(segment)) {
                 throw new IllegalStateException("Expected array element to exist at path: " + path);
             }
-            child = FrozenNode.empty();
+            child = emptyNodeForRootMode();
         }
         FrozenNode nextChild = write(child, tail, value, path, mode);
         return node.withProperty(segment, nextChild);

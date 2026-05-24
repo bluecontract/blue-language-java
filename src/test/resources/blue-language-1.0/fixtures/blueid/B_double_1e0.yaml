@@ -1,0 +1,6 @@
+id: B_double_1e0
+category: BlueId
+operation: calculateBlueId
+description: exponent notation 1e0 is inferred as Double
+input: 1e0
+expectedNodeBlueId: "3SeoqNFjgk6TJV2DzMBGv1wkzcgUzTL9s8BVKhmnXUqL"

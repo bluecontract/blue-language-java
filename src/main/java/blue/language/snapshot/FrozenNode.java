@@ -6,7 +6,9 @@ import blue.language.utils.Base58Sha256Provider;
 import blue.language.utils.BlueNumbers;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.JsonPointer;
-import com.fasterxml.jackson.core.type.TypeReference;
+import blue.language.utils.NodeToBlueIdInput;
+import blue.language.utils.NodeToMapListOrValue;
+import blue.language.utils.SchemaToMapListOrValue;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -20,7 +22,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static blue.language.utils.Properties.*;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public final class FrozenNode {
 
@@ -35,6 +36,7 @@ public final class FrozenNode {
     private final Object value;
     private final List<FrozenNode> items;
     private final Map<String, FrozenNode> properties;
+    private final FrozenNode contracts;
     private final String referenceBlueId;
     private final Schema schema;
     private final String mergePolicy;
@@ -43,6 +45,8 @@ public final class FrozenNode {
     private final FrozenNode blue;
     private final boolean inlineValue;
     private final boolean strictCanonical;
+    private final boolean strictBlueIdValidation;
+    private final boolean previousAnchorContext;
     private final String blueId;
 
     private FrozenNode(Builder builder) {
@@ -53,8 +57,9 @@ public final class FrozenNode {
         this.keyType = builder.keyType;
         this.valueType = builder.valueType;
         this.value = builder.nodeValue;
-        this.items = freezeList(builder.items);
+        this.items = freezeList(builder.items, builder.strictCanonical);
         this.properties = freezeMap(builder.properties);
+        this.contracts = builder.contracts;
         this.referenceBlueId = builder.referenceBlueId;
         this.schema = builder.schema != null ? builder.schema.clone() : null;
         this.mergePolicy = builder.mergePolicy;
@@ -63,6 +68,8 @@ public final class FrozenNode {
         this.blue = builder.blue;
         this.inlineValue = builder.inlineValue;
         this.strictCanonical = builder.strictCanonical;
+        this.strictBlueIdValidation = builder.strictBlueIdValidation;
+        this.previousAnchorContext = builder.previousAnchorContext;
         validatePayloadShape();
         this.blueId = computeBlueId();
     }
@@ -80,14 +87,30 @@ public final class FrozenNode {
     }
 
     public static FrozenNode fromResolvedNode(Node node, ResolvedReferenceInterner interner) {
-        return fromNode(node, false, interner);
+        return fromNode(node, false, interner, false);
+    }
+
+    public static FrozenNode fromUncheckedCanonicalNode(Node node) {
+        return fromNode(node, true, null, false);
     }
 
     private static FrozenNode fromNode(Node node, boolean strictCanonical) {
-        return fromNode(node, strictCanonical, null);
+        return fromNode(node, strictCanonical, null, true);
     }
 
     private static FrozenNode fromNode(Node node, boolean strictCanonical, ResolvedReferenceInterner interner) {
+        return fromNode(node, strictCanonical, interner, strictCanonical);
+    }
+
+    private static FrozenNode fromNode(Node node, boolean strictCanonical, ResolvedReferenceInterner interner, boolean strictBlueIdValidation) {
+        return fromNode(node, strictCanonical, interner, strictBlueIdValidation, false);
+    }
+
+    private static FrozenNode fromNode(Node node,
+                                       boolean strictCanonical,
+                                       ResolvedReferenceInterner interner,
+                                       boolean strictBlueIdValidation,
+                                       boolean previousAnchorContext) {
         Objects.requireNonNull(node, "node");
         if (!strictCanonical && interner != null && node.getBlueId() != null) {
             FrozenNode cached = interner.lookup(node.getBlueId());
@@ -98,28 +121,42 @@ public final class FrozenNode {
         FrozenNode frozen = builder()
                 .name(node.getName())
                 .description(node.getDescription())
-                .type(node.getType() != null ? fromNode(node.getType(), strictCanonical, interner) : null)
-                .itemType(node.getItemType() != null ? fromNode(node.getItemType(), strictCanonical, interner) : null)
-                .keyType(node.getKeyType() != null ? fromNode(node.getKeyType(), strictCanonical, interner) : null)
-                .valueType(node.getValueType() != null ? fromNode(node.getValueType(), strictCanonical, interner) : null)
+                .type(node.getType() != null ? fromNode(node.getType(), strictCanonical, interner, strictBlueIdValidation) : null)
+                .itemType(node.getItemType() != null ? fromNode(node.getItemType(), strictCanonical, interner, strictBlueIdValidation) : null)
+                .keyType(node.getKeyType() != null ? fromNode(node.getKeyType(), strictCanonical, interner, strictBlueIdValidation) : null)
+                .valueType(node.getValueType() != null ? fromNode(node.getValueType(), strictCanonical, interner, strictBlueIdValidation) : null)
                 .value(node.getValue())
                 .items(node.getItems() != null
-                        ? node.getItems().stream().map(item -> fromNode(item, strictCanonical, interner)).collect(Collectors.toList())
+                        ? freezeItems(node.getItems(), strictCanonical, interner, strictBlueIdValidation)
                         : null)
-                .properties(freezeProperties(node.getProperties(), strictCanonical, interner))
+                .properties(freezeProperties(node.getProperties(), strictCanonical, interner, strictBlueIdValidation))
+                .contracts(node.getContracts() != null ? fromNode(node.getContracts(), strictCanonical, interner, strictBlueIdValidation) : null)
                 .referenceBlueId(node.getBlueId())
                 .schema(node.getSchema())
                 .mergePolicy(node.getMergePolicy())
                 .previousBlueId(node.getPreviousBlueId())
                 .position(node.getPosition())
-                .blue(node.getBlue() != null ? fromNode(node.getBlue(), strictCanonical, interner) : null)
+                .blue(node.getBlue() != null ? fromNode(node.getBlue(), strictCanonical, interner, strictBlueIdValidation) : null)
                 .inlineValue(node.isInlineValue())
                 .strictCanonical(strictCanonical)
+                .strictBlueIdValidation(strictBlueIdValidation)
+                .previousAnchorContext(previousAnchorContext)
                 .build();
         if (!strictCanonical && interner != null && node.getBlueId() != null && !node.isReferenceOnly()) {
             return interner.intern(node.getBlueId(), frozen);
         }
         return frozen;
+    }
+
+    private static List<FrozenNode> freezeItems(List<Node> source,
+                                                boolean strictCanonical,
+                                                ResolvedReferenceInterner interner,
+                                                boolean strictBlueIdValidation) {
+        List<FrozenNode> result = new ArrayList<>(source.size());
+        for (Node item : source) {
+            result.add(fromNode(item, strictCanonical, interner, strictBlueIdValidation, true));
+        }
+        return result;
     }
 
     public static List<FrozenNode> fromNodes(List<Node> nodes) {
@@ -133,13 +170,14 @@ public final class FrozenNode {
 
     private static Map<String, FrozenNode> freezeProperties(Map<String, Node> source,
                                                             boolean strictCanonical,
-                                                            ResolvedReferenceInterner interner) {
+                                                            ResolvedReferenceInterner interner,
+                                                            boolean strictBlueIdValidation) {
         if (source == null || source.isEmpty()) {
             return null;
         }
         Map<String, FrozenNode> result = new LinkedHashMap<>();
         for (Map.Entry<String, Node> entry : source.entrySet()) {
-            FrozenNode child = fromNode(entry.getValue(), strictCanonical, interner);
+            FrozenNode child = fromNode(entry.getValue(), strictCanonical, interner, strictBlueIdValidation);
             if (strictCanonical && child.isEmptyNode()) {
                 continue;
             }
@@ -149,7 +187,12 @@ public final class FrozenNode {
     }
 
     public static String calculateBlueId(List<FrozenNode> nodes) {
-        return computeListHash(nodes == null ? Collections.emptyList() : nodes);
+        List<Object> objects = new ArrayList<>((nodes == null ? Collections.<FrozenNode>emptyList() : nodes).size());
+        List<FrozenNode> source = nodes == null ? Collections.emptyList() : nodes;
+        for (int i = 0; i < source.size(); i++) {
+            objects.add(FrozenNodeToBlueIdInput.getListElement(source.get(i), i));
+        }
+        return BlueIdCalculator.INSTANCE.calculate(objects);
     }
 
     public Node toNode() {
@@ -167,6 +210,7 @@ public final class FrozenNode {
                 .previousBlueId(previousBlueId)
                 .position(position)
                 .blue(blue != null ? blue.toNode() : null)
+                .contracts(contracts != null ? contracts.toNode() : null)
                 .inlineValue(inlineValue);
         if (items != null) {
             node.items(items.stream().map(FrozenNode::toNode).collect(Collectors.toList()));
@@ -250,7 +294,14 @@ public final class FrozenNode {
         return properties;
     }
 
+    public FrozenNode getContracts() {
+        return contracts;
+    }
+
     public FrozenNode property(String key) {
+        if (OBJECT_CONTRACTS.equals(key)) {
+            return contracts;
+        }
         return properties != null ? properties.get(key) : null;
     }
 
@@ -276,7 +327,7 @@ public final class FrozenNode {
             if (current == null) {
                 return null;
             }
-            if (current.items != null) {
+            if (current.items != null && !OBJECT_CONTRACTS.equals(segment)) {
                 current = current.item(parseArrayIndex(segment));
             } else {
                 current = current.property(segment);
@@ -310,6 +361,7 @@ public final class FrozenNode {
                 && value == null
                 && items == null
                 && properties == null
+                && contracts == null
                 && schema == null
                 && mergePolicy == null
                 && previousBlueId == null
@@ -328,6 +380,7 @@ public final class FrozenNode {
                 && value == null
                 && items == null
                 && properties == null
+                && contracts == null
                 && schema == null
                 && mergePolicy == null
                 && position == null
@@ -337,6 +390,14 @@ public final class FrozenNode {
 
     public boolean isStrictCanonical() {
         return strictCanonical;
+    }
+
+    public boolean isStrictBlueIdValidation() {
+        return strictBlueIdValidation;
+    }
+
+    boolean isListElementContext() {
+        return previousAnchorContext;
     }
 
     public boolean isEmptyNode() {
@@ -349,6 +410,7 @@ public final class FrozenNode {
                 && value == null
                 && items == null
                 && properties == null
+                && contracts == null
                 && referenceBlueId == null
                 && schema == null
                 && mergePolicy == null
@@ -358,6 +420,9 @@ public final class FrozenNode {
     }
 
     public FrozenNode withProperty(String key, FrozenNode child) {
+        if (OBJECT_CONTRACTS.equals(key)) {
+            return toBuilder().contracts(child == null || (strictCanonical && child.isEmptyNode()) ? null : child).build();
+        }
         Map<String, FrozenNode> next = properties != null
                 ? new LinkedHashMap<>(properties)
                 : new LinkedHashMap<>();
@@ -391,22 +456,19 @@ public final class FrozenNode {
         if (strictCanonical && referenceBlueId != null && !isReferenceOnly()) {
             throw new IllegalArgumentException("\"blueId\" nodes must be reference-only and cannot contain sibling fields.");
         }
-        if (strictCanonical && previousBlueId != null && !isPreviousOnly()) {
-            throw new IllegalArgumentException("\"$previous\" list anchors must be single-key list items.");
+        if (strictCanonical && previousBlueId != null) {
+            if (!isPreviousOnly()) {
+                throw new IllegalArgumentException("\"$previous\" list anchors must be single-key list items.");
+            }
+            if (!previousAnchorContext) {
+                throw new IllegalArgumentException("\"$previous\" is valid only as the first list item in direct BlueId input.");
+            }
         }
-        if (position != null
-                && payloadKinds == 0
-                && name == null
-                && description == null
-                && type == null
-                && itemType == null
-                && keyType == null
-                && valueType == null
-                && schema == null
-                && mergePolicy == null
-                && blue == null
-                && referenceBlueId == null) {
-            throw new IllegalArgumentException("\"$pos\" items must contain an overlay.");
+        if (strictCanonical && blue != null) {
+            throw new IllegalArgumentException("\"blue\" is a preprocessing directive and must not appear in canonical BlueId input.");
+        }
+        if (strictCanonical && position != null) {
+            throw new IllegalArgumentException("\"$pos\" overlays are not valid direct BlueId input.");
         }
     }
 
@@ -419,6 +481,9 @@ public final class FrozenNode {
         }
         if (properties != null) {
             properties.forEach((key, child) -> child.indexPaths(JsonPointer.append(path, key), index));
+        }
+        if (contracts != null) {
+            contracts.indexPaths(JsonPointer.append(path, OBJECT_CONTRACTS), index);
         }
     }
 
@@ -442,6 +507,7 @@ public final class FrozenNode {
                 .value(value)
                 .items(items)
                 .properties(properties)
+                .contracts(contracts)
                 .referenceBlueId(referenceBlueId)
                 .schema(schema)
                 .mergePolicy(mergePolicy)
@@ -449,10 +515,22 @@ public final class FrozenNode {
                 .position(position)
                 .blue(blue)
                 .inlineValue(inlineValue)
-                .strictCanonical(strictCanonical);
+                .strictCanonical(strictCanonical)
+                .strictBlueIdValidation(strictBlueIdValidation)
+                .previousAnchorContext(previousAnchorContext);
     }
 
     private String computeBlueId() {
+        if (strictCanonical) {
+            if (!strictBlueIdValidation) {
+                return BlueIdCalculator.calculateUncheckedBlueId(toNode());
+            }
+            return BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(this));
+        }
+        return computeResolvedStructuralBlueId();
+    }
+
+    private String computeResolvedStructuralBlueId() {
         if (isReferenceOnly()) {
             return referenceBlueId;
         }
@@ -490,6 +568,7 @@ public final class FrozenNode {
         if (schema != null) {
             putBlueId(hashes, OBJECT_SCHEMA, BlueIdCalculator.INSTANCE.calculate(schemaObject(schema)));
         }
+        putBlueId(hashes, OBJECT_CONTRACTS, contracts);
         putBlueId(hashes, OBJECT_BLUE, blue);
         if (properties != null) {
             properties.forEach((key, child) -> putBlueId(hashes, key, child));
@@ -498,51 +577,14 @@ public final class FrozenNode {
     }
 
     private static String computeListHash(List<FrozenNode> list) {
-        if (list == null) {
-            return HASH.apply(Collections.singletonMap("$list", "empty"));
-        }
-
-        String accumulator = HASH.apply(Collections.singletonMap("$list", "empty"));
-        int start = 0;
-        if (!list.isEmpty() && list.get(0).isPreviousOnly()) {
-            accumulator = list.get(0).previousBlueId;
-            start = 1;
-        }
-
-        List<FrozenNode> normalized = normalizeListControls(list, start);
-        for (FrozenNode element : normalized) {
-            Map<String, Object> cons = new TreeMap<>(String::compareTo);
-            cons.put("elem", reference(element.blueId()));
-            cons.put("prev", reference(accumulator));
-            accumulator = HASH.apply(Collections.singletonMap("$listCons", cons));
-        }
-        return accumulator;
+        return BlueIdCalculator.calculateBlueId(toBlueIdInputNodes(list));
     }
 
-    private static List<FrozenNode> normalizeListControls(List<FrozenNode> list, int start) {
-        Map<Integer, FrozenNode> positioned = new TreeMap<>();
-        List<FrozenNode> appended = new ArrayList<>();
-        boolean hasPositions = false;
-        for (int i = start; i < list.size(); i++) {
-            FrozenNode item = list.get(i);
-            if (item.isPreviousOnly()) {
-                throw new IllegalArgumentException("\"$previous\" must appear only as the first list item.");
-            }
-            if (item.position != null) {
-                hasPositions = true;
-                if (positioned.put(item.position, item.withoutPosition()) != null) {
-                    throw new IllegalArgumentException("Duplicate \"$pos\" value in list: " + item.position);
-                }
-            } else {
-                appended.add(item);
-            }
-        }
-        if (!hasPositions) {
-            return list.subList(start, list.size());
-        }
-        List<FrozenNode> normalized = new ArrayList<>(positioned.values());
-        normalized.addAll(appended);
-        return normalized;
+    private static List<Node> toBlueIdInputNodes(List<FrozenNode> list) {
+        return (list == null ? Collections.<FrozenNode>emptyList() : list).stream()
+                .map(FrozenNode::toNode)
+                .map(NodeToBlueIdInput::stripResolvedBlueIdMetadata)
+                .collect(Collectors.toList());
     }
 
     private static void putRaw(Map<String, Object> target, String key, Object value) {
@@ -605,14 +647,25 @@ public final class FrozenNode {
     }
 
     private static Map<String, Object> schemaObject(Schema schema) {
-        return YAML_MAPPER.convertValue(schema, new TypeReference<Map<String, Object>>() {});
+        return SchemaToMapListOrValue.get(schema, NodeToMapListOrValue::get);
     }
 
-    private static List<FrozenNode> freezeList(List<FrozenNode> source) {
+    private static List<FrozenNode> freezeList(List<FrozenNode> source, boolean strictCanonical) {
         if (source == null) {
             return null;
         }
-        return Collections.unmodifiableList(new ArrayList<>(source));
+        List<FrozenNode> result = new ArrayList<>(source.size());
+        for (int i = 0; i < source.size(); i++) {
+            FrozenNode node = source.get(i);
+            if (strictCanonical && node.isEmptyNode()) {
+                throw new IllegalArgumentException("Direct BlueId input must use { \"$empty\": true } for empty list placeholders.");
+            }
+            if (strictCanonical && node.isPreviousOnly() && i != 0) {
+                throw new IllegalArgumentException("\"$previous\" must appear only as the first list item.");
+            }
+            result.add(node);
+        }
+        return Collections.unmodifiableList(result);
     }
 
     private static Map<String, FrozenNode> freezeMap(Map<String, FrozenNode> source) {
@@ -636,6 +689,7 @@ public final class FrozenNode {
         private Object nodeValue;
         private List<FrozenNode> items;
         private Map<String, FrozenNode> properties;
+        private FrozenNode contracts;
         private String referenceBlueId;
         private Schema schema;
         private String mergePolicy;
@@ -644,6 +698,8 @@ public final class FrozenNode {
         private FrozenNode blue;
         private boolean inlineValue;
         private boolean strictCanonical = true;
+        private boolean strictBlueIdValidation = true;
+        private boolean previousAnchorContext;
 
         Builder name(String name) {
             this.name = name;
@@ -690,6 +746,11 @@ public final class FrozenNode {
             return this;
         }
 
+        Builder contracts(FrozenNode contracts) {
+            this.contracts = contracts;
+            return this;
+        }
+
         Builder referenceBlueId(String referenceBlueId) {
             this.referenceBlueId = referenceBlueId;
             return this;
@@ -727,6 +788,16 @@ public final class FrozenNode {
 
         Builder strictCanonical(boolean strictCanonical) {
             this.strictCanonical = strictCanonical;
+            return this;
+        }
+
+        Builder strictBlueIdValidation(boolean strictBlueIdValidation) {
+            this.strictBlueIdValidation = strictBlueIdValidation;
+            return this;
+        }
+
+        Builder previousAnchorContext(boolean previousAnchorContext) {
+            this.previousAnchorContext = previousAnchorContext;
             return this;
         }
 

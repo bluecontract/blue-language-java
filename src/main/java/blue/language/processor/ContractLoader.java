@@ -92,11 +92,7 @@ final class ContractLoader {
         if (scopeNode == null) {
             return builder.build();
         }
-        Map<String, FrozenNode> properties = scopeNode.getProperties();
-        if (properties == null) {
-            return builder.build();
-        }
-        FrozenNode contractsNode = properties.get("contracts");
+        FrozenNode contractsNode = scopeNode.getContracts();
         if (contractsNode == null) {
             return builder.build();
         }
@@ -216,6 +212,9 @@ final class ContractLoader {
     }
 
     private FrozenNode property(FrozenNode node, String key) {
+        if (node != null && "contracts".equals(key)) {
+            return node.getContracts();
+        }
         return node != null && node.getProperties() != null ? node.getProperties().get(key) : null;
     }
 

@@ -1,0 +1,17 @@
+id: R_contracts_canonicalization_deterministic
+category: Canonicalization
+operation: canonicalize
+description: inherited and instance contracts canonicalize deterministically as reserved content
+source:
+  type:
+    contracts:
+      audit:
+        enabled: true
+  contracts:
+    audit:
+      retentionDays: 30
+expectedCanonicalOverlay:
+  type: {}
+  contracts:
+    audit:
+      retentionDays: 30

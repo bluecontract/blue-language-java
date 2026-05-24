@@ -1,0 +1,15 @@
+id: R_schema_large_integer_minimum_with_type_alias
+category: Schema
+operation: preprocess
+description: schema numeric explicit Integer node may use a core alias before preprocessing
+source:
+  schema:
+    minimum:
+      type: Integer
+      value: "9007199254740992"
+expectedPreprocessed:
+  schema:
+    minimum:
+      type:
+        blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1
+      value: "9007199254740992"

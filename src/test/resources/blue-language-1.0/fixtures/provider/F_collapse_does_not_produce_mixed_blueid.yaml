@@ -1,0 +1,10 @@
+id: F_collapse_does_not_produce_mixed_blueid
+category: Provider
+operation: collapse
+description: collapse emits a pure blueId reference without sibling materialized content
+source:
+  child: 1
+  label: ok
+expectedCollapsed:
+  blueId: 4uy5Y7Kisu3mMtuFEeM1WPZAyrUYyGcJ5XiriEoEvvyt
+expectedNodeBlueId: "4uy5Y7Kisu3mMtuFEeM1WPZAyrUYyGcJ5XiriEoEvvyt"

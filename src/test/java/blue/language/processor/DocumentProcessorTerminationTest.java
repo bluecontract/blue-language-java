@@ -47,12 +47,13 @@ class DocumentProcessorTerminationTest {
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
         Node processed = result.document();
-        Node contracts = processed.getProperties().get("contracts");
+        Node contracts = processed.getContracts();
         assertNotNull(contracts);
         Node terminated = contracts.getProperties().get("terminated");
         assertNotNull(terminated);
         assertEquals("graceful", terminated.getProperties().get("cause").getValue());
-        assertNull(processed.getProperties().get("afterTermination"), "patch after termination must be ignored");
+        assertNull(processed.getProperties() != null ? processed.getProperties().get("afterTermination") : null,
+                "patch after termination must be ignored");
 
         List<Node> triggeredEvents = result.triggeredEvents();
         assertEquals(1, triggeredEvents.size(), "Only the terminated lifecycle event should be present");
@@ -128,8 +129,7 @@ class DocumentProcessorTerminationTest {
         assertNotNull(fromChild, "Parent should capture bridged termination event");
         assertEquals(new BigInteger("7"), fromChild.getValue());
 
-        Node childContracts = processed.getProperties().get("child").getProperties()
-                .get("contracts");
+        Node childContracts = processed.getProperties().get("child").getContracts();
         assertNotNull(childContracts);
         Node childTerminated = childContracts.getProperties().get("terminated");
         assertNotNull(childTerminated);

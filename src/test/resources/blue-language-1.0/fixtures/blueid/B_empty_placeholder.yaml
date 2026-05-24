@@ -1,0 +1,10 @@
+id: B_empty_placeholder
+category: BlueId
+operation: calculateBlueId
+description: exact empty placeholder hashes as positional list content
+input:
+  items:
+    - value: A
+    - $empty: true
+    - value: B
+expectedNodeBlueId: "Eeg3z8vs8hxseHrd3vssoYsXCvPSYq2cWjqp1ZaqtYTX"

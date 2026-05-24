@@ -1,0 +1,8 @@
+id: B_type_alias_rejected_in_direct_blueid_input
+category: BlueId
+operation: calculateBlueId
+description: direct BlueId input rejects unresolved aliases in type-position fields
+expectError: true
+input:
+  type: Integer
+  value: 1

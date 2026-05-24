@@ -1,0 +1,12 @@
+id: R_provider_reference_canonicalizes_back
+category: Canonicalization
+operation: canonicalize
+description: materialized type reference canonicalizes back to the pure reference used by the source
+source:
+  type:
+    blueId: DLRQwz7MQeCrzjy9bohPNwtCxKEBbKaMK65KBrwjfG6K
+  value: materialized
+expectedCanonicalOverlay:
+  type:
+    blueId: DLRQwz7MQeCrzjy9bohPNwtCxKEBbKaMK65KBrwjfG6K
+  value: materialized

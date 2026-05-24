@@ -1,0 +1,13 @@
+id: F_expand_nested_reference_preserves_node_blueid
+category: Provider
+operation: expand
+description: provider-backed expansion materializes nested pure references and preserves Node BlueId
+source:
+  child:
+    blueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+provider:
+  - requestedBlueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+    node: 1
+expectedExpanded:
+  child: 1
+expectedNodeBlueId: "7YbCaeXGknitZpoejQMKbfVEBiVtxNGSnSEHvo9ubN6o"

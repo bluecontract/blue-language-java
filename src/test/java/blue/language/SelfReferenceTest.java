@@ -5,6 +5,7 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.CircularBlueIdCalculator;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.limits.PathLimits;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -39,12 +40,9 @@ public class SelfReferenceTest {
         Node aNode = nodeProvider.findNodeByName("A").orElseThrow(() -> new IllegalArgumentException("No A node found"));
         String aNodeBlueId = nodeProvider.getBlueIdByName("A");
         Node extended = aNode.clone();
-        new NodeExtender(nodeProvider).extend(extended, PathLimits.withSinglePath("/x/x/x/x"));
-
-        assertEquals(aNodeBlueId, extended.getAsNode("/x/type").getBlueId());
-        assertEquals("A", extended.getAsText("/x/type/name"));
-        assertEquals(aNodeBlueId, extended.getAsNode("/x/type/x/type").getBlueId());
-        assertEquals("A", extended.getAsText("/x/type/x/type/name"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new NodeExtender(nodeProvider).extend(extended, PathLimits.withSinglePath("/x/x/x/x")));
+        assertEquals(aNodeBlueId, aNode.getAsNode("/x/type").getBlueId());
 
     }
 
@@ -64,7 +62,7 @@ public class SelfReferenceTest {
                 .preprocessWithDefaultBlue(YAML_MAPPER.readValue(withPlaceholder, Node.class));
 
         assertEquals(
-                BlueIdCalculator.calculateBlueId(preprocessedPlaceholder),
+                BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preprocessedPlaceholder),
                 nodeProvider.getBlueIdByName("A"));
     }
 
@@ -204,8 +202,8 @@ public class SelfReferenceTest {
                     "bVal: B";
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider(YAML_MAPPER.readValue(docs, Node.class));
-        String expectedFirstName = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(aWithPlaceholder, Node.class))
-                .compareTo(BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(bWithPlaceholder, Node.class))) <= 0
+        String expectedFirstName = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(YAML_MAPPER.readValue(aWithPlaceholder, Node.class))
+                .compareTo(BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(YAML_MAPPER.readValue(bWithPlaceholder, Node.class))) <= 0
                 ? "A" : "B";
         String masterBlueId = baseBlueId(nodeProvider.getBlueIdByName("A"));
         List<Node> fetched = nodeProvider.fetchByBlueId(masterBlueId);
@@ -285,7 +283,116 @@ public class SelfReferenceTest {
     }
 
     @Test
-    public void testThisReferencesAreRewrittenInTypeMetadataAndSchemaEnum() {
+    public void circularSetCalculatorReturnsFinalMemberIdsInOriginalOrder() {
+        String docs = "- name: A\n" +
+                    "  x:\n" +
+                    "    type:\n" +
+                    "      blueId: this#1\n" +
+                    "  aVal: A\n" +
+                    "- name: B\n" +
+                    "  y:\n" +
+                    "    type:\n" +
+                    "      blueId: this#0\n" +
+                    "  bVal: B";
+        List<Node> nodes = YAML_MAPPER.readValue(docs, Node.class).getItems();
+        BasicNodeProvider provider = new BasicNodeProvider(YAML_MAPPER.readValue(docs, Node.class));
+
+        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes);
+
+        assertEquals(provider.getBlueIdByName("A"), ids.get(0));
+        assertEquals(provider.getBlueIdByName("B"), ids.get(1));
+        assertEquals(baseBlueId(ids.get(0)), baseBlueId(ids.get(1)));
+    }
+
+    @Test
+    public void circularSetCalculatorIsStableAcrossPermutations() {
+        String abc = "- name: A\n" +
+                    "  next:\n" +
+                    "    type:\n" +
+                    "      blueId: this#1\n" +
+                    "- name: B\n" +
+                    "  next:\n" +
+                    "    type:\n" +
+                    "      blueId: this#2\n" +
+                    "- name: C\n" +
+                    "  next:\n" +
+                    "    type:\n" +
+                    "      blueId: this#0";
+        String cab = "- name: C\n" +
+                    "  next:\n" +
+                    "    type:\n" +
+                    "      blueId: this#1\n" +
+                    "- name: A\n" +
+                    "  next:\n" +
+                    "    type:\n" +
+                    "      blueId: this#2\n" +
+                    "- name: B\n" +
+                    "  next:\n" +
+                    "    type:\n" +
+                    "      blueId: this#0";
+
+        Map<String, String> abcIds = idsByName(YAML_MAPPER.readValue(abc, Node.class).getItems());
+        Map<String, String> cabIds = idsByName(YAML_MAPPER.readValue(cab, Node.class).getItems());
+
+        assertEquals(abcIds.get("A"), cabIds.get("A"));
+        assertEquals(abcIds.get("B"), cabIds.get("B"));
+        assertEquals(abcIds.get("C"), cabIds.get("C"));
+    }
+
+    @Test
+    public void zeroPlaceholderIsRejectedInFinalBlueIdInput() {
+        assertThrows(RuntimeException.class,
+                () -> BlueIdCalculator.calculateBlueId(new Node().blueId(NodeContentHandler.ZERO_BLUE_ID)));
+    }
+
+    @Test
+    public void circularSetWithoutInternalThisReferencesRejected() {
+        List<Node> nodes = Arrays.asList(new Node().value("same"), new Node().value("same"));
+
+        assertThrows(IllegalArgumentException.class, () -> CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes));
+    }
+
+    @Test
+    public void singleDocumentCycleUsesThisHashZero() {
+        Node node = YAML_MAPPER.readValue("next:\n  blueId: this#0", Node.class);
+
+        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(Arrays.asList(node));
+
+        assertEquals(1, ids.size());
+        assertTrue(ids.get(0).endsWith("#0"));
+    }
+
+    @Test
+    public void bareThisRejectedInCircularApi() {
+        Node node = YAML_MAPPER.readValue("next:\n  blueId: this", Node.class);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> CircularBlueIdCalculator.calculateCircularSetBlueIds(Arrays.asList(node)));
+    }
+
+    @Test
+    public void bareThisRejectedOutsideCircularApi() {
+        assertThrows(RuntimeException.class, () -> BlueIdCalculator.calculateBlueId(new Node().blueId("this")));
+        assertThrows(RuntimeException.class, () -> new Blue().parseBlueIdInputYaml("blueId: this"));
+    }
+
+    @Test
+    public void duplicatePreliminaryIdsWithActualCycleUseOriginalIndexTieBreak() {
+        List<Node> nodes = YAML_MAPPER.readValue(
+                "- next:\n" +
+                "    blueId: this#1\n" +
+                "- next:\n" +
+                "    blueId: this#0", Node.class).getItems();
+
+        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes);
+
+        assertEquals(baseBlueId(ids.get(0)), baseBlueId(ids.get(1)));
+        assertTrue(ids.get(0).endsWith("#0"));
+        assertTrue(ids.get(1).endsWith("#1"));
+    }
+
+    @Test
+    public void testThisReferencesAreRewrittenInTypeMetadata() {
         String docs = "- name: A\n" +
                     "  type:\n" +
                     "    blueId: this#1\n" +
@@ -295,11 +402,6 @@ public class SelfReferenceTest {
                     "    blueId: this#1\n" +
                     "  valueType:\n" +
                     "    blueId: this#2\n" +
-                    "  choice:\n" +
-                    "    schema:\n" +
-                    "      enum:\n" +
-                    "        - blueId: this#1\n" +
-                    "        - blueId: this#2\n" +
                     "- name: B\n" +
                     "  peer:\n" +
                     "    type:\n" +
@@ -316,8 +418,6 @@ public class SelfReferenceTest {
         assertEquals(nodeProvider.getBlueIdByName("C"), a.getItemType().getBlueId());
         assertEquals(nodeProvider.getBlueIdByName("B"), a.getKeyType().getBlueId());
         assertEquals(nodeProvider.getBlueIdByName("C"), a.getValueType().getBlueId());
-        assertEquals(nodeProvider.getBlueIdByName("B"), a.getAsNode("/choice").getSchema().getEnum().get(0).getBlueId());
-        assertEquals(nodeProvider.getBlueIdByName("C"), a.getAsNode("/choice").getSchema().getEnum().get(1).getBlueId());
     }
 
     @Test
@@ -333,7 +433,7 @@ public class SelfReferenceTest {
 
         NodeContentHandler.ParsedContent parsed = NodeContentHandler.parseAndCalculateBlueId(docs, node -> node);
         List<Node> stored = Arrays.asList(JSON_MAPPER.treeToValue(parsed.content, Node[].class));
-        assertEquals(BlueIdCalculator.calculateBlueId(stored), parsed.blueId);
+        assertEquals(BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(stored), parsed.blueId);
 
         Map<String, Integer> nameToStoredIndex = IntStream.range(0, stored.size())
                 .boxed()
@@ -383,6 +483,13 @@ public class SelfReferenceTest {
 
     private String baseBlueId(String blueId) {
         return blueId.split("#")[0];
+    }
+
+    private Map<String, String> idsByName(List<Node> nodes) {
+        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes);
+        return IntStream.range(0, nodes.size())
+                .boxed()
+                .collect(Collectors.toMap(i -> nodes.get(i).getName(), ids::get));
     }
 
 }

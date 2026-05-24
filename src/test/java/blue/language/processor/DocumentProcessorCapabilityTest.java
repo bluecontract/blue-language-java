@@ -62,14 +62,7 @@ class DocumentProcessorCapabilityTest {
                 "  - bad\n";
 
         Blue blue = new Blue();
-        Node document = blue.yamlToNode(yaml);
-
-        DocumentProcessingResult result = blue.initializeDocument(document);
-
-        assertTrue(result.capabilityFailure());
-        assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
-        assertTrue(result.failureReason().contains("Contracts must be an object map"));
+        assertThrows(RuntimeException.class, () -> blue.yamlToNode(yaml));
     }
 
     @Test
@@ -90,7 +83,7 @@ class DocumentProcessorCapabilityTest {
                 "    propertyValue: 1\n";
 
         Node initialized = blue.initializeDocument(blue.yamlToNode(baseYaml)).document().clone();
-        Node contracts = initialized.getProperties().get("contracts");
+        Node contracts = initialized.getContracts();
         assertNotNull(contracts);
 
         TerminateScope scope = new TerminateScope();
@@ -108,7 +101,7 @@ class DocumentProcessorCapabilityTest {
         assertTrue(result.triggeredEvents().isEmpty());
         Node resultDoc = result.document();
         assertNotNull(resultDoc);
-        Node resultContracts = resultDoc.getProperties().get("contracts");
+        Node resultContracts = resultDoc.getContracts();
         assertNotNull(resultContracts);
         assertNotNull(resultContracts.getProperties().get("unsupportedHandler"));
         assertNotNull(result.failureReason());
@@ -132,7 +125,7 @@ class DocumentProcessorCapabilityTest {
                 "    propertyValue: 1\n";
 
         Node initialized = blue.initializeDocument(blue.yamlToNode(baseYaml)).document().clone();
-        Node contracts = initialized.getProperties().get("contracts");
+        Node contracts = initialized.getContracts();
         assertNotNull(contracts);
         contracts.properties("unclear", new Node().properties("property", new Node().value("value")));
 

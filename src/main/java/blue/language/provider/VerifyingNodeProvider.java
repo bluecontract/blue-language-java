@@ -1,0 +1,71 @@
+package blue.language.provider;
+
+import blue.language.NodeProvider;
+import blue.language.model.Node;
+import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
+
+import java.util.List;
+
+public class VerifyingNodeProvider implements NodeProvider {
+
+    private final NodeProvider delegate;
+
+    public VerifyingNodeProvider(NodeProvider delegate) {
+        this.delegate = delegate;
+    }
+
+    @Override
+    public List<Node> fetchByBlueId(String blueId) {
+        String requestedBlueId = BlueIds.requireBlueIdOrCyclicMember(blueId, "provider.fetchByBlueId");
+        if (requestedBlueId.contains("#")) {
+            if (!(delegate instanceof CyclicAwareNodeProvider)) {
+                throw new UnsupportedOperationException(
+                        "Provider verification for cyclic member BlueIds requires a cyclic-set-aware verifier: "
+                                + requestedBlueId);
+            }
+            if (!((CyclicAwareNodeProvider) delegate).hasVerifiedContentForBlueId(requestedBlueId)) {
+                throw new UnsupportedOperationException(
+                        "Provider verification for cyclic member BlueIds requires verified cyclic-set content: "
+                                + requestedBlueId);
+            }
+            return delegate.fetchByBlueId(blueId);
+        }
+
+        List<Node> nodes = delegate.fetchByBlueId(blueId);
+        if (nodes == null || nodes.isEmpty()) {
+            return nodes;
+        }
+
+        verifyPlainContent(requestedBlueId, nodes);
+        return nodes;
+    }
+
+    private void verifyPlainContent(String requestedBlueId, List<Node> nodes) {
+        String actualBlueId = nodes.size() == 1
+                ? BlueIdCalculator.calculateBlueId(contentWithoutRootIdentity(nodes.get(0)))
+                : BlueIdCalculator.calculateBlueId(contentWithoutRootIdentity(nodes));
+        if (requestedBlueId.equals(actualBlueId)) {
+            return;
+        }
+
+        throw new IllegalArgumentException("Provider returned content with BlueId " + actualBlueId
+                + " for requested BlueId " + requestedBlueId + ".");
+    }
+
+    private Node contentWithoutRootIdentity(Node node) {
+        Node canonical = node.clone();
+        if (canonical.getBlueId() != null && !canonical.isReferenceOnly()) {
+            canonical.blueId(null);
+        }
+        return canonical;
+    }
+
+    private List<Node> contentWithoutRootIdentity(List<Node> nodes) {
+        List<Node> canonical = new java.util.ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            canonical.add(contentWithoutRootIdentity(node));
+        }
+        return canonical;
+    }
+}

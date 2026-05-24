@@ -1,0 +1,10 @@
+id: B_previous_invalid_blueid_rejected
+category: BlueId
+operation: calculateBlueId
+description: previous anchors must use plain valid BlueIds
+expectError: true
+input:
+  items:
+    - $previous:
+        blueId: not-a-real-blueid
+    - A

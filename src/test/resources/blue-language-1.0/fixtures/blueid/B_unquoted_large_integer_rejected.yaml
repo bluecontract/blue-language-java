@@ -1,0 +1,7 @@
+id: B_unquoted_large_integer_rejected
+category: BlueId
+operation: calculateBlueId
+description: unquoted integers outside the safe interoperable range are rejected
+expectError: true
+input:
+  value: 9007199254740992

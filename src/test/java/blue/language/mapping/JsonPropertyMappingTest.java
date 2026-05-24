@@ -101,7 +101,7 @@ class JsonPropertyMappingTest {
 
         JsonPropertyBlueIdMetadata converted = blue.nodeToObject(node, JsonPropertyBlueIdMetadata.class);
 
-        assertEquals(BlueIdCalculator.calculateBlueId(target), converted.packageBlueId);
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(target), converted.packageBlueId);
     }
 
     @Test

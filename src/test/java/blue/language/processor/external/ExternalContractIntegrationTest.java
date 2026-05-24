@@ -91,7 +91,7 @@ class ExternalContractIntegrationTest {
 
         assertTrue(result.capabilityFailure());
         assertTrue(result.failureReason().contains(UNKNOWN_BLUE_ID));
-        assertFalse(result.document().getProperties().get("contracts").getProperties().containsKey("initialized"));
+        assertFalse(result.document().getContracts().getProperties().containsKey("initialized"));
         assertEquals(new BigInteger("0"), result.document().get("/counter"));
     }
 

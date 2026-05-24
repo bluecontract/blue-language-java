@@ -27,7 +27,7 @@ public class ListProcessorTest {
                 .type("List")
                 .itemType("Integer");
         Node listB = new Node().name("ListB")
-                .type(new Node().blueId(calculateBlueId(listA)));
+                .type(new Node().blueId(new Blue().calculateSemanticBlueId(listA)));
 
         List<Node> nodes = Arrays.asList(listA, listB);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
@@ -100,15 +100,19 @@ public class ListProcessorTest {
         nodeProvider.addSingleDocs(a);
 
         String b = "name: B\n" +
-                   "type: " + nodeProvider.getBlueIdByName("A");
+                   "type:\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A");
         nodeProvider.addSingleDocs(b);
 
         String listOfB = "name: ListOfB\n" +
                          "type: List\n" +
-                         "itemType: " + nodeProvider.getBlueIdByName("B") + "\n" +
+                         "itemType:\n" +
+                         "  blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                          "items:\n" +
-                         "  - type: " + nodeProvider.getBlueIdByName("B") + "\n" +
-                         "  - type: " + nodeProvider.getBlueIdByName("A");  // This should cause an error
+                         "  - type:\n" +
+                         "      blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
+                         "  - type:\n" +
+                         "      blueId: " + nodeProvider.getBlueIdByName("A");  // This should cause an error
         nodeProvider.addSingleDocs(listOfB);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
@@ -260,8 +264,10 @@ public class ListProcessorTest {
         nodeProvider.addSingleDocs(a);
 
         String nonListWithItemType = "name: NonListWithItemType\n" +
-                                     "type: " + nodeProvider.getBlueIdByName("A") + "\n" +
-                                     "itemType: " + nodeProvider.getBlueIdByName("A");
+                                     "type:\n" +
+                                     "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
+                                     "itemType:\n" +
+                                     "  blueId: " + nodeProvider.getBlueIdByName("A");
         nodeProvider.addSingleDocs(nonListWithItemType);
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(

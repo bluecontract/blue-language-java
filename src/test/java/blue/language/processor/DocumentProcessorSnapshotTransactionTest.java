@@ -376,7 +376,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "      blueId: SetProperty\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 9\n", Node.class);
-        FrozenNode canonical = FrozenNode.fromNode(initialized);
+        FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(initialized);
         ResolvedSnapshot snapshot = new ResolvedSnapshot(canonical,
                 FrozenNode.fromResolvedNode(initialized),
                 canonical.blueId());
@@ -410,7 +410,7 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessor snapshotProcessor = new DocumentProcessor(null, new CountingSnapshotManager())
                 .registerContractProcessor(new TestEventChannelProcessor())
                 .registerContractProcessor(new SetPropertyContractProcessor());
-        FrozenNode canonical = FrozenNode.fromNode(document);
+        FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(document);
         ResolvedSnapshot inputSnapshot = new ResolvedSnapshot(canonical,
                 FrozenNode.fromResolvedNode(document),
                 canonical.blueId());
@@ -512,7 +512,7 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void contractLoadingUsesSnapshotResolvedViewForInheritedContracts() {
         BasicNodeProvider provider = new BasicNodeProvider();
-        provider.addSingleDocs(
+        provider.addSingleDocsUnchecked(
                 "name: Event Driven Type\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
@@ -547,7 +547,7 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     private static void assertSnapshotConsistent(ResolvedSnapshot snapshot) {
-        assertEquals(BlueIdCalculator.calculateBlueId(snapshot.canonicalRoot()), snapshot.blueId());
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(snapshot.canonicalRoot()), snapshot.blueId());
     }
 
     private static final class CountingSnapshotManager implements ProcessingSnapshotManager {
@@ -591,7 +591,7 @@ class DocumentProcessorSnapshotTransactionTest {
             }
             Node canonicalSource = canonical != null ? canonical.clone() : document.clone();
             Node resolvedSource = resolved != null ? resolved.clone() : document.clone();
-            FrozenNode canonicalRoot = FrozenNode.fromNode(canonicalSource);
+            FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(canonicalSource);
             return new ResolvedSnapshot(canonicalRoot,
                     FrozenNode.fromResolvedNode(resolvedSource),
                     canonicalRoot.blueId());

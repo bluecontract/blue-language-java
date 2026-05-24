@@ -117,7 +117,7 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void providerBackedTypeCompatibilityIgnoresNameDescriptionAndSchemaLabels() {
+    void providerBackedTypeCompatibilityIgnoresNameDescriptionOnTypes() {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Provider Request\n" +
@@ -125,10 +125,7 @@ public class NodeTypeMatcherTest {
                 "payload:\n" +
                 "  type: Integer\n" +
                 "  schema:\n" +
-                "    minimum:\n" +
-                "      name: Provider minimum label\n" +
-                "      description: Provider minimum description\n" +
-                "      value: 1");
+                "    minimum: 1");
         Blue blue = new Blue(nodeProvider);
 
         Node providerTypedNode = blue.yamlToNode(
@@ -142,10 +139,7 @@ public class NodeTypeMatcherTest {
                 "  payload:\n" +
                 "    type: Integer\n" +
                 "    schema:\n" +
-                "      minimum:\n" +
-                "        name: Inline minimum label\n" +
-                "        description: Inline minimum description\n" +
-                "        value: 1\n" +
+                "      minimum: 1\n" +
                 "payload:\n" +
                 "  type: Integer");
         Node inlineTypedNode = blue.yamlToNode(
@@ -155,10 +149,7 @@ public class NodeTypeMatcherTest {
                 "  payload:\n" +
                 "    type: Integer\n" +
                 "    schema:\n" +
-                "      minimum:\n" +
-                "        name: Inline minimum label\n" +
-                "        description: Inline minimum description\n" +
-                "        value: 1\n" +
+                "      minimum: 1\n" +
                 "payload: 5");
         Node providerReferenceTarget = blue.yamlToNode(
                 "type:\n" +
@@ -291,7 +282,6 @@ public class NodeTypeMatcherTest {
                 "values:\n" +
                 "  type: List\n" +
                 "  schema:\n" +
-                "    allowMultiple: true\n" +
                 "    minItems: 2\n" +
                 "    maxItems: 3\n" +
                 "    uniqueItems: true\n" +
@@ -520,7 +510,6 @@ public class NodeTypeMatcherTest {
                         "values:\n" +
                         "  type: List\n" +
                         "  schema:\n" +
-                        "    allowMultiple: true\n" +
                         "    minItems: 2\n" +
                         "    maxItems: 2")));
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("List Candidate")));
@@ -1279,7 +1268,8 @@ public class NodeTypeMatcherTest {
     void directFrozenReferenceMatchingCachesUnresolvedReferenceMisses() {
         CountingNodeProvider provider = new CountingNodeProvider(new BasicNodeProvider());
         Blue blue = new Blue(provider);
-        FrozenNode missingReference = FrozenNode.fromResolvedNode(new Node().blueId("missing-reference"));
+        String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().value("missing"));
+        FrozenNode missingReference = FrozenNode.fromResolvedNode(new Node().blueId(missingBlueId));
         FrozenNode target = FrozenNode.fromResolvedNode(blue.yamlToNode("payload: 1"));
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
@@ -1287,7 +1277,7 @@ public class NodeTypeMatcherTest {
             assertFalse(matcher.matchesResolvedType(missingReference, target));
         }
 
-        assertEquals(2, provider.fetchesFor("missing-reference"));
+        assertEquals(2, provider.fetchesFor(missingBlueId));
     }
 
     @Test
@@ -1407,7 +1397,6 @@ public class NodeTypeMatcherTest {
                 "  lineItems:\n" +
                 "    type: List\n" +
                 "    schema:\n" +
-                "      allowMultiple: true\n" +
                 "      minItems: 2\n" +
                 "      maxItems: 2\n" +
                 "  metadata:\n" +

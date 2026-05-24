@@ -87,6 +87,11 @@ public final class NodePathSelector {
                 currentPath.remove(currentPath.size() - 1);
             }
         }
+        if (current.getContracts() != null) {
+            currentPath.add("contracts");
+            select(current.getContracts(), pattern, index + 1, currentPath, predicate, selected);
+            currentPath.remove(currentPath.size() - 1);
+        }
     }
 
     private static void traverseListItems(Node current,
@@ -120,6 +125,9 @@ public final class NodePathSelector {
         }
         if ("blue".equals(segment)) {
             return node.getBlue();
+        }
+        if ("contracts".equals(segment)) {
+            return node.getContracts();
         }
         if (node.getItems() != null && isListIndex(segment)) {
             int index = Integer.parseInt(segment);

@@ -269,6 +269,13 @@ final class ProcessorEngine {
             if (segment.isEmpty()) {
                 continue;
             }
+            if ("contracts".equals(segment)) {
+                current = current.getContracts();
+                if (current == null) {
+                    return null;
+                }
+                continue;
+            }
             Map<String, Node> props = current.getProperties();
             if (props == null) {
                 return null;

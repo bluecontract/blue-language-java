@@ -1,0 +1,15 @@
+id: R_inherited_keyType_valueType
+category: Resolution
+operation: resolve
+description: inherited dictionary keyType and valueType remain effective when child omits them
+expectError: true
+source:
+  type:
+    type:
+      blueId: G7fBT9PSod1RfHLHkpafAGBDVAJMrMhAMY51ERcyXNrj
+    keyType:
+      blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1
+    valueType:
+      blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1
+  notAnIntegerKey:
+    value: not an integer

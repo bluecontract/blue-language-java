@@ -1,0 +1,20 @@
+id: R_top_level_type_name_description_not_inherited
+category: Resolution
+operation: resolve
+description: root name and description from an inline type are not inherited onto the instance root
+source:
+  type:
+    name: Base Type
+    description: Base description
+    inherited: yes
+  own: child
+expectedResolved:
+  type:
+    name: Base Type
+    description: Base description
+    inherited:
+      value: yes
+  inherited:
+    value: yes
+  own:
+    value: child

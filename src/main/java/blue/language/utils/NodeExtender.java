@@ -76,6 +76,9 @@ public class NodeExtender {
             if (currentNode.getValueType() != null) {
                 extendNode(currentNode.getValueType(), currentLimits, "valueType", true);
             }
+            if (currentNode.getContracts() != null) {
+                extendNode(currentNode.getContracts(), currentLimits, "contracts", false);
+            }
 
             Map<String, Node> properties = currentNode.getProperties();
             if (properties != null) {
@@ -148,6 +151,7 @@ public class NodeExtender {
         target.value(source.getValue());
         target.items(source.getItems());
         target.properties(source.getProperties());
+        target.contracts(source.getContracts());
         target.schema(source.getSchema());
         target.mergePolicy(source.getMergePolicy());
         target.previousBlueId(source.getPreviousBlueId());

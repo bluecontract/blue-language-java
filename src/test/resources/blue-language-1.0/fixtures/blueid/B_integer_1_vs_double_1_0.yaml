@@ -1,0 +1,7 @@
+id: B_integer_1_vs_double_1_0
+category: BlueId
+operation: calculateBlueId
+description: integer 1 and double 1.0 have distinct BlueIds
+input: 1.0
+expectedNodeBlueId: "3SeoqNFjgk6TJV2DzMBGv1wkzcgUzTL9s8BVKhmnXUqL"
+alsoDifferentFrom: 1

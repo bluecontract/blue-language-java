@@ -3,42 +3,46 @@ package blue.language.utils;
 import blue.language.model.*;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.*;
 import static com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT;
 import static com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.MINIMIZE_QUOTES;
-import static com.fasterxml.jackson.dataformat.yaml.YAMLParser.Feature.EMPTY_STRING_AS_NULL;
 
 public class UncheckedObjectMapper extends ObjectMapper {
 
+    private static final Pattern YAML_TAG_PATTERN = Pattern.compile("(^|[\\s\\[{,])![^\\s]+");
+    private static final Pattern YAML_ANCHOR_OR_ALIAS_PATTERN = Pattern.compile("(^|\\s)[&*][A-Za-z0-9_-]+");
+
     public static final UncheckedObjectMapper YAML_MAPPER =  new UncheckedObjectMapper(
-            new YAMLFactory()
+            YAMLFactory.builder()
                     .enable(MINIMIZE_QUOTES)
-                    .enable(EMPTY_STRING_AS_NULL));
+                    .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+                    .build());
 
     public static final UncheckedObjectMapper JSON_MAPPER = new UncheckedObjectMapper(
-            new JsonFactory());
+            JsonFactory.builder()
+                    .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+                    .build());
 
     private UncheckedObjectMapper(JsonFactory jsonFactory) {
         super(jsonFactory);
-
-        setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.AS_EMPTY));
 
         setVisibility(getSerializationConfig().getDefaultVisibilityChecker()
                 .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
@@ -51,7 +55,6 @@ public class UncheckedObjectMapper extends ObjectMapper {
         setSerializationInclusion(Include.NON_NULL);
         enable(USE_BIG_DECIMAL_FOR_FLOATS);
         enable(USE_BIG_INTEGER_FOR_INTS);
-        enable(ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
 
         SimpleModule module = new SimpleModule();
         module.setSerializerModifier(new BlueAnnotationsBeanSerializerModifier());
@@ -82,7 +85,8 @@ public class UncheckedObjectMapper extends ObjectMapper {
     @Override
     public <T> T readValue(String content, Class<T> valueType) {
         try {
-            return super.readValue(content, valueType);
+            rejectYamlOnlySyntax(content);
+            return rejectRootNull(super.readValue(content, valueType), valueType);
         } catch (IOException e) {
             throw new JsonException(e);
         }
@@ -91,7 +95,10 @@ public class UncheckedObjectMapper extends ObjectMapper {
     @Override
     public <T> T readValue(InputStream src, Class<T> valueType) {
         try {
-            return super.readValue(src, valueType);
+            if (getFactory() instanceof YAMLFactory) {
+                return readValue(readUtf8(src), valueType);
+            }
+            return rejectRootNull(super.readValue(src, valueType), valueType);
         } catch (IOException e) {
             throw new JsonException(e);
         }
@@ -100,6 +107,9 @@ public class UncheckedObjectMapper extends ObjectMapper {
     @Override
     public <T> T readValue(InputStream src, TypeReference<T> valueTypeRef) {
         try {
+            if (getFactory() instanceof YAMLFactory) {
+                return readValue(readUtf8(src), valueTypeRef);
+            }
             return super.readValue(src, valueTypeRef);
         } catch (IOException e) {
             throw new JsonException(e);
@@ -109,6 +119,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
     @Override
     public JsonNode readTree(String content) {
         try {
+            rejectYamlOnlySyntax(content);
             return super.readTree(content);
         } catch (IOException e) {
             throw new JsonException(e);
@@ -118,6 +129,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
     @Override
     public <T> T readValue(String content, TypeReference<T> valueTypeRef) {
         try {
+            rejectYamlOnlySyntax(content);
             return super.readValue(content, valueTypeRef);
         } catch (IOException e) {
             throw new JsonException(e);
@@ -127,6 +139,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
     @Override
     public <T> T readValue(String content, JavaType valueType) {
         try {
+            rejectYamlOnlySyntax(content);
             return super.readValue(content, valueType);
         } catch (IOException e) {
             throw new JsonException(e);
@@ -162,10 +175,39 @@ public class UncheckedObjectMapper extends ObjectMapper {
     @Override
     public <T> T treeToValue(TreeNode n, Class<T> valueType) {
         try {
-            return super.treeToValue(n, valueType);
+            return rejectRootNull(super.treeToValue(n, valueType), valueType);
         } catch (IllegalArgumentException | JsonProcessingException e) {
             throw new JsonException(e);
         }
+    }
+
+    private <T> T rejectRootNull(T result, Class<T> valueType) {
+        if (result == null && Node.class.equals(valueType)) {
+            throw new JsonException(new IllegalArgumentException("Root null is not a valid Blue document."));
+        }
+        return result;
+    }
+
+    private void rejectYamlOnlySyntax(String content) {
+        if (!(getFactory() instanceof YAMLFactory) || content == null) {
+            return;
+        }
+        if (YAML_TAG_PATTERN.matcher(content).find()) {
+            throw new JsonException(new IllegalArgumentException("YAML tags are not part of the Blue JSON data model."));
+        }
+        if (YAML_ANCHOR_OR_ALIAS_PATTERN.matcher(content).find()) {
+            throw new JsonException(new IllegalArgumentException("YAML anchors and aliases are not part of the Blue JSON data model."));
+        }
+    }
+
+    private String readUtf8(InputStream src) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = src.read(buffer)) != -1) {
+            out.write(buffer, 0, read);
+        }
+        return new String(out.toByteArray(), StandardCharsets.UTF_8);
     }
 
     public <T> T nestedConvertValue(Object fromValue, Class<T> toValueType) {

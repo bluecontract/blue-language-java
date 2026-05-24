@@ -1,0 +1,12 @@
+id: C_duplicate_preliminary_ids_deterministic_or_rejected
+category: Circular
+operation: calculateCircularSetBlueIds
+description: duplicate preliminary IDs use original index as a deterministic tie-break
+documents:
+  - next:
+      blueId: this#1
+  - next:
+      blueId: this#0
+expectedBlueIds:
+  - "APkJUKnY7fY7dcCpuq16jHSoQQ6hkgUmRJWHXu6GK6Da#0"
+  - "APkJUKnY7fY7dcCpuq16jHSoQQ6hkgUmRJWHXu6GK6Da#1"

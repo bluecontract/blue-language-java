@@ -1,0 +1,11 @@
+id: F_expand_preserves_node_blueid
+category: Provider
+operation: expand
+description: provider-backed expansion preserves Node BlueId
+source:
+  blueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+provider:
+  - requestedBlueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+    node: 1
+expectedExpanded: 1
+expectedNodeBlueId: "GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF"

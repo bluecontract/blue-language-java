@@ -61,7 +61,7 @@ final class FrozenConformancePlanner {
 
             if (nextCanonicalRoot != null) {
                 FrozenNode before = read(nextCanonicalRoot, path);
-                FrozenNode after = reuseUnchangedSubtrees(before, canonicalize(generalizedNode.resolved()));
+                FrozenNode after = reuseUnchangedSubtrees(before, canonicalize(generalizedNode.resolved(), nextCanonicalRoot));
                 nextCanonicalRoot = replaceAt(nextCanonicalRoot, path, after);
                 canonicalPatches.add(new CanonicalGeneralizationPatch(path, before, after));
             }
@@ -102,7 +102,8 @@ final class FrozenConformancePlanner {
             return ConformanceResult.conformant();
         }
         try {
-            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(node.toNode(), Limits.NO_LIMITS);
+            Node canonical = new MergeReverser().reverse(node.toNode());
+            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(canonical, Limits.NO_LIMITS);
             return ConformanceResult.conformant();
         } catch (RuntimeException ex) {
             return ConformanceResult.nonConformant(ex.getMessage());
@@ -174,8 +175,12 @@ final class FrozenConformancePlanner {
                 : BlueIdCalculator.calculateBlueId(new MergeReverser().reverse(type.toNode()));
     }
 
-    private FrozenNode canonicalize(FrozenNode resolvedNode) {
-        return FrozenNode.fromNode(new MergeReverser().reverse(resolvedNode.toNode()));
+    private FrozenNode canonicalize(FrozenNode resolvedNode, FrozenNode canonicalRoot) {
+        Node canonical = new MergeReverser().reverse(resolvedNode.toNode());
+        if (canonicalRoot != null && !canonicalRoot.isStrictBlueIdValidation()) {
+            return FrozenNode.fromUncheckedCanonicalNode(canonical);
+        }
+        return FrozenNode.fromNode(canonical);
     }
 
     private List<String> existingPathSegments(FrozenNode root, String pointer) {

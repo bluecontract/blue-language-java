@@ -263,7 +263,6 @@ reference forms.
 `schema` provides deterministic core validation. Supported keywords include:
 
 - `required`
-- `allowMultiple`
 - `minLength`
 - `maxLength`
 - `minimum`
@@ -879,11 +878,39 @@ For deeper design notes, see:
 
 ## Build And Test
 
-Run the test suite:
+The project currently compiles for Java 8 source/target compatibility and uses
+JUnit 5 for tests. Build and test with a JDK that can run Gradle 8.4.
+
+Run the full CI-style verification command:
+
+```bash
+./gradlew clean test
+```
+
+Run the test suite without cleaning:
 
 ```bash
 ./gradlew test
 ```
+
+Run only the Blue Language 1.0 conformance fixtures:
+
+```bash
+./gradlew test --tests '*BlueLanguageConformanceFixtureTest'
+```
+
+At runtime, `new Blue().conformanceReport()` returns static Blue Language 1.0
+metadata: language version, core registry BlueIds, fixture package identity,
+fixture IDs, and fixture categories. `new Blue().runConformanceSuite()` executes
+the manifest-driven fixture suite and returns passed fixture IDs plus detailed
+failures with fixture ID, category, operation, exception class, and message.
+The fixture package under `src/test/resources/blue-language-1.0/fixtures` is a
+vendored copy of the canonical Blue Language 1.0 fixture package; its manifest
+identity must match the fixture package identity published by the Blue Language
+1.0 specification release. The current Java fixture package identity is a
+SHA-256 content digest over `manifest.yaml` with the identity field blanked plus
+each manifest-listed fixture file in manifest order; verify it with
+`BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`.
 
 Build jars:
 
@@ -897,8 +924,11 @@ Publish to local Maven:
 ./gradlew publishToMavenLocal
 ```
 
-The project currently compiles for Java 8 source/target compatibility and uses
-JUnit 5 for tests.
+The Gradle wrapper uses the distribution declared in
+`gradle/wrapper/gradle-wrapper.properties`. Local and CI environments need either
+network access for that first wrapper download or a cached Gradle distribution;
+offline verification works once the wrapper distribution and normal dependency
+cache are already present.
 
 ## Project Layout
 

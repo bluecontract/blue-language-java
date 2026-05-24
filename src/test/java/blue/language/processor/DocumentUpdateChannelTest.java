@@ -215,7 +215,7 @@ class DocumentUpdateChannelTest {
         assertNull(originalX.getProperties().get("a"));
         Node originalY = originalX.getProperties().get("y");
         assertNotNull(originalY);
-        assertNull(originalY.getProperties().get("a"));
+        assertNull(originalY.getProperties() != null ? originalY.getProperties().get("a") : null);
     }
 
     @Test

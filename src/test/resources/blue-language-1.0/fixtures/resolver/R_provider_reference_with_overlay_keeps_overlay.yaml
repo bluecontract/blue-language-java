@@ -1,0 +1,15 @@
+id: R_provider_reference_with_overlay_keeps_overlay
+category: Canonicalization
+operation: canonicalize
+description: provider materialization canonicalizes back to a pure reference plus instance overlay
+source:
+  type:
+    blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  local: overlay
+provider:
+  - requestedBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+    node: {}
+expectedCanonicalOverlay:
+  type:
+    blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  local: overlay

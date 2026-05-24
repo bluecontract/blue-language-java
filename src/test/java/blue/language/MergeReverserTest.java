@@ -7,6 +7,7 @@ import blue.language.utils.MergeReverser;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -217,7 +218,7 @@ public class MergeReverserTest {
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
         String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
-        nodeProvider.addSingleDocs(
+        Node derived = blue.yamlToNode(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
@@ -229,7 +230,7 @@ public class MergeReverserTest {
                 "    - $pos: 1\n" +
                 "      value: C");
 
-        Node resolved = blue.resolve(nodeProvider.getNodeByName("Derived"));
+        Node resolved = blue.resolve(derived);
         Node reversed = new MergeReverser().reverse(resolved);
         Node reversedList = reversed.getAsNode("/list");
 
@@ -255,7 +256,7 @@ public class MergeReverserTest {
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
         String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
-        nodeProvider.addSingleDocs(
+        Node derived = blue.yamlToNode(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
@@ -270,7 +271,7 @@ public class MergeReverserTest {
                 "      value: Z\n" +
                 "    - D");
 
-        Node reversed = new MergeReverser().reverse(blue.resolve(nodeProvider.getNodeByName("Derived")));
+        Node reversed = new MergeReverser().reverse(blue.resolve(derived));
         Node reversedList = reversed.getAsNode("/list");
 
         assertEquals(4, reversedList.getItems().size());
@@ -305,7 +306,7 @@ public class MergeReverserTest {
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
         String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
-        nodeProvider.addSingleDocs(
+        Node derived = blue.yamlToNode(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
@@ -318,7 +319,7 @@ public class MergeReverserTest {
                 "      details:\n" +
                 "        color: red");
 
-        Node reversed = new MergeReverser().reverse(blue.resolve(nodeProvider.getNodeByName("Derived")));
+        Node reversed = new MergeReverser().reverse(blue.resolve(derived));
         Node overlay = reversed.getAsNode("/list").getItems().get(1);
 
         assertEquals(Integer.valueOf(0), overlay.getPosition());
@@ -343,7 +344,7 @@ public class MergeReverserTest {
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
         String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
-        nodeProvider.addSingleDocs(
+        Node derived = blue.yamlToNode(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
@@ -355,12 +356,50 @@ public class MergeReverserTest {
                 "    - $pos: 0\n" +
                 "      value: A");
 
-        Node reversed = new MergeReverser().reverse(blue.resolve(nodeProvider.getNodeByName("Derived")));
+        Node reversed = new MergeReverser().reverse(blue.resolve(derived));
         Node overlay = reversed.getAsNode("/list").getItems().get(1);
 
         assertEquals(Integer.valueOf(0), overlay.getPosition());
         assertEquals("A", overlay.getValue());
         assertEquals("A", blue.resolve(reversed).getAsNode("/list").getItems().get(0).getValue());
+    }
+
+    @Test
+    public void canonicalOverlayDoesNotSerializePreviousOrPos() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - A\n" +
+                "    - B");
+        Blue blue = new Blue(nodeProvider);
+        Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        nodeProvider.addListAndItsItems(inheritedList.getItems());
+        Node derived = blue.yamlToNode(
+                "name: Derived\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - $previous:\n" +
+                "        blueId: " + previousBlueId + "\n" +
+                "    - $pos: 1\n" +
+                "      value: C");
+
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(blue.resolve(derived));
+        Node canonicalList = canonical.getAsNode("/list");
+
+        assertEquals(2, canonicalList.getItems().size());
+        assertEquals("A", canonicalList.getItems().get(0).getValue());
+        assertEquals("C", canonicalList.getItems().get(1).getValue());
+        canonicalList.getItems().forEach(item -> {
+            assertNull(item.getPreviousBlueId());
+            assertNull(item.getPosition());
+        });
     }
 
     @Test
@@ -399,7 +438,7 @@ public class MergeReverserTest {
         Node reversed = new MergeReverser().reverse(resolved);
 
         assertNotNull(reversed.getSchema());
-        assertEquals(3, reversed.getSchema().getMinLengthValue());
+        assertEquals(BigInteger.valueOf(3), reversed.getSchema().getMinLengthExact());
     }
 
 }

@@ -75,6 +75,16 @@ class NodeToPathLimitsConverterTest {
     }
 
     @Test
+    void testContractsReservedField() {
+        Node node = new Node().contracts(new Node().properties("audit", new Node().properties("enabled", new Node())));
+
+        assertAllows(node, "/contracts");
+        assertAllows(node, "/contracts/audit");
+        assertAllows(node, "/contracts/audit/enabled");
+        assertRejects(node, "/audit");
+    }
+
+    @Test
     void testNullNode() {
         assertRejects(null, "/");
         assertRejects(null, "/anyPath");

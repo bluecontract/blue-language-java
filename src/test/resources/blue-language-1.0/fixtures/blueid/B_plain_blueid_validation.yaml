@@ -1,0 +1,7 @@
+id: B_plain_blueid_validation
+category: BlueId
+operation: calculateBlueId
+description: invalid plain BlueId reference is rejected
+expectError: true
+input:
+  blueId: not-a-real-blueid

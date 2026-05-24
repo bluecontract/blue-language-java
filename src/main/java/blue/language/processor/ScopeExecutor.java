@@ -104,7 +104,7 @@ final class ScopeExecutor {
         }
 
         runtime.chargeInitialization();
-        String documentId = BlueIdCalculator.calculateBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
+        String documentId = BlueIdCalculator.calculateUncheckedBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
         ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, false, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, true);

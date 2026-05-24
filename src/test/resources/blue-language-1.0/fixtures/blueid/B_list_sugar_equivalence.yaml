@@ -1,0 +1,12 @@
+id: B_list_sugar_equivalence
+category: BlueId
+operation: calculateBlueId
+description: surface list and wrapped items list are equivalent
+input:
+  - A
+  - B
+expectedNodeBlueId: "HGLd6gvx6YHX2cizkCMnrTPhTngpTeRnSzApLfrGYDWf"
+alsoEquivalentTo:
+  items:
+    - A
+    - B

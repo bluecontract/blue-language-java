@@ -272,16 +272,15 @@ public class NodeTypeMatcher {
 
         private boolean schemaNeedsItems(Schema schema) {
             return schema != null
-                    && (schema.getAllowMultipleValue() != null
-                    || schema.getMinItemsValue() != null
-                    || schema.getMaxItemsValue() != null
+                    && (schema.getMinItemsExact() != null
+                    || schema.getMaxItemsExact() != null
                     || schema.getUniqueItemsValue() != null);
         }
 
         private boolean schemaNeedsFields(Schema schema) {
             return schema != null
-                    && (schema.getMinFieldsValue() != null
-                    || schema.getMaxFieldsValue() != null);
+                    && (schema.getMinFieldsExact() != null
+                    || schema.getMaxFieldsExact() != null);
         }
 
         private boolean shouldAttemptBundleReconstruction(List<Node> candidateItems, List<Node> targetItems) {

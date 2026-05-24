@@ -1,0 +1,11 @@
+id: R_instance_field_kept
+category: Canonicalization
+operation: canonicalize
+description: canonical overlay keeps fields supplied by the instance
+source:
+  type:
+    inherited: from-type
+  instanceField: supplied
+expectedCanonicalOverlay:
+  type: {}
+  instanceField: supplied

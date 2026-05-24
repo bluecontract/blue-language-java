@@ -1,0 +1,8 @@
+id: B_scalar_sugar_equivalence
+category: BlueId
+operation: calculateBlueId
+description: scalar sugar and wrapped scalar are equivalent
+input: 1
+expectedNodeBlueId: "GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF"
+alsoEquivalentTo:
+  value: 1

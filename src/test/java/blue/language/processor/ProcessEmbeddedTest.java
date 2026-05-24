@@ -10,6 +10,7 @@ import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -52,16 +53,16 @@ class ProcessEmbeddedTest {
         Blue blue = new Blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
-        String rootId = blue.calculateBlueId(original.clone());
+        String rootId = BlueIdCalculator.calculateUncheckedBlueId(original.clone());
         Node originalChildNode = original.getProperties().get("x");
-        String childId = blue.calculateBlueId(originalChildNode.clone());
+        String childId = BlueIdCalculator.calculateUncheckedBlueId(originalChildNode.clone());
 
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node initialized = result.document();
 
         Node child = initialized.getProperties().get("x");
         assertNotNull(child, "Embedded child should remain present");
-        Node childContracts = child.getProperties().get("contracts");
+        Node childContracts = child.getContracts();
         assertNotNull(childContracts, "Child contracts map should exist");
         assertTrue(childContracts.getProperties().containsKey("initialized"),
                 "Child scope must record Initialization Marker");
@@ -72,7 +73,7 @@ class ProcessEmbeddedTest {
         assertEquals(new BigInteger("1"), child.getProperties().get("a").getValue(),
                 "Child property /x/a should be set by embedded handler");
 
-        Node rootContracts = initialized.getProperties().get("contracts");
+        Node rootContracts = initialized.getContracts();
         assertNotNull(rootContracts, "Root contracts map should exist");
         assertTrue(rootContracts.getProperties().containsKey("initialized"),
                 "Root scope must record Initialization Marker");
@@ -262,19 +263,19 @@ class ProcessEmbeddedTest {
 
         Node xNode = initialized.getProperties().get("x");
         assertNotNull(xNode);
-        Node xContracts = xNode.getProperties().get("contracts");
+        Node xContracts = xNode.getContracts();
         assertNotNull(xContracts);
         assertTrue(xContracts.getProperties().containsKey("initialized"));
 
         Node yNode = xNode.getProperties().get("y");
         assertNotNull(yNode);
-        Node yContracts = yNode.getProperties().get("contracts");
+        Node yContracts = yNode.getContracts();
         assertNotNull(yContracts);
         assertTrue(yContracts.getProperties().containsKey("initialized"));
         assertEquals(new BigInteger("1"), yNode.getProperties().get("a").getValue());
 
         Node originalY = nested.getProperties().get("x").getProperties().get("y");
-        assertNull(originalY.getProperties().get("a"));
+        assertNull(originalY.getProperties() != null ? originalY.getProperties().get("a") : null);
 
         Node rootViolation = blue.yamlToNode(rootViolationYaml);
         DocumentProcessingResult rootResult = blue.initializeDocument(rootViolation);
@@ -470,7 +471,7 @@ class ProcessEmbeddedTest {
         DocumentProcessingResult initResult = blue.initializeDocument(original);
         Node initialized = initResult.document();
 
-        Node initialContracts = initialized.getProperties().get("contracts");
+        Node initialContracts = initialized.getContracts();
         Node initialEmbedded = initialContracts.getProperties().get("embedded");
         Node initialPaths = initialEmbedded.getProperties().get("paths");
         assertNotNull(initialPaths);
@@ -557,9 +558,11 @@ class ProcessEmbeddedTest {
         DocumentProcessingResult result = blue.processDocument(initialized, event);
         Node processed = result.document();
 
-        assertNull(processed.getProperties().get("child"), "Child scope should remain removed after cut-off");
+        assertNull(processed.getProperties() != null ? processed.getProperties().get("child") : null,
+                "Child scope should remain removed after cut-off");
 
-        assertNull(processed.getProperties().get("postSeen"), "No post-cut-off emission should be bridged");
+        assertNull(processed.getProperties() != null ? processed.getProperties().get("postSeen") : null,
+                "No post-cut-off emission should be bridged");
 
         boolean postEmissionRecorded = result.triggeredEvents().stream()
                 .map(Node::getProperties)

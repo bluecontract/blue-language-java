@@ -9,6 +9,7 @@ import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,48 +33,47 @@ public class SchemaVerifier implements MergingProcessor {
         verifyWellFormed(schema);
 
         verifyRequired(schema.getRequiredValue(), target);
-        verifyAllowMultiple(schema.getAllowMultipleValue(), target.getItems());
-        verifyMinLength(schema.getMinLengthValue(), target.getValue());
-        verifyMaxLength(schema.getMaxLengthValue(), target.getValue());
+        verifyMinLength(schema.getMinLengthExact(), target.getValue());
+        verifyMaxLength(schema.getMaxLengthExact(), target.getValue());
         verifyMinimum(schema.getMinimumValue(), target.getValue());
         verifyMaximum(schema.getMaximumValue(), target.getValue());
         verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target.getValue());
         verifyExclusiveMaximum(schema.getExclusiveMaximumValue(), target.getValue());
         verifyMultipleOf(schema.getMultipleOfValue(), target.getValue());
-        verifyMinItems(schema.getMinItemsValue(), target.getItems());
-        verifyMaxItems(schema.getMaxItemsValue(), target.getItems());
+        verifyMinItems(schema.getMinItemsExact(), target.getItems());
+        verifyMaxItems(schema.getMaxItemsExact(), target.getItems());
         verifyUniqueItems(schema.getUniqueItemsValue(), target.getItems());
-        verifyMinFields(schema.getMinFieldsValue(), target.getProperties());
-        verifyMaxFields(schema.getMaxFieldsValue(), target.getProperties());
+        verifyMinFields(schema.getMinFieldsExact(), target.getProperties());
+        verifyMaxFields(schema.getMaxFieldsExact(), target.getProperties());
         verifyEnum(schema.getEnum(), target);
     }
 
     private void verifyWellFormed(Schema schema) {
-        verifyNonNegative("minLength", schema.getMinLengthValue());
-        verifyNonNegative("maxLength", schema.getMaxLengthValue());
-        verifyMinLessThanOrEqualMax("minLength", schema.getMinLengthValue(), "maxLength", schema.getMaxLengthValue());
+        verifyNonNegative("minLength", schema.getMinLengthExact());
+        verifyNonNegative("maxLength", schema.getMaxLengthExact());
+        verifyMinLessThanOrEqualMax("minLength", schema.getMinLengthExact(), "maxLength", schema.getMaxLengthExact());
 
-        verifyNonNegative("minItems", schema.getMinItemsValue());
-        verifyNonNegative("maxItems", schema.getMaxItemsValue());
-        verifyMinLessThanOrEqualMax("minItems", schema.getMinItemsValue(), "maxItems", schema.getMaxItemsValue());
+        verifyNonNegative("minItems", schema.getMinItemsExact());
+        verifyNonNegative("maxItems", schema.getMaxItemsExact());
+        verifyMinLessThanOrEqualMax("minItems", schema.getMinItemsExact(), "maxItems", schema.getMaxItemsExact());
 
-        verifyNonNegative("minFields", schema.getMinFieldsValue());
-        verifyNonNegative("maxFields", schema.getMaxFieldsValue());
-        verifyMinLessThanOrEqualMax("minFields", schema.getMinFieldsValue(), "maxFields", schema.getMaxFieldsValue());
+        verifyNonNegative("minFields", schema.getMinFieldsExact());
+        verifyNonNegative("maxFields", schema.getMaxFieldsExact());
+        verifyMinLessThanOrEqualMax("minFields", schema.getMinFieldsExact(), "maxFields", schema.getMaxFieldsExact());
 
         verifyMinimumLessThanOrEqualMaximum(schema.getMinimumValue(), schema.getMaximumValue());
         verifyExclusiveMinimumLessThanExclusiveMaximum(schema.getExclusiveMinimumValue(), schema.getExclusiveMaximumValue());
         verifyMultipleOfKeyword(schema.getMultipleOfValue());
     }
 
-    private void verifyNonNegative(String keyword, Integer value) {
-        if (value != null && value < 0) {
+    private void verifyNonNegative(String keyword, BigInteger value) {
+        if (value != null && value.signum() < 0) {
             throw new IllegalArgumentException("Schema keyword \"" + keyword + "\" must be non-negative.");
         }
     }
 
-    private void verifyMinLessThanOrEqualMax(String minKeyword, Integer minValue, String maxKeyword, Integer maxValue) {
-        if (minValue != null && maxValue != null && minValue > maxValue) {
+    private void verifyMinLessThanOrEqualMax(String minKeyword, BigInteger minValue, String maxKeyword, BigInteger maxValue) {
+        if (minValue != null && maxValue != null && minValue.compareTo(maxValue) > 0) {
             throw new IllegalArgumentException("Schema keyword \"" + minKeyword + "\" must be less than or equal to \"" + maxKeyword + "\".");
         }
     }
@@ -107,18 +107,18 @@ public class SchemaVerifier implements MergingProcessor {
                 || (node.getProperties() != null && !node.getProperties().isEmpty());
     }
 
-    private void verifyAllowMultiple(Boolean allowMultiple, List<Node> items) {
-        if ((allowMultiple == null || Boolean.FALSE.equals(allowMultiple)) && items != null && items.size() > 1)
-            throw new IllegalArgumentException("Multiple items are not allowed. Found items: " + items);
-    }
-
-    private void verifyMinLength(Integer minLength, Object value) {
-        if (minLength != null && value instanceof String && codePointLength((String) value) < minLength)
+    private void verifyMinLength(BigInteger minLength, Object value) {
+        if (minLength != null
+                && value instanceof String
+                && BigInteger.valueOf(codePointLength((String) value)).compareTo(minLength) < 0) {
             throw new IllegalArgumentException("Value \"" + value + "\" is shorter than the minimum length of " + minLength + ".");
+        }
     }
 
-    private void verifyMaxLength(Integer maxLength, Object value) {
-        if (maxLength != null && value instanceof String && codePointLength((String) value) > maxLength) {
+    private void verifyMaxLength(BigInteger maxLength, Object value) {
+        if (maxLength != null
+                && value instanceof String
+                && BigInteger.valueOf(codePointLength((String) value)).compareTo(maxLength) > 0) {
             throw new IllegalArgumentException("Value \"" + value + "\" is longer than the maximum length of " + maxLength + ".");
         }
     }
@@ -173,14 +173,15 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyMinItems(Integer minItems, List<Node> items) {
-        if (minItems != null && (items == null || items.size() < minItems)) {
+    private void verifyMinItems(BigInteger minItems, List<Node> items) {
+        int size = items != null ? items.size() : 0;
+        if (minItems != null && BigInteger.valueOf(size).compareTo(minItems) < 0) {
             throw new IllegalArgumentException("Number of items " + (items != null ? items.size() : 0) + " is less than the minimum required items of " + minItems + ".");
         }
     }
 
-    private void verifyMaxItems(Integer maxItems, List<Node> items) {
-        if (maxItems != null && items != null && items.size() > maxItems) {
+    private void verifyMaxItems(BigInteger maxItems, List<Node> items) {
+        if (maxItems != null && items != null && BigInteger.valueOf(items.size()).compareTo(maxItems) > 0) {
             throw new IllegalArgumentException("Number of items " + items.size() + " is greater than the maximum allowed items of " + maxItems + ".");
         }
     }
@@ -198,16 +199,16 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyMinFields(Integer minFields, Map<String, Node> properties) {
+    private void verifyMinFields(BigInteger minFields, Map<String, Node> properties) {
         int fieldCount = properties == null ? 0 : properties.size();
-        if (minFields != null && fieldCount < minFields) {
+        if (minFields != null && BigInteger.valueOf(fieldCount).compareTo(minFields) < 0) {
             throw new IllegalArgumentException("Number of fields " + fieldCount + " is less than the minimum required fields of " + minFields + ".");
         }
     }
 
-    private void verifyMaxFields(Integer maxFields, Map<String, Node> properties) {
+    private void verifyMaxFields(BigInteger maxFields, Map<String, Node> properties) {
         int fieldCount = properties == null ? 0 : properties.size();
-        if (maxFields != null && fieldCount > maxFields) {
+        if (maxFields != null && BigInteger.valueOf(fieldCount).compareTo(maxFields) > 0) {
             throw new IllegalArgumentException("Number of fields " + fieldCount + " is greater than the maximum allowed fields of " + maxFields + ".");
         }
     }

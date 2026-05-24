@@ -71,14 +71,22 @@ public final class DocumentProcessingRuntime {
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager,
                                      ProcessingMetricsSink metrics) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        this.materializedView = new MaterializedDocumentView(snapshot.canonicalRoot());
+        ResolvedSnapshot processorSnapshot = processorSnapshot(Objects.requireNonNull(snapshot, "snapshot"));
+        this.materializedView = new MaterializedDocumentView(processorSnapshot.canonicalRoot());
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
         this.conformanceEngine = conformanceEngine;
         this.snapshotManager = snapshotManager;
-        this.snapshot = snapshot;
+        this.snapshot = processorSnapshot;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+    }
+
+    private ResolvedSnapshot processorSnapshot(ResolvedSnapshot snapshot) {
+        if (!snapshot.frozenCanonicalRoot().isStrictBlueIdValidation()) {
+            return snapshot;
+        }
+        FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(snapshot.canonicalRoot());
+        return new ResolvedSnapshot(canonicalRoot, snapshot.frozenResolvedRoot(), canonicalRoot.blueId());
     }
 
     public Node document() {

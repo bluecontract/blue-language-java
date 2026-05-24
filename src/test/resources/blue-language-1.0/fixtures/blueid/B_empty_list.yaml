@@ -1,0 +1,6 @@
+id: B_empty_list
+category: BlueId
+operation: calculateBlueId
+description: empty list remains hashable as list content
+input: []
+expectedNodeBlueId: "8m5xsnaKVx5FSBtpcf3tNWKQcE795gf51XbNUTrjxmDK"

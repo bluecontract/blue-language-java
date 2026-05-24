@@ -1,0 +1,9 @@
+id: F_expand_missing_nested_content_fails
+category: Provider
+operation: expand
+description: nested expansion fails deterministically when provider content is missing
+expectError: true
+source:
+  child:
+    blueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+provider: []

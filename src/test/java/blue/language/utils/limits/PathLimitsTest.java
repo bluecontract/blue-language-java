@@ -192,12 +192,13 @@ public class PathLimitsTest {
                    "    maxLength: 4";
         Node aNode = blue.yamlToNode(a);
         nodeProvider.addSingleNodes(aNode);
+        String referencedBlueId = calculateBlueId(new Node().value("some-blue-id"));
 
         String b = "name: B\n" +
                    "type:\n" +
                    "  blueId: " + calculateBlueId(aNode) + "\n" +
                    "x:\n" +
-                   "  blueId: some-blue-id\n" +
+                   "  blueId: " + referencedBlueId + "\n" +
                    "y: abcd";
         Node bNode = blue.yamlToNode(b);
         nodeProvider.addSingleNodes(bNode);
@@ -206,7 +207,7 @@ public class PathLimitsTest {
                        "type:\n" +
                        "  blueId: " + calculateBlueId(bNode) + "\n" +
                        "x:\n" +
-                       "  blueId: some-blue-id\n" +
+                       "  blueId: " + referencedBlueId + "\n" +
                        "y: abcd";
         Node bInstNode = blue.yamlToNode(bInst);
         nodeProvider.addSingleNodes(bInstNode);

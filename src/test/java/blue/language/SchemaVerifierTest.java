@@ -10,9 +10,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -56,16 +58,14 @@ public class SchemaVerifierTest {
     }
 
     @Test
-    public void testAllowMultiplePositive() throws Exception {
-        schema.allowMultiple(true);
+    public void testMultipleItemsAllowedWithoutMaxItems() throws Exception {
         node.items(Arrays.asList(new Node().name("item 1"), new Node().name("item 2")));
-        merger.resolve(node);
-        // nothing should be thrown
+        assertDoesNotThrow(() -> merger.resolve(node));
     }
 
     @Test
-    public void testAllowMultipleNegative() throws Exception {
-        schema.allowMultiple(false);
+    public void testMaxItemsControlsSingleItemCardinality() throws Exception {
+        schema.maxItems(1);
         node.items(new Node().name("item 1"), new Node().name("item 2"));
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
     }
@@ -192,7 +192,6 @@ public class SchemaVerifierTest {
     @Test
     public void testMinItemsPositive() throws Exception {
         schema.minItems(2);
-        schema.allowMultiple(true);
         node.items(Arrays.asList(new Node(), new Node()));
         merger.resolve(node);
         // nothing should be thrown
@@ -208,7 +207,6 @@ public class SchemaVerifierTest {
     @Test
     public void testMaxItemsPositive() throws Exception {
         schema.maxItems(3);
-        schema.allowMultiple(true);
         node.items(Arrays.asList(new Node(), new Node()));
         merger.resolve(node);
         // nothing should be thrown
@@ -224,7 +222,6 @@ public class SchemaVerifierTest {
     @Test
     public void testUniqueItemsPositive() throws Exception {
         schema.uniqueItems(true);
-        schema.allowMultiple(true);
         node.items(Arrays.asList(new Node().name("Name 1"), new Node().name("Name 2")));
         merger.resolve(node);
         // nothing should be thrown
@@ -233,7 +230,6 @@ public class SchemaVerifierTest {
     @Test
     public void testUniqueItemsNegative() throws Exception {
         schema.uniqueItems(true);
-        schema.allowMultiple(true);
         node.items(Arrays.asList(new Node().name("Name 1"), new Node().name("Name 1")));
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
     }
@@ -316,6 +312,74 @@ public class SchemaVerifierTest {
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
                 .schema(new Schema().multipleOf(BigDecimal.ZERO))
                 .value(BigDecimal.ONE)));
+    }
+
+    @Test
+    public void enumIntersectionPreservesEffectiveScalarType() {
+        Node source = new Node().schema(new Schema().enumValues(Arrays.asList(
+                new Node().value(BigInteger.ONE),
+                new Node().value(new BigDecimal("1.0")),
+                new Node().value("1"))));
+        Node target = new Node().schema(new Schema().enumValues(Arrays.asList(
+                new Node().value(new BigDecimal("1.0")),
+                new Node().value("1"))));
+
+        new SchemaPropagator().process(target, source, blueId -> null, null);
+
+        assertEquals(2, target.getSchema().getEnum().size());
+        assertEquals(new BigDecimal("1.0"), target.getSchema().getEnum().get(0).getValue());
+        assertEquals("1", target.getSchema().getEnum().get(1).getValue());
+    }
+
+    @Test
+    public void minimumAndExclusiveMinimumMergeToExclusive() {
+        Node source = new Node().schema(new Schema().minimum(new BigDecimal("5")));
+        Node targetAtBound = new Node().schema(new Schema().exclusiveMinimum(new BigDecimal("5"))).value(new BigDecimal("5"));
+        Node targetAboveBound = new Node().schema(new Schema().exclusiveMinimum(new BigDecimal("5"))).value(new BigDecimal("6"));
+
+        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(targetAtBound, source));
+        propagateAndVerify(targetAboveBound, source);
+        assertEquals(0, new BigDecimal("5").compareTo(targetAboveBound.getSchema().getMinimumValue()));
+        assertEquals(0, new BigDecimal("5").compareTo(targetAboveBound.getSchema().getExclusiveMinimumValue()));
+    }
+
+    @Test
+    public void maximumAndExclusiveMaximumMergeToExclusive() {
+        Node source = new Node().schema(new Schema().maximum(new BigDecimal("5")));
+        Node targetAtBound = new Node().schema(new Schema().exclusiveMaximum(new BigDecimal("5"))).value(new BigDecimal("5"));
+        Node targetBelowBound = new Node().schema(new Schema().exclusiveMaximum(new BigDecimal("5"))).value(new BigDecimal("4"));
+
+        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(targetAtBound, source));
+        propagateAndVerify(targetBelowBound, source);
+        assertEquals(0, new BigDecimal("5").compareTo(targetBelowBound.getSchema().getMaximumValue()));
+        assertEquals(0, new BigDecimal("5").compareTo(targetBelowBound.getSchema().getExclusiveMaximumValue()));
+    }
+
+    @Test
+    public void minMaxItemsConflictFails() {
+        Node source = new Node().schema(new Schema().minItems(3));
+        Node target = new Node()
+                .schema(new Schema().maxItems(2))
+                .items(new Node().value("A"), new Node().value("B"));
+
+        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(target, source));
+    }
+
+    @Test
+    public void integerMultipleOfMergeUsesLcmOrEquivalentAllConstraints() {
+        Node source = new Node().schema(new Schema().multipleOf(new BigDecimal("4")));
+        Node target = new Node().schema(new Schema().multipleOf(new BigDecimal("6"))).value(new BigDecimal("24"));
+        Node failingTarget = new Node().schema(new Schema().multipleOf(new BigDecimal("6"))).value(new BigDecimal("18"));
+
+        propagateAndVerify(target, source);
+
+        assertEquals(0, new BigDecimal("12").compareTo(target.getSchema().getMultipleOfValue()));
+        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(failingTarget, source));
+    }
+
+    private void propagateAndVerify(Node target, Node source) {
+        new SchemaPropagator().process(target, source, blueId -> null, null);
+        new SchemaVerifier().postProcess(target, source, blueId -> null, null);
     }
 
 //

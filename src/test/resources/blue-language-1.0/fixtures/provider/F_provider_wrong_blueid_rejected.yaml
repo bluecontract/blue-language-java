@@ -1,0 +1,12 @@
+id: F_provider_wrong_blueid_rejected
+category: Provider
+operation: resolve
+description: provider content with the wrong computed BlueId is rejected
+expectError: true
+source:
+  type:
+    blueId: HE4QGLZWbsarW3S32hi6eMrBNaQB2cpuS4WuFHZGiDA6
+provider:
+  - requestedBlueId: HE4QGLZWbsarW3S32hi6eMrBNaQB2cpuS4WuFHZGiDA6
+    returnedNode:
+      value: actual

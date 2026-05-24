@@ -1,0 +1,14 @@
+id: C_circular_reference_set_ids
+category: Circular
+operation: calculateCircularSetBlueIds
+description: circular sets produce final MASTER member BlueIds
+documents:
+  - name: A
+    next:
+      blueId: this#1
+  - name: B
+    next:
+      blueId: this#0
+expectedBlueIds:
+  - "C18ETfS2A7MNmBGo67MYaQrRL9TrUSGwvvEu6KoMqC2R#0"
+  - "C18ETfS2A7MNmBGo67MYaQrRL9TrUSGwvvEu6KoMqC2R#1"

@@ -1,0 +1,7 @@
+id: C_this_placeholder_rejected_outside_cyclic_api
+category: Circular
+operation: calculateBlueId
+description: this#k placeholders are rejected by ordinary Node BlueId input
+expectError: true
+input:
+  blueId: this#0

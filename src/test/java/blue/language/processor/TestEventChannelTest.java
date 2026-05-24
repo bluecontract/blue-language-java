@@ -40,12 +40,12 @@ class TestEventChannelTest {
         DocumentProcessingResult initResult = blue.initializeDocument(document);
         Node initialized = initResult.document();
 
-        assertNull(initialized.getProperties().get("x"));
+        assertNull(initialized.getProperties() != null ? initialized.getProperties().get("x") : null);
 
         Node randomEvent = blue.yamlToNode("type:\n  blueId: RandomEvent\n");
         DocumentProcessingResult randomResult = blue.processDocument(initialized, randomEvent);
         Node afterRandom = randomResult.document();
-        assertNull(afterRandom.getProperties().get("x"));
+        assertNull(afterRandom.getProperties() != null ? afterRandom.getProperties().get("x") : null);
 
         Node testEvent = blue.objectToNode(new TestEvent().x(5).y(10));
         DocumentProcessingResult testResult = blue.processDocument(afterRandom, testEvent);
@@ -180,7 +180,7 @@ class TestEventChannelTest {
     }
 
     private String checkpointValue(Node document) {
-        Node contracts = document.getProperties().get("contracts");
+        Node contracts = document.getContracts();
         Node checkpoint = contracts.getProperties().get("checkpoint");
         if (checkpoint == null) {
             return null;
@@ -247,7 +247,7 @@ class TestEventChannelTest {
     }
 
     private Node checkpointStoredEvent(Node document) {
-        Node contracts = document.getProperties().get("contracts");
+        Node contracts = document.getContracts();
         Node checkpoint = contracts.getProperties().get("checkpoint");
         if (checkpoint == null) {
             return null;

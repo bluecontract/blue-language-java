@@ -1,0 +1,26 @@
+id: R_child_field_labels_materialize_until_overridden
+category: Resolution
+operation: resolve
+description: child labels inherited from a type materialize in resolution
+source:
+  type:
+    child:
+      name: Type child
+      description: Type child description
+      value: inherited
+  child:
+    value: inherited
+expectedResolved:
+  type:
+    child:
+      name: Type child
+      description: Type child description
+      type:
+        blueId: DLRQwz7MQeCrzjy9bohPNwtCxKEBbKaMK65KBrwjfG6K
+      value: inherited
+  child:
+    name: Type child
+    description: Type child description
+    type:
+      blueId: DLRQwz7MQeCrzjy9bohPNwtCxKEBbKaMK65KBrwjfG6K
+    value: inherited

@@ -1,0 +1,11 @@
+id: R_canonicalization_deterministic_for_same_resolved_view
+category: Canonicalization
+operation: canonicalize
+description: canonicalization is deterministic for a stable source and provider state
+source:
+  type:
+    inherited: stable
+  local: stable
+expectedCanonicalOverlay:
+  type: {}
+  local: stable

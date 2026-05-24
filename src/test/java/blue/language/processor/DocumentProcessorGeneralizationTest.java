@@ -7,6 +7,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -539,9 +540,13 @@ class DocumentProcessorGeneralizationTest {
     }
 
     private void assertEquivalentDocuments(Node expected, Node actual, String label) {
-        assertEquals(BlueIdCalculator.calculateBlueId(expected),
-                BlueIdCalculator.calculateBlueId(actual),
+        assertEquals(runtimeDocumentBlueId(expected),
+                runtimeDocumentBlueId(actual),
                 label);
+    }
+
+    private String runtimeDocumentBlueId(Node node) {
+        return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
     }
 
     private List<String> updatePaths(List<DocumentProcessingRuntime.DocumentUpdateData> updates) {

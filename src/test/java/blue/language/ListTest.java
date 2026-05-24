@@ -204,11 +204,10 @@ public class ListTest {
 
         Node x1Extended = preprocessAndExtend(x1);
         Node x2Extended = preprocessAndExtend(x2);
-        Node x5Extended = preprocessAndExtend(x5);
+        assertThrows(IllegalArgumentException.class, () -> preprocessAndExtend(x5));
 
         assertEquals(3, x1Extended.getItems().size());
         assertEquals(3, x2Extended.getItems().size());
-        assertEquals(3, x5Extended.getItems().size());
 
     }
 
