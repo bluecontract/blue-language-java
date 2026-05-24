@@ -327,7 +327,6 @@ The frozen matcher verifies the schema keywords currently supported by the Java
 schema verifier:
 
 - `required`
-- `allowMultiple`
 - `minLength`
 - `maxLength`
 - `minimum`
@@ -343,8 +342,8 @@ schema verifier:
 - `enum`
 
 String length is counted by Unicode code points. Regex pattern validation is
-intentionally not part of core schema; contract libraries can perform regex
-validation as runtime behavior when they define exact execution semantics.
+outside the Blue Language 1.0 schema vocabulary; contract libraries can perform
+regex validation as runtime behavior when they define exact execution semantics.
 
 ### Presence Semantics
 
@@ -442,7 +441,6 @@ order:
   lineItems:
     type: List
     schema:
-      allowMultiple: true
       minItems: 2
       maxItems: 2
 ```

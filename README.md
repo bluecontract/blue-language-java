@@ -874,7 +874,6 @@ For deeper design notes, see:
 - [Frozen Type Matching](docs/frozen-type-matching.md)
 - [Processor Contract Matching](docs/processor-contract-matching.md)
 - [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md)
-- [Specification Implementation Gaps](docs/specification-implementation-gaps.md)
 
 ## Build And Test
 
