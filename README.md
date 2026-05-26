@@ -581,6 +581,39 @@ The generalization flow is transactional:
 4. commit the new snapshot only if the whole plan succeeds;
 5. roll back on failure.
 
+## Working Documents
+
+`WorkingDocument` is a frozen preview state for processor-side read-your-writes
+logic. It uses the same immutable patch transaction as the processor runtime,
+including conformance checks, dynamic type generalization, and Type
+Generalization Policy enforcement, but it does not commit to the active
+processor runtime.
+
+```java
+import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.WorkingDocument;
+import blue.language.processor.model.JsonPatch;
+
+WorkingDocument working = context.newWorkingDocument();
+
+working.applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
+
+String currency = (String) working.resolvedAt("/price/currency").getValue();
+```
+
+Working previews do not emit Document Update cascades, charge gas, update
+checkpoints, or write termination/marker state. Contract processors should
+preview first and buffer actual effects only after preview succeeds:
+
+```java
+working.applyPatches(patches);
+context.applyPatches(patches);
+```
+
+Use `materializeCanonicalRoot()`, `materializeResolvedRoot()`, `commitToNode()`,
+or `commitSnapshot()` only at explicit integration boundaries. Normal processor
+reads should stay on `FrozenNode` roots and pointer lookups.
+
 ## Object Mapping
 
 Java objects can be converted to and from Blue nodes.

@@ -7,6 +7,10 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.JsonPointer;
+import blue.language.utils.MergeReverser;
+import blue.language.utils.NodePathEditor;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +28,9 @@ public final class DocumentProcessingRuntime {
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final ProcessingSnapshotManager snapshotManager;
     private final ProcessingMetricsSink metrics;
+    private final boolean lazyMaterializedCommits;
     private ResolvedSnapshot snapshot;
+    private boolean materializedViewStale;
     private boolean runTerminated;
     private long batchPatchCalls;
     private long batchPatchEntries;
@@ -69,6 +75,7 @@ public final class DocumentProcessingRuntime {
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.lazyMaterializedCommits = false;
     }
 
     public DocumentProcessingRuntime(ResolvedSnapshot snapshot,
@@ -98,6 +105,7 @@ public final class DocumentProcessingRuntime {
         this.snapshotManager = snapshotManager;
         this.snapshot = processorSnapshot;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.lazyMaterializedCommits = true;
     }
 
     private ResolvedSnapshot processorSnapshot(ResolvedSnapshot snapshot) {
@@ -109,12 +117,14 @@ public final class DocumentProcessingRuntime {
     }
 
     public Node document() {
+        syncMaterializedView();
         return materializedView.root();
     }
 
     void replaceDocument(Node document) {
         materializedView.replaceWith(Objects.requireNonNull(document, "document"));
         snapshot = null;
+        materializedViewStale = false;
     }
 
     public Map<String, ScopeRuntimeContext> scopes() {
@@ -231,7 +241,7 @@ public final class DocumentProcessingRuntime {
 
     public ResolvedSnapshot snapshot() {
         if (snapshot == null && snapshotManager != null) {
-            snapshot = snapshotManager.fromDocument(materializedView.root());
+            snapshot = snapshotFromDocument(materializedView.root());
             materializedView.replaceWithSnapshot(snapshot);
         }
         return snapshot;
@@ -275,13 +285,43 @@ public final class DocumentProcessingRuntime {
         return node != null ? FrozenNode.fromResolvedNode(node) : null;
     }
 
+    public WorkingDocument workingDocument(String originScopePath) {
+        String normalizedScope = PointerUtils.normalizeScope(originScopePath);
+        ResolvedSnapshot current = snapshot;
+        boolean materializedFallback = false;
+        if (current == null && snapshotManager != null) {
+            syncMaterializedView();
+            current = snapshotFromDocument(materializedView.copyRoot());
+            materializedFallback = true;
+        }
+        if (current != null) {
+            return new WorkingDocument(normalizedScope,
+                    current.frozenCanonicalRoot(),
+                    current.frozenResolvedRoot(),
+                    conformanceEngine,
+                    conformancePlannerOverride,
+                    snapshotManager,
+                    current,
+                    materializedFallback);
+        }
+
+        Node root = materializedView.copyRoot();
+        FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(new MergeReverser().reverse(root.clone()));
+        FrozenNode resolved = FrozenNode.fromResolvedNode(root.clone());
+        return new WorkingDocument(normalizedScope,
+                canonical,
+                resolved,
+                conformanceEngine,
+                conformancePlannerOverride,
+                snapshotManager,
+                null,
+                true);
+    }
+
     public Node nodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         if (snapshot != null) {
-            Node resolved = snapshot.resolvedNodeAt(normalized);
-            if (resolved != null) {
-                return resolved;
-            }
+            return snapshot.resolvedNodeAt(normalized);
         }
         return materializedView.nodeAt(normalized);
     }
@@ -322,6 +362,10 @@ public final class DocumentProcessingRuntime {
     }
 
     public void directWrite(String path, Node value) {
+        if (snapshotManager != null && snapshot != null) {
+            directWriteSnapshot(path, value);
+            return;
+        }
         Node rollback = materializedView.copyRoot();
         ResolvedSnapshot snapshotRollback = snapshot;
         try {
@@ -339,7 +383,73 @@ public final class DocumentProcessingRuntime {
         } catch (RuntimeException ex) {
             materializedView.replaceWith(rollback);
             snapshot = snapshotRollback;
+            materializedViewStale = false;
             throw ex;
+        }
+    }
+
+    private void directWriteSnapshot(String path, Node value) {
+        ResolvedSnapshot snapshotRollback = snapshot;
+        try {
+            PlanningContext planning = planningContext(materializedView.root());
+            FrozenNode before = planning.canonicalPlanner.read(path);
+            Node beforeNode = before != null ? before.toNode() : null;
+            JsonPatch snapshotPatch = directWritePatch(path, beforeNode, value);
+            if (snapshotPatch == null) {
+                return;
+            }
+            ImmutablePatchPlanner.PatchPlan canonicalPlan = planning.canonicalPlanner.plan("/", snapshotPatch);
+            ImmutablePatchPlanner.PatchPlan resolvedPlan = planning.resolvedPlanner.plan("/", snapshotPatch);
+            ResolvedSnapshot next = new ResolvedSnapshot(canonicalPlan.root(),
+                    resolvedPlan.root(),
+                    canonicalPlan.root().blueId());
+            snapshot = snapshotManager.cacheSnapshot(next);
+            commitMaterializedSnapshot(snapshot);
+        } catch (RuntimeException ex) {
+            snapshot = snapshotRollback;
+            throw ex;
+        }
+    }
+
+    private void applyMaterializedDirectWrite(String path, Node value) {
+        if (value == null) {
+            removeMaterializedPath(path);
+        } else {
+            NodePathEditor.put(materializedView.root(), path, value.clone());
+        }
+    }
+
+    private void removeMaterializedPath(String path) {
+        List<String> segments = JsonPointer.split(path);
+        if (segments.isEmpty()) {
+            materializedView.root().replaceWith(new Node());
+            return;
+        }
+        List<String> parentSegments = new ArrayList<>(segments.subList(0, segments.size() - 1));
+        Node parent = NodePathEditor.getOrNull(materializedView.root(), JsonPointer.toPointer(parentSegments));
+        if (parent == null) {
+            return;
+        }
+        String leaf = segments.get(segments.size() - 1);
+        if ("type".equals(leaf)) {
+            parent.type((Node) null);
+        } else if ("itemType".equals(leaf)) {
+            parent.itemType((Node) null);
+        } else if ("keyType".equals(leaf)) {
+            parent.keyType((Node) null);
+        } else if ("valueType".equals(leaf)) {
+            parent.valueType((Node) null);
+        } else if ("blue".equals(leaf)) {
+            parent.blue(null);
+        } else if ("contracts".equals(leaf)) {
+            parent.contracts(null);
+        } else if (JsonPointer.isArrayIndexSegment(leaf) && parent.getItems() != null && !"-".equals(leaf)) {
+            int index = Integer.parseInt(leaf);
+            if (index >= 0 && index < parent.getItems().size()) {
+                parent.getItems().remove(index);
+            }
+        } else if (parent.getProperties() != null) {
+            parent.getProperties().remove(leaf);
         }
     }
 
@@ -365,19 +475,7 @@ public final class DocumentProcessingRuntime {
                     planning,
                     conformanceEngine,
                     conformancePlannerOverride,
-                    new UpdateMaterializationMetrics() {
-                        @Override
-                        public void recordBeforeNodeMaterialization() {
-                            documentUpdateBeforeNodeMaterializations++;
-                            metrics.incrementDocumentUpdateBeforeMaterializations();
-                        }
-
-                        @Override
-                        public void recordAfterNodeMaterialization() {
-                            documentUpdateAfterNodeMaterializations++;
-                            metrics.incrementDocumentUpdateAfterMaterializations();
-                        }
-                    });
+                    updateMaterializationMetrics());
             BatchPatchResult result = transaction.apply();
             batchPatchPlanningNanos += result.patchPlanningNanos();
             batchPatchConformanceNanos += result.conformanceNanos();
@@ -399,9 +497,82 @@ public final class DocumentProcessingRuntime {
             snapshot = snapshotRollback;
             if (snapshotRollback != null) {
                 materializedView.replaceWithSnapshot(snapshotRollback);
+                materializedViewStale = false;
             }
             throw ex;
         }
+    }
+
+    List<DocumentUpdateData> applyPrecomputedPatch(String originScopePath,
+                                                   JsonPatch patch,
+                                                   WorkingDocument.PatchPreview preview) {
+        if (patch == null) {
+            return Collections.emptyList();
+        }
+        if (!canApplyPrecomputedPatch(originScopePath, patch, preview)) {
+            return applyPatches(originScopePath, Collections.singletonList(patch));
+        }
+        ResolvedSnapshot snapshotRollback = snapshot;
+        batchPatchCalls++;
+        batchPatchEntries++;
+        try {
+            long buildUpdatesStart = System.nanoTime();
+            BatchPatchResult result;
+            try {
+                result = preview.result().withMaterializationMetrics(updateMaterializationMetrics());
+            } finally {
+                long buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
+                batchPatchBuildUpdatesNanos += buildUpdatesNanos;
+                metrics.addBatchPatchBuildUpdatesNanos(buildUpdatesNanos);
+            }
+            long commitStart = System.nanoTime();
+            try {
+                commitBatchPatchResult(result);
+            } finally {
+                long commitNanos = System.nanoTime() - commitStart;
+                batchPatchCommitNanos += commitNanos;
+                metrics.addBatchPatchCommitNanos(commitNanos);
+                metrics.addSnapshotCommitNanos(commitNanos);
+            }
+            return result.updates();
+        } catch (RuntimeException ex) {
+            snapshot = snapshotRollback;
+            if (snapshotRollback != null) {
+                materializedView.replaceWithSnapshot(snapshotRollback);
+                materializedViewStale = false;
+            }
+            throw ex;
+        }
+    }
+
+    private boolean canApplyPrecomputedPatch(String originScopePath,
+                                             JsonPatch patch,
+                                             WorkingDocument.PatchPreview preview) {
+        if (preview == null
+                || !PointerUtils.normalizeScope(originScopePath).equals(preview.originScope())
+                || !preview.matches(patch)) {
+            return false;
+        }
+        ResolvedSnapshot current = snapshot();
+        return current != null
+                && current.frozenCanonicalRoot().blueId().equals(preview.baseCanonical().blueId())
+                && current.frozenResolvedRoot().blueId().equals(preview.baseResolved().blueId());
+    }
+
+    private UpdateMaterializationMetrics updateMaterializationMetrics() {
+        return new UpdateMaterializationMetrics() {
+            @Override
+            public void recordBeforeNodeMaterialization() {
+                documentUpdateBeforeNodeMaterializations++;
+                metrics.incrementDocumentUpdateBeforeMaterializations();
+            }
+
+            @Override
+            public void recordAfterNodeMaterialization() {
+                documentUpdateAfterNodeMaterializations++;
+                metrics.incrementDocumentUpdateAfterMaterializations();
+            }
+        };
     }
 
     private JsonPatch directWritePatch(String path, Node before, Node value) {
@@ -418,10 +589,16 @@ public final class DocumentProcessingRuntime {
             ImmutablePatchPlanner planner = ImmutablePatchPlanner.forMaterialized(rollback);
             return new PlanningContext(null, planner, planner);
         }
-        ResolvedSnapshot base = snapshot != null ? snapshot : snapshotManager.fromDocument(rollback);
+        ResolvedSnapshot base = snapshot != null ? snapshot : snapshotFromDocument(rollback);
         return new PlanningContext(base,
                 ImmutablePatchPlanner.forSnapshot(base),
                 ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot()));
+    }
+
+    static PlanningContext workingPlanningContext(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
+        return new PlanningContext(null,
+                ImmutablePatchPlanner.forFrozen(canonicalRoot),
+                ImmutablePatchPlanner.forFrozen(resolvedRoot));
     }
 
     private SnapshotPatchPlan prepareSnapshotPatch(ResolvedSnapshot base, JsonPatch patch) {
@@ -438,14 +615,15 @@ public final class DocumentProcessingRuntime {
     private void commitSnapshotPatch(SnapshotPatchPlan plan, FrozenNode fallbackRoot) {
         if (snapshotManager == null || plan == null) {
             materializedView.replaceWith(fallbackRoot.toNode());
+            materializedViewStale = false;
             return;
         }
         if (plan.next != null) {
             snapshot = plan.next;
-            materializedView.replaceWithSnapshot(snapshot);
+            commitMaterializedSnapshot(snapshot);
         } else {
-            snapshot = snapshotManager.fromDocument(fallbackRoot.toNode());
-            materializedView.replaceWithSnapshot(snapshot);
+            snapshot = snapshotFromDocument(fallbackRoot.toNode());
+            commitMaterializedSnapshot(snapshot);
         }
     }
 
@@ -454,14 +632,41 @@ public final class DocumentProcessingRuntime {
             Node next = result.resolvedRoot().toNode();
             materializedView.replaceWith(next);
             snapshot = null;
+            materializedViewStale = false;
             return;
         }
         ResolvedSnapshot next = new ResolvedSnapshot(result.canonicalRoot(),
                 result.resolvedRoot(),
                 result.canonicalRoot().blueId());
         ResolvedSnapshot cached = snapshotManager.cacheSnapshot(next);
-        materializedView.replaceWithSnapshot(cached);
         snapshot = cached;
+        commitMaterializedSnapshot(cached);
+    }
+
+    private void commitMaterializedSnapshot(ResolvedSnapshot committed) {
+        if (lazyMaterializedCommits) {
+            materializedViewStale = true;
+            return;
+        }
+        materializedView.replaceWithSnapshot(committed);
+        materializedViewStale = false;
+    }
+
+    private void syncMaterializedView() {
+        if (materializedViewStale && snapshot != null) {
+            materializedView.replaceWithSnapshot(snapshot);
+            materializedViewStale = false;
+        }
+    }
+
+    private ResolvedSnapshot snapshotFromDocument(Node document) {
+        long start = System.nanoTime();
+        try {
+            return snapshotManager.fromDocument(document);
+        } finally {
+            metrics.incrementProcessingSnapshotFromDocumentBuilds();
+            metrics.addProcessingSnapshotFromDocumentNanos(System.nanoTime() - start);
+        }
     }
 
     long batchPatchCallsForTest() {
@@ -579,6 +784,24 @@ public final class DocumentProcessingRuntime {
 
         JsonPatch.Op op() {
             return op;
+        }
+
+        DocumentUpdateData withMaterializationMetrics(UpdateMaterializationMetrics materializationMetrics) {
+            if (beforeFrozen != null || afterFrozen != null) {
+                return new DocumentUpdateData(path,
+                        beforeFrozen,
+                        afterFrozen,
+                        op,
+                        originScope,
+                        cascadeScopes,
+                        materializationMetrics);
+            }
+            return new DocumentUpdateData(path,
+                    before != null ? before.clone() : null,
+                    after != null ? after.clone() : null,
+                    op,
+                    originScope,
+                    cascadeScopes);
         }
 
         String originScope() {

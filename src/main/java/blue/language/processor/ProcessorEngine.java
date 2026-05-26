@@ -465,7 +465,7 @@ final class ProcessorEngine {
                     owner.conformancePlannerOverride(),
                     owner.snapshotManager(),
                     owner.metricsSink());
-            this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue());
+            this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue(), owner.metricsSink());
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
             this.scopeExecutor = new ScopeExecutor(owner, this, runtime, bundles, channelRunner);
@@ -478,7 +478,7 @@ final class ProcessorEngine {
                     owner.conformancePlannerOverride(),
                     owner.snapshotManager(),
                     owner.metricsSink());
-            this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue());
+            this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue(), owner.metricsSink());
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
             this.scopeExecutor = new ScopeExecutor(owner, this, runtime, bundles, channelRunner);
@@ -546,6 +546,14 @@ final class ProcessorEngine {
                            List<JsonPatch> patches,
                            boolean allowReservedMutation) {
             scopeExecutor.handlePatches(scopePath, bundle, patches, allowReservedMutation);
+        }
+
+        void handlePatches(String scopePath,
+                           ContractBundle bundle,
+                           List<JsonPatch> patches,
+                           boolean allowReservedMutation,
+                           WorkingDocument.Preview preview) {
+            scopeExecutor.handlePatches(scopePath, bundle, patches, allowReservedMutation, preview);
         }
 
         ProcessorExecutionContext createContext(String scopePath,

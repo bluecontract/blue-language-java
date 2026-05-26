@@ -12,6 +12,7 @@ final class ContractEffectBuffer {
     private long gas;
     private String invalidGasReason;
     private final List<JsonPatch> patches = new ArrayList<>();
+    private final List<PatchBatch> patchBatches = new ArrayList<>();
     private final List<Node> emittedEvents = new ArrayList<>();
     private TerminationRequest terminationRequest;
 
@@ -33,21 +34,37 @@ final class ContractEffectBuffer {
 
     void addPatch(JsonPatch patch) {
         if (patch != null) {
-            patches.add(copyPatch(patch));
+            addPatches(Collections.singletonList(patch));
         }
     }
 
     void addPatches(List<JsonPatch> input) {
+        addPatches(input, null);
+    }
+
+    void addPreviewedPatches(List<JsonPatch> input, WorkingDocument.Preview preview) {
+        addPatches(input, preview);
+    }
+
+    private void addPatches(List<JsonPatch> input, WorkingDocument.Preview preview) {
         if (input == null || input.isEmpty()) {
             return;
         }
+        List<JsonPatch> batch = new ArrayList<>(input.size());
         for (JsonPatch patch : input) {
-            addPatch(patch);
+            JsonPatch copied = copyPatch(patch);
+            patches.add(copied);
+            batch.add(copied);
         }
+        patchBatches.add(new PatchBatch(batch, preview));
     }
 
     List<JsonPatch> patches() {
         return Collections.unmodifiableList(patches);
+    }
+
+    List<PatchBatch> patchBatches() {
+        return Collections.unmodifiableList(patchBatches);
     }
 
     void emit(Node event) {
@@ -96,6 +113,24 @@ final class ContractEffectBuffer {
 
         String reason() {
             return reason;
+        }
+    }
+
+    static final class PatchBatch {
+        private final List<JsonPatch> patches;
+        private final WorkingDocument.Preview preview;
+
+        private PatchBatch(List<JsonPatch> patches, WorkingDocument.Preview preview) {
+            this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
+            this.preview = preview;
+        }
+
+        List<JsonPatch> patches() {
+            return patches;
+        }
+
+        WorkingDocument.Preview preview() {
+            return preview;
         }
     }
 }

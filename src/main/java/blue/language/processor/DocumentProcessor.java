@@ -195,6 +195,10 @@ public class DocumentProcessor {
         return metricsSink();
     }
 
+    public boolean supportsSnapshotProcessing() {
+        return snapshotManager != null;
+    }
+
     public DocumentProcessor processingMetricsSink(ProcessingMetricsSink metricsSink) {
         this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
         return this;

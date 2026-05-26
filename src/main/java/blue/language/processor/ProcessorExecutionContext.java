@@ -80,6 +80,16 @@ public final class ProcessorExecutionContext {
         effects.addPatches(patches);
     }
 
+    public void applyPreviewedPatches(List<JsonPatch> patches, WorkingDocument.Preview preview) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        if (patches == null || patches.isEmpty()) {
+            return;
+        }
+        effects.addPreviewedPatches(patches, preview);
+    }
+
     public void emitEvent(Node emission) {
         if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
             return;
@@ -106,8 +116,12 @@ public final class ProcessorExecutionContext {
         if (effects.gas() > 0L) {
             runtime().addGas(effects.gas());
         }
-        if (!effects.patches().isEmpty()) {
-            execution.handlePatches(scopePath, bundle, effects.patches(), allowReservedMutation);
+        for (ContractEffectBuffer.PatchBatch patchBatch : effects.patchBatches()) {
+            execution.handlePatches(scopePath,
+                    bundle,
+                    patchBatch.patches(),
+                    allowReservedMutation,
+                    patchBatch.preview());
             if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
                 return;
             }
@@ -174,6 +188,14 @@ public final class ProcessorExecutionContext {
             return null;
         }
         return runtime().resolvedFrozenAt(absolutePointer);
+    }
+
+    public WorkingDocument newWorkingDocument() {
+        return runtime().workingDocument(scopePath);
+    }
+
+    public WorkingDocument newWorkingDocument(String originScope) {
+        return runtime().workingDocument(originScope);
     }
 
     public boolean documentContains(String absolutePointer) {

@@ -20,19 +20,23 @@ import java.util.function.Function;
 final class CheckpointManager {
 
     private final DocumentProcessingRuntime runtime;
-    private final Blue blue;
+    private final CheckpointIdentityCache identityCache;
 
     CheckpointManager(DocumentProcessingRuntime runtime) {
-        this(runtime, (Blue) null);
+        this(runtime, (Blue) null, ProcessingMetricsSink.NOOP);
     }
 
     CheckpointManager(DocumentProcessingRuntime runtime, Blue blue) {
+        this(runtime, blue, ProcessingMetricsSink.NOOP);
+    }
+
+    CheckpointManager(DocumentProcessingRuntime runtime, Blue blue, ProcessingMetricsSink metrics) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
-        this.blue = blue;
+        this.identityCache = new CheckpointIdentityCache(blue, metrics);
     }
 
     CheckpointManager(DocumentProcessingRuntime runtime, Function<Node, String> ignoredSignatureFn) {
-        this(runtime, (Blue) null);
+        this(runtime, (Blue) null, ProcessingMetricsSink.NOOP);
     }
 
     void ensureCheckpointMarker(String scopePath, ContractBundle bundle) {
@@ -58,7 +62,6 @@ final class CheckpointManager {
                 ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) entry.getValue();
                 Node stored = checkpoint.lastEvent(channelKey);
                 CheckpointRecord record = new CheckpointRecord(entry.getKey(), checkpoint, channelKey, stored);
-                record.lastEventSignature = eventIdentity(stored);
                 return record;
             }
         }
@@ -66,7 +69,15 @@ final class CheckpointManager {
     }
 
     boolean isDuplicate(CheckpointRecord record, String signature) {
-        return record != null && record.matches(signature);
+        if (record == null || signature == null || record.lastEventNode == null) {
+            return false;
+        }
+        if (record.lastEventSignature == null) {
+            record.lastEventSignature = identityCache.storedIdentity(record.checkpoint,
+                    record.channelKey,
+                    record.lastEventNode);
+        }
+        return record.matches(signature);
     }
 
     void persist(String scopePath,
@@ -85,10 +96,11 @@ final class CheckpointManager {
         record.checkpoint.updateEvent(record.channelKey, stored);
         record.lastEventNode = stored != null ? stored.clone() : null;
         record.lastEventSignature = eventSignature;
+        identityCache.updateStoredIdentity(record.checkpoint, record.channelKey, eventSignature);
     }
 
-    private String eventIdentity(Node event) {
-        return CheckpointIdentityCalculator.identity(event, blue);
+    String eventIdentity(Node event) {
+        return identityCache.identity(event);
     }
 
     static final class CheckpointRecord {

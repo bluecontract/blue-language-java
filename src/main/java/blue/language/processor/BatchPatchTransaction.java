@@ -21,6 +21,7 @@ final class BatchPatchTransaction {
     private final ConformanceEngine conformanceEngine;
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics;
+    private final boolean buildUpdates;
 
     BatchPatchTransaction(String originScopePath,
                           List<JsonPatch> patches,
@@ -28,12 +29,24 @@ final class BatchPatchTransaction {
                           ConformanceEngine conformanceEngine,
                           ConformancePlannerOverride conformancePlannerOverride,
                           DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+        this(originScopePath, patches, planning, conformanceEngine, conformancePlannerOverride,
+                materializationMetrics, true);
+    }
+
+    BatchPatchTransaction(String originScopePath,
+                          List<JsonPatch> patches,
+                          DocumentProcessingRuntime.PlanningContext planning,
+                          ConformanceEngine conformanceEngine,
+                          ConformancePlannerOverride conformancePlannerOverride,
+                          DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                          boolean buildUpdates) {
         this.originScopePath = originScopePath;
         this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
         this.planning = planning;
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.materializationMetrics = materializationMetrics;
+        this.buildUpdates = buildUpdates;
     }
 
     BatchPatchResult apply() {
@@ -70,13 +83,26 @@ final class BatchPatchTransaction {
         FrozenNode finalResolved = conformancePlan.root();
         boolean includeGeneratedUpdates = conformancePlannerOverride != null && conformancePlannerOverride.applies();
 
-        long buildUpdatesStart = System.nanoTime();
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = buildUpdates(records,
+        BatchPatchResult.UpdatePlan updatePlan = new BatchPatchResult.UpdatePlan(records,
                 preConformanceResolved,
                 finalResolved,
                 conformancePlan.changedPaths(),
                 includeGeneratedUpdates);
-        long buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
+        long buildUpdatesNanos = 0L;
+        List<DocumentProcessingRuntime.DocumentUpdateData> updates = null;
+        if (buildUpdates) {
+            long buildUpdatesStart = System.nanoTime();
+            updates = updatePlan.build(materializationMetrics);
+            buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
+        }
+        if (!buildUpdates) {
+            return new BatchPatchResult(finalCanonical,
+                    finalResolved,
+                    updatePlan,
+                    patchPlanningNanos,
+                    conformanceNanos,
+                    buildUpdatesNanos);
+        }
         return new BatchPatchResult(finalCanonical,
                 finalResolved,
                 updates,

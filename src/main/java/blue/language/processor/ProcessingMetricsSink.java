@@ -25,6 +25,21 @@ public interface ProcessingMetricsSink {
     default void addBlueIdCalculationNanos(long nanos) {
     }
 
+    default void addProcessingSnapshotCacheLookupNanos(long nanos) {
+    }
+
+    default void incrementProcessingSnapshotCacheHits() {
+    }
+
+    default void incrementProcessingSnapshotCacheMisses() {
+    }
+
+    default void addProcessingSnapshotFromDocumentNanos(long nanos) {
+    }
+
+    default void incrementProcessingSnapshotFromDocumentBuilds() {
+    }
+
     default void addBundleLoadNanos(long nanos) {
     }
 
@@ -47,6 +62,24 @@ public interface ProcessingMetricsSink {
     }
 
     default void incrementBundlesReused() {
+    }
+
+    default void incrementBundleScopeLoadAttempts() {
+    }
+
+    default void incrementBundleScopeExecutionCacheHits() {
+    }
+
+    default void incrementBundleScopeRefreshes() {
+    }
+
+    default void addBundleScopeTerminationCheckNanos(long nanos) {
+    }
+
+    default void addBundleScopeResolvedLookupNanos(long nanos) {
+    }
+
+    default void addBundleScopeContractLoadNanos(long nanos) {
     }
 
     default void addChannelDiscoveryNanos(long nanos) {
@@ -80,6 +113,45 @@ public interface ProcessingMetricsSink {
     }
 
     default void addCheckpointUpdateNanos(long nanos) {
+    }
+
+    default void addCheckpointEnsureNanos(long nanos) {
+    }
+
+    default void addCheckpointFindNanos(long nanos) {
+    }
+
+    default void addCheckpointCurrentIdentityNanos(long nanos) {
+    }
+
+    default void addCheckpointIsNewerNanos(long nanos) {
+    }
+
+    default void addCheckpointDuplicateNanos(long nanos) {
+    }
+
+    default void addCheckpointPersistNanos(long nanos) {
+    }
+
+    default void incrementCheckpointIdentityCacheHits() {
+    }
+
+    default void incrementCheckpointIdentityCacheMisses() {
+    }
+
+    default void incrementCheckpointStoredIdentityCacheHits() {
+    }
+
+    default void incrementCheckpointStoredIdentityCacheMisses() {
+    }
+
+    default void addCheckpointDirectBlueIdNanos(long nanos) {
+    }
+
+    default void addCheckpointContentBlueIdNanos(long nanos) {
+    }
+
+    default void addCheckpointFallbackNanos(long nanos) {
     }
 
     default void addSnapshotCommitNanos(long nanos) {

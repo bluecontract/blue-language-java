@@ -1,6 +1,5 @@
 package blue.language.processor;
 
-import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 
@@ -62,14 +61,20 @@ final class ChannelRunner {
             return;
         }
         Node eventForHandlers = match.eventNode() != null ? match.eventNode() : event;
-        Node checkpointEvent = event != null ? event.clone() : null;
+        Node checkpointEvent = event;
         long checkpointStart = System.nanoTime();
         CheckpointManager.CheckpointRecord checkpoint;
         String eventSignature;
         try {
+            long ensureStart = System.nanoTime();
             checkpointManager.ensureCheckpointMarker(scopePath, bundle);
+            metrics.addCheckpointEnsureNanos(System.nanoTime() - ensureStart);
+            long findStart = System.nanoTime();
             checkpoint = checkpointManager.findCheckpoint(bundle, channel.key());
-            eventSignature = eventSignature(checkpointEvent);
+            metrics.addCheckpointFindNanos(System.nanoTime() - findStart);
+            long identityStart = System.nanoTime();
+            eventSignature = eventSignature(event);
+            metrics.addCheckpointCurrentIdentityNanos(System.nanoTime() - identityStart);
         } catch (RuntimeException ex) {
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
             execution.enterFatalTermination(scopePath,
@@ -78,18 +83,32 @@ final class ChannelRunner {
                     execution.fatalReason(ex, "Checkpoint error"));
             return;
         }
-        if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
+        boolean newer;
+        long isNewerStart = System.nanoTime();
+        try {
+            ChannelCheckpointContext checkpointContext = new ChannelCheckpointContext(scopePath,
+                    channel.key(),
+                    checkpointEvent,
+                    eventSignature,
+                    checkpoint != null ? checkpoint.lastEventNode : null,
+                    checkpoint != null ? checkpoint.lastEventSignature : null,
+                    bundle.markers());
+            newer = match.processor.isNewerEvent(contract, checkpointContext);
+        } finally {
+            metrics.addCheckpointIsNewerNanos(System.nanoTime() - isNewerStart);
+        }
+        if (!newer) {
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
             return;
         }
-        ChannelCheckpointContext checkpointContext = new ChannelCheckpointContext(scopePath,
-                channel.key(),
-                checkpointEvent,
-                eventSignature,
-                checkpoint != null ? checkpoint.lastEventNode : null,
-                checkpoint != null ? checkpoint.lastEventSignature : null,
-                bundle.markers());
-        if (!match.processor.isNewerEvent(contract, checkpointContext)) {
+        boolean duplicate;
+        long duplicateStart = System.nanoTime();
+        try {
+            duplicate = checkpointManager.isDuplicate(checkpoint, eventSignature);
+        } finally {
+            metrics.addCheckpointDuplicateNanos(System.nanoTime() - duplicateStart);
+        }
+        if (duplicate) {
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
             return;
         }
@@ -107,6 +126,7 @@ final class ChannelRunner {
                     execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
                     execution.fatalReason(ex, "Checkpoint error"));
         }
+        metrics.addCheckpointPersistNanos(System.nanoTime() - checkpointPersistStart);
         metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointPersistStart);
     }
 
@@ -119,8 +139,12 @@ final class ChannelRunner {
         long checkpointEnsureStart = System.nanoTime();
         String fallbackSignature;
         try {
+            long ensureStart = System.nanoTime();
             checkpointManager.ensureCheckpointMarker(scopePath, bundle);
+            metrics.addCheckpointEnsureNanos(System.nanoTime() - ensureStart);
+            long identityStart = System.nanoTime();
             fallbackSignature = eventSignature(checkpointEvent);
+            metrics.addCheckpointCurrentIdentityNanos(System.nanoTime() - identityStart);
         } catch (RuntimeException ex) {
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointEnsureStart);
             execution.enterFatalTermination(scopePath,
@@ -138,28 +162,46 @@ final class ChannelRunner {
                     ? delivery.checkpointKey()
                     : channel.key();
             long checkpointStart = System.nanoTime();
+            long findStart = System.nanoTime();
             CheckpointManager.CheckpointRecord checkpoint = checkpointManager.findCheckpoint(bundle, checkpointKey);
+            metrics.addCheckpointFindNanos(System.nanoTime() - findStart);
+            long identityStart = System.nanoTime();
             String eventSignature = eventSignature(checkpointEvent, fallbackSignature);
-            if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
-                metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
-                continue;
-            }
+            metrics.addCheckpointCurrentIdentityNanos(System.nanoTime() - identityStart);
             Boolean shouldProcess = delivery.shouldProcess();
             if (Boolean.FALSE.equals(shouldProcess)) {
                 continue;
             }
             if (shouldProcess == null) {
-                ChannelCheckpointContext checkpointContext = new ChannelCheckpointContext(scopePath,
-                        checkpointKey,
-                        checkpointEvent,
-                        eventSignature,
-                        checkpoint != null ? checkpoint.lastEventNode : null,
-                        checkpoint != null ? checkpoint.lastEventSignature : null,
-                        bundle.markers());
-                if (!match.processor.isNewerEvent(channel.contract(), checkpointContext)) {
+                boolean newer;
+                long isNewerStart = System.nanoTime();
+                try {
+                    ChannelCheckpointContext checkpointContext = new ChannelCheckpointContext(scopePath,
+                            checkpointKey,
+                            checkpointEvent,
+                            eventSignature,
+                            checkpoint != null ? checkpoint.lastEventNode : null,
+                            checkpoint != null ? checkpoint.lastEventSignature : null,
+                            bundle.markers());
+                    newer = match.processor.isNewerEvent(channel.contract(), checkpointContext);
+                } finally {
+                    metrics.addCheckpointIsNewerNanos(System.nanoTime() - isNewerStart);
+                }
+                if (!newer) {
                     metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
                     continue;
                 }
+            }
+            boolean duplicate;
+            long duplicateStart = System.nanoTime();
+            try {
+                duplicate = checkpointManager.isDuplicate(checkpoint, eventSignature);
+            } finally {
+                metrics.addCheckpointDuplicateNanos(System.nanoTime() - duplicateStart);
+            }
+            if (duplicate) {
+                metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
+                continue;
             }
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
             Node eventForHandlers = delivery.eventForDelivery();
@@ -180,6 +222,7 @@ final class ChannelRunner {
                         execution.fatalReason(ex, "Checkpoint error"));
                 return;
             }
+            metrics.addCheckpointPersistNanos(System.nanoTime() - checkpointPersistStart);
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointPersistStart);
         }
     }
@@ -189,11 +232,7 @@ final class ChannelRunner {
     }
 
     private String eventSignature(Node fallbackEvent, String fallbackSignature) {
-        return eventSignature(fallbackEvent, fallbackSignature, owner.matchingService().blue());
-    }
-
-    private static String eventSignature(Node fallbackEvent, String fallbackSignature, Blue blue) {
-        return fallbackSignature != null ? fallbackSignature : CheckpointIdentityCalculator.identity(fallbackEvent, blue);
+        return fallbackSignature != null ? fallbackSignature : checkpointManager.eventIdentity(fallbackEvent);
     }
 
     void runHandlers(String scopePath,

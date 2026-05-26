@@ -83,7 +83,14 @@ final class ScopeExecutor {
         }
 
         while (true) {
-            FrozenNode scopeNode = runtime.resolvedFrozenAt(normalizedScope);
+            ProcessingMetricsSink metrics = owner.metricsSink();
+            long resolvedStart = System.nanoTime();
+            FrozenNode scopeNode;
+            try {
+                scopeNode = runtime.resolvedFrozenAt(normalizedScope);
+            } finally {
+                metrics.addBundleScopeResolvedLookupNanos(System.nanoTime() - resolvedStart);
+            }
             if (scopeNode == null) {
                 return;
             }
@@ -93,7 +100,12 @@ final class ScopeExecutor {
                 preInitSnapshot = (canonicalScopeNode != null ? canonicalScopeNode : scopeNode).toNode();
             }
 
-            bundle = owner.contractLoader().load(scopeNode, normalizedScope, owner.metricsSink());
+            long loadStart = System.nanoTime();
+            try {
+                bundle = owner.contractLoader().load(scopeNode, normalizedScope, metrics);
+            } finally {
+                metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
+            }
             bundles.put(normalizedScope, bundle);
 
             String childScope;
@@ -157,20 +169,31 @@ final class ScopeExecutor {
 
     void loadBundles(String scopePath) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        ProcessingMetricsSink metrics = owner.metricsSink();
+        metrics.incrementBundleScopeLoadAttempts();
         if (bundles.containsKey(normalizedScope)) {
+            metrics.incrementBundleScopeExecutionCacheHits();
             return;
         }
         try {
+            long terminationStart = System.nanoTime();
             if (runtime.hasTerminationMarker(normalizedScope)) {
                 bundles.put(normalizedScope, ContractBundle.empty());
                 return;
             }
+            metrics.addBundleScopeTerminationCheckNanos(System.nanoTime() - terminationStart);
         } catch (IllegalStateException ex) {
             throw new MustUnderstandFailureException(ex.getMessage());
         }
-        FrozenNode scopeNode = runtime.resolvedFrozenAt(normalizedScope);
+        long resolvedStart = System.nanoTime();
+        FrozenNode scopeNode;
+        try {
+            scopeNode = runtime.resolvedFrozenAt(normalizedScope);
+        } finally {
+            metrics.addBundleScopeResolvedLookupNanos(System.nanoTime() - resolvedStart);
+        }
         ContractBundle bundle = scopeNode != null
-                ? owner.contractLoader().load(scopeNode, normalizedScope, owner.metricsSink())
+                ? loadBundle(scopeNode, normalizedScope, metrics)
                 : ContractBundle.empty();
         bundles.put(normalizedScope, bundle);
         for (String embeddedPointer : bundle.embeddedPaths()) {
@@ -257,13 +280,22 @@ final class ScopeExecutor {
                        ContractBundle bundle,
                        List<JsonPatch> patches,
                        boolean allowReservedMutation) {
+        handlePatches(scopePath, bundle, patches, allowReservedMutation, null);
+    }
+
+    void handlePatches(String scopePath,
+                       ContractBundle bundle,
+                       List<JsonPatch> patches,
+                       boolean allowReservedMutation,
+                       WorkingDocument.Preview preview) {
         if (execution.isScopeInactive(scopePath)) {
             return;
         }
         if (patches == null || patches.isEmpty()) {
             return;
         }
-        for (JsonPatch patch : patches) {
+        for (int patchIndex = 0; patchIndex < patches.size(); patchIndex++) {
+            JsonPatch patch = patches.get(patchIndex);
             if (execution.isScopeInactive(scopePath)) {
                 return;
             }
@@ -298,8 +330,9 @@ final class ScopeExecutor {
                 long gasStart = System.nanoTime();
                 chargePatchGas(patch);
                 owner.metricsSink().addPatchGasNanos(System.nanoTime() - gasStart);
-                List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches(scopePath,
-                        Collections.singletonList(patch));
+                List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPrecomputedPatch(scopePath,
+                        patch,
+                        preview != null ? preview.patch(patchIndex) : null);
                 long routingStart = System.nanoTime();
                 for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
                     routeDocumentUpdateAfterPatch(scopePath, bundle, update);
@@ -487,14 +520,31 @@ final class ScopeExecutor {
 
     private ContractBundle refreshBundle(String scopePath) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        FrozenNode scopeNode = runtime.resolvedFrozenAt(normalizedScope);
+        ProcessingMetricsSink metrics = owner.metricsSink();
+        metrics.incrementBundleScopeRefreshes();
+        long resolvedStart = System.nanoTime();
+        FrozenNode scopeNode;
+        try {
+            scopeNode = runtime.resolvedFrozenAt(normalizedScope);
+        } finally {
+            metrics.addBundleScopeResolvedLookupNanos(System.nanoTime() - resolvedStart);
+        }
         if (scopeNode == null) {
             bundles.remove(normalizedScope);
             return null;
         }
-        ContractBundle refreshed = owner.contractLoader().load(scopeNode, normalizedScope, owner.metricsSink());
+        ContractBundle refreshed = loadBundle(scopeNode, normalizedScope, metrics);
         bundles.put(normalizedScope, refreshed);
         return refreshed;
+    }
+
+    private ContractBundle loadBundle(FrozenNode scopeNode, String normalizedScope, ProcessingMetricsSink metrics) {
+        long loadStart = System.nanoTime();
+        try {
+            return owner.contractLoader().load(scopeNode, normalizedScope, metrics);
+        } finally {
+            metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
+        }
     }
 
     private String nextEmbeddedChildScope(String scopePath, ContractBundle bundle, Set<String> processed) {

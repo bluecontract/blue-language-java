@@ -16,6 +16,7 @@ import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ProcessingMetricsSink;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
@@ -58,6 +59,8 @@ import static blue.language.utils.limits.Limits.NO_LIMITS;
 
 public class Blue implements NodeResolver {
 
+    private static final int RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT = 32;
+
     private NodeProvider nodeProvider;
     private NodeProvider originalNodeProvider;
     private MergingProcessor mergingProcessor;
@@ -67,6 +70,7 @@ public class Blue implements NodeResolver {
     private DocumentProcessor documentProcessor;
     private final ConcurrentMap<String, ResolvedSnapshot> resolvedSnapshotsByBlueId = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Node> externalContractTypeNodes = new ConcurrentHashMap<>();
+    private final List<ProcessingDocumentSnapshot> recentProcessingDocumentSnapshots = new ArrayList<>();
     private final ResolvedReferenceCache resolvedReferenceCache = new ResolvedReferenceCache();
     private final DictionaryRegistry dictionaryRegistry = new DictionaryRegistry();
 
@@ -364,6 +368,9 @@ public class Blue implements NodeResolver {
 
     public void clearResolvedSnapshotCache() {
         resolvedSnapshotsByBlueId.clear();
+        synchronized (recentProcessingDocumentSnapshots) {
+            recentProcessingDocumentSnapshots.clear();
+        }
         resolvedReferenceCache.clear();
     }
 
@@ -675,6 +682,10 @@ public class Blue implements NodeResolver {
         DocumentProcessor processor = ensureDocumentProcessor();
         long start = System.nanoTime();
         try {
+            ResolvedSnapshot cached = cachedProcessingSnapshotFor(document, processor);
+            if (cached != null) {
+                return rememberProcessingResultSnapshot(processor.processDocument(cached, event));
+            }
             return attachProcessingSnapshot(processor, processor.processDocument(document, event));
         } finally {
             processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
@@ -685,7 +696,7 @@ public class Blue implements NodeResolver {
         DocumentProcessor processor = ensureDocumentProcessor();
         long start = System.nanoTime();
         try {
-            return processor.processDocument(snapshot, event);
+            return rememberProcessingResultSnapshot(processor.processDocument(snapshot, event));
         } finally {
             processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
         }
@@ -709,7 +720,7 @@ public class Blue implements NodeResolver {
     }
 
     public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
-        return ensureDocumentProcessor().initializeDocument(snapshot);
+        return rememberProcessingResultSnapshot(ensureDocumentProcessor().initializeDocument(snapshot));
     }
 
     public boolean isInitialized(Node document) {
@@ -819,15 +830,90 @@ public class Blue implements NodeResolver {
 
     private DocumentProcessingResult attachProcessingSnapshot(DocumentProcessor processor, DocumentProcessingResult result) {
         if (result == null || result.capabilityFailure() || result.snapshot() != null) {
-            return result;
+            return rememberProcessingResultSnapshot(result);
         }
         long start = System.nanoTime();
         try {
-            return result.withSnapshot(resolveProcessingSnapshot(result.document()));
+            DocumentProcessingResult attached = result.withSnapshot(resolveProcessingSnapshot(result.document()));
+            return rememberProcessingResultSnapshot(attached);
         } finally {
             long nanos = System.nanoTime() - start;
             processor.processingMetricsSink().addResultSnapshotAttachNanos(nanos);
             processor.processingMetricsSink().addBlueIdCalculationNanos(nanos);
+        }
+    }
+
+    private DocumentProcessingResult rememberProcessingResultSnapshot(DocumentProcessingResult result) {
+        if (result != null && result.snapshot() != null && result.document() != null) {
+            rememberProcessingSnapshot(result.document(), result.snapshot());
+        }
+        return result;
+    }
+
+    private ResolvedSnapshot cachedProcessingSnapshotFor(Node document, DocumentProcessor processor) {
+        if (document == null || !processor.supportsSnapshotProcessing()) {
+            return null;
+        }
+        long start = System.nanoTime();
+        ProcessingMetricsSink metrics = processor.processingMetricsSink();
+        try {
+            ResolvedSnapshot identitySnapshot = recentProcessingSnapshotByIdentity(document);
+            if (identitySnapshot == null) {
+                metrics.incrementProcessingSnapshotCacheMisses();
+                return null;
+            }
+            String blueId;
+            try {
+                blueId = BlueIdCalculator.calculateUncheckedBlueId(document);
+            } catch (RuntimeException ex) {
+                metrics.incrementProcessingSnapshotCacheMisses();
+                return null;
+            }
+            ResolvedSnapshot cached = blueId.equals(identitySnapshot.blueId()) ? identitySnapshot : null;
+            if (cached != null) {
+                metrics.incrementProcessingSnapshotCacheHits();
+                return cached;
+            }
+            metrics.incrementProcessingSnapshotCacheMisses();
+            return null;
+        } finally {
+            metrics.addProcessingSnapshotCacheLookupNanos(System.nanoTime() - start);
+        }
+    }
+
+    private ResolvedSnapshot recentProcessingSnapshotByIdentity(Node document) {
+        synchronized (recentProcessingDocumentSnapshots) {
+            for (ProcessingDocumentSnapshot entry : recentProcessingDocumentSnapshots) {
+                if (entry.document == document) {
+                    return entry.snapshot;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void rememberProcessingSnapshot(Node document, ResolvedSnapshot snapshot) {
+        synchronized (recentProcessingDocumentSnapshots) {
+            for (int i = recentProcessingDocumentSnapshots.size() - 1; i >= 0; i--) {
+                ProcessingDocumentSnapshot entry = recentProcessingDocumentSnapshots.get(i);
+                if (entry.document == document || entry.snapshot.blueId().equals(snapshot.blueId())) {
+                    recentProcessingDocumentSnapshots.remove(i);
+                }
+            }
+            recentProcessingDocumentSnapshots.add(0, new ProcessingDocumentSnapshot(document, snapshot));
+            while (recentProcessingDocumentSnapshots.size() > RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT) {
+                recentProcessingDocumentSnapshots.remove(recentProcessingDocumentSnapshots.size() - 1);
+            }
+        }
+    }
+
+    private static final class ProcessingDocumentSnapshot {
+        final Node document;
+        final ResolvedSnapshot snapshot;
+
+        ProcessingDocumentSnapshot(Node document, ResolvedSnapshot snapshot) {
+            this.document = document;
+            this.snapshot = snapshot;
         }
     }
 

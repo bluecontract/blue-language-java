@@ -15,9 +15,12 @@ import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Collections;
+import java.util.List;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,6 +43,117 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals(2, runtime.snapshot().canonicalRoot().getAsInteger("/x"));
         assertEquals("keep", runtime.snapshot().canonicalRoot().getAsText("/other"));
         assertSnapshotConsistent(runtime.snapshot());
+    }
+
+    @Test
+    void workingDocumentAppliesPatchWithoutMutatingRuntime() {
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        Node document = YAML_MAPPER.readValue("x: 1\nother: keep", Node.class);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
+        runtime.snapshot();
+
+        WorkingDocument working = runtime.workingDocument("/");
+        working.applyPatch(JsonPatch.replace("/x", new Node().value(2)));
+
+        assertFalse(working.usedMaterializedFallback());
+        assertEquals(1, document.getAsInteger("/x"));
+        assertEquals(1, runtime.snapshot().canonicalRoot().getAsInteger("/x"));
+        assertEquals(2, working.materializeCanonicalRoot().getAsInteger("/x"));
+        assertEquals("keep", working.canonicalAt("/other").getValue());
+        assertSnapshotConsistent(working.snapshot());
+    }
+
+    @Test
+    void precomputedWorkingDocumentPreviewCommitsWithoutReplanning() {
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        Node document = YAML_MAPPER.readValue("x: 1\nother: keep", Node.class);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
+        runtime.snapshot();
+        JsonPatch patch = JsonPatch.replace("/x", new Node().value(2));
+
+        WorkingDocument.Preview preview = runtime.workingDocument("/")
+                .previewAndApplyPatches(Collections.singletonList(patch));
+        List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+                runtime.applyPrecomputedPatch("/", patch, preview.patch(0));
+
+        assertEquals(2, document.getAsInteger("/x"));
+        assertEquals(1, updates.size());
+        assertEquals("/x", updates.get(0).path());
+        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(1, manager.cacheSnapshotCalls);
+        assertEquals(1, runtime.batchPatchCallsForTest());
+        assertEquals(1, runtime.batchPatchEntriesForTest());
+        assertEquals(0, runtime.batchPatchPlanningNanosForTest());
+        assertEquals(0, runtime.batchPatchConformanceNanosForTest());
+        assertTrue(runtime.batchPatchBuildUpdatesNanosForTest() > 0);
+        assertTrue(runtime.batchPatchCommitNanosForTest() > 0);
+        assertSnapshotConsistent(runtime.snapshot());
+    }
+
+    @Test
+    void workingDocumentRecordsMaterializedFallbackWhenRuntimeHasNoSnapshotManager() {
+        Node document = YAML_MAPPER.readValue("x: 1", Node.class);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null);
+
+        WorkingDocument working = runtime.workingDocument("/");
+        working.applyPatch(JsonPatch.replace("/x", new Node().value(2)));
+
+        assertTrue(working.usedMaterializedFallback());
+        assertEquals(1, document.getAsInteger("/x"));
+        assertEquals(2, working.commitToNode().getAsInteger("/x"));
+        assertSnapshotConsistent(working.commitSnapshot());
+    }
+
+    @Test
+    void workingDocumentPreviewFailureDoesNotMutateWorkingOrRuntime() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Fixed One\n" +
+                "x: 1");
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "name: Instance\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Fixed One") + "\n" +
+                "x: 1", Node.class));
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        WorkingDocument working = runtime.workingDocument("/");
+
+        assertThrows(RuntimeException.class,
+                () -> working.applyPatch(JsonPatch.replace("/x", new Node().value(2))));
+
+        assertEquals(1, document.getAsInteger("/x"));
+        assertEquals(1, working.materializeResolvedRoot().getAsInteger("/x"));
+        assertEquals(nodeProvider.getBlueIdByName("Fixed One"),
+                working.materializeResolvedRoot().getType().getBlueId());
+    }
+
+    @Test
+    void workingDocumentRunsGeneralizationPolicyOnFrozenPreviewState() {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "price:\n" +
+                "  type:\n" +
+                "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "  amount: 150\n" +
+                "  currency: EUR\n", Node.class));
+        document.contracts(new Node().properties("generalization",
+                new Node()
+                        .type(new Node().blueId("Fbenow6tanFHkWzKiDD8fGxminQswQ1FecMRakaCx2WX"))
+                        .properties("rules", new Node().items(java.util.Collections.singletonList(
+                                new Node().properties("path", new Node().value("/price"),
+                                        "mode", new Node().value("nearest-valid"),
+                                        "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("Price"))))))));
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+
+        WorkingDocument working = runtime.workingDocument("/")
+                .applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
+
+        assertEquals("EUR", document.getAsText("/price/currency"));
+        assertEquals("USD", working.resolvedAt("/price/currency").getValue());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                working.resolvedAt("/price").getType().getReferenceBlueId());
     }
 
     @Test
@@ -233,7 +347,8 @@ class DocumentProcessorSnapshotTransactionTest {
 
         assertMissing(document, "/checkpoint/lastEvent");
         assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(2, manager.applyPatchCalls);
+        assertEquals(1, manager.applyPatchCalls);
+        assertEquals(1, manager.cacheSnapshotCalls);
         assertMissing(runtime.snapshot().canonicalRoot(), "/checkpoint/lastEvent");
         assertSnapshotConsistent(runtime.snapshot());
     }
@@ -349,7 +464,7 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals(7, processed.canonicalDocument().getAsInteger("/x"));
         assertEquals("evt-runtime-snapshot",
                 processed.canonicalDocument().getAsText("/contracts/checkpoint/lastEvents/testChannel/eventId"));
-        assertTrue(manager.applyPatchCalls >= 2);
+        assertTrue(manager.cacheSnapshotCalls >= 2);
         assertSnapshotConsistent(processed.snapshot());
     }
 
@@ -383,7 +498,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 new TestEvent().eventId("evt-snapshot-native").toNode());
 
         assertEquals(0, manager.fromDocumentCalls);
-        assertTrue(manager.applyPatchCalls > 0);
+        assertTrue(manager.cacheSnapshotCalls > 0);
         assertEquals(9, result.snapshot().canonicalRoot().getAsInteger("/x"));
         assertSnapshotConsistent(result.snapshot());
     }
