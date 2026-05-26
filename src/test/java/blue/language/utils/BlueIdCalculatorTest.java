@@ -414,7 +414,7 @@ public class BlueIdCalculatorTest {
                 Node node = YAML_MAPPER.readValue(yaml, Node.class);
                 String blueId = BlueIdCalculator.calculateBlueId(node);
 
-                String json = "{\"text\":{\"type\":{\"blueId\":\"DLRQwz7MQeCrzjy9bohPNwtCxKEBbKaMK65KBrwjfG6K\"},\"value\":\"abc\\ndef\"}}";
+                String json = "{\"text\":{\"type\":{\"blueId\":\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"},\"value\":\"abc\\ndef\"}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
@@ -430,7 +430,7 @@ public class BlueIdCalculatorTest {
                 Node node = YAML_MAPPER.readValue(yaml, Node.class);
                 String blueId = BlueIdCalculator.calculateBlueId(node);
 
-                String json = "{\"text\":{\"type\":{\"blueId\":\"DLRQwz7MQeCrzjy9bohPNwtCxKEBbKaMK65KBrwjfG6K\"},\"value\":\"abc def\"}}\n";
+                String json = "{\"text\":{\"type\":{\"blueId\":\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"},\"value\":\"abc def\"}}\n";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 

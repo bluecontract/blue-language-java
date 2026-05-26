@@ -25,18 +25,18 @@ final class ChannelRunnerTest {
 
     @Test
     void skipsDuplicateEventsUsingCheckpoint() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
 
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -71,19 +71,19 @@ final class ChannelRunnerTest {
     }
 
     @Test
-    void skipsDuplicateEventsByEventIdEvenIfPayloadChanges() {
-        Blue blue = new Blue();
+    void treatsDifferentContentWithSameEventIdAsNewByDefault() {
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
 
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -108,23 +108,23 @@ final class ChannelRunnerTest {
 
         Node counterNode = execution.runtime().document().getProperties().get("counter");
         assertNotNull(counterNode);
-        assertEquals(new BigInteger("2"), counterNode.getValue());
+        assertEquals(new BigInteger("3"), counterNode.getValue());
     }
 
     @Test
     void skipsDuplicateEventsByCanonicalPayloadWhenNoEventIdPresent() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
 
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -153,18 +153,18 @@ final class ChannelRunnerTest {
 
     @Test
     void deliversChannelizedEventToHandlersAndStoresOriginalEventInCheckpoint() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
 
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setFlag:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetPropertyOnEvent\n" +
+                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
                 "    expectedKind: " + NormalizingTestEventChannelProcessor.NORMALIZED_KIND + "\n" +
                 "    propertyKey: /flag\n" +
                 "    propertyValue: 7\n";
@@ -200,18 +200,18 @@ final class ChannelRunnerTest {
 
     @Test
     void duplicateSignatureForChannelizedEventsUsesOriginalExternalEvent() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
 
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);

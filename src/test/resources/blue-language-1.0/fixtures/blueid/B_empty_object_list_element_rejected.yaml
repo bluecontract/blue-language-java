@@ -5,6 +5,6 @@ description: direct BlueId Input rejects empty-object list elements
 expectError: true
 input:
   items:
-    - A
-    - {}
-    - B
+  - A
+  - {}
+  - B

@@ -11,6 +11,7 @@ import blue.language.utils.JsonPointer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 final class BatchPatchTransaction {
 
@@ -18,17 +19,20 @@ final class BatchPatchTransaction {
     private final List<JsonPatch> patches;
     private final DocumentProcessingRuntime.PlanningContext planning;
     private final ConformanceEngine conformanceEngine;
+    private final ConformancePlannerOverride conformancePlannerOverride;
     private final DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics;
 
     BatchPatchTransaction(String originScopePath,
                           List<JsonPatch> patches,
                           DocumentProcessingRuntime.PlanningContext planning,
                           ConformanceEngine conformanceEngine,
+                          ConformancePlannerOverride conformancePlannerOverride,
                           DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
         this.originScopePath = originScopePath;
         this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
         this.planning = planning;
         this.conformanceEngine = conformanceEngine;
+        this.conformancePlannerOverride = conformancePlannerOverride;
         this.materializationMetrics = materializationMetrics;
     }
 
@@ -57,15 +61,21 @@ final class BatchPatchTransaction {
         long patchPlanningNanos = System.nanoTime() - planningStart;
 
         long conformanceStart = System.nanoTime();
+        FrozenNode preConformanceResolved = workingResolved;
         ConformancePlan conformancePlan = planBatchConformance(workingCanonical, workingResolved, records);
         long conformanceNanos = System.nanoTime() - conformanceStart;
         FrozenNode finalCanonical = conformancePlan.canonicalRoot() != null
                 ? conformancePlan.canonicalRoot()
                 : workingCanonical;
         FrozenNode finalResolved = conformancePlan.root();
+        boolean includeGeneratedUpdates = conformancePlannerOverride != null && conformancePlannerOverride.applies();
 
         long buildUpdatesStart = System.nanoTime();
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = buildUpdates(records, finalResolved);
+        List<DocumentProcessingRuntime.DocumentUpdateData> updates = buildUpdates(records,
+                preConformanceResolved,
+                finalResolved,
+                conformancePlan.changedPaths(),
+                includeGeneratedUpdates);
         long buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
         return new BatchPatchResult(finalCanonical,
                 finalResolved,
@@ -78,22 +88,46 @@ final class BatchPatchTransaction {
     private ConformancePlan planBatchConformance(FrozenNode canonicalRoot,
                                                  FrozenNode resolvedRoot,
                                                  List<BatchPatchRecord> records) {
-        if (conformanceEngine == null) {
+        boolean hasOverride = conformancePlannerOverride != null && conformancePlannerOverride.applies();
+        if (conformanceEngine == null && !hasOverride) {
             return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
         }
         List<String> changedPaths = new ArrayList<>();
+        List<ConformanceChangedPath> changedPathRecords = new ArrayList<>();
         for (BatchPatchRecord record : records) {
             if (record.processorManagedConformanceBypass()) {
                 continue;
             }
             if (hasTypedNodeBetweenOriginAndPath(resolvedRoot, record.originScope(), record.path())) {
                 changedPaths.add(record.path());
+                changedPathRecords.add(new ConformanceChangedPath(record.path(), record.originScope()));
             }
         }
         if (changedPaths.isEmpty()) {
             return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
         }
-        return conformanceEngine.planGeneralization(canonicalRoot, resolvedRoot, changedPaths);
+        if (hasOverride) {
+            ConformancePlan plan = conformancePlannerOverride.plan(canonicalRoot, resolvedRoot, changedPathRecords);
+            String originScope = originScopeForGeneratedUpdate(records);
+            TypeGeneralizationPolicyResolver.enforceScopeBoundary(originScope,
+                    plan.changedPaths());
+            TypeGeneralizationPolicyResolver.enforce(conformanceEngine, plan.root(), plan.changedPaths(), originScope);
+            return plan;
+        }
+        try {
+            ConformancePlan plan = conformanceEngine.planGeneralization(canonicalRoot, resolvedRoot, changedPaths);
+            String originScope = originScopeForGeneratedUpdate(records);
+            TypeGeneralizationPolicyResolver.enforceScopeBoundary(originScope,
+                    plan.changedPaths());
+            TypeGeneralizationPolicyResolver.enforce(conformanceEngine, plan.root(), plan.changedPaths(), originScope);
+            return plan;
+        } catch (ProcessorFailureException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new ProcessorFailureException(ProcessorErrorCategory.GeneralizationNoValidType,
+                    "GeneralizationNoValidType: " + ex.getMessage(),
+                    ex);
+        }
     }
 
     private boolean hasTypedNodeBetweenOriginAndPath(FrozenNode resolvedRoot, String originScope, String changedPath) {
@@ -129,7 +163,10 @@ final class BatchPatchTransaction {
     }
 
     private List<DocumentProcessingRuntime.DocumentUpdateData> buildUpdates(List<BatchPatchRecord> records,
-                                                                           FrozenNode finalResolvedRoot) {
+                                                                           FrozenNode preConformanceResolvedRoot,
+                                                                           FrozenNode finalResolvedRoot,
+                                                                           List<String> generatedPaths,
+                                                                           boolean includeGeneratedUpdates) {
         List<DocumentProcessingRuntime.DocumentUpdateData> updates = new ArrayList<>();
         ImmutablePatchPlanner finalResolvedPlanner = ImmutablePatchPlanner.forFrozen(finalResolvedRoot);
         for (BatchPatchRecord record : records) {
@@ -147,7 +184,25 @@ final class BatchPatchTransaction {
                     record.cascadeScopes(),
                     materializationMetrics));
         }
+        if (includeGeneratedUpdates && generatedPaths != null && !generatedPaths.isEmpty()) {
+            ImmutablePatchPlanner preConformancePlanner = ImmutablePatchPlanner.forFrozen(preConformanceResolvedRoot);
+            for (String path : generatedPaths) {
+                FrozenNode before = preConformancePlanner.read(path);
+                FrozenNode after = finalResolvedPlanner.read(path);
+                updates.add(new DocumentProcessingRuntime.DocumentUpdateData(path,
+                        before,
+                        after,
+                        before == null ? JsonPatch.Op.ADD : JsonPatch.Op.REPLACE,
+                        originScopeForGeneratedUpdate(records),
+                        Collections.singletonList("/"),
+                        materializationMetrics));
+            }
+        }
         return updates;
+    }
+
+    private String originScopeForGeneratedUpdate(List<BatchPatchRecord> records) {
+        return records.isEmpty() ? "/" : records.get(0).originScope();
     }
 
     private boolean hasLaterOverlappingPatch(List<BatchPatchRecord> records, BatchPatchRecord current) {
@@ -161,21 +216,13 @@ final class BatchPatchTransaction {
     }
 
     private boolean pathsOverlap(String first, String second) {
-        return first.equals(second)
-                || isAncestorPath(first, second)
-                || isAncestorPath(second, first);
-    }
-
-    private boolean isAncestorPath(String ancestor, String descendant) {
-        if ("/".equals(ancestor)) {
-            return !"/".equals(descendant);
-        }
-        return descendant.startsWith(ancestor + "/");
+        return PointerUtils.descendantOrEqual(first, second)
+                || PointerUtils.descendantOrEqual(second, first);
     }
 
     private boolean isProcessorManagedConformanceBypass(ImmutablePatchPlanner.PatchPlan result) {
         String relativePath = PointerUtils.relativizePointer(result.originScope(), result.path());
         String initialized = ProcessorPointerConstants.RELATIVE_INITIALIZED;
-        return relativePath.equals(initialized) || relativePath.startsWith(initialized + "/");
+        return PointerUtils.descendantOrEqual(relativePath, initialized);
     }
 }

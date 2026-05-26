@@ -1,0 +1,58 @@
+id: T001c_embedded_marker_whole_replace_still_fatal
+category: Patching
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    embedded:
+      type:
+        blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q
+      paths:
+        - /a
+    incoming:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+    badPatch:
+      type:
+        blueId: 2TwRC3EdLXk4gqwyyVWy52h5BQ5ntrkmpcrhrTxsGAs1
+      channel: incoming
+  a: {}
+event:
+  kind: replace-embedded-marker
+mockRuntime:
+  channels:
+    - contract: /contracts/incoming
+      calls:
+        - when:
+            event:
+              kind: replace-embedded-marker
+          accepted: true
+          payload:
+            kind: replace-embedded-marker
+  handlers:
+    - contract: /contracts/badPatch
+      calls:
+        - when:
+            channelKey: incoming
+            payload:
+              kind: replace-embedded-marker
+          result:
+            patches:
+              - op: replace
+                path: /contracts/embedded
+                val:
+                  paths:
+                    - /c
+expectedStatus: runtime-fatal
+expectedErrorCategory: ReservedKeyWrite
+expectedDocumentPaths:
+  /contracts/terminated/cause:
+    value: fatal
+expectedDocumentPathValues:
+  - path: /contracts/embedded/paths
+    value:
+      items:
+        - value: /a
+assertions:
+  - The embedded paths exception does not permit replacing or removing the Process Embedded marker.

@@ -1,7 +1,8 @@
 id: R_contracts_canonicalization_deterministic
 category: Canonicalization
 operation: canonicalize
-description: inherited and instance contracts canonicalize deterministically as reserved content
+description: inherited and instance contracts canonicalize deterministically as reserved
+  content
 source:
   type:
     contracts:

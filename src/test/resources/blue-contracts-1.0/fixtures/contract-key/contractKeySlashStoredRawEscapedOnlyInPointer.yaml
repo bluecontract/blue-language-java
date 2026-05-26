@@ -1,0 +1,45 @@
+id: contractKeySlashStoredRawEscapedOnlyInPointer
+category: ContractKey
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    a/b:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+    handler:
+      type:
+        blueId: 2TwRC3EdLXk4gqwyyVWy52h5BQ5ntrkmpcrhrTxsGAs1
+      channel: a/b
+event:
+  kind: slash-key
+mockRuntime:
+  channels:
+    - contract: /contracts/a~1b
+      calls:
+        - when:
+            event:
+              kind: slash-key
+          accepted: true
+          payload:
+            kind: slash-key
+  handlers:
+    - contract: /contracts/handler
+      calls:
+        - when:
+            channelKey: a/b
+          result:
+            patches:
+              - op: replace
+                path: /handled
+                val: true
+expectedStatus: success
+expectedDocumentPaths:
+  /handled:
+    value: true
+expectedStoredObjectKeys:
+  /contracts:
+    - a/b
+expectedPointerReads:
+  - /contracts/a~1b

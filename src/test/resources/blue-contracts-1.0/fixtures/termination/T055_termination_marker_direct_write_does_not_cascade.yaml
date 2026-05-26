@@ -1,0 +1,36 @@
+id: T055_termination_marker_direct_write_does_not_cascade
+category: Termination
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    terminator:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      termination: graceful
+      terminationReason: done
+    docUpdate:
+      type:
+        blueId: "Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o"
+      path: /contracts/terminated
+    duHandler:
+      channel: docUpdate
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /terminationCascaded
+          val:
+            value: true
+event:
+  kind: term-direct
+expectedCapabilityFailure: false
+expectedDocumentPathExists:
+  - /contracts/terminated
+expectedAbsentDocumentPaths:
+  - /terminationCascaded

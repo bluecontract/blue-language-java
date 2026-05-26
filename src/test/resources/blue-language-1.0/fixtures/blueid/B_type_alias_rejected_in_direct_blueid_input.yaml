@@ -3,6 +3,7 @@ category: BlueId
 operation: calculateBlueId
 description: direct BlueId input rejects unresolved aliases in type-position fields
 expectError: true
+expectedErrorCategory: InvalidBlueIdInput
 input:
   type: Integer
   value: 1

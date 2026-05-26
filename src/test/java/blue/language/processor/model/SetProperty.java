@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.HandlerContract;
 
-@TypeBlueId("SetProperty")
+@TypeBlueId("8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts")
 public class SetProperty extends HandlerContract {
 
     private String propertyKey;

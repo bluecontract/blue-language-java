@@ -77,6 +77,10 @@ public final class FrozenNodeToBlueIdInput {
             }
         }
 
+        if (items != null && isPayloadOnlyList(node)) {
+            return items;
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         if (node.getName() != null) {
             result.put(OBJECT_NAME, node.getName());
@@ -132,6 +136,25 @@ public final class FrozenNodeToBlueIdInput {
                     result.put(key, get(propertyValue, appendPath(path, key), Context.OBJECT_FIELD, -1)));
         }
         return result;
+    }
+
+    private static boolean isPayloadOnlyList(FrozenNode node) {
+        return node.getItems() != null
+                && node.getName() == null
+                && node.getDescription() == null
+                && node.getType() == null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null
+                && node.getValue() == null
+                && node.getProperties() == null
+                && node.getContracts() == null
+                && node.getReferenceBlueId() == null
+                && node.getSchema() == null
+                && node.getMergePolicy() == null
+                && node.getPreviousBlueId() == null
+                && node.getPosition() == null
+                && node.getBlue() == null;
     }
 
     private static void validateBlueIdInput(FrozenNode node, String path, Context context, int listIndex) {

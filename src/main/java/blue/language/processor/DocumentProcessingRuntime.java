@@ -21,6 +21,7 @@ public final class DocumentProcessingRuntime {
     private final EmissionRegistry emissionRegistry;
     private final GasMeter gasMeter;
     private final ConformanceEngine conformanceEngine;
+    private final ConformancePlannerOverride conformancePlannerOverride;
     private final ProcessingSnapshotManager snapshotManager;
     private final ProcessingMetricsSink metrics;
     private ResolvedSnapshot snapshot;
@@ -53,10 +54,19 @@ public final class DocumentProcessingRuntime {
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager,
                                      ProcessingMetricsSink metrics) {
+        this(document, conformanceEngine, null, snapshotManager, metrics);
+    }
+
+    public DocumentProcessingRuntime(Node document,
+                                     ConformanceEngine conformanceEngine,
+                                     ConformancePlannerOverride conformancePlannerOverride,
+                                     ProcessingSnapshotManager snapshotManager,
+                                     ProcessingMetricsSink metrics) {
         this.materializedView = new MaterializedDocumentView(Objects.requireNonNull(document, "document"));
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
         this.conformanceEngine = conformanceEngine;
+        this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
     }
@@ -71,11 +81,20 @@ public final class DocumentProcessingRuntime {
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager,
                                      ProcessingMetricsSink metrics) {
+        this(snapshot, conformanceEngine, null, snapshotManager, metrics);
+    }
+
+    public DocumentProcessingRuntime(ResolvedSnapshot snapshot,
+                                     ConformanceEngine conformanceEngine,
+                                     ConformancePlannerOverride conformancePlannerOverride,
+                                     ProcessingSnapshotManager snapshotManager,
+                                     ProcessingMetricsSink metrics) {
         ResolvedSnapshot processorSnapshot = processorSnapshot(Objects.requireNonNull(snapshot, "snapshot"));
         this.materializedView = new MaterializedDocumentView(processorSnapshot.canonicalRoot());
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
         this.conformanceEngine = conformanceEngine;
+        this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.snapshot = processorSnapshot;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
@@ -93,12 +112,21 @@ public final class DocumentProcessingRuntime {
         return materializedView.root();
     }
 
+    void replaceDocument(Node document) {
+        materializedView.replaceWith(Objects.requireNonNull(document, "document"));
+        snapshot = null;
+    }
+
     public Map<String, ScopeRuntimeContext> scopes() {
         return emissionRegistry.scopes();
     }
 
     public ScopeRuntimeContext scope(String scopePath) {
-        return emissionRegistry.scope(scopePath);
+        ScopeRuntimeContext context = emissionRegistry.scope(scopePath);
+        if ("/".equals(PointerUtils.normalizeScope(scopePath))) {
+            context.setEmbeddedDepth(0);
+        }
+        return context;
     }
 
     public ScopeRuntimeContext existingScope(String scopePath) {
@@ -122,7 +150,15 @@ public final class DocumentProcessingRuntime {
     }
 
     public void chargeScopeEntry(String scopePath) {
-        gasMeter.chargeScopeEntry(scopePath);
+        gasMeter.chargeScopeEntry(scope(scopePath).embeddedDepth());
+    }
+
+    public void setScopeEmbeddedDepth(String scopePath, int depth) {
+        scope(scopePath).setEmbeddedDepth(depth);
+    }
+
+    public int scopeEmbeddedDepth(String scopePath) {
+        return scope(scopePath).embeddedDepth();
     }
 
     public void chargeInitialization() {
@@ -264,6 +300,27 @@ public final class DocumentProcessingRuntime {
         return true;
     }
 
+    public ProcessorEngine.TerminationMarker terminationMarker(String scopePath) {
+        String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_TERMINATED);
+        Node marker = canonicalNodeAt(pointer);
+        if (marker == null) {
+            return null;
+        }
+        return ProcessorEngine.validateTerminationMarker(marker, pointer);
+    }
+
+    public boolean hasTerminationMarker(String scopePath) {
+        return terminationMarker(scopePath) != null;
+    }
+
+    public void markScopeTerminatedFromMarker(String scopePath) {
+        ProcessorEngine.TerminationMarker marker = terminationMarker(scopePath);
+        if (marker == null) {
+            return;
+        }
+        scope(scopePath).finalizeTermination(marker.kind, marker.reason);
+    }
+
     public void directWrite(String path, Node value) {
         Node rollback = materializedView.copyRoot();
         ResolvedSnapshot snapshotRollback = snapshot;
@@ -307,6 +364,7 @@ public final class DocumentProcessingRuntime {
                     patches,
                     planning,
                     conformanceEngine,
+                    conformancePlannerOverride,
                     new UpdateMaterializationMetrics() {
                         @Override
                         public void recordBeforeNodeMaterialization() {

@@ -3,4 +3,4 @@ category: BlueId
 operation: calculateBlueId
 description: exponent notation 1e0 is inferred as Double
 input: 1e0
-expectedNodeBlueId: "3SeoqNFjgk6TJV2DzMBGv1wkzcgUzTL9s8BVKhmnXUqL"
+expectedNodeBlueId: 8BCB5pcQa5PAHvBa2FSzEWe9MZ5YEirsuymGaE2BM3MA

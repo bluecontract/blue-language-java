@@ -16,12 +16,15 @@ public final class ScopeRuntimeContext {
     private final String scopePath;
     private final Deque<Node> triggeredQueue = new ArrayDeque<>();
     private final List<Node> bridgeableEvents = new ArrayList<>();
+    private final List<String> processedEmbeddedPaths = new ArrayList<>();
     private boolean terminated;
     private TerminationKind terminationKind;
     private String terminationReason;
     private boolean cutOff;
     private int triggeredLimit = -1;
     private int bridgeableLimit = -1;
+    private int embeddedDepth;
+    private boolean embeddedDepthSet;
 
     public ScopeRuntimeContext(String scopePath) {
         this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
@@ -58,6 +61,32 @@ public final class ScopeRuntimeContext {
         }
         bridgeableEvents.clear();
         return drained;
+    }
+
+    public void clearProcessedEmbeddedPaths() {
+        processedEmbeddedPaths.clear();
+    }
+
+    public void recordProcessedEmbeddedPath(String path) {
+        processedEmbeddedPaths.add(Objects.requireNonNull(path, "path"));
+    }
+
+    public List<String> processedEmbeddedPaths() {
+        return new ArrayList<>(processedEmbeddedPaths);
+    }
+
+    public int embeddedDepth() {
+        return embeddedDepth;
+    }
+
+    public void setEmbeddedDepth(int depth) {
+        if (depth < 0) {
+            throw new IllegalArgumentException("Scope embedded depth must be non-negative");
+        }
+        if (!embeddedDepthSet || depth < embeddedDepth) {
+            embeddedDepth = depth;
+            embeddedDepthSet = true;
+        }
     }
 
     public boolean isTerminated() {

@@ -2,14 +2,18 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.CircularBlueIdCalculator;
 import blue.language.utils.Nodes;
+import blue.language.utils.Properties;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,7 +38,11 @@ public final class BlueConformanceSuiteRunner {
             "calculateSemanticBlueId",
             "expand",
             "collapse",
-            "assertSameNodeBlueId"
+            "assertSameNodeBlueId",
+            "assertViewPath",
+            "registryNodeHashesToPublishedBlueId",
+            "changingRegistryDescriptionChangesBlueId",
+            "lintPublishableDocumentation"
     )));
 
     private BlueConformanceSuiteRunner() {
@@ -97,6 +105,7 @@ public final class BlueConformanceSuiteRunner {
             try {
                 runOperation(spec, operation);
             } catch (RuntimeException expected) {
+                assertExpectedErrorCategory(spec, expected);
                 return;
             }
             throw new AssertionError("Fixture expected an error but operation succeeded: " + fixture.id);
@@ -129,6 +138,12 @@ public final class BlueConformanceSuiteRunner {
         } else if ("collapse".equals(operation)) {
             assertExpectedNode(spec, "expectedCollapsed", (Node) actual);
             assertExpectedNodeBlueIdIfPresent(spec, (Node) actual, requirePresent(spec, "source"));
+        } else if ("assertViewPath".equals(operation)) {
+            // Operation-specific assertions are performed while running the fixture.
+        } else if ("registryNodeHashesToPublishedBlueId".equals(operation)
+                || "changingRegistryDescriptionChangesBlueId".equals(operation)
+                || "lintPublishableDocumentation".equals(operation)) {
+            // Operation-specific assertions are performed while running the fixture.
         }
     }
 
@@ -177,7 +192,113 @@ public final class BlueConformanceSuiteRunner {
             assertEquals(left, right);
             return left;
         }
+        if ("assertViewPath".equals(operation)) {
+            runAssertViewPath(spec);
+            return null;
+        }
+        if ("registryNodeHashesToPublishedBlueId".equals(operation)) {
+            runRegistryNodeHashesToPublishedBlueId(spec);
+            return null;
+        }
+        if ("changingRegistryDescriptionChangesBlueId".equals(operation)) {
+            runChangingRegistryDescriptionChangesBlueId(spec);
+            return null;
+        }
+        if ("lintPublishableDocumentation".equals(operation)) {
+            runLintPublishableDocumentation(spec);
+            return null;
+        }
         throw new IllegalArgumentException("Unsupported fixture operation: " + operation);
+    }
+
+    private static void runAssertViewPath(JsonNode spec) {
+        Node document = readNode(requirePresent(spec, "document"));
+        JsonNode assertions = requireNonNull(spec, "assertions");
+        if (!assertions.isArray() || assertions.size() == 0) {
+            throw new IllegalArgumentException("assertViewPath requires at least one assertion.");
+        }
+        for (JsonNode assertion : assertions) {
+            String path = requireNonNull(assertion, "path").asText();
+            Node selected = BlueViewPath.select(document, path);
+            if (assertion.path("expectedRoot").asBoolean(false)) {
+                assertEquals(BlueIdCalculator.calculateBlueId(document), BlueIdCalculator.calculateBlueId(selected));
+            }
+            if (assertion.has("expectedNode")) {
+                assertNodeEquals(readNode(requireNonNull(assertion, "expectedNode")), selected);
+            }
+        }
+    }
+
+    private static void runRegistryNodeHashesToPublishedBlueId(JsonNode spec) {
+        requireCoreRegistryKind(spec);
+        String registryKey = requireNonNull(spec, "registryKey").asText();
+        String expected = requireNonNull(spec, "expectedPublishedBlueId").asText();
+        BlueCoreTypeRegistry registry = BlueCoreTypeRegistry.INSTANCE;
+        String calculated = BlueIdCalculator.calculateBlueId(registry.node(registryKey));
+        assertEquals(expected, calculated);
+        assertEquals(expected, registry.blueId(registryKey));
+        assertEquals(expected, Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(registryKey));
+    }
+
+    private static void runChangingRegistryDescriptionChangesBlueId(JsonNode spec) {
+        requireCoreRegistryKind(spec);
+        String registryKey = requireNonNull(spec, "registryKey").asText();
+        Node original = BlueCoreTypeRegistry.INSTANCE.node(registryKey);
+        Node mutated = original.clone();
+        JsonNode mutation = requireNonNull(spec, "mutation");
+        String field = requireNonNull(mutation, "field").asText();
+        if (!"description".equals(field)) {
+            throw new IllegalArgumentException("Unsupported registry mutation field: " + field);
+        }
+        mutated.description((mutated.getDescription() == null ? "" : mutated.getDescription())
+                + requireNonNull(mutation, "append").asText());
+        boolean changed = !BlueIdCalculator.calculateBlueId(original).equals(BlueIdCalculator.calculateBlueId(mutated));
+        assertEquals(requireNonNull(spec, "expectBlueIdChanged").asBoolean(), changed);
+    }
+
+    private static void runLintPublishableDocumentation(JsonNode spec) {
+        JsonNode files = requireNonNull(spec, "publishableFiles");
+        if (!files.isArray() || files.size() == 0) {
+            throw new IllegalArgumentException("lintPublishableDocumentation requires publishableFiles.");
+        }
+        JsonNode requiredHeadings = spec.get("requiredHeadings");
+        JsonNode forbiddenJoinedTerms = spec.get("forbiddenJoinedTerms");
+        if ((requiredHeadings == null || !requiredHeadings.isArray() || requiredHeadings.size() == 0)
+                && (forbiddenJoinedTerms == null || !forbiddenJoinedTerms.isArray() || forbiddenJoinedTerms.size() == 0)) {
+            throw new IllegalArgumentException("lintPublishableDocumentation requires headings or forbidden terms.");
+        }
+        for (JsonNode file : files) {
+            String path = file.asText();
+            String content = readTextResource(path);
+            if (requiredHeadings != null) {
+                for (JsonNode heading : requiredHeadings) {
+                    if (!content.contains(heading.asText())) {
+                        throw new AssertionError("Missing required heading in " + path + ": " + heading.asText());
+                    }
+                }
+            }
+            if (forbiddenJoinedTerms != null) {
+                for (JsonNode entry : forbiddenJoinedTerms) {
+                    JsonNode tokens = requireNonNull(entry, "tokens");
+                    String joiner = requireNonNull(entry, "joiner").asText();
+                    List<String> tokenValues = new ArrayList<>();
+                    for (JsonNode token : tokens) {
+                        tokenValues.add(token.asText());
+                    }
+                    String forbidden = String.join(joiner, tokenValues);
+                    if (content.contains(forbidden)) {
+                        throw new AssertionError("Forbidden term in " + path + ": " + forbidden);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void requireCoreRegistryKind(JsonNode spec) {
+        String registryKind = requireNonNull(spec, "registryKind").asText();
+        if (!"Blue Language core type registry".equals(registryKind)) {
+            throw new IllegalArgumentException("Unsupported registry kind: " + registryKind);
+        }
     }
 
     private static NodeProvider provider(JsonNode providerSpec) {
@@ -224,6 +345,8 @@ public final class BlueConformanceSuiteRunner {
         }
         if (!spec.path("expectError").asBoolean(false)) {
             requireExpectedOutput(spec, operation);
+        } else {
+            validateExpectedErrorCategoryFields(spec);
         }
     }
 
@@ -239,7 +362,8 @@ public final class BlueConformanceSuiteRunner {
                 BlueFixtureCategory.fromLabel(fixture.category),
                 operation,
                 throwable.getClass().getName(),
-                throwable.getMessage());
+                throwable.getMessage(),
+                BlueLanguageErrorClassifier.classify(throwable));
     }
 
     private static void requireExpectedOutput(JsonNode spec, String operation) {
@@ -280,7 +404,62 @@ public final class BlueConformanceSuiteRunner {
             requireNonNull(spec, "expectedCollapsed");
             return;
         }
+        if ("assertViewPath".equals(operation)) {
+            requireNonNull(spec, "assertions");
+            return;
+        }
+        if ("registryNodeHashesToPublishedBlueId".equals(operation)) {
+            requireNonNull(spec, "expectedPublishedBlueId");
+            return;
+        }
+        if ("changingRegistryDescriptionChangesBlueId".equals(operation)) {
+            requireNonNull(spec, "expectBlueIdChanged");
+            return;
+        }
+        if ("lintPublishableDocumentation".equals(operation)) {
+            requireNonNull(spec, "publishableFiles");
+            if (!spec.has("requiredHeadings") && !spec.has("forbiddenJoinedTerms")) {
+                throw new IllegalArgumentException("lintPublishableDocumentation must assert headings or forbidden terms.");
+            }
+            return;
+        }
         throw new IllegalArgumentException("Unsupported fixture operation: " + operation);
+    }
+
+    private static void validateExpectedErrorCategoryFields(JsonNode spec) {
+        if (spec.has("expectedErrorCategory")) {
+            BlueLanguageErrorCategory.valueOf(requireNonNull(spec, "expectedErrorCategory").asText());
+        }
+        if (spec.has("expectedErrorCategories")) {
+            JsonNode categories = requireNonNull(spec, "expectedErrorCategories");
+            if (!categories.isArray() || categories.size() == 0) {
+                throw new IllegalArgumentException("expectedErrorCategories must be a non-empty list.");
+            }
+            for (JsonNode category : categories) {
+                BlueLanguageErrorCategory.valueOf(category.asText());
+            }
+        }
+    }
+
+    private static void assertExpectedErrorCategory(JsonNode spec, Throwable throwable) {
+        JsonNode expected = spec.get("expectedErrorCategory");
+        JsonNode allowed = spec.get("expectedErrorCategories");
+        if ((expected == null || expected.isNull()) && (allowed == null || allowed.isNull())) {
+            return;
+        }
+        BlueLanguageErrorCategory actual = BlueLanguageErrorClassifier.classify(throwable);
+        if (expected != null && !expected.isNull()) {
+            assertEquals(BlueLanguageErrorCategory.valueOf(expected.asText()), actual);
+        }
+        if (allowed != null && !allowed.isNull()) {
+            for (JsonNode category : allowed) {
+                if (BlueLanguageErrorCategory.valueOf(category.asText()) == actual) {
+                    return;
+                }
+            }
+            throw new AssertionError("Expected error category in " + allowed + " but was " + actual
+                    + " for error: " + throwable.getMessage());
+        }
     }
 
     private static void assertExpectedText(JsonNode spec, String field, String actual) {
@@ -300,8 +479,12 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static void assertExpectedNode(JsonNode spec, String field, Node actual) {
+        assertNodeEquals(readNode(requireNonNull(spec, field)), actual);
+    }
+
+    private static void assertNodeEquals(Node expectedNode, Node actual) {
         JsonNode expected = UncheckedObjectMapper.YAML_MAPPER.readTree(
-                UncheckedObjectMapper.YAML_MAPPER.writeValueAsString(readNode(requireNonNull(spec, field))));
+                UncheckedObjectMapper.YAML_MAPPER.writeValueAsString(expectedNode));
         JsonNode actualTree = UncheckedObjectMapper.YAML_MAPPER.readTree(
                 UncheckedObjectMapper.YAML_MAPPER.writeValueAsString(actual));
         assertEquals(expected, actualTree);
@@ -421,6 +604,24 @@ public final class BlueConformanceSuiteRunner {
             return UncheckedObjectMapper.YAML_MAPPER.readTree(inputStream);
         } catch (Exception e) {
             throw new IllegalArgumentException("Unable to read fixture resource: " + resource, e);
+        }
+    }
+
+    private static String readTextResource(String resource) {
+        try (InputStream inputStream = BlueConformanceSuiteRunner.class.getClassLoader()
+                .getResourceAsStream(resource)) {
+            if (inputStream == null) {
+                throw new IllegalArgumentException("Missing publishable resource: " + resource);
+            }
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = inputStream.read(buffer)) >= 0) {
+                output.write(buffer, 0, read);
+            }
+            return new String(output.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unable to read publishable resource: " + resource, e);
         }
     }
 

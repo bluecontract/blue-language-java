@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.processor.model.HandlerContract;
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("AssertDocumentUpdate")
+@TypeBlueId("2QCfZuct9TQRCmgE4q6PneDoZFcshqMLYpsNGpxvfwMd")
 public class AssertDocumentUpdate extends HandlerContract {
 
     private String expectedPath;

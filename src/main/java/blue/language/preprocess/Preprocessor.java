@@ -60,33 +60,43 @@ public class Preprocessor {
 
     public Node preprocess(Node document, Node defaultBlue) {
         Node processedDocument = new NormalizeListPlaceholders().process(document.clone());
+        if (defaultBlue != null) {
+            processedDocument = applyStandardBaseline(processedDocument);
+        }
         processedDocument = applyPortableImports(processedDocument);
-        Node blueNode = processedDocument.getBlue();
 
-        if (blueNode == null && defaultBlue != null) {
-            blueNode = defaultBlue.clone();
+        Node blueNode = processedDocument.getBlue();
+        if (blueNode != null) {
+            processedDocument = applyDeclaredBlueTransformations(processedDocument, blueNode);
         }
 
-        if (blueNode != null) {
+        return processedDocument;
+    }
 
-            new NodeExtender(nodeProvider).extend(blueNode, PathLimits.withSinglePath("/*"));
+    private Node applyStandardBaseline(Node document) {
+        Node transformed = new ReplaceInlineValuesForTypeAttributesWithImports(CORE_TYPE_NAME_TO_BLUE_ID_MAP)
+                .process(document);
+        return new InferBasicTypesForUntypedValues().process(transformed);
+    }
 
-            if (blueNode.getItems() != null) {
-                List<Node> transformations = blueNode.getItems();
+    private Node applyDeclaredBlueTransformations(Node processedDocument, Node blueNode) {
+        Node extendedBlue = blueNode.clone();
+        new NodeExtender(nodeProvider).extend(extendedBlue, PathLimits.withSinglePath("/*"));
 
-                for (Node transformation : transformations) {
-                    Optional<TransformationProcessor> processor = processorProvider.getProcessor(transformation);
-                    if (processor.isPresent()) {
-                        processedDocument = processor.get().process(processedDocument);
-                    } else {
-                        throw new IllegalArgumentException("No processor found for transformation: " + transformation);
-                    }
+        if (extendedBlue.getItems() != null) {
+            List<Node> transformations = extendedBlue.getItems();
+
+            for (Node transformation : transformations) {
+                Optional<TransformationProcessor> processor = processorProvider.getProcessor(transformation);
+                if (processor.isPresent()) {
+                    processedDocument = processor.get().process(processedDocument);
+                } else {
+                    throw new IllegalArgumentException("No processor found for transformation: " + transformation);
                 }
-
-                processedDocument.blue(null);
             }
         }
 
+        processedDocument.blue(null);
         return processedDocument;
     }
 

@@ -1,0 +1,7 @@
+id: coreRegistryBooleanNodeHashesToPublishedBlueId
+category: Registry
+operation: registryNodeHashesToPublishedBlueId
+registryKind: Blue Language core type registry
+registryKey: Boolean
+semanticDescriptionIdentityBearing: true
+expectedPublishedBlueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2

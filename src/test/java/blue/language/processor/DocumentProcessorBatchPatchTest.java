@@ -20,18 +20,18 @@ class DocumentProcessorBatchPatchTest {
 
     @Test
     void processorExecutionContextApplyPatchesWorksInsideHandler() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new ApplyBatchPatchContractProcessor());
         Node original = blue.yamlToNode(
                 "name: Batch Handler Doc\n" +
                 "contracts:\n" +
                 "  lifecycle:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  apply:\n" +
                 "    channel: lifecycle\n" +
                 "    type:\n" +
-                "      blueId: ApplyBatchPatch\n");
+                "      blueId: AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw\n");
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
@@ -40,24 +40,27 @@ class DocumentProcessorBatchPatchTest {
     }
 
     @Test
-    void boundaryViolationInSecondPatchRollsBackEarlierPatch() {
+    void boundaryViolationInSecondPatchKeepsEarlierSuccessfulPatch() {
         Node document = new Node();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         execution.handlePatches("/foo", bundle, Arrays.asList(
                 JsonPatch.add("/foo/a", new Node().value("applied-first")),
-                JsonPatch.add("/bar", new Node().value("outside"))
+                JsonPatch.add("/bar", new Node().value("outside")),
+                JsonPatch.add("/foo/c", new Node().value("discarded-third"))
         ), false);
 
         Node resultDoc = execution.result().document();
         Node foo = resultDoc.getAsNode("/foo");
-        assertFalse(hasProperty(foo, "a"));
+        assertTrue(hasProperty(foo, "a"));
+        assertEquals("applied-first", foo.getAsText("/a"));
+        assertFalse(hasProperty(foo, "c"));
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
     }
 
     @Test
-    void reservedKeyViolationInSecondPatchRollsBackEarlierPatch() {
+    void reservedKeyViolationInSecondPatchKeepsEarlierSuccessfulPatch() {
         Node document = new Node().properties("foo", new Node());
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
@@ -69,14 +72,35 @@ class DocumentProcessorBatchPatchTest {
 
         Node resultDoc = execution.result().document();
         Node foo = resultDoc.getAsNode("/foo");
-        assertFalse(hasProperty(foo, "a"));
+        assertTrue(hasProperty(foo, "a"));
+        assertEquals("applied-first", foo.getAsText("/a"));
+        assertTrue(execution.runtime().isScopeTerminated("/foo"));
+    }
+
+    @Test
+    void patchTwoFatalPreservesPatchOneAndDiscardsPatchThreeAndEvents() {
+        Node document = new Node().properties("foo", new Node());
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ContractBundle bundle = ContractBundle.builder().build();
+
+        execution.handlePatches("/foo", bundle, Arrays.asList(
+                JsonPatch.add("/foo/a", new Node().value("applied-first")),
+                JsonPatch.remove("/foo/missing"),
+                JsonPatch.add("/foo/c", new Node().value("discarded-third"))
+        ), false);
+
+        Node resultDoc = execution.result().document();
+        Node foo = resultDoc.getAsNode("/foo");
+        assertTrue(hasProperty(foo, "a"));
+        assertEquals("applied-first", foo.getAsText("/a"));
+        assertFalse(hasProperty(foo, "c"));
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
     }
 
     @Test
     void documentUpdateChannelsReceiveBatchUpdatesInPatchOrder() {
         RecordDocumentUpdateContractProcessor recorder = new RecordDocumentUpdateContractProcessor();
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new ApplyBatchPatchContractProcessor());
         blue.registerContractProcessor(recorder);
         Node original = blue.yamlToNode(
@@ -84,27 +108,27 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  lifecycle:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  watchA:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /a\n" +
                 "  watchB:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /b\n" +
                 "  apply:\n" +
                 "    channel: lifecycle\n" +
                 "    type:\n" +
-                "      blueId: ApplyBatchPatch\n" +
+                "      blueId: AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw\n" +
                 "  recordA:\n" +
                 "    channel: watchA\n" +
                 "    type:\n" +
-                "      blueId: RecordDocumentUpdate\n" +
+                "      blueId: qLb75fi7BHJf8HvxXNTJP8Zo2fCsA3t6Lz5R269qUiC\n" +
                 "  recordB:\n" +
                 "    channel: watchB\n" +
                 "    type:\n" +
-                "      blueId: RecordDocumentUpdate\n");
+                "      blueId: qLb75fi7BHJf8HvxXNTJP8Zo2fCsA3t6Lz5R269qUiC\n");
 
         blue.initializeDocument(original);
 
@@ -113,13 +137,13 @@ class DocumentProcessorBatchPatchTest {
 
     @Test
     void unmatchedDocumentUpdateChannelDoesNotMaterializeUpdateNodes() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(
                 "name: Lazy Update Doc\n" +
                 "contracts:\n" +
                 "  watchOther:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /other\n");
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         execution.loadBundles("/");
@@ -134,14 +158,14 @@ class DocumentProcessorBatchPatchTest {
 
     @Test
     void matchingDocumentUpdateChannelMaterializesUpdateNodes() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(
                 "name: Lazy Update Doc\n" +
                 "a: old\n" +
                 "contracts:\n" +
                 "  watchA:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /a\n");
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         execution.loadBundles("/");

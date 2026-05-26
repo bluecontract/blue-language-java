@@ -3,4 +3,4 @@ category: BlueId
 operation: calculateBlueId
 description: empty list remains hashable as list content
 input: []
-expectedNodeBlueId: "8m5xsnaKVx5FSBtpcf3tNWKQcE795gf51XbNUTrjxmDK"
+expectedNodeBlueId: 4mfDwwrpfVGMwKn82vsr4rVX484P8DAMy5RNEVXqsy9h

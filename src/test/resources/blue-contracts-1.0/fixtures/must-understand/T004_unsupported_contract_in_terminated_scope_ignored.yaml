@@ -1,0 +1,34 @@
+id: T004_unsupported_contract_in_terminated_scope_ignored
+category: MustUnderstand
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  child:
+    contracts:
+      terminated:
+        type:
+          blueId: "GBDBthfshBFr4GQKUU1fmy4GnPL7q2y3as4deUWpuBtu"
+        cause: graceful
+      unsupported:
+        type:
+          name: Unsupported Contract
+  contracts:
+    embedded:
+      type:
+        blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+      paths:
+        - /child
+event:
+  value: external
+expectedCapabilityFailure: false
+expectedTotalGasMin: 1
+expectedRootEventTypes:
+  - "Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL"
+expectedDocumentPathExists:
+  - /child/contracts/terminated
+  - /child/contracts/unsupported
+  - /contracts/initialized
+expectedAbsentDocumentPaths:
+  - /child/contracts/initialized
+  - /child/contracts/checkpoint

@@ -1,0 +1,31 @@
+id: T028_runtime_unsupported_after_patch_fatal
+category: MustUnderstand
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    patcher:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /contracts/unsupported
+          val:
+            type:
+              name: UnsupportedRuntimeContract
+event:
+  kind: runtime-unsupported
+expectedCapabilityFailure: false
+expectedTotalGasMin: 1
+expectedDocumentPathExists:
+  - /contracts/terminated
+  - /contracts/unsupported
+expectedDocumentPaths:
+  /contracts/terminated/cause:
+    value: fatal
+expectedFailureReasonContains: Unsupported

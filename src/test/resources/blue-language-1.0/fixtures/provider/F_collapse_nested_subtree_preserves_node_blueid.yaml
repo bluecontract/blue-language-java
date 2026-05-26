@@ -1,9 +1,10 @@
 id: F_collapse_nested_subtree_preserves_node_blueid
 category: Provider
 operation: collapse
-description: collapse returns a pure reference for nested materialized content while preserving root Node BlueId
+description: collapse returns a pure reference for nested materialized content while
+  preserving root Node BlueId
 source:
   child: 1
 expectedCollapsed:
-  blueId: 7YbCaeXGknitZpoejQMKbfVEBiVtxNGSnSEHvo9ubN6o
-expectedNodeBlueId: "7YbCaeXGknitZpoejQMKbfVEBiVtxNGSnSEHvo9ubN6o"
+  blueId: H7rCFBMhmR3S869fq2fyLthZSBwU8W5TywaaEF13mmZ9
+expectedNodeBlueId: H7rCFBMhmR3S869fq2fyLthZSBwU8W5TywaaEF13mmZ9

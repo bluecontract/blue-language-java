@@ -3,8 +3,9 @@ category: BlueId
 operation: calculateBlueId
 description: previous anchors must use plain valid BlueIds
 expectError: true
+expectedErrorCategory: ListControlViolation
 input:
   items:
-    - $previous:
-        blueId: not-a-real-blueid
-    - A
+  - $previous:
+      blueId: not-a-real-blueid
+  - A

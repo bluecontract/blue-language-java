@@ -1,0 +1,19 @@
+id: T076_lazy_checkpoint_creation_costs_zero_gas
+category: Gas
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+event:
+  kind: checkpoint-create-cost
+expectedCapabilityFailure: false
+expectedDocumentPathExists:
+  - /contracts/checkpoint
+expectedCheckpointLastEvents:
+  channel:
+    kind: checkpoint-create-cost
+expectedExactGas: 1129

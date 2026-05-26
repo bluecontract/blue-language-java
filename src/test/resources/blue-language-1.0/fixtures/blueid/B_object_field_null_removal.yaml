@@ -4,5 +4,5 @@ operation: calculateBlueId
 description: object field null is removed during direct BlueId cleaning
 input:
   x: null
-expectedNodeBlueId: "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+expectedNodeBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
 alsoEquivalentTo: {}

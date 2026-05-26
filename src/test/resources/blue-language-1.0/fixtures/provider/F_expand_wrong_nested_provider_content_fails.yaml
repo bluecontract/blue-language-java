@@ -1,11 +1,12 @@
 id: F_expand_wrong_nested_provider_content_fails
 category: Provider
 operation: expand
-description: nested expansion rejects provider content whose BlueId does not match the requested reference
+description: nested expansion rejects provider content whose BlueId does not match
+  the requested reference
 expectError: true
 source:
   child:
-    blueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+    blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
 provider:
-  - requestedBlueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
-    returnedNode: 2
+- requestedBlueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+  returnedNode: 2

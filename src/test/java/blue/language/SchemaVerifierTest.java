@@ -190,6 +190,41 @@ public class SchemaVerifierTest {
     }
 
     @Test
+    public void doubleMultipleOfUsesExactBinary64RationalArithmetic() {
+        Node passing = new Node()
+                .schema(new Schema().multipleOf(new BigDecimal("0.5")))
+                .value(new BigDecimal("1.5"));
+        Node failing = new Node()
+                .schema(new Schema().multipleOf(new BigDecimal("0.1")))
+                .value(new BigDecimal("0.3"));
+
+        assertDoesNotThrow(() -> merger.resolve(passing));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(failing));
+    }
+
+    @Test
+    public void schemaKeywordsRejectWrongPayloadKinds() {
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minLength(1))
+                .value(BigInteger.ONE)));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minimum(BigDecimal.ONE))
+                .value("one")));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minItems(1))
+                .value("not a list")));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minItems(1))
+                .properties("field", new Node().value("not a list"))));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minFields(1))
+                .value("not an object")));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .schema(new Schema().minFields(1))
+                .items(new Node().value("not an object"))));
+    }
+
+    @Test
     public void testMinItemsPositive() throws Exception {
         schema.minItems(2);
         node.items(Arrays.asList(new Node(), new Node()));

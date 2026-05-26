@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 
@@ -44,6 +45,12 @@ final class ChannelRunner {
         ProcessorEngine.ChannelMatch match;
         try {
             match = ProcessorEngine.evaluateChannel(owner, channel, bundle, scopePath, event);
+        } catch (RuntimeException ex) {
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
+                    execution.fatalReason(ex, "Channel execution failed"));
+            return;
         } finally {
             metrics.addChannelMatchNanos(System.nanoTime() - channelMatchStart);
         }
@@ -57,11 +64,20 @@ final class ChannelRunner {
         Node eventForHandlers = match.eventNode() != null ? match.eventNode() : event;
         Node checkpointEvent = event != null ? event.clone() : null;
         long checkpointStart = System.nanoTime();
-        checkpointManager.ensureCheckpointMarker(scopePath, bundle);
-        CheckpointManager.CheckpointRecord checkpoint = checkpointManager.findCheckpoint(bundle, channel.key());
-        String eventSignature = match.eventId != null
-                ? match.eventId
-                : ProcessorEngine.canonicalSignature(checkpointEvent);
+        CheckpointManager.CheckpointRecord checkpoint;
+        String eventSignature;
+        try {
+            checkpointManager.ensureCheckpointMarker(scopePath, bundle);
+            checkpoint = checkpointManager.findCheckpoint(bundle, channel.key());
+            eventSignature = eventSignature(checkpointEvent);
+        } catch (RuntimeException ex) {
+            metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
+                    execution.fatalReason(ex, "Checkpoint error"));
+            return;
+        }
         if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
             return;
@@ -83,7 +99,14 @@ final class ChannelRunner {
             return;
         }
         long checkpointPersistStart = System.nanoTime();
-        checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, checkpointEvent);
+        try {
+            checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, checkpointEvent);
+        } catch (RuntimeException ex) {
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
+                    execution.fatalReason(ex, "Checkpoint error"));
+        }
         metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointPersistStart);
     }
 
@@ -94,8 +117,18 @@ final class ChannelRunner {
                                ProcessorEngine.ChannelMatch match) {
         ProcessingMetricsSink metrics = owner.metricsSink();
         long checkpointEnsureStart = System.nanoTime();
-        checkpointManager.ensureCheckpointMarker(scopePath, bundle);
-        String fallbackSignature = ProcessorEngine.canonicalSignature(checkpointEvent);
+        String fallbackSignature;
+        try {
+            checkpointManager.ensureCheckpointMarker(scopePath, bundle);
+            fallbackSignature = eventSignature(checkpointEvent);
+        } catch (RuntimeException ex) {
+            metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointEnsureStart);
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
+                    execution.fatalReason(ex, "Checkpoint error"));
+            return;
+        }
         metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointEnsureStart);
         for (ChannelDelivery delivery : match.deliveries()) {
             if (execution.isScopeInactive(scopePath)) {
@@ -106,7 +139,7 @@ final class ChannelRunner {
                     : channel.key();
             long checkpointStart = System.nanoTime();
             CheckpointManager.CheckpointRecord checkpoint = checkpointManager.findCheckpoint(bundle, checkpointKey);
-            String eventSignature = delivery.eventId() != null ? delivery.eventId() : fallbackSignature;
+            String eventSignature = eventSignature(checkpointEvent, fallbackSignature);
             if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
                 metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
                 continue;
@@ -138,9 +171,29 @@ final class ChannelRunner {
                 return;
             }
             long checkpointPersistStart = System.nanoTime();
-            checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, checkpointEvent);
+            try {
+                checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, checkpointEvent);
+            } catch (RuntimeException ex) {
+                execution.enterFatalTermination(scopePath,
+                        bundle,
+                        execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
+                        execution.fatalReason(ex, "Checkpoint error"));
+                return;
+            }
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointPersistStart);
         }
+    }
+
+    private String eventSignature(Node fallbackEvent) {
+        return eventSignature(fallbackEvent, null);
+    }
+
+    private String eventSignature(Node fallbackEvent, String fallbackSignature) {
+        return eventSignature(fallbackEvent, fallbackSignature, owner.matchingService().blue());
+    }
+
+    private static String eventSignature(Node fallbackEvent, String fallbackSignature, Blue blue) {
+        return fallbackSignature != null ? fallbackSignature : CheckpointIdentityCalculator.identity(fallbackEvent, blue);
     }
 
     void runHandlers(String scopePath,
@@ -160,6 +213,8 @@ final class ChannelRunner {
                 break;
             }
             HandlerMatchContext matchContext = new HandlerMatchContext(scopePath,
+                    handler.key(),
+                    channelKey,
                     event,
                     bundle.markers(),
                     owner.matchingService());
@@ -186,6 +241,21 @@ final class ChannelRunner {
             long executionStart = System.nanoTime();
             try {
                 ProcessorEngine.executeHandler(owner, handler.contract(), context);
+                context.applyBufferedEffects();
+            } catch (RunTerminationException ex) {
+                throw ex;
+            } catch (ProcessorFatalException ex) {
+                execution.enterFatalTermination(scopePath,
+                        bundle,
+                        ex.errorCategory(),
+                        execution.fatalReason(ex, "Handler execution failed"));
+                break;
+            } catch (RuntimeException ex) {
+                execution.enterFatalTermination(scopePath,
+                        bundle,
+                        execution.fatalCategory(ex, ProcessorErrorCategory.HandlerExecutionError),
+                        execution.fatalReason(ex, "Handler execution failed"));
+                break;
             } finally {
                 metrics.addHandlerExecutionNanos(System.nanoTime() - executionStart);
             }

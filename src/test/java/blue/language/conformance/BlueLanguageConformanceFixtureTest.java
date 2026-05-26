@@ -5,6 +5,8 @@ import blue.language.BlueConformanceFailure;
 import blue.language.BlueConformanceReport;
 import blue.language.BlueConformanceSuiteRunner;
 import blue.language.BlueFixtureCategory;
+import blue.language.BlueLanguageErrorCategory;
+import blue.language.BlueLanguageErrorClassifier;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -134,6 +136,49 @@ public class BlueLanguageConformanceFixtureTest {
                 "expectedNodeBlueId: placeholder\n");
 
         assertDoesNotThrow(() -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+    }
+
+    @Test
+    void fixtureExpectedErrorCategoryIsValidated() {
+        JsonNode spec = YAML_MAPPER.readTree(
+                "id: B_error_category\n" +
+                "category: BlueId\n" +
+                "operation: calculateBlueId\n" +
+                "expectError: true\n" +
+                "expectedErrorCategory: InvalidBlueIdInput\n" +
+                "input:\n" +
+                "  type: Integer\n" +
+                "  value: 1\n");
+
+        assertDoesNotThrow(() -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+    }
+
+    @Test
+    void fixtureExpectedErrorCategoryRejectsUnknownCategory() {
+        JsonNode spec = YAML_MAPPER.readTree(
+                "id: B_error_category\n" +
+                "category: BlueId\n" +
+                "operation: calculateBlueId\n" +
+                "expectError: true\n" +
+                "expectedErrorCategory: NotACategory\n" +
+                "input:\n" +
+                "  type: Integer\n" +
+                "  value: 1\n");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+    }
+
+    @Test
+    void languageErrorClassifierRecognizesRepresentativeCategories() {
+        assertEquals(BlueLanguageErrorCategory.InvalidBlueId,
+                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("not a valid BlueId")));
+        assertEquals(BlueLanguageErrorCategory.SchemaViolation,
+                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("schema keyword minLength applies to wrong kind")));
+        assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
+                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("Provider returned content for abc but computed BlueId xyz")));
+        assertEquals(BlueLanguageErrorCategory.ListControlViolation,
+                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("$pos list overlay is invalid")));
     }
 
     @Test

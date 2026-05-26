@@ -9,7 +9,9 @@ public enum BlueFixtureCategory {
     RESOLUTION("Resolution"),
     CANONICALIZATION("Canonicalization"),
     PROVIDER("Provider"),
-    CIRCULAR("Circular");
+    CIRCULAR("Circular"),
+    REGISTRY("Registry"),
+    DOCUMENTATION_LINT("DocumentationLint");
 
     private final String label;
 

@@ -377,18 +377,15 @@ public class SelfReferenceTest {
     }
 
     @Test
-    public void duplicatePreliminaryIdsWithActualCycleUseOriginalIndexTieBreak() {
+    public void duplicatePreliminaryIdsWithActualCycleAreRejected() {
         List<Node> nodes = YAML_MAPPER.readValue(
                 "- next:\n" +
                 "    blueId: this#1\n" +
                 "- next:\n" +
                 "    blueId: this#0", Node.class).getItems();
 
-        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes);
-
-        assertEquals(baseBlueId(ids.get(0)), baseBlueId(ids.get(1)));
-        assertTrue(ids.get(0).endsWith("#0"));
-        assertTrue(ids.get(1).endsWith("#1"));
+        assertThrows(IllegalArgumentException.class,
+                () -> CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes));
     }
 
     @Test

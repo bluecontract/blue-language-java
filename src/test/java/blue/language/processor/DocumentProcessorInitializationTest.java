@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.RemovePropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -20,36 +21,34 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 5\n" +
                 "  setXLater:\n" +
                 "    order: 1\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 10\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
-        String expectedDocumentId = BlueIdCalculator.calculateUncheckedBlueId(original.clone());
-
         assertFalse(blue.isInitialized(original));
 
-        assertThrows(IllegalStateException.class,
-                () -> blue.processDocument(original, new Node().value("external")));
+        DocumentProcessingResult uninitializedProcessResult = blue.processDocument(original.clone(), new Node().value("external"));
+        assertTrue(blue.isInitialized(uninitializedProcessResult.document()));
 
         DocumentProcessingResult initResult = blue.initializeDocument(original);
         Node initialized = initResult.document();
@@ -59,10 +58,15 @@ class DocumentProcessorInitializationTest {
         assertEquals(1, initResult.triggeredEvents().size());
         Node lifecycleEvent = initResult.triggeredEvents().get(0);
         Map<String, Node> lifecycleProps = lifecycleEvent.getProperties();
-        assertEquals("Document Processing Initiated", lifecycleProps.get("type").getValue());
+        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, lifecycleEvent.getType().getBlueId());
         Node lifecycleDocId = lifecycleProps.get("documentId");
         assertNotNull(lifecycleDocId);
-        assertEquals(expectedDocumentId, lifecycleDocId.getValue());
+        Node markerDocId = initialized.getContracts()
+                .getProperties()
+                .get("initialized")
+                .getProperties()
+                .get("documentId");
+        assertEquals(markerDocId.getValue(), lifecycleDocId.getValue());
 
         Map<String, Node> initializedProps = initialized.getProperties();
         assertNotNull(initializedProps);
@@ -77,21 +81,20 @@ class DocumentProcessorInitializationTest {
         assertNotNull(initializedNode, "Initialization marker should be present");
         Node initType = initializedNode.getType();
         assertNotNull(initType);
-        assertEquals("InitializationMarker", initType.getBlueId());
-        Node markerDocId = initializedNode.getProperties().get("documentId");
-        assertNotNull(markerDocId);
-        assertEquals(expectedDocumentId, markerDocId.getValue());
+        assertEquals(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER, initType.getBlueId());
+        Node initializedMarkerDocId = initializedNode.getProperties().get("documentId");
+        assertNotNull(initializedMarkerDocId);
 
         Node checkpointNode = contractsNode.getProperties().get("checkpoint");
         assertNull(checkpointNode, "Checkpoint marker should not be present before any external event");
 
         assertThrows(IllegalStateException.class, () -> blue.initializeDocument(initialized));
 
-        DocumentProcessingResult processResult = blue.processDocument(initialized, new Node().value("external"));
-        Node processed = processResult.document();
+        DocumentProcessingResult postInitProcessResult = blue.processDocument(initialized, new Node().value("external"));
+        Node processed = postInitProcessResult.document();
         assertEquals(new BigInteger("10"), processed.getProperties().get("x").getValue());
 
-        assertTrue(processResult.triggeredEvents().isEmpty());
+        assertTrue(postInitProcessResult.triggeredEvents().isEmpty());
 
         assertNull(original.getProperties() != null ? original.getProperties().get("x") : null);
     }
@@ -102,40 +105,40 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  setRoot:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 3\n" +
                 "  setNested:\n" +
                 "    order: 1\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    path: /nested/branch/\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 7\n" +
                 "  setExplicit:\n" +
                 "    order: 2\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    path: a/x\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 11\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
@@ -169,15 +172,15 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 5\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node original = blue.yamlToNode(yaml);
         String originalJson = blue.nodeToJson(original.clone());
 
@@ -194,14 +197,14 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
-                "      blueId: NotInitializationMarker\n";
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> blue.processDocument(document, new Node().value("event")));
-        assertTrue(ex.getMessage().contains("Initialization Marker"));
+        assertTrue(ex.getMessage().contains("Processing Initialized Marker"));
     }
 
     @Test
@@ -210,14 +213,14 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
-                "      blueId: SomethingElse\n";
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> blue.initializeDocument(document));
-        assertTrue(ex.getMessage().contains("Initialization Marker"));
+        assertTrue(ex.getMessage().contains("Processing Initialized Marker"));
     }
 
     @Test
@@ -226,14 +229,14 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
-                "      blueId: WrongMarker\n";
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> blue.isInitialized(document));
-        assertTrue(ex.getMessage().contains("Initialization Marker"));
+        assertTrue(ex.getMessage().contains("Processing Initialized Marker"));
     }
 
     @Test
@@ -241,21 +244,21 @@ class DocumentProcessorInitializationTest {
         String yaml = "name: Remove Doc\n" +
                 "x:\n" +
                 "  type:\n" +
-                "    blueId: Text\n" +
+                "    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  removeX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: RemoveProperty\n" +
+                "      blueId: 2REa15BDY5EWq4tJsbUaBwhhTG2xSdk2ZyFL1aCpqTVF\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /x\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new RemovePropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
@@ -267,8 +270,8 @@ class DocumentProcessorInitializationTest {
         assertFalse(processed.getProperties() != null && processed.getProperties().containsKey("x"));
         assertTrue(result.triggeredEvents().stream()
                 .anyMatch(node -> {
-                    Map<String, Node> props = node.getProperties();
-                    return props != null && "Document Processing Initiated".equals(props.get("type").getValue());
+                    return node.getType() != null
+                            && RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED.equals(node.getType().getBlueId());
                 }));
 
         assertTrue(original.getProperties().containsKey("x"));
@@ -280,9 +283,9 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: ChannelEventCheckpoint\n";
+                "      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
         assertThrows(IllegalStateException.class, () -> blue.initializeDocument(document));
@@ -294,9 +297,9 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: ProcessingFailureMarker\n";
+                "      blueId: 33kfH8pfk7F1P5zMsuK1Jm3GcSdmTXoFHKjP16DesEco\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
@@ -310,12 +313,12 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: ChannelEventCheckpoint\n" +
+                "      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1\n" +
                 "  extraCheckpoint:\n" +
                 "    type:\n" +
-                "      blueId: ChannelEventCheckpoint\n";
+                "      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
@@ -329,27 +332,27 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  triggeredChannel:\n" +
                 "    type:\n" +
-                "      blueId: TriggeredEventChannel\n" +
+                "      blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ\n" +
                 "  handleLifecycle:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /lifecycle\n" +
                 "    propertyValue: 1\n" +
                 "  triggeredHandler:\n" +
                 "    channel: triggeredChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /triggered\n" +
                 "    propertyValue: 1\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
@@ -370,21 +373,21 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  childBridge:\n" +
                 "    type:\n" +
-                "      blueId: EmbeddedNodeChannel\n" +
+                "      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i\n" +
                 "    childPath: /child\n" +
                 "  captureChildLifecycle:\n" +
                 "    channel: childBridge\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /childLifecycle\n" +
                 "    propertyValue: 1\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 

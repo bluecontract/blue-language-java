@@ -22,6 +22,7 @@ public class DocumentProcessor {
     private final NodeToObjectConverter contractConverter;
     private final ContractLoader contractLoader;
     private final ConformanceEngine conformanceEngine;
+    private final ConformancePlannerOverride conformancePlannerOverride;
     private final ProcessingSnapshotManager snapshotManager;
     private final ContractMatchingService matchingService;
     private ProcessingMetricsSink metricsSink;
@@ -73,11 +74,28 @@ public class DocumentProcessor {
                              ProcessingSnapshotManager snapshotManager,
                              ContractMatchingService matchingService,
                              ProcessingMetricsSink metricsSink) {
+        this(registry,
+                contractTypeResolver,
+                conformanceEngine,
+                null,
+                snapshotManager,
+                matchingService,
+                metricsSink);
+    }
+
+    public DocumentProcessor(ContractProcessorRegistry registry,
+                             TypeClassResolver contractTypeResolver,
+                             ConformanceEngine conformanceEngine,
+                             ConformancePlannerOverride conformancePlannerOverride,
+                             ProcessingSnapshotManager snapshotManager,
+                             ContractMatchingService matchingService,
+                             ProcessingMetricsSink metricsSink) {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
         this.contractTypeResolver = Objects.requireNonNull(contractTypeResolver, "contractTypeResolver");
         this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
         this.contractLoader = new ContractLoader(contractRegistry, contractConverter, this.contractTypeResolver);
         this.conformanceEngine = conformanceEngine;
+        this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
         this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
@@ -87,6 +105,7 @@ public class DocumentProcessor {
         this(builder.contractRegistry,
                 builder.contractTypeResolver,
                 builder.conformanceEngine,
+                builder.conformancePlannerOverride,
                 builder.snapshotManager,
                 builder.matchingService,
                 builder.metricsSink);
@@ -156,6 +175,10 @@ public class DocumentProcessor {
         return conformanceEngine;
     }
 
+    ConformancePlannerOverride conformancePlannerOverride() {
+        return conformancePlannerOverride;
+    }
+
     ProcessingSnapshotManager snapshotManager() {
         return snapshotManager;
     }
@@ -206,6 +229,7 @@ public class DocumentProcessor {
         private ContractProcessorRegistry contractRegistry = ContractProcessorRegistryBuilder.create().registerDefaults().build();
         private TypeClassResolver contractTypeResolver = defaultContractTypeResolver();
         private ConformanceEngine conformanceEngine;
+        private ConformancePlannerOverride conformancePlannerOverride;
         private ProcessingSnapshotManager snapshotManager;
         private ContractMatchingService matchingService = new ContractMatchingService();
         private ProcessingMetricsSink metricsSink = ProcessingMetricsSink.NOOP;
@@ -249,6 +273,11 @@ public class DocumentProcessor {
 
         public Builder withConformanceEngine(ConformanceEngine conformanceEngine) {
             this.conformanceEngine = conformanceEngine;
+            return this;
+        }
+
+        public Builder withConformancePlannerOverride(ConformancePlannerOverride conformancePlannerOverride) {
+            this.conformancePlannerOverride = conformancePlannerOverride;
             return this;
         }
 

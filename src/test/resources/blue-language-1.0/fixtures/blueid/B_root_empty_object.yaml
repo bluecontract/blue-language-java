@@ -3,4 +3,4 @@ category: BlueId
 operation: calculateBlueId
 description: root empty object remains hashable
 input: {}
-expectedNodeBlueId: "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+expectedNodeBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK

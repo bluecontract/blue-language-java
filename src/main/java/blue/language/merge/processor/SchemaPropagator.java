@@ -7,9 +7,12 @@ import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.LeastCommonMultiple;
+import blue.language.utils.NodeToBlueIdInput;
+import blue.language.utils.UncheckedObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -145,7 +148,7 @@ public class SchemaPropagator implements MergingProcessor {
 
         List<Node> targetEnum = target.getEnum();
         if (targetEnum == null) {
-            target.enumValues(cloneNodes(sourceEnum));
+            target.enumValues(canonicalizeEnum(sourceEnum));
             return;
         }
 
@@ -158,7 +161,7 @@ public class SchemaPropagator implements MergingProcessor {
                 intersection.add(targetValue.clone());
             }
         }
-        target.enumValues(intersection);
+        target.enumValues(canonicalizeEnum(intersection));
     }
 
     private List<Node> cloneNodes(List<Node> nodes) {
@@ -171,6 +174,22 @@ public class SchemaPropagator implements MergingProcessor {
         Node comparable = node.clone();
         comparable.schema(null);
         return BlueIdCalculator.calculateBlueId(comparable);
+    }
+
+    private List<Node> canonicalizeEnum(List<Node> nodes) {
+        Map<String, Node> uniqueByIdentity = new LinkedHashMap<>();
+        for (Node node : nodes) {
+            uniqueByIdentity.putIfAbsent(enumComparableBlueId(node), node.clone());
+        }
+        List<Node> result = new ArrayList<>(uniqueByIdentity.values());
+        result.sort((left, right) -> enumCanonicalKey(left).compareTo(enumCanonicalKey(right)));
+        return result;
+    }
+
+    private String enumCanonicalKey(Node node) {
+        Node comparable = node.clone();
+        comparable.schema(null);
+        return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(NodeToBlueIdInput.get(comparable));
     }
 
 }

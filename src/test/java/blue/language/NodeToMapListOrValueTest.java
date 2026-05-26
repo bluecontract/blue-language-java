@@ -253,7 +253,7 @@ public class NodeToMapListOrValueTest {
         assertEquals("C", ((Map<?, ?>) positioned).get("value"));
 
         Object list = NodeToMapListOrValue.get(new Node()
-                .type(new Node().blueId("6aehfNAxHLC1PHHoDr3tYtFH3RWNbiWdFancJ1bypXEY"))
+                .type(new Node().blueId("8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF"))
                 .mergePolicy("append-only")
                 .items(new Node().value("A")));
         assertEquals("append-only", ((Map<?, ?>) list).get("mergePolicy"));

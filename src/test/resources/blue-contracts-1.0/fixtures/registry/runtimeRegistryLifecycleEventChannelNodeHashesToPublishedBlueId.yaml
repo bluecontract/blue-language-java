@@ -1,0 +1,8 @@
+id: runtimeRegistryLifecycleEventChannelNodeHashesToPublishedBlueId
+category: Registry
+operation: registryNodeHashesToPublishedBlueId
+registryKind: Blue Contracts runtime type registry
+registryKey: LifecycleEventChannel
+registryPath: registry/blue-contracts-1.0/LifecycleEventChannel.blue
+expectedBlueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ
+semanticDescriptionIdentityBearing: true

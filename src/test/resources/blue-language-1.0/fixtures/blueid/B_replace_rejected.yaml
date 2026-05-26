@@ -5,6 +5,6 @@ description: direct BlueId Input rejects $replace overlays
 expectError: true
 input:
   items:
-    - $pos: 0
-      $replace:
-        value: A
+  - $pos: 0
+    $replace:
+      value: A

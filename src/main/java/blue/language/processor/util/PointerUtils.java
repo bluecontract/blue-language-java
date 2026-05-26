@@ -21,6 +21,67 @@ public final class PointerUtils {
         return JsonPointer.canonicalize(pointer);
     }
 
+    public static String abs(String scopePath, String pointer) {
+        return resolvePointer(scopePath, pointer);
+    }
+
+    public static String relativize(String scopePath, String absolutePath) {
+        return relativizePointer(scopePath, absolutePath);
+    }
+
+    public static boolean descendantOrEqual(String path, String ancestor) {
+        List<String> pathSegments = JsonPointer.split(normalizePointer(path));
+        List<String> ancestorSegments = JsonPointer.split(normalizePointer(ancestor));
+        if (ancestorSegments.size() > pathSegments.size()) {
+            return false;
+        }
+        for (int i = 0; i < ancestorSegments.size(); i++) {
+            if (!ancestorSegments.get(i).equals(pathSegments.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean strictlyInside(String path, String ancestor) {
+        return !normalizePointer(path).equals(normalizePointer(ancestor))
+                && descendantOrEqual(path, ancestor);
+    }
+
+    public static String assertValidRuntimePointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            throw new IllegalArgumentException("Runtime pointer must not be empty");
+        }
+        if (pointer.charAt(0) != '/') {
+            throw new IllegalArgumentException("Runtime pointer must be absolute: " + pointer);
+        }
+        if (pointer.length() > 1 && pointer.endsWith("/")) {
+            throw new IllegalArgumentException("Runtime pointer must not have a trailing slash: " + pointer);
+        }
+        if ("/".equals(pointer)) {
+            return "/";
+        }
+        String[] parts = pointer.substring(1).split("/", -1);
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                throw new IllegalArgumentException("Runtime pointer must not contain empty segments: " + pointer);
+            }
+            for (int i = 0; i < part.length(); i++) {
+                if (part.charAt(i) == '~') {
+                    if (i + 1 >= part.length()) {
+                        throw new IllegalArgumentException("Runtime pointer contains bad '~' escape: " + pointer);
+                    }
+                    char next = part.charAt(i + 1);
+                    if (next != '0' && next != '1') {
+                        throw new IllegalArgumentException("Runtime pointer contains bad '~' escape: " + pointer);
+                    }
+                    i++;
+                }
+            }
+        }
+        return JsonPointer.canonicalize(pointer);
+    }
+
     public static String canonicalizePointer(String pointer) {
         return JsonPointer.canonicalize(pointer);
     }

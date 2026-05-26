@@ -33,7 +33,7 @@ class DocumentProcessorGasTest {
 
     @BeforeEach
     void setUp() {
-        blue = new Blue();
+        blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new EmitEventsContractProcessor());
@@ -49,13 +49,11 @@ class DocumentProcessorGasTest {
         long markerSizeCharge = sizeCharge(initializedMarker);
 
         long expected = scopeEntryCharge("/")
-                + 1_000L // initialization
+                + 1_001L // initialization
                 + 30L    // lifecycle delivery
-                + 2L     // boundary check
-                + (20L + markerSizeCharge) // patch add
-                + 10L;   // cascade routing for root
+                + (20L + markerSizeCharge); // patch add; no cascade gas without a matching participant
 
-        assertEquals(expected, result.totalGas());
+        assertEquals(expected, result.totalGas(), "initialization gas");
     }
 
     @Test
@@ -64,11 +62,11 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
 
@@ -84,11 +82,10 @@ class DocumentProcessorGasTest {
                 + 5L    // channel match attempt
                 + 50L   // handler overhead
                 + 2L    // boundary check
-                + (20L + valueSizeCharge) // add/replace patch
-                + 10L   // cascade routing (root only)
+                + (20L + valueSizeCharge) // add/replace patch; no cascade gas without a matching participant
                 + 20L;  // checkpoint update direct write
 
-        assertEquals(expected, result.totalGas());
+        assertEquals(expected, result.totalGas(), "process patch gas");
     }
 
     @Test
@@ -97,18 +94,18 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  emitter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: EmitEvents\n" +
+                "      blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
                 "    events:\n" +
                 "      - type:\n" +
-                "          blueId: TestEvent\n" +
+                "          blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
                 "        kind: emitted\n" +
                 "  triggered:\n" +
                 "    type:\n" +
-                "      blueId: TriggeredEventChannel\n";
+                "      blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ\n";
 
         Node initialized = blue.initializeDocument(blue.yamlToNode(yaml)).document().clone();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-emit"));
@@ -125,7 +122,7 @@ class DocumentProcessorGasTest {
                 + 10L   // drain triggered FIFO
                 + 20L;  // checkpoint update after successful channel
 
-        assertEquals(expected, result.totalGas());
+        assertEquals(expected, result.totalGas(), "triggered event gas");
     }
 
     @Test
@@ -155,7 +152,7 @@ class DocumentProcessorGasTest {
         assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
-        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
         CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
         Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
         int warmCacheSizeBeforeProcessing = warmBlue.resolvedReferenceCacheSize();
@@ -194,7 +191,7 @@ class DocumentProcessorGasTest {
         assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
-        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
         CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
         Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
         Node warmOriginal = accountDocument(types);
@@ -235,7 +232,7 @@ class DocumentProcessorGasTest {
         assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
-        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(portfolioCanonical(types));
+        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(portfolioCanonical(types));
         CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
         Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
         Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-repeated-warm"));
@@ -272,7 +269,7 @@ class DocumentProcessorGasTest {
         assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
-        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
         CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
         Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
         warmProvider.reset();
@@ -311,7 +308,7 @@ class DocumentProcessorGasTest {
         assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
         assertEquals(cold.totalGas(), coldReused.totalGas());
 
-        ResolvedSnapshot precomputedTypeGraph = new Blue(types.provider).loadSnapshot(accountCanonical(types));
+        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
         CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
         Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
         Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-embedded-warm"));
@@ -332,7 +329,7 @@ class DocumentProcessorGasTest {
         CountingNodeProvider secondProvider = new CountingNodeProvider(secondTypes.provider);
         Blue blue = processingBlue(firstProvider);
 
-        blue.nodeProvider(secondProvider);
+        blue.nodeProvider(ProcessorTestSupport.providerWithTestContractTypes(secondProvider));
         firstProvider.reset();
         secondProvider.reset();
         Node document = processingDocument(secondTypes);
@@ -398,11 +395,11 @@ class DocumentProcessorGasTest {
 
     @Test
     void capabilityFailureResultDoesNotBuildSnapshotOrSpendGasOnResolution() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         String yaml = "contracts:\n" +
                 "  unsupported:\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    channel: missing\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
@@ -481,7 +478,7 @@ class DocumentProcessorGasTest {
     }
 
     private Blue processingBlue(NodeProvider provider) {
-        Blue result = new Blue(provider);
+        Blue result = ProcessorTestSupport.blue(provider);
         result.registerContractProcessor(new TestEventChannelProcessor());
         result.registerContractProcessor(new SetPropertyContractProcessor());
         result.registerContractProcessor(new EmitEventsContractProcessor());
@@ -532,11 +529,11 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    path: /balance\n" +
                 "    propertyKey: cents\n" +
                 "    propertyValue: 1\n", Node.class);
@@ -632,11 +629,11 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    path: /secondary/balance\n" +
                 "    propertyKey: cents\n" +
                 "    propertyValue: 1\n");
@@ -692,7 +689,7 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /primary\n" +
                 "      - /secondary\n", Node.class);
@@ -702,7 +699,7 @@ class DocumentProcessorGasTest {
         Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
         Node initialized = setupBlue.initializeDocument(embeddedAccountsProcessingDocument(types)).document();
         assertTrue(setupBlue.isInitialized(initialized));
-        return new Blue(types.provider).reverse(initialized);
+        return ProcessorTestSupport.blue(types.provider).reverse(initialized);
     }
 
     private Node embeddedAccountsProcessingDocument(ProcessingTypeGraph types) {
@@ -719,11 +716,11 @@ class DocumentProcessorGasTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: TestEventChannel\n" +
+                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "    setter:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: SetProperty\n" +
+                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      path: /balance\n" +
                 "      propertyKey: cents\n" +
                 "      propertyValue: 1\n" +
@@ -739,18 +736,18 @@ class DocumentProcessorGasTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: TestEventChannel\n" +
+                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "    setter:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: SetProperty\n" +
+                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      path: /balance\n" +
                 "      propertyKey: cents\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /primary\n" +
                 "      - /secondary\n", Node.class);
@@ -864,11 +861,11 @@ class DocumentProcessorGasTest {
         }
 
         private boolean isProcessorTypeStub(String blueId) {
-            return "InitializationMarker".equals(blueId)
-                    || "ChannelEventCheckpoint".equals(blueId)
-                    || "TestEventChannel".equals(blueId)
+            return "6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q".equals(blueId)
+                    || "9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1".equals(blueId)
+                    || "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L".equals(blueId)
                     || "SetProperty".equals(blueId)
-                    || "ProcessEmbedded".equals(blueId);
+                    || "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q".equals(blueId);
         }
     }
 }

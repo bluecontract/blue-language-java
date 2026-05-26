@@ -125,6 +125,10 @@ public final class NodeToBlueIdInput {
             }
         }
 
+        if (items != null && isPayloadOnlyList(node)) {
+            return items;
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         if (node.getName() != null)
             result.put(OBJECT_NAME, node.getName());
@@ -171,6 +175,25 @@ public final class NodeToBlueIdInput {
                     result.put(key, get(propertyValue, appendPath(path, key), Context.OBJECT_FIELD, -1, allowCyclicPlaceholders)));
         }
         return result;
+    }
+
+    private static boolean isPayloadOnlyList(Node node) {
+        return node.getItems() != null
+                && node.getName() == null
+                && node.getDescription() == null
+                && node.getType() == null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null
+                && node.getValue() == null
+                && node.getProperties() == null
+                && node.getContracts() == null
+                && node.getBlueId() == null
+                && node.getSchema() == null
+                && node.getMergePolicy() == null
+                && node.getPreviousBlueId() == null
+                && node.getPosition() == null
+                && node.getBlue() == null;
     }
 
     private static String validateReferenceBlueId(String blueId, String path, boolean allowCyclicPlaceholders) {

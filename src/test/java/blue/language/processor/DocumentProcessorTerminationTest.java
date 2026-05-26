@@ -6,6 +6,7 @@ import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +22,7 @@ class DocumentProcessorTerminationTest {
 
     @BeforeEach
     void setUp() {
-        blue = new Blue();
+        blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new TerminateScopeContractProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
@@ -33,11 +34,11 @@ class DocumentProcessorTerminationTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  terminate:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: TerminateScope\n" +
+                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
                 "    mode: graceful\n" +
                 "    emitAfter: true\n" +
                 "    patchAfter: true\n");
@@ -52,13 +53,15 @@ class DocumentProcessorTerminationTest {
         Node terminated = contracts.getProperties().get("terminated");
         assertNotNull(terminated);
         assertEquals("graceful", terminated.getProperties().get("cause").getValue());
-        assertNull(processed.getProperties() != null ? processed.getProperties().get("afterTermination") : null,
-                "patch after termination must be ignored");
+        Node afterTermination = processed.getProperties() != null ? processed.getProperties().get("afterTermination") : null;
+        assertNotNull(afterTermination, "buffered patches apply before buffered termination");
+        assertEquals("should-not-exist", afterTermination.getValue());
 
         List<Node> triggeredEvents = result.triggeredEvents();
-        assertEquals(1, triggeredEvents.size(), "Only the terminated lifecycle event should be present");
-        assertEquals("Document Processing Terminated", stringProperty(triggeredEvents.get(0), "type"));
-        assertEquals("graceful", stringProperty(triggeredEvents.get(0), "cause"));
+        assertEquals(2, triggeredEvents.size(), "Buffered emitted event is recorded before termination lifecycle");
+        assertEquals("ShouldNotEmit", triggeredEvents.get(0).getProperties().get("type").getValue());
+        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED, triggeredEvents.get(1).getType().getBlueId());
+        assertEquals("graceful", stringProperty(triggeredEvents.get(1), "cause"));
     }
 
     @Test
@@ -67,11 +70,11 @@ class DocumentProcessorTerminationTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  terminate:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: TerminateScope\n" +
+                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
                 "    mode: fatal\n" +
                 "    reason: panic\n");
 
@@ -81,11 +84,9 @@ class DocumentProcessorTerminationTest {
 
         List<Node> triggeredEvents = result.triggeredEvents();
         assertEquals(2, triggeredEvents.size(), "Fatal run should emit terminated and fatal error events");
-        assertEquals("Document Processing Terminated", stringProperty(triggeredEvents.get(0), "type"));
+        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED, triggeredEvents.get(0).getType().getBlueId());
         assertEquals("fatal", stringProperty(triggeredEvents.get(0), "cause"));
-        assertEquals("Document Processing Fatal Error", stringProperty(triggeredEvents.get(1), "type"));
-        assertEquals("/", stringProperty(triggeredEvents.get(1), "domain"));
-        assertEquals("RuntimeFatal", stringProperty(triggeredEvents.get(1), "code"));
+        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR, triggeredEvents.get(1).getType().getBlueId());
         assertEquals("panic", stringProperty(triggeredEvents.get(1), "reason"));
     }
 
@@ -97,26 +98,26 @@ class DocumentProcessorTerminationTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: TestEventChannel\n" +
+                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "    terminate:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: TerminateScope\n" +
+                "        blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
                 "      mode: graceful\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  childBridge:\n" +
                 "    type:\n" +
-                "      blueId: EmbeddedNodeChannel\n" +
+                "      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i\n" +
                 "    childPath: /child\n" +
                 "  captureChild:\n" +
                 "    channel: childBridge\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /fromChild\n" +
                 "    propertyValue: 7\n");
 

@@ -17,7 +17,7 @@ class DocumentProcessorEventImmutabilityTest {
 
     @BeforeEach
     void setUp() {
-        blue = new Blue();
+        blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new MutateEventContractProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
@@ -29,16 +29,16 @@ class DocumentProcessorEventImmutabilityTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  mutator:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: MutateEvent\n" +
+                "      blueId: EgL9wruNhEJTS5RspenxoyRngKEbXzMwDM4ZZ8gCHsiv\n" +
                 "  recorder:\n" +
                 "    channel: testChannel\n" +
                 "    order: 1\n" +
                 "    type:\n" +
-                "      blueId: SetPropertyOnEvent\n" +
+                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
                 "    expectedKind: original\n" +
                 "    propertyKey: /result\n" +
                 "    propertyValue: 42\n";
@@ -46,7 +46,7 @@ class DocumentProcessorEventImmutabilityTest {
         Node initialized = blue.initializeDocument(blue.yamlToNode(documentYaml)).document().clone();
 
         String eventYaml = "type:\n" +
-                "  blueId: TestEvent\n" +
+                "  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
                 "eventId: evt-immutable\n" +
                 "kind: original\n";
         Node event = blue.yamlToNode(eventYaml);

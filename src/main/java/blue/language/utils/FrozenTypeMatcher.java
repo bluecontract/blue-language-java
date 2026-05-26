@@ -469,65 +469,93 @@ public final class FrozenTypeMatcher {
     private boolean verifyMinLength(Schema schema, FrozenNode node) {
         BigInteger minLength = schema.getMinLengthExact();
         Object value = node.getValue();
-        return minLength == null || !(value instanceof String)
-                || BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(minLength) >= 0;
+        if (minLength == null || !hasPayload(node)) {
+            return true;
+        }
+        return value instanceof String
+                && BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(minLength) >= 0;
     }
 
     private boolean verifyMaxLength(Schema schema, FrozenNode node) {
         BigInteger maxLength = schema.getMaxLengthExact();
         Object value = node.getValue();
-        return maxLength == null || !(value instanceof String)
-                || BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(maxLength) <= 0;
+        if (maxLength == null || !hasPayload(node)) {
+            return true;
+        }
+        return value instanceof String
+                && BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(maxLength) <= 0;
     }
 
     private boolean verifyMinimum(Schema schema, FrozenNode node) {
-        return compareNumber(node.getValue(), schema.getMinimumValue()) >= 0;
+        return compareNumber(node, schema.getMinimumValue()) >= 0;
     }
 
     private boolean verifyMaximum(Schema schema, FrozenNode node) {
-        return compareNumber(node.getValue(), schema.getMaximumValue()) <= 0;
+        return compareNumber(node, schema.getMaximumValue()) <= 0;
     }
 
     private boolean verifyExclusiveMinimum(Schema schema, FrozenNode node) {
         return schema.getExclusiveMinimumValue() == null
-                || compareNumber(node.getValue(), schema.getExclusiveMinimumValue()) > 0;
+                || compareNumber(node, schema.getExclusiveMinimumValue()) > 0;
     }
 
     private boolean verifyExclusiveMaximum(Schema schema, FrozenNode node) {
         return schema.getExclusiveMaximumValue() == null
-                || compareNumber(node.getValue(), schema.getExclusiveMaximumValue()) < 0;
+                || compareNumber(node, schema.getExclusiveMaximumValue()) < 0;
     }
 
     private boolean verifyMultipleOf(Schema schema, FrozenNode node) {
         BigDecimal multipleOf = schema.getMultipleOfValue();
         Object value = node.getValue();
-        if (multipleOf == null || !(value instanceof Number)) {
+        if (multipleOf == null || !hasPayload(node)) {
             return true;
         }
-        return numberValue(value).remainder(multipleOf).compareTo(BigDecimal.ZERO) == 0;
+        return value instanceof Number && BlueNumbers.isExactBinary64Multiple(value, multipleOf);
     }
 
-    private int compareNumber(Object value, BigDecimal bound) {
-        if (bound == null || !(value instanceof Number)) {
+    private int compareNumber(FrozenNode node, BigDecimal bound) {
+        Object value = node.getValue();
+        if (bound == null || !hasPayload(node)) {
             return 0;
+        }
+        if (!(value instanceof Number)) {
+            throw new IllegalArgumentException("numeric schema keyword applies to wrong kind");
         }
         return numberValue(value).compareTo(bound);
     }
 
     private boolean verifyMinItems(Schema schema, FrozenNode node) {
         BigInteger minItems = schema.getMinItemsExact();
+        if (minItems == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+            return false;
+        }
         int size = node.getItems() != null ? node.getItems().size() : 0;
-        return minItems == null || BigInteger.valueOf(size).compareTo(minItems) >= 0;
+        return BigInteger.valueOf(size).compareTo(minItems) >= 0;
     }
 
     private boolean verifyMaxItems(Schema schema, FrozenNode node) {
         BigInteger maxItems = schema.getMaxItemsExact();
+        if (maxItems == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+            return false;
+        }
         int size = node.getItems() != null ? node.getItems().size() : 0;
-        return maxItems == null || BigInteger.valueOf(size).compareTo(maxItems) <= 0;
+        return BigInteger.valueOf(size).compareTo(maxItems) <= 0;
     }
 
     private boolean verifyUniqueItems(Schema schema, FrozenNode node) {
-        if (!Boolean.TRUE.equals(schema.getUniqueItemsValue()) || node.getItems() == null) {
+        if (!Boolean.TRUE.equals(schema.getUniqueItemsValue()) || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+            return false;
+        }
+        if (node.getItems() == null) {
             return true;
         }
         Set<String> itemIds = new HashSet<>();
@@ -541,20 +569,35 @@ public final class FrozenTypeMatcher {
 
     private boolean verifyMinFields(Schema schema, FrozenNode node) {
         BigInteger minFields = schema.getMinFieldsExact();
+        if (minFields == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || node.getItems() != null) {
+            return false;
+        }
         int size = node.getProperties() != null ? node.getProperties().size() : 0;
-        return minFields == null || BigInteger.valueOf(size).compareTo(minFields) >= 0;
+        return BigInteger.valueOf(size).compareTo(minFields) >= 0;
     }
 
     private boolean verifyMaxFields(Schema schema, FrozenNode node) {
         BigInteger maxFields = schema.getMaxFieldsExact();
+        if (maxFields == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || node.getItems() != null) {
+            return false;
+        }
         int size = node.getProperties() != null ? node.getProperties().size() : 0;
-        return maxFields == null || BigInteger.valueOf(size).compareTo(maxFields) <= 0;
+        return BigInteger.valueOf(size).compareTo(maxFields) <= 0;
     }
 
     private boolean verifyEnum(Schema schema, FrozenNode node) {
         List<Node> enumValues = schema.getEnum();
         if (enumValues == null) {
             return true;
+        }
+        if (node.getValue() == null) {
+            return !hasPayload(node);
         }
         String nodeBlueId = comparableBlueId(node);
         for (Node enumValue : enumValues) {
@@ -671,18 +714,23 @@ public final class FrozenTypeMatcher {
         if (cached != null) {
             return cached;
         }
-        FrozenNode core = FrozenNode.fromResolvedNode(new Node()
-                .name(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(blueId))
-                .blueId(blueId));
+        FrozenNode core = FrozenNode.fromResolvedNode(new Node().blueId(blueId));
         resolvedReferenceCache.put(blueId, core);
         return core;
     }
 
     private boolean sameType(FrozenNode left, FrozenNode right) {
-        if (typeIdentity(left).equals(typeIdentity(right))) {
+        String leftIdentity = typeIdentity(left);
+        String rightIdentity = typeIdentity(right);
+        if (leftIdentity.equals(rightIdentity)) {
             return true;
         }
-        return typeCompatibilityIdentity(left).equals(typeCompatibilityIdentity(right));
+        String leftCompatibility = typeCompatibilityIdentity(left);
+        String rightCompatibility = typeCompatibilityIdentity(right);
+        if (CORE_TYPE_BLUE_IDS.contains(leftCompatibility) || CORE_TYPE_BLUE_IDS.contains(rightCompatibility)) {
+            return leftCompatibility.equals(rightCompatibility);
+        }
+        return leftCompatibility.equals(rightCompatibility);
     }
 
     private String typeIdentity(FrozenNode type) {
@@ -693,6 +741,10 @@ public final class FrozenTypeMatcher {
         FrozenNode resolved = type.isReferenceOnly() ? resolveTypeReference(type) : type;
         if (resolved == null) {
             return typeIdentity(type);
+        }
+        String identityBlueId = typeIdentity(resolved);
+        if (CORE_TYPE_BLUE_IDS.contains(identityBlueId)) {
+            return identityBlueId;
         }
         String cacheKey = typeIdentity(resolved) + "|" + resolved.blueId();
         String cached = typeCompatibilityIdentityCache.get(cacheKey);

@@ -2,16 +2,16 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@TypeBlueId("ChannelEventCheckpoint")
+@TypeBlueId(RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT)
 public class ChannelEventCheckpoint extends MarkerContract {
 
     private Map<String, Node> lastEvents = new LinkedHashMap<>();
-    private Map<String, String> lastSignatures = new LinkedHashMap<>();
 
     public Map<String, Node> getLastEvents() {
         return Collections.unmodifiableMap(lastEvents);
@@ -43,36 +43,5 @@ public class ChannelEventCheckpoint extends MarkerContract {
 
     public ChannelEventCheckpoint updateEvent(String channelKey, Node event) {
         return putEvent(channelKey, event);
-    }
-
-    public Map<String, String> getLastSignatures() {
-        return Collections.unmodifiableMap(lastSignatures);
-    }
-
-    public ChannelEventCheckpoint lastSignatures(Map<String, String> signatures) {
-        this.lastSignatures = new LinkedHashMap<>();
-        if (signatures != null) {
-            for (Map.Entry<String, String> entry : signatures.entrySet()) {
-                if (entry.getKey() != null && entry.getValue() != null) {
-                    this.lastSignatures.put(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-        return this;
-    }
-
-    public String lastSignature(String channelKey) {
-        return lastSignatures.get(channelKey);
-    }
-
-    public ChannelEventCheckpoint updateSignature(String channelKey, String signature) {
-        if (channelKey != null) {
-            if (signature == null) {
-                lastSignatures.remove(channelKey);
-            } else {
-                lastSignatures.put(channelKey, signature);
-            }
-        }
-        return this;
     }
 }

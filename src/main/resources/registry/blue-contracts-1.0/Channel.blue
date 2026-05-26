@@ -1,0 +1,14 @@
+name: Channel
+type: Contract
+description: >
+  Runtime contract role for event entry points within a scope. A Channel
+  evaluates an incoming event or processor-managed delivery and either rejects
+  it or accepts it by producing one channelized payload for same-scope
+  handlers bound to that channel key. A Channel may consume gas and may request
+  termination only through processor-defined interfaces. A Channel must not
+  directly mutate the selected document. Processor-managed channel subtypes are
+  fed only by the processor and are never directly entered by external events.
+event:
+  description: >
+    Optional channel-specific matcher or matcher configuration. The meaning is
+    defined by the concrete channel type.

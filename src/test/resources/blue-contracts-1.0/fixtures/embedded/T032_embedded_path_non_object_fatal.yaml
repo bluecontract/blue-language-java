@@ -1,0 +1,21 @@
+id: T032_embedded_path_non_object_fatal
+category: Embedded
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  child:
+    value: scalar
+  contracts:
+    embedded:
+      type:
+        blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+      paths:
+        - /child
+event:
+  kind: non-object-child
+expectedCapabilityFailure: false
+expectedTotalGasMin: 1
+expectedDocumentPathExists:
+  - /contracts/terminated
+expectedFailureReasonContains: object

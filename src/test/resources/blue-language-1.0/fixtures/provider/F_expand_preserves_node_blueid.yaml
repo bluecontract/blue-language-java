@@ -3,9 +3,9 @@ category: Provider
 operation: expand
 description: provider-backed expansion preserves Node BlueId
 source:
-  blueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+  blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
 provider:
-  - requestedBlueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
-    node: 1
+- requestedBlueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+  node: 1
 expectedExpanded: 1
-expectedNodeBlueId: "GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF"
+expectedNodeBlueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz

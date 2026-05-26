@@ -3,10 +3,11 @@ category: Provider
 operation: resolve
 description: provider content with the wrong computed BlueId is rejected
 expectError: true
+expectedErrorCategory: ProviderBlueIdMismatch
 source:
   type:
-    blueId: HE4QGLZWbsarW3S32hi6eMrBNaQB2cpuS4WuFHZGiDA6
+    blueId: 7CUvDJwdfytCjadRG1KLL2GrttK2LfdNvEA8HycjMCcv
 provider:
-  - requestedBlueId: HE4QGLZWbsarW3S32hi6eMrBNaQB2cpuS4WuFHZGiDA6
-    returnedNode:
-      value: actual
+- requestedBlueId: 7CUvDJwdfytCjadRG1KLL2GrttK2LfdNvEA8HycjMCcv
+  returnedNode:
+    value: actual

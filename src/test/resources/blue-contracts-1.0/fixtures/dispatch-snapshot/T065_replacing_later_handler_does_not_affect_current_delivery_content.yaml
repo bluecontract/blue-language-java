@@ -1,0 +1,46 @@
+id: T065_replacing_later_handler_does_not_affect_current_delivery_content
+category: DispatchSnapshot
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    first:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /contracts/second
+          val:
+            channel: channel
+            type:
+              blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+            patches:
+              - op: replace
+                path: /replacedContentRan
+                val:
+                  value: true
+    second:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /originalContentRan
+          val:
+            value: true
+event:
+  kind: snapshot-replace
+expectedCapabilityFailure: false
+expectedDocumentPathExists:
+  - /contracts/second
+  - /originalContentRan
+expectedAbsentDocumentPaths:
+  - /replacedContentRan
+expectedDocumentPaths:
+  /contracts/second/patches/0/path:
+    value: /replacedContentRan

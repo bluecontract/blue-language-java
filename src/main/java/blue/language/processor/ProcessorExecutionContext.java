@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.conformance.ScriptedContractsRuntime;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 
@@ -21,6 +22,8 @@ public final class ProcessorExecutionContext {
     private final Node event;
     private final boolean allowTerminatedWork;
     private final boolean allowReservedMutation;
+    private final ContractEffectBuffer effects = new ContractEffectBuffer();
+    private boolean effectsApplied;
 
     ProcessorExecutionContext(ProcessorEngine.Execution execution,
                               ContractBundle bundle,
@@ -74,7 +77,7 @@ public final class ProcessorExecutionContext {
         if (patches == null || patches.isEmpty()) {
             return;
         }
-        execution.handlePatches(scopePath, bundle, patches, allowReservedMutation);
+        effects.addPatches(patches);
     }
 
     public void emitEvent(Node emission) {
@@ -82,14 +85,55 @@ public final class ProcessorExecutionContext {
             return;
         }
         Objects.requireNonNull(emission, "emission");
-        DocumentProcessingRuntime runtime = runtime();
-        ScopeRuntimeContext scopeContext = runtime.scope(scopePath);
-        runtime.chargeEmitEvent(emission);
-        Node queued = emission.clone();
-        scopeContext.enqueueTriggered(queued);
-        scopeContext.recordBridgeable(queued.clone());
-        if ("/".equals(scopeContext.scopePath())) {
-            runtime.recordRootEmission(queued.clone());
+        effects.emit(emission);
+    }
+
+    void applyBufferedEffects() {
+        if (effectsApplied) {
+            return;
+        }
+        effectsApplied = true;
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        if (effects.invalidGasReason() != null) {
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    ProcessorErrorCategory.GasError,
+                    effects.invalidGasReason());
+            return;
+        }
+        if (effects.gas() > 0L) {
+            runtime().addGas(effects.gas());
+        }
+        if (!effects.patches().isEmpty()) {
+            execution.handlePatches(scopePath, bundle, effects.patches(), allowReservedMutation);
+            if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+                return;
+            }
+        }
+        for (Node emission : effects.emittedEvents()) {
+            if (!emitEventNow(emission)) {
+                return;
+            }
+            if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+                return;
+            }
+        }
+        ContractEffectBuffer.TerminationRequest termination = effects.terminationRequest();
+        if (termination != null) {
+            ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
+            if (scriptedRuntime != null) {
+                scriptedRuntime.recordTermination(runtime(), termination.kind());
+            }
+            if (termination.kind() == ScopeRuntimeContext.TerminationKind.FATAL) {
+                execution.enterFatalTermination(scopePath,
+                        bundle,
+                        ProcessorErrorCategory.InternalProcessorError,
+                        termination.reason());
+            } else {
+                execution.enterGracefulTermination(scopePath, bundle, termination.reason());
+            }
         }
     }
 
@@ -97,11 +141,14 @@ public final class ProcessorExecutionContext {
         if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
             return;
         }
-        runtime().addGas(units);
+        effects.addGas(units);
     }
 
     public void throwFatal(String reason) {
-        throw new ProcessorFatalException(reason, execution.partialResult());
+        applyBufferedEffects();
+        throw new ProcessorFatalException(reason,
+                execution.partialResult(),
+                ProcessorErrorCategory.HandlerExecutionError);
     }
 
     public String resolvePointer(String pointer) {
@@ -137,11 +184,40 @@ public final class ProcessorExecutionContext {
     }
 
     public void terminateGracefully(String reason) {
-        execution.enterGracefulTermination(scopePath, bundle, reason);
+        effects.terminate(ScopeRuntimeContext.TerminationKind.GRACEFUL, reason);
     }
 
     public void terminateFatally(String reason) {
-        execution.enterFatalTermination(scopePath, bundle, reason);
+        effects.terminate(ScopeRuntimeContext.TerminationKind.FATAL, reason);
+    }
+
+    private boolean emitEventNow(Node emission) {
+        try {
+            CheckpointIdentityCalculator.identity(emission, execution.blue());
+        } catch (RuntimeException ex) {
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    ProcessorErrorCategory.InvalidPatchValue,
+                    "Invalid emitted event: " + ex.getMessage());
+            return false;
+        }
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return false;
+        }
+        DocumentProcessingRuntime runtime = runtime();
+        ScopeRuntimeContext scopeContext = runtime.scope(scopePath);
+        runtime.chargeEmitEvent(emission);
+        Node queued = emission.clone();
+        scopeContext.enqueueTriggered(queued);
+        scopeContext.recordBridgeable(queued.clone());
+        ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
+        if (scriptedRuntime != null) {
+            scriptedRuntime.recordTriggeredEvent(runtime, queued);
+        }
+        if ("/".equals(scopeContext.scopePath())) {
+            runtime.recordRootEmission(queued.clone());
+        }
+        return true;
     }
 
     private DocumentProcessingRuntime runtime() {

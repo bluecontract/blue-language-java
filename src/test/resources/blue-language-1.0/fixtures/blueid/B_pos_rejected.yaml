@@ -3,7 +3,8 @@ category: BlueId
 operation: calculateBlueId
 description: direct BlueId Input rejects $pos overlays
 expectError: true
+expectedErrorCategory: InvalidBlueIdInput
 input:
   items:
-    - $pos: 0
-      value: A
+  - $pos: 0
+    value: A

@@ -6,6 +6,7 @@ import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueNumbers;
 import blue.language.utils.NodeToMapListOrValue;
 
 import java.math.BigDecimal;
@@ -33,18 +34,18 @@ public class SchemaVerifier implements MergingProcessor {
         verifyWellFormed(schema);
 
         verifyRequired(schema.getRequiredValue(), target);
-        verifyMinLength(schema.getMinLengthExact(), target.getValue());
-        verifyMaxLength(schema.getMaxLengthExact(), target.getValue());
-        verifyMinimum(schema.getMinimumValue(), target.getValue());
-        verifyMaximum(schema.getMaximumValue(), target.getValue());
-        verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target.getValue());
-        verifyExclusiveMaximum(schema.getExclusiveMaximumValue(), target.getValue());
-        verifyMultipleOf(schema.getMultipleOfValue(), target.getValue());
-        verifyMinItems(schema.getMinItemsExact(), target.getItems());
-        verifyMaxItems(schema.getMaxItemsExact(), target.getItems());
-        verifyUniqueItems(schema.getUniqueItemsValue(), target.getItems());
-        verifyMinFields(schema.getMinFieldsExact(), target.getProperties());
-        verifyMaxFields(schema.getMaxFieldsExact(), target.getProperties());
+        verifyMinLength(schema.getMinLengthExact(), target);
+        verifyMaxLength(schema.getMaxLengthExact(), target);
+        verifyMinimum(schema.getMinimumValue(), target);
+        verifyMaximum(schema.getMaximumValue(), target);
+        verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target);
+        verifyExclusiveMaximum(schema.getExclusiveMaximumValue(), target);
+        verifyMultipleOf(schema.getMultipleOfValue(), target);
+        verifyMinItems(schema.getMinItemsExact(), target);
+        verifyMaxItems(schema.getMaxItemsExact(), target);
+        verifyUniqueItems(schema.getUniqueItemsValue(), target);
+        verifyMinFields(schema.getMinFieldsExact(), target);
+        verifyMaxFields(schema.getMaxFieldsExact(), target);
         verifyEnum(schema.getEnum(), target);
     }
 
@@ -107,18 +108,28 @@ public class SchemaVerifier implements MergingProcessor {
                 || (node.getProperties() != null && !node.getProperties().isEmpty());
     }
 
-    private void verifyMinLength(BigInteger minLength, Object value) {
-        if (minLength != null
-                && value instanceof String
-                && BigInteger.valueOf(codePointLength((String) value)).compareTo(minLength) < 0) {
+    private void verifyMinLength(BigInteger minLength, Node node) {
+        if (minLength == null) {
+            return;
+        }
+        Object value = requireScalarPayload("minLength", node, String.class, "Text scalar");
+        if (value == null) {
+            return;
+        }
+        if (BigInteger.valueOf(codePointLength((String) value)).compareTo(minLength) < 0) {
             throw new IllegalArgumentException("Value \"" + value + "\" is shorter than the minimum length of " + minLength + ".");
         }
     }
 
-    private void verifyMaxLength(BigInteger maxLength, Object value) {
-        if (maxLength != null
-                && value instanceof String
-                && BigInteger.valueOf(codePointLength((String) value)).compareTo(maxLength) > 0) {
+    private void verifyMaxLength(BigInteger maxLength, Node node) {
+        if (maxLength == null) {
+            return;
+        }
+        Object value = requireScalarPayload("maxLength", node, String.class, "Text scalar");
+        if (value == null) {
+            return;
+        }
+        if (BigInteger.valueOf(codePointLength((String) value)).compareTo(maxLength) > 0) {
             throw new IllegalArgumentException("Value \"" + value + "\" is longer than the maximum length of " + maxLength + ".");
         }
     }
@@ -127,67 +138,105 @@ public class SchemaVerifier implements MergingProcessor {
         return value.codePointCount(0, value.length());
     }
 
-    private void verifyMinimum(BigDecimal minimum, Object value) {
-        if (minimum != null && value instanceof Number) {
-            BigDecimal valueDecimal = new BigDecimal(value.toString());
-            if (valueDecimal.compareTo(minimum) < 0) {
-                throw new IllegalArgumentException("Value " + value + " is less than the minimum value of " + minimum + ".");
-            }
+    private void verifyMinimum(BigDecimal minimum, Node node) {
+        if (minimum == null) {
+            return;
+        }
+        Object value = requireScalarPayload("minimum", node, Number.class, "numeric scalar");
+        if (value == null) {
+            return;
+        }
+        BigDecimal valueDecimal = new BigDecimal(value.toString());
+        if (valueDecimal.compareTo(minimum) < 0) {
+            throw new IllegalArgumentException("Value " + value + " is less than the minimum value of " + minimum + ".");
         }
     }
 
-    private void verifyMaximum(BigDecimal maximum, Object value) {
-        if (maximum != null && value instanceof Number) {
-            BigDecimal valueDecimal = new BigDecimal(value.toString());
-            if (valueDecimal.compareTo(maximum) > 0) {
-                throw new IllegalArgumentException("Value " + value + " is greater than the maximum value of " + maximum + ".");
-            }
+    private void verifyMaximum(BigDecimal maximum, Node node) {
+        if (maximum == null) {
+            return;
+        }
+        Object value = requireScalarPayload("maximum", node, Number.class, "numeric scalar");
+        if (value == null) {
+            return;
+        }
+        BigDecimal valueDecimal = new BigDecimal(value.toString());
+        if (valueDecimal.compareTo(maximum) > 0) {
+            throw new IllegalArgumentException("Value " + value + " is greater than the maximum value of " + maximum + ".");
         }
     }
 
-    private void verifyExclusiveMinimum(BigDecimal exclusiveMinimum, Object value) {
-        if (exclusiveMinimum != null && value instanceof Number) {
-            BigDecimal valueDecimal = new BigDecimal(value.toString());
-            if (valueDecimal.compareTo(exclusiveMinimum) <= 0) {
-                throw new IllegalArgumentException("Value " + value + " is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
-            }
+    private void verifyExclusiveMinimum(BigDecimal exclusiveMinimum, Node node) {
+        if (exclusiveMinimum == null) {
+            return;
+        }
+        Object value = requireScalarPayload("exclusiveMinimum", node, Number.class, "numeric scalar");
+        if (value == null) {
+            return;
+        }
+        BigDecimal valueDecimal = new BigDecimal(value.toString());
+        if (valueDecimal.compareTo(exclusiveMinimum) <= 0) {
+            throw new IllegalArgumentException("Value " + value + " is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
         }
     }
 
-    private void verifyExclusiveMaximum(BigDecimal exclusiveMaximum, Object value) {
-        if (exclusiveMaximum != null && value instanceof Number) {
-            BigDecimal valueDecimal = new BigDecimal(value.toString());
-            if (valueDecimal.compareTo(exclusiveMaximum) >= 0) {
-                throw new IllegalArgumentException("Value " + value + " is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
-            }
+    private void verifyExclusiveMaximum(BigDecimal exclusiveMaximum, Node node) {
+        if (exclusiveMaximum == null) {
+            return;
+        }
+        Object value = requireScalarPayload("exclusiveMaximum", node, Number.class, "numeric scalar");
+        if (value == null) {
+            return;
+        }
+        BigDecimal valueDecimal = new BigDecimal(value.toString());
+        if (valueDecimal.compareTo(exclusiveMaximum) >= 0) {
+            throw new IllegalArgumentException("Value " + value + " is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
         }
     }
 
-    private void verifyMultipleOf(BigDecimal multipleOf, Object value) {
-        if (multipleOf != null && value instanceof Number) {
-            BigDecimal valueDecimal = new BigDecimal(value.toString());
-            BigDecimal remainder = valueDecimal.remainder(multipleOf);
-            if (remainder.compareTo(BigDecimal.ZERO) != 0) {
-                throw new IllegalArgumentException("Value " + value + " is not a multiple of " + multipleOf + ".");
-            }
+    private void verifyMultipleOf(BigDecimal multipleOf, Node node) {
+        if (multipleOf == null) {
+            return;
+        }
+        Object value = requireScalarPayload("multipleOf", node, Number.class, "numeric scalar");
+        if (value == null) {
+            return;
+        }
+        if (!BlueNumbers.isExactBinary64Multiple(value, multipleOf)) {
+            throw new IllegalArgumentException("Value " + value + " is not a multiple of " + multipleOf + ".");
         }
     }
 
-    private void verifyMinItems(BigInteger minItems, List<Node> items) {
+    private void verifyMinItems(BigInteger minItems, Node node) {
+        if (minItems == null) {
+            return;
+        }
+        requireListPayload("minItems", node);
+        List<Node> items = node.getItems();
         int size = items != null ? items.size() : 0;
-        if (minItems != null && BigInteger.valueOf(size).compareTo(minItems) < 0) {
+        if (BigInteger.valueOf(size).compareTo(minItems) < 0) {
             throw new IllegalArgumentException("Number of items " + (items != null ? items.size() : 0) + " is less than the minimum required items of " + minItems + ".");
         }
     }
 
-    private void verifyMaxItems(BigInteger maxItems, List<Node> items) {
-        if (maxItems != null && items != null && BigInteger.valueOf(items.size()).compareTo(maxItems) > 0) {
+    private void verifyMaxItems(BigInteger maxItems, Node node) {
+        if (maxItems == null) {
+            return;
+        }
+        requireListPayload("maxItems", node);
+        List<Node> items = node.getItems();
+        if (items != null && BigInteger.valueOf(items.size()).compareTo(maxItems) > 0) {
             throw new IllegalArgumentException("Number of items " + items.size() + " is greater than the maximum allowed items of " + maxItems + ".");
         }
     }
 
-    private void verifyUniqueItems(Boolean uniqueItems, List<Node> items) {
-        if (Boolean.TRUE.equals(uniqueItems) && items != null) {
+    private void verifyUniqueItems(Boolean uniqueItems, Node node) {
+        if (!Boolean.TRUE.equals(uniqueItems)) {
+            return;
+        }
+        requireListPayload("uniqueItems", node);
+        List<Node> items = node.getItems();
+        if (items != null) {
             int uniqueItemsCount = items.stream()
                     .map(NodeToMapListOrValue::get)
                     .map(doc -> YAML_MAPPER.convertValue(doc, Node.class))
@@ -199,22 +248,38 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyMinFields(BigInteger minFields, Map<String, Node> properties) {
+    private void verifyMinFields(BigInteger minFields, Node node) {
+        if (minFields == null) {
+            return;
+        }
+        requireObjectPayload("minFields", node);
+        Map<String, Node> properties = node.getProperties();
         int fieldCount = properties == null ? 0 : properties.size();
-        if (minFields != null && BigInteger.valueOf(fieldCount).compareTo(minFields) < 0) {
+        if (BigInteger.valueOf(fieldCount).compareTo(minFields) < 0) {
             throw new IllegalArgumentException("Number of fields " + fieldCount + " is less than the minimum required fields of " + minFields + ".");
         }
     }
 
-    private void verifyMaxFields(BigInteger maxFields, Map<String, Node> properties) {
+    private void verifyMaxFields(BigInteger maxFields, Node node) {
+        if (maxFields == null) {
+            return;
+        }
+        requireObjectPayload("maxFields", node);
+        Map<String, Node> properties = node.getProperties();
         int fieldCount = properties == null ? 0 : properties.size();
-        if (maxFields != null && BigInteger.valueOf(fieldCount).compareTo(maxFields) > 0) {
+        if (BigInteger.valueOf(fieldCount).compareTo(maxFields) > 0) {
             throw new IllegalArgumentException("Number of fields " + fieldCount + " is greater than the maximum allowed fields of " + maxFields + ".");
         }
     }
 
     private void verifyEnum(List<Node> enumValues, Node node) {
         if (enumValues == null) {
+            return;
+        }
+        if (node.getValue() == null) {
+            if (hasPayload(node)) {
+                throw wrongKind("enum", "scalar", node);
+            }
             return;
         }
 
@@ -231,5 +296,32 @@ public class SchemaVerifier implements MergingProcessor {
         Node comparable = node.clone();
         comparable.schema(null);
         return BlueIdCalculator.calculateBlueId(comparable);
+    }
+
+    private Object requireScalarPayload(String keyword, Node node, Class<?> expectedClass, String expected) {
+        Object value = node.getValue();
+        if (value == null && !hasPayload(node)) {
+            return null;
+        }
+        if (!expectedClass.isInstance(value)) {
+            throw wrongKind(keyword, expected, node);
+        }
+        return value;
+    }
+
+    private void requireListPayload(String keyword, Node node) {
+        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+            throw wrongKind(keyword, "List payload", node);
+        }
+    }
+
+    private void requireObjectPayload(String keyword, Node node) {
+        if (node.getValue() != null || node.getItems() != null) {
+            throw wrongKind(keyword, "Dictionary/object payload", node);
+        }
+    }
+
+    private IllegalArgumentException wrongKind(String keyword, String expected, Node node) {
+        return new IllegalArgumentException("Schema keyword \"" + keyword + "\" applies to wrong kind; expected " + expected + ".");
     }
 }

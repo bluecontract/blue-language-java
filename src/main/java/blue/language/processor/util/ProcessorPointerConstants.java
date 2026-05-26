@@ -18,7 +18,6 @@ public final class ProcessorPointerConstants {
     public static final String RELATIVE_CHECKPOINT = RELATIVE_CONTRACTS + "/" + ProcessorContractConstants.KEY_CHECKPOINT;
 
     private static final String LAST_EVENTS_SUFFIX = "/lastEvents";
-    private static final String LAST_SIGNATURES_SUFFIX = "/lastSignatures";
 
     private ProcessorPointerConstants() {
     }
@@ -29,9 +28,5 @@ public final class ProcessorPointerConstants {
 
     public static String relativeCheckpointLastEvent(String markerKey, String channelKey) {
         return JsonPointer.append(relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX, channelKey);
-    }
-
-    public static String relativeCheckpointLastSignature(String markerKey, String channelKey) {
-        return JsonPointer.append(relativeContractsEntry(markerKey) + LAST_SIGNATURES_SUFFIX, channelKey);
     }
 }

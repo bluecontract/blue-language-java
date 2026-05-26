@@ -1,0 +1,29 @@
+id: T077_checkpoint_update_costs_configured_amount
+category: Gas
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    handler:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /handled
+          val:
+            value: true
+event:
+  kind: checkpoint-update-cost
+expectedCapabilityFailure: false
+expectedExactGas: 1202
+expectedDocumentPaths:
+  /handled:
+    value: true
+expectedCheckpointLastEvents:
+  channel:
+    kind: checkpoint-update-cost

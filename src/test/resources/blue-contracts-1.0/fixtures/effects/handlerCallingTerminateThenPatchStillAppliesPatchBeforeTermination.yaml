@@ -1,0 +1,56 @@
+id: handlerCallingTerminateThenPatchStillAppliesPatchBeforeTermination
+category: Effects
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    incoming:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+    buffered:
+      type:
+        blueId: 3rHWt14WhTvmBBQ6Cr1Mb263KuxSdwqvb2jD7oPbkNL3
+      channel: incoming
+event:
+  kind: terminate-then-patch
+mockRuntime:
+  channels:
+    - contract: /contracts/incoming
+      calls:
+        - when:
+            event:
+              kind: terminate-then-patch
+          accepted: true
+          payload:
+            kind: terminate-then-patch
+  handlers:
+    - contract: /contracts/buffered
+      calls:
+        - when:
+            channelKey: incoming
+          hostApiCalls:
+            - terminate:
+                cause: graceful
+                reason: requested before patch call
+            - applyPatch:
+                op: replace
+                path: /patchedBeforeTermination
+                val: true
+          result:
+            patches:
+              - op: replace
+                path: /patchedBeforeTermination
+                val: true
+            termination:
+              cause: graceful
+              reason: requested before patch call
+expectedStatus: success
+expectedDocumentPaths:
+  /patchedBeforeTermination:
+    value: true
+  /contracts/terminated/cause:
+    value: graceful
+expectedEffectApplicationOrder:
+  - patch:/patchedBeforeTermination
+  - termination:graceful

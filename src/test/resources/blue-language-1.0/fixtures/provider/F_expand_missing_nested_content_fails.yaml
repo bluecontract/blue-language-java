@@ -5,5 +5,5 @@ description: nested expansion fails deterministically when provider content is m
 expectError: true
 source:
   child:
-    blueId: GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF
+    blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
 provider: []

@@ -37,6 +37,7 @@ public final class CircularBlueIdCalculator {
             indexedNodes.add(new IndexedNode(i, documents.get(i),
                     BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary)));
         }
+        rejectDuplicatePreliminaryInputs(indexedNodes);
 
         indexedNodes.sort(Comparator
                 .comparing((IndexedNode indexedNode) -> indexedNode.preliminaryBlueId)
@@ -63,6 +64,19 @@ public final class CircularBlueIdCalculator {
             result.add(masterBlueId + "#" + originalIndexToSortedIndex.get(originalIndex));
         }
         return result;
+    }
+
+    private static void rejectDuplicatePreliminaryInputs(List<IndexedNode> indexedNodes) {
+        Map<String, Integer> firstIndexByPreliminaryBlueId = new HashMap<>();
+        for (IndexedNode indexedNode : indexedNodes) {
+            Integer firstIndex = firstIndexByPreliminaryBlueId.putIfAbsent(
+                    indexedNode.preliminaryBlueId,
+                    indexedNode.originalIndex);
+            if (firstIndex != null) {
+                throw new IllegalArgumentException("Duplicate preliminary cyclic BlueId input for members "
+                        + firstIndex + " and " + indexedNode.originalIndex + ".");
+            }
+        }
     }
 
     private static void validateMultiDocumentReferences(List<ThisReference> references, int documentCount) {

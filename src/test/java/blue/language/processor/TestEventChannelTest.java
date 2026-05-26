@@ -20,7 +20,7 @@ class TestEventChannelTest {
 
     @Test
     void testEventChannelMatchesOnlyTestEvents() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new TestEventChannelProcessor());
 
@@ -28,11 +28,11 @@ class TestEventChannelTest {
                 "contracts:\n" +
                 "  testEventsChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setX:\n" +
                 "    channel: testEventsChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
 
@@ -57,7 +57,7 @@ class TestEventChannelTest {
 
     @Test
     void triggeredAndEmbeddedChannelsPropagateChildEvents() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new EmitEventsContractProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
@@ -68,25 +68,25 @@ class TestEventChannelTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: LifecycleChannel\n" +
+                "        blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "    triggered:\n" +
                 "      type:\n" +
-                "        blueId: TriggeredEventChannel\n" +
+                "        blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ\n" +
                 "    emitOnInit:\n" +
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: DocumentProcessingInitiated\n" +
+                "          blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "      type:\n" +
-                "        blueId: EmitEvents\n" +
+                "        blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
                 "      events:\n" +
                 "        - type:\n" +
-                "            blueId: TestEvent\n" +
+                "            blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
                 "          kind: first\n" +
                 "    setLocalFirst:\n" +
                 "      channel: triggered\n" +
                 "      type:\n" +
-                "        blueId: SetPropertyOnEvent\n" +
+                "        blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
                 "      expectedKind: first\n" +
                 "      propertyKey: /localFirst\n" +
                 "      propertyValue: 1\n" +
@@ -94,34 +94,34 @@ class TestEventChannelTest {
                 "      channel: triggered\n" +
                 "      order: 1\n" +
                 "      type:\n" +
-                "        blueId: EmitEvents\n" +
+                "        blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
                 "      expectedKind: first\n" +
                 "      events:\n" +
                 "        - type:\n" +
-                "            blueId: TestEvent\n" +
+                "            blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
                 "          kind: second\n" +
                 "    setLocalSecond:\n" +
                 "      channel: triggered\n" +
                 "      order: 2\n" +
                 "      type:\n" +
-                "        blueId: SetPropertyOnEvent\n" +
+                "        blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
                 "      expectedKind: second\n" +
                 "      propertyKey: /localSecond\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "  embeddedEvents:\n" +
                 "    type:\n" +
-                "      blueId: EmbeddedNodeChannel\n" +
+                "      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i\n" +
                 "    childPath: /a\n" +
                 "  setRootFromChild:\n" +
                 "    channel: embeddedEvents\n" +
                 "    type:\n" +
-                "      blueId: SetPropertyOnEvent\n" +
+                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
                 "    expectedKind: second\n" +
                 "    propertyKey: /fromChild\n" +
                 "    propertyValue: 1\n";
@@ -142,7 +142,7 @@ class TestEventChannelTest {
 
     @Test
     void checkpointSkipsStaleEvents() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -151,11 +151,11 @@ class TestEventChannelTest {
                 "contracts:\n" +
                 "  testEventsChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  incrementX:\n" +
                 "    channel: testEventsChannel\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    propertyKey: /x\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -185,13 +185,6 @@ class TestEventChannelTest {
         if (checkpoint == null) {
             return null;
         }
-        Node lastSignatures = checkpoint.getProperties().get("lastSignatures");
-        if (lastSignatures != null && lastSignatures.getProperties() != null) {
-            Node sigNode = lastSignatures.getProperties().get("testEventsChannel");
-            if (sigNode != null && sigNode.getValue() != null) {
-                return sigNode.getValue().toString();
-            }
-        }
         Node lastEvents = checkpoint.getProperties().get("lastEvents");
         if (lastEvents == null || lastEvents.getProperties() == null) {
             return null;
@@ -207,7 +200,7 @@ class TestEventChannelTest {
 
     @Test
     void checkpointStoresFullEventAndComparesPayload() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -216,28 +209,28 @@ class TestEventChannelTest {
                 "contracts:\n" +
                 "  testEventsChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  incrementX:\n" +
                 "    channel: testEventsChannel\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    propertyKey: /x\n";
 
         Node initialized = blue.initializeDocument(blue.yamlToNode(yaml)).document();
 
-        Node firstEvent = blue.yamlToNode("type:\n  blueId: TestEvent\nkind: alpha\n");
+        Node firstEvent = blue.yamlToNode("type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: alpha\n");
         Node afterFirst = blue.processDocument(initialized, firstEvent).document();
         assertEquals(new BigInteger("1"), afterFirst.getProperties().get("x").getValue());
         Node storedEvent = checkpointStoredEvent(afterFirst);
         assertNotNull(storedEvent);
         assertEquals("alpha", storedEvent.getProperties().get("kind").getValue());
 
-        Node identicalEvent = blue.yamlToNode("type:\n  blueId: TestEvent\nkind: alpha\n");
+        Node identicalEvent = blue.yamlToNode("type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: alpha\n");
         Node afterSecond = blue.processDocument(afterFirst, identicalEvent).document();
         assertEquals(new BigInteger("1"), afterSecond.getProperties().get("x").getValue(),
                 "Identical payload should be gated by checkpoint");
 
-        Node changedEvent = blue.yamlToNode("type:\n  blueId: TestEvent\nkind: beta\n");
+        Node changedEvent = blue.yamlToNode("type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: beta\n");
         Node afterThird = blue.processDocument(afterSecond, changedEvent).document();
         assertEquals(new BigInteger("2"), afterThird.getProperties().get("x").getValue(),
                 "Changed payload should be processed");

@@ -5,6 +5,6 @@ description: direct BlueId Input rejects null list elements
 expectError: true
 input:
   items:
-    - A
-    - null
-    - B
+  - A
+  - null
+  - B

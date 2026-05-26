@@ -3,6 +3,6 @@ category: BlueId
 operation: calculateBlueId
 description: scalar sugar and wrapped scalar are equivalent
 input: 1
-expectedNodeBlueId: "GrtpYnzZDc1tg6HJEgwvSj93vwHYUrQM7hLkMUTwzZbF"
+expectedNodeBlueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
 alsoEquivalentTo:
   value: 1

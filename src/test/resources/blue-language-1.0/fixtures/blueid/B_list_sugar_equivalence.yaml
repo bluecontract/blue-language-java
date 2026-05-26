@@ -3,10 +3,10 @@ category: BlueId
 operation: calculateBlueId
 description: surface list and wrapped items list are equivalent
 input:
-  - A
-  - B
-expectedNodeBlueId: "HGLd6gvx6YHX2cizkCMnrTPhTngpTeRnSzApLfrGYDWf"
+- A
+- B
+expectedNodeBlueId: 49W45qY1LKK66NNRDF8k3W75zd8mj48Fh9wBs31ZNceB
 alsoEquivalentTo:
   items:
-    - A
-    - B
+  - A
+  - B

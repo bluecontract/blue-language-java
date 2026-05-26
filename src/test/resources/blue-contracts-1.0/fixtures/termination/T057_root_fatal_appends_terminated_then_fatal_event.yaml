@@ -1,0 +1,23 @@
+id: T057_root_fatal_appends_terminated_then_fatal_event
+category: Termination
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    terminator:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      termination: fatal
+      terminationReason: fatal-root
+event:
+  kind: fatal-root
+expectedCapabilityFailure: false
+expectedRootEventTypes:
+  - "Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL"
+  - "4HWncQEQsdpk8zcXxYxgdtoXo5nKHxFPWeJfTscCbmeK"
+  - "AMZbj5tNGxjPrvaNyw56sfqcLSW2j1XmkncEYUVtgmVC"

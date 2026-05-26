@@ -1,8 +1,9 @@
 package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
-@TypeBlueId("InitializationMarker")
+@TypeBlueId(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER)
 public class InitializationMarker extends MarkerContract {
 
     private String documentId;

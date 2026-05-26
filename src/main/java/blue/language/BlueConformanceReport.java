@@ -288,6 +288,14 @@ public final class BlueConformanceReport {
 
     private static Set<String> requiredFixtureIds() {
         return set(
+                "L_no_profile_era_language_conformance_terms",
+                "coreRegistryTextNodeHashesToPublishedBlueId",
+                "coreRegistryIntegerNodeHashesToPublishedBlueId",
+                "coreRegistryDoubleNodeHashesToPublishedBlueId",
+                "coreRegistryBooleanNodeHashesToPublishedBlueId",
+                "coreRegistryDictionaryNodeHashesToPublishedBlueId",
+                "coreRegistryListNodeHashesToPublishedBlueId",
+                "changingCoreTypeDescriptionChangesBlueId",
                 "B_scalar_sugar_equivalence",
                 "B_list_sugar_equivalence",
                 "B_root_scalar",
@@ -312,11 +320,12 @@ public final class BlueConformanceReport {
                 "B_pos_rejected",
                 "B_replace_rejected",
                 "R_blue_imports_type_itemType_keyType_valueType",
-                "R_blue_imports",
                 "R_source_null_list_to_empty",
                 "R_source_empty_object_list_to_empty",
+                "R_blue_imports",
                 "R_schema_value_shapes",
                 "R_schema_large_integer_minimum_with_type_alias",
+                "R_schema_integer_multiple_of_lcm_merge",
                 "R_enum_integer_vs_double",
                 "R_canonical_overlay_no_previous_no_pos",
                 "R_inherited_append_only_policy",
@@ -345,7 +354,17 @@ public final class BlueConformanceReport {
                 "C_this_placeholder_rejected_outside_cyclic_api",
                 "C_zero_blueid_rejected_in_final_input",
                 "C_three_document_cycle_stable_order",
-                "C_duplicate_preliminary_ids_deterministic_or_rejected");
+                "C_duplicate_preliminary_ids_deterministic_or_rejected",
+                "B_double_negative_zero",
+                "B_double_overflow_rejected",
+                "B_payload_only_scalar_typed_identity",
+                "R_source_recursive_empty_object_list_to_empty",
+                "R_core_type_compatibility_nominal_by_blueid",
+                "R_view_path_root_is_empty_string",
+                "R_schema_enum_order_and_duplicates_canonical",
+                "R_schema_double_multiple_of_exact",
+                "R_schema_double_multiple_of_rejects_decimal_approximation",
+                "R_schema_wrong_kind_keywords_rejected");
     }
 
     private static Set<String> set(String... values) {

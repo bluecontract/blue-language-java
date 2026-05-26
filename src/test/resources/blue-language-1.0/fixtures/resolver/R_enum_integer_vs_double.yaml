@@ -5,10 +5,10 @@ description: enum accepts scalar integer and double entries as distinct scalar f
 source:
   schema:
     enum:
-      - 1
-      - 1.0
+    - 1
+    - 1.0
 expectedParsed:
   schema:
     enum:
-      - 1
-      - 1.0
+    - 1
+    - 1.0

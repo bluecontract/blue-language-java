@@ -1,0 +1,45 @@
+id: L_no_profile_era_language_conformance_terms
+category: DocumentationLint
+operation: lintPublishableDocumentation
+description: publishable Blue Language 1.0 files use the single conformance target
+  and canonical section 1 heading
+publishableFiles:
+- language/1.0/spec.md
+requiredHeadings:
+- '## 1. Scope, Goals, Versioning, and Conformance'
+forbiddenJoinedTerms:
+- tokens:
+  - Conformance
+  - Profiles
+  joiner: ' '
+- tokens:
+  - BlueId
+  - Profile
+  joiner: ' '
+- tokens:
+  - Resolver
+  - Profile
+  joiner: ' '
+- tokens:
+  - Language
+  - Full
+  - Profile
+  joiner: ' '
+- tokens:
+  - profile
+  - relative
+  joiner: '-'
+- tokens:
+  - preprocessing
+  - profile
+  joiner: ' '
+- tokens:
+  - profile
+  - supported
+  joiner: '-'
+- tokens:
+  - profile
+  - specific
+  joiner: '-'
+matchRule: Join tokens with the listed joiner and reject any case-sensitive match
+  in publishableFiles.

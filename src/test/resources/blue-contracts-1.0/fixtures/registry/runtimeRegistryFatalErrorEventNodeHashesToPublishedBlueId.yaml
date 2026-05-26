@@ -1,0 +1,8 @@
+id: runtimeRegistryFatalErrorEventNodeHashesToPublishedBlueId
+category: Registry
+operation: registryNodeHashesToPublishedBlueId
+registryKind: Blue Contracts runtime type registry
+registryKey: DocumentProcessingFatalError
+registryPath: registry/blue-contracts-1.0/DocumentProcessingFatalError.blue
+expectedBlueId: AMZbj5tNGxjPrvaNyw56sfqcLSW2j1XmkncEYUVtgmVC
+semanticDescriptionIdentityBearing: true

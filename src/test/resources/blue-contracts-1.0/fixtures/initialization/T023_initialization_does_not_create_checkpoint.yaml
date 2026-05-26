@@ -1,0 +1,15 @@
+id: T023_initialization_does_not_create_checkpoint
+category: Initialization
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  note:
+    value: init-only
+event:
+  kind: init-no-checkpoint
+expectedCapabilityFailure: false
+expectedDocumentPathExists:
+  - /contracts/initialized
+expectedAbsentDocumentPaths:
+  - /contracts/checkpoint

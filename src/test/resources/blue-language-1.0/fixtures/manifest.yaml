@@ -1,177 +1,234 @@
-specVersion: "1.0"
-fixturePackageIdentity: "sha256:85e8690260c1b861431b42e2bad77d2959fe7253e12d9950f387fb0a9c0e9399"
+specVersion: '1.0'
+fixturePackageIdentity: sha256:3387cb4b6626fc56cec91d584b2df7f37c229e396dee990750ac50e762a1bc1d
 fixtures:
-  - id: B_scalar_sugar_equivalence
-    category: BlueId
-    path: blueid/B_scalar_sugar_equivalence.yaml
-  - id: B_list_sugar_equivalence
-    category: BlueId
-    path: blueid/B_list_sugar_equivalence.yaml
-  - id: B_root_scalar
-    category: BlueId
-    path: blueid/B_root_scalar.yaml
-  - id: B_root_list
-    category: BlueId
-    path: blueid/B_root_list.yaml
-  - id: B_root_empty_object
-    category: BlueId
-    path: blueid/B_root_empty_object.yaml
-  - id: B_root_pure_reference
-    category: BlueId
-    path: blueid/B_root_pure_reference.yaml
-  - id: B_root_null_rejected
-    category: BlueId
-    path: blueid/B_root_null_rejected.yaml
-  - id: B_plain_blueid_validation
-    category: BlueId
-    path: blueid/B_plain_blueid_validation.yaml
-  - id: B_empty_list
-    category: BlueId
-    path: blueid/B_empty_list.yaml
-  - id: B_object_field_null_removal
-    category: BlueId
-    path: blueid/B_object_field_null_removal.yaml
-  - id: B_empty_placeholder
-    category: BlueId
-    path: blueid/B_empty_placeholder.yaml
-  - id: B_null_list_element_rejected
-    category: BlueId
-    path: blueid/B_null_list_element_rejected.yaml
-  - id: B_empty_object_list_element_rejected
-    category: BlueId
-    path: blueid/B_empty_object_list_element_rejected.yaml
-  - id: B_malformed_empty_rejected
-    category: BlueId
-    path: blueid/B_malformed_empty_rejected.yaml
-  - id: B_large_integer_quoted_explicit_integer
-    category: BlueId
-    path: blueid/B_large_integer_quoted_explicit_integer.yaml
-  - id: B_unquoted_large_integer_rejected
-    category: BlueId
-    path: blueid/B_unquoted_large_integer_rejected.yaml
-  - id: B_integer_1_vs_double_1_0
-    category: BlueId
-    path: blueid/B_integer_1_vs_double_1_0.yaml
-  - id: B_double_1e0
-    category: BlueId
-    path: blueid/B_double_1e0.yaml
-  - id: B_invalid_this_placeholder_rejected
-    category: BlueId
-    path: blueid/B_invalid_this_placeholder_rejected.yaml
-  - id: B_type_alias_rejected_in_direct_blueid_input
-    category: BlueId
-    path: blueid/B_type_alias_rejected_in_direct_blueid_input.yaml
-  - id: B_previous_invalid_blueid_rejected
-    category: BlueId
-    path: blueid/B_previous_invalid_blueid_rejected.yaml
-  - id: B_pos_rejected
-    category: BlueId
-    path: blueid/B_pos_rejected.yaml
-  - id: B_replace_rejected
-    category: BlueId
-    path: blueid/B_replace_rejected.yaml
-  - id: R_blue_imports_type_itemType_keyType_valueType
-    category: Resolution
-    path: resolver/R_blue_imports_type_itemType_keyType_valueType.yaml
-  - id: R_source_null_list_to_empty
-    category: Resolution
-    path: resolver/R_source_null_list_to_empty.yaml
-  - id: R_source_empty_object_list_to_empty
-    category: Resolution
-    path: resolver/R_source_empty_object_list_to_empty.yaml
-  - id: R_blue_imports
-    category: Resolution
-    path: resolver/R_blue_imports.yaml
-  - id: R_schema_value_shapes
-    category: Schema
-    path: resolver/R_schema_value_shapes.yaml
-  - id: R_schema_large_integer_minimum_with_type_alias
-    category: Schema
-    path: resolver/R_schema_large_integer_minimum_with_type_alias.yaml
-  - id: R_enum_integer_vs_double
-    category: Schema
-    path: resolver/R_enum_integer_vs_double.yaml
-  - id: R_canonical_overlay_no_previous_no_pos
-    category: Canonicalization
-    path: resolver/R_canonical_overlay_no_previous_no_pos.yaml
-  - id: R_inherited_append_only_policy
-    category: Resolution
-    path: resolver/R_inherited_append_only_policy.yaml
-  - id: R_inherited_item_type
-    category: Resolution
-    path: resolver/R_inherited_item_type.yaml
-  - id: R_inherited_keyType_valueType
-    category: Resolution
-    path: resolver/R_inherited_keyType_valueType.yaml
-  - id: R_provider_reference_canonicalizes_back
-    category: Canonicalization
-    path: resolver/R_provider_reference_canonicalizes_back.yaml
-  - id: R_type_aliases_removed_from_canonical_overlay
-    category: Canonicalization
-    path: resolver/R_type_aliases_removed_from_canonical_overlay.yaml
-  - id: R_contracts_merge_as_content
-    category: Resolution
-    path: resolver/R_contracts_merge_as_content.yaml
-  - id: R_top_level_type_name_description_not_inherited
-    category: Resolution
-    path: resolver/R_top_level_type_name_description_not_inherited.yaml
-  - id: R_type_derived_field_removed
-    category: Canonicalization
-    path: resolver/R_type_derived_field_removed.yaml
-  - id: R_instance_field_kept
-    category: Canonicalization
-    path: resolver/R_instance_field_kept.yaml
-  - id: R_provider_reference_with_overlay_keeps_overlay
-    category: Canonicalization
-    path: resolver/R_provider_reference_with_overlay_keeps_overlay.yaml
-  - id: R_contracts_canonicalization_deterministic
-    category: Canonicalization
-    path: resolver/R_contracts_canonicalization_deterministic.yaml
-  - id: R_child_field_labels_materialize_until_overridden
-    category: Resolution
-    path: resolver/R_child_field_labels_materialize_until_overridden.yaml
-  - id: R_canonicalization_deterministic_for_same_resolved_view
-    category: Canonicalization
-    path: resolver/R_canonicalization_deterministic_for_same_resolved_view.yaml
-  - id: F_provider_wrong_blueid_rejected
-    category: Provider
-    path: provider/F_provider_wrong_blueid_rejected.yaml
-  - id: F_provider_missing_content_fails
-    category: Provider
-    path: provider/F_provider_missing_content_fails.yaml
-  - id: F_expand_preserves_node_blueid
-    category: Provider
-    path: provider/F_expand_preserves_node_blueid.yaml
-  - id: F_expand_nested_reference_preserves_node_blueid
-    category: Provider
-    path: provider/F_expand_nested_reference_preserves_node_blueid.yaml
-  - id: F_expand_wrong_nested_provider_content_fails
-    category: Provider
-    path: provider/F_expand_wrong_nested_provider_content_fails.yaml
-  - id: F_expand_missing_nested_content_fails
-    category: Provider
-    path: provider/F_expand_missing_nested_content_fails.yaml
-  - id: F_collapse_preserves_node_blueid
-    category: Provider
-    path: provider/F_collapse_preserves_node_blueid.yaml
-  - id: F_collapse_nested_subtree_preserves_node_blueid
-    category: Provider
-    path: provider/F_collapse_nested_subtree_preserves_node_blueid.yaml
-  - id: F_collapse_does_not_produce_mixed_blueid
-    category: Provider
-    path: provider/F_collapse_does_not_produce_mixed_blueid.yaml
-  - id: C_circular_reference_set_ids
-    category: Circular
-    path: circular/C_circular_reference_set_ids.yaml
-  - id: C_this_placeholder_rejected_outside_cyclic_api
-    category: Circular
-    path: circular/C_this_placeholder_rejected_outside_cyclic_api.yaml
-  - id: C_zero_blueid_rejected_in_final_input
-    category: Circular
-    path: circular/C_zero_blueid_rejected_in_final_input.yaml
-  - id: C_three_document_cycle_stable_order
-    category: Circular
-    path: circular/C_three_document_cycle_stable_order.yaml
-  - id: C_duplicate_preliminary_ids_deterministic_or_rejected
-    category: Circular
-    path: circular/C_duplicate_preliminary_ids_deterministic_or_rejected.yaml
+- id: L_no_profile_era_language_conformance_terms
+  category: DocumentationLint
+  path: lint/L_no_profile_era_language_conformance_terms.yaml
+- id: coreRegistryTextNodeHashesToPublishedBlueId
+  category: Registry
+  path: registry/coreRegistryTextNodeHashesToPublishedBlueId.yaml
+- id: coreRegistryIntegerNodeHashesToPublishedBlueId
+  category: Registry
+  path: registry/coreRegistryIntegerNodeHashesToPublishedBlueId.yaml
+- id: coreRegistryDoubleNodeHashesToPublishedBlueId
+  category: Registry
+  path: registry/coreRegistryDoubleNodeHashesToPublishedBlueId.yaml
+- id: coreRegistryBooleanNodeHashesToPublishedBlueId
+  category: Registry
+  path: registry/coreRegistryBooleanNodeHashesToPublishedBlueId.yaml
+- id: coreRegistryDictionaryNodeHashesToPublishedBlueId
+  category: Registry
+  path: registry/coreRegistryDictionaryNodeHashesToPublishedBlueId.yaml
+- id: coreRegistryListNodeHashesToPublishedBlueId
+  category: Registry
+  path: registry/coreRegistryListNodeHashesToPublishedBlueId.yaml
+- id: changingCoreTypeDescriptionChangesBlueId
+  category: Registry
+  path: registry/changingCoreTypeDescriptionChangesBlueId.yaml
+- id: B_scalar_sugar_equivalence
+  category: BlueId
+  path: blueid/B_scalar_sugar_equivalence.yaml
+- id: B_list_sugar_equivalence
+  category: BlueId
+  path: blueid/B_list_sugar_equivalence.yaml
+- id: B_root_scalar
+  category: BlueId
+  path: blueid/B_root_scalar.yaml
+- id: B_root_list
+  category: BlueId
+  path: blueid/B_root_list.yaml
+- id: B_root_empty_object
+  category: BlueId
+  path: blueid/B_root_empty_object.yaml
+- id: B_root_pure_reference
+  category: BlueId
+  path: blueid/B_root_pure_reference.yaml
+- id: B_root_null_rejected
+  category: BlueId
+  path: blueid/B_root_null_rejected.yaml
+- id: B_plain_blueid_validation
+  category: BlueId
+  path: blueid/B_plain_blueid_validation.yaml
+- id: B_empty_list
+  category: BlueId
+  path: blueid/B_empty_list.yaml
+- id: B_object_field_null_removal
+  category: BlueId
+  path: blueid/B_object_field_null_removal.yaml
+- id: B_empty_placeholder
+  category: BlueId
+  path: blueid/B_empty_placeholder.yaml
+- id: B_null_list_element_rejected
+  category: BlueId
+  path: blueid/B_null_list_element_rejected.yaml
+- id: B_empty_object_list_element_rejected
+  category: BlueId
+  path: blueid/B_empty_object_list_element_rejected.yaml
+- id: B_malformed_empty_rejected
+  category: BlueId
+  path: blueid/B_malformed_empty_rejected.yaml
+- id: B_large_integer_quoted_explicit_integer
+  category: BlueId
+  path: blueid/B_large_integer_quoted_explicit_integer.yaml
+- id: B_unquoted_large_integer_rejected
+  category: BlueId
+  path: blueid/B_unquoted_large_integer_rejected.yaml
+- id: B_integer_1_vs_double_1_0
+  category: BlueId
+  path: blueid/B_integer_1_vs_double_1_0.yaml
+- id: B_double_1e0
+  category: BlueId
+  path: blueid/B_double_1e0.yaml
+- id: B_invalid_this_placeholder_rejected
+  category: BlueId
+  path: blueid/B_invalid_this_placeholder_rejected.yaml
+- id: B_type_alias_rejected_in_direct_blueid_input
+  category: BlueId
+  path: blueid/B_type_alias_rejected_in_direct_blueid_input.yaml
+- id: B_previous_invalid_blueid_rejected
+  category: BlueId
+  path: blueid/B_previous_invalid_blueid_rejected.yaml
+- id: B_pos_rejected
+  category: BlueId
+  path: blueid/B_pos_rejected.yaml
+- id: B_replace_rejected
+  category: BlueId
+  path: blueid/B_replace_rejected.yaml
+- id: R_blue_imports_type_itemType_keyType_valueType
+  category: Resolution
+  path: resolver/R_blue_imports_type_itemType_keyType_valueType.yaml
+- id: R_source_null_list_to_empty
+  category: Resolution
+  path: resolver/R_source_null_list_to_empty.yaml
+- id: R_source_empty_object_list_to_empty
+  category: Resolution
+  path: resolver/R_source_empty_object_list_to_empty.yaml
+- id: R_blue_imports
+  category: Resolution
+  path: resolver/R_blue_imports.yaml
+- id: R_schema_value_shapes
+  category: Schema
+  path: resolver/R_schema_value_shapes.yaml
+- id: R_schema_large_integer_minimum_with_type_alias
+  category: Schema
+  path: resolver/R_schema_large_integer_minimum_with_type_alias.yaml
+- id: R_schema_integer_multiple_of_lcm_merge
+  category: Schema
+  path: resolver/R_schema_integer_multiple_of_lcm_merge.yaml
+- id: R_enum_integer_vs_double
+  category: Schema
+  path: resolver/R_enum_integer_vs_double.yaml
+- id: R_canonical_overlay_no_previous_no_pos
+  category: Canonicalization
+  path: resolver/R_canonical_overlay_no_previous_no_pos.yaml
+- id: R_inherited_append_only_policy
+  category: Resolution
+  path: resolver/R_inherited_append_only_policy.yaml
+- id: R_inherited_item_type
+  category: Resolution
+  path: resolver/R_inherited_item_type.yaml
+- id: R_inherited_keyType_valueType
+  category: Resolution
+  path: resolver/R_inherited_keyType_valueType.yaml
+- id: R_provider_reference_canonicalizes_back
+  category: Canonicalization
+  path: resolver/R_provider_reference_canonicalizes_back.yaml
+- id: R_type_aliases_removed_from_canonical_overlay
+  category: Canonicalization
+  path: resolver/R_type_aliases_removed_from_canonical_overlay.yaml
+- id: R_contracts_merge_as_content
+  category: Resolution
+  path: resolver/R_contracts_merge_as_content.yaml
+- id: R_top_level_type_name_description_not_inherited
+  category: Resolution
+  path: resolver/R_top_level_type_name_description_not_inherited.yaml
+- id: R_type_derived_field_removed
+  category: Canonicalization
+  path: resolver/R_type_derived_field_removed.yaml
+- id: R_instance_field_kept
+  category: Canonicalization
+  path: resolver/R_instance_field_kept.yaml
+- id: R_provider_reference_with_overlay_keeps_overlay
+  category: Canonicalization
+  path: resolver/R_provider_reference_with_overlay_keeps_overlay.yaml
+- id: R_contracts_canonicalization_deterministic
+  category: Canonicalization
+  path: resolver/R_contracts_canonicalization_deterministic.yaml
+- id: R_child_field_labels_materialize_until_overridden
+  category: Resolution
+  path: resolver/R_child_field_labels_materialize_until_overridden.yaml
+- id: R_canonicalization_deterministic_for_same_resolved_view
+  category: Canonicalization
+  path: resolver/R_canonicalization_deterministic_for_same_resolved_view.yaml
+- id: F_provider_wrong_blueid_rejected
+  category: Provider
+  path: provider/F_provider_wrong_blueid_rejected.yaml
+- id: F_provider_missing_content_fails
+  category: Provider
+  path: provider/F_provider_missing_content_fails.yaml
+- id: F_expand_preserves_node_blueid
+  category: Provider
+  path: provider/F_expand_preserves_node_blueid.yaml
+- id: F_expand_nested_reference_preserves_node_blueid
+  category: Provider
+  path: provider/F_expand_nested_reference_preserves_node_blueid.yaml
+- id: F_expand_wrong_nested_provider_content_fails
+  category: Provider
+  path: provider/F_expand_wrong_nested_provider_content_fails.yaml
+- id: F_expand_missing_nested_content_fails
+  category: Provider
+  path: provider/F_expand_missing_nested_content_fails.yaml
+- id: F_collapse_preserves_node_blueid
+  category: Provider
+  path: provider/F_collapse_preserves_node_blueid.yaml
+- id: F_collapse_nested_subtree_preserves_node_blueid
+  category: Provider
+  path: provider/F_collapse_nested_subtree_preserves_node_blueid.yaml
+- id: F_collapse_does_not_produce_mixed_blueid
+  category: Provider
+  path: provider/F_collapse_does_not_produce_mixed_blueid.yaml
+- id: C_circular_reference_set_ids
+  category: Circular
+  path: circular/C_circular_reference_set_ids.yaml
+- id: C_this_placeholder_rejected_outside_cyclic_api
+  category: Circular
+  path: circular/C_this_placeholder_rejected_outside_cyclic_api.yaml
+- id: C_zero_blueid_rejected_in_final_input
+  category: Circular
+  path: circular/C_zero_blueid_rejected_in_final_input.yaml
+- id: C_three_document_cycle_stable_order
+  category: Circular
+  path: circular/C_three_document_cycle_stable_order.yaml
+- id: C_duplicate_preliminary_ids_deterministic_or_rejected
+  category: Circular
+  path: circular/C_duplicate_preliminary_ids_deterministic_or_rejected.yaml
+- id: B_double_negative_zero
+  category: BlueId
+  path: blueid/B_double_negative_zero.yaml
+- id: B_double_overflow_rejected
+  category: BlueId
+  path: blueid/B_double_overflow_rejected.yaml
+- id: B_payload_only_scalar_typed_identity
+  category: BlueId
+  path: blueid/B_payload_only_scalar_typed_identity.yaml
+- id: R_source_recursive_empty_object_list_to_empty
+  category: Resolution
+  path: resolver/R_source_recursive_empty_object_list_to_empty.yaml
+- id: R_core_type_compatibility_nominal_by_blueid
+  category: Resolution
+  path: resolver/R_core_type_compatibility_nominal_by_blueid.yaml
+- id: R_view_path_root_is_empty_string
+  category: Resolution
+  path: resolver/R_view_path_root_is_empty_string.yaml
+- id: R_schema_enum_order_and_duplicates_canonical
+  category: Schema
+  path: resolver/R_schema_enum_order_and_duplicates_canonical.yaml
+- id: R_schema_double_multiple_of_exact
+  category: Schema
+  path: resolver/R_schema_double_multiple_of_exact.yaml
+- id: R_schema_double_multiple_of_rejects_decimal_approximation
+  category: Schema
+  path: resolver/R_schema_double_multiple_of_rejects_decimal_approximation.yaml
+- id: R_schema_wrong_kind_keywords_rejected
+  category: Schema
+  path: resolver/R_schema_wrong_kind_keywords_rejected.yaml

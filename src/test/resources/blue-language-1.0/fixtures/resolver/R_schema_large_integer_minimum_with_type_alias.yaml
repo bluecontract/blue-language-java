@@ -6,10 +6,10 @@ source:
   schema:
     minimum:
       type: Integer
-      value: "9007199254740992"
+      value: '9007199254740992'
 expectedPreprocessed:
   schema:
     minimum:
       type:
-        blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1
-      value: "9007199254740992"
+        blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+      value: '9007199254740992'

@@ -18,7 +18,7 @@ Valid scalar node:
 
 ```yaml
 type:
-  blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1
+  blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
 value: 42
 ```
 
@@ -35,7 +35,7 @@ Valid list node:
 
 ```yaml
 type:
-  blueId: 6aehfNAxHLC1PHHoDr3tYtFH3RWNbiWdFancJ1bypXEY
+  blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
 items:
   - A
   - B

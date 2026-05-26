@@ -1,0 +1,12 @@
+name: Double
+description: >-
+  Core Blue Language 1.0 primitive scalar for finite IEEE 754 binary64
+  floating-point values. NaN, positive Infinity, and negative Infinity are
+  invalid Blue values. Double parsing uses round-to-nearest, ties-to-even
+  binary64 semantics; numeric tokens that overflow to Infinity or parse as NaN
+  are invalid. Source numeric tokens with a decimal point or exponent infer
+  Double when no explicit type is provided, even when their mathematical value
+  is integral. Negative zero and positive zero compare as the same numeric
+  value and canonicalize as JSON number zero, while the effective Double type
+  remains part of canonical BlueId input. Applicable schema constraints are
+  minimum, maximum, exclusiveMinimum, exclusiveMaximum, multipleOf, and enum.

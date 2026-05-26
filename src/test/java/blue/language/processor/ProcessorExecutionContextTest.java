@@ -62,10 +62,31 @@ final class ProcessorExecutionContextTest {
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
 
         context.emitEvent(new Node().value("payload"));
+        context.applyBufferedEffects();
 
         ScopeRuntimeContext scopeRuntime = execution.runtime().scope("/");
         assertEquals(1, scopeRuntime.triggeredQueue().size());
         assertTrue(execution.runtime().totalGas() >= 20L);
+    }
+
+    @Test
+    void invalidEmitEventFatalsBeforeQueueAndEmitGas() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+        Node invalidEvent = new Node()
+                .value("payload")
+                .properties("alsoPayload", new Node().value("invalid"));
+
+        context.emitEvent(invalidEvent);
+        assertThrows(RunTerminationException.class, context::applyBufferedEffects);
+
+        ScopeRuntimeContext scopeRuntime = execution.runtime().scope("/");
+        assertTrue(scopeRuntime.triggeredQueue().isEmpty());
+        assertEquals(150L, execution.runtime().totalGas());
+        assertEquals(2, execution.runtime().rootEmissions().size(),
+                "Only termination and fatal outbox events should be recorded for the failed emit");
     }
 
     @Test
@@ -94,7 +115,7 @@ final class ProcessorExecutionContextTest {
 
     @Test
     void fatalExceptionCarriesSnapshotBackedPartialResultDuringDocumentProcessing() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new FatalSetPropertyProcessor());
 
@@ -102,27 +123,25 @@ final class ProcessorExecutionContextTest {
                 "contracts:\n" +
                 "  events:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  fatal:\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    channel: events\n");
         DocumentProcessingResult initialized = blue.initializeDocument(document);
 
-        ProcessorFatalException ex = assertThrows(ProcessorFatalException.class,
-                () -> blue.processDocument(initialized.snapshot(), blue.objectToNode(new TestEvent().eventId("evt-fatal"))));
+        DocumentProcessingResult result = blue.processDocument(initialized.snapshot(),
+                blue.objectToNode(new TestEvent().eventId("evt-fatal")));
 
-        DocumentProcessingResult partial = ex.partialResult();
-        assertNotNull(partial);
-        assertNotNull(partial.snapshot());
-        assertEquals(partial.totalGas(), ex.totalGas());
-        assertTrue(partial.totalGas() >= 222L);
-        assertNotNull(partial.blueId());
-        assertFalse(initialized.blueId().equals(partial.blueId()),
+        assertNotNull(result);
+        assertNotNull(result.snapshot());
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertTrue(result.totalGas() >= 222L);
+        assertNotNull(result.blueId());
+        assertFalse(initialized.blueId().equals(result.blueId()),
                 "checkpoint marker creation before handler execution is part of the exposed partial state");
-        assertNotNull(partial.canonicalDocument().get("/contracts/checkpoint"));
-        assertEquals(0, partial.triggeredEvents().size());
-        assertEquals(initialized.canonicalDocument().get("/name"), partial.canonicalDocument().get("/name"));
+        assertNotNull(result.canonicalDocument().get("/contracts/checkpoint"));
+        assertEquals(initialized.canonicalDocument().get("/name"), result.canonicalDocument().get("/name"));
     }
 
     @Test
@@ -149,7 +168,7 @@ final class ProcessorExecutionContextTest {
     @Test
     void executingHandlerContextExposesContractKeyAndOriginalContractNode() {
         MetadataProbeProcessor processor = new MetadataProbeProcessor();
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(processor);
 
@@ -157,12 +176,12 @@ final class ProcessorExecutionContextTest {
                 "contracts:\n" +
                 "  events:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  probe:\n" +
                 "    name: Probe Handler\n" +
                 "    description: Captures execution context metadata\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    channel: events\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n");

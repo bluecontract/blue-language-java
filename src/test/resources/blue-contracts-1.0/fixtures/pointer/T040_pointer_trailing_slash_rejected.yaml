@@ -1,0 +1,6 @@
+id: T040_pointer_trailing_slash_rejected
+category: Pointer
+operation: pointerValidation
+pointer: /trailing/
+expectedValid: false
+expectedFailureReasonContains: trailing

@@ -1,0 +1,34 @@
+id: T048_ab_not_inside_a_for_patch_boundaries
+category: Patching
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  a:
+    contracts:
+      channel:
+        type:
+          blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+      handler:
+        channel: channel
+        type:
+          blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+        patches:
+          - op: replace
+            path: /ab/value
+            val:
+              value: bad
+  ab: {}
+  contracts:
+    embedded:
+      type:
+        blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+      paths:
+        - /a
+event:
+  kind: ab-boundary
+expectedCapabilityFailure: false
+expectedDocumentPathExists:
+  - /a/contracts/terminated
+expectedAbsentDocumentPaths:
+  - /ab/value

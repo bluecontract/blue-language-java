@@ -1,8 +1,10 @@
 package blue.language.processor;
 
+import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.MarkerContract;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
@@ -18,11 +20,19 @@ import java.util.function.Function;
 final class CheckpointManager {
 
     private final DocumentProcessingRuntime runtime;
-    private final Function<Node, String> signatureFn;
+    private final Blue blue;
 
-    CheckpointManager(DocumentProcessingRuntime runtime, Function<Node, String> signatureFn) {
+    CheckpointManager(DocumentProcessingRuntime runtime) {
+        this(runtime, (Blue) null);
+    }
+
+    CheckpointManager(DocumentProcessingRuntime runtime, Blue blue) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
-        this.signatureFn = Objects.requireNonNull(signatureFn, "signatureFn");
+        this.blue = blue;
+    }
+
+    CheckpointManager(DocumentProcessingRuntime runtime, Function<Node, String> ignoredSignatureFn) {
+        this(runtime, (Blue) null);
     }
 
     void ensureCheckpointMarker(String scopePath, ContractBundle bundle) {
@@ -30,9 +40,8 @@ final class CheckpointManager {
         String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_CHECKPOINT);
         if (marker == null) {
             Node markerNode = new Node()
-                    .type(new Node().blueId("ChannelEventCheckpoint"))
-                    .properties("lastEvents", new Node().properties(new LinkedHashMap<>()))
-                    .properties("lastSignatures", new Node().properties(new LinkedHashMap<>()));
+                    .type(new Node().blueId(RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT))
+                    .properties("lastEvents", new Node().properties(new LinkedHashMap<>()));
             runtime.directWrite(pointer, markerNode);
             bundle.registerCheckpointMarker(new ChannelEventCheckpoint());
             return;
@@ -49,8 +58,7 @@ final class CheckpointManager {
                 ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) entry.getValue();
                 Node stored = checkpoint.lastEvent(channelKey);
                 CheckpointRecord record = new CheckpointRecord(entry.getKey(), checkpoint, channelKey, stored);
-                String storedSignature = checkpoint.lastSignature(channelKey);
-                record.lastEventSignature = storedSignature != null ? storedSignature : signatureFn.apply(stored);
+                record.lastEventSignature = eventIdentity(stored);
                 return record;
             }
         }
@@ -76,12 +84,11 @@ final class CheckpointManager {
         runtime.directWrite(pointer, stored);
         record.checkpoint.updateEvent(record.channelKey, stored);
         record.lastEventNode = stored != null ? stored.clone() : null;
-        String signaturePointer = PointerUtils.resolvePointer(scopePath,
-                ProcessorPointerConstants.relativeCheckpointLastSignature(record.markerKey, record.channelKey));
-        Node signatureNode = eventSignature != null ? new Node().value(eventSignature) : null;
-        runtime.directWrite(signaturePointer, signatureNode);
-        record.checkpoint.updateSignature(record.channelKey, eventSignature);
         record.lastEventSignature = eventSignature;
+    }
+
+    private String eventIdentity(Node event) {
+        return CheckpointIdentityCalculator.identity(event, blue);
     }
 
     static final class CheckpointRecord {

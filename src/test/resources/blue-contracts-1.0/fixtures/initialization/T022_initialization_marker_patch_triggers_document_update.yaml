@@ -1,0 +1,28 @@
+id: T022_initialization_marker_patch_triggers_document_update
+category: Initialization
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    docUpdate:
+      type:
+        blueId: "Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o"
+      path: /contracts/initialized
+    handler:
+      channel: docUpdate
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /initMarkerUpdateObserved
+          val:
+            value: true
+event:
+  kind: init-doc-update
+expectedCapabilityFailure: false
+expectedDocumentPaths:
+  /initMarkerUpdateObserved:
+    value: true
+expectedDocumentPathExists:
+  - /contracts/initialized

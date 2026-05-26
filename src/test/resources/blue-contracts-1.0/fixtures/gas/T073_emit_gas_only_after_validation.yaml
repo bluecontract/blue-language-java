@@ -1,0 +1,21 @@
+id: T073_emit_gas_only_after_validation
+category: Gas
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    emitter:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      triggeredEvents:
+        - value: valid-event
+event:
+  kind: emit-gas
+expectedCapabilityFailure: false
+expectedExactGas: 1200
+expectedRootEventCount: 2

@@ -117,7 +117,7 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void runtimeRebuildsSnapshotFromGeneralizedDocumentWhenConformanceChangesTypes() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
@@ -142,7 +142,7 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void immutableConformancePlanningDoesNotMutatePreviousSnapshotRoots() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
@@ -172,7 +172,7 @@ class DocumentProcessorSnapshotTransactionTest {
         nodeProvider.addSingleDocs(
                 "name: Fixed One\n" +
                 "x: 1");
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Instance\n" +
@@ -205,7 +205,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Counter") + "\n" +
                 "x: 0");
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Counter Instance\n" +
@@ -331,11 +331,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 7\n", Node.class);
 
@@ -347,8 +347,6 @@ class DocumentProcessorSnapshotTransactionTest {
         assertNotNull(processed.snapshot());
         assertEquals(processed.snapshot().blueId(), processed.blueId());
         assertEquals(7, processed.canonicalDocument().getAsInteger("/x"));
-        assertEquals("evt-runtime-snapshot",
-                processed.canonicalDocument().getAsText("/contracts/checkpoint/lastSignatures/testChannel"));
         assertEquals("evt-runtime-snapshot",
                 processed.canonicalDocument().getAsText("/contracts/checkpoint/lastEvents/testChannel/eventId"));
         assertTrue(manager.applyPatchCalls >= 2);
@@ -365,15 +363,15 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
-                "      blueId: InitializationMarker\n" +
+                "      blueId: 6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q\n" +
                 "    documentId: doc-1\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 9\n", Node.class);
         FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(initialized);
@@ -397,11 +395,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 7\n", Node.class);
         DocumentProcessor nodeProcessor = new DocumentProcessor(null, new CountingSnapshotManager())
@@ -439,7 +437,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "name: Typed Runtime Root\n" +
                 "label:\n" +
                 "  type: Text");
-        Blue blue = new Blue(provider);
+        Blue blue = ProcessorTestSupport.blue(provider);
         ResolvedSnapshot input = blue.resolveToSnapshot(YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
@@ -480,7 +478,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "name: Money\n" +
                 "cents: 0");
         String moneyId = provider.getBlueIdByName("Money");
-        Blue blue = new Blue(provider);
+        Blue blue = ProcessorTestSupport.blue(provider);
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node document = YAML_MAPPER.readValue(
@@ -491,11 +489,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    path: /balance\n" +
                 "    propertyKey: cents\n" +
                 "    propertyValue: 0\n", Node.class);
@@ -517,14 +515,14 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 42\n");
-        Blue blue = new Blue(provider);
+        Blue blue = ProcessorTestSupport.blue(provider);
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node document = YAML_MAPPER.readValue(

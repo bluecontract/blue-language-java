@@ -1,0 +1,25 @@
+id: R_view_path_root_is_empty_string
+category: Resolution
+operation: assertViewPath
+description: Blue Language view paths use RFC 6901 root as the empty string; slash
+  selects an empty-key member
+document:
+  "": empty-key
+  regular:
+    items:
+    - first
+    - second
+  a/b:
+    c~d: escaped
+assertions:
+- path: ''
+  expectedRoot: true
+- path: /
+  expectedNode:
+    value: empty-key
+- path: /regular/items/0
+  expectedNode:
+    value: first
+- path: /a~1b/c~0d
+  expectedNode:
+    value: escaped

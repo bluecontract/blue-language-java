@@ -4,11 +4,11 @@ operation: preprocess
 description: source list empty object normalizes to exact empty placeholder
 source:
   items:
-    - A
-    - {}
-    - B
+  - A
+  - {}
+  - B
 expectedPreprocessed:
   items:
-    - value: A
-    - $empty: true
-    - value: B
+  - value: A
+  - $empty: true
+  - value: B

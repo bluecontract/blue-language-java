@@ -1,0 +1,62 @@
+id: T079_generalization_nearest_valid_child_type
+category: Generalization
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+  - blue-contracts-fixture-type-graph-v1
+typeGraph:
+  Price:
+    blueId: 4AQJxurDsYFiwbuh6TshyzZ1XJgyRDQSoFHeCu2Kcw8p
+  PriceInEUR:
+    blueId: GKR2zJxmhCkDjabCgsVVfv4nsFYYDmk8XaGGqdNrtZKd
+    parent: Price
+    fixedValues:
+      /currency: EUR
+initialDocument:
+  price:
+    type:
+      blueId: GKR2zJxmhCkDjabCgsVVfv4nsFYYDmk8XaGGqdNrtZKd
+    amount: 150
+    currency: EUR
+  contracts:
+    incoming:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+    patcher:
+      type:
+        blueId: 2TwRC3EdLXk4gqwyyVWy52h5BQ5ntrkmpcrhrTxsGAs1
+      channel: incoming
+event:
+  kind: change-currency
+mockRuntime:
+  channels:
+    - contract: /contracts/incoming
+      calls:
+        - when:
+            event:
+              kind: change-currency
+          accepted: true
+          payload:
+            kind: change-currency
+  handlers:
+    - contract: /contracts/patcher
+      calls:
+        - when:
+            channelKey: incoming
+          result:
+            patches:
+              - op: replace
+                path: /price/currency
+                val: USD
+expectedStatus: success
+expectedDocumentPaths:
+  /price/currency:
+    value: USD
+  /price/type:
+    blueId: 4AQJxurDsYFiwbuh6TshyzZ1XJgyRDQSoFHeCu2Kcw8p
+expectedDocumentUpdateOrder:
+  - /price/currency
+  - /price/type
+expectedAbsentDocumentPathValues:
+  - path: /price/type/blueId
+    value: GKR2zJxmhCkDjabCgsVVfv4nsFYYDmk8XaGGqdNrtZKd

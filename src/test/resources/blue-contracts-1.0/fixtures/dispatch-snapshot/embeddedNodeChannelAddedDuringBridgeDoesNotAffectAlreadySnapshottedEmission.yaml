@@ -1,0 +1,37 @@
+id: embeddedNodeChannelAddedDuringBridgeDoesNotAffectAlreadySnapshottedEmission
+category: DispatchSnapshot
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    embedded:
+      type:
+        blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q
+      paths:
+        - /child
+    bridge:
+      type:
+        blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i
+      childPath: /child
+  child:
+    contracts: {}
+event:
+  kind: bridge-add-channel
+mockRuntime:
+  childEmissions:
+    /child:
+      - id: child-1
+      - id: child-2
+  bridgeMutations:
+    - duringEmission: child-1
+      addChannelKey: lateBridge
+      childPath: /child
+expectedStatus: success
+expectedEmbeddedDeliveryOrder:
+  - emission: child-1
+    channels: [bridge]
+  - emission: child-2
+    channels: [bridge, lateBridge]
+expectedDocumentPathExists:
+  - /contracts/lateBridge

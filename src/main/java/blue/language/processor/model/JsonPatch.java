@@ -2,10 +2,11 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
 import java.util.Objects;
 
-@TypeBlueId("JsonPatch")
+@TypeBlueId(RuntimeBlueIds.JSON_PATCH_ENTRY)
 public class JsonPatch {
 
     public enum Op {

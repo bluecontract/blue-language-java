@@ -1,0 +1,14 @@
+name: List
+description: >-
+  Core Blue Language 1.0 ordered collection type. Surface array form and
+  wrapped items form are equivalent authoring forms. Order and multiplicity
+  are preserved. List BlueId calculation uses a domain-separated streaming
+  fold over element BlueIds. itemType is optional; if omitted and no effective
+  itemType is inherited, elements are not constrained by itemType. If
+  mergePolicy is omitted and no effective mergePolicy is inherited, resolvers
+  assume positional. append-only forbids changes to the inherited prefix.
+  positional allows $pos overlays within the inherited prefix. $previous,
+  $pos, $replace, and $empty are recognized only at the top level of items
+  when the node's effective type is List. Source list null and empty object
+  elements normalize to $empty: true and are not deleted. Applicable schema
+  constraints are minItems, maxItems, and uniqueItems.

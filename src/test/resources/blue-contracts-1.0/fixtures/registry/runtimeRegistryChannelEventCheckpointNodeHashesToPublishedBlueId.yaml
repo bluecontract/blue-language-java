@@ -1,0 +1,8 @@
+id: runtimeRegistryChannelEventCheckpointNodeHashesToPublishedBlueId
+category: Registry
+operation: registryNodeHashesToPublishedBlueId
+registryKind: Blue Contracts runtime type registry
+registryKey: ChannelEventCheckpoint
+registryPath: registry/blue-contracts-1.0/ChannelEventCheckpoint.blue
+expectedBlueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1
+semanticDescriptionIdentityBearing: true

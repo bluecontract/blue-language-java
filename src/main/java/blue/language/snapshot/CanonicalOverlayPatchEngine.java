@@ -170,10 +170,68 @@ public final class CanonicalOverlayPatchEngine {
             throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
         }
 
-        if (mode == WriteMode.REMOVE && node.property(leaf) == null) {
+        FrozenNode existing = node.property(leaf);
+        if (mode == WriteMode.REMOVE && existing == null) {
             throw new IllegalStateException("Path does not exist for remove: " + path);
         }
-        return node.withProperty(leaf, mode == WriteMode.REMOVE ? null : value);
+        FrozenNode nextValue = mode == WriteMode.REPLACE ? mergeObjectReplacement(existing, value) : value;
+        return node.withProperty(leaf, mode == WriteMode.REMOVE ? null : nextValue);
+    }
+
+    private FrozenNode mergeObjectReplacement(FrozenNode existing, FrozenNode replacement) {
+        if (!isMergeableObject(existing) || !isMergeableObject(replacement)) {
+            return replacement;
+        }
+        Node merged = existing.toNode();
+        Node overlay = replacement.toNode();
+        if (overlay.getProperties() != null) {
+            overlay.getProperties().forEach((key, value) -> merged.properties(key, value.clone()));
+        }
+        if (overlay.getContracts() != null) {
+            merged.contracts(overlay.getContracts().clone());
+        }
+        if (overlay.getType() != null) {
+            merged.type(overlay.getType().clone());
+        }
+        if (overlay.getItemType() != null) {
+            merged.itemType(overlay.getItemType().clone());
+        }
+        if (overlay.getKeyType() != null) {
+            merged.keyType(overlay.getKeyType().clone());
+        }
+        if (overlay.getValueType() != null) {
+            merged.valueType(overlay.getValueType().clone());
+        }
+        if (overlay.getBlue() != null) {
+            merged.blue(overlay.getBlue().clone());
+        }
+        if (overlay.getSchema() != null) {
+            merged.schema(overlay.getSchema().clone());
+        }
+        if (overlay.getName() != null) {
+            merged.name(overlay.getName());
+        }
+        if (overlay.getDescription() != null) {
+            merged.description(overlay.getDescription());
+        }
+        if (overlay.getMergePolicy() != null) {
+            merged.mergePolicy(overlay.getMergePolicy());
+        }
+        if (overlay.getPreviousBlueId() != null) {
+            merged.previousBlueId(overlay.getPreviousBlueId());
+        }
+        if (overlay.getPosition() != null) {
+            merged.position(overlay.getPosition());
+        }
+        return freezePatchValue(merged);
+    }
+
+    private boolean isMergeableObject(FrozenNode node) {
+        return node != null
+                && node.getValue() == null
+                && !node.hasItems()
+                && !node.isReferenceOnly()
+                && node.getPreviousBlueId() == null;
     }
 
     private FrozenNode read(FrozenNode node, List<String> segments, boolean beforeAdd) {

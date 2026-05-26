@@ -27,6 +27,9 @@ public class Types {
         String supertypeBlueId = typeBlueId(supertype);
         if (sameType(subtype, supertype, subtypeBlueId, supertypeBlueId))
             return true;
+        if (isCoreTypeIdentity(supertype, supertypeBlueId) && isAnonymousCoreAlias(subtype)) {
+            return false;
+        }
 
         if (CORE_TYPE_BLUE_IDS.contains(subtypeBlueId)) {
             Node current = supertype;
@@ -79,7 +82,36 @@ public class Types {
         if (leftBlueId.equals(rightBlueId)) {
             return true;
         }
-        return compatibilityBlueId(left).equals(compatibilityBlueId(right));
+        String leftCompatibility = compatibilityBlueId(left);
+        String rightCompatibility = compatibilityBlueId(right);
+        if (CORE_TYPE_BLUE_IDS.contains(leftCompatibility) || CORE_TYPE_BLUE_IDS.contains(rightCompatibility)) {
+            return leftCompatibility.equals(rightCompatibility);
+        }
+        return leftCompatibility.equals(rightCompatibility);
+    }
+
+    private static boolean isCoreTypeIdentity(Node node, String blueId) {
+        return CORE_TYPE_BLUE_IDS.contains(blueId) || isBareCoreTypeName(node);
+    }
+
+    private static boolean isAnonymousCoreAlias(Node node) {
+        return node.getName() == null
+                && node.getDescription() == null
+                && node.getBlueId() == null
+                && node.getType() != null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null
+                && node.getValue() == null
+                && node.getItems() == null
+                && node.getProperties() == null
+                && node.getContracts() == null
+                && node.getSchema() == null
+                && node.getMergePolicy() == null
+                && node.getPreviousBlueId() == null
+                && node.getPosition() == null
+                && node.getBlue() == null
+                && CORE_TYPE_BLUE_IDS.contains(typeBlueId(node.getType()));
     }
 
     private static String typeBlueId(Node node) {
@@ -174,17 +206,16 @@ public class Types {
     }
 
     public static boolean isSubtypeOfBasicType(Node type, NodeProvider nodeProvider) {
-        return BASIC_TYPES.stream()
-                .map(basicTypeName -> new Node().name(basicTypeName))
+        return BASIC_TYPE_BLUE_IDS.stream()
+                .map(blueId -> new Node().blueId(blueId))
                 .anyMatch(basicTypeNode -> isSubtype(type, basicTypeNode, nodeProvider));
     }
 
     public static String findBasicTypeName(Node type, NodeProvider nodeProvider) {
-        return BASIC_TYPES.stream()
-                .map(basicTypeName -> new Node().name(basicTypeName))
-                .filter(basicTypeNode -> Types.isSubtype(type, basicTypeNode, nodeProvider))
+        return BASIC_TYPE_BLUE_IDS.stream()
+                .filter(blueId -> Types.isSubtype(type, new Node().blueId(blueId), nodeProvider))
                 .findFirst()
-                .map(Node::getName)
+                .map(CORE_TYPE_BLUE_ID_TO_NAME_MAP::get)
                 .orElseThrow(() -> new IllegalArgumentException("Cannot determine the basic type for node of type \"" + type.getName() + "\"."));
     }
 

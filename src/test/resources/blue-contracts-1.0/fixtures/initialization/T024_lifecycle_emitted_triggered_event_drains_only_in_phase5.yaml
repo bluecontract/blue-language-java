@@ -1,0 +1,34 @@
+id: T024_lifecycle_emitted_triggered_event_drains_only_in_phase5
+category: Initialization
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    life:
+      type:
+        blueId: "2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ"
+    lifeHandler:
+      channel: life
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      triggeredEvents:
+        - value: from-lifecycle
+    triggered:
+      type:
+        blueId: "5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ"
+    triggeredHandler:
+      channel: triggered
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /lifecycleTriggeredDrained
+          val:
+            value: true
+event:
+  kind: lifecycle-fifo
+expectedCapabilityFailure: false
+expectedDocumentPaths:
+  /lifecycleTriggeredDrained:
+    value: true

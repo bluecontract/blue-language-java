@@ -38,7 +38,11 @@ class BlueConformanceReportTest {
             "calculateSemanticBlueId",
             "expand",
             "collapse",
-            "assertSameNodeBlueId"
+            "assertSameNodeBlueId",
+            "assertViewPath",
+            "registryNodeHashesToPublishedBlueId",
+            "changingRegistryDescriptionChangesBlueId",
+            "lintPublishableDocumentation"
     ));
 
     @Test
@@ -89,7 +93,8 @@ class BlueConformanceReportTest {
                 BlueFixtureCategory.BLUE_ID,
                 "calculateBlueId",
                 IllegalArgumentException.class.getName(),
-                "bad fixture");
+                "bad fixture",
+                BlueLanguageErrorCategory.InvalidBlueIdInput);
         BlueConformanceReport report = new BlueConformanceReport(
                 "1.0",
                 Collections.emptyMap(),
@@ -104,6 +109,7 @@ class BlueConformanceReportTest {
         assertEquals("B_bad", report.getFailures().get(0).getFixtureId());
         assertEquals("calculateBlueId", report.getFailures().get(0).getOperation());
         assertEquals(IllegalArgumentException.class.getName(), report.getFailures().get(0).getExceptionClass());
+        assertEquals(BlueLanguageErrorCategory.InvalidBlueIdInput, report.getFailures().get(0).getErrorCategory());
     }
 
     @Test

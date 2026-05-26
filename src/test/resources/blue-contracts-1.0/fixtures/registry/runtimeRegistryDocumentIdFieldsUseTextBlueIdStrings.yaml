@@ -1,0 +1,15 @@
+id: runtimeRegistryDocumentIdFieldsUseTextBlueIdStrings
+category: Registry
+operation: registryFieldUsesTextBlueIdString
+registryKind: Blue Contracts runtime type registry
+fields:
+  - registryKey: ProcessingInitializedMarker
+    registryPath: registry/blue-contracts-1.0/ProcessingInitializedMarker.blue
+    fieldPath: /documentId
+    expectedType: Text
+    expectedDescriptionContains: BlueId string
+  - registryKey: DocumentProcessingInitiated
+    registryPath: registry/blue-contracts-1.0/DocumentProcessingInitiated.blue
+    fieldPath: /documentId
+    expectedType: Text
+    expectedDescriptionContains: BlueId string

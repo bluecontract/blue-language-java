@@ -5,4 +5,4 @@ description: malformed empty placeholders are rejected
 expectError: true
 input:
   items:
-    - $empty: false
+  - $empty: false

@@ -186,7 +186,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
                 "name: Has Inherited List\n" +
                 "a:\n" +
                 "  - inherited");
-        Blue blue = new Blue(provider);
+        Blue blue = ProcessorTestSupport.blue(provider);
         Node canonical = YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
@@ -210,7 +210,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         provider.addSingleDocs(
                 "name: Has Inherited Status\n" +
                 "status: idle");
-        Blue blue = new Blue(provider);
+        Blue blue = ProcessorTestSupport.blue(provider);
         Node canonical = YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +

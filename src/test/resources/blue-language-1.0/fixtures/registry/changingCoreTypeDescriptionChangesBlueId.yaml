@@ -1,0 +1,9 @@
+id: changingCoreTypeDescriptionChangesBlueId
+category: Registry
+operation: changingRegistryDescriptionChangesBlueId
+registryKind: Blue Language core type registry
+registryKey: Text
+mutation:
+  field: description
+  append: ' '
+expectBlueIdChanged: true

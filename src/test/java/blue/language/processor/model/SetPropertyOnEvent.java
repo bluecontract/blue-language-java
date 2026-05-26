@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.HandlerContract;
 
-@TypeBlueId("SetPropertyOnEvent")
+@TypeBlueId("H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz")
 public class SetPropertyOnEvent extends HandlerContract {
 
     private String expectedKind;

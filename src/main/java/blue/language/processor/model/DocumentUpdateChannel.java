@@ -1,8 +1,9 @@
 package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
-@TypeBlueId("DocumentUpdateChannel")
+@TypeBlueId(RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL)
 public class DocumentUpdateChannel extends ChannelContract {
 
     private String path;

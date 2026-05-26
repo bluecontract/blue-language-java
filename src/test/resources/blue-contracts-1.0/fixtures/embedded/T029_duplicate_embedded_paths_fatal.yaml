@@ -1,0 +1,21 @@
+id: T029_duplicate_embedded_paths_fatal
+category: Embedded
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  child: {}
+  contracts:
+    embedded:
+      type:
+        blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+      paths:
+        - /child
+        - /child
+event:
+  kind: duplicate-embedded
+expectedCapabilityFailure: true
+expectedNoDocumentMutation: true
+expectedTotalGas: 0
+expectedRootEventCount: 0
+expectedFailureReasonContains: Unique items are required
