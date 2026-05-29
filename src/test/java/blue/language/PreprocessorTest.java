@@ -30,7 +30,9 @@ public class PreprocessorTest {
                      "    value: Integer\n" +
                      "c:\n" +
                      "  type:\n" +
-                     "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
+                     "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                     "d:\n" +
+                     "  type: Channel";
 
         Blue blue = new Blue();
         Node node = blue.preprocess(blue.yamlToNode(doc));
@@ -38,10 +40,12 @@ public class PreprocessorTest {
         assertEquals(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get("Integer"), node.getProperties().get("a").getType().getName());
         assertEquals("Integer", node.getProperties().get("b").getType().getValue());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("c").getType().getBlueId());
+        assertEquals(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get("Channel"), node.getProperties().get("d").getType().getBlueId());
 
         assertFalse(node.getProperties().get("a").getType().isInlineValue());
         assertFalse(node.getProperties().get("b").getType().isInlineValue());
         assertFalse(node.getProperties().get("c").getType().isInlineValue());
+        assertFalse(node.getProperties().get("d").getType().isInlineValue());
     }
 
     @Test
@@ -109,6 +113,23 @@ public class PreprocessorTest {
 
         assertNull(result.getProperties().get("x").getType());
         assertEquals(BigInteger.ONE, result.getProperties().get("x").getValue());
+    }
+
+    @Test
+    public void blueImportsCannotRedefineDefaultRuntimeAliases() {
+        Node raw = YAML_MAPPER.readValue(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Channel:\n" +
+                "      blueId: " + TEXT_TYPE_BLUE_ID + "\n" +
+                "x:\n" +
+                "  type: Channel",
+                Node.class);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> new Preprocessor(BootstrapProvider.INSTANCE).preprocess(raw));
+
+        assertTrue(error.getMessage().contains("default Blue alias \"Channel\""));
     }
 
     @Test

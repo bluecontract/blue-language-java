@@ -1,5 +1,6 @@
 package blue.language.processor.registry;
 
+import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelEventCheckpoint;
@@ -39,6 +40,22 @@ class BlueRuntimeTypeRegistryTest {
             assertEquals(1, nodes.size(), entry.getKey().name());
             assertNotNull(nodes.get(0).getName(), entry.getKey().name());
         }
+    }
+
+    @Test
+    void blueInstancesResolveRuntimeTypeDefinitionsByDefault() {
+        Blue blue = new Blue();
+
+        Node resolved = blue.resolve(blue.yamlToNode(
+                "type: Document Update Channel\n" +
+                "path: /orders"));
+
+        assertEquals(RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL, resolved.getType().getBlueId());
+        assertEquals("Document Update Channel", resolved.getType().getName());
+        assertNotNull(resolved.getProperties().get("order"), "Contract field should be inherited");
+        assertNotNull(resolved.getProperties().get("event"), "Channel field should be inherited");
+        assertEquals("/orders", resolved.getProperties().get("path").getValue());
+        assertNotNull(blue.getNodeProvider().fetchByBlueId(RuntimeBlueIds.CHANNEL));
     }
 
     @Test

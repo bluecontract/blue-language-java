@@ -1,6 +1,8 @@
 package blue.language.utils;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,5 +58,78 @@ public class Properties {
     public static final Map<String, String> CORE_TYPE_BLUE_ID_TO_NAME_MAP = IntStream.range(0, CORE_TYPES.size())
             .boxed()
             .collect(Collectors.toMap(CORE_TYPE_BLUE_IDS::get, CORE_TYPES::get));
+
+    public static final List<String> BLUE_CONTRACTS_RUNTIME_TYPES = Arrays.asList(
+            "Contract",
+            "Json Patch Entry",
+            "Contract Execution Result",
+            "Channel",
+            "Handler",
+            "Marker",
+            "Process Embedded",
+            "Processing Initialized Marker",
+            "Processing Terminated Marker",
+            "Channel Event Checkpoint",
+            "Type Generalization Policy",
+            "Type Generalization Rule",
+            "Document Update Channel",
+            "Triggered Event Channel",
+            "Lifecycle Event Channel",
+            "Embedded Node Channel",
+            "Document Update",
+            "Document Processing Initiated",
+            "Document Processing Terminated",
+            "Document Processing Fatal Error"
+    );
+
+    public static final List<String> BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_IDS = Arrays.asList(
+            "6WrVQoSpKHUUg5HPrwjkVV6pxe4sdkyGnakMs8ayEGeF",
+            "61W96XosAp3DrEC7PuqLYtmF2A6ETpqH6qF2DgYwDq4c",
+            "AMtAXPmvumgz1GxKUU9uv3ncXiKMENvqq8AaLvD5LXhv",
+            "4FAZ94JPExNM4pn2ZhtdHa4CVP7uASmLNVrBy7aCG1p5",
+            "7X46P3Q6FJrogqKrBXTALpqzkieyyiQeatnqLvWzAPXE",
+            "6zqbYGDGrMv5ReuEsjyzyyjjuqVnqDZxtY7RsPXdBTNy",
+            "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q",
+            "6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q",
+            "GBDBthfshBFr4GQKUU1fmy4GnPL7q2y3as4deUWpuBtu",
+            "9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1",
+            "Fbenow6tanFHkWzKiDD8fGxminQswQ1FecMRakaCx2WX",
+            "7Vnmk8StjwY7e9mBNpACrn8oh3KZ7yQBjnXe5bLDWn4D",
+            "Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o",
+            "5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ",
+            "2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ",
+            "H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i",
+            "7HEaG1SpBdsbVHsrwRTZSZGmpJUWHfFoEzecYWpjo1vm",
+            "Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL",
+            "4HWncQEQsdpk8zcXxYxgdtoXo5nKHxFPWeJfTscCbmeK",
+            "AMZbj5tNGxjPrvaNyw56sfqcLSW2j1XmkncEYUVtgmVC"
+    );
+
+    public static final Map<String, String> BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP =
+            IntStream.range(0, BLUE_CONTRACTS_RUNTIME_TYPES.size())
+                    .boxed()
+                    .collect(Collectors.toMap(BLUE_CONTRACTS_RUNTIME_TYPES::get, BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_IDS::get));
+
+    public static final Map<String, String> BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_ID_TO_NAME_MAP =
+            IntStream.range(0, BLUE_CONTRACTS_RUNTIME_TYPES.size())
+                    .boxed()
+                    .collect(Collectors.toMap(BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_IDS::get, BLUE_CONTRACTS_RUNTIME_TYPES::get));
+
+    public static final Map<String, String> DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP = buildDefaultBlueTypeNameToBlueIdMap();
+    public static final Map<String, String> DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP = buildDefaultBlueTypeBlueIdToNameMap();
+
+    private static Map<String, String> buildDefaultBlueTypeNameToBlueIdMap() {
+        Map<String, String> result = new LinkedHashMap<>();
+        result.putAll(CORE_TYPE_NAME_TO_BLUE_ID_MAP);
+        result.putAll(BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP);
+        return Collections.unmodifiableMap(result);
+    }
+
+    private static Map<String, String> buildDefaultBlueTypeBlueIdToNameMap() {
+        Map<String, String> result = new LinkedHashMap<>();
+        result.putAll(CORE_TYPE_BLUE_ID_TO_NAME_MAP);
+        result.putAll(BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_ID_TO_NAME_MAP);
+        return Collections.unmodifiableMap(result);
+    }
 
 }

@@ -1,4 +1,4 @@
 name: Infer Basic Types For Untyped Values
 type:
-  blueId: AFidhDk8aBDwV7J5X2GjujPfVXBuHvHLcrXMBxxoCSf9
+  blueId: Ct1SGRGw1i47qjzm1ruiUdSZofeV6WevPTGuieVvbRS4
 description: This transformation infers type details for Text, Integer, Number and Boolean.

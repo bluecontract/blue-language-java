@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static blue.language.utils.Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP;
+import static blue.language.utils.Properties.DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
@@ -74,7 +74,7 @@ public class Preprocessor {
     }
 
     private Node applyStandardBaseline(Node document) {
-        Node transformed = new ReplaceInlineValuesForTypeAttributesWithImports(CORE_TYPE_NAME_TO_BLUE_ID_MAP)
+        Node transformed = new ReplaceInlineValuesForTypeAttributesWithImports(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP)
                 .process(document);
         return new InferBasicTypesForUntypedValues().process(transformed);
     }
@@ -120,9 +120,9 @@ public class Preprocessor {
                 throw new IllegalArgumentException("\"blue.imports." + alias + "\" must be a pure reference.");
             }
             String blueId = BlueIds.requirePlainBlueId(reference.getBlueId(), "blue.imports." + alias);
-            String coreBlueId = CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(alias);
-            if (coreBlueId != null && !coreBlueId.equals(blueId)) {
-                throw new IllegalArgumentException("\"blue.imports\" cannot redefine core alias \"" + alias + "\".");
+            String defaultBlueId = DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get(alias);
+            if (defaultBlueId != null && !defaultBlueId.equals(blueId)) {
+                throw new IllegalArgumentException("\"blue.imports\" cannot redefine default Blue alias \"" + alias + "\".");
             }
             mappings.put(alias, blueId);
         }
@@ -142,15 +142,17 @@ public class Preprocessor {
 
     public static TransformationProcessorProvider getStandardProvider() {
         return new TransformationProcessorProvider() {
-            private static final String REPLACE_INLINE_TYPES = "53yFLQ3dpuGwa2svHubDyzyhYz9RQNmctiJRdi3gRYr7";
-            private static final String INFER_BASIC_TYPES = "49hrWpkoXavNmK8PpZag11zB2vYwzhQZahwioz6vDk2i";
+            private static final String REPLACE_INLINE_TYPES = "27B7fuxQCS1VAptiCPc2RMkKoutP5qxkh3uDxZ7dr6Eo";
+            private static final String LEGACY_REPLACE_INLINE_TYPES = "53yFLQ3dpuGwa2svHubDyzyhYz9RQNmctiJRdi3gRYr7";
+            private static final String INFER_BASIC_TYPES = "FGYuTXwaoSKfZmpTysLTLsb8WzSqf43384rKZDkXhxD4";
+            private static final String LEGACY_INFER_BASIC_TYPES = "49hrWpkoXavNmK8PpZag11zB2vYwzhQZahwioz6vDk2i";
 
             @Override
             public Optional<TransformationProcessor> getProcessor(Node transformation) {
                 String blueId = transformation.getAsText("/type/blueId");
-                if (REPLACE_INLINE_TYPES.equals(blueId))
+                if (REPLACE_INLINE_TYPES.equals(blueId) || LEGACY_REPLACE_INLINE_TYPES.equals(blueId))
                     return Optional.of(new ReplaceInlineValuesForTypeAttributesWithImports(transformation));
-                else if (INFER_BASIC_TYPES.equals(blueId))
+                else if (INFER_BASIC_TYPES.equals(blueId) || LEGACY_INFER_BASIC_TYPES.equals(blueId))
                     return Optional.of(new InferBasicTypesForUntypedValues());
                 return Optional.empty();
             }

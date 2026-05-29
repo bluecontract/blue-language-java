@@ -2,16 +2,22 @@ package blue.language.provider;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
+import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
 import static blue.language.utils.Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP;
+import static blue.language.utils.Properties.DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP;
+import static blue.language.utils.Properties.DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP;
 import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
@@ -36,6 +42,28 @@ class BootstrapProviderVerificationTest {
         CORE_TYPE_NAME_TO_BLUE_ID_MAP.forEach((name, blueId) ->
                 assertEquals(name, CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(blueId)));
         assertEquals(CORE_TYPE_NAME_TO_BLUE_ID_MAP, new Blue().conformanceReport().getCoreRegistryBlueIds());
+    }
+
+    @Test
+    void defaultBlueAliasMapIncludesRuntimeTypeBlueIds() {
+        BlueRuntimeTypeRegistry registry = BlueRuntimeTypeRegistry.getDefault();
+
+        for (RuntimeTypeKey key : RuntimeTypeKey.values()) {
+            String name = registry.node(key).getName();
+            String blueId = registry.blueId(key);
+            assertEquals(blueId, DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get(name));
+            assertEquals(name, DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP.get(blueId));
+        }
+    }
+
+    @Test
+    void defaultBlueResourceMappingsMatchDefaultAliasMap() throws Exception {
+        Node defaultBlue = readResource("transformation/DefaultBlue.blue");
+        Node mappings = defaultBlue.getItems().get(0).getProperties().get("mappings");
+        Map<String, String> actual = new LinkedHashMap<>();
+        mappings.getProperties().forEach((name, node) -> actual.put(name, (String) node.getValue()));
+
+        assertEquals(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP, actual);
     }
 
     @Test
