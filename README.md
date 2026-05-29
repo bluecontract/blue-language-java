@@ -1,7 +1,7 @@
 # Blue Language Java
 
 Java implementation of the Blue language core:
-https://language.blue/docs/reference/specification
+https://github.com/bluecontract/blue-spec
 
 Blue is a deterministic document language for describing data, types, and
 identity. A Blue document can be parsed, resolved against its type graph,
@@ -36,7 +36,7 @@ repositories {
 }
 
 dependencies {
-    implementation "blue.language:blue-language-java:1.0.0"
+    implementation "blue.language:blue-language-java:3.0.0"
 }
 ```
 
@@ -46,22 +46,8 @@ Maven:
 <dependency>
     <groupId>blue.language</groupId>
     <artifactId>blue-language-java</artifactId>
-    <version>1.0.0</version>
+    <version>3.0.0</version>
 </dependency>
-```
-
-For local development before the `1.0.0` release is available from Maven
-Central, publish this checkout locally and depend on the snapshot version
-reported by Gradle. After the 1.0 bump, that coordinate is:
-
-```bash
-./gradlew publishToMavenLocal
-```
-
-```groovy
-dependencies {
-    implementation "blue.language:blue-language-java:1.0.0-SNAPSHOT"
-}
 ```
 
 ## Core Concepts
