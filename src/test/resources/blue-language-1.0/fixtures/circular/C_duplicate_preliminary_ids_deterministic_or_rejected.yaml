@@ -1,0 +1,12 @@
+id: C_duplicate_preliminary_ids_deterministic_or_rejected
+category: Circular
+operation: calculateCircularSetBlueIds
+description: duplicate preliminary cyclic members without identity-bearing disambiguators
+  are rejected
+documents:
+- next:
+    blueId: this#1
+- next:
+    blueId: this#0
+expectError: true
+expectedErrorCategory: CircularSetError

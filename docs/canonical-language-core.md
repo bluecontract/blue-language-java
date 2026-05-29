@@ -18,7 +18,7 @@ Valid scalar node:
 
 ```yaml
 type:
-  blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1
+  blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
 value: 42
 ```
 
@@ -35,7 +35,7 @@ Valid list node:
 
 ```yaml
 type:
-  blueId: 6aehfNAxHLC1PHHoDr3tYtFH3RWNbiWdFancJ1bypXEY
+  blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
 items:
   - A
   - B
@@ -84,24 +84,16 @@ schema:
   minimum: 0
 ```
 
-Legacy input with `constraints` is migrated:
+Input with `constraints` is rejected:
 
 ```yaml
-name: Legacy
+name: Invalid Constraints
 constraints:
   minLength: 2
 ```
 
-After parsing, this is represented as:
-
-```yaml
-name: Legacy
-schema:
-  minLength: 2
-```
-
-If both `schema` and `constraints` are present, parsing fails because the two
-sources of truth would be ambiguous.
+Use `schema` directly. This keeps canonical ingestion strict and avoids a
+second schema vocabulary in source documents.
 
 ## Deterministic Numbers
 
@@ -188,7 +180,13 @@ String structural = blue.calculateBlueId(node);
 String semantic = blue.calculateSemanticBlueId(node);
 ```
 
-`calculateBlueId(node)` hashes the node as provided.
+`blue` is a preprocessing directive, not semantic content. It is not valid
+BlueId input.
+
+`calculateBlueId(node)` hashes a node that is already valid BlueId input. It
+rejects nodes containing `blue` because silently dropping the directive would
+hash unprocessed authored content. It also rejects `blueId` with sibling
+content; resolved runtime metadata must be minimized before canonical hashing.
 
 `calculateSemanticBlueId(node)` runs:
 
@@ -200,11 +198,19 @@ Use semantic BlueId when authoring noise should not matter. Use structural
 BlueId when the node is already known to be canonical and you want direct Merkle
 hashing.
 
+The BlueId algorithm removes nulls and empty maps at any depth. Empty lists are
+preserved. If a list element normalizes to an empty map, that element is removed.
+Use `$empty: true` when a placeholder must remain as content.
+
+A leading `$previous` list-control item is a list accumulator seed in the pure
+BlueId algorithm. The hash algorithm itself does not verify the seed against an
+inherited prefix. Semantic resolution validates that the inherited list prefix
+hashes to `$previous.blueId`; if it does not, resolution fails.
+
 ## Provider Ingestion
 
-Provider ingestion now parses and migrates legacy canonical fields before
-hashing. For example, `constraints` is migrated to `schema`, and the provider
-stores/fetches the migrated content under the corrected hash.
+Provider ingestion parses canonical fields strictly before hashing. `constraints`
+input is rejected; provider content must use `schema` directly.
 
 Provider ingestion does not yet resolve and semantically minimize arbitrary
 authoring input by default. If that becomes the intended language rule, provider

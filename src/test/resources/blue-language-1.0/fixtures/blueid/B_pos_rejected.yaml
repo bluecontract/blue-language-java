@@ -1,0 +1,10 @@
+id: B_pos_rejected
+category: BlueId
+operation: calculateBlueId
+description: direct BlueId Input rejects $pos overlays
+expectError: true
+expectedErrorCategory: InvalidBlueIdInput
+input:
+  items:
+  - $pos: 0
+    value: A

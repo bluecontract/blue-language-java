@@ -1,0 +1,10 @@
+id: R_schema_wrong_kind_keywords_rejected
+category: Schema
+operation: resolve
+description: schema keywords applied to incompatible value kinds fail deterministically
+expectError: true
+expectedErrorCategory: SchemaViolation
+source:
+  schema:
+    minLength: 1
+  value: 123

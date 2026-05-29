@@ -1,0 +1,17 @@
+id: R_schema_double_multiple_of_exact
+category: Schema
+operation: resolve
+description: Double multipleOf uses exact rational arithmetic over IEEE 754 binary64
+  values
+source:
+  type:
+    blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  schema:
+    multipleOf: 0.5
+  value: 1.5
+expectedResolved:
+  type:
+    blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  schema:
+    multipleOf: 0.5
+  value: 1.5

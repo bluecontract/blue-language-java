@@ -1,0 +1,58 @@
+id: T034_embedded_no_resurrection_after_remove_and_readd
+category: Embedded
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  child:
+    contracts:
+      childChannel:
+        type:
+          blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+      childHandler:
+        channel: childChannel
+        type:
+          blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+        patches:
+          - op: replace
+            path: /child/childRan
+            val:
+              value: true
+  contracts:
+    embedded:
+      type:
+        blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+      paths:
+        - /child
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    replaceChild:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /child
+          val:
+            contracts:
+              childChannel:
+                type:
+                  blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+              childHandler:
+                channel: childChannel
+                type:
+                  blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+                patches:
+                  - op: replace
+                    path: /resurrectedRan
+                    val:
+                      value: true
+event:
+  kind: no-resurrection
+expectedCapabilityFailure: false
+expectedDocumentPaths:
+  /child/childRan:
+    value: true
+expectedAbsentDocumentPaths:
+  - /resurrectedRan

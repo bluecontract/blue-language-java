@@ -18,9 +18,15 @@ public class NodeToPathLimitsConverter {
             return;
         }
 
-        if ((node.getProperties() == null || node.getProperties().isEmpty()) && node.getItems() == null) {
+        if ((node.getProperties() == null || node.getProperties().isEmpty())
+                && node.getItems() == null
+                && node.getContracts() == null) {
             builder.addPath(currentPath);
             return;
+        }
+
+        if (node.getContracts() != null) {
+            traverseNode(node.getContracts(), JsonPointer.append(currentPath, "contracts"), builder);
         }
 
         if (node.getProperties() != null) {

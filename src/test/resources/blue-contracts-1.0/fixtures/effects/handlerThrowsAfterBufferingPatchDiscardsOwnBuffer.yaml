@@ -1,0 +1,45 @@
+id: handlerThrowsAfterBufferingPatchDiscardsOwnBuffer
+category: Effects
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    incoming:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+    throwing:
+      type:
+        blueId: DGfkvtSJ9ruXQWbA1XRdjCExi4LGoQvg13Tu1nrMUFsY
+      channel: incoming
+event:
+  kind: throw-after-buffering
+mockRuntime:
+  channels:
+    - contract: /contracts/incoming
+      calls:
+        - when:
+            event:
+              kind: throw-after-buffering
+          accepted: true
+          payload:
+            kind: throw-after-buffering
+  handlers:
+    - contract: /contracts/throwing
+      calls:
+        - when:
+            channelKey: incoming
+          hostApiCalls:
+            - applyPatch:
+                op: replace
+                path: /bufferedPatchApplied
+                val: true
+            - throw:
+                category: HandlerExecutionError
+expectedStatus: runtime-fatal
+expectedErrorCategory: HandlerExecutionError
+expectedAbsentDocumentPaths:
+  - /bufferedPatchApplied
+expectedDocumentPaths:
+  /contracts/terminated/cause:
+    value: fatal

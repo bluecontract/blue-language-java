@@ -1,0 +1,8 @@
+id: runtimeRegistryProcessingInitializedMarkerNodeHashesToPublishedBlueId
+category: Registry
+operation: registryNodeHashesToPublishedBlueId
+registryKind: Blue Contracts runtime type registry
+registryKey: ProcessingInitializedMarker
+registryPath: registry/blue-contracts-1.0/ProcessingInitializedMarker.blue
+expectedBlueId: 6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q
+semanticDescriptionIdentityBearing: true

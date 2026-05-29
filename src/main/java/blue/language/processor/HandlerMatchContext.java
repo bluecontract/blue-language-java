@@ -15,16 +15,22 @@ import java.util.Objects;
 public final class HandlerMatchContext {
 
     private final String scopePath;
+    private final String handlerKey;
+    private final String channelKey;
     private final Node event;
     private final FrozenNode eventFrozen;
     private final Map<String, MarkerContract> markers;
     private final ContractMatchingService matchingService;
 
     HandlerMatchContext(String scopePath,
+                        String handlerKey,
+                        String channelKey,
                         Node event,
                         Map<String, MarkerContract> markers,
                         ContractMatchingService matchingService) {
         this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
+        this.handlerKey = handlerKey;
+        this.channelKey = channelKey;
         this.event = event != null ? event.clone() : null;
         this.eventFrozen = event != null ? FrozenNode.fromResolvedNode(event) : null;
         this.markers = markers == null
@@ -35,6 +41,14 @@ public final class HandlerMatchContext {
 
     public String scopePath() {
         return scopePath;
+    }
+
+    public String handlerKey() {
+        return handlerKey;
+    }
+
+    public String channelKey() {
+        return channelKey;
     }
 
     public Node event() {

@@ -1,0 +1,8 @@
+id: runtimeRegistryMarkerNodeHashesToPublishedBlueId
+category: Registry
+operation: registryNodeHashesToPublishedBlueId
+registryKind: Blue Contracts runtime type registry
+registryKey: Marker
+registryPath: registry/blue-contracts-1.0/Marker.blue
+expectedBlueId: 6zqbYGDGrMv5ReuEsjyzyyjjuqVnqDZxtY7RsPXdBTNy
+semanticDescriptionIdentityBearing: true

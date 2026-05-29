@@ -1,0 +1,14 @@
+id: R_source_null_list_to_empty
+category: Resolution
+operation: preprocess
+description: source list null normalizes to exact empty placeholder
+source:
+  items:
+  - A
+  - null
+  - B
+expectedPreprocessed:
+  items:
+  - value: A
+  - $empty: true
+  - value: B

@@ -1,0 +1,52 @@
+id: handlerCallingEmitThenPatchStillAppliesPatchBeforeEmission
+category: Effects
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    incoming:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+    buffered:
+      type:
+        blueId: 3rHWt14WhTvmBBQ6Cr1Mb263KuxSdwqvb2jD7oPbkNL3
+      channel: incoming
+event:
+  kind: emit-then-patch
+mockRuntime:
+  channels:
+    - contract: /contracts/incoming
+      calls:
+        - when:
+            event:
+              kind: emit-then-patch
+          accepted: true
+          payload:
+            kind: emit-then-patch
+  handlers:
+    - contract: /contracts/buffered
+      calls:
+        - when:
+            channelKey: incoming
+          hostApiCalls:
+            - emitEvent:
+                kind: emitted-before-patch-call
+            - applyPatch:
+                op: replace
+                path: /patched
+                val: true
+          result:
+            patches:
+              - op: replace
+                path: /patched
+                val: true
+            triggeredEvents:
+              - kind: emitted-before-patch-call
+expectedStatus: success
+expectedDocumentPaths:
+  /patched:
+    value: true
+expectedEffectApplicationOrder:
+  - patch:/patched
+  - triggeredEvent:emitted-before-patch-call

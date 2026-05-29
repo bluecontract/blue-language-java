@@ -1,0 +1,9 @@
+name: Text
+description: >-
+  Core Blue Language 1.0 primitive scalar representing Unicode text. Text
+  values are exact Unicode code-point sequences after parsing. Blue Language
+  performs no Unicode normalization, case folding, locale-sensitive collation,
+  whitespace normalization, or line-ending normalization by default. String
+  schema constraints minLength and maxLength count Unicode code points. The
+  empty string is valid unless restricted by schema. Applicable schema
+  constraints are minLength, maxLength, and enum.

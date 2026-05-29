@@ -1,44 +1,44 @@
 contracts:
   embedded:
     type:
-      blueId: ProcessEmbedded
+      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q
     paths:
       - /payment
       - /shipping
   documentUpdate:
     type:
-      blueId: DocumentUpdateChannel
+      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o
     path: /
   triggered:
     type:
-      blueId: TriggeredEventChannel
+      blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ
   lifecycleChannel:
     type:
-      blueId: LifecycleChannel
+      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ
   embeddedNode:
     type:
-      blueId: EmbeddedNodeChannel
+      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i
     childPath: /payment
   checkpoint:
     type:
-      blueId: ChannelEventCheckpoint
+      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1
     lastEvents:
       external:
         type:
-          blueId: TestEvent
+          blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf
         eventId: evt-001
   initialized:
     type:
-      blueId: InitializationMarker
+      blueId: 6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q
     documentId: doc-123
   failure:
     type:
-      blueId: ProcessingFailureMarker
+      blueId: 33kfH8pfk7F1P5zMsuK1Jm3GcSdmTXoFHKjP16DesEco
     code: RuntimeFatal
     reason: boundary violation
   setProperty:
     type:
-      blueId: SetProperty
+      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts
     channel: lifecycleChannel
     propertyKey: /x
     propertyValue: 7

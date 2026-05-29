@@ -27,6 +27,16 @@ public class TypeUtils {
         }
     }
 
+    public static BigInteger getBigIntegerFromObject(Object obj) {
+        if (obj instanceof BigInteger) {
+            return (BigInteger) obj;
+        } else if (obj instanceof BigDecimal) {
+            return ((BigDecimal) obj).toBigIntegerExact();
+        } else {
+            throw new IllegalArgumentException("Object is not a BigInteger or BigDecimal");
+        }
+    }
+
     public static BigDecimal getBigDecimalFromObject(Object obj) {
         if (obj instanceof BigInteger) {
             return new BigDecimal((BigInteger) obj);

@@ -1,0 +1,15 @@
+id: R_type_aliases_removed_from_canonical_overlay
+category: Canonicalization
+operation: canonicalize
+description: type aliases are removed from canonical overlay after preprocessing
+source:
+  blue:
+    imports:
+      Label:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  type: Label
+  value: hello
+expectedCanonicalOverlay:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  value: hello

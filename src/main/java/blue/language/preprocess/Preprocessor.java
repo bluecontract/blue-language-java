@@ -3,17 +3,24 @@ package blue.language.preprocess;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
+import blue.language.preprocess.processor.NormalizeListPlaceholders;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
 import blue.language.provider.BootstrapProvider;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
+import blue.language.utils.Nodes;
 import blue.language.utils.limits.PathLimits;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+
+import static blue.language.utils.Properties.DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
@@ -40,6 +47,10 @@ public class Preprocessor {
     }
 
     public Node preprocess(Node document) {
+        return preprocessWithDefaultBlue(document);
+    }
+
+    public Node preprocessWithoutDefaultBlue(Node document) {
         return preprocess(document, null);
     }
 
@@ -48,47 +59,100 @@ public class Preprocessor {
     }
 
     public Node preprocess(Node document, Node defaultBlue) {
-        Node processedDocument = document.clone();
-        Node blueNode = processedDocument.getBlue();
-
-        if (blueNode == null) {
-            blueNode = defaultBlue.clone();
+        Node processedDocument = new NormalizeListPlaceholders().process(document.clone());
+        if (defaultBlue != null) {
+            processedDocument = applyStandardBaseline(processedDocument);
         }
+        processedDocument = applyPortableImports(processedDocument);
 
+        Node blueNode = processedDocument.getBlue();
         if (blueNode != null) {
-
-            new NodeExtender(nodeProvider).extend(blueNode, PathLimits.withSinglePath("/*"));
-
-            if (blueNode.getItems() != null) {
-                List<Node> transformations = blueNode.getItems();
-
-                for (Node transformation : transformations) {
-                    Optional<TransformationProcessor> processor = processorProvider.getProcessor(transformation);
-                    if (processor.isPresent()) {
-                        processedDocument = processor.get().process(processedDocument);
-                    } else {
-                        throw new IllegalArgumentException("No processor found for transformation: " + transformation);
-                    }
-                }
-
-                processedDocument.blue(null);
-            }
+            processedDocument = applyDeclaredBlueTransformations(processedDocument, blueNode);
         }
 
         return processedDocument;
     }
 
+    private Node applyStandardBaseline(Node document) {
+        Node transformed = new ReplaceInlineValuesForTypeAttributesWithImports(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP)
+                .process(document);
+        return new InferBasicTypesForUntypedValues().process(transformed);
+    }
+
+    private Node applyDeclaredBlueTransformations(Node processedDocument, Node blueNode) {
+        Node extendedBlue = blueNode.clone();
+        new NodeExtender(nodeProvider).extend(extendedBlue, PathLimits.withSinglePath("/*"));
+
+        if (extendedBlue.getItems() != null) {
+            List<Node> transformations = extendedBlue.getItems();
+
+            for (Node transformation : transformations) {
+                Optional<TransformationProcessor> processor = processorProvider.getProcessor(transformation);
+                if (processor.isPresent()) {
+                    processedDocument = processor.get().process(processedDocument);
+                } else {
+                    throw new IllegalArgumentException("No processor found for transformation: " + transformation);
+                }
+            }
+        }
+
+        processedDocument.blue(null);
+        return processedDocument;
+    }
+
+    private Node applyPortableImports(Node document) {
+        Node blueNode = document.getBlue();
+        if (blueNode == null || blueNode.getProperties() == null || !blueNode.getProperties().containsKey("imports")) {
+            return document;
+        }
+
+        Node importsNode = blueNode.getProperties().get("imports");
+        if (importsNode == null || importsNode.getProperties() == null || importsNode.getValue() != null
+                || importsNode.getItems() != null || importsNode.getBlueId() != null) {
+            throw new IllegalArgumentException("\"blue.imports\" must be an object mapping aliases to pure references.");
+        }
+
+        Map<String, String> mappings = new LinkedHashMap<>();
+        for (Map.Entry<String, Node> entry : importsNode.getProperties().entrySet()) {
+            String alias = entry.getKey();
+            Node reference = entry.getValue();
+            if (reference == null || !reference.isReferenceOnly()) {
+                throw new IllegalArgumentException("\"blue.imports." + alias + "\" must be a pure reference.");
+            }
+            String blueId = BlueIds.requirePlainBlueId(reference.getBlueId(), "blue.imports." + alias);
+            String defaultBlueId = DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get(alias);
+            if (defaultBlueId != null && !defaultBlueId.equals(blueId)) {
+                throw new IllegalArgumentException("\"blue.imports\" cannot redefine default Blue alias \"" + alias + "\".");
+            }
+            mappings.put(alias, blueId);
+        }
+
+        Node transformed = new ReplaceInlineValuesForTypeAttributesWithImports(mappings).process(document);
+        Node transformedBlue = transformed.getBlue();
+        if (transformedBlue != null && transformedBlue.getProperties() != null) {
+            Map<String, Node> remainingProperties = new LinkedHashMap<>(transformedBlue.getProperties());
+            remainingProperties.remove("imports");
+            transformedBlue.properties(remainingProperties.isEmpty() ? null : remainingProperties);
+        }
+        if (transformedBlue != null && Nodes.isEmptyNode(transformedBlue)) {
+            transformed.blue(null);
+        }
+        return transformed;
+    }
+
     public static TransformationProcessorProvider getStandardProvider() {
         return new TransformationProcessorProvider() {
             private static final String REPLACE_INLINE_TYPES = "27B7fuxQCS1VAptiCPc2RMkKoutP5qxkh3uDxZ7dr6Eo";
+            private static final String LEGACY_REPLACE_INLINE_TYPES = "53yFLQ3dpuGwa2svHubDyzyhYz9RQNmctiJRdi3gRYr7";
             private static final String INFER_BASIC_TYPES = "FGYuTXwaoSKfZmpTysLTLsb8WzSqf43384rKZDkXhxD4";
+            private static final String LEGACY_INFER_BASIC_TYPES = "49hrWpkoXavNmK8PpZag11zB2vYwzhQZahwioz6vDk2i";
 
             @Override
             public Optional<TransformationProcessor> getProcessor(Node transformation) {
                 String blueId = transformation.getAsText("/type/blueId");
-                if (REPLACE_INLINE_TYPES.equals(blueId))
+                if (REPLACE_INLINE_TYPES.equals(blueId) || LEGACY_REPLACE_INLINE_TYPES.equals(blueId))
                     return Optional.of(new ReplaceInlineValuesForTypeAttributesWithImports(transformation));
-                else if (INFER_BASIC_TYPES.equals(blueId))
+                else if (INFER_BASIC_TYPES.equals(blueId) || LEGACY_INFER_BASIC_TYPES.equals(blueId))
                     return Optional.of(new InferBasicTypesForUntypedValues());
                 return Optional.empty();
             }

@@ -3,7 +3,7 @@ package blue.language.utils;
 import blue.language.model.Node;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +53,9 @@ public final class NodePathEditor {
         if ("blue".equals(segment)) {
             return node.getBlue();
         }
+        if ("contracts".equals(segment)) {
+            return node.getContracts();
+        }
         if (JsonPointer.isArrayIndexSegment(segment) && node.getItems() != null && !"-".equals(segment)) {
             int index = Integer.parseInt(segment);
             return index < node.getItems().size() ? node.getItems().get(index) : null;
@@ -91,6 +94,10 @@ public final class NodePathEditor {
             node.blue(value);
             return;
         }
+        if ("contracts".equals(segment)) {
+            node.contracts(value);
+            return;
+        }
         if (JsonPointer.isArrayIndexSegment(segment) && !"-".equals(segment)) {
             int index = Integer.parseInt(segment);
             List<Node> items = node.getItems();
@@ -106,7 +113,7 @@ public final class NodePathEditor {
         }
         Map<String, Node> properties = node.getProperties();
         if (properties == null) {
-            node.properties(new HashMap<>());
+            node.properties(new LinkedHashMap<>());
             properties = node.getProperties();
         }
         properties.put(segment, value);

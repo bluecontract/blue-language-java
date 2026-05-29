@@ -1,0 +1,24 @@
+id: T025_initial_closure_includes_embedded_scopes
+category: MustUnderstand
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  child:
+    contracts:
+      unsupported:
+        type:
+          name: UnsupportedContract
+  contracts:
+    embedded:
+      type:
+        blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+      paths:
+        - /child
+event:
+  kind: closure
+expectedCapabilityFailure: true
+expectedNoDocumentMutation: true
+expectedTotalGas: 0
+expectedRootEventCount: 0
+expectedFailureReasonContains: Unsupported

@@ -1,12 +1,14 @@
 # Blue Language Java
 
 Java implementation of the Blue language core:
-https://language.blue/docs/reference/specification
+https://github.com/bluecontract/blue-spec
 
-Blue is a deterministic document language for describing data, types, identity,
-and document-processing behavior. A Blue document can be parsed, resolved
-against its type graph, reduced to canonical content, and addressed by a stable
-content hash called a BlueId.
+Blue is a deterministic document language for describing data, types, and
+identity. A Blue document can be parsed, resolved against its type graph,
+reduced to canonical content, and addressed by a stable content hash called a
+BlueId. Blue Contracts and Processor 1.0 is implemented as a separate runtime
+target on top of the language layer for document processing, channels, handlers,
+events, gas, checkpoints, embedded scopes, lifecycle, and termination.
 
 This library gives Java applications the foundations needed to work with Blue:
 
@@ -21,6 +23,9 @@ This library gives Java applications the foundations needed to work with Blue:
 - run the generic snapshot-backed document processor;
 - register custom channel, handler, and marker processors.
 
+Blue Language 1.0 and Blue Contracts and Processor 1.0 have separate
+conformance suites and reports. 
+
 ## Installation
 
 Gradle:
@@ -31,7 +36,7 @@ repositories {
 }
 
 dependencies {
-    implementation "blue.language:blue-language-java:1.0.0"
+    implementation "blue.language:blue-language-java:3.0.0"
 }
 ```
 
@@ -41,22 +46,8 @@ Maven:
 <dependency>
     <groupId>blue.language</groupId>
     <artifactId>blue-language-java</artifactId>
-    <version>1.0.0</version>
+    <version>3.0.0</version>
 </dependency>
-```
-
-For local development before the `1.0.0` release is available from Maven
-Central, publish this checkout locally and depend on the snapshot version
-reported by Gradle. After the 1.0 bump, that coordinate is:
-
-```bash
-./gradlew publishToMavenLocal
-```
-
-```groovy
-dependencies {
-    implementation "blue.language:blue-language-java:1.0.0-SNAPSHOT"
-}
 ```
 
 ## Core Concepts
@@ -263,7 +254,6 @@ reference forms.
 `schema` provides deterministic core validation. Supported keywords include:
 
 - `required`
-- `allowMultiple`
 - `minLength`
 - `maxLength`
 - `minimum`
@@ -577,6 +567,39 @@ The generalization flow is transactional:
 4. commit the new snapshot only if the whole plan succeeds;
 5. roll back on failure.
 
+## Working Documents
+
+`WorkingDocument` is a frozen preview state for processor-side read-your-writes
+logic. It uses the same immutable patch transaction as the processor runtime,
+including conformance checks, dynamic type generalization, and Type
+Generalization Policy enforcement, but it does not commit to the active
+processor runtime.
+
+```java
+import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.WorkingDocument;
+import blue.language.processor.model.JsonPatch;
+
+WorkingDocument working = context.newWorkingDocument();
+
+working.applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
+
+String currency = (String) working.resolvedAt("/price/currency").getValue();
+```
+
+Working previews do not emit Document Update cascades, charge gas, update
+checkpoints, or write termination/marker state. Contract processors should
+preview first and buffer actual effects only after preview succeeds:
+
+```java
+working.applyPatches(patches);
+context.applyPatches(patches);
+```
+
+Use `materializeCanonicalRoot()`, `materializeResolvedRoot()`, `commitToNode()`,
+or `commitSnapshot()` only at explicit integration boundaries. Normal processor
+reads should stay on `FrozenNode` roots and pointer lookups.
+
 ## Object Mapping
 
 Java objects can be converted to and from Blue nodes.
@@ -635,10 +658,8 @@ Processor roles:
 Minimal channel contract:
 
 ```java
-import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
 
-@TypeBlueId("ExampleChannel")
 public class ExampleChannel extends ChannelContract {
     private String eventType;
 
@@ -682,10 +703,8 @@ public final class ExampleChannelProcessor implements ChannelProcessor<ExampleCh
 Minimal handler contract:
 
 ```java
-import blue.language.model.TypeBlueId;
 import blue.language.processor.model.HandlerContract;
 
-@TypeBlueId("SetCounter")
 public class SetCounter extends HandlerContract {
     private int value;
 
@@ -729,9 +748,15 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 
-Blue blue = new Blue()
-        .registerContractProcessor(new ExampleChannelProcessor())
-        .registerContractProcessor(new SetCounterProcessor());
+Blue blue = new Blue();
+
+Node exampleChannelType = new Node().name("ExampleChannel");
+String exampleChannelBlueId = blue.calculateBlueId(exampleChannelType);
+Node setCounterType = new Node().name("SetCounter");
+String setCounterBlueId = blue.calculateBlueId(setCounterType);
+
+blue.registerExternalContractType(exampleChannelBlueId, exampleChannelType, new ExampleChannelProcessor())
+        .registerExternalContractType(setCounterBlueId, setCounterType, new SetCounterProcessor());
 
 Node document = blue.yamlToNode(
         "name: Counter\n" +
@@ -739,11 +764,11 @@ Node document = blue.yamlToNode(
         "contracts:\n" +
         "  events:\n" +
         "    type:\n" +
-        "      blueId: ExampleChannel\n" +
+        "      blueId: " + exampleChannelBlueId + "\n" +
         "    eventType: counter.set\n" +
         "  setCounter:\n" +
         "    type:\n" +
-        "      blueId: SetCounter\n" +
+        "      blueId: " + setCounterBlueId + "\n" +
         "    channel: events\n" +
         "    value: 10\n");
 
@@ -751,17 +776,18 @@ Node event = blue.yamlToNode(
         "eventId: evt-1\n" +
         "eventType: counter.set\n");
 
-DocumentProcessingResult initialized = blue.initializeDocument(document);
-DocumentProcessingResult result = blue.processDocument(initialized.snapshot(), event);
+DocumentProcessingResult result = blue.processDocument(document, event);
 
 System.out.println(result.blueId());
 System.out.println(result.totalGas());
 System.out.println(blue.nodeToYaml(result.document()));
 ```
 
-The runtime checks that every contract in the document is understood. If a
-contract type has no registered processor, processing fails before state is
-mutated.
+External contract processors must register the canonical type node for the
+BlueId they handle. The runtime checks that every active contract in the
+initial processing closure is understood; if not, processing fails before state
+is mutated. `processDocument(document, event)` is the normative one-call
+PROCESS API and initializes scopes as part of the run when needed.
 
 ## Serialization Helpers
 
@@ -803,7 +829,12 @@ Primary facade:
 - `initializeDocument(Node)`
 - `processDocument(Node, Node)`
 - `processDocument(ResolvedSnapshot, Node)`
+- `conformanceReport()`
+- `runConformanceSuite()`
+- `contractsConformanceReport()`
+- `runContractsConformanceSuite()`
 - `registerContractProcessor(...)`
+- `registerExternalContractType(...)`
 - `registerTypeDictionary(...)`
 
 ### `Node`
@@ -855,7 +886,9 @@ Implemented and covered by tests:
 - dynamic type generalization with rollback;
 - fast frozen type/pattern matching;
 - snapshot-backed document processing runtime;
-- external channel/handler/marker processor SPI.
+- Blue Contracts and Processor 1.0 runtime registry and conformance fixtures;
+- external channel/handler/marker processor SPI with explicit canonical type
+  registration.
 
 Known boundaries:
 
@@ -865,8 +898,8 @@ Known boundaries:
   default to semantic resolve/minimize storage;
 - conformance/generalization is snapshot-safe at the boundary but still bridges
   through mutable resolver internals in some checks;
-- concrete business contracts are supplied by applications through registered
-  processors;
+- concrete business contracts are supplied by applications through explicitly
+  registered processors and canonical type nodes;
 - canonical-plus-bundle transport/webhook export is not part of this module yet.
 
 For deeper design notes, see:
@@ -875,15 +908,65 @@ For deeper design notes, see:
 - [Frozen Type Matching](docs/frozen-type-matching.md)
 - [Processor Contract Matching](docs/processor-contract-matching.md)
 - [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md)
-- [Specification Implementation Gaps](docs/specification-implementation-gaps.md)
 
 ## Build And Test
 
-Run the test suite:
+The project currently compiles for Java 8 source/target compatibility and uses
+JUnit 5 for tests. Build and test with a JDK that can run Gradle 8.4.
+
+Run the full CI-style verification command:
+
+```bash
+./gradlew clean test
+```
+
+Run the test suite without cleaning:
 
 ```bash
 ./gradlew test
 ```
+
+Run only the Blue Language 1.0 conformance fixtures:
+
+```bash
+./gradlew test --tests '*BlueLanguageConformanceFixtureTest'
+```
+
+Run only the Blue Contracts and Processor 1.0 conformance fixtures:
+
+```bash
+./gradlew test --tests '*BlueContractsConformanceFixtureTest'
+```
+
+At runtime, `new Blue().conformanceReport()` returns static Blue Language 1.0
+metadata: language version, core registry BlueIds, fixture package identity,
+fixture IDs, and fixture categories. `new Blue().runConformanceSuite()` executes
+the manifest-driven fixture suite and returns passed fixture IDs plus detailed
+failures with fixture ID, category, operation, exception class, and message.
+The fixture package under `src/test/resources/blue-language-1.0/fixtures` is a
+vendored copy of the canonical Blue Language 1.0 fixture package; its manifest
+identity must match the fixture package identity published by the Blue Language
+1.0 specification release. The current Java fixture package identity is a
+SHA-256 content digest over `manifest.yaml` with the identity field blanked plus
+each manifest-listed fixture file in manifest order; verify it with
+`BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`.
+
+At runtime, `new Blue().contractsConformanceReport()` returns static Blue
+Contracts and Processor 1.0 metadata: fixture package identity, required fixture
+IDs, fixture IDs, categories, and coverage checks.
+`new Blue().runContractsConformanceSuite()` executes the separate contracts
+fixture suite. The contracts fixture package under
+`src/test/resources/blue-contracts-1.0/fixtures` is vendored from the official
+Blue Contracts 1.0 spec repository. Its release identity is
+`sha256:2f197ca3bbdc41b75e772777cc48e51019754347e1bee26b5f3209b71d9bd9ca`.
+The runtime registry resources are vendored from
+`contract/1.0/registry/blue-contracts-1.0`. The fixture package uses the same
+SHA-256 content digest scheme; verify it with
+`BlueContractsConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`
+and `contractsConformanceReport().isOfficialContracts10FixturePackage()`.
+For release checks, both language and contracts reports should have no failures,
+all fixture IDs passed, required fixture coverage, exact required fixture sets,
+and matching fixture package identities.
 
 Build jars:
 
@@ -897,8 +980,11 @@ Publish to local Maven:
 ./gradlew publishToMavenLocal
 ```
 
-The project currently compiles for Java 8 source/target compatibility and uses
-JUnit 5 for tests.
+The Gradle wrapper uses the distribution declared in
+`gradle/wrapper/gradle-wrapper.properties`. Local and CI environments need either
+network access for that first wrapper download or a cached Gradle distribution;
+offline verification works once the wrapper distribution and normal dependency
+cache are already present.
 
 ## Project Layout
 

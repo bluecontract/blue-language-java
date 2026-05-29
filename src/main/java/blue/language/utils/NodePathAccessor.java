@@ -78,7 +78,9 @@ public class NodePathAccessor {
             case "value":
                 return new Node().value(node.getValue());
             case "blueId":
-                return new Node().value(BlueIdCalculator.calculateBlueId(node));
+                return new Node().value(BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node)));
+            case "contracts":
+                return node.getContracts();
         }
 
         if (segment.matches("\\d+")) {
@@ -116,7 +118,9 @@ public class NodePathAccessor {
             case "value":
                 return new Node().value(node.getRawValue());
             case "blueId":
-                return new Node().value(BlueIdCalculator.calculateBlueId(node));
+                return new Node().value(BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node)));
+            case "contracts":
+                return node.getContracts();
         }
 
         if (segment.matches("\\d+")) {

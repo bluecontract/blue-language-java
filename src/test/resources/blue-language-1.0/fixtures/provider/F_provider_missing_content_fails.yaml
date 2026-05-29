@@ -1,0 +1,9 @@
+id: F_provider_missing_content_fails
+category: Provider
+operation: resolve
+description: missing provider content fails resolution
+expectError: true
+source:
+  type:
+    blueId: 7CUvDJwdfytCjadRG1KLL2GrttK2LfdNvEA8HycjMCcv
+provider: []

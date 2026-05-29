@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PointerUtilsTest {
 
@@ -25,5 +28,25 @@ class PointerUtilsTest {
     @Test
     void joinRelativePointersEscapesLiteralSegments() {
         assertEquals("/a~1b/c~0d", PointerUtils.joinRelativePointers("/a~1b", "c~d"));
+    }
+
+    @Test
+    void descendantChecksAreSegmentAware() {
+        assertTrue(PointerUtils.descendantOrEqual("/a", "/a"));
+        assertTrue(PointerUtils.descendantOrEqual("/a/b", "/a"));
+        assertFalse(PointerUtils.descendantOrEqual("/ab", "/a"));
+        assertFalse(PointerUtils.strictlyInside("/a", "/a"));
+        assertTrue(PointerUtils.strictlyInside("/a/b", "/a"));
+    }
+
+    @Test
+    void runtimePointerValidationRejectsMalformedPointers() {
+        assertEquals("/", PointerUtils.assertValidRuntimePointer("/"));
+        assertEquals("/a~1b/c~0d", PointerUtils.assertValidRuntimePointer("/a~1b/c~0d"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer(""));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("a"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("/a/"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("/a//b"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("/a~2b"));
     }
 }

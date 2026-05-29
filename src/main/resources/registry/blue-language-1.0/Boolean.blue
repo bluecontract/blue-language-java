@@ -1,0 +1,6 @@
+name: Boolean
+description: >-
+  Core Blue Language 1.0 primitive scalar with exactly two values: true and
+  false. Blue Language defines no truthiness conversion for Boolean values.
+  Only the literal parsed boolean values true and false are Boolean values.
+  Applicable schema constraint is enum.

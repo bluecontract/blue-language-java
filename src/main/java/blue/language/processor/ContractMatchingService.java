@@ -10,6 +10,7 @@ import blue.language.utils.FrozenTypeMatcher;
  */
 public final class ContractMatchingService {
 
+    private final Blue blue;
     private final FrozenTypeMatcher matcher;
 
     public ContractMatchingService() {
@@ -17,7 +18,12 @@ public final class ContractMatchingService {
     }
 
     public ContractMatchingService(Blue blue) {
+        this.blue = blue;
         this.matcher = new FrozenTypeMatcher(blue);
+    }
+
+    Blue blue() {
+        return blue;
     }
 
     public boolean matches(FrozenNode event, FrozenNode pattern) {

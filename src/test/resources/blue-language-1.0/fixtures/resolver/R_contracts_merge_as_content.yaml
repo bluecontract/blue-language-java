@@ -1,0 +1,21 @@
+id: R_contracts_merge_as_content
+category: Resolution
+operation: resolve
+description: contracts merge field-wise as language content
+source:
+  type:
+    contracts:
+      audit:
+        enabled: true
+  contracts:
+    audit:
+      retentionDays: 30
+expectedResolved:
+  type:
+    contracts:
+      audit:
+        enabled: true
+  contracts:
+    audit:
+      enabled: true
+      retentionDays: 30

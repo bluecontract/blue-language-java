@@ -1,0 +1,33 @@
+id: checkpointNodeBlueIdModeRequiresBlueIdInput
+category: Checkpoint
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    incoming:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+      checkpointIdentityMode: nodeBlueId
+    handler:
+      type:
+        blueId: 2TwRC3EdLXk4gqwyyVWy52h5BQ5ntrkmpcrhrTxsGAs1
+      channel: incoming
+event:
+  blue:
+    type: Text
+  value: source-only-event
+mockRuntime:
+  channels:
+    - contract: /contracts/incoming
+      checkpointIdentityMode: nodeBlueId
+      calls:
+        - when:
+            event: any
+          accepted: true
+          payload:
+            value: source-only-event
+expectedStatus: runtime-fatal
+expectedErrorCategory: CheckpointError
+expectedAbsentDocumentPaths:
+  - /contracts/checkpoint/lastEvents/incoming

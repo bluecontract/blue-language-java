@@ -1,0 +1,15 @@
+id: R_blue_imports
+category: Resolution
+operation: preprocess
+description: portable blue.imports aliases type positions and is removed
+source:
+  blue:
+    imports:
+      Person:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  type: Person
+  value: hello
+expectedPreprocessed:
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  value: hello

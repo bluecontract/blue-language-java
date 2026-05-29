@@ -103,7 +103,7 @@ public class NodeContentHandler {
         Node preliminary = node.clone();
         rewriteThisReferences(preliminary, reference -> ZERO_BLUE_ID);
 
-        String blueId = BlueIdCalculator.calculateBlueId(preliminary);
+        String blueId = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary);
         return new ParsedContent(blueId, JSON_MAPPER.valueToTree(node), false);
     }
 
@@ -121,7 +121,8 @@ public class NodeContentHandler {
         for (int i = 0; i < nodes.size(); i++) {
             Node preliminary = nodes.get(i).clone();
             rewriteThisReferences(preliminary, reference -> ZERO_BLUE_ID);
-            indexedNodes.add(new IndexedNode(i, nodes.get(i), BlueIdCalculator.calculateBlueId(preliminary)));
+            indexedNodes.add(new IndexedNode(i, nodes.get(i),
+                    BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary)));
         }
 
         indexedNodes.sort(Comparator
@@ -143,7 +144,7 @@ public class NodeContentHandler {
             sortedNodes.add(rewritten);
         }
 
-        String blueId = BlueIdCalculator.calculateBlueId(sortedNodes);
+        String blueId = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(sortedNodes);
         return new ParsedContent(blueId, JSON_MAPPER.valueToTree(sortedNodes), true);
     }
 
@@ -248,6 +249,7 @@ public class NodeContentHandler {
         collectThisReferences(node.getKeyType(), references);
         collectThisReferences(node.getValueType(), references);
         collectThisReferences(node.getBlue(), references);
+        collectThisReferences(node.getContracts(), references);
         collectThisReferences(node.getSchema(), references);
         if (node.getItems() != null) {
             node.getItems().forEach(item -> collectThisReferences(item, references));
@@ -262,7 +264,6 @@ public class NodeContentHandler {
             return;
         }
         collectThisReferences(schema.getRequired(), references);
-        collectThisReferences(schema.getAllowMultiple(), references);
         collectThisReferences(schema.getMinLength(), references);
         collectThisReferences(schema.getMaxLength(), references);
         collectThisReferences(schema.getMinimum(), references);
@@ -292,6 +293,7 @@ public class NodeContentHandler {
         rewriteThisReferences(node.getKeyType(), replacement);
         rewriteThisReferences(node.getValueType(), replacement);
         rewriteThisReferences(node.getBlue(), replacement);
+        rewriteThisReferences(node.getContracts(), replacement);
         rewriteThisReferences(node.getSchema(), replacement);
         if (node.getItems() != null) {
             node.getItems().forEach(item -> rewriteThisReferences(item, replacement));
@@ -306,7 +308,6 @@ public class NodeContentHandler {
             return;
         }
         rewriteThisReferences(schema.getRequired(), replacement);
-        rewriteThisReferences(schema.getAllowMultiple(), replacement);
         rewriteThisReferences(schema.getMinLength(), replacement);
         rewriteThisReferences(schema.getMaxLength(), replacement);
         rewriteThisReferences(schema.getMinimum(), replacement);

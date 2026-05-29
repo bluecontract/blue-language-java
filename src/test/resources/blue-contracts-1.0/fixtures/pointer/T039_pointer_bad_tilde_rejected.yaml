@@ -1,0 +1,6 @@
+id: T039_pointer_bad_tilde_rejected
+category: Pointer
+operation: pointerValidation
+pointer: /bad~2path
+expectedValid: false
+expectedFailureReasonContains: escape

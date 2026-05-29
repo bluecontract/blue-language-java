@@ -1,0 +1,13 @@
+id: R_inherited_item_type
+category: Resolution
+operation: resolve
+description: inherited itemType remains effective when child omits itemType
+expectError: true
+source:
+  type:
+    type:
+      blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    itemType:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  items:
+  - value: not an integer

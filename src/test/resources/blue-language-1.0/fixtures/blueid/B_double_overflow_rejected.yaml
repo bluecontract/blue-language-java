@@ -1,0 +1,9 @@
+id: B_double_overflow_rejected
+category: BlueId
+operation: parseBlueIdInput
+description: Double overflow is rejected as a non-finite numeric token
+expectError: true
+input:
+  type:
+    blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  value: 1e999

@@ -24,10 +24,10 @@ class ContractBundleCacheTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  increment:\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    channel: testChannel\n" +
                 "    propertyKey: /count\n")).document();
 
@@ -53,10 +53,10 @@ class ContractBundleCacheTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  set:\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    channel: testChannel\n" +
                 "    path: /orders\n" +
                 "    propertyKey: count\n" +
@@ -86,10 +86,10 @@ class ContractBundleCacheTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: TestEventChannel\n" +
+                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "  set:\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    channel: testChannel\n" +
                 "    path: /orders\n" +
                 "    propertyKey: count\n" +
@@ -116,16 +116,16 @@ class ContractBundleCacheTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: TestEventChannel\n" +
+                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
                 "    increment:\n" +
                 "      type:\n" +
-                "        blueId: IncrementProperty\n" +
+                "        blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "      channel: testChannel\n" +
                 "      propertyKey: /count\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /child\n")).document();
 
@@ -145,7 +145,7 @@ class ContractBundleCacheTest {
                 .registerContractProcessor(new IncrementPropertyContractProcessor())
                 .registerContractProcessor(new SetPropertyContractProcessor())
                 .build();
-        return new Blue().documentProcessor(processor);
+        return ProcessorTestSupport.blue().documentProcessor(processor);
     }
 
     private Node event(Blue blue, String eventId) {

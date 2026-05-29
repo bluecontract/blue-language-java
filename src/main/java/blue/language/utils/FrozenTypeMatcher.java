@@ -406,7 +406,6 @@ public final class FrozenTypeMatcher {
         try {
             verifyWellFormed(schema);
             return verifyRequired(schema, node)
-                    && verifyAllowMultiple(schema, node)
                     && verifyMinLength(schema, node)
                     && verifyMaxLength(schema, node)
                     && verifyMinimum(schema, node)
@@ -426,15 +425,15 @@ public final class FrozenTypeMatcher {
     }
 
     private void verifyWellFormed(Schema schema) {
-        verifyNonNegative(schema.getMinLengthValue());
-        verifyNonNegative(schema.getMaxLengthValue());
-        verifyMinLessThanOrEqualMax(schema.getMinLengthValue(), schema.getMaxLengthValue());
-        verifyNonNegative(schema.getMinItemsValue());
-        verifyNonNegative(schema.getMaxItemsValue());
-        verifyMinLessThanOrEqualMax(schema.getMinItemsValue(), schema.getMaxItemsValue());
-        verifyNonNegative(schema.getMinFieldsValue());
-        verifyNonNegative(schema.getMaxFieldsValue());
-        verifyMinLessThanOrEqualMax(schema.getMinFieldsValue(), schema.getMaxFieldsValue());
+        verifyNonNegative(schema.getMinLengthExact());
+        verifyNonNegative(schema.getMaxLengthExact());
+        verifyMinLessThanOrEqualMax(schema.getMinLengthExact(), schema.getMaxLengthExact());
+        verifyNonNegative(schema.getMinItemsExact());
+        verifyNonNegative(schema.getMaxItemsExact());
+        verifyMinLessThanOrEqualMax(schema.getMinItemsExact(), schema.getMaxItemsExact());
+        verifyNonNegative(schema.getMinFieldsExact());
+        verifyNonNegative(schema.getMaxFieldsExact());
+        verifyMinLessThanOrEqualMax(schema.getMinFieldsExact(), schema.getMaxFieldsExact());
         if (schema.getMinimumValue() != null
                 && schema.getMaximumValue() != null
                 && schema.getMinimumValue().compareTo(schema.getMaximumValue()) > 0) {
@@ -451,14 +450,14 @@ public final class FrozenTypeMatcher {
         }
     }
 
-    private void verifyNonNegative(Integer value) {
-        if (value != null && value < 0) {
+    private void verifyNonNegative(BigInteger value) {
+        if (value != null && value.signum() < 0) {
             throw new IllegalArgumentException("schema value must be non-negative");
         }
     }
 
-    private void verifyMinLessThanOrEqualMax(Integer min, Integer max) {
-        if (min != null && max != null && min > max) {
+    private void verifyMinLessThanOrEqualMax(BigInteger min, BigInteger max) {
+        if (min != null && max != null && min.compareTo(max) > 0) {
             throw new IllegalArgumentException("schema min must be <= max");
         }
     }
@@ -467,73 +466,96 @@ public final class FrozenTypeMatcher {
         return !Boolean.TRUE.equals(schema.getRequiredValue()) || hasPayload(node);
     }
 
-    private boolean verifyAllowMultiple(Schema schema, FrozenNode node) {
-        List<FrozenNode> items = node.getItems();
-        return Boolean.TRUE.equals(schema.getAllowMultipleValue()) || items == null || items.size() <= 1;
-    }
-
     private boolean verifyMinLength(Schema schema, FrozenNode node) {
-        Integer minLength = schema.getMinLengthValue();
+        BigInteger minLength = schema.getMinLengthExact();
         Object value = node.getValue();
-        return minLength == null || !(value instanceof String)
-                || ((String) value).codePointCount(0, ((String) value).length()) >= minLength;
+        if (minLength == null || !hasPayload(node)) {
+            return true;
+        }
+        return value instanceof String
+                && BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(minLength) >= 0;
     }
 
     private boolean verifyMaxLength(Schema schema, FrozenNode node) {
-        Integer maxLength = schema.getMaxLengthValue();
+        BigInteger maxLength = schema.getMaxLengthExact();
         Object value = node.getValue();
-        return maxLength == null || !(value instanceof String)
-                || ((String) value).codePointCount(0, ((String) value).length()) <= maxLength;
+        if (maxLength == null || !hasPayload(node)) {
+            return true;
+        }
+        return value instanceof String
+                && BigInteger.valueOf(((String) value).codePointCount(0, ((String) value).length())).compareTo(maxLength) <= 0;
     }
 
     private boolean verifyMinimum(Schema schema, FrozenNode node) {
-        return compareNumber(node.getValue(), schema.getMinimumValue()) >= 0;
+        return compareNumber(node, schema.getMinimumValue()) >= 0;
     }
 
     private boolean verifyMaximum(Schema schema, FrozenNode node) {
-        return compareNumber(node.getValue(), schema.getMaximumValue()) <= 0;
+        return compareNumber(node, schema.getMaximumValue()) <= 0;
     }
 
     private boolean verifyExclusiveMinimum(Schema schema, FrozenNode node) {
         return schema.getExclusiveMinimumValue() == null
-                || compareNumber(node.getValue(), schema.getExclusiveMinimumValue()) > 0;
+                || compareNumber(node, schema.getExclusiveMinimumValue()) > 0;
     }
 
     private boolean verifyExclusiveMaximum(Schema schema, FrozenNode node) {
         return schema.getExclusiveMaximumValue() == null
-                || compareNumber(node.getValue(), schema.getExclusiveMaximumValue()) < 0;
+                || compareNumber(node, schema.getExclusiveMaximumValue()) < 0;
     }
 
     private boolean verifyMultipleOf(Schema schema, FrozenNode node) {
         BigDecimal multipleOf = schema.getMultipleOfValue();
         Object value = node.getValue();
-        if (multipleOf == null || !(value instanceof Number)) {
+        if (multipleOf == null || !hasPayload(node)) {
             return true;
         }
-        return numberValue(value).remainder(multipleOf).compareTo(BigDecimal.ZERO) == 0;
+        return value instanceof Number && BlueNumbers.isExactBinary64Multiple(value, multipleOf);
     }
 
-    private int compareNumber(Object value, BigDecimal bound) {
-        if (bound == null || !(value instanceof Number)) {
+    private int compareNumber(FrozenNode node, BigDecimal bound) {
+        Object value = node.getValue();
+        if (bound == null || !hasPayload(node)) {
             return 0;
+        }
+        if (!(value instanceof Number)) {
+            throw new IllegalArgumentException("numeric schema keyword applies to wrong kind");
         }
         return numberValue(value).compareTo(bound);
     }
 
     private boolean verifyMinItems(Schema schema, FrozenNode node) {
-        Integer minItems = schema.getMinItemsValue();
+        BigInteger minItems = schema.getMinItemsExact();
+        if (minItems == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+            return false;
+        }
         int size = node.getItems() != null ? node.getItems().size() : 0;
-        return minItems == null || size >= minItems;
+        return BigInteger.valueOf(size).compareTo(minItems) >= 0;
     }
 
     private boolean verifyMaxItems(Schema schema, FrozenNode node) {
-        Integer maxItems = schema.getMaxItemsValue();
+        BigInteger maxItems = schema.getMaxItemsExact();
+        if (maxItems == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+            return false;
+        }
         int size = node.getItems() != null ? node.getItems().size() : 0;
-        return maxItems == null || size <= maxItems;
+        return BigInteger.valueOf(size).compareTo(maxItems) <= 0;
     }
 
     private boolean verifyUniqueItems(Schema schema, FrozenNode node) {
-        if (!Boolean.TRUE.equals(schema.getUniqueItemsValue()) || node.getItems() == null) {
+        if (!Boolean.TRUE.equals(schema.getUniqueItemsValue()) || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+            return false;
+        }
+        if (node.getItems() == null) {
             return true;
         }
         Set<String> itemIds = new HashSet<>();
@@ -546,21 +568,36 @@ public final class FrozenTypeMatcher {
     }
 
     private boolean verifyMinFields(Schema schema, FrozenNode node) {
-        Integer minFields = schema.getMinFieldsValue();
+        BigInteger minFields = schema.getMinFieldsExact();
+        if (minFields == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || node.getItems() != null) {
+            return false;
+        }
         int size = node.getProperties() != null ? node.getProperties().size() : 0;
-        return minFields == null || size >= minFields;
+        return BigInteger.valueOf(size).compareTo(minFields) >= 0;
     }
 
     private boolean verifyMaxFields(Schema schema, FrozenNode node) {
-        Integer maxFields = schema.getMaxFieldsValue();
+        BigInteger maxFields = schema.getMaxFieldsExact();
+        if (maxFields == null || !hasPayload(node)) {
+            return true;
+        }
+        if (node.getValue() != null || node.getItems() != null) {
+            return false;
+        }
         int size = node.getProperties() != null ? node.getProperties().size() : 0;
-        return maxFields == null || size <= maxFields;
+        return BigInteger.valueOf(size).compareTo(maxFields) <= 0;
     }
 
     private boolean verifyEnum(Schema schema, FrozenNode node) {
         List<Node> enumValues = schema.getEnum();
         if (enumValues == null) {
             return true;
+        }
+        if (node.getValue() == null) {
+            return !hasPayload(node);
         }
         String nodeBlueId = comparableBlueId(node);
         for (Node enumValue : enumValues) {
@@ -677,18 +714,23 @@ public final class FrozenTypeMatcher {
         if (cached != null) {
             return cached;
         }
-        FrozenNode core = FrozenNode.fromResolvedNode(new Node()
-                .name(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(blueId))
-                .blueId(blueId));
+        FrozenNode core = FrozenNode.fromResolvedNode(new Node().blueId(blueId));
         resolvedReferenceCache.put(blueId, core);
         return core;
     }
 
     private boolean sameType(FrozenNode left, FrozenNode right) {
-        if (typeIdentity(left).equals(typeIdentity(right))) {
+        String leftIdentity = typeIdentity(left);
+        String rightIdentity = typeIdentity(right);
+        if (leftIdentity.equals(rightIdentity)) {
             return true;
         }
-        return typeCompatibilityIdentity(left).equals(typeCompatibilityIdentity(right));
+        String leftCompatibility = typeCompatibilityIdentity(left);
+        String rightCompatibility = typeCompatibilityIdentity(right);
+        if (CORE_TYPE_BLUE_IDS.contains(leftCompatibility) || CORE_TYPE_BLUE_IDS.contains(rightCompatibility)) {
+            return leftCompatibility.equals(rightCompatibility);
+        }
+        return leftCompatibility.equals(rightCompatibility);
     }
 
     private String typeIdentity(FrozenNode type) {
@@ -699,6 +741,10 @@ public final class FrozenTypeMatcher {
         FrozenNode resolved = type.isReferenceOnly() ? resolveTypeReference(type) : type;
         if (resolved == null) {
             return typeIdentity(type);
+        }
+        String identityBlueId = typeIdentity(resolved);
+        if (CORE_TYPE_BLUE_IDS.contains(identityBlueId)) {
+            return identityBlueId;
         }
         String cacheKey = typeIdentity(resolved) + "|" + resolved.blueId();
         String cached = typeCompatibilityIdentityCache.get(cacheKey);
@@ -730,6 +776,7 @@ public final class FrozenTypeMatcher {
         stripLabels(node.getKeyType());
         stripLabels(node.getValueType());
         stripLabels(node.getBlue());
+        stripLabels(node.getContracts());
         if (node.getItems() != null) {
             node.getItems().forEach(this::stripLabels);
         }
@@ -744,7 +791,6 @@ public final class FrozenTypeMatcher {
             return;
         }
         stripLabels(schema.getRequired());
-        stripLabels(schema.getAllowMultiple());
         stripLabels(schema.getMinLength());
         stripLabels(schema.getMaxLength());
         stripLabels(schema.getMinimum());

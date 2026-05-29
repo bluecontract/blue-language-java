@@ -2,6 +2,7 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
+import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -10,8 +11,9 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
-public class BasicNodeProvider extends PreloadedNodeProvider {
+public class BasicNodeProvider extends PreloadedNodeProvider implements CyclicAwareNodeProvider {
 
     private Map<String, JsonNode> blueIdToContentMap;
     private Map<String, Boolean> blueIdToMultipleDocumentsMap;
@@ -46,6 +48,14 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
         addToNameMap(node.getName(), parsedContent.blueId);
     }
 
+    private void processSingleNodeUnchecked(Node node) {
+        Node preprocessed = preprocessor.apply(node);
+        String blueId = BlueIdCalculator.calculateUncheckedBlueId(preprocessed);
+        blueIdToContentMap.put(blueId, JSON_MAPPER.valueToTree(preprocessed));
+        blueIdToMultipleDocumentsMap.put(blueId, false);
+        addToNameMap(node.getName(), blueId);
+    }
+
     private void processNodeWithItems(Node node) {
         List<Node> items = node.getItems();
         NodeContentHandler.ParsedContent parsedContent = NodeContentHandler.parseAndCalculateBlueId(items, preprocessor);
@@ -77,6 +87,16 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
         return null;
     }
 
+    @Override
+    public boolean hasVerifiedContentForBlueId(String blueId) {
+        String baseBlueId = blueId;
+        int memberSeparator = blueId.indexOf('#');
+        if (memberSeparator >= 0) {
+            baseBlueId = blueId.substring(0, memberSeparator);
+        }
+        return blueIdToContentMap.containsKey(baseBlueId);
+    }
+
     public void addSingleNodes(Node... nodes) {
         Arrays.stream(nodes).forEach(this::processNode);
     }
@@ -85,6 +105,12 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
         Arrays.stream(docs)
                 .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
                 .forEach(this::processNode);
+    }
+
+    public void addSingleDocsUnchecked(String... docs) {
+        Arrays.stream(docs)
+                .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
+                .forEach(this::processSingleNodeUnchecked);
     }
 
     public String getBlueIdByName(String name) {

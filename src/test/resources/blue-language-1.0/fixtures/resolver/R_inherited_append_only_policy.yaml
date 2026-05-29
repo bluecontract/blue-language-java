@@ -1,0 +1,16 @@
+id: R_inherited_append_only_policy
+category: Resolution
+operation: resolve
+description: inherited append-only merge policy rejects positional overlays when child
+  omits mergePolicy
+expectError: true
+source:
+  type:
+    type:
+      blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    mergePolicy: append-only
+    items:
+    - value: A
+  items:
+  - $pos: 0
+    value: B

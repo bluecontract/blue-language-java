@@ -21,6 +21,7 @@ public class Nodes {
         ITEM_TYPE,
         VALUE,
         PROPERTIES,
+        CONTRACTS,
         BLUE,
         ITEMS,
         SCHEMA,
@@ -31,6 +32,56 @@ public class Nodes {
 
     public static boolean isEmptyNode(Node node) {
         return hasFieldsAndMayHaveFields(node, EnumSet.noneOf(NodeField.class), EnumSet.noneOf(NodeField.class));
+    }
+
+    public static Node emptyPlaceholder() {
+        return new Node().properties(LIST_CONTROL_EMPTY, new Node().value(true).inlineValue(true));
+    }
+
+    public static boolean isEmptyPlaceholder(Node node) {
+        if (node == null || node.getProperties() == null || node.getProperties().size() != 1) {
+            return false;
+        }
+        Node marker = node.getProperties().get(LIST_CONTROL_EMPTY);
+        return marker != null
+                && Boolean.TRUE.equals(marker.getValue())
+                && marker.getName() == null
+                && marker.getDescription() == null
+                && marker.getType() == null
+                && marker.getItemType() == null
+                && marker.getKeyType() == null
+                && marker.getValueType() == null
+                && marker.getItems() == null
+                && marker.getProperties() == null
+                && marker.getContracts() == null
+                && marker.getBlueId() == null
+                && marker.getSchema() == null
+                && marker.getMergePolicy() == null
+                && marker.getPreviousBlueId() == null
+                && marker.getPosition() == null
+                && marker.getBlue() == null
+                && node.getName() == null
+                && node.getDescription() == null
+                && node.getType() == null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null
+                && node.getValue() == null
+                && node.getItems() == null
+                && node.getContracts() == null
+                && node.getBlueId() == null
+                && node.getSchema() == null
+                && node.getMergePolicy() == null
+                && node.getPreviousBlueId() == null
+                && node.getPosition() == null
+                && node.getBlue() == null;
+    }
+
+    public static void validateEmptyPlaceholder(Node node, String path) {
+        if (isEmptyPlaceholder(node)) {
+            return;
+        }
+        throw new IllegalArgumentException("\"$empty\" list placeholder must have exact shape { \"$empty\": true }. Path: " + path);
     }
 
     public static boolean hasBlueIdOnly(Node node) {
@@ -79,6 +130,7 @@ public class Nodes {
             case VALUE: return node.getValue();
             case DESCRIPTION: return node.getDescription();
             case PROPERTIES: return node.getProperties();
+            case CONTRACTS: return node.getContracts();
             case BLUE: return node.getBlue();
             case ITEMS: return node.getItems();
             case SCHEMA: return node.getSchema();

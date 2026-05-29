@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 
 /**
@@ -23,7 +25,26 @@ final class TerminationService {
 
         String normalized = execution.normalizeScope(scopePath);
         String pointer = ProcessorEngine.resolvePointer(normalized, ProcessorPointerConstants.RELATIVE_TERMINATED);
-        runtime.directWrite(pointer, createTerminationMarker(kind, reason));
+        Node marker = createTerminationMarker(kind, reason);
+        try {
+            runtime.directWrite(pointer, marker);
+        } catch (RuntimeException ex) {
+            String contractsPointer = ProcessorEngine.resolvePointer(normalized,
+                    ProcessorPointerConstants.RELATIVE_CONTRACTS);
+            Node contracts = new Node().properties(ProcessorContractConstants.KEY_TERMINATED, marker);
+            try {
+                runtime.directWrite(contractsPointer, contracts);
+            } catch (RuntimeException fallbackFailure) {
+                Node replacement = runtime.document().clone();
+                replacement.contracts(contracts);
+                runtime.replaceDocument(replacement);
+            }
+        }
+        if (runtime.nodeAt(pointer) == null) {
+            Node replacement = runtime.document().clone();
+            replacement.contracts(new Node().properties(ProcessorContractConstants.KEY_TERMINATED, marker));
+            runtime.replaceDocument(replacement);
+        }
         runtime.chargeTerminationMarker();
 
         ContractBundle bundleRef = bundle != null ? bundle : execution.bundleForScope(normalized);
@@ -52,7 +73,7 @@ final class TerminationService {
 
     private Node createTerminationMarker(ScopeRuntimeContext.TerminationKind kind, String reason) {
         Node marker = new Node()
-                .type(new Node().blueId("ProcessingTerminatedMarker"))
+                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_TERMINATED_MARKER))
                 .properties("cause", new Node().value(kind == ScopeRuntimeContext.TerminationKind.GRACEFUL ? "graceful" : "fatal"));
         if (reason != null && !reason.isEmpty()) {
             marker.properties("reason", new Node().value(reason));
@@ -61,7 +82,7 @@ final class TerminationService {
     }
 
     private Node createTerminationLifecycleEvent(ScopeRuntimeContext.TerminationKind kind, String reason) {
-        Node event = new Node().properties("type", new Node().value("Document Processing Terminated"));
+        Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED));
         event.properties("cause", new Node().value(kind == ScopeRuntimeContext.TerminationKind.GRACEFUL ? "graceful" : "fatal"));
         if (reason != null && !reason.isEmpty()) {
             event.properties("reason", new Node().value(reason));
@@ -70,9 +91,7 @@ final class TerminationService {
     }
 
     private Node createFatalOutboxEvent(String scopePath, String reason) {
-        Node event = new Node().properties("type", new Node().value("Document Processing Fatal Error"));
-        event.properties("domain", new Node().value(scopePath));
-        event.properties("code", new Node().value("RuntimeFatal"));
+        Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR));
         if (reason != null && !reason.isEmpty()) {
             event.properties("reason", new Node().value(reason));
         }

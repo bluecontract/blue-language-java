@@ -1,0 +1,11 @@
+id: B_payload_only_scalar_typed_identity
+category: BlueId
+operation: calculateBlueId
+description: payload-only scalar hashing uses typed scalar identity form, not raw
+  JSON scalar hashing
+input: 1
+expectedNodeBlueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+alsoDifferentFrom:
+  type:
+    blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  value: 1.0

@@ -1,0 +1,9 @@
+id: F_collapse_preserves_node_blueid
+category: Provider
+operation: collapse
+description: collapse returns a pure-reference form preserving known content Node
+  BlueId
+source: 1
+expectedCollapsed:
+  blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+expectedNodeBlueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz

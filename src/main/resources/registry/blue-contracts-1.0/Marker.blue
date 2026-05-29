@@ -1,0 +1,9 @@
+name: Marker
+type: Contract
+description: >
+  Runtime contract role for processor-observed state or policy. Markers do not
+  run contract logic. The processor obeys supported marker semantics when a
+  supported marker appears at the correct reserved key. Unsupported marker
+  types in an active scope are subject to must-understand rules. Required
+  processor-managed markers have reserved keys under contracts and must not
+  appear under other keys.

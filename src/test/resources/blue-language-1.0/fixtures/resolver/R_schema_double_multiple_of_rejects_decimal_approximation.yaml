@@ -1,0 +1,12 @@
+id: R_schema_double_multiple_of_rejects_decimal_approximation
+category: Schema
+operation: resolve
+description: Double multipleOf uses exact binary64 rational arithmetic, not decimal epsilon behavior
+expectError: true
+expectedErrorCategory: SchemaViolation
+source:
+  type:
+    blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  schema:
+    multipleOf: 0.1
+  value: 0.3

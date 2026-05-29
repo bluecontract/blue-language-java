@@ -26,6 +26,7 @@ public class Node implements Cloneable {
     private Object value;
     private List<Node> items;
     private Map<String, Node> properties;
+    private Node contracts;
     private String blueId;
     private Schema schema;
     private String mergePolicy;
@@ -66,7 +67,13 @@ public class Node implements Cloneable {
             } else if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId)) {
                 return BlueNumbers.toCanonicalDoubleValue(this.value);
             } else if (BOOLEAN_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
-                return Boolean.parseBoolean((String) this.value);
+                if ("true".equals(this.value)) {
+                    return true;
+                }
+                if ("false".equals(this.value)) {
+                    return false;
+                }
+                throw new IllegalArgumentException("Explicit Boolean scalar values must be \"true\" or \"false\".");
             }
         }
         return value;
@@ -84,6 +91,10 @@ public class Node implements Cloneable {
         return properties;
     }
 
+    public Node getContracts() {
+        return contracts;
+    }
+
     public String getBlueId() {
         return blueId;
     }
@@ -99,6 +110,7 @@ public class Node implements Cloneable {
                 && value == null
                 && items == null
                 && properties == null
+                && contracts == null
                 && schema == null
                 && mergePolicy == null
                 && previousBlueId == null
@@ -212,17 +224,24 @@ public class Node implements Cloneable {
     }
 
     public Node properties(Map<String, Node> properties) {
-        if (properties != null) {
-            this.properties = new HashMap<>(properties);
-        } else {
-            this.properties = null;
+        this.properties = null;
+        if (properties == null) {
+            return this;
         }
+        Map<String, Node> objectProperties = new LinkedHashMap<>(properties);
+        if (objectProperties.containsKey(OBJECT_CONTRACTS)) {
+            this.contracts = objectProperties.remove(OBJECT_CONTRACTS);
+        }
+        this.properties = objectProperties;
         return this;
     }
 
     public Node properties(String key1, Node value1) {
+        if (OBJECT_CONTRACTS.equals(key1)) {
+            return contracts(value1);
+        }
         if (this.properties == null) {
-            this.properties = new HashMap<>();
+            this.properties = new LinkedHashMap<>();
         }
         this.properties.put(key1, value1);
         return this;
@@ -248,6 +267,11 @@ public class Node implements Cloneable {
 
     public Node blueId(String blueId) {
         this.blueId = blueId;
+        return this;
+    }
+
+    public Node contracts(Node contracts) {
+        this.contracts = contracts;
         return this;
     }
 
@@ -294,6 +318,7 @@ public class Node implements Cloneable {
         this.previousBlueId = source.previousBlueId;
         this.position = source.position;
         this.inlineValue = source.inlineValue;
+        this.contracts = source.contracts != null ? source.contracts.clone() : null;
 
         this.type = source.type != null ? source.type.clone() : null;
         this.itemType = source.itemType != null ? source.itemType.clone() : null;
@@ -308,7 +333,7 @@ public class Node implements Cloneable {
                             Map.Entry::getKey,
                             entry -> entry.getValue().clone(),
                             (e1, e2) -> e1,
-                            HashMap::new
+                            LinkedHashMap::new
                     ))
                 : null;
         this.schema = source.schema != null ? source.schema.clone() : null;
@@ -375,6 +400,7 @@ public class Node implements Cloneable {
                ", value=" + value +
                ", items=" + items +
                ", properties=" + properties +
+               ", contracts=" + contracts +
                ", blueId='" + blueId + '\'' +
                ", schema=" + schema +
                ", mergePolicy='" + mergePolicy + '\'' +

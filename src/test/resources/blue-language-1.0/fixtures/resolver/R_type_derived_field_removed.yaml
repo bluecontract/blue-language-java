@@ -1,0 +1,11 @@
+id: R_type_derived_field_removed
+category: Canonicalization
+operation: canonicalize
+description: canonical overlay omits content inherited from the type root
+source:
+  type:
+    inherited: from-type
+  local: from-instance
+expectedCanonicalOverlay:
+  type: {}
+  local: from-instance

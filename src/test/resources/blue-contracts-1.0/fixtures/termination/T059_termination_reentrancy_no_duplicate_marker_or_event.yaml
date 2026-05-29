@@ -1,0 +1,31 @@
+id: T059_termination_reentrancy_no_duplicate_marker_or_event
+category: Termination
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    first:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      termination: graceful
+      terminationReason: first
+    second:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      termination: graceful
+      terminationReason: second
+event:
+  kind: reentrant
+expectedCapabilityFailure: false
+expectedRootEventTypes:
+  - "Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL"
+  - "4HWncQEQsdpk8zcXxYxgdtoXo5nKHxFPWeJfTscCbmeK"
+expectedDocumentPaths:
+  /contracts/terminated/reason:
+    value: first

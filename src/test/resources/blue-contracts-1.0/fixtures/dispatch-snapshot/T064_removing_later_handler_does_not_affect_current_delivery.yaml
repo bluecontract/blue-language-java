@@ -1,0 +1,34 @@
+id: T064_removing_later_handler_does_not_affect_current_delivery
+category: DispatchSnapshot
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    first:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: remove
+          path: /contracts/second
+    second:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /secondRan
+          val:
+            value: true
+event:
+  kind: snapshot-remove
+expectedCapabilityFailure: false
+expectedDocumentPaths:
+  /secondRan:
+    value: true
+expectedAbsentDocumentPaths:
+  - /contracts/second

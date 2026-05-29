@@ -1,17 +1,26 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.conformance.ConformancePlan;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.ConformanceEngineTest;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.provider.BasicNodeProvider;
+import blue.language.provider.BootstrapProvider;
+import blue.language.provider.SequentialNodeProvider;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
@@ -25,7 +34,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void patchGeneralizesChangedNodeAndAncestorsBeforeCommit() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
@@ -49,7 +58,7 @@ class DocumentProcessorGeneralizationTest {
         nodeProvider.addSingleDocs(
                 "name: Fixed One\n" +
                 "x: 1");
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
@@ -66,21 +75,21 @@ class DocumentProcessorGeneralizationTest {
 
     @Test
     void untypedRootPatchesAreNotConformanceEnforced() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
 
         runtime.applyPatch("/", JsonPatch.add("/contracts/initialized",
-                new Node().type(new Node().blueId("InitializationMarker"))));
+                new Node().type(new Node().blueId("6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"))));
 
         assertNotNull(document.getAsNode("/contracts/initialized"));
-        assertEquals("InitializationMarker", document.getAsNode("/contracts/initialized/type").getBlueId());
+        assertEquals("6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q", document.getAsNode("/contracts/initialized/type").getBlueId());
     }
 
     @Test
     void batchPatchGeneralizesChangedNodeAndAncestorOnce() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
@@ -109,7 +118,7 @@ class DocumentProcessorGeneralizationTest {
         nodeProvider.addSingleDocs(
                 "name: Fixed One\n" +
                 "x: 1");
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
@@ -130,13 +139,13 @@ class DocumentProcessorGeneralizationTest {
 
     @Test
     void processorManagedInitializedMarkerBypassWorksInBatch() {
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
 
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.add("/contracts/initialized",
-                        new Node().type(new Node().blueId("InitializationMarker"))),
+                        new Node().type(new Node().blueId("6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"))),
                 JsonPatch.add("/status", new Node().value("active"))
         ));
 
@@ -147,7 +156,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchParentThenChildPatchGeneralizesAndPreservesChildValue() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
@@ -173,7 +182,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchChildThenSiblingPatchGeneralizesOnceAndPreservesBothChanges() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
@@ -197,7 +206,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchSiblingPatchesRequiringAncestorGeneralizationPreserveBothChanges() {
         BasicNodeProvider nodeProvider = productWithAvailabilityProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
@@ -224,7 +233,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchDictionaryValueTypePatchesPreserveValuesAndDictionaryType() {
         BasicNodeProvider nodeProvider = orderBookProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Book\n" +
                 "type:\n" +
@@ -249,7 +258,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchListItemTypePatchesMatchSequentialBehavior() {
         BasicNodeProvider nodeProvider = itemListProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
                 "name: Batch List\n" +
                 "type:\n" +
@@ -279,7 +288,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchGeneralizesTypedChildUnderUntypedRoot() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
                 "name: Untyped Container\n" +
                 "child:\n" +
@@ -303,7 +312,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchGeneralizesDictionaryValueTypeUnderUntypedRoot() {
         BasicNodeProvider nodeProvider = orderBookProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
                 "name: Untyped Book\n" +
                 "orders:\n" +
@@ -337,7 +346,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void batchGeneralizesListItemTypeUnderUntypedRoot() {
         BasicNodeProvider nodeProvider = itemListProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
                 "name: Untyped List\n" +
                 "entries:\n" +
@@ -368,7 +377,7 @@ class DocumentProcessorGeneralizationTest {
     @Test
     void conformanceAffectedUpdateAfterReflectsCommittedResolvedValue() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
-        Blue blue = new Blue(nodeProvider);
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
@@ -431,7 +440,7 @@ class DocumentProcessorGeneralizationTest {
                 "list add replace remove");
 
         BasicNodeProvider priceProvider = ConformanceEngineTest.priceProvider();
-        Blue priceBlue = new Blue(priceProvider);
+        Blue priceBlue = ProcessorTestSupport.blue(priceProvider);
         assertBatchMatchesSequential(priceBlue.resolve(YAML_MAPPER.readValue(
                         "name: Untyped Container\n" +
                         "child:\n" +
@@ -444,7 +453,7 @@ class DocumentProcessorGeneralizationTest {
                 "typed child generalization");
 
         BasicNodeProvider orderProvider = orderBookProvider();
-        Blue orderBlue = new Blue(orderProvider);
+        Blue orderBlue = ProcessorTestSupport.blue(orderProvider);
         assertBatchMatchesSequential(orderBlue.resolve(YAML_MAPPER.readValue(
                         "name: Untyped Book\n" +
                         "orders:\n" +
@@ -463,7 +472,7 @@ class DocumentProcessorGeneralizationTest {
                 "dictionary valueType update");
 
         BasicNodeProvider itemProvider = itemListProvider();
-        Blue itemBlue = new Blue(itemProvider);
+        Blue itemBlue = ProcessorTestSupport.blue(itemProvider);
         assertBatchMatchesSequential(itemBlue.resolve(YAML_MAPPER.readValue(
                         "name: Untyped List\n" +
                         "entries:\n" +
@@ -478,6 +487,220 @@ class DocumentProcessorGeneralizationTest {
                 itemBlue.conformanceEngine(),
                 Arrays.asList(JsonPatch.replace("/entries/0/status", new Node().value("closed"))),
                 "list itemType update");
+    }
+
+    @Test
+    void productionGeneralizationPolicyRejectModeFailsWithoutScriptedRuntime() throws Exception {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "price:\n" +
+                "  type:\n" +
+                "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "  amount: 150\n" +
+                "  currency: EUR", Node.class));
+        document.contracts(generalizationPolicy(new Node().items(Arrays.asList(
+                new Node().properties("path", new Node().value("/price"),
+                        "mode", new Node().value("reject"))))));
+
+        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
+                () -> new DocumentProcessingRuntime(document, blue.conformanceEngine())
+                        .applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD"))));
+
+        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+                failure.errorCategory(),
+                "Unexpected category for " + failure.getMessage());
+        assertEquals("EUR", document.getAsText("/price/currency"));
+        assertEquals(nodeProvider.getBlueIdByName("Price in EUR"), document.getAsNode("/price/type").getBlueId());
+    }
+
+    @Test
+    void productionGeneralizationPolicyFloorAllowsEqualGeneratedType() throws Exception {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "price:\n" +
+                "  type:\n" +
+                "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "  amount: 150\n" +
+                "  currency: EUR", Node.class));
+        document.contracts(generalizationPolicy(new Node().items(Arrays.asList(
+                new Node().properties("path", new Node().value("/price"),
+                        "mode", new Node().value("nearest-valid"),
+                        "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("Price")))))));
+
+        new DocumentProcessingRuntime(document, blue.conformanceEngine())
+                .applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
+
+        assertEquals("USD", document.getAsText("/price/currency"));
+        assertEquals(nodeProvider.getBlueIdByName("Price"), document.getAsNode("/price/type").getBlueId());
+    }
+
+    @Test
+    void productionGeneralizationPolicyFloorAllowsEqualGeneratedTypeWithSnapshotRuntime() throws Exception {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "price:\n" +
+                "  type:\n" +
+                "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "  amount: 150\n" +
+                "  currency: EUR", Node.class));
+        document.contracts(generalizationPolicy(new Node().items(Arrays.asList(
+                new Node().properties("path", new Node().value("/price"),
+                        "mode", new Node().value("nearest-valid"),
+                        "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("Price")))))));
+
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(document);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot,
+                blue.conformanceEngine(),
+                snapshotManager(blue));
+        runtime.applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
+
+        assertEquals("USD", runtime.document().getAsText("/price/currency"));
+        assertEquals(nodeProvider.getBlueIdByName("Price"), runtime.document().getAsNode("/price/type").getBlueId());
+        assertNotNull(runtime.snapshot());
+    }
+
+    @Test
+    void productionGeneralizationPolicyFloorRejectsOvergeneralizationWithoutScriptedRuntime() throws Exception {
+        BasicNodeProvider nodeProvider = payNoteProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("EUBankTransferPayNote") + "\n" +
+                "paymentKind: bank-transfer\n" +
+                "rail: SEPA\n" +
+                "amount: 10", Node.class));
+        document.contracts(generalizationPolicy(new Node().items(Arrays.asList(
+                new Node().properties("path", new Node().value("/"),
+                        "mode", new Node().value("nearest-valid"),
+                        "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("BankTransferPayNote")))))));
+
+        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
+                () -> new DocumentProcessingRuntime(document, blue.conformanceEngine())
+                        .applyPatch("/", JsonPatch.replace("/paymentKind", new Node().value("card"))));
+
+        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+                failure.errorCategory(),
+                "Unexpected category for " + failure.getMessage());
+        assertEquals("bank-transfer", document.getAsText("/paymentKind"));
+        assertEquals(nodeProvider.getBlueIdByName("EUBankTransferPayNote"), document.getType().getBlueId());
+    }
+
+    @Test
+    void productionGeneralizationPolicyUsesScopeLocalMarker() throws Exception {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "child:\n" +
+                "  contracts:\n" +
+                "    generalization:\n" +
+                "      type:\n" +
+                "        blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                "      rules:\n" +
+                "        - path: /price\n" +
+                "          mode: reject\n" +
+                "  price:\n" +
+                "    type:\n" +
+                "      blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "    amount: 150\n" +
+                "    currency: EUR", Node.class));
+
+        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
+                () -> new DocumentProcessingRuntime(document, blue.conformanceEngine())
+                        .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD"))));
+
+        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+                failure.errorCategory(),
+                "Unexpected category for " + failure.getMessage());
+        assertEquals("EUR", document.getAsText("/child/price/currency"));
+        assertEquals(nodeProvider.getBlueIdByName("Price in EUR"),
+                document.getAsNode("/child/price/type").getBlueId());
+    }
+
+    @Test
+    void productionGeneralizationPolicyRulePathIsScopeRelative() throws Exception {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "child:\n" +
+                "  contracts:\n" +
+                "    generalization:\n" +
+                "      type:\n" +
+                "        blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                "      rules:\n" +
+                "        - path: /price\n" +
+                "          mode: nearest-valid\n" +
+                "          mustRemainSubtypeOf:\n" +
+                "            blueId: " + nodeProvider.getBlueIdByName("Price") + "\n" +
+                "  price:\n" +
+                "    type:\n" +
+                "      blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "    amount: 150\n" +
+                "    currency: EUR", Node.class));
+
+        new DocumentProcessingRuntime(document, blue.conformanceEngine())
+                .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD")));
+
+        assertEquals("USD", document.getAsText("/child/price/currency"));
+        assertEquals(nodeProvider.getBlueIdByName("Price"), document.getAsNode("/child/price/type").getBlueId());
+    }
+
+    @Test
+    void rootGeneralizationPolicyDoesNotAccidentallyOverrideChildPolicyUnlessSpecified() throws Exception {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = blue.resolve(YAML_MAPPER.readValue(
+                "contracts:\n" +
+                "  generalization:\n" +
+                "    type:\n" +
+                "      blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                "    rules:\n" +
+                "      - path: /price\n" +
+                "        mode: reject\n" +
+                "child:\n" +
+                "  price:\n" +
+                "    type:\n" +
+                "      blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "    amount: 150\n" +
+                "    currency: EUR", Node.class));
+
+        new DocumentProcessingRuntime(document, blue.conformanceEngine())
+                .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD")));
+
+        assertEquals("USD", document.getAsText("/child/price/currency"));
+        assertEquals(nodeProvider.getBlueIdByName("Price"), document.getAsNode("/child/price/type").getBlueId());
+    }
+
+    @Test
+    void embeddedChildPatchCannotGeneralizeParentWithoutScriptedRuntime() throws Exception {
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = YAML_MAPPER.readValue(
+                "contracts:\n" +
+                "  embedded:\n" +
+                "    paths:\n" +
+                "      - /child\n" +
+                "child:\n" +
+                "  price:\n" +
+                "    type:\n" +
+                "      blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "    amount: 150\n" +
+                "    currency: EUR", Node.class);
+
+        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
+                () -> new DocumentProcessingRuntime(document,
+                        blue.conformanceEngine(),
+                        parentGeneralizationOverride(),
+                        null,
+                        null)
+                        .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD"))));
+
+        assertEquals(ProcessorErrorCategory.BoundaryViolation, failure.errorCategory());
+        assertEquals("EUR", document.getAsText("/child/price/currency"));
+        assertEquals(nodeProvider.getBlueIdByName("Price in EUR"),
+                document.getAsNode("/child/price/type").getBlueId());
     }
 
     private BasicNodeProvider productWithAvailabilityProvider() {
@@ -512,6 +735,83 @@ class DocumentProcessorGeneralizationTest {
         return nodeProvider;
     }
 
+    private Node generalizationPolicy(Node rules) {
+        return new Node().properties("generalization",
+                new Node()
+                        .type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                        .properties("rules", rules));
+    }
+
+    private Blue snapshotBlue(BasicNodeProvider nodeProvider) {
+        return new Blue(new SequentialNodeProvider(
+                BootstrapProvider.INSTANCE,
+                BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider(),
+                nodeProvider));
+    }
+
+    private ProcessingSnapshotManager snapshotManager(Blue blue) {
+        return new ProcessingSnapshotManager() {
+            @Override
+            public ResolvedSnapshot fromDocument(Node document) {
+                return blue.resolveToSnapshot(document);
+            }
+
+            @Override
+            public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+                return blue.applyCanonicalPatch(snapshot, patch);
+            }
+
+            @Override
+            public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+                blue.cacheResolvedSnapshot(snapshot);
+                return snapshot;
+            }
+        };
+    }
+
+    private BasicNodeProvider payNoteProvider() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: PayNote\n" +
+                "paymentKind:\n" +
+                "  type: Text\n" +
+                "rail:\n" +
+                "  type: Text\n" +
+                "amount:\n" +
+                "  type: Integer");
+        nodeProvider.addSingleDocs(
+                "name: BankTransferPayNote\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("PayNote") + "\n" +
+                "paymentKind: bank-transfer");
+        nodeProvider.addSingleDocs(
+                "name: EUBankTransferPayNote\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("BankTransferPayNote") + "\n" +
+                "rail: SEPA");
+        return nodeProvider;
+    }
+
+    private ConformancePlannerOverride parentGeneralizationOverride() {
+        return new ConformancePlannerOverride() {
+            @Override
+            public boolean applies() {
+                return true;
+            }
+
+            @Override
+            public ConformancePlan plan(FrozenNode canonicalRoot,
+                                        FrozenNode resolvedRoot,
+                                        List<ConformanceChangedPath> changedPaths) {
+                return ConformancePlan.generalized(canonicalRoot,
+                        resolvedRoot,
+                        Collections.emptyList(),
+                        Collections.singletonList("/type"),
+                        canonicalRoot != null);
+            }
+        };
+    }
+
     private void assertBatchMatchesSequential(Node initial,
                                               ConformanceEngine conformanceEngine,
                                               List<JsonPatch> patches,
@@ -539,9 +839,13 @@ class DocumentProcessorGeneralizationTest {
     }
 
     private void assertEquivalentDocuments(Node expected, Node actual, String label) {
-        assertEquals(BlueIdCalculator.calculateBlueId(expected),
-                BlueIdCalculator.calculateBlueId(actual),
+        assertEquals(runtimeDocumentBlueId(expected),
+                runtimeDocumentBlueId(actual),
                 label);
+    }
+
+    private String runtimeDocumentBlueId(Node node) {
+        return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
     }
 
     private List<String> updatePaths(List<DocumentProcessingRuntime.DocumentUpdateData> updates) {

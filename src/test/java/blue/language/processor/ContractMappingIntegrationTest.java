@@ -36,10 +36,10 @@ class ContractMappingIntegrationTest {
                 StandardCharsets.UTF_8
         );
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
         assertNotNull(document);
-        Node contractsNode = document.getProperties().get("contracts");
+        Node contractsNode = document.getContracts();
         assertNotNull(contractsNode, "contracts node should be present");
 
         Map<String, Node> contractEntries = contractsNode.getProperties();
@@ -102,9 +102,9 @@ class ContractMappingIntegrationTest {
                 StandardCharsets.UTF_8
         );
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(document);
+        FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(document);
         ResolvedSnapshot snapshot = new ResolvedSnapshot(canonicalRoot,
                 FrozenNode.fromResolvedNode(document),
                 canonicalRoot.blueId());
@@ -132,5 +132,32 @@ class ContractMappingIntegrationTest {
         assertEquals("/x", setProperty.getPropertyKey());
         assertEquals(7, setProperty.getPropertyValue());
         assertEquals("/custom/path/", setProperty.getPath());
+    }
+
+    @Test
+    void processorContractLoaderStillFindsContracts() {
+        Node document = ProcessorTestSupport.blue().yamlToNode(
+                "contracts:\n" +
+                "  lifecycleChannel:\n" +
+                "    type:\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "  setProperty:\n" +
+                "    channel: lifecycleChannel\n" +
+                "    type:\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 7\n");
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(new SetPropertyContractProcessor())
+                .build();
+        TypeClassResolver resolver = new TypeClassResolver("blue.language.processor.model");
+        ContractLoader loader = new ContractLoader(registry,
+                new NodeToObjectConverter(resolver),
+                resolver);
+
+        ContractBundle bundle = loader.load(FrozenNode.fromResolvedNode(document), "/");
+
+        assertNotNull(bundle.contractNode("setProperty"));
+        assertTrue(bundle.contractNodes().containsKey("setProperty"));
     }
 }

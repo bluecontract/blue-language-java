@@ -1,0 +1,46 @@
+id: T037_embedded_node_handler_runs_in_parent_scope_and_cannot_patch_inside_child
+category: Embedded
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  child:
+    contracts:
+      c:
+        type:
+          blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+      h:
+        channel: c
+        type:
+          blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+        triggeredEvents:
+          - value: child
+  contracts:
+    embedded:
+      type:
+        blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+      paths:
+        - /child
+    bridge:
+      type:
+        blueId: "H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i"
+      childPath: /child
+    h:
+      channel: bridge
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /child/inside
+          val:
+            value: forbidden
+event:
+  kind: parent-boundary
+expectedCapabilityFailure: false
+expectedDocumentPathExists:
+  - /contracts/terminated
+expectedAbsentDocumentPaths:
+  - /child/inside
+expectedDocumentPaths:
+  /contracts/terminated/cause:
+    value: fatal

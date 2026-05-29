@@ -1,8 +1,9 @@
 package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
-@TypeBlueId("EmbeddedNodeChannel")
+@TypeBlueId(RuntimeBlueIds.EMBEDDED_NODE_CHANNEL)
 public class EmbeddedNodeChannel extends ChannelContract {
 
     private String childPath;

@@ -11,14 +11,21 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.merge.processor.*;
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ProcessingMetricsSink;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.preprocess.Preprocessor;
+import blue.language.provider.BootstrapProvider;
+import blue.language.provider.SequentialNodeProvider;
+import blue.language.provider.VerifyingNodeProvider;
+import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -35,8 +42,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,27 +59,18 @@ import static blue.language.utils.limits.Limits.NO_LIMITS;
 
 public class Blue implements NodeResolver {
 
-    private static final Set<String> PROCESSOR_MANAGED_TYPE_BLUE_IDS = new HashSet<>(Arrays.asList(
-            "ChannelEventCheckpoint",
-            "DocumentUpdate",
-            "DocumentUpdateChannel",
-            "EmbeddedNodeChannel",
-            "InitializationMarker",
-            "JsonPatch",
-            "LifecycleChannel",
-            "ProcessEmbedded",
-            "ProcessingFailureMarker",
-            "ProcessingTerminatedMarker",
-            "TriggeredEventChannel"
-    ));
+    private static final int RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT = 32;
 
     private NodeProvider nodeProvider;
+    private NodeProvider originalNodeProvider;
     private MergingProcessor mergingProcessor;
     private TypeClassResolver typeClassResolver;
     private Map<String, String> preprocessingAliases = new HashMap<>();
     private Limits globalLimits = NO_LIMITS;
     private DocumentProcessor documentProcessor;
     private final ConcurrentMap<String, ResolvedSnapshot> resolvedSnapshotsByBlueId = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Node> externalContractTypeNodes = new ConcurrentHashMap<>();
+    private final List<ProcessingDocumentSnapshot> recentProcessingDocumentSnapshots = new ArrayList<>();
     private final ResolvedReferenceCache resolvedReferenceCache = new ResolvedReferenceCache();
     private final DictionaryRegistry dictionaryRegistry = new DictionaryRegistry();
 
@@ -80,6 +81,7 @@ public class Blue implements NodeResolver {
     }
 
     public Blue(NodeProvider nodeProvider) {
+        this.originalNodeProvider = nodeProvider;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = createDefaultNodeProcessor();
         this.documentProcessor = createDefaultDocumentProcessor();
@@ -94,6 +96,7 @@ public class Blue implements NodeResolver {
     }
 
     public Blue(NodeProvider nodeProvider, MergingProcessor mergingProcessor, TypeClassResolver typeClassResolver) {
+        this.originalNodeProvider = nodeProvider;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = mergingProcessor != null ? mergingProcessor : createDefaultNodeProcessor();
         this.typeClassResolver = typeClassResolver;
@@ -157,10 +160,22 @@ public class Blue implements NodeResolver {
         return resolvePreservingPaths(node, limits, selectPaths(node, pathPatterns, predicate));
     }
 
+    /**
+     * @deprecated Use {@link #canonicalize(Node)} for Content BlueId identity
+     * or {@link MergeReverser#reverseToMinimizedOverlay(Node)} for author-facing
+     * minimized output.
+     */
+    @Deprecated
     public Node reverse(Node node) {
         return new MergeReverser().reverse(node);
     }
 
+    /**
+     * @deprecated Use {@link #canonicalize(Object)} for Content BlueId identity
+     * or {@link MergeReverser#reverseToMinimizedOverlay(Node)} for author-facing
+     * minimized output.
+     */
+    @Deprecated
     public Node reverse(Object object) {
         return reverse(objectToNode(object));
     }
@@ -168,17 +183,39 @@ public class Blue implements NodeResolver {
     public Node canonicalize(Node node) {
         Node preprocessed = preprocess(node.clone());
         Node resolved = resolve(preprocessed.clone());
-        return reverse(resolved);
+        return new MergeReverser().reverseToCanonicalOverlay(resolved);
     }
 
     public Node canonicalize(Object object) {
         return canonicalize(objectToNode(object));
     }
 
+    public Node expand(Node node) {
+        if (node == null) {
+            throw new IllegalArgumentException("node must not be null");
+        }
+        return expandReferences(node);
+    }
+
+    public Node expand(Object object) {
+        return expand(objectToNode(object));
+    }
+
+    public Node collapse(Node node) {
+        if (node == null) {
+            throw new IllegalArgumentException("node must not be null");
+        }
+        return new Node().blueId(BlueIdCalculator.calculateBlueId(node));
+    }
+
+    public Node collapse(Object object) {
+        return collapse(objectToNode(object));
+    }
+
     public ResolvedSnapshot resolveToSnapshot(Node node) {
         Node preprocessed = preprocess(node.clone());
         Node resolved = resolve(preprocessed.clone());
-        Node canonical = reverse(resolved.clone());
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(resolved.clone());
         FrozenNode canonicalRoot = FrozenNode.fromNode(canonical);
         return cacheSnapshot(new ResolvedSnapshot(canonicalRoot, resolvedReferenceCache.freezeResolved(resolved), canonicalRoot.blueId()));
     }
@@ -226,6 +263,75 @@ public class Blue implements NodeResolver {
         return canonical;
     }
 
+    private Node expandReferences(Node node) {
+        if (node == null) {
+            return null;
+        }
+        if (node.isReferenceOnly()) {
+            List<Node> nodes = nodeProvider.fetchByBlueId(node.getBlueId());
+            if (nodes == null || nodes.isEmpty()) {
+                throw new IllegalArgumentException("No content found for blueId: " + node.getBlueId());
+            }
+            if (nodes.size() == 1) {
+                return expandReferences(providerContentWithoutRootIdentity(nodes.get(0)));
+            }
+            return new Node().items(expandReferences(providerContentWithoutRootIdentity(nodes)));
+        }
+
+        Node expanded = node.clone();
+        expanded.type(expandReferences(expanded.getType()));
+        expanded.itemType(expandReferences(expanded.getItemType()));
+        expanded.keyType(expandReferences(expanded.getKeyType()));
+        expanded.valueType(expandReferences(expanded.getValueType()));
+        expanded.blue(expandReferences(expanded.getBlue()));
+        expanded.contracts(expandReferences(expanded.getContracts()));
+        if (expanded.getItems() != null) {
+            expanded.items(expandReferences(expanded.getItems()));
+        }
+        if (expanded.getProperties() != null) {
+            Map<String, Node> expandedProperties = new LinkedHashMap<>();
+            expanded.getProperties().forEach((key, value) ->
+                    expandedProperties.put(key, expandReferences(value)));
+            expanded.properties(expandedProperties);
+        }
+        if (expanded.getSchema() != null) {
+            expanded.schema(expandReferences(expanded.getSchema()));
+        }
+        return expanded;
+    }
+
+    private List<Node> expandReferences(List<Node> nodes) {
+        List<Node> expanded = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            expanded.add(expandReferences(node));
+        }
+        return expanded;
+    }
+
+    private Schema expandReferences(Schema schema) {
+        if (schema == null) {
+            return null;
+        }
+        Schema expanded = schema.clone();
+        expanded.required(expandReferences(expanded.getRequired()));
+        expanded.minLength(expandReferences(expanded.getMinLength()));
+        expanded.maxLength(expandReferences(expanded.getMaxLength()));
+        expanded.minimum(expandReferences(expanded.getMinimum()));
+        expanded.maximum(expandReferences(expanded.getMaximum()));
+        expanded.exclusiveMinimum(expandReferences(expanded.getExclusiveMinimum()));
+        expanded.exclusiveMaximum(expandReferences(expanded.getExclusiveMaximum()));
+        expanded.multipleOf(expandReferences(expanded.getMultipleOf()));
+        expanded.minItems(expandReferences(expanded.getMinItems()));
+        expanded.maxItems(expandReferences(expanded.getMaxItems()));
+        expanded.uniqueItems(expandReferences(expanded.getUniqueItems()));
+        expanded.minFields(expandReferences(expanded.getMinFields()));
+        expanded.maxFields(expandReferences(expanded.getMaxFields()));
+        if (expanded.getEnum() != null) {
+            expanded.enumValues(expandReferences(expanded.getEnum()));
+        }
+        return expanded;
+    }
+
     public CanonicalOverlayPatchEngine canonicalPatchEngine(Node canonical) {
         return new CanonicalOverlayPatchEngine(FrozenNode.fromNode(canonical));
     }
@@ -262,11 +368,57 @@ public class Blue implements NodeResolver {
 
     public void clearResolvedSnapshotCache() {
         resolvedSnapshotsByBlueId.clear();
+        synchronized (recentProcessingDocumentSnapshots) {
+            recentProcessingDocumentSnapshots.clear();
+        }
         resolvedReferenceCache.clear();
     }
 
     public ConformanceEngine conformanceEngine() {
         return new ConformanceEngine(nodeProvider, mergingProcessor, resolvedReferenceCache);
+    }
+
+    public String languageVersion() {
+        return "1.0";
+    }
+
+    public BlueConformanceReport conformanceReport() {
+        String fixturePackageIdentity = BlueConformanceReport.loadFixturePackageIdentity("blue-language-1.0-fixtures:unavailable");
+        List<String> fixtureIds = BlueConformanceReport.loadFixtureIds();
+        Map<String, BlueFixtureCategory> fixtureCategories = BlueConformanceReport.loadFixtureCategories();
+        return new BlueConformanceReport(
+                languageVersion(),
+                new LinkedHashMap<>(BlueCoreTypeRegistry.INSTANCE.blueIdsByName()),
+                fixturePackageIdentity,
+                fixtureIds,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                fixtureCategories
+        );
+    }
+
+    public BlueConformanceReport runConformanceSuite() {
+        return BlueConformanceSuiteRunner.run(this);
+    }
+
+    public BlueContractsConformanceReport contractsConformanceReport() {
+        String fixturePackageIdentity = BlueContractsConformanceReport.loadFixturePackageIdentity(
+                "blue-contracts-1.0-fixtures:unavailable");
+        List<String> fixtureIds = BlueContractsConformanceReport.loadFixtureIds();
+        Map<String, BlueContractsFixtureCategory> fixtureCategories =
+                BlueContractsConformanceReport.loadFixtureCategories();
+        return new BlueContractsConformanceReport(
+                languageVersion(),
+                fixturePackageIdentity,
+                fixtureIds,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                fixtureCategories,
+                Collections.emptyList());
+    }
+
+    public BlueContractsConformanceReport runContractsConformanceSuite() {
+        return BlueContractsConformanceSuiteRunner.run(this);
     }
 
     public void extend(Node node, Limits limits) {
@@ -304,11 +456,94 @@ public class Blue implements NodeResolver {
     }
 
     public Node yamlToNode(String yaml) {
-        return preprocess(YAML_MAPPER.readValue(yaml, Node.class));
+        return preprocess(parseSourceYaml(yaml));
     }
 
     public Node jsonToNode(String json) {
-        return preprocess(JSON_MAPPER.readValue(json, Node.class));
+        return preprocess(parseSourceJson(json));
+    }
+
+    public Node parseSourceYaml(String yaml) {
+        return YAML_MAPPER.readValue(yaml, Node.class);
+    }
+
+    public Node parseSourceJson(String json) {
+        return JSON_MAPPER.readValue(json, Node.class);
+    }
+
+    public Node parseBlueIdInputYaml(String yaml) {
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+        validateBlueIdInputReferences(node, "/");
+        BlueIdCalculator.calculateBlueId(node);
+        return node;
+    }
+
+    public Node parseBlueIdInputJson(String json) {
+        Node node = JSON_MAPPER.readValue(json, Node.class);
+        validateBlueIdInputReferences(node, "/");
+        BlueIdCalculator.calculateBlueId(node);
+        return node;
+    }
+
+    private void validateBlueIdInputReferences(Node node, String path) {
+        if (node == null) {
+            return;
+        }
+        if (node.getBlueId() != null) {
+            BlueIds.requireNoThisPlaceholderOutsideCyclicApi(node.getBlueId(), path + "/blueId");
+            BlueIds.requireBlueIdOrCyclicMember(node.getBlueId(), path + "/blueId");
+        }
+        if (node.getPreviousBlueId() != null) {
+            BlueIds.requirePlainBlueId(node.getPreviousBlueId(), path + "/$previous/blueId");
+        }
+        validateBlueIdInputReferences(node.getType(), appendPath(path, "type"));
+        validateBlueIdInputReferences(node.getItemType(), appendPath(path, "itemType"));
+        validateBlueIdInputReferences(node.getKeyType(), appendPath(path, "keyType"));
+        validateBlueIdInputReferences(node.getValueType(), appendPath(path, "valueType"));
+        validateBlueIdInputReferences(node.getBlue(), appendPath(path, "blue"));
+        validateBlueIdInputReferences(node.getContracts(), appendPath(path, "contracts"));
+        if (node.getItems() != null) {
+            for (int i = 0; i < node.getItems().size(); i++) {
+                validateBlueIdInputReferences(node.getItems().get(i), appendPath(path, String.valueOf(i)));
+            }
+        }
+        if (node.getProperties() != null) {
+            node.getProperties().forEach((key, value) ->
+                    validateBlueIdInputReferences(value, appendPath(path, key)));
+        }
+        validateBlueIdInputReferences(node.getSchema(), appendPath(path, "schema"));
+    }
+
+    private void validateBlueIdInputReferences(Schema schema, String path) {
+        if (schema == null) {
+            return;
+        }
+        validateBlueIdInputReferences(schema.getRequired(), appendPath(path, "required"));
+        validateBlueIdInputReferences(schema.getMinLength(), appendPath(path, "minLength"));
+        validateBlueIdInputReferences(schema.getMaxLength(), appendPath(path, "maxLength"));
+        validateBlueIdInputReferences(schema.getMinimum(), appendPath(path, "minimum"));
+        validateBlueIdInputReferences(schema.getMaximum(), appendPath(path, "maximum"));
+        validateBlueIdInputReferences(schema.getExclusiveMinimum(), appendPath(path, "exclusiveMinimum"));
+        validateBlueIdInputReferences(schema.getExclusiveMaximum(), appendPath(path, "exclusiveMaximum"));
+        validateBlueIdInputReferences(schema.getMultipleOf(), appendPath(path, "multipleOf"));
+        validateBlueIdInputReferences(schema.getMinItems(), appendPath(path, "minItems"));
+        validateBlueIdInputReferences(schema.getMaxItems(), appendPath(path, "maxItems"));
+        validateBlueIdInputReferences(schema.getUniqueItems(), appendPath(path, "uniqueItems"));
+        validateBlueIdInputReferences(schema.getMinFields(), appendPath(path, "minFields"));
+        validateBlueIdInputReferences(schema.getMaxFields(), appendPath(path, "maxFields"));
+        if (schema.getEnum() != null) {
+            for (int i = 0; i < schema.getEnum().size(); i++) {
+                validateBlueIdInputReferences(schema.getEnum().get(i), appendPath(path, "enum/" + i));
+            }
+        }
+    }
+
+    private String appendPath(String path, String segment) {
+        String prefix = path == null || path.isEmpty() ? "/" : path;
+        if ("/".equals(prefix)) {
+            return "/" + segment.replace("~", "~0").replace("/", "~1");
+        }
+        return prefix + "/" + segment.replace("~", "~0").replace("/", "~1");
     }
 
     public String nodeToYaml(Node node) {
@@ -430,10 +665,27 @@ public class Blue implements NodeResolver {
         return this;
     }
 
+    public Blue registerContractProcessor(String blueId,
+                                          Node canonicalTypeNode,
+                                          ContractProcessor<? extends Contract> processor) {
+        return registerExternalContractType(blueId, canonicalTypeNode, processor);
+    }
+
+    public Blue registerExternalContractType(String blueId,
+                                             Node canonicalTypeNode,
+                                             ContractProcessor<? extends Contract> processor) {
+        registerExternalTypeNode(blueId, canonicalTypeNode);
+        return registerContractProcessor(blueId, processor);
+    }
+
     public DocumentProcessingResult processDocument(Node document, Node event) {
         DocumentProcessor processor = ensureDocumentProcessor();
         long start = System.nanoTime();
         try {
+            ResolvedSnapshot cached = cachedProcessingSnapshotFor(document, processor);
+            if (cached != null) {
+                return rememberProcessingResultSnapshot(processor.processDocument(cached, event));
+            }
             return attachProcessingSnapshot(processor, processor.processDocument(document, event));
         } finally {
             processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
@@ -444,7 +696,7 @@ public class Blue implements NodeResolver {
         DocumentProcessor processor = ensureDocumentProcessor();
         long start = System.nanoTime();
         try {
-            return processor.processDocument(snapshot, event);
+            return rememberProcessingResultSnapshot(processor.processDocument(snapshot, event));
         } finally {
             processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
         }
@@ -468,7 +720,7 @@ public class Blue implements NodeResolver {
     }
 
     public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
-        return ensureDocumentProcessor().initializeDocument(snapshot);
+        return rememberProcessingResultSnapshot(ensureDocumentProcessor().initializeDocument(snapshot));
     }
 
     public boolean isInitialized(Node document) {
@@ -533,6 +785,7 @@ public class Blue implements NodeResolver {
     }
 
     public Blue nodeProvider(NodeProvider nodeProvider) {
+        this.originalNodeProvider = nodeProvider;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         clearResolvedSnapshotCache();
         refreshDocumentProcessorConformanceEngine();
@@ -565,19 +818,24 @@ public class Blue implements NodeResolver {
 
     private DocumentProcessor createDefaultDocumentProcessor() {
         return DocumentProcessor.builder()
-                .withConformanceEngine(conformanceEngine())
+                .withConformanceEngine(processorConformanceEngine())
                 .withSnapshotManager(processingSnapshotManager())
                 .withMatchingService(new ContractMatchingService(this))
                 .build();
     }
 
+    private ConformanceEngine processorConformanceEngine() {
+        return new ConformanceEngine(processorSnapshotNodeProvider(), mergingProcessor, resolvedReferenceCache);
+    }
+
     private DocumentProcessingResult attachProcessingSnapshot(DocumentProcessor processor, DocumentProcessingResult result) {
         if (result == null || result.capabilityFailure() || result.snapshot() != null) {
-            return result;
+            return rememberProcessingResultSnapshot(result);
         }
         long start = System.nanoTime();
         try {
-            return result.withSnapshot(resolveProcessingSnapshot(result.document()));
+            DocumentProcessingResult attached = result.withSnapshot(resolveProcessingSnapshot(result.document()));
+            return rememberProcessingResultSnapshot(attached);
         } finally {
             long nanos = System.nanoTime() - start;
             processor.processingMetricsSink().addResultSnapshotAttachNanos(nanos);
@@ -585,11 +843,85 @@ public class Blue implements NodeResolver {
         }
     }
 
+    private DocumentProcessingResult rememberProcessingResultSnapshot(DocumentProcessingResult result) {
+        if (result != null && result.snapshot() != null && result.document() != null) {
+            rememberProcessingSnapshot(result.document(), result.snapshot());
+        }
+        return result;
+    }
+
+    private ResolvedSnapshot cachedProcessingSnapshotFor(Node document, DocumentProcessor processor) {
+        if (document == null || !processor.supportsSnapshotProcessing()) {
+            return null;
+        }
+        long start = System.nanoTime();
+        ProcessingMetricsSink metrics = processor.processingMetricsSink();
+        try {
+            ResolvedSnapshot identitySnapshot = recentProcessingSnapshotByIdentity(document);
+            if (identitySnapshot == null) {
+                metrics.incrementProcessingSnapshotCacheMisses();
+                return null;
+            }
+            String blueId;
+            try {
+                blueId = BlueIdCalculator.calculateUncheckedBlueId(document);
+            } catch (RuntimeException ex) {
+                metrics.incrementProcessingSnapshotCacheMisses();
+                return null;
+            }
+            ResolvedSnapshot cached = blueId.equals(identitySnapshot.blueId()) ? identitySnapshot : null;
+            if (cached != null) {
+                metrics.incrementProcessingSnapshotCacheHits();
+                return cached;
+            }
+            metrics.incrementProcessingSnapshotCacheMisses();
+            return null;
+        } finally {
+            metrics.addProcessingSnapshotCacheLookupNanos(System.nanoTime() - start);
+        }
+    }
+
+    private ResolvedSnapshot recentProcessingSnapshotByIdentity(Node document) {
+        synchronized (recentProcessingDocumentSnapshots) {
+            for (ProcessingDocumentSnapshot entry : recentProcessingDocumentSnapshots) {
+                if (entry.document == document) {
+                    return entry.snapshot;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void rememberProcessingSnapshot(Node document, ResolvedSnapshot snapshot) {
+        synchronized (recentProcessingDocumentSnapshots) {
+            for (int i = recentProcessingDocumentSnapshots.size() - 1; i >= 0; i--) {
+                ProcessingDocumentSnapshot entry = recentProcessingDocumentSnapshots.get(i);
+                if (entry.document == document || entry.snapshot.blueId().equals(snapshot.blueId())) {
+                    recentProcessingDocumentSnapshots.remove(i);
+                }
+            }
+            recentProcessingDocumentSnapshots.add(0, new ProcessingDocumentSnapshot(document, snapshot));
+            while (recentProcessingDocumentSnapshots.size() > RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT) {
+                recentProcessingDocumentSnapshots.remove(recentProcessingDocumentSnapshots.size() - 1);
+            }
+        }
+    }
+
+    private static final class ProcessingDocumentSnapshot {
+        final Node document;
+        final ResolvedSnapshot snapshot;
+
+        ProcessingDocumentSnapshot(Node document, ResolvedSnapshot snapshot) {
+            this.document = document;
+            this.snapshot = snapshot;
+        }
+    }
+
     private void refreshDocumentProcessorConformanceEngine() {
         if (documentProcessor != null) {
             documentProcessor = new DocumentProcessor(documentProcessor.getContractRegistry(),
                     documentProcessor.getContractTypeResolver(),
-                    conformanceEngine(),
+                    processorConformanceEngine(),
                     processingSnapshotManager(),
                     new ContractMatchingService(this),
                     documentProcessor.processingMetricsSink());
@@ -618,9 +950,9 @@ public class Blue implements NodeResolver {
     private ResolvedSnapshot resolveProcessingSnapshot(Node node) {
         Node preprocessed = preprocess(node.clone());
         Node resolved = new Merger(mergingProcessor, processorSnapshotNodeProvider(), resolvedReferenceCache)
-                .resolve(preprocessed.clone(), NO_LIMITS);
-        Node canonical = reverse(resolved.clone());
-        FrozenNode canonicalRoot = FrozenNode.fromNode(canonical);
+                .resolve(preprocessed.clone());
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(resolved.clone());
+        FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(canonical);
         return cacheSnapshot(new ResolvedSnapshot(canonicalRoot, resolvedReferenceCache.freezeResolved(resolved), canonicalRoot.blueId()));
     }
 
@@ -660,8 +992,52 @@ public class Blue implements NodeResolver {
         }
         Node canonical = canonicalRoot.toNode();
         Node resolved = new Merger(mergingProcessor, snapshotNodeProvider, resolvedReferenceCache)
-                .resolve(canonical.clone(), NO_LIMITS);
+                .resolve(canonical.clone());
         return cacheSnapshot(new ResolvedSnapshot(canonicalRoot, resolvedReferenceCache.freezeResolved(resolved), canonicalRoot.blueId()));
+    }
+
+    private Set<String> processorContractPaths(Node root) {
+        Set<String> paths = new LinkedHashSet<>();
+        collectProcessorContractPaths(root, new ArrayList<>(), paths);
+        return paths;
+    }
+
+    private void collectProcessorContractPaths(Node node, List<String> path, Set<String> paths) {
+        if (node == null) {
+            return;
+        }
+        if (node.getContracts() != null) {
+            List<String> contractsPath = new ArrayList<>(path);
+            contractsPath.add("contracts");
+            paths.add(JsonPointer.toPointer(contractsPath));
+            collectProcessorContractPaths(node.getContracts(), contractsPath, paths);
+        }
+        if (node.getProperties() != null) {
+            for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
+                path.add(entry.getKey());
+                collectProcessorContractPaths(entry.getValue(), path, paths);
+                path.remove(path.size() - 1);
+            }
+        }
+        if (node.getItems() != null) {
+            for (int i = 0; i < node.getItems().size(); i++) {
+                path.add(String.valueOf(i));
+                collectProcessorContractPaths(node.getItems().get(i), path, paths);
+                path.remove(path.size() - 1);
+            }
+        }
+    }
+
+    private void restorePreservedPaths(Node resolved, Node source, Set<String> paths) {
+        if (paths == null || paths.isEmpty()) {
+            return;
+        }
+        for (String path : paths) {
+            Node preserved = NodePathEditor.getOrNull(source, path);
+            if (preserved != null) {
+                NodePathEditor.put(resolved, path, preserved.clone());
+            }
+        }
     }
 
     private boolean canMinimizePatchedOverride(JsonPatch patch) {
@@ -693,16 +1069,38 @@ public class Blue implements NodeResolver {
     }
 
     private NodeProvider processorSnapshotNodeProvider() {
-        Set<String> processorTypeBlueIds = new HashSet<>(PROCESSOR_MANAGED_TYPE_BLUE_IDS);
-        if (documentProcessor != null) {
-            processorTypeBlueIds.addAll(documentProcessor.getContractRegistry().processors().keySet());
-        }
+        return new SequentialNodeProvider(
+                BootstrapProvider.INSTANCE,
+                BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider(),
+                registeredExtensionTypeProvider(),
+                blueId -> BlueIds.isPotentialBlueId(blueId)
+                        ? nodeProvider.fetchByBlueId(blueId)
+                        : null);
+    }
+
+    private NodeProvider registeredExtensionTypeProvider() {
         return blueId -> {
-            if (processorTypeBlueIds.contains(blueId) || !BlueIds.isPotentialBlueId(blueId)) {
-                return Collections.singletonList(new Node().name(blueId));
+            if (!BlueIds.isPotentialBlueId(blueId)
+                    || BlueRuntimeTypeRegistry.getDefault().isProcessorManagedTypeBlueId(blueId)) {
+                return null;
             }
-            return nodeProvider.fetchByBlueId(blueId);
+            Node typeNode = externalContractTypeNodes.get(blueId);
+            return typeNode != null ? Collections.singletonList(typeNode.clone()) : null;
         };
+    }
+
+    private void registerExternalTypeNode(String blueId, Node canonicalTypeNode) {
+        if (blueId == null || blueId.isEmpty()) {
+            throw new IllegalArgumentException("blueId must not be empty");
+        }
+        Objects.requireNonNull(canonicalTypeNode, "canonicalTypeNode");
+        Node canonical = canonicalTypeNode.clone();
+        String calculated = BlueIdCalculator.calculateBlueId(canonical);
+        if (!blueId.equals(calculated)) {
+            throw new IllegalArgumentException("External contract type node hashes to " + calculated
+                    + ", not declared BlueId " + blueId);
+        }
+        externalContractTypeNodes.put(blueId, canonical);
     }
 
     private ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {

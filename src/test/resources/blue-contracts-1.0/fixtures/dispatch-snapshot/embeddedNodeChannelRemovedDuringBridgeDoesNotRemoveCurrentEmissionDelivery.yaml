@@ -1,0 +1,36 @@
+id: embeddedNodeChannelRemovedDuringBridgeDoesNotRemoveCurrentEmissionDelivery
+category: DispatchSnapshot
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    embedded:
+      type:
+        blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q
+      paths:
+        - /child
+    bridge:
+      type:
+        blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i
+      childPath: /child
+  child:
+    contracts: {}
+event:
+  kind: bridge-remove-channel
+mockRuntime:
+  childEmissions:
+    /child:
+      - id: child-1
+      - id: child-2
+  bridgeMutations:
+    - duringEmission: child-1
+      removeChannelKey: bridge
+expectedStatus: success
+expectedEmbeddedDeliveryOrder:
+  - emission: child-1
+    channels: [bridge]
+  - emission: child-2
+    channels: []
+expectedAbsentDocumentPaths:
+  - /contracts/bridge

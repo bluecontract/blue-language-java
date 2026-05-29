@@ -54,6 +54,7 @@ public final class DictionaryAwareExporter {
         result.itemType(transformTypeReference(result.getItemType(), inliningStack));
         result.keyType(transformTypeReference(result.getKeyType(), inliningStack));
         result.valueType(transformTypeReference(result.getValueType(), inliningStack));
+        result.contracts(transformNode(result.getContracts(), inliningStack));
 
         if (result.getItems() != null) {
             List<Node> transformedItems = new ArrayList<>(result.getItems().size());
@@ -137,7 +138,6 @@ public final class DictionaryAwareExporter {
     private Schema transformSchema(Schema schema, Set<String> inliningStack) {
         Schema result = schema.clone();
         result.required(transformNode(result.getRequired(), inliningStack));
-        result.allowMultiple(transformNode(result.getAllowMultiple(), inliningStack));
         result.minLength(transformNode(result.getMinLength(), inliningStack));
         result.maxLength(transformNode(result.getMaxLength(), inliningStack));
         result.minimum(transformNode(result.getMinimum(), inliningStack));

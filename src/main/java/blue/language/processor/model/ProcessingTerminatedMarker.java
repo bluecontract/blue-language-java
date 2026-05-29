@@ -2,8 +2,9 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
-@TypeBlueId("ProcessingTerminatedMarker")
+@TypeBlueId(RuntimeBlueIds.PROCESSING_TERMINATED_MARKER)
 public class ProcessingTerminatedMarker extends MarkerContract {
 
     private String cause;
@@ -37,7 +38,7 @@ public class ProcessingTerminatedMarker extends MarkerContract {
 
     public Node toNode() {
         Node node = new Node()
-                .type(new Node().blueId("ProcessingTerminatedMarker"))
+                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_TERMINATED_MARKER))
                 .properties("cause", new Node().value(cause));
         if (reason != null) {
             node.properties("reason", new Node().value(reason));

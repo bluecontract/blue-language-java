@@ -1,0 +1,11 @@
+id: R_core_type_compatibility_nominal_by_blueid
+category: Resolution
+operation: resolve
+description: canonical core type compatibility is nominal by registry BlueId; a structurally
+  similar non-registry type is not interchangeable with Integer
+expectError: true
+source:
+  type:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  value: 1

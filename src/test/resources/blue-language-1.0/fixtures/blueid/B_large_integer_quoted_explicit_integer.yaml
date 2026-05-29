@@ -1,0 +1,10 @@
+id: B_large_integer_quoted_explicit_integer
+category: BlueId
+operation: calculateBlueId
+description: large integers use quoted canonical decimal strings with explicit Integer
+  type
+input:
+  type:
+    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  value: '9007199254740992'
+expectedNodeBlueId: wXgWtTwBfUZdEeHyA3DnsuiwxczE57E6HvUBNRs1Pyz

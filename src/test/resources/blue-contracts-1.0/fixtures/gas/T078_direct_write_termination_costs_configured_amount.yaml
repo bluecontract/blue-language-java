@@ -1,0 +1,22 @@
+id: T078_direct_write_termination_costs_configured_amount
+category: Gas
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    terminator:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      termination: graceful
+      terminationReason: gas-term
+event:
+  kind: termination-gas
+expectedCapabilityFailure: false
+expectedExactGas: 1209
+expectedDocumentPathExists:
+  - /contracts/terminated

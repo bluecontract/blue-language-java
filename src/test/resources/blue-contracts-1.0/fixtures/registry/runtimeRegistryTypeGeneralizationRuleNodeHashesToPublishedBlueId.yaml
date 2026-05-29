@@ -1,0 +1,8 @@
+id: runtimeRegistryTypeGeneralizationRuleNodeHashesToPublishedBlueId
+category: Registry
+operation: registryNodeHashesToPublishedBlueId
+registryKind: Blue Contracts runtime type registry
+registryKey: TypeGeneralizationRule
+registryPath: registry/blue-contracts-1.0/TypeGeneralizationRule.blue
+expectedBlueId: 7Vnmk8StjwY7e9mBNpACrn8oh3KZ7yQBjnXe5bLDWn4D
+semanticDescriptionIdentityBearing: true

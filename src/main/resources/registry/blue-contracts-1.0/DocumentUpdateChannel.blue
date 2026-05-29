@@ -1,0 +1,20 @@
+name: Document Update Channel
+type: Channel
+description: >
+  Processor-managed channel fed after each successful runtime patch. For every
+  successful patch, the processor discovers matching Document Update Channels
+  from the post-patch selected document and delivers one Document Update
+  payload per participating scope, from the patch origin scope toward root. A
+  Document Update Channel matches when the absolute changed path is
+  descendant-or-equal to the channel path resolved against the receiving scope.
+  The channel is never checkpoint-gated and is never entered directly by
+  external events. Triggered FIFO is not drained during Document Update
+  cascades.
+path:
+  type: Text
+  description: >
+    Required scope-relative Blue Runtime Pointer watched by this channel.
+    The channel matches patches whose absolute changed path is
+    descendant-or-equal to ABS(scope, path).
+  schema:
+    required: true

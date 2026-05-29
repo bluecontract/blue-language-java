@@ -1,0 +1,6 @@
+id: B_root_null_rejected
+category: BlueId
+operation: calculateBlueId
+description: root null is not valid BlueId Input
+expectError: true
+input: null

@@ -10,8 +10,10 @@ import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public final class ConformanceEngine {
 
@@ -95,5 +97,29 @@ public final class ConformanceEngine {
                 canonicalPatches,
                 allChangedPaths,
                 nextCanonical != null);
+    }
+
+    public boolean isSubtypeOf(String candidateBlueId, String expectedAncestorBlueId) {
+        if (candidateBlueId == null || expectedAncestorBlueId == null) {
+            return false;
+        }
+        String current = candidateBlueId;
+        Set<String> seen = new HashSet<>();
+        while (current != null && seen.add(current)) {
+            if (Objects.equals(current, expectedAncestorBlueId)) {
+                return true;
+            }
+            current = parentTypeBlueId(current);
+        }
+        return false;
+    }
+
+    private String parentTypeBlueId(String blueId) {
+        List<Node> candidates = nodeProvider.fetchByBlueId(blueId);
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+        Node type = candidates.get(0).getType();
+        return type != null ? type.getBlueId() : null;
     }
 }

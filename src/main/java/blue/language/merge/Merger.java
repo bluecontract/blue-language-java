@@ -11,13 +11,14 @@ import blue.language.utils.BlueIdCalculator;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
+import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
 import static blue.language.utils.Properties.LIST_TYPE;
 import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
@@ -108,6 +109,15 @@ public class Merger implements NodeResolver {
         List<Node> children = source.getItems();
         if (children != null) {
             mergeChildren(target, children, limits);
+        }
+
+        if (source.getContracts() != null && limits.shouldMergePathSegment("contracts", source.getContracts())) {
+            limits.enterPathSegment("contracts", source.getContracts());
+            try {
+                mergeContracts(target, source.getContracts(), limits);
+            } finally {
+                limits.exitPathSegment();
+            }
         }
 
         Map<String, Node> properties = source.getProperties();
@@ -229,7 +239,7 @@ public class Merger implements NodeResolver {
                 appendChildren(targetChildren, sourceChildren, start, limits, itemType);
                 return;
             }
-            mergeLegacyPositionalChildren(targetChildren, sourceChildren, start, limits, itemType);
+            mergePlainPositionalChildren(targetChildren, sourceChildren, start, limits, itemType);
             return;
         }
 
@@ -254,7 +264,7 @@ public class Merger implements NodeResolver {
         }
     }
 
-    private void mergeLegacyPositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits, Node itemType) {
+    private void mergePlainPositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits, Node itemType) {
         int sourceLength = sourceChildren.size() - start;
         if (sourceLength < targetChildren.size()) {
             throw new IllegalArgumentException(String.format(
@@ -280,6 +290,14 @@ public class Merger implements NodeResolver {
         Node effectiveItemType = targetChildren.get(position).getType() != null
                 ? targetChildren.get(position).getType()
                 : itemType;
+        if (hasReplacement(overlay)) {
+            Node replacement = overlay.getProperties().get(LIST_CONTROL_REPLACE);
+            Node resolvedChild = resolveListChild(replacement, limits, String.valueOf(position), effectiveItemType);
+            if (resolvedChild != null) {
+                targetChildren.set(position, resolvedChild);
+            }
+            return;
+        }
         if (isEmptyPlaceholder(targetChildren.get(position)) || overlay.getValue() != null || overlay.getItems() != null) {
             Node resolvedChild = resolveListChild(overlay, limits, String.valueOf(position), effectiveItemType);
             if (resolvedChild != null) {
@@ -294,7 +312,21 @@ public class Merger implements NodeResolver {
             }
             return;
         }
+        if (isObjectOverlay(overlay) && !isObjectCompatibleListItem(targetChildren.get(position))) {
+            throw new IllegalArgumentException("\"$pos\" object overlays require an object-compatible inherited list item.");
+        }
         merge(targetChildren.get(position), overlay, limits);
+    }
+
+    private boolean isObjectOverlay(Node overlay) {
+        return overlay.getProperties() != null && !overlay.getProperties().isEmpty();
+    }
+
+    private boolean isObjectCompatibleListItem(Node inherited) {
+        return inherited != null
+                && inherited.getValue() == null
+                && inherited.getItems() == null
+                && inherited.getBlueId() == null;
     }
 
     private void appendChildren(List<Node> targetChildren, List<Node> sourceChildren, int start, Limits limits, Node itemType) {
@@ -432,13 +464,43 @@ public class Merger implements NodeResolver {
                 if (!positions.add(child.getPosition())) {
                     throw new IllegalArgumentException("Duplicate \"$pos\" value in list: " + child.getPosition());
                 }
+            } else if (hasReplacement(child)) {
+                throw new IllegalArgumentException("\"$replace\" is valid only inside a \"$pos\" list overlay.");
             }
+            if (hasReplacement(child)) {
+                validateReplacementOverlay(child);
+            }
+        }
+    }
+
+    private boolean hasReplacement(Node node) {
+        return node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_REPLACE);
+    }
+
+    private void validateReplacementOverlay(Node node) {
+        boolean onlyReplaceProperty = node.getProperties() != null
+                && node.getProperties().size() == 1
+                && node.getProperties().containsKey(LIST_CONTROL_REPLACE);
+        if (!onlyReplaceProperty
+                || node.getValue() != null
+                || node.getItems() != null
+                || node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getSchema() != null
+                || node.getMergePolicy() != null
+                || node.getBlueId() != null
+                || node.getPreviousBlueId() != null
+                || node.getName() != null
+                || node.getDescription() != null) {
+            throw new IllegalArgumentException("\"$replace\" cannot be combined with sibling overlay fields other than \"$pos\".");
         }
     }
 
     private void mergeProperty(Node target, String sourceKey, Node sourceValue, Limits limits) {
         if (target.getProperties() == null)
-            target.properties(new HashMap<>());
+            target.properties(new LinkedHashMap<>());
         Node targetValue = target.getProperties().get(sourceKey);
         if (targetValue == null) {
             Node node = resolve(sourceValue, limits);
@@ -449,6 +511,15 @@ public class Merger implements NodeResolver {
             Node node = resolve(sourceValue, limits);
             mergeObject(targetValue, node, limits);
         }
+    }
+
+    private void mergeContracts(Node target, Node sourceContracts, Limits limits) {
+        if (target.getContracts() == null) {
+            target.contracts(resolve(sourceContracts, limits));
+            return;
+        }
+        Node resolved = resolve(sourceContracts, limits);
+        mergeObject(target.getContracts(), resolved, limits);
     }
 
     private boolean hasListControls(Node node) {

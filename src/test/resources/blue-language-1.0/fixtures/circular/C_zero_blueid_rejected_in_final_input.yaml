@@ -1,0 +1,7 @@
+id: C_zero_blueid_rejected_in_final_input
+category: Circular
+operation: calculateBlueId
+description: ZERO_BLUEID placeholders are rejected by finalized Node BlueId input
+expectError: true
+input:
+  blueId: '00000000000000000000000000000000000000000000'

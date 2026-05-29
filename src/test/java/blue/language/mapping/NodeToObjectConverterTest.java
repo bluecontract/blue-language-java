@@ -38,8 +38,14 @@ public class NodeToObjectConverterTest {
                        "shortObjectField: -32768\n" +
                        "intField: 2147483647\n" +
                        "integerField: -2147483648\n" +
-                       "longField: 9223372036854775807\n" +
-                       "longObjectField: -9223372036854775808\n" +
+                       "longField:\n" +
+                       "  type:\n" +
+                       "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
+                       "  value: \"9223372036854775807\"\n" +
+                       "longObjectField:\n" +
+                       "  type:\n" +
+                       "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
+                       "  value: \"-9223372036854775808\"\n" +
                        "floatField: 3.14\n" +
                        "floatObjectField: -3.14\n" +
                        "doubleField: 3.141592653589793\n" +
@@ -448,7 +454,7 @@ public class NodeToObjectConverterTest {
         assertNotNull(data);
 
         assertNotNull(data.alice1);
-        assertTrue(data.alice1.matches(BlueIdCalculator.calculateBlueId(data.alice2)));
+        assertTrue(data.alice1.matches(BlueIdCalculator.calculateUncheckedBlueId(data.alice2)));
 
         assertNotNull(data.alice2);
         assertEquals("Alice", data.alice2.getName());
@@ -480,19 +486,19 @@ public class NodeToObjectConverterTest {
                                     "  blueId: PersonValue-BlueId\n" +
                                     "age1:\n" +
                                     "  type:\n" +
-                                    "    blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1\n" +
+                                    "    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\n" +
                                     "  name: Official Age\n" +
                                     "  description: Description for official age\n" +
                                     "  value: 25\n" +
                                     "age2:\n" +
                                     "  type:\n" +
-                                    "    blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1\n" +
+                                    "    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\n" +
                                     "  name: Official Age\n" +
                                     "  description: Description for official age\n" +
                                     "  value: 25\n" +
                                     "age3:\n" +
                                     "  type:\n" +
-                                    "    blueId: 5WNMiV9Knz63B4dVY5JtMyh3FB4FSGqv7ceScvuapdE1\n" +
+                                    "    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\n" +
                                     "  name: Official Age\n" +
                                     "  description: Description for official age\n" +
                                     "  value: 25";

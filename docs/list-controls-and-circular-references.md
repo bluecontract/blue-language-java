@@ -32,7 +32,7 @@ Example:
 
 ```yaml
 type:
-  blueId: 6aehfNAxHLC1PHHoDr3tYtFH3RWNbiWdFancJ1bypXEY
+  blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
 items:
   - $previous:
       blueId: BaseListBlueId
@@ -56,7 +56,7 @@ Example:
 
 ```yaml
 type:
-  blueId: 6aehfNAxHLC1PHHoDr3tYtFH3RWNbiWdFancJ1bypXEY
+  blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
 items:
   - $previous:
       blueId: BaseListBlueId

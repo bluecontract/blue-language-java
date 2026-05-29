@@ -1,0 +1,7 @@
+id: B_invalid_this_placeholder_rejected
+category: BlueId
+operation: calculateBlueId
+description: this#k placeholders are rejected outside cyclic calculation APIs
+expectError: true
+input:
+  blueId: this#0

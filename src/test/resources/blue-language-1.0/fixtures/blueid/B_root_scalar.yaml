@@ -1,0 +1,6 @@
+id: B_root_scalar
+category: BlueId
+operation: calculateBlueId
+description: root scalar is valid BlueId Input
+input: hello
+expectedNodeBlueId: 7CUvDJwdfytCjadRG1KLL2GrttK2LfdNvEA8HycjMCcv

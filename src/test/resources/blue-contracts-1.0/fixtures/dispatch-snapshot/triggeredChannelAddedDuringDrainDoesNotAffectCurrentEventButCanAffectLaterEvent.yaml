@@ -1,0 +1,54 @@
+id: triggeredChannelAddedDuringDrainDoesNotAffectCurrentEventButCanAffectLaterEvent
+category: DispatchSnapshot
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  orderLog:
+    items: []
+  contracts:
+    incoming:
+      type:
+        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm
+    trigger:
+      type:
+        blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ
+    handler:
+      type:
+        blueId: 2TwRC3EdLXk4gqwyyVWy52h5BQ5ntrkmpcrhrTxsGAs1
+      channel: incoming
+event:
+  kind: seed-fifo
+mockRuntime:
+  channels:
+    - contract: /contracts/incoming
+      calls:
+        - when:
+            event:
+              kind: seed-fifo
+          accepted: true
+          payload:
+            kind: seed-fifo
+  handlers:
+    - contract: /contracts/handler
+      calls:
+        - when:
+            channelKey: incoming
+          result:
+            triggeredEvents:
+              - id: E1
+              - id: E2
+            patches:
+              - op: replace
+                path: /contracts/lateTrigger
+                val:
+                  type:
+                    blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ
+expectedStatus: success
+expectedTriggeredDeliveryOrder:
+  - event: E1
+    channels: [trigger]
+  - event: E2
+    channels: [trigger, lateTrigger]
+expectedDocumentPathExists:
+  - /contracts/lateTrigger

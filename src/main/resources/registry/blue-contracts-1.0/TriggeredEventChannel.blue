@@ -1,0 +1,9 @@
+name: Triggered Event Channel
+type: Channel
+description: >
+  Processor-managed channel that drains events emitted into a scope's Triggered
+  FIFO. A scope drains its Triggered FIFO at most once per PROCESS invocation,
+  during the scope's FIFO phase. Triggered FIFO delivery does not occur during
+  Document Update cascades. If a scope has no Triggered Event Channel, emitted
+  events are still recorded and may be bridged to a parent, but they are not
+  locally delivered.

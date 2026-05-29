@@ -7,6 +7,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -101,5 +103,53 @@ class NodePathAccessorTest {
         assertEquals("slash", node.get("/a~1b/value"));
         assertEquals("tilde", node.get("/a~0b/value"));
         assertEquals("value", node.get("/nested/x~1y/value"));
+    }
+
+    @Test
+    void nodePathAccessorReadsContracts() throws Exception {
+        Node node = YAML_MAPPER.readValue(
+                "contracts:\n" +
+                "  audit:\n" +
+                "    enabled: true", Node.class);
+
+        assertEquals(Boolean.TRUE, node.get("/contracts/audit/enabled/value"));
+        assertSame(node.getContracts(), NodePathAccessor.getNode(node, "/contracts"));
+    }
+
+    @Test
+    void nodePathEditorWritesContracts() {
+        Node node = new Node();
+
+        NodePathEditor.put(node, "/contracts/audit/enabled", new Node().value(true));
+
+        assertNotNull(node.getContracts());
+        assertEquals(Boolean.TRUE, node.get("/contracts/audit/enabled/value"));
+        assertFalse(node.getProperties() != null && node.getProperties().containsKey("contracts"));
+    }
+
+    @Test
+    void nodePathSelectorFindsContracts() throws Exception {
+        Node node = YAML_MAPPER.readValue(
+                "contracts:\n" +
+                "  audit:\n" +
+                "    enabled: true\n" +
+                "other:\n" +
+                "  enabled: true", Node.class);
+
+        List<String> selected = NodePathSelector.select(node,
+                Arrays.asList("/contracts/*/enabled"),
+                candidate -> Boolean.TRUE.equals(candidate.getValue()));
+
+        assertEquals(Arrays.asList("/contracts/audit/enabled"), selected);
+    }
+
+    @Test
+    void jsonPointerContractsRoundTrip() throws Exception {
+        Node node = YAML_MAPPER.readValue(
+                "contracts:\n" +
+                "  \"a/b\":\n" +
+                "    \"c~d\": value", Node.class);
+
+        assertEquals("value", node.get("/contracts/a~1b/c~0d/value"));
     }
 }

@@ -1,0 +1,18 @@
+name: Document Processing Terminated
+description: >
+  Processor-emitted lifecycle event published at a scope when that scope
+  terminates gracefully or fatally. It is delivered through Lifecycle Event
+  Channels, recorded as bridgeable for parent Embedded Node Channels, and, at
+  root, included in the root outbox. For a root fatal termination, this event
+  appears before Document Processing Fatal Error.
+cause:
+  type: Text
+  description: >
+    Required termination cause: fatal or graceful.
+  schema:
+    required: true
+    enum: [fatal, graceful]
+reason:
+  type: Text
+  description: >
+    Optional deterministic reason for termination.

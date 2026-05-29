@@ -1,0 +1,18 @@
+id: R_canonical_overlay_no_previous_no_pos
+category: Canonicalization
+operation: canonicalize
+description: canonical overlay serializes final list content without $previous or
+  $pos controls
+source:
+  type:
+    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+  items:
+  - $pos: 0
+    value: A
+  - value: B
+expectedCanonicalOverlay:
+  type:
+    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+  items:
+  - value: A
+  - value: B

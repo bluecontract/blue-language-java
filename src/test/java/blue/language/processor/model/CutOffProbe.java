@@ -2,7 +2,7 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("CutOffProbe")
+@TypeBlueId("A8kbVbinjJAPFnbaQgBRCDU6h64xydTHe69kPakvgjbU")
 public class CutOffProbe extends HandlerContract {
 
     private boolean emitBefore;

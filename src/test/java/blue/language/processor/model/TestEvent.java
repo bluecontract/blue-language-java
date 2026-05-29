@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("TestEvent")
+@TypeBlueId("Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf")
 public class TestEvent {
 
     private String eventId;
@@ -48,7 +48,7 @@ public class TestEvent {
     }
 
     public Node toNode() {
-        Node node = new Node().type(new Node().blueId("TestEvent"));
+        Node node = new Node().type(new Node().blueId("Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf"));
         if (eventId != null) {
             node.properties("eventId", new Node().value(eventId));
         }

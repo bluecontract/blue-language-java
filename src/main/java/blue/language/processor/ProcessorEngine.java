@@ -1,10 +1,13 @@
 package blue.language.processor;
 
+import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.conformance.ScriptedContractsRuntime;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
@@ -40,7 +43,7 @@ final class ProcessorEngine {
         } catch (RunTerminationException ignored) {
             // Initialization run terminated early (e.g., graceful root termination).
         } catch (MustUnderstandFailureException ex) {
-            return DocumentProcessingResult.capabilityFailure(document.clone(), ex.getMessage());
+            return DocumentProcessingResult.capabilityFailure(document.clone(), ex.getMessage(), ex.errorCategory());
         }
         return execution.result();
     }
@@ -56,7 +59,7 @@ final class ProcessorEngine {
         } catch (RunTerminationException ignored) {
             // Initialization run terminated early (e.g., graceful root termination).
         } catch (MustUnderstandFailureException ex) {
-            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage());
+            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage(), ex.errorCategory());
         }
         return execution.result();
     }
@@ -69,12 +72,16 @@ final class ProcessorEngine {
         long preprocessStart = System.nanoTime();
         Execution execution = null;
         try {
-            if (!isInitialized(owner, document)) {
-                throw new IllegalStateException("Document not initialized");
+            DocumentProcessingResult invalid = validateProcessingDocument(document);
+            if (invalid != null) {
+                return invalid;
             }
             Node cloned = document.clone();
             execution = new Execution(owner, cloned);
             metrics.addEventPreprocessNanos(System.nanoTime() - preprocessStart);
+            if (execution.applyScriptedForcedFatalIfPresent()) {
+                return execution.result();
+            }
             long bundleStart = System.nanoTime();
             execution.loadBundles("/");
             metrics.addBundleLoadNanos(System.nanoTime() - bundleStart);
@@ -83,7 +90,7 @@ final class ProcessorEngine {
             // Processing terminated early; result still returned.
         } catch (MustUnderstandFailureException ex) {
             metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
-            return DocumentProcessingResult.capabilityFailure(document.clone(), ex.getMessage());
+            return DocumentProcessingResult.capabilityFailure(document.clone(), ex.getMessage(), ex.errorCategory());
         }
         long postStart = System.nanoTime();
         try {
@@ -102,11 +109,15 @@ final class ProcessorEngine {
         long preprocessStart = System.nanoTime();
         Execution execution = null;
         try {
-            if (!isInitialized(owner, snapshot)) {
-                throw new IllegalStateException("Document not initialized");
+            DocumentProcessingResult invalid = validateProcessingDocument(snapshot.canonicalRoot());
+            if (invalid != null) {
+                return invalid.withSnapshot(snapshot);
             }
             execution = new Execution(owner, snapshot);
             metrics.addEventPreprocessNanos(System.nanoTime() - preprocessStart);
+            if (execution.applyScriptedForcedFatalIfPresent()) {
+                return execution.result();
+            }
             long bundleStart = System.nanoTime();
             execution.loadBundles("/");
             metrics.addBundleLoadNanos(System.nanoTime() - bundleStart);
@@ -115,7 +126,7 @@ final class ProcessorEngine {
             // Processing terminated early; result still returned.
         } catch (MustUnderstandFailureException ex) {
             metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
-            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage());
+            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage(), ex.errorCategory());
         }
         long postStart = System.nanoTime();
         try {
@@ -139,6 +150,21 @@ final class ProcessorEngine {
         }
         validateInitializationMarker(marker, pointer);
         return true;
+    }
+
+    private static DocumentProcessingResult validateProcessingDocument(Node document) {
+        if (document == null) {
+            throw new NullPointerException("document");
+        }
+        if (document.getBlue() != null) {
+            return DocumentProcessingResult.invalidProcessingDocument(document.clone(),
+                    "Invalid Processing Document: root blue directive is not allowed");
+        }
+        if (document.getValue() != null || document.getItems() != null || document.isReferenceOnly()) {
+            return DocumentProcessingResult.invalidProcessingDocument(document.clone(),
+                    "Invalid Processing Document: root scope must be an object");
+        }
+        return null;
     }
 
     static boolean isInitialized(DocumentProcessor owner, ResolvedSnapshot snapshot) {
@@ -215,7 +241,7 @@ final class ProcessorEngine {
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
-        Node event = new Node().properties("type", new Node().value("Document Processing Initiated"));
+        Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED));
         event.properties("documentId", new Node().value(documentId));
         return event;
     }
@@ -224,7 +250,7 @@ final class ProcessorEngine {
         if (node == null) {
             return null;
         }
-        Object canonical = NodeToMapListOrValue.get(node);
+        Object canonical = NodeToMapListOrValue.get(normalizeSignatureNode(node.clone()));
         try {
             String json = UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(canonical);
             return new JsonCanonicalizer(json).getEncodedString();
@@ -233,9 +259,58 @@ final class ProcessorEngine {
         }
     }
 
+    private static Node normalizeSignatureNode(Node node) {
+        if (node == null) {
+            return null;
+        }
+        node.type(normalizeSignatureReference(node.getType()));
+        node.itemType(normalizeSignatureReference(node.getItemType()));
+        node.keyType(normalizeSignatureReference(node.getKeyType()));
+        node.valueType(normalizeSignatureReference(node.getValueType()));
+        if (node.getItems() != null) {
+            node.getItems().replaceAll(ProcessorEngine::normalizeSignatureNode);
+        }
+        if (node.getProperties() != null) {
+            node.getProperties().replaceAll((key, value) -> {
+                if (isTypeReferenceKey(key)) {
+                    return normalizeSignatureReference(value);
+                }
+                return normalizeSignatureNode(value);
+            });
+        }
+        if (node.getContracts() != null) {
+            node.contracts(normalizeSignatureNode(node.getContracts()));
+        }
+        if (node.getBlue() != null) {
+            node.blue(normalizeSignatureNode(node.getBlue()));
+        }
+        return node;
+    }
+
+    private static boolean isTypeReferenceKey(String key) {
+        return "type".equals(key)
+                || "itemType".equals(key)
+                || "keyType".equals(key)
+                || "valueType".equals(key);
+    }
+
+    private static Node normalizeSignatureReference(Node reference) {
+        if (reference == null) {
+            return null;
+        }
+        normalizeSignatureNode(reference);
+        if (reference.getBlueId() != null) {
+            return new Node().blueId(reference.getBlueId());
+        }
+        if (reference.getBlueId() == null && reference.getName() != null) {
+            return new Node().blueId(BlueIdCalculator.calculateBlueId(reference));
+        }
+        return reference;
+    }
+
     static Node createDocumentUpdateEvent(DocumentProcessingRuntime.DocumentUpdateData data, String scopePath) {
         String relativePath = relativizePointer(scopePath, data.path());
-        Node event = new Node().properties("type", new Node().value("Document Update"));
+        Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_UPDATE));
         event.properties("op", new Node().value(data.op().name().toLowerCase()));
         Node beforeNode = data.before() != null ? data.before().clone() : new Node().value(null);
         Node afterNode = data.after() != null ? data.after().clone() : new Node().value(null);
@@ -251,13 +326,7 @@ final class ProcessorEngine {
         }
         String watch = PointerUtils.normalizePointer(PointerUtils.resolvePointer(scopePath, watchPath));
         String changed = PointerUtils.normalizePointer(changedPath);
-        if (watch.equals("/")) {
-            return true;
-        }
-        if (changed.equals(watch)) {
-            return true;
-        }
-        return changed.startsWith(watch + "/");
+        return PointerUtils.descendantOrEqual(changed, watch);
     }
 
     static Node nodeAt(Node root, String pointer) {
@@ -267,6 +336,13 @@ final class ProcessorEngine {
         Node current = root;
         for (String segment : JsonPointer.split(pointer)) {
             if (segment.isEmpty()) {
+                continue;
+            }
+            if ("contracts".equals(segment)) {
+                current = current.getContracts();
+                if (current == null) {
+                    return null;
+                }
                 continue;
             }
             Map<String, Node> props = current.getProperties();
@@ -296,14 +372,77 @@ final class ProcessorEngine {
         return true;
     }
 
+    static TerminationMarker terminationMarker(Node root, String scopePath) {
+        String pointer = resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_TERMINATED);
+        Node marker;
+        try {
+            marker = nodeAt(root, pointer);
+        } catch (Exception ignored) {
+            return null;
+        }
+        if (marker == null) {
+            return null;
+        }
+        return validateTerminationMarker(marker, pointer);
+    }
+
     static void validateInitializationMarker(Node marker, String pointer) {
         if (marker == null) {
             return;
         }
         Node type = marker.getType();
-        if (type == null || type.getBlueId() == null || !"InitializationMarker".equals(type.getBlueId())) {
+        if (type == null || !RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER.equals(runtimeTypeBlueId(type))) {
             throw new IllegalStateException(
-                    "Reserved key 'initialized' must contain an Initialization Marker at " + pointer);
+                    "Reserved key 'initialized' must contain a Processing Initialized Marker at " + pointer);
+        }
+    }
+
+    static TerminationMarker validateTerminationMarker(Node marker, String pointer) {
+        if (marker == null) {
+            return null;
+        }
+        Node type = marker.getType();
+        if (type == null || !RuntimeBlueIds.PROCESSING_TERMINATED_MARKER.equals(runtimeTypeBlueId(type))) {
+            throw new IllegalStateException(
+                    "Reserved key 'terminated' must contain a Processing Terminated Marker at " + pointer);
+        }
+        String cause = stringProperty(marker, "cause");
+        ScopeRuntimeContext.TerminationKind kind = "fatal".equals(cause)
+                ? ScopeRuntimeContext.TerminationKind.FATAL
+                : ScopeRuntimeContext.TerminationKind.GRACEFUL;
+        return new TerminationMarker(kind, stringProperty(marker, "reason"));
+    }
+
+    private static String runtimeTypeBlueId(Node type) {
+        if (type == null) {
+            return null;
+        }
+        if (type.getBlueId() != null) {
+            return type.getBlueId();
+        }
+        try {
+            return BlueIdCalculator.calculateBlueId(type);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private static String stringProperty(Node node, String key) {
+        if (node == null || node.getProperties() == null) {
+            return null;
+        }
+        Node value = node.getProperties().get(key);
+        Object raw = value != null ? value.getValue() : null;
+        return raw instanceof String ? (String) raw : null;
+    }
+
+    static final class TerminationMarker {
+        final ScopeRuntimeContext.TerminationKind kind;
+        final String reason;
+
+        TerminationMarker(ScopeRuntimeContext.TerminationKind kind, String reason) {
+            this.kind = kind;
+            this.reason = reason;
         }
     }
 
@@ -312,6 +451,7 @@ final class ProcessorEngine {
         private final DocumentProcessingRuntime runtime;
         private final Map<String, ContractBundle> bundles = new LinkedHashMap<>();
         private final Map<String, PendingTermination> pendingTerminations = new LinkedHashMap<>();
+        private final Map<String, ProcessorErrorCategory> terminationCategories = new LinkedHashMap<>();
         private final Set<String> cutOffScopes = new LinkedHashSet<>();
         private final CheckpointManager checkpointManager;
         private final TerminationService terminationService;
@@ -322,9 +462,10 @@ final class ProcessorEngine {
             this.owner = owner;
             this.runtime = new DocumentProcessingRuntime(document,
                     owner.conformanceEngine(),
+                    owner.conformancePlannerOverride(),
                     owner.snapshotManager(),
                     owner.metricsSink());
-            this.checkpointManager = new CheckpointManager(runtime, ProcessorEngine::canonicalSignature);
+            this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue(), owner.metricsSink());
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
             this.scopeExecutor = new ScopeExecutor(owner, this, runtime, bundles, channelRunner);
@@ -334,9 +475,10 @@ final class ProcessorEngine {
             this.owner = owner;
             this.runtime = new DocumentProcessingRuntime(snapshot,
                     owner.conformanceEngine(),
+                    owner.conformancePlannerOverride(),
                     owner.snapshotManager(),
                     owner.metricsSink());
-            this.checkpointManager = new CheckpointManager(runtime, ProcessorEngine::canonicalSignature);
+            this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue(), owner.metricsSink());
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
             this.scopeExecutor = new ScopeExecutor(owner, this, runtime, bundles, channelRunner);
@@ -352,6 +494,38 @@ final class ProcessorEngine {
 
         void processExternalEvent(String scopePath, Node event) {
             scopeExecutor.processExternalEvent(scopePath, event);
+        }
+
+        boolean applyScriptedForcedFatalIfPresent() {
+            ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
+            if (scriptedRuntime == null || !scriptedRuntime.hasForcedFatal()) {
+                return false;
+            }
+            ScriptedContractsRuntime.ForcedFatal forcedFatal = scriptedRuntime.consumeForcedFatal();
+            String scope = forcedFatal.scope() != null ? forcedFatal.scope() : "/";
+            ensureContractsContainerForForcedFatal(scope);
+            enterFatalTermination(scope,
+                    bundleForScope(ProcessorEngine.normalizeScope(scope)),
+                    ProcessorErrorCategory.TerminationError,
+                    forcedFatal.reason());
+            return true;
+        }
+
+        private void ensureContractsContainerForForcedFatal(String scopePath) {
+            String contractsPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_CONTRACTS);
+            Node contracts = null;
+            try {
+                contracts = runtime.nodeAt(contractsPointer);
+            } catch (RuntimeException ignored) {
+            }
+            if (contracts != null && contracts.getProperties() != null) {
+                return;
+            }
+            Node replacement = runtime.document().clone();
+            if ("/".equals(ProcessorEngine.normalizeScope(scopePath))) {
+                replacement.contracts(new Node());
+                runtime.replaceDocument(replacement);
+            }
         }
 
         void handlePatch(String scopePath,
@@ -372,6 +546,14 @@ final class ProcessorEngine {
                            List<JsonPatch> patches,
                            boolean allowReservedMutation) {
             scopeExecutor.handlePatches(scopePath, bundle, patches, allowReservedMutation);
+        }
+
+        void handlePatches(String scopePath,
+                           ContractBundle bundle,
+                           List<JsonPatch> patches,
+                           boolean allowReservedMutation,
+                           WorkingDocument.Preview preview) {
+            scopeExecutor.handlePatches(scopePath, bundle, patches, allowReservedMutation, preview);
         }
 
         ProcessorExecutionContext createContext(String scopePath,
@@ -408,13 +590,24 @@ final class ProcessorEngine {
         }
 
         DocumentProcessingResult result() {
+            ProcessorStatus status = processingStatus();
+            ProcessorErrorCategory category = rootErrorCategory();
+            String reason = rootFailureReason();
             ResolvedSnapshot snapshot = runtime.snapshot();
             if (snapshot != null) {
-                return DocumentProcessingResult.of(snapshot, runtime.rootEmissions(), runtime.totalGas());
+                return DocumentProcessingResult.of(snapshot,
+                        runtime.rootEmissions(),
+                        runtime.totalGas(),
+                        status,
+                        category,
+                        reason);
             }
             return DocumentProcessingResult.of(runtime.document(),
                     runtime.rootEmissions(),
-                    runtime.totalGas());
+                    runtime.totalGas(),
+                    status,
+                    category,
+                    reason);
         }
 
         DocumentProcessingResult partialResult() {
@@ -431,6 +624,10 @@ final class ProcessorEngine {
             return runtime;
         }
 
+        Blue blue() {
+            return owner.matchingService().blue();
+        }
+
         boolean isScopeInactive(String scopePath) {
             String normalized = ProcessorEngine.normalizeScope(scopePath);
             return cutOffScopes.contains(normalized)
@@ -443,6 +640,17 @@ final class ProcessorEngine {
         }
 
         void enterFatalTermination(String scopePath, ContractBundle bundle, String reason) {
+            enterFatalTermination(scopePath, bundle, ProcessorErrorCategory.InternalProcessorError, reason);
+        }
+
+        void enterFatalTermination(String scopePath,
+                                   ContractBundle bundle,
+                                   ProcessorErrorCategory errorCategory,
+                                   String reason) {
+            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            terminationCategories.put(normalized, errorCategory != null
+                    ? errorCategory
+                    : ProcessorErrorCategory.InternalProcessorError);
             terminate(scopePath, bundle, ScopeRuntimeContext.TerminationKind.FATAL, reason);
         }
 
@@ -493,6 +701,67 @@ final class ProcessorEngine {
         String fatalReason(Throwable throwable, String defaultReason) {
             String message = throwable != null ? throwable.getMessage() : null;
             return message != null ? message : defaultReason;
+        }
+
+        ProcessorErrorCategory fatalCategory(Throwable throwable, ProcessorErrorCategory defaultCategory) {
+            if (throwable instanceof ProcessorFailureException) {
+                return ((ProcessorFailureException) throwable).errorCategory();
+            }
+            if (throwable instanceof ProcessorFatalException) {
+                return ((ProcessorFatalException) throwable).errorCategory();
+            }
+            if (throwable instanceof MustUnderstandFailureException) {
+                return ((MustUnderstandFailureException) throwable).errorCategory();
+            }
+            return defaultCategory != null ? defaultCategory : ProcessorErrorCategory.InternalProcessorError;
+        }
+
+        private ProcessorStatus processingStatus() {
+            PendingTermination pendingRoot = pendingTerminations.get("/");
+            if (pendingRoot != null && pendingRoot.kind == ScopeRuntimeContext.TerminationKind.FATAL) {
+                return ProcessorStatus.RUNTIME_FATAL;
+            }
+            for (PendingTermination pending : pendingTerminations.values()) {
+                if (pending.kind == ScopeRuntimeContext.TerminationKind.FATAL) {
+                    return ProcessorStatus.RUNTIME_FATAL;
+                }
+            }
+            if (!terminationCategories.isEmpty()) {
+                return ProcessorStatus.RUNTIME_FATAL;
+            }
+            ProcessorEngine.TerminationMarker marker = runtime.terminationMarker("/");
+            if (marker != null && marker.kind == ScopeRuntimeContext.TerminationKind.FATAL) {
+                return ProcessorStatus.RUNTIME_FATAL;
+            }
+            return ProcessorStatus.SUCCESS;
+        }
+
+        private ProcessorErrorCategory rootErrorCategory() {
+            if (processingStatus() != ProcessorStatus.RUNTIME_FATAL) {
+                return null;
+            }
+            ProcessorErrorCategory category = terminationCategories.get("/");
+            if (category != null) {
+                return category;
+            }
+            if (!terminationCategories.isEmpty()) {
+                return terminationCategories.values().iterator().next();
+            }
+            return ProcessorErrorCategory.InternalProcessorError;
+        }
+
+        private String rootFailureReason() {
+            PendingTermination pendingRoot = pendingTerminations.get("/");
+            if (pendingRoot != null && pendingRoot.reason != null) {
+                return pendingRoot.reason;
+            }
+            for (PendingTermination pending : pendingTerminations.values()) {
+                if (pending.reason != null) {
+                    return pending.reason;
+                }
+            }
+            ProcessorEngine.TerminationMarker marker = runtime.terminationMarker("/");
+            return marker != null ? marker.reason : null;
         }
 
         void deliverLifecycle(String scopePath,

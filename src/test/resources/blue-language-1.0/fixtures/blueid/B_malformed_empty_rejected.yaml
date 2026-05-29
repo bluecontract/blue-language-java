@@ -1,0 +1,8 @@
+id: B_malformed_empty_rejected
+category: BlueId
+operation: calculateBlueId
+description: malformed empty placeholders are rejected
+expectError: true
+input:
+  items:
+  - $empty: false

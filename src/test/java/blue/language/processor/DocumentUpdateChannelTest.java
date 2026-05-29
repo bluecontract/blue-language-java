@@ -21,38 +21,38 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  documentUpdateChannelX:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /x\n" +
                 "  documentUpdateChannelY:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /y\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n" +
                 "  setY:\n" +
                 "    channel: documentUpdateChannelX\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /y\n" +
                 "    propertyValue: 1\n" +
                 "  setZ:\n" +
                 "    channel: documentUpdateChannelY\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /z\n" +
                 "    propertyValue: 1\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
@@ -78,37 +78,37 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: LifecycleChannel\n" +
+                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "  documentUpdateA:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /a\n" +
                 "  setAX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /a/x\n" +
                 "    propertyValue: 1\n" +
                 "  setABX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    order: 1\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: DocumentProcessingInitiated\n" +
+                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "    propertyKey: /a/b/x\n" +
                 "    propertyValue: 1\n" +
                 "  incrementYOnA:\n" +
                 "    channel: documentUpdateA\n" +
                 "    type:\n" +
-                "      blueId: IncrementProperty\n" +
+                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
                 "    propertyKey: /y\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
@@ -143,50 +143,50 @@ class DocumentUpdateChannelTest {
                 "    contracts:\n" +
                 "      life:\n" +
                 "        type:\n" +
-                "          blueId: LifecycleChannel\n" +
+                "          blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "      setInner:\n" +
                 "        channel: life\n" +
                 "        event:\n" +
                 "          type:\n" +
-                "            blueId: DocumentProcessingInitiated\n" +
+                "            blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "        type:\n" +
-                "          blueId: SetProperty\n" +
+                "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "        propertyKey: /a\n" +
                 "        propertyValue: 1\n" +
                 "  contracts:\n" +
                 "    embedded:\n" +
                 "      type:\n" +
-                "        blueId: ProcessEmbedded\n" +
+                "        blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "      paths:\n" +
                 "        - /y\n" +
                 "    documentUpdateFromY:\n" +
                 "      type:\n" +
-                "        blueId: DocumentUpdateChannel\n" +
+                "        blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "      path: /y/a\n" +
                 "    setFromY:\n" +
                 "      channel: documentUpdateFromY\n" +
                 "      type:\n" +
-                "        blueId: SetProperty\n" +
+                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      propertyKey: /a\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /x\n" +
                 "  documentUpdateFromChild:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /x/y/a\n" +
                 "  setFromChild:\n" +
                 "    channel: documentUpdateFromChild\n" +
                 "    type:\n" +
-                "      blueId: SetProperty\n" +
+                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /a\n" +
                 "    propertyValue: 1\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
@@ -215,7 +215,7 @@ class DocumentUpdateChannelTest {
         assertNull(originalX.getProperties().get("a"));
         Node originalY = originalX.getProperties().get("y");
         assertNotNull(originalY);
-        assertNull(originalY.getProperties().get("a"));
+        assertNull(originalY.getProperties() != null ? originalY.getProperties().get("a") : null);
     }
 
     @Test
@@ -225,24 +225,24 @@ class DocumentUpdateChannelTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: LifecycleChannel\n" +
+                "        blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
                 "    setX:\n" +
                 "      channel: life\n" +
                 "      type:\n" +
-                "        blueId: SetProperty\n" +
+                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: DocumentProcessingInitiated\n" +
+                "          blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "    watchX:\n" +
                 "      type:\n" +
-                "        blueId: DocumentUpdateChannel\n" +
+                "        blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "      path: /x\n" +
                 "    assertA:\n" +
                 "      channel: watchX\n" +
                 "      type:\n" +
-                "        blueId: AssertDocumentUpdate\n" +
+                "        blueId: 2QCfZuct9TQRCmgE4q6PneDoZFcshqMLYpsNGpxvfwMd\n" +
                 "      expectedPath: /x\n" +
                 "      expectedOp: add\n" +
                 "      expectBeforeNull: true\n" +
@@ -250,23 +250,23 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: ProcessEmbedded\n" +
+                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "  watchRoot:\n" +
                 "    type:\n" +
-                "      blueId: DocumentUpdateChannel\n" +
+                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
                 "    path: /a/x\n" +
                 "  assertRoot:\n" +
                 "    channel: watchRoot\n" +
                 "    type:\n" +
-                "      blueId: AssertDocumentUpdate\n" +
+                "      blueId: 2QCfZuct9TQRCmgE4q6PneDoZFcshqMLYpsNGpxvfwMd\n" +
                 "    expectedPath: /a/x\n" +
                 "    expectedOp: add\n" +
                 "    expectBeforeNull: true\n" +
                 "    expectedAfterValue: 1\n";
 
-        Blue blue = new Blue();
+        Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new AssertDocumentUpdateContractProcessor());
 

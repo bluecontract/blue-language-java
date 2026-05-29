@@ -118,6 +118,47 @@ class ResolvedSnapshotTest {
     }
 
     @Test
+    void resolvedSnapshotResolvedAtUsesIndex() {
+        ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue(
+                "deep:\n" +
+                "  nested:\n" +
+                "    value: ok", Node.class));
+
+        assertSame(snapshot.resolvedIndex().get("/deep/nested"), snapshot.resolvedAt("/deep/nested"));
+    }
+
+    @Test
+    void resolvedSnapshotCanonicalAtUsesIndex() {
+        ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue(
+                "deep:\n" +
+                "  nested:\n" +
+                "    value: ok", Node.class));
+
+        assertSame(snapshot.canonicalIndex().get("/deep/nested"), snapshot.canonicalAt("/deep/nested"));
+    }
+
+    @Test
+    void resolvedSnapshotBlueIdEqualsCanonicalRootBlueId() {
+        ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue("value: ok", Node.class));
+
+        assertEquals(snapshot.frozenCanonicalRoot().blueId(), snapshot.blueId());
+    }
+
+    @Test
+    void resolvedRootHashNotUsedAsContentBlueId() {
+        BasicNodeProvider nodeProvider = productProvider();
+        Blue blue = new Blue(nodeProvider);
+        Node canonical = YAML_MAPPER.readValue(
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Product"), Node.class);
+
+        ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
+
+        assertEquals(snapshot.frozenCanonicalRoot().blueId(), snapshot.blueId());
+        assertFalse(snapshot.frozenResolvedRoot().blueId().equals(snapshot.blueId()));
+    }
+
+    @Test
     void blueCanApplyCanonicalPatchAndReturnNextResolvedSnapshot() {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
@@ -321,6 +362,20 @@ class ResolvedSnapshotTest {
         assertSame(first.frozenResolvedRoot().getType().getType(), second.frozenResolvedRoot().getType().getType());
         assertEquals(2, blue.resolvedSnapshotCacheSize());
         assertTrue(blue.resolvedReferenceCacheSize() >= 2);
+    }
+
+    @Test
+    void providerFetchCountDoesNotIncreaseForCachedResolvedTypes() {
+        BasicNodeProvider delegate = inheritedProductProvider();
+        CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
+        Blue blue = new Blue(countingProvider);
+
+        blue.loadSnapshot(productInstance(delegate, "first"));
+        int fetchesAfterFirst = countingProvider.fetchCount();
+        blue.loadSnapshot(productInstance(delegate, "second"));
+
+        assertTrue(fetchesAfterFirst > 0);
+        assertEquals(fetchesAfterFirst, countingProvider.fetchCount());
     }
 
     @Test

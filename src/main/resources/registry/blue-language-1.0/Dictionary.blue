@@ -1,0 +1,17 @@
+name: Dictionary
+description: >-
+  Core Blue Language 1.0 object-map collection type. A Dictionary is encoded
+  as a Blue object node whose ordinary child fields represent direct keys
+  when those keys do not collide with reserved language fields. Direct object
+  encoding cannot represent data keys named name, description, type, itemType,
+  keyType, valueType, value, items, blueId, blue, schema, mergePolicy,
+  contracts, properties, or constraints. Direct object encoding cannot
+  represent reserved language keys as data keys. Applications needing
+  arbitrary keys use an escaped entry representation such as a list of { key,
+  val } entries. keyType is optional; if
+  omitted and no effective keyType is inherited, keys default to Text for
+  direct object encoding. For direct object encoding, keyType must resolve to
+  a scalar key type with a canonical textual form, such as Text, Integer,
+  Double, or Boolean. valueType is optional; if omitted and no effective
+  valueType is inherited, values may be any Blue node. Applicable schema
+  constraints are minFields and maxFields.

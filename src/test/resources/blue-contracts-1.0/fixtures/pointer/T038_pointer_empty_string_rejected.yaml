@@ -1,0 +1,6 @@
+id: T038_pointer_empty_string_rejected
+category: Pointer
+operation: pointerValidation
+pointer: ""
+expectedValid: false
+expectedFailureReasonContains: empty

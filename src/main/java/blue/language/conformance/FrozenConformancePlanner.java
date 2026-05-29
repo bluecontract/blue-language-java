@@ -61,7 +61,7 @@ final class FrozenConformancePlanner {
 
             if (nextCanonicalRoot != null) {
                 FrozenNode before = read(nextCanonicalRoot, path);
-                FrozenNode after = reuseUnchangedSubtrees(before, canonicalize(generalizedNode.resolved()));
+                FrozenNode after = reuseUnchangedSubtrees(before, canonicalize(generalizedNode.resolved(), nextCanonicalRoot));
                 nextCanonicalRoot = replaceAt(nextCanonicalRoot, path, after);
                 canonicalPatches.add(new CanonicalGeneralizationPatch(path, before, after));
             }
@@ -79,34 +79,93 @@ final class FrozenConformancePlanner {
         if (node == null) {
             return GeneralizedNode.unchanged(node);
         }
+        if (!hasTypeMetadata(node)) {
+            return GeneralizedNode.unchanged(node);
+        }
 
-        ConformanceResult result = check(node);
-        FrozenNode current = node;
+        Node canonical = new MergeReverser().reverse(node.toNode());
+        ConformanceResult result = checkCanonical(canonical);
+        FrozenNode type = node.getType();
+        FrozenNode itemType = node.getItemType();
+        FrozenNode keyType = node.getKeyType();
+        FrozenNode valueType = node.getValueType();
         List<String> metadataFields = new ArrayList<>();
         boolean generalized = false;
         while (!result.isConformant()) {
-            GeneralizationStep step = nextGeneralizationStep(current);
+            GeneralizationStep step = nextGeneralizationStep(type, itemType, keyType, valueType);
             if (step == null) {
                 throw new IllegalArgumentException("Node cannot be generalized to a conforming type: " + result.getMessage());
             }
-            current = generalizedNode(current, step);
+            applyGeneralizationStep(canonical, step);
+            switch (step.metadataField()) {
+                case "type":
+                    type = step.parentType();
+                    break;
+                case "itemType":
+                    itemType = step.parentType();
+                    break;
+                case "keyType":
+                    keyType = step.parentType();
+                    break;
+                case "valueType":
+                    valueType = step.parentType();
+                    break;
+                default:
+                    throw new IllegalStateException("Unsupported metadata field for generalization: " + step.metadataField());
+            }
             metadataFields.add(step.metadataField());
             generalized = true;
-            result = check(current);
+            result = checkCanonical(canonical);
         }
-        return new GeneralizedNode(current, generalized, metadataFields);
+        if (!generalized) {
+            return GeneralizedNode.unchanged(node);
+        }
+        Node resolved = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
+                .resolve(canonical, Limits.NO_LIMITS);
+        return new GeneralizedNode(reuseUnchangedSubtrees(node,
+                FrozenNode.fromResolvedNode(resolved, resolvedReferenceCache)), true, metadataFields);
+    }
+
+    private boolean hasTypeMetadata(FrozenNode node) {
+        return node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null;
     }
 
     private ConformanceResult check(FrozenNode node) {
         if (node == null) {
             return ConformanceResult.conformant();
         }
+        return checkCanonical(new MergeReverser().reverse(node.toNode()));
+    }
+
+    private ConformanceResult checkCanonical(Node canonical) {
         try {
-            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(node.toNode(), Limits.NO_LIMITS);
+            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(canonical, Limits.NO_LIMITS);
             return ConformanceResult.conformant();
         } catch (RuntimeException ex) {
             return ConformanceResult.nonConformant(ex.getMessage());
         }
+    }
+
+    private GeneralizationStep nextGeneralizationStep(FrozenNode typeNode,
+                                                      FrozenNode itemTypeNode,
+                                                      FrozenNode keyTypeNode,
+                                                      FrozenNode valueTypeNode) {
+        GeneralizationStep type = generalizationStep("type", typeNode);
+        if (type != null) {
+            return type;
+        }
+        GeneralizationStep itemType = generalizationStep("itemType", itemTypeNode);
+        if (itemType != null) {
+            return itemType;
+        }
+        GeneralizationStep keyType = generalizationStep("keyType", keyTypeNode);
+        if (keyType != null) {
+            return keyType;
+        }
+        return generalizationStep("valueType", valueTypeNode);
     }
 
     private GeneralizationStep nextGeneralizationStep(FrozenNode node) {
@@ -130,28 +189,24 @@ final class FrozenConformancePlanner {
         return parentType != null ? new GeneralizationStep(metadataField, parentType) : null;
     }
 
-    private FrozenNode generalizedNode(FrozenNode node, GeneralizationStep step) {
-        Node canonical = new MergeReverser().reverse(node.toNode());
+    private void applyGeneralizationStep(Node canonical, GeneralizationStep step) {
         Node parentType = new Node().blueId(typeReferenceBlueId(step.parentType()));
         switch (step.metadataField()) {
             case "type":
                 canonical.type(parentType);
-                break;
+                return;
             case "itemType":
                 canonical.itemType(parentType);
-                break;
+                return;
             case "keyType":
                 canonical.keyType(parentType);
-                break;
+                return;
             case "valueType":
                 canonical.valueType(parentType);
-                break;
+                return;
             default:
                 throw new IllegalStateException("Unsupported metadata field for generalization: " + step.metadataField());
         }
-        Node resolved = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
-                .resolve(canonical, Limits.NO_LIMITS);
-        return reuseUnchangedSubtrees(node, FrozenNode.fromResolvedNode(resolved, resolvedReferenceCache));
     }
 
     private FrozenNode parentType(FrozenNode type) {
@@ -174,8 +229,12 @@ final class FrozenConformancePlanner {
                 : BlueIdCalculator.calculateBlueId(new MergeReverser().reverse(type.toNode()));
     }
 
-    private FrozenNode canonicalize(FrozenNode resolvedNode) {
-        return FrozenNode.fromNode(new MergeReverser().reverse(resolvedNode.toNode()));
+    private FrozenNode canonicalize(FrozenNode resolvedNode, FrozenNode canonicalRoot) {
+        Node canonical = new MergeReverser().reverse(resolvedNode.toNode());
+        if (canonicalRoot != null && !canonicalRoot.isStrictBlueIdValidation()) {
+            return FrozenNode.fromUncheckedCanonicalNode(canonical);
+        }
+        return FrozenNode.fromNode(canonical);
     }
 
     private List<String> existingPathSegments(FrozenNode root, String pointer) {

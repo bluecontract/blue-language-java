@@ -1,0 +1,10 @@
+id: R_schema_value_shapes
+category: Schema
+operation: parseSource
+description: schema keyword value shapes are strict
+expectError: true
+expectedErrorCategory: SchemaVocabularyError
+source:
+  schema:
+    required:
+      value: true

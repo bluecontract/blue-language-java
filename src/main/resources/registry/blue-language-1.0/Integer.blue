@@ -1,0 +1,11 @@
+name: Integer
+description: >-
+  Core Blue Language 1.0 primitive scalar for exact mathematical integer
+  values. Integer values are arbitrary precision in the language model.
+  Unquoted integer tokens are portable only in the safe JSON numeric integer
+  range [-9007199254740991, 9007199254740991]. Integer values outside that
+  range are represented as quoted canonical decimal text with explicit or
+  inherited effective Integer type. The canonical decimal text form uses an
+  optional leading minus sign followed by decimal digits, with no leading
+  zeros except the single digit zero. Applicable schema constraints are
+  minimum, maximum, exclusiveMinimum, exclusiveMaximum, multipleOf, and enum.

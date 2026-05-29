@@ -1,0 +1,89 @@
+specVersion: "1.0"
+registryKind: Blue Contracts runtime type registry
+publishedBy: Blue Contracts and Processor 1.0
+canonicalizationRule: Standard Blue Language 1.0 baseline preprocessing resolves symbolic core type aliases and runtime registry aliases before BlueId calculation.
+conformanceFixturePackageIdentity: "sha256:2f197ca3bbdc41b75e772777cc48e51019754347e1bee26b5f3209b71d9bd9ca"
+preprocessingEnvironment:
+  coreRegistry: blue-language-1.0
+  runtimeRegistry: blue-contracts-1.0
+entries:
+  - key: Contract
+    path: Contract.blue
+    blueId: "6WrVQoSpKHUUg5HPrwjkVV6pxe4sdkyGnakMs8ayEGeF"
+    semanticDescriptionIdentityBearing: true
+  - key: JsonPatchEntry
+    path: JsonPatchEntry.blue
+    blueId: "61W96XosAp3DrEC7PuqLYtmF2A6ETpqH6qF2DgYwDq4c"
+    semanticDescriptionIdentityBearing: true
+  - key: ContractExecutionResult
+    path: ContractExecutionResult.blue
+    blueId: "AMtAXPmvumgz1GxKUU9uv3ncXiKMENvqq8AaLvD5LXhv"
+    semanticDescriptionIdentityBearing: true
+  - key: Channel
+    path: Channel.blue
+    blueId: "4FAZ94JPExNM4pn2ZhtdHa4CVP7uASmLNVrBy7aCG1p5"
+    semanticDescriptionIdentityBearing: true
+  - key: Handler
+    path: Handler.blue
+    blueId: "7X46P3Q6FJrogqKrBXTALpqzkieyyiQeatnqLvWzAPXE"
+    semanticDescriptionIdentityBearing: true
+  - key: Marker
+    path: Marker.blue
+    blueId: "6zqbYGDGrMv5ReuEsjyzyyjjuqVnqDZxtY7RsPXdBTNy"
+    semanticDescriptionIdentityBearing: true
+  - key: ProcessEmbedded
+    path: ProcessEmbedded.blue
+    blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
+    semanticDescriptionIdentityBearing: true
+  - key: ProcessingInitializedMarker
+    path: ProcessingInitializedMarker.blue
+    blueId: "6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"
+    semanticDescriptionIdentityBearing: true
+  - key: ProcessingTerminatedMarker
+    path: ProcessingTerminatedMarker.blue
+    blueId: "GBDBthfshBFr4GQKUU1fmy4GnPL7q2y3as4deUWpuBtu"
+    semanticDescriptionIdentityBearing: true
+  - key: ChannelEventCheckpoint
+    path: ChannelEventCheckpoint.blue
+    blueId: "9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1"
+    semanticDescriptionIdentityBearing: true
+  - key: TypeGeneralizationPolicy
+    path: TypeGeneralizationPolicy.blue
+    blueId: "Fbenow6tanFHkWzKiDD8fGxminQswQ1FecMRakaCx2WX"
+    semanticDescriptionIdentityBearing: true
+  - key: TypeGeneralizationRule
+    path: TypeGeneralizationRule.blue
+    blueId: "7Vnmk8StjwY7e9mBNpACrn8oh3KZ7yQBjnXe5bLDWn4D"
+    semanticDescriptionIdentityBearing: true
+  - key: DocumentUpdateChannel
+    path: DocumentUpdateChannel.blue
+    blueId: "Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o"
+    semanticDescriptionIdentityBearing: true
+  - key: TriggeredEventChannel
+    path: TriggeredEventChannel.blue
+    blueId: "5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ"
+    semanticDescriptionIdentityBearing: true
+  - key: LifecycleEventChannel
+    path: LifecycleEventChannel.blue
+    blueId: "2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ"
+    semanticDescriptionIdentityBearing: true
+  - key: EmbeddedNodeChannel
+    path: EmbeddedNodeChannel.blue
+    blueId: "H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i"
+    semanticDescriptionIdentityBearing: true
+  - key: DocumentUpdate
+    path: DocumentUpdate.blue
+    blueId: "7HEaG1SpBdsbVHsrwRTZSZGmpJUWHfFoEzecYWpjo1vm"
+    semanticDescriptionIdentityBearing: true
+  - key: DocumentProcessingInitiated
+    path: DocumentProcessingInitiated.blue
+    blueId: "Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL"
+    semanticDescriptionIdentityBearing: true
+  - key: DocumentProcessingTerminated
+    path: DocumentProcessingTerminated.blue
+    blueId: "4HWncQEQsdpk8zcXxYxgdtoXo5nKHxFPWeJfTscCbmeK"
+    semanticDescriptionIdentityBearing: true
+  - key: DocumentProcessingFatalError
+    path: DocumentProcessingFatalError.blue
+    blueId: "AMZbj5tNGxjPrvaNyw56sfqcLSW2j1XmkncEYUVtgmVC"
+    semanticDescriptionIdentityBearing: true

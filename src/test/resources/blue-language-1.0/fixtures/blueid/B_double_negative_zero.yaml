@@ -1,0 +1,14 @@
+id: B_double_negative_zero
+category: BlueId
+operation: calculateBlueId
+description: Double negative zero canonicalizes to numeric payload 0 while retaining
+  Double type
+input:
+  type:
+    blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  value: -0.0
+expectedNodeBlueId: EMyry1HoEveRhdWaq554hVrrciRW1731ik3bXLLyN36U
+alsoEquivalentTo:
+  type:
+    blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  value: 0.0

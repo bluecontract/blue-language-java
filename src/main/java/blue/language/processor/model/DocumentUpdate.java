@@ -2,8 +2,9 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
-@TypeBlueId("DocumentUpdate")
+@TypeBlueId(RuntimeBlueIds.DOCUMENT_UPDATE)
 public class DocumentUpdate {
 
     private String op;

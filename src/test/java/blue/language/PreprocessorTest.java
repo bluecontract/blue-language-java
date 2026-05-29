@@ -30,7 +30,9 @@ public class PreprocessorTest {
                      "    value: Integer\n" +
                      "c:\n" +
                      "  type:\n" +
-                     "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
+                     "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
+                     "d:\n" +
+                     "  type: Channel";
 
         Blue blue = new Blue();
         Node node = blue.preprocess(blue.yamlToNode(doc));
@@ -38,10 +40,12 @@ public class PreprocessorTest {
         assertEquals(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get("Integer"), node.getProperties().get("a").getType().getName());
         assertEquals("Integer", node.getProperties().get("b").getType().getValue());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("c").getType().getBlueId());
+        assertEquals(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get("Channel"), node.getProperties().get("d").getType().getBlueId());
 
         assertFalse(node.getProperties().get("a").getType().isInlineValue());
         assertFalse(node.getProperties().get("b").getType().isInlineValue());
         assertFalse(node.getProperties().get("c").getType().isInlineValue());
+        assertFalse(node.getProperties().get("d").getType().isInlineValue());
     }
 
     @Test
@@ -50,17 +54,15 @@ public class PreprocessorTest {
                      "items:\n" +
                      "  blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
 
-        Blue blue = new Blue();
-        Node node = blue.preprocess(blue.yamlToNode(doc));
-        assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getItems().get(0).getBlueId());
+        assertThrows(RuntimeException.class, () -> new Blue().yamlToNode(doc));
     }
 
     @Test
     public void testPreprocessWithCustomBlueExtendingDefaultBlue() throws Exception {
         String doc = "blue:\n" +
-                     "  - blueId:\n" +
-                     "      " + DEFAULT_BLUE_BLUE_ID + "\n" +
-                     "  - name: MyTestTransformation\n" +
+                     "  items:\n" +
+                     "    - blueId: " + DEFAULT_BLUE_BLUE_ID + "\n" +
+                     "    - name: MyTestTransformation\n" +
                      "x:\n" +
                      "  type: Integer\n" +
                      "y: ABC";
@@ -82,6 +84,52 @@ public class PreprocessorTest {
 
         assertEquals(Properties.INTEGER_TYPE_BLUE_ID, result.getAsText("/x/type/blueId"));
         assertEquals("XYZ", result.getAsText("/y/value"));
+    }
+
+    @Test
+    public void preprocessorPreprocessAppliesDefaultBaselineWhenBlueOmitted() {
+        Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
+
+        Node result = new Preprocessor(BootstrapProvider.INSTANCE).preprocess(raw);
+
+        assertEquals(INTEGER_TYPE_BLUE_ID, result.getAsText("/x/type/blueId"));
+    }
+
+    @Test
+    public void preprocessorPreprocessWithDefaultBlueMatchesBluePreprocess() {
+        Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
+
+        Node direct = new Preprocessor(BootstrapProvider.INSTANCE).preprocessWithDefaultBlue(raw);
+        Node viaBlue = new Blue().preprocess(raw.clone());
+
+        assertEquals(BlueIdCalculator.calculateBlueId(direct), BlueIdCalculator.calculateBlueId(viaBlue));
+    }
+
+    @Test
+    public void preprocessorPreprocessWithoutDefaultBlueIsExplicit() {
+        Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
+
+        Node result = new Preprocessor(BootstrapProvider.INSTANCE).preprocessWithoutDefaultBlue(raw);
+
+        assertNull(result.getProperties().get("x").getType());
+        assertEquals(BigInteger.ONE, result.getProperties().get("x").getValue());
+    }
+
+    @Test
+    public void blueImportsCannotRedefineDefaultRuntimeAliases() {
+        Node raw = YAML_MAPPER.readValue(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Channel:\n" +
+                "      blueId: " + TEXT_TYPE_BLUE_ID + "\n" +
+                "x:\n" +
+                "  type: Channel",
+                Node.class);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> new Preprocessor(BootstrapProvider.INSTANCE).preprocess(raw));
+
+        assertTrue(error.getMessage().contains("default Blue alias \"Channel\""));
     }
 
     @Test
@@ -146,6 +194,128 @@ public class PreprocessorTest {
                 .inlineValue(false);
 
         assertNodesEqual(expectedRaw, rawNode);
+    }
+
+    @Test
+    public void blueImportsReplaceTypeAliasesAndAreRemoved() {
+        String personBlueId = BlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
+        String keyBlueId = BlueIdCalculator.calculateBlueId(new Node().value("KeyType"));
+        String valueBlueId = BlueIdCalculator.calculateBlueId(new Node().value("ValueType"));
+        String doc = "blue:\n" +
+                     "  imports:\n" +
+                     "    Person:\n" +
+                     "      blueId: " + personBlueId + "\n" +
+                     "    Key:\n" +
+                     "      blueId: " + keyBlueId + "\n" +
+                     "    Value:\n" +
+                     "      blueId: " + valueBlueId + "\n" +
+                     "person:\n" +
+                     "  type: Person\n" +
+                     "people:\n" +
+                     "  type: List\n" +
+                     "  itemType: Person\n" +
+                     "dict:\n" +
+                     "  type: Dictionary\n" +
+                     "  keyType: Key\n" +
+                     "  valueType: Value";
+
+        Node node = new Blue().yamlToNode(doc);
+
+        assertNull(node.getBlue());
+        assertEquals(personBlueId, node.getAsText("/person/type/blueId"));
+        assertEquals(personBlueId, node.getAsText("/people/itemType/blueId"));
+        assertEquals(keyBlueId, node.getAsText("/dict/keyType/blueId"));
+        assertEquals(valueBlueId, node.getAsText("/dict/valueType/blueId"));
+    }
+
+    @Test
+    public void blueImportsRejectInvalidShapes() {
+        String personBlueId = BlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
+
+        assertThrows(RuntimeException.class, () -> new Blue().yamlToNode(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Person:\n" +
+                "      value: x\n" +
+                "x:\n" +
+                "  type: Person"));
+
+        assertThrows(RuntimeException.class, () -> new Blue().yamlToNode(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Text:\n" +
+                "      blueId: " + personBlueId + "\n" +
+                "x:\n" +
+                "  type: Text"));
+
+        assertThrows(RuntimeException.class, () -> new Blue().yamlToNode(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Person:\n" +
+                "      blueId: " + personBlueId + "\n" +
+                "    Person:\n" +
+                "      blueId: " + personBlueId + "\n" +
+                "x:\n" +
+                "  type: Person"));
+
+        assertThrows(RuntimeException.class, () -> new Blue().yamlToNode(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Person:\n" +
+                "      blueId: not-a-real-blueid\n" +
+                "x:\n" +
+                "  type: Person"));
+
+        assertThrows(RuntimeException.class, () -> new Blue().yamlToNode(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Person:\n" +
+                "      blueId: this#0\n" +
+                "x:\n" +
+                "  type: Person"));
+
+        assertThrows(RuntimeException.class, () -> new Blue().yamlToNode(
+                "blue:\n" +
+                "  imports:\n" +
+                "    Person:\n" +
+                "      blueId: " + personBlueId + "#0\n" +
+                "x:\n" +
+                "  type: Person"));
+    }
+
+    @Test
+    public void blueImportsDoNotDropOtherBlueTransforms() {
+        String personBlueId = BlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
+        String doc = "blue:\n" +
+                     "  imports:\n" +
+                     "    Person:\n" +
+                     "      blueId: " + personBlueId + "\n" +
+                     "  items:\n" +
+                     "    - name: MyTestTransformation\n" +
+                     "x:\n" +
+                     "  type: Person\n" +
+                     "y: ABC";
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        TransformationProcessor changeABCtoXYZ = document -> NodeTransformer.transform(document, docNode -> {
+            Node result = docNode.clone();
+            if ("ABC".equals(docNode.getValue())) {
+                result.value("XYZ");
+            }
+            return result;
+        });
+        TransformationProcessorProvider provider = transformation -> {
+            if ("MyTestTransformation".equals(transformation.getName())) {
+                return Optional.of(changeABCtoXYZ);
+            }
+            return Optional.empty();
+        };
+
+        Node result = new Preprocessor(provider, BootstrapProvider.INSTANCE).preprocess(node);
+
+        assertEquals(personBlueId, result.getAsText("/x/type/blueId"));
+        assertEquals("XYZ", result.getAsText("/y/value"));
+        assertNull(result.getBlue());
     }
 
     private void assertNodesEqual(Node expected, Node actual) {

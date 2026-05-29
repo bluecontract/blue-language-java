@@ -1,0 +1,46 @@
+id: T051_contracts_whole_map_patch_preserving_reserved_subtrees_allowed
+category: Patching
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    initialized:
+      type:
+        blueId: "6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"
+      documentId:
+        value: existing
+    channel:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+    handler:
+      channel: channel
+      type:
+        blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+      patches:
+        - op: replace
+          path: /contracts
+          val:
+            initialized:
+              type:
+                blueId: "6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"
+              documentId:
+                value: existing
+            channel:
+              type:
+                blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+            handler:
+              channel: channel
+              type:
+                blueId: "HvDTdkzXnW9fRL7NrifNu63TMdQbXUcyihfiPy4CARw4"
+              patches:
+                - op: replace
+                  path: /changed
+                  val:
+                    value: true
+event:
+  kind: contracts-preserve
+expectedCapabilityFailure: false
+expectedDocumentPaths:
+  /contracts/initialized/documentId:
+    value: existing

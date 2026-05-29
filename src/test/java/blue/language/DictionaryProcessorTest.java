@@ -26,7 +26,7 @@ public class DictionaryProcessorTest {
                 .keyType("Text")
                 .valueType("Integer");
         Node dictB = new Node().name("DictB")
-                .type(new Node().blueId(calculateBlueId(dictA)));
+                .type(new Node().blueId(new Blue().calculateSemanticBlueId(dictA)));
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider(Arrays.asList(dictA, dictB));
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(

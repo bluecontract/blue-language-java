@@ -15,8 +15,10 @@ import blue.language.utils.TypeClassResolver;
 
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -24,6 +26,18 @@ import java.util.concurrent.ConcurrentMap;
  * Parses contracts under a scope and produces a {@link ContractBundle}.
  */
 final class ContractLoader {
+
+    private static final Set<String> INVALID_CONTRACT_KEYS = new LinkedHashSet<>();
+
+    static {
+        INVALID_CONTRACT_KEYS.add("type");
+        INVALID_CONTRACT_KEYS.add("value");
+        INVALID_CONTRACT_KEYS.add("items");
+        INVALID_CONTRACT_KEYS.add("schema");
+        INVALID_CONTRACT_KEYS.add("contracts");
+        INVALID_CONTRACT_KEYS.add("properties");
+        INVALID_CONTRACT_KEYS.add("constraints");
+    }
 
     private final ContractProcessorRegistry registry;
     private final NodeToObjectConverter converter;
@@ -92,11 +106,7 @@ final class ContractLoader {
         if (scopeNode == null) {
             return builder.build();
         }
-        Map<String, FrozenNode> properties = scopeNode.getProperties();
-        if (properties == null) {
-            return builder.build();
-        }
-        FrozenNode contractsNode = properties.get("contracts");
+        FrozenNode contractsNode = scopeNode.getContracts();
         if (contractsNode == null) {
             return builder.build();
         }
@@ -104,7 +114,8 @@ final class ContractLoader {
             if (contractsNode.isEmptyNode()) {
                 return builder.build();
             }
-            throw new MustUnderstandFailureException("Contracts must be an object map");
+            throw new MustUnderstandFailureException("Contracts must be an object map",
+                    ProcessorErrorCategory.InvalidProcessingDocument);
         }
 
         Map<String, FrozenNode> contractNodes = new LinkedHashMap<>(contractsNode.getProperties());
@@ -118,14 +129,17 @@ final class ContractLoader {
 
         for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
             String key = entry.getKey();
+            validateContractKey(key);
             String typeBlueId = contractTypeBlueIds.get(key);
             if (typeBlueId == null) {
                 throw new MustUnderstandFailureException(
-                        "Contract '" + key + "' must declare a type");
+                        "Contract '" + key + "' must declare a type",
+                        ProcessorErrorCategory.UnsupportedContract);
             }
             Class<?> contractClass = typeResolver.resolveClass(typeBlueId);
             if (contractClass == null || !Contract.class.isAssignableFrom(contractClass)) {
-                throw new MustUnderstandFailureException("Unsupported contract type: " + typeBlueId);
+                throw new MustUnderstandFailureException("Unsupported contract type: " + typeBlueId,
+                        ProcessorErrorCategory.UnsupportedContract);
             }
             Contract contract = converter.convertWithType(entry.getValue().toNode(), Contract.class, false);
             if (contract == null) {
@@ -138,7 +152,8 @@ final class ContractLoader {
                 if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
                         && !registry.lookupChannel(channel).isPresent()) {
                     throw new MustUnderstandFailureException(
-                            "Unsupported contract type: " + typeBlueId);
+                            "Unsupported contract type: " + typeBlueId,
+                            ProcessorErrorCategory.UnsupportedContract);
                 }
                 builder.addChannel(key, channel, entry.getValue());
             } else if (contract instanceof HandlerContract) {
@@ -146,7 +161,8 @@ final class ContractLoader {
                 Optional<HandlerProcessor<? extends HandlerContract>> processor = registry.lookupHandler(handler);
                 if (!processor.isPresent()) {
                     throw new MustUnderstandFailureException(
-                            "Unsupported contract type: " + typeBlueId);
+                            "Unsupported contract type: " + typeBlueId,
+                            ProcessorErrorCategory.UnsupportedContract);
                 }
                 String channelKey = resolveHandlerChannel(scopePath,
                         key,
@@ -155,9 +171,11 @@ final class ContractLoader {
                         contractNodes,
                         contractTypeBlueIds);
                 handler.setChannelKey(channelKey);
-                requireRegisteredChannel(key, channelKey, contractNodes, contractTypeBlueIds);
-                builder.addHandler(key, handler, entry.getValue());
+                if (hasRegisteredSameScopeChannel(channelKey, contractNodes, contractTypeBlueIds)) {
+                    builder.addHandler(key, handler, entry.getValue());
+                }
             } else if (contract instanceof ProcessEmbedded) {
+                validateEmbeddedPaths((ProcessEmbedded) contract);
                 builder.setEmbedded((ProcessEmbedded) contract, entry.getValue());
             } else if (contract instanceof MarkerContract) {
                 builder.addMarker(key, (MarkerContract) contract, entry.getValue());
@@ -165,6 +183,27 @@ final class ContractLoader {
         }
 
         return builder.build();
+    }
+
+    private void validateContractKey(String key) {
+        if (key == null || key.isEmpty()) {
+            throw new MustUnderstandFailureException("Invalid contract key: key must be non-empty",
+                    ProcessorErrorCategory.InvalidRuntimePointer);
+        }
+        if (INVALID_CONTRACT_KEYS.contains(key)) {
+            throw new MustUnderstandFailureException("Invalid contract key: reserved key '" + key + "'",
+                    ProcessorErrorCategory.InvalidReservedMarker);
+        }
+    }
+
+    private void validateEmbeddedPaths(ProcessEmbedded embedded) {
+        Set<String> seen = new LinkedHashSet<>();
+        for (String path : embedded.getPaths()) {
+            if (!seen.add(path)) {
+                throw new MustUnderstandFailureException("Unique items are required for Process Embedded paths",
+                        ProcessorErrorCategory.BoundaryViolation);
+            }
+        }
     }
 
     private BundleCacheKey cacheKey(FrozenNode scopeNode, String scopePath) {
@@ -206,7 +245,6 @@ final class ContractLoader {
         Node node = checkpointNode.toNode();
         if (node.getProperties() != null) {
             node.getProperties().remove("lastEvents");
-            node.getProperties().remove("lastSignatures");
         }
         return FrozenNode.fromResolvedNode(node).blueId();
     }
@@ -216,6 +254,9 @@ final class ContractLoader {
     }
 
     private FrozenNode property(FrozenNode node, String key) {
+        if (node != null && "contracts".equals(key)) {
+            return node.getContracts();
+        }
         return node != null && node.getProperties() != null ? node.getProperties().get(key) : null;
     }
 
@@ -289,38 +330,33 @@ final class ContractLoader {
         return channelKey;
     }
 
-    private void requireRegisteredChannel(String handlerKey,
-                                          String channelKey,
-                                          Map<String, FrozenNode> contractNodes,
-                                          Map<String, String> contractTypeBlueIds) {
+    private boolean hasRegisteredSameScopeChannel(String channelKey,
+                                                  Map<String, FrozenNode> contractNodes,
+                                                  Map<String, String> contractTypeBlueIds) {
         FrozenNode channelNode = contractNodes.get(channelKey);
         if (channelNode == null) {
-            throw new IllegalStateException(
-                    "Handler " + handlerKey + " references unknown channel '" + channelKey + "'");
+            return false;
         }
         String channelTypeBlueId = contractTypeBlueIds.get(channelKey);
         if (channelTypeBlueId == null) {
-            throw new IllegalStateException(
-                    "Handler " + handlerKey + " references contract '" + channelKey + "' without a type");
+            return false;
         }
         Class<?> channelClass = typeResolver.resolveClass(channelTypeBlueId);
         if (channelClass == null || !ChannelContract.class.isAssignableFrom(channelClass)) {
-            throw new IllegalStateException(
-                    "Handler " + handlerKey + " references non-channel contract '" + channelKey + "'");
+            return false;
         }
         Contract channelContract = converter.convertWithType(channelNode.toNode(), Contract.class, false);
         if (!(channelContract instanceof ChannelContract)) {
-            throw new IllegalStateException(
-                    "Handler " + handlerKey + " references non-channel contract '" + channelKey + "'");
+            return false;
         }
         ChannelContract channel = (ChannelContract) channelContract;
         channel.setKey(channelKey);
         channel.setTypeBlueId(channelTypeBlueId);
         if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
                 && !registry.lookupChannel(channel).isPresent()) {
-            throw new IllegalStateException(
-                    "Handler " + handlerKey + " references unsupported channel '" + channelKey + "'");
+            return false;
         }
+        return true;
     }
 
     private String trimToNull(String value) {

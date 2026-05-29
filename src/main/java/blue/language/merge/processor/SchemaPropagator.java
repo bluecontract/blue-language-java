@@ -7,9 +7,12 @@ import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.LeastCommonMultiple;
+import blue.language.utils.NodeToBlueIdInput;
+import blue.language.utils.UncheckedObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -33,7 +36,6 @@ public class SchemaPropagator implements MergingProcessor {
         }
 
         propagateRequired(sourceSchema, targetSchema);
-        propagateAllowMultiple(sourceSchema, targetSchema);
         propagateMinLength(sourceSchema, targetSchema);
         propagateMaxLength(sourceSchema, targetSchema);
         propagateMinimum(sourceSchema, targetSchema);
@@ -51,11 +53,11 @@ public class SchemaPropagator implements MergingProcessor {
 
 
     private void propagateMinLength(Schema source, Schema target) {
-        propagateMinValue(source.getMinLengthValue(), target::getMinLengthValue, target::minLength);
+        propagateMinValue(source.getMinLengthExact(), target::getMinLengthExact, target::minLength);
     }
 
     private void propagateMaxLength(Schema source, Schema target) {
-        propagateMaxValue(source.getMaxLengthValue(), target::getMaxLengthValue, target::maxLength);
+        propagateMaxValue(source.getMaxLengthExact(), target::getMaxLengthExact, target::maxLength);
     }
 
     private void propagateMinimum(Schema source, Schema target) {
@@ -76,10 +78,6 @@ public class SchemaPropagator implements MergingProcessor {
 
     private void propagateRequired(Schema source, Schema target) {
         propagateBoolean(source.getRequiredValue(), target::getRequiredValue, target::required, true);
-    }
-
-    private void propagateAllowMultiple(Schema source, Schema target) {
-        propagateBoolean(source.getAllowMultipleValue(), target::getAllowMultipleValue, target::allowMultiple, true);
     }
 
     private <T extends Comparable<T>> void propagateMinValue(T sourceValue,
@@ -123,11 +121,11 @@ public class SchemaPropagator implements MergingProcessor {
     }
 
     private void propagateMinItems(Schema source, Schema target) {
-        propagateMinValue(source.getMinItemsValue(), target::getMinItemsValue, target::minItems);
+        propagateMinValue(source.getMinItemsExact(), target::getMinItemsExact, target::minItems);
     }
 
     private void propagateMaxItems(Schema source, Schema target) {
-        propagateMaxValue(source.getMaxItemsValue(), target::getMaxItemsValue, target::maxItems);
+        propagateMaxValue(source.getMaxItemsExact(), target::getMaxItemsExact, target::maxItems);
     }
 
     private void propagateUniqueItems(Schema source, Schema target) {
@@ -135,11 +133,11 @@ public class SchemaPropagator implements MergingProcessor {
     }
 
     private void propagateMinFields(Schema source, Schema target) {
-        propagateMinValue(source.getMinFieldsValue(), target::getMinFieldsValue, target::minFields);
+        propagateMinValue(source.getMinFieldsExact(), target::getMinFieldsExact, target::minFields);
     }
 
     private void propagateMaxFields(Schema source, Schema target) {
-        propagateMaxValue(source.getMaxFieldsValue(), target::getMaxFieldsValue, target::maxFields);
+        propagateMaxValue(source.getMaxFieldsExact(), target::getMaxFieldsExact, target::maxFields);
     }
 
     private void propagateEnum(Schema source, Schema target) {
@@ -150,7 +148,7 @@ public class SchemaPropagator implements MergingProcessor {
 
         List<Node> targetEnum = target.getEnum();
         if (targetEnum == null) {
-            target.enumValues(cloneNodes(sourceEnum));
+            target.enumValues(canonicalizeEnum(sourceEnum));
             return;
         }
 
@@ -163,7 +161,7 @@ public class SchemaPropagator implements MergingProcessor {
                 intersection.add(targetValue.clone());
             }
         }
-        target.enumValues(intersection);
+        target.enumValues(canonicalizeEnum(intersection));
     }
 
     private List<Node> cloneNodes(List<Node> nodes) {
@@ -176,6 +174,22 @@ public class SchemaPropagator implements MergingProcessor {
         Node comparable = node.clone();
         comparable.schema(null);
         return BlueIdCalculator.calculateBlueId(comparable);
+    }
+
+    private List<Node> canonicalizeEnum(List<Node> nodes) {
+        Map<String, Node> uniqueByIdentity = new LinkedHashMap<>();
+        for (Node node : nodes) {
+            uniqueByIdentity.putIfAbsent(enumComparableBlueId(node), node.clone());
+        }
+        List<Node> result = new ArrayList<>(uniqueByIdentity.values());
+        result.sort((left, right) -> enumCanonicalKey(left).compareTo(enumCanonicalKey(right)));
+        return result;
+    }
+
+    private String enumCanonicalKey(Node node) {
+        Node comparable = node.clone();
+        comparable.schema(null);
+        return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(NodeToBlueIdInput.get(comparable));
     }
 
 }

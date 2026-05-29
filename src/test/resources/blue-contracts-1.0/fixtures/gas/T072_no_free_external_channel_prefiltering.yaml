@@ -1,0 +1,23 @@
+id: T072_no_free_external_channel_prefiltering
+category: Gas
+operation: processDocument
+processorCapabilities:
+  - blue-contracts-fixture-scripted-runtime-v1
+initialDocument:
+  contracts:
+    rejectedA:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+      accept:
+        value: false
+    rejectedB:
+      type:
+        blueId: "9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi"
+      accept:
+        value: false
+event:
+  kind: prefilter
+expectedCapabilityFailure: false
+expectedExactGas: 1114
+expectedAbsentDocumentPaths:
+  - /contracts/checkpoint

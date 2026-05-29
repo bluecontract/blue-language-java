@@ -222,8 +222,7 @@ public class SchemaVerifierMinLengthTest {
                    "  type:\n" +
                    indent(b, 4) + "\n" +
                    "  schema:\n" +
-                   "    minLength:\n" +
-                   "      value: 2";
+                   "    minLength: 2";
 
         String y = "name: Y\n" +
                    "type:\n" +

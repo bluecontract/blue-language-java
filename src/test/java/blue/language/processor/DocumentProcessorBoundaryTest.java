@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class DocumentProcessorBoundaryTest {
 
     @Test
-    void allowsPatchingWithinScopeUsingLiteralSegments() {
+    void rejectsEmptyPointerSegments() {
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
@@ -21,10 +21,11 @@ class DocumentProcessorBoundaryTest {
 
         execution.handlePatch("/foo", bundle, JsonPatch.add("/foo//bar", new Node().value("ok")), false);
 
-        Node foo = getProperty(document, "foo");
-        Node empty = getProperty(foo, "");
-        Node bar = getProperty(empty, "bar");
-        assertEquals("ok", bar.getValue());
+        Node resultDoc = execution.result().document();
+        Node terminated = resultDoc.getAsNode("/foo/contracts/terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
+        assertTrue(execution.runtime().isScopeTerminated("/foo"));
     }
 
     @Test
@@ -46,8 +47,7 @@ class DocumentProcessorBoundaryTest {
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
         Node foo = resultDoc.getAsNode("/foo");
         Map<String, Node> fooProps = foo.getProperties();
-        assertNotNull(fooProps);
-        assertFalse(fooProps.containsKey("bar"));
+        assertFalse(fooProps != null && fooProps.containsKey("bar"));
     }
 
     @Test
@@ -72,8 +72,7 @@ class DocumentProcessorBoundaryTest {
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
         Node foo = resultDoc.getAsNode("/foo");
         Map<String, Node> fooProps = foo.getProperties();
-        assertNotNull(fooProps);
-        assertFalse(fooProps.containsKey("child"));
+        assertFalse(fooProps != null && fooProps.containsKey("child"));
     }
 
     @Test
@@ -200,7 +199,7 @@ class DocumentProcessorBoundaryTest {
         assertTrue(execution.runtime().isScopeTerminated("/foo"));
         Node fooNode = resultDoc.getProperties().get("foo");
         assertNotNull(fooNode);
-        assertTrue(fooNode.getProperties().containsKey("contracts"));
+        assertTrue(fooNode.getContracts() != null);
     }
 
     private Node getProperty(Node node, String key) {

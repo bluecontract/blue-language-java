@@ -1,12 +1,13 @@
 package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@TypeBlueId("ProcessEmbedded")
+@TypeBlueId(RuntimeBlueIds.PROCESS_EMBEDDED)
 public class ProcessEmbedded extends MarkerContract {
 
     private final List<String> paths = new ArrayList<>();

@@ -8,7 +8,7 @@ import blue.language.processor.model.TestEventChannel;
 
 public class TestEventChannelProcessor implements ChannelProcessor<TestEventChannel> {
 
-    private static final String DEFAULT_EVENT_TYPE = "TestEvent";
+    private static final String DEFAULT_EVENT_TYPE = "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
 
     @Override
     public Class<TestEventChannel> contractType() {

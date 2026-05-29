@@ -2,7 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.util.NodeCanonicalizer;
-import blue.language.processor.util.PointerUtils;
 
 /**
  * Tracks and charges gas usage for a processing run.
@@ -16,11 +15,17 @@ final class GasMeter {
     }
 
     void add(long amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Gas amount must be non-negative");
+        }
         totalGas += amount;
     }
 
-    void chargeScopeEntry(String scopePath) {
-        add(GasCharges.scopeEntry(scopeDepth(scopePath)));
+    void chargeScopeEntry(int embeddedDepth) {
+        if (embeddedDepth < 0) {
+            throw new IllegalArgumentException("Scope embedded depth must be non-negative");
+        }
+        add(GasCharges.scopeEntry(embeddedDepth));
     }
 
     void chargeInitialization() {
@@ -86,26 +91,8 @@ final class GasMeter {
         return (bytes + 99L) / 100L;
     }
 
-    private int scopeDepth(String scopePath) {
-        String normalized = PointerUtils.normalizeScope(scopePath);
-        if ("/".equals(normalized)) {
-            return 0;
-        }
-        String trimmed = normalized.substring(1);
-        if (trimmed.isEmpty()) {
-            return 0;
-        }
-        int depth = 1;
-        for (int i = 0; i < trimmed.length(); i++) {
-            if (trimmed.charAt(i) == '/') {
-                depth++;
-            }
-        }
-        return depth;
-    }
-
     private static final class GasCharges {
-        private static final long INITIALIZATION = 1_000L;
+        private static final long INITIALIZATION = 1001L;
         private static final long CHANNEL_MATCH_ATTEMPT = 5L;
         private static final long HANDLER_OVERHEAD = 50L;
         private static final long BOUNDARY_CHECK = 2L;
