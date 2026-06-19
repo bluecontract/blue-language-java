@@ -65,6 +65,9 @@ dependencies {
 }
 
 test {
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
     useJUnitPlatform()
     reports {
         junitXml.required = false

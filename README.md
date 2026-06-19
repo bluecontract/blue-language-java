@@ -911,8 +911,9 @@ For deeper design notes, see:
 
 ## Build And Test
 
-The project currently publishes Java 8-compatible bytecode and uses JUnit 5 for
-tests. Build and test with JDK 25 and Gradle 9.6.
+The project publishes Java 8-compatible bytecode, runs Gradle on JDK 25, and
+executes tests on a Java 8 toolchain. If Java 8 is not installed locally, Gradle
+can provision it through the configured Foojay toolchain resolver.
 
 Run the full CI-style verification command:
 
