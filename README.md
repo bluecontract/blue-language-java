@@ -911,8 +911,8 @@ For deeper design notes, see:
 
 ## Build And Test
 
-The project currently compiles for Java 8 source/target compatibility and uses
-JUnit 5 for tests. Build and test with a JDK that can run Gradle 8.4.
+The project currently publishes Java 8-compatible bytecode and uses JUnit 5 for
+tests. Build and test with JDK 25 and Gradle 9.6.
 
 Run the full CI-style verification command:
 
