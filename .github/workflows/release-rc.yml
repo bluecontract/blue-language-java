@@ -1,13 +1,27 @@
-name: Release
+name: Release RC
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - next
+    paths:
+      - '.cz.toml'
+      - 'build.gradle'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'gradle/wrapper/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'src/**'
+
+env:
+  CI: true
+  GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
 
 jobs:
-  Release:
+  ReleaseRC:
+    if: "${{ startsWith(github.event.head_commit.message, 'chore: release ') == false }}"
     runs-on: ubuntu-latest
-    env:
-      CI: true
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -15,12 +29,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.WORKFLOW_PAT }}
 
-      - name: Check if branch is master
-        run: |
-          if [[ "${GITHUB_REF##*/}" != "master" ]]; then
-            echo "This workflow can only be triggered for the master branch."
-            exit 1
-          fi
+      - name: Fetch master and tags
+        run: git fetch origin master:refs/remotes/origin/master --tags
 
       - name: Set up Java 8 test runtime
         uses: actions/setup-java@v3
@@ -36,10 +46,25 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
-    
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Prepare RC version
+        id: version
+        run: node .github/scripts/prepare-rc-release.js
+
+      - name: Commit and tag RC version
+        run: |
+          git add .cz.toml
+          git commit -m "chore: release ${{ steps.version.outputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+
       - name: Execute Gradle build
         run: ./gradlew clean build
-    
+
       - name: Execute Gradle publish
         run: ./gradlew publish
 
@@ -53,11 +78,14 @@ jobs:
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
         run: ./gradlew jreleaserFullRelease
 
+      - name: Push release commit and tag
+        run: git push origin HEAD:next --follow-tags
+
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: artifacts
+          name: rc-artifacts
           path: |
             build/libs
             build/publications
