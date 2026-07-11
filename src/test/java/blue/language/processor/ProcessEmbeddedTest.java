@@ -489,7 +489,7 @@ class ProcessEmbeddedTest {
     }
 
     @Test
-    void removingEmbeddedChildCutsOffFurtherWorkWithinRun() {
+    void actualBalloonCutOffStillStopsFurtherEffects() {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new CutOffProbeContractProcessor());

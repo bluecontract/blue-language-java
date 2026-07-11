@@ -110,7 +110,7 @@ final class TerminationConformanceTest {
     }
 
     @Test
-    void ordinaryHandlersRemainInactiveDuringTerminationLifecycle() {
+    void terminationLifecyclePatchRunsImmediateDocumentUpdateCascade() {
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         String document = terminationDocument("graceful", lifecycleHandler("lifecycle", 1, "/lifecycleEffect"))
@@ -129,9 +129,64 @@ final class TerminationConformanceTest {
 
         DocumentProcessingResult result = blue.processDocument(initialized, testEvent("ordinary-cutoff"));
 
-        assertEquals(Arrays.asList("/lifecycleEffect"), observed);
+        assertEquals(Arrays.asList("/lifecycleEffect", "/ordinary"), observed);
         assertEquals(new BigInteger("1"), nodeAt(result.document(), "/lifecycleEffect").getValue());
         assertNull(nodeOrNull(result.document(), "/ordinary"));
+    }
+
+    @Test
+    void childTerminationLifecycleEmissionRemainsBridgeable() {
+        List<String> observed = new ArrayList<>();
+        Blue blue = blueWithLifecycleProbe(observed);
+        Node document = blue.yamlToNode("name: Parent\n"
+                + "child:\n"
+                + "  name: Child\n"
+                + "  contracts:\n"
+                + "    lifecycle:\n"
+                + "      type:\n"
+                + "        blueId: " + LIFECYCLE_CHANNEL + "\n"
+                + "    emitter:\n"
+                + "      channel: lifecycle\n"
+                + "      type:\n"
+                + "        blueId: " + SET_PROPERTY + "\n"
+                + "      propertyKey: /emitLifecycle\n"
+                + "      propertyValue: 1\n");
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        execution.loadBundles("/child");
+
+        execution.enterGracefulTermination("/child", execution.bundleForScope("/child"), "child graceful");
+
+        assertEquals(Arrays.asList("/emitLifecycle"), observed);
+        List<Node> bridgeable = execution.runtime().scope("/child").drainBridgeableEvents();
+        assertEquals(2, bridgeable.size());
+        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED, bridgeable.get(0).getType().getBlueId());
+        assertEquals("termination-lifecycle", bridgeable.get(1).getAsText("/kind"));
+    }
+
+    @Test
+    void terminationLifecycleEmissionFifoIsClearedBeforeDrain() {
+        List<String> observed = new ArrayList<>();
+        Blue blue = blueWithLifecycleProbe(observed);
+        String document = terminationDocument("graceful", lifecycleHandler("lifecycle", 1, "/emitTriggered"))
+                + "  triggered:\n"
+                + "    type:\n"
+                + "      blueId: " + RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL + "\n"
+                + "  triggeredHandler:\n"
+                + "    channel: triggered\n"
+                + "    type:\n"
+                + "      blueId: " + SET_PROPERTY + "\n"
+                + "    propertyKey: /triggeredDrained\n"
+                + "    propertyValue: 1\n";
+        Node initialized = blue.initializeDocument(blue.yamlToNode(document)).document();
+
+        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("fifo-clear"));
+
+        assertEquals(Arrays.asList("/emitTriggered"), observed);
+        assertEquals(2, result.triggeredEvents().size());
+        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
+                result.triggeredEvents().get(0).getType().getBlueId());
+        assertEquals("termination-lifecycle-emission",
+                result.triggeredEvents().get(1).getAsText("/eventId"));
     }
 
     @Test
@@ -210,6 +265,74 @@ final class TerminationConformanceTest {
     }
 
     @Test
+    void successfulGracefulTerminationHasNoFailureReason() {
+        Blue blue = blueWithLifecycleProbe(new ArrayList<String>());
+        Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful"))).document();
+
+        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("graceful-result"));
+
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
+        assertNull(result.errorCategory());
+        assertNull(result.failureReason());
+        assertEquals("first", result.document().getAsNode("/contracts/terminated").getAsText("/reason"));
+    }
+
+    @Test
+    void earlierChildEscalationDoesNotOverrideLaterRootFatalDiagnostic() {
+        List<String> observed = new ArrayList<>();
+        Blue blue = blueWithLifecycleProbe(observed);
+        Node document = blue.yamlToNode("name: Parent\n"
+                + "contracts: {}\n"
+                + "child:\n"
+                + "  name: Child\n"
+                + "  contracts:\n"
+                + "    lifecycle:\n"
+                + "      type:\n"
+                + "        blueId: " + LIFECYCLE_CHANNEL + "\n"
+                + "    failingHandler:\n"
+                + "      channel: lifecycle\n"
+                + "      type:\n"
+                + "        blueId: " + SET_PROPERTY + "\n"
+                + "      propertyKey: /failing\n"
+                + "      propertyValue: 1\n");
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        execution.loadBundles("/child");
+        execution.enterGracefulTermination("/child", execution.bundleForScope("/child"), "child graceful");
+
+        assertThrows(RunTerminationException.class,
+                () -> execution.enterFatalTermination("/", null, ProcessorErrorCategory.GasError, "later root fatal"));
+
+        DocumentProcessingResult result = execution.result();
+        assertEquals(Arrays.asList("/failing"), observed);
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertEquals(ProcessorErrorCategory.GasError, result.errorCategory());
+        assertEquals("later root fatal", result.failureReason());
+    }
+
+    @Test
+    void rootGracefulReasonDoesNotMaskChildFatalDiagnostic() {
+        Blue blue = ProcessorTestSupport.blue();
+        Node document = new Node()
+                .name("Parent")
+                .contracts(new Node())
+                .properties("child", new Node().name("Child"));
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+
+        execution.enterFatalTermination("/child",
+                null,
+                ProcessorErrorCategory.BoundaryViolation,
+                "child fatal");
+        assertThrows(RunTerminationException.class,
+                () -> execution.enterGracefulTermination("/", null, "root graceful"));
+
+        DocumentProcessingResult result = execution.result();
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertEquals(ProcessorErrorCategory.BoundaryViolation, result.errorCategory());
+        assertEquals("child fatal", result.failureReason());
+        assertEquals("root graceful", result.document().getAsNode("/contracts/terminated").getAsText("/reason"));
+    }
+
+    @Test
     void earlierBufferedFailurePreventsQueuedGracefulTermination() {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -246,7 +369,7 @@ final class TerminationConformanceTest {
     }
 
     @Test
-    void fatalDuringRootGracefulLifecyclePreservesFirstEvidenceAndStopsLaterDelivery() {
+    void rootEscalationCategoryAndReasonComeFromSameRecord() {
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful",
@@ -265,6 +388,7 @@ final class TerminationConformanceTest {
         assertEquals("first", marker.getAsText("/reason"));
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.HandlerExecutionError, result.errorCategory());
+        assertEquals("termination lifecycle handler failed", result.failureReason());
         assertTerminationEventSequence(result.triggeredEvents(),
                 RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
                 RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR);
@@ -464,6 +588,10 @@ final class TerminationConformanceTest {
                 observed.add(propertyKey);
                 return;
             }
+            if ("/triggeredDrained".equals(propertyKey)) {
+                observed.add(propertyKey);
+                return;
+            }
             if (context.event().getType() == null
                     || !RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED.equals(context.event().getType().getBlueId())) {
                 if ("/ordinary".equals(propertyKey)) {
@@ -472,6 +600,14 @@ final class TerminationConformanceTest {
                 return;
             }
             observed.add(propertyKey);
+            if ("/emitLifecycle".equals(propertyKey)) {
+                context.emitEvent(new Node().properties("kind", new Node().value("termination-lifecycle")));
+                return;
+            }
+            if ("/emitTriggered".equals(propertyKey)) {
+                context.emitEvent(new TestEvent().eventId("termination-lifecycle-emission").toNode());
+                return;
+            }
             context.applyPatch(JsonPatch.add(context.resolvePointer(propertyKey), new Node().value(contract.getPropertyValue())));
             if ("/reentrant".equals(propertyKey)) {
                 context.terminateGracefully("ignored reentrant request");
