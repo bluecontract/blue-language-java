@@ -454,8 +454,10 @@ final class ProcessorEngine {
         private final Object processEventSnapshotLock = new Object();
         private final Map<String, ContractBundle> bundles = new LinkedHashMap<>();
         private final Map<String, PendingTermination> pendingTerminations = new LinkedHashMap<>();
+        private final Map<String, PendingTermination> terminationEscalations = new LinkedHashMap<>();
         private final Map<String, ProcessorErrorCategory> terminationCategories = new LinkedHashMap<>();
         private final Set<String> cutOffScopes = new LinkedHashSet<>();
+        private boolean rootFatalEvidenceAppended;
         private final CheckpointManager checkpointManager;
         private final TerminationService terminationService;
         private final ChannelRunner channelRunner;
@@ -592,8 +594,34 @@ final class ProcessorEngine {
                            ContractBundle bundle,
                            List<JsonPatch> patches,
                            boolean allowReservedMutation,
+                           boolean allowTerminatingScope) {
+            scopeExecutor.handlePatches(scopePath,
+                    bundle,
+                    patches,
+                    allowReservedMutation,
+                    allowTerminatingScope);
+        }
+
+        void handlePatches(String scopePath,
+                           ContractBundle bundle,
+                           List<JsonPatch> patches,
+                           boolean allowReservedMutation,
                            WorkingDocument.Preview preview) {
             scopeExecutor.handlePatches(scopePath, bundle, patches, allowReservedMutation, preview);
+        }
+
+        void handlePatches(String scopePath,
+                           ContractBundle bundle,
+                           List<JsonPatch> patches,
+                           boolean allowReservedMutation,
+                           boolean allowTerminatingScope,
+                           WorkingDocument.Preview preview) {
+            scopeExecutor.handlePatches(scopePath,
+                    bundle,
+                    patches,
+                    allowReservedMutation,
+                    allowTerminatingScope,
+                    preview);
         }
 
         ProcessorExecutionContext createContext(String scopePath,
@@ -721,13 +749,30 @@ final class ProcessorEngine {
 
         boolean isScopeInactive(String scopePath) {
             String normalized = ProcessorEngine.normalizeScope(scopePath);
+            ScopeRuntimeContext context = runtime.existingScope(normalized);
             return cutOffScopes.contains(normalized)
-                    || pendingTerminations.containsKey(normalized)
-                    || runtime.isScopeTerminated(normalized);
+                    || (context != null && context.isTerminated());
+        }
+
+        boolean shouldStopTerminationLifecycle(String scopePath) {
+            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            ScopeRuntimeContext context = runtime.existingScope(normalized);
+            return terminationEscalations.containsKey(normalized)
+                    || (context != null && context.isTerminated());
         }
 
         void enterGracefulTermination(String scopePath, ContractBundle bundle, String reason) {
             terminate(scopePath, bundle, ScopeRuntimeContext.TerminationKind.GRACEFUL, reason);
+        }
+
+        void enterRequestedFatalTermination(String scopePath, ContractBundle bundle, String reason) {
+            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            ScopeRuntimeContext context = runtime.scope(normalized);
+            if (!context.isActive()) {
+                return;
+            }
+            terminationCategories.putIfAbsent(normalized, ProcessorErrorCategory.InternalProcessorError);
+            terminate(scopePath, bundle, ScopeRuntimeContext.TerminationKind.FATAL, reason);
         }
 
         void enterFatalTermination(String scopePath, ContractBundle bundle, String reason) {
@@ -739,9 +784,21 @@ final class ProcessorEngine {
                                    ProcessorErrorCategory errorCategory,
                                    String reason) {
             String normalized = ProcessorEngine.normalizeScope(scopePath);
-            terminationCategories.put(normalized, errorCategory != null
+            ScopeRuntimeContext context = runtime.scope(normalized);
+            if (context.isTerminated()) {
+                return;
+            }
+            ProcessorErrorCategory category = errorCategory != null
                     ? errorCategory
-                    : ProcessorErrorCategory.InternalProcessorError);
+                    : ProcessorErrorCategory.InternalProcessorError;
+            if (context.isTerminating()) {
+                terminationEscalations.putIfAbsent(normalized, new PendingTermination(
+                        ScopeRuntimeContext.TerminationKind.FATAL,
+                        reason));
+                terminationCategories.putIfAbsent(normalized, category);
+                return;
+            }
+            terminationCategories.putIfAbsent(normalized, category);
             terminate(scopePath, bundle, ScopeRuntimeContext.TerminationKind.FATAL, reason);
         }
 
@@ -750,10 +807,12 @@ final class ProcessorEngine {
                                ScopeRuntimeContext.TerminationKind kind,
                                String reason) {
             String normalized = ProcessorEngine.normalizeScope(scopePath);
-            if (pendingTerminations.containsKey(normalized) || runtime.isScopeTerminated(normalized)) {
+            ScopeRuntimeContext context = runtime.scope(normalized);
+            if (!context.beginTermination()) {
                 return;
             }
-            pendingTerminations.put(normalized, new PendingTermination(kind, reason));
+            pendingTerminations.putIfAbsent(normalized, new PendingTermination(kind, reason));
+            markCutOff(normalized);
             terminationService.terminateScope(this, scopePath, bundle, kind, reason);
         }
 
@@ -761,14 +820,31 @@ final class ProcessorEngine {
             return bundles.get(scopePath);
         }
 
-        void recordPendingTermination(String scopePath,
-                                      ScopeRuntimeContext.TerminationKind kind,
-                                      String reason) {
-            pendingTerminations.put(ProcessorEngine.normalizeScope(scopePath), new PendingTermination(kind, reason));
+        boolean hasTerminationEscalation(String scopePath) {
+            return terminationEscalations.containsKey(ProcessorEngine.normalizeScope(scopePath));
         }
 
-        void clearPendingTermination(String scopePath) {
-            pendingTerminations.remove(ProcessorEngine.normalizeScope(scopePath));
+        String fatalTerminationReason(String scopePath, String initialReason) {
+            PendingTermination escalation = terminationEscalations.get(ProcessorEngine.normalizeScope(scopePath));
+            return escalation != null && escalation.reason != null ? escalation.reason : initialReason;
+        }
+
+        void recordTerminationWriteFailure(String scopePath, String reason) {
+            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            terminationEscalations.putIfAbsent(normalized, new PendingTermination(
+                    ScopeRuntimeContext.TerminationKind.FATAL,
+                    reason));
+            terminationCategories.putIfAbsent(normalized, ProcessorErrorCategory.TerminationError);
+            markCutOff(normalized);
+            runtime.markRunTerminated();
+        }
+
+        boolean markRootFatalEvidenceAppended() {
+            if (rootFatalEvidenceAppended) {
+                return false;
+            }
+            rootFatalEvidenceAppended = true;
+            return true;
         }
 
         void markCutOff(String scopePath) {
@@ -842,6 +918,15 @@ final class ProcessorEngine {
         }
 
         private String rootFailureReason() {
+            PendingTermination rootEscalation = terminationEscalations.get("/");
+            if (rootEscalation != null && rootEscalation.reason != null) {
+                return rootEscalation.reason;
+            }
+            for (PendingTermination escalation : terminationEscalations.values()) {
+                if (escalation.reason != null) {
+                    return escalation.reason;
+                }
+            }
             PendingTermination pendingRoot = pendingTerminations.get("/");
             if (pendingRoot != null && pendingRoot.reason != null) {
                 return pendingRoot.reason;
@@ -862,9 +947,19 @@ final class ProcessorEngine {
             scopeExecutor.deliverLifecycle(scopePath, bundle, event, finalizeAfter);
         }
 
+        void deliverTerminationLifecycle(String scopePath,
+                                         ContractBundle bundle,
+                                         Node event) {
+            scopeExecutor.deliverTerminationLifecycle(scopePath, bundle, event);
+        }
+
         void recordLifecycleForBridging(String scopePath, Node event) {
             ScopeRuntimeContext scopeContext = runtime.scope(scopePath);
-            scopeContext.recordBridgeable(event.clone());
+            if (scopeContext.isTerminating()) {
+                scopeContext.recordTerminationLifecycleBridgeable(event.clone());
+            } else {
+                scopeContext.recordBridgeable(event.clone());
+            }
             if ("/".equals(scopePath)) {
                 runtime.recordRootEmission(event.clone());
             }

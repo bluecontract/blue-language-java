@@ -17,7 +17,7 @@ public final class ScopeRuntimeContext {
     private final Deque<Node> triggeredQueue = new ArrayDeque<>();
     private final List<Node> bridgeableEvents = new ArrayList<>();
     private final List<String> processedEmbeddedPaths = new ArrayList<>();
-    private boolean terminated;
+    private TerminationState terminationState = TerminationState.ACTIVE;
     private TerminationKind terminationKind;
     private String terminationReason;
     private boolean cutOff;
@@ -50,6 +50,13 @@ public final class ScopeRuntimeContext {
             return;
         }
         bridgeableEvents.add(Objects.requireNonNull(node, "node"));
+    }
+
+    public void recordTerminationLifecycleBridgeable(Node node) {
+        bridgeableEvents.add(Objects.requireNonNull(node, "node"));
+        if (cutOff && bridgeableLimit >= 0) {
+            bridgeableLimit = bridgeableEvents.size();
+        }
     }
 
     public List<Node> drainBridgeableEvents() {
@@ -90,7 +97,23 @@ public final class ScopeRuntimeContext {
     }
 
     public boolean isTerminated() {
-        return terminated;
+        return terminationState == TerminationState.TERMINATED;
+    }
+
+    public boolean isTerminating() {
+        return terminationState == TerminationState.TERMINATING;
+    }
+
+    public boolean isActive() {
+        return terminationState == TerminationState.ACTIVE;
+    }
+
+    public boolean beginTermination() {
+        if (!isActive()) {
+            return false;
+        }
+        terminationState = TerminationState.TERMINATING;
+        return true;
     }
 
     public TerminationKind terminationKind() {
@@ -102,10 +125,10 @@ public final class ScopeRuntimeContext {
     }
 
     public void finalizeTermination(TerminationKind kind, String reason) {
-        if (terminated) {
+        if (isTerminated()) {
             return;
         }
-        terminated = true;
+        terminationState = TerminationState.TERMINATED;
         terminationKind = Objects.requireNonNull(kind, "kind");
         terminationReason = reason;
         triggeredQueue.clear();
@@ -118,6 +141,16 @@ public final class ScopeRuntimeContext {
         cutOff = true;
         triggeredLimit = triggeredQueue.size();
         bridgeableLimit = bridgeableEvents.size();
+    }
+
+    public boolean isCutOff() {
+        return cutOff;
+    }
+
+    public enum TerminationState {
+        ACTIVE,
+        TERMINATING,
+        TERMINATED
     }
 
     public enum TerminationKind {

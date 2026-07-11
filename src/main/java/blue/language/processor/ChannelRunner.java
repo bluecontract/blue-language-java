@@ -248,6 +248,9 @@ final class ChannelRunner {
             return;
         }
         for (ContractBundle.HandlerBinding handler : handlers) {
+            if (allowTerminatedWork && execution.shouldStopTerminationLifecycle(scopePath)) {
+                break;
+            }
             if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
                 break;
             }
@@ -299,6 +302,9 @@ final class ChannelRunner {
                 metrics.addHandlerExecutionNanos(System.nanoTime() - executionStart);
             }
             if (execution.isScopeInactive(scopePath) && !allowTerminatedWork) {
+                break;
+            }
+            if (allowTerminatedWork && execution.shouldStopTerminationLifecycle(scopePath)) {
                 break;
             }
         }

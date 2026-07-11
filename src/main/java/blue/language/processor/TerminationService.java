@@ -4,9 +4,14 @@ import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.snapshot.FrozenNode;
+import blue.language.utils.NodePathEditor;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Handles termination markers, lifecycle emission, and run termination bookkeeping.
+ * Handles one scope termination transition: marker, lifecycle event, and root completion.
  */
 final class TerminationService {
 
@@ -21,53 +26,105 @@ final class TerminationService {
                         ContractBundle bundle,
                         ScopeRuntimeContext.TerminationKind kind,
                         String reason) {
-        execution.recordPendingTermination(scopePath, kind, reason);
-
         String normalized = execution.normalizeScope(scopePath);
-        String pointer = ProcessorEngine.resolvePointer(normalized, ProcessorPointerConstants.RELATIVE_TERMINATED);
         Node marker = createTerminationMarker(kind, reason);
-        try {
-            runtime.directWrite(pointer, marker);
-        } catch (RuntimeException ex) {
-            String contractsPointer = ProcessorEngine.resolvePointer(normalized,
-                    ProcessorPointerConstants.RELATIVE_CONTRACTS);
-            Node contracts = new Node().properties(ProcessorContractConstants.KEY_TERMINATED, marker);
-            try {
-                runtime.directWrite(contractsPointer, contracts);
-            } catch (RuntimeException fallbackFailure) {
-                Node replacement = runtime.document().clone();
-                replacement.contracts(contracts);
-                runtime.replaceDocument(replacement);
-            }
-        }
-        if (runtime.nodeAt(pointer) == null) {
-            Node replacement = runtime.document().clone();
-            replacement.contracts(new Node().properties(ProcessorContractConstants.KEY_TERMINATED, marker));
-            runtime.replaceDocument(replacement);
+        if (!writeTerminationMarker(normalized, marker)) {
+            execution.recordTerminationWriteFailure(normalized,
+                    "Unable to write terminated marker at scope " + normalized);
+            throw new RunTerminationException(true);
         }
         runtime.chargeTerminationMarker();
 
         ContractBundle bundleRef = bundle != null ? bundle : execution.bundleForScope(normalized);
         Node lifecycleEvent = createTerminationLifecycleEvent(kind, reason);
-        execution.deliverLifecycle(normalized, bundleRef, lifecycleEvent, false);
+        execution.deliverTerminationLifecycle(normalized, bundleRef, lifecycleEvent);
 
         ScopeRuntimeContext scopeContext = runtime.scope(normalized);
         scopeContext.finalizeTermination(kind, reason);
-        execution.clearPendingTermination(scopePath);
 
         if (ScopeRuntimeContext.TerminationKind.FATAL.equals(kind)) {
             runtime.chargeFatalTerminationOverhead();
         }
 
-        if (ScopeRuntimeContext.TerminationKind.FATAL.equals(kind) && "/".equals(normalized)) {
-            runtime.recordRootEmission(createFatalOutboxEvent(normalized, reason));
+        if ("/".equals(normalized)) {
+            boolean fatal = ScopeRuntimeContext.TerminationKind.FATAL.equals(kind)
+                    || execution.hasTerminationEscalation(normalized);
+            if (fatal) {
+                recordRootFatalEvidence(execution, execution.fatalTerminationReason(normalized, reason));
+            }
             runtime.markRunTerminated();
-            throw new RunTerminationException(true);
+            throw new RunTerminationException(fatal);
         }
+    }
 
-        if (ScopeRuntimeContext.TerminationKind.GRACEFUL.equals(kind) && "/".equals(normalized)) {
-            runtime.markRunTerminated();
-            throw new RunTerminationException(false);
+    private boolean writeTerminationMarker(String scopePath, Node marker) {
+        String markerPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_TERMINATED);
+        try {
+            runtime.directWrite(markerPointer, marker);
+            return true;
+        } catch (RuntimeException primaryFailure) {
+            String contractsPointer = ProcessorEngine.resolvePointer(scopePath,
+                    ProcessorPointerConstants.RELATIVE_CONTRACTS);
+            if (!hasMalformedContractsContainer(contractsPointer)) {
+                return false;
+            }
+            return replaceMalformedContractsOnce(contractsPointer, fallbackContracts(contractsPointer, marker));
+        }
+    }
+
+    private boolean hasMalformedContractsContainer(String contractsPointer) {
+        Node contracts = NodePathEditor.getOrNull(runtime.document(), contractsPointer);
+        return contracts != null
+                && (contracts.getValue() != null
+                || contracts.getItems() != null
+                || contracts.isReferenceOnly());
+    }
+
+    private boolean replaceMalformedContractsOnce(String contractsPointer, Node replacementContracts) {
+        Node replacement = runtime.document().clone();
+        try {
+            NodePathEditor.put(replacement, contractsPointer, replacementContracts);
+            FrozenNode.fromNode(replacement);
+            runtime.replaceDocument(replacement);
+            return true;
+        } catch (RuntimeException fallbackFailure) {
+            return false;
+        }
+    }
+
+    private Node fallbackContracts(String contractsPointer, Node marker) {
+        Node existingContracts = NodePathEditor.getOrNull(runtime.document(), contractsPointer);
+        Map<String, Node> preserved = new LinkedHashMap<>();
+        if (existingContracts != null && existingContracts.getProperties() != null) {
+            for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
+                if (ProcessorContractConstants.KEY_TERMINATED.equals(key)) {
+                    continue;
+                }
+                Node candidate = existingContracts.getProperties().get(key);
+                if (isValidReservedRuntimeSubtree(candidate)) {
+                    preserved.put(key, candidate.clone());
+                }
+            }
+        }
+        preserved.put(ProcessorContractConstants.KEY_TERMINATED, marker);
+        return new Node().properties(preserved);
+    }
+
+    private boolean isValidReservedRuntimeSubtree(Node candidate) {
+        if (candidate == null) {
+            return false;
+        }
+        try {
+            FrozenNode.fromNode(candidate);
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private void recordRootFatalEvidence(ProcessorEngine.Execution execution, String reason) {
+        if (execution.markRootFatalEvidenceAppended()) {
+            runtime.recordRootEmission(createFatalOutboxEvent(reason));
         }
     }
 
@@ -90,7 +147,7 @@ final class TerminationService {
         return event;
     }
 
-    private Node createFatalOutboxEvent(String scopePath, String reason) {
+    private Node createFatalOutboxEvent(String reason) {
         Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR));
         if (reason != null && !reason.isEmpty()) {
             event.properties("reason", new Node().value(reason));

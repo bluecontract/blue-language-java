@@ -150,8 +150,12 @@ public final class ProcessorExecutionContext {
                     bundle,
                     patchBatch.patches(),
                     allowReservedMutation,
+                    allowTerminatedWork,
                     patchBatch.preview());
             if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+                return;
+            }
+            if (allowTerminatedWork && execution.shouldStopTerminationLifecycle(scopePath)) {
                 return;
             }
         }
@@ -170,10 +174,7 @@ public final class ProcessorExecutionContext {
                 scriptedRuntime.recordTermination(runtime(), termination.kind());
             }
             if (termination.kind() == ScopeRuntimeContext.TerminationKind.FATAL) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        ProcessorErrorCategory.InternalProcessorError,
-                        termination.reason());
+                execution.enterRequestedFatalTermination(scopePath, bundle, termination.reason());
             } else {
                 execution.enterGracefulTermination(scopePath, bundle, termination.reason());
             }

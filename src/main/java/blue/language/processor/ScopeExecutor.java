@@ -280,7 +280,15 @@ final class ScopeExecutor {
                        ContractBundle bundle,
                        List<JsonPatch> patches,
                        boolean allowReservedMutation) {
-        handlePatches(scopePath, bundle, patches, allowReservedMutation, null);
+        handlePatches(scopePath, bundle, patches, allowReservedMutation, false, null);
+    }
+
+    void handlePatches(String scopePath,
+                       ContractBundle bundle,
+                       List<JsonPatch> patches,
+                       boolean allowReservedMutation,
+                       boolean allowTerminatingScope) {
+        handlePatches(scopePath, bundle, patches, allowReservedMutation, allowTerminatingScope, null);
     }
 
     void handlePatches(String scopePath,
@@ -288,7 +296,16 @@ final class ScopeExecutor {
                        List<JsonPatch> patches,
                        boolean allowReservedMutation,
                        WorkingDocument.Preview preview) {
-        if (execution.isScopeInactive(scopePath)) {
+        handlePatches(scopePath, bundle, patches, allowReservedMutation, false, preview);
+    }
+
+    void handlePatches(String scopePath,
+                       ContractBundle bundle,
+                       List<JsonPatch> patches,
+                       boolean allowReservedMutation,
+                       boolean allowTerminatingScope,
+                       WorkingDocument.Preview preview) {
+        if (!allowTerminatingScope && execution.isScopeInactive(scopePath)) {
             return;
         }
         if (patches == null || patches.isEmpty()) {
@@ -296,7 +313,10 @@ final class ScopeExecutor {
         }
         for (int patchIndex = 0; patchIndex < patches.size(); patchIndex++) {
             JsonPatch patch = patches.get(patchIndex);
-            if (execution.isScopeInactive(scopePath)) {
+            if (!allowTerminatingScope && execution.isScopeInactive(scopePath)) {
+                return;
+            }
+            if (allowTerminatingScope && execution.shouldStopTerminationLifecycle(scopePath)) {
                 return;
             }
             if (!allowReservedMutation) {
@@ -336,8 +356,11 @@ final class ScopeExecutor {
                 long routingStart = System.nanoTime();
                 for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
                     routeDocumentUpdateAfterPatch(scopePath, bundle, update);
-                    if (execution.isScopeInactive(scopePath)) {
+                    if (!allowTerminatingScope && execution.isScopeInactive(scopePath)) {
                         break;
+                    }
+                    if (allowTerminatingScope && execution.shouldStopTerminationLifecycle(scopePath)) {
+                        return;
                     }
                 }
                 owner.metricsSink().addDocumentUpdateRoutingNanos(System.nanoTime() - routingStart);
@@ -445,6 +468,20 @@ final class ScopeExecutor {
                           ContractBundle bundle,
                           Node event,
                           boolean finalizeAfter) {
+        deliverLifecycle(scopePath, bundle, event, finalizeAfter, false);
+    }
+
+    void deliverTerminationLifecycle(String scopePath,
+                                     ContractBundle bundle,
+                                     Node event) {
+        deliverLifecycle(scopePath, bundle, event, false, true);
+    }
+
+    private void deliverLifecycle(String scopePath,
+                                  ContractBundle bundle,
+                                  Node event,
+                                  boolean finalizeAfter,
+                                  boolean terminationLifecycle) {
         runtime.chargeLifecycleDelivery();
         execution.recordLifecycleForBridging(scopePath, event);
         if (bundle == null) {
@@ -452,11 +489,13 @@ final class ScopeExecutor {
         }
         for (ContractBundle.ChannelBinding channel : bundle.channelsOfType(LifecycleChannel.class)) {
             channelRunner.runHandlers(scopePath, bundle, channel.key(), event, true);
-            if (execution.isScopeInactive(scopePath)) {
+            if (terminationLifecycle
+                    ? execution.shouldStopTerminationLifecycle(scopePath)
+                    : execution.isScopeInactive(scopePath)) {
                 break;
             }
         }
-        if (finalizeAfter) {
+        if (finalizeAfter && !terminationLifecycle) {
             finalizeScope(scopePath, bundle);
         }
     }
