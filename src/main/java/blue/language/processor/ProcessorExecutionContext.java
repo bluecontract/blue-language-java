@@ -59,8 +59,37 @@ public final class ProcessorExecutionContext {
         return contractNode;
     }
 
+    /**
+     * Returns this handler's current channelized event payload.
+     *
+     * <p>This is not the Processing Event. Triggered, bridged, and adapted
+     * deliveries may each have a different current event.</p>
+     */
     public Node event() {
         return event;
+    }
+
+    /**
+     * Returns whether this execution was started by {@code PROCESS(document, event)}.
+     *
+     * <p>This is a constant-time presence check and never constructs the immutable
+     * Processing Event snapshot. Explicit {@code INITIALIZE} executions return
+     * {@code false}.</p>
+     */
+    public boolean hasProcessEvent() {
+        return execution.hasProcessEvent();
+    }
+
+    /**
+     * Returns the immutable snapshot of the original Processing Event for this run.
+     *
+     * <p>The snapshot is constructed lazily on first access and then shared by all
+     * handler contexts in the same execution. Explicit {@code INITIALIZE}
+     * executions return {@code null}. Unlike {@link #event()}, this value is never
+     * replaced by triggered, bridged, or adapted channel payloads.</p>
+     */
+    public FrozenNode frozenProcessEvent() {
+        return execution.frozenProcessEvent();
     }
 
     public void applyPatch(JsonPatch patch) {

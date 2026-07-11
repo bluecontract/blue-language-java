@@ -40,6 +40,30 @@ public interface ProcessingMetricsSink {
     default void incrementProcessingSnapshotFromDocumentBuilds() {
     }
 
+    /**
+     * Records one attempt to create the immutable Processing Event snapshot.
+     */
+    default void incrementProcessEventSnapshotAttempts() {
+    }
+
+    /**
+     * Records one successfully created immutable Processing Event snapshot.
+     */
+    default void incrementProcessEventSnapshotBuilds() {
+    }
+
+    /**
+     * Records one failed immutable Processing Event snapshot construction.
+     */
+    default void incrementProcessEventSnapshotFailures() {
+    }
+
+    /**
+     * Records the duration of one immutable Processing Event snapshot attempt.
+     */
+    default void addProcessEventSnapshotConstructionNanos(long nanos) {
+    }
+
     default void addBundleLoadNanos(long nanos) {
     }
 

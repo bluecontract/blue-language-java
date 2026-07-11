@@ -77,7 +77,7 @@ final class ProcessorEngine {
                 return invalid;
             }
             Node cloned = document.clone();
-            execution = new Execution(owner, cloned);
+            execution = new Execution(owner, cloned, event);
             metrics.addEventPreprocessNanos(System.nanoTime() - preprocessStart);
             if (execution.applyScriptedForcedFatalIfPresent()) {
                 return execution.result();
@@ -113,7 +113,7 @@ final class ProcessorEngine {
             if (invalid != null) {
                 return invalid.withSnapshot(snapshot);
             }
-            execution = new Execution(owner, snapshot);
+            execution = new Execution(owner, snapshot, event);
             metrics.addEventPreprocessNanos(System.nanoTime() - preprocessStart);
             if (execution.applyScriptedForcedFatalIfPresent()) {
                 return execution.result();
@@ -449,6 +449,9 @@ final class ProcessorEngine {
     static final class Execution {
         private final DocumentProcessor owner;
         private final DocumentProcessingRuntime runtime;
+        private final Node processEventSource;
+        private final ProcessEventSnapshotFactory processEventSnapshotFactory;
+        private final Object processEventSnapshotLock = new Object();
         private final Map<String, ContractBundle> bundles = new LinkedHashMap<>();
         private final Map<String, PendingTermination> pendingTerminations = new LinkedHashMap<>();
         private final Map<String, ProcessorErrorCategory> terminationCategories = new LinkedHashMap<>();
@@ -457,14 +460,34 @@ final class ProcessorEngine {
         private final TerminationService terminationService;
         private final ChannelRunner channelRunner;
         private final ScopeExecutor scopeExecutor;
+        private volatile ProcessEventSnapshotState processEventSnapshotState;
+        private volatile FrozenNode frozenProcessEvent;
+        private RuntimeException processEventSnapshotFailure;
 
         Execution(DocumentProcessor owner, Node document) {
+            this(owner, document, null);
+        }
+
+        Execution(DocumentProcessor owner, Node document, Node processEventSource) {
+            this(owner, document, processEventSource, FrozenNode::fromResolvedNode);
+        }
+
+        Execution(DocumentProcessor owner,
+                  Node document,
+                  Node processEventSource,
+                  ProcessEventSnapshotFactory processEventSnapshotFactory) {
             this.owner = owner;
             this.runtime = new DocumentProcessingRuntime(document,
                     owner.conformanceEngine(),
                     owner.conformancePlannerOverride(),
                     owner.snapshotManager(),
                     owner.metricsSink());
+            this.processEventSource = processEventSource;
+            this.processEventSnapshotFactory = Objects.requireNonNull(processEventSnapshotFactory,
+                    "processEventSnapshotFactory");
+            this.processEventSnapshotState = processEventSource != null
+                    ? ProcessEventSnapshotState.UNINITIALIZED
+                    : ProcessEventSnapshotState.ABSENT;
             this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue(), owner.metricsSink());
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
@@ -472,12 +495,29 @@ final class ProcessorEngine {
         }
 
         Execution(DocumentProcessor owner, ResolvedSnapshot snapshot) {
+            this(owner, snapshot, null);
+        }
+
+        Execution(DocumentProcessor owner, ResolvedSnapshot snapshot, Node processEventSource) {
+            this(owner, snapshot, processEventSource, FrozenNode::fromResolvedNode);
+        }
+
+        Execution(DocumentProcessor owner,
+                  ResolvedSnapshot snapshot,
+                  Node processEventSource,
+                  ProcessEventSnapshotFactory processEventSnapshotFactory) {
             this.owner = owner;
             this.runtime = new DocumentProcessingRuntime(snapshot,
                     owner.conformanceEngine(),
                     owner.conformancePlannerOverride(),
                     owner.snapshotManager(),
                     owner.metricsSink());
+            this.processEventSource = processEventSource;
+            this.processEventSnapshotFactory = Objects.requireNonNull(processEventSnapshotFactory,
+                    "processEventSnapshotFactory");
+            this.processEventSnapshotState = processEventSource != null
+                    ? ProcessEventSnapshotState.UNINITIALIZED
+                    : ProcessEventSnapshotState.ABSENT;
             this.checkpointManager = new CheckpointManager(runtime, owner.matchingService().blue(), owner.metricsSink());
             this.terminationService = new TerminationService(runtime);
             this.channelRunner = new ChannelRunner(owner, this, runtime, checkpointManager);
@@ -626,6 +666,57 @@ final class ProcessorEngine {
 
         Blue blue() {
             return owner.matchingService().blue();
+        }
+
+        boolean hasProcessEvent() {
+            return processEventSource != null;
+        }
+
+        FrozenNode frozenProcessEvent() {
+            ProcessEventSnapshotState state = processEventSnapshotState;
+            if (state == ProcessEventSnapshotState.ABSENT) {
+                return null;
+            }
+            if (state == ProcessEventSnapshotState.READY) {
+                return frozenProcessEvent;
+            }
+            if (state == ProcessEventSnapshotState.FAILED) {
+                throw processEventSnapshotFailure;
+            }
+
+            synchronized (processEventSnapshotLock) {
+                state = processEventSnapshotState;
+                if (state == ProcessEventSnapshotState.READY) {
+                    return frozenProcessEvent;
+                }
+                if (state == ProcessEventSnapshotState.FAILED) {
+                    throw processEventSnapshotFailure;
+                }
+                return buildFrozenProcessEvent();
+            }
+        }
+
+        private FrozenNode buildFrozenProcessEvent() {
+            ProcessingMetricsSink metrics = owner.metricsSink();
+            metrics.incrementProcessEventSnapshotAttempts();
+            long startedAt = System.nanoTime();
+            try {
+                FrozenNode snapshot = processEventSnapshotFactory.freeze(processEventSource);
+                if (snapshot == null) {
+                    throw new IllegalStateException("Processing Event snapshot construction returned null");
+                }
+                frozenProcessEvent = snapshot;
+                processEventSnapshotState = ProcessEventSnapshotState.READY;
+                metrics.incrementProcessEventSnapshotBuilds();
+                return snapshot;
+            } catch (RuntimeException ex) {
+                processEventSnapshotFailure = ex;
+                processEventSnapshotState = ProcessEventSnapshotState.FAILED;
+                metrics.incrementProcessEventSnapshotFailures();
+                throw ex;
+            } finally {
+                metrics.addProcessEventSnapshotConstructionNanos(System.nanoTime() - startedAt);
+            }
         }
 
         boolean isScopeInactive(String scopePath) {
@@ -782,6 +873,18 @@ final class ProcessorEngine {
         private Node cloneEvent(Node event) {
             return event != null ? event.clone() : null;
         }
+    }
+
+    @FunctionalInterface
+    interface ProcessEventSnapshotFactory {
+        FrozenNode freeze(Node processEventSource);
+    }
+
+    private enum ProcessEventSnapshotState {
+        UNINITIALIZED,
+        ABSENT,
+        READY,
+        FAILED
     }
 
     private static final class PendingTermination {

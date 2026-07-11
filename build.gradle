@@ -9,6 +9,7 @@ plugins {
     id 'maven-publish'
     id 'signing'
     id 'org.jreleaser' version '1.24.0'
+    id 'me.champeau.jmh' version '0.7.3'
 }
 
 group = "blue.language"
@@ -77,6 +78,18 @@ test {
         events 'PASSED', 'FAILED', 'SKIPPED'
         showStandardStreams = true
     }
+}
+
+jmh {
+    includeTests = true
+    jmhVersion = '1.37'
+    warmupIterations = 2
+    warmup = '1s'
+    iterations = 3
+    timeOnIteration = '1s'
+    fork = 1
+    resultFormat = 'JSON'
+    resultsFile = file("$buildDir/reports/jmh/processor-process-event-context.json")
 }
 
 ext.genResourcesDir = file("$buildDir/generated-resources")
