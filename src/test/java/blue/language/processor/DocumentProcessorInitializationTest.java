@@ -16,6 +16,33 @@ import static org.junit.jupiter.api.Assertions.*;
 class DocumentProcessorInitializationTest {
 
     @Test
+    void initializeDocumentEmitsRootLifecycleEvent() {
+        Blue blue = ProcessorTestSupport.blue();
+        Node original = blue.yamlToNode("name: Minimal Doc\n" +
+                "contracts: {}\n");
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertTrue(blue.isInitialized(result.document()));
+        assertEquals(1, result.triggeredEvents().size());
+
+        Node lifecycleEvent = result.triggeredEvents().get(0);
+        assertNotNull(lifecycleEvent.getType());
+        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, lifecycleEvent.getType().getBlueId());
+
+        Node lifecycleDocId = lifecycleEvent.getProperties().get("documentId");
+        Node markerDocId = result.document()
+                .getContracts()
+                .getProperties()
+                .get("initialized")
+                .getProperties()
+                .get("documentId");
+        assertNotNull(lifecycleDocId);
+        assertEquals(markerDocId.getValue(), lifecycleDocId.getValue());
+    }
+
+    @Test
     void initializesDocumentAndExecutesHandlersInOrder() {
         String yaml = "name: Sample Doc\n" +
                 "contracts:\n" +
