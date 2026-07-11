@@ -83,11 +83,12 @@ test {
 jmh {
     includeTests = true
     jmhVersion = '1.37'
-    warmupIterations = 2
+    warmupIterations = 3
     warmup = '1s'
-    iterations = 3
+    iterations = 5
     timeOnIteration = '1s'
-    fork = 1
+    fork = 2
+    profilers = ['gc']
     resultFormat = 'JSON'
     resultsFile = file("$buildDir/reports/jmh/processor-process-event-context.json")
 }

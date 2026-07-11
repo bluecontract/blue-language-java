@@ -10,6 +10,12 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 final class ProcessorProcessEventContextTest {
 
+    private static final int CONCURRENT_READER_COUNT = 8;
+    private static final long CONCURRENCY_TIMEOUT_SECONDS = 5L;
     private static final String TEST_EVENT_TYPE = "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
     private static final String TEST_EVENT_CHANNEL_TYPE = "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
     private static final String SET_PROPERTY_TYPE = "8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts";
@@ -125,6 +133,110 @@ final class ProcessorProcessEventContextTest {
         assertEquals(1L, metrics.processEventSnapshotAttempts);
         assertEquals(1L, metrics.processEventSnapshotFailures);
         assertEquals(0L, metrics.processEventSnapshotBuilds);
+    }
+
+    @Test
+    void concurrentFirstAccessBuildsOnceAndPublishesOneSnapshot() throws Exception {
+        RecordingMetrics metrics = new RecordingMetrics();
+        AtomicInteger freezerCalls = new AtomicInteger();
+        CountDownLatch readersReady = new CountDownLatch(CONCURRENT_READER_COUNT);
+        CountDownLatch startReaders = new CountDownLatch(1);
+        CountDownLatch readAttempts = new CountDownLatch(CONCURRENT_READER_COUNT);
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
+                DocumentProcessor.builder().withProcessingMetricsSink(metrics).build(),
+                new Node(),
+                processEvent("concurrent-root"),
+                source -> {
+                    freezerCalls.incrementAndGet();
+                    awaitLatch(readAttempts, "all concurrent readers to attempt snapshot access");
+                    return FrozenNode.fromResolvedNode(source);
+                });
+        ProcessorExecutionContext context = execution.createContext(
+                "/", ContractBundle.empty(), new Node(), false, false);
+        ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_READER_COUNT);
+        List<Future<FrozenNode>> reads = new ArrayList<>();
+
+        try {
+            for (int index = 0; index < CONCURRENT_READER_COUNT; index++) {
+                reads.add(executor.submit(() -> {
+                    readersReady.countDown();
+                    awaitLatch(startReaders, "concurrent snapshot readers to start");
+                    readAttempts.countDown();
+                    return context.frozenProcessEvent();
+                }));
+            }
+            assertTrue(readersReady.await(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                    "all concurrent readers should be ready");
+            startReaders.countDown();
+
+            FrozenNode expected = reads.get(0).get(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            for (Future<FrozenNode> read : reads) {
+                assertSame(expected, read.get(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            }
+            assertSnapshotKind(expected, "concurrent-root");
+        } finally {
+            startReaders.countDown();
+            shutdownExecutor(executor);
+        }
+
+        assertEquals(1, freezerCalls.get());
+        assertEquals(1L, metrics.processEventSnapshotAttempts);
+        assertEquals(1L, metrics.processEventSnapshotBuilds);
+        assertEquals(0L, metrics.processEventSnapshotFailures);
+        assertEquals(1L, metrics.processEventSnapshotConstructionSamples);
+    }
+
+    @Test
+    void concurrentFailedFirstAccessPublishesOneFailureWithoutRetry() throws Exception {
+        RecordingMetrics metrics = new RecordingMetrics();
+        IllegalStateException expected = new IllegalStateException("concurrent snapshot failure");
+        AtomicInteger freezerCalls = new AtomicInteger();
+        CountDownLatch readersReady = new CountDownLatch(CONCURRENT_READER_COUNT);
+        CountDownLatch startReaders = new CountDownLatch(1);
+        CountDownLatch readAttempts = new CountDownLatch(CONCURRENT_READER_COUNT);
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
+                DocumentProcessor.builder().withProcessingMetricsSink(metrics).build(),
+                snapshot(new Node()),
+                processEvent("concurrent-root"),
+                source -> {
+                    freezerCalls.incrementAndGet();
+                    awaitLatch(readAttempts, "all concurrent readers to attempt failed snapshot access");
+                    throw expected;
+                });
+        ProcessorExecutionContext context = execution.createContext(
+                "/", ContractBundle.empty(), new Node(), false, false);
+        ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_READER_COUNT);
+        List<Future<FrozenNode>> reads = new ArrayList<>();
+
+        try {
+            for (int index = 0; index < CONCURRENT_READER_COUNT; index++) {
+                reads.add(executor.submit(() -> {
+                    readersReady.countDown();
+                    awaitLatch(startReaders, "concurrent failed snapshot readers to start");
+                    readAttempts.countDown();
+                    return context.frozenProcessEvent();
+                }));
+            }
+            assertTrue(readersReady.await(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                    "all concurrent readers should be ready");
+            startReaders.countDown();
+
+            for (Future<FrozenNode> read : reads) {
+                ExecutionException failure = assertThrows(ExecutionException.class,
+                        () -> read.get(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+                assertSame(expected, failure.getCause());
+            }
+            assertSame(expected, assertThrows(IllegalStateException.class, context::frozenProcessEvent));
+        } finally {
+            startReaders.countDown();
+            shutdownExecutor(executor);
+        }
+
+        assertEquals(1, freezerCalls.get());
+        assertEquals(1L, metrics.processEventSnapshotAttempts);
+        assertEquals(0L, metrics.processEventSnapshotBuilds);
+        assertEquals(1L, metrics.processEventSnapshotFailures);
+        assertEquals(1L, metrics.processEventSnapshotConstructionSamples);
     }
 
     @Test
@@ -443,6 +555,23 @@ final class ProcessorProcessEventContextTest {
         FrozenNode canonicalRoot = FrozenNode.fromNode(document);
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
         return new ResolvedSnapshot(canonicalRoot, resolvedRoot, canonicalRoot.blueId());
+    }
+
+    private static void awaitLatch(CountDownLatch latch, String description) {
+        try {
+            if (!latch.await(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Timed out waiting for " + description);
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for " + description, exception);
+        }
+    }
+
+    private static void shutdownExecutor(ExecutorService executor) throws InterruptedException {
+        executor.shutdownNow();
+        assertTrue(executor.awaitTermination(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "concurrent reader executor should terminate");
     }
 
     private static String eventKind(Node event) {

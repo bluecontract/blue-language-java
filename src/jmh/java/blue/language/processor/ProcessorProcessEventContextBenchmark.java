@@ -18,7 +18,9 @@ import org.openjdk.jmh.annotations.State;
  * execution environment metadata, to
  * {@code build/reports/jmh/processor-process-event-context.json}. The two
  * shape values intentionally remain separate because no unmeasured complexity
- * claim is made for snapshot construction.</p>
+ * claim is made for snapshot construction. Used and unused variants execute
+ * the same handler path and differ only in whether that handler reads the
+ * Processing Event.</p>
  */
 @State(Scope.Benchmark)
 public class ProcessorProcessEventContextBenchmark {
@@ -42,9 +44,7 @@ public class ProcessorProcessEventContextBenchmark {
     public void setUp() {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
-        if ("used".equals(access)) {
-            blue.registerContractProcessor(new SnapshotReadingHandler());
-        }
+        blue.registerContractProcessor(new SnapshotAccessHandler("used".equals(access)));
         processor = blue.getDocumentProcessor();
         DocumentProcessingResult initialized = blue.initializeDocument(blue.yamlToNode(documentYaml()));
         initializedDocument = initialized.document();
@@ -66,12 +66,10 @@ public class ProcessorProcessEventContextBenchmark {
     }
 
     private String documentYaml() {
-        String handler = "used".equals(access)
-                ? "  readProcessEvent:\n" +
+        String handler = "  accessProcessEvent:\n" +
                 "    channel: events\n" +
                 "    type:\n" +
-                "      blueId: " + SET_PROPERTY_TYPE + "\n"
-                : "";
+                "      blueId: " + SET_PROPERTY_TYPE + "\n";
         return "name: Processing Event Benchmark\n" +
                 "contracts:\n" +
                 "  events:\n" +
@@ -107,7 +105,13 @@ public class ProcessorProcessEventContextBenchmark {
                 .properties("kind", new Node().value(kind));
     }
 
-    public static final class SnapshotReadingHandler implements HandlerProcessor<SetProperty> {
+    public static final class SnapshotAccessHandler implements HandlerProcessor<SetProperty> {
+        private final boolean readProcessEvent;
+
+        SnapshotAccessHandler(boolean readProcessEvent) {
+            this.readProcessEvent = readProcessEvent;
+        }
+
         @Override
         public Class<SetProperty> contractType() {
             return SetProperty.class;
@@ -115,7 +119,9 @@ public class ProcessorProcessEventContextBenchmark {
 
         @Override
         public void execute(SetProperty contract, ProcessorExecutionContext context) {
-            context.frozenProcessEvent();
+            if (readProcessEvent) {
+                context.frozenProcessEvent();
+            }
         }
     }
 }
