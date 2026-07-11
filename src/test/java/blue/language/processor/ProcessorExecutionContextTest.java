@@ -32,7 +32,7 @@ final class ProcessorExecutionContextTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
         execution.loadBundles("/");
 
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
 
         assertNull(context.contractKey());
         assertNull(context.contractNode());
@@ -59,7 +59,7 @@ final class ProcessorExecutionContextTest {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
         execution.loadBundles("/");
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
 
         context.emitEvent(new Node().value("payload"));
         context.applyBufferedEffects();
@@ -74,7 +74,7 @@ final class ProcessorExecutionContextTest {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
         execution.loadBundles("/");
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
         Node invalidEvent = new Node()
                 .value("payload")
                 .properties("alsoPayload", new Node().value("invalid"));
@@ -94,7 +94,7 @@ final class ProcessorExecutionContextTest {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("existing", new Node().value(1)));
         execution.loadBundles("/");
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
 
         context.applyPatch(JsonPatch.add("/x", new Node().value(7)));
         context.emitEvent(new Node().properties("message", new Node().value("queued before fatal")));
@@ -151,7 +151,7 @@ final class ProcessorExecutionContextTest {
                 .build();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner,
                 new Node().properties("payload", new Node().value("still visible")));
-        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false);
         context.consumeGas(44L);
 
         ProcessorFatalException ex = assertThrows(ProcessorFatalException.class,

@@ -63,8 +63,8 @@ final class ProcessorProcessEventContextTest {
                     freezerCalls.incrementAndGet();
                     return FrozenNode.fromResolvedNode(source);
                 });
-        ProcessorExecutionContext first = execution.createContext("/", ContractBundle.empty(), new Node(), false, false);
-        ProcessorExecutionContext second = execution.createContext("/", ContractBundle.empty(), new Node(), false, false);
+        ProcessorExecutionContext first = execution.createContext("/", ContractBundle.empty(), new Node(), false);
+        ProcessorExecutionContext second = execution.createContext("/", ContractBundle.empty(), new Node(), false);
 
         assertTrue(first.hasProcessEvent());
         assertTrue(second.hasProcessEvent());
@@ -98,7 +98,7 @@ final class ProcessorProcessEventContextTest {
                     freezerCalls.incrementAndGet();
                     throw expected;
                 });
-        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false);
 
         IllegalStateException first = assertThrows(IllegalStateException.class, context::frozenProcessEvent);
         IllegalStateException second = assertThrows(IllegalStateException.class, context::frozenProcessEvent);
@@ -124,7 +124,7 @@ final class ProcessorProcessEventContextTest {
                     freezerCalls.incrementAndGet();
                     return null;
                 });
-        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false);
 
         IllegalStateException failure = assertThrows(IllegalStateException.class, context::frozenProcessEvent);
         assertSame(failure, assertThrows(IllegalStateException.class, context::frozenProcessEvent));
@@ -152,7 +152,7 @@ final class ProcessorProcessEventContextTest {
                     return FrozenNode.fromResolvedNode(source);
                 });
         ProcessorExecutionContext context = execution.createContext(
-                "/", ContractBundle.empty(), new Node(), false, false);
+                "/", ContractBundle.empty(), new Node(), false);
         ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_READER_COUNT);
         List<Future<FrozenNode>> reads = new ArrayList<>();
 
@@ -204,7 +204,7 @@ final class ProcessorProcessEventContextTest {
                     throw expected;
                 });
         ProcessorExecutionContext context = execution.createContext(
-                "/", ContractBundle.empty(), new Node(), false, false);
+                "/", ContractBundle.empty(), new Node(), false);
         ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_READER_COUNT);
         List<Future<FrozenNode>> reads = new ArrayList<>();
 
@@ -494,7 +494,7 @@ final class ProcessorProcessEventContextTest {
     }
 
     private void assertAbsentProcessEvent(ProcessorEngine.Execution execution) {
-        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false, false);
+        ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false);
         assertFalse(context.hasProcessEvent());
         assertNull(context.frozenProcessEvent());
     }

@@ -158,10 +158,10 @@ final class ScopeExecutor {
         runtime.chargeInitialization();
         String documentId = BlueIdCalculator.calculateUncheckedBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
-        ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, false, true);
+        ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
         addInitializationMarker(context, documentId);
-        if (finalizeAfterInitialization && !execution.isScopeInactive(normalizedScope)) {
+        if (finalizeAfterInitialization && !execution.shouldStopScopeWork(normalizedScope)) {
             ContractBundle refreshed = refreshBundle(normalizedScope);
             finalizeScope(normalizedScope, refreshed);
         }
@@ -204,7 +204,7 @@ final class ScopeExecutor {
 
     void processExternalEvent(String scopePath, Node event) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        if (execution.isScopeInactive(normalizedScope)) {
+        if (execution.shouldStopScopeWork(normalizedScope)) {
             return;
         }
         if ("/".equals(normalizedScope)) {
@@ -230,7 +230,7 @@ final class ScopeExecutor {
         }
         if (!runtime.hasInitializationMarker(normalizedScope)) {
             initializeScope(normalizedScope, false, false);
-            if (execution.isScopeInactive(normalizedScope)) {
+            if (execution.shouldStopScopeWork(normalizedScope)) {
                 return;
             }
             bundle = refreshBundle(normalizedScope);
@@ -252,7 +252,7 @@ final class ScopeExecutor {
             runtime.addGas(1L);
         }
         for (ContractBundle.ChannelBinding channel : channels) {
-            if (execution.isScopeInactive(normalizedScope)) {
+            if (execution.shouldStopScopeWork(normalizedScope)) {
                 break;
             }
             if (ProcessorContractConstants.isProcessorManagedChannel(channel.contract())) {
@@ -280,15 +280,7 @@ final class ScopeExecutor {
                        ContractBundle bundle,
                        List<JsonPatch> patches,
                        boolean allowReservedMutation) {
-        handlePatches(scopePath, bundle, patches, allowReservedMutation, false, null);
-    }
-
-    void handlePatches(String scopePath,
-                       ContractBundle bundle,
-                       List<JsonPatch> patches,
-                       boolean allowReservedMutation,
-                       boolean allowTerminatingScope) {
-        handlePatches(scopePath, bundle, patches, allowReservedMutation, allowTerminatingScope, null);
+        handlePatches(scopePath, bundle, patches, allowReservedMutation, null);
     }
 
     void handlePatches(String scopePath,
@@ -296,16 +288,7 @@ final class ScopeExecutor {
                        List<JsonPatch> patches,
                        boolean allowReservedMutation,
                        WorkingDocument.Preview preview) {
-        handlePatches(scopePath, bundle, patches, allowReservedMutation, false, preview);
-    }
-
-    void handlePatches(String scopePath,
-                       ContractBundle bundle,
-                       List<JsonPatch> patches,
-                       boolean allowReservedMutation,
-                       boolean allowTerminatingScope,
-                       WorkingDocument.Preview preview) {
-        if (!allowTerminatingScope && execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         if (patches == null || patches.isEmpty()) {
@@ -313,10 +296,7 @@ final class ScopeExecutor {
         }
         for (int patchIndex = 0; patchIndex < patches.size(); patchIndex++) {
             JsonPatch patch = patches.get(patchIndex);
-            if (!allowTerminatingScope && execution.isScopeInactive(scopePath)) {
-                return;
-            }
-            if (allowTerminatingScope && execution.shouldStopTerminationLifecycle(scopePath)) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 return;
             }
             if (!allowReservedMutation) {
@@ -356,10 +336,7 @@ final class ScopeExecutor {
                 long routingStart = System.nanoTime();
                 for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
                     routeDocumentUpdateAfterPatch(scopePath, bundle, update);
-                    if (!allowTerminatingScope && execution.isScopeInactive(scopePath)) {
-                        break;
-                    }
-                    if (allowTerminatingScope && execution.shouldStopTerminationLifecycle(scopePath)) {
+                    if (execution.shouldStopScopeWork(scopePath)) {
                         return;
                     }
                 }
@@ -419,7 +396,7 @@ final class ScopeExecutor {
         markCutOffChildrenIfNeeded(scopePath, bundle, data);
         List<DocumentUpdateParticipant> participants = new ArrayList<>();
         for (String cascadeScope : data.cascadeScopes()) {
-            if (execution.isScopeInactive(cascadeScope)) {
+            if (execution.shouldStopScopeWork(cascadeScope)) {
                 continue;
             }
             ContractBundle targetBundle;
@@ -450,14 +427,14 @@ final class ScopeExecutor {
         }
         runtime.chargeCascadeRouting(participants.size());
         for (DocumentUpdateParticipant participant : participants) {
-            if (execution.isScopeInactive(participant.scopePath)) {
+            if (execution.shouldStopScopeWork(participant.scopePath)) {
                 continue;
             }
             Node updateEvent = ProcessorEngine.createDocumentUpdateEvent(data, participant.scopePath);
             owner.metricsSink().incrementDocumentUpdateEventsBuilt();
             for (ContractBundle.ChannelBinding channel : participant.channels) {
-                channelRunner.runHandlers(participant.scopePath, participant.bundle, channel.key(), updateEvent, false);
-                if (execution.isScopeInactive(participant.scopePath)) {
+                channelRunner.runHandlers(participant.scopePath, participant.bundle, channel.key(), updateEvent);
+                if (execution.shouldStopScopeWork(participant.scopePath)) {
                     continue;
                 }
             }
@@ -468,36 +445,26 @@ final class ScopeExecutor {
                           ContractBundle bundle,
                           Node event,
                           boolean finalizeAfter) {
-        deliverLifecycle(scopePath, bundle, event, finalizeAfter, false);
-    }
-
-    void deliverTerminationLifecycle(String scopePath,
-                                     ContractBundle bundle,
-                                     Node event) {
-        deliverLifecycle(scopePath, bundle, event, false, true);
-    }
-
-    private void deliverLifecycle(String scopePath,
-                                  ContractBundle bundle,
-                                  Node event,
-                                  boolean finalizeAfter,
-                                  boolean terminationLifecycle) {
         runtime.chargeLifecycleDelivery();
         execution.recordLifecycleForBridging(scopePath, event);
         if (bundle == null) {
             return;
         }
         for (ContractBundle.ChannelBinding channel : bundle.channelsOfType(LifecycleChannel.class)) {
-            channelRunner.runHandlers(scopePath, bundle, channel.key(), event, true);
-            if (terminationLifecycle
-                    ? execution.shouldStopTerminationLifecycle(scopePath)
-                    : execution.isScopeInactive(scopePath)) {
+            channelRunner.runHandlers(scopePath, bundle, channel.key(), event);
+            if (execution.shouldStopScopeWork(scopePath)) {
                 break;
             }
         }
-        if (finalizeAfter && !terminationLifecycle) {
+        if (finalizeAfter && !execution.shouldStopScopeWork(scopePath)) {
             finalizeScope(scopePath, bundle);
         }
+    }
+
+    void deliverTerminationLifecycle(String scopePath,
+                                     ContractBundle bundle,
+                                     Node event) {
+        deliverLifecycle(scopePath, bundle, event, false);
     }
 
     private ContractBundle processEmbeddedChildren(String scopePath, Node event) {
@@ -523,7 +490,7 @@ final class ScopeExecutor {
             processed.add(childScope);
             scopeContext.recordProcessedEmbeddedPath(childScope);
             runtime.setScopeEmbeddedDepth(childScope, runtime.scopeEmbeddedDepth(normalizedScope) + 1);
-            if (execution.isScopeInactive(childScope)) {
+            if (execution.shouldStopScopeWork(childScope)) {
                 bundle = refreshBundle(normalizedScope);
                 continue;
             }
@@ -635,7 +602,7 @@ final class ScopeExecutor {
 
     private void initializeCurrentScopeIfNeeded(String scopePath, ContractBundle bundle) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        if (runtime.hasInitializationMarker(normalizedScope) || execution.isScopeInactive(normalizedScope)) {
+        if (runtime.hasInitializationMarker(normalizedScope) || execution.shouldStopScopeWork(normalizedScope)) {
             return;
         }
         FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
@@ -643,9 +610,9 @@ final class ScopeExecutor {
                 canonicalScopeNode != null ? canonicalScopeNode.toNode() : new Node());
         runtime.chargeInitialization();
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
-        ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, false, true);
+        ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
-        if (!execution.isScopeInactive(normalizedScope)) {
+        if (!execution.shouldStopScopeWork(normalizedScope)) {
             addInitializationMarker(context, documentId);
         }
     }
@@ -654,7 +621,7 @@ final class ScopeExecutor {
         if (bundle == null) {
             return;
         }
-        if (execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         bridgeEmbeddedEmissions(scopePath, bundle);
@@ -662,7 +629,7 @@ final class ScopeExecutor {
     }
 
     private void bridgeEmbeddedEmissions(String scopePath, ContractBundle bundle) {
-        if (execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         ScopeRuntimeContext parentContext = runtime.scope(scopePath);
@@ -695,7 +662,7 @@ final class ScopeExecutor {
                         charged = true;
                     }
                     deliveredChannels.add(channel.key());
-                    channelRunner.runHandlers(scopePath, currentBundle, channel.key(), emission.clone(), false);
+                    channelRunner.runHandlers(scopePath, currentBundle, channel.key(), emission.clone());
                 }
                 ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
                 if (scriptedRuntime != null) {
@@ -709,7 +676,7 @@ final class ScopeExecutor {
     private void drainTriggeredQueue(String scopePath, ContractBundle bundle) {
         long routingStart = System.nanoTime();
         try {
-            if (execution.isScopeInactive(scopePath)) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 return;
             }
             ScopeRuntimeContext context = runtime.scope(scopePath);
@@ -729,13 +696,13 @@ final class ScopeExecutor {
                 runtime.chargeDrainEvent();
                 List<String> deliveredChannels = new ArrayList<>();
                 for (ContractBundle.ChannelBinding channel : triggeredChannels) {
-                    if (execution.isScopeInactive(scopePath)) {
+                    if (execution.shouldStopScopeWork(scopePath)) {
                         context.triggeredQueue().clear();
                         return;
                     }
                     deliveredChannels.add(channel.key());
-                    channelRunner.runHandlers(scopePath, currentBundle, channel.key(), next.clone(), false);
-                    if (execution.isScopeInactive(scopePath)) {
+                    channelRunner.runHandlers(scopePath, currentBundle, channel.key(), next.clone());
+                    if (execution.shouldStopScopeWork(scopePath)) {
                         context.triggeredQueue().clear();
                         return;
                     }

@@ -33,7 +33,7 @@ final class ChannelRunner {
                             ContractBundle bundle,
                             ContractBundle.ChannelBinding channel,
                             Node event) {
-        if (execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         runtime.chargeChannelMatchAttempt();
@@ -113,8 +113,8 @@ final class ChannelRunner {
             return;
         }
         metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
-        runHandlers(scopePath, bundle, channel.key(), eventForHandlers, false);
-        if (execution.isScopeInactive(scopePath)) {
+        runHandlers(scopePath, bundle, channel.key(), eventForHandlers);
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         long checkpointPersistStart = System.nanoTime();
@@ -155,7 +155,7 @@ final class ChannelRunner {
         }
         metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointEnsureStart);
         for (ChannelDelivery delivery : match.deliveries()) {
-            if (execution.isScopeInactive(scopePath)) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 return;
             }
             String checkpointKey = delivery.checkpointKey() != null
@@ -208,8 +208,8 @@ final class ChannelRunner {
             if (eventForHandlers == null) {
                 continue;
             }
-            runHandlers(scopePath, bundle, channel.key(), eventForHandlers, false);
-            if (execution.isScopeInactive(scopePath)) {
+            runHandlers(scopePath, bundle, channel.key(), eventForHandlers);
+            if (execution.shouldStopScopeWork(scopePath)) {
                 return;
             }
             long checkpointPersistStart = System.nanoTime();
@@ -238,8 +238,7 @@ final class ChannelRunner {
     void runHandlers(String scopePath,
                      ContractBundle bundle,
                      String channelKey,
-                     Node event,
-                     boolean allowTerminatedWork) {
+                     Node event) {
         ProcessingMetricsSink metrics = owner.metricsSink();
         long discoveryStart = System.nanoTime();
         List<ContractBundle.HandlerBinding> handlers = bundle.handlersFor(channelKey);
@@ -248,10 +247,7 @@ final class ChannelRunner {
             return;
         }
         for (ContractBundle.HandlerBinding handler : handlers) {
-            if (allowTerminatedWork && execution.shouldStopTerminationLifecycle(scopePath)) {
-                break;
-            }
-            if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 break;
             }
             HandlerMatchContext matchContext = new HandlerMatchContext(scopePath,
@@ -277,7 +273,6 @@ final class ChannelRunner {
                     event,
                     handler.key(),
                     handler.node(),
-                    allowTerminatedWork,
                     false);
             metrics.incrementHandlersExecuted();
             long executionStart = System.nanoTime();
@@ -301,10 +296,7 @@ final class ChannelRunner {
             } finally {
                 metrics.addHandlerExecutionNanos(System.nanoTime() - executionStart);
             }
-            if (execution.isScopeInactive(scopePath) && !allowTerminatedWork) {
-                break;
-            }
-            if (allowTerminatedWork && execution.shouldStopTerminationLifecycle(scopePath)) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 break;
             }
         }

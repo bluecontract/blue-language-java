@@ -20,7 +20,6 @@ public final class ProcessorExecutionContext {
     private final String contractKey;
     private final FrozenNode contractNode;
     private final Node event;
-    private final boolean allowTerminatedWork;
     private final boolean allowReservedMutation;
     private final ContractEffectBuffer effects = new ContractEffectBuffer();
     private boolean effectsApplied;
@@ -31,7 +30,6 @@ public final class ProcessorExecutionContext {
                               String contractKey,
                               FrozenNode contractNode,
                               Node event,
-                              boolean allowTerminatedWork,
                               boolean allowReservedMutation) {
         this.execution = Objects.requireNonNull(execution, "execution");
         this.bundle = Objects.requireNonNull(bundle, "bundle");
@@ -39,7 +37,6 @@ public final class ProcessorExecutionContext {
         this.contractKey = contractKey;
         this.contractNode = contractNode;
         this.event = Objects.requireNonNull(event, "event");
-        this.allowTerminatedWork = allowTerminatedWork;
         this.allowReservedMutation = allowReservedMutation;
     }
 
@@ -100,7 +97,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void applyPatches(List<JsonPatch> patches) {
-        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         if (patches == null || patches.isEmpty()) {
@@ -110,7 +107,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void applyPreviewedPatches(List<JsonPatch> patches, WorkingDocument.Preview preview) {
-        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         if (patches == null || patches.isEmpty()) {
@@ -120,7 +117,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void emitEvent(Node emission) {
-        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         Objects.requireNonNull(emission, "emission");
@@ -132,7 +129,7 @@ public final class ProcessorExecutionContext {
             return;
         }
         effectsApplied = true;
-        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         if (effects.invalidGasReason() != null) {
@@ -150,12 +147,8 @@ public final class ProcessorExecutionContext {
                     bundle,
                     patchBatch.patches(),
                     allowReservedMutation,
-                    allowTerminatedWork,
                     patchBatch.preview());
-            if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
-                return;
-            }
-            if (allowTerminatedWork && execution.shouldStopTerminationLifecycle(scopePath)) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 return;
             }
         }
@@ -163,7 +156,7 @@ public final class ProcessorExecutionContext {
             if (!emitEventNow(emission)) {
                 return;
             }
-            if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 return;
             }
         }
@@ -182,7 +175,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void consumeGas(long units) {
-        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
         effects.addGas(units);
@@ -253,7 +246,7 @@ public final class ProcessorExecutionContext {
                     "Invalid emitted event: " + ex.getMessage());
             return false;
         }
-        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+        if (execution.shouldStopScopeWork(scopePath)) {
             return false;
         }
         DocumentProcessingRuntime runtime = runtime();

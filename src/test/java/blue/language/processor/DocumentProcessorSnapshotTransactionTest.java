@@ -578,7 +578,6 @@ class DocumentProcessorSnapshotTransactionTest {
         ProcessorExecutionContext context = execution.createContext("/",
                 execution.bundleForScope("/"),
                 new Node(),
-                false,
                 false);
 
         assertEquals("from-type", context.documentAt("/inherited").getValue());

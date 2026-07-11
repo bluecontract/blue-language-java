@@ -52,13 +52,6 @@ public final class ScopeRuntimeContext {
         bridgeableEvents.add(Objects.requireNonNull(node, "node"));
     }
 
-    public void recordTerminationLifecycleBridgeable(Node node) {
-        bridgeableEvents.add(Objects.requireNonNull(node, "node"));
-        if (cutOff && bridgeableLimit >= 0) {
-            bridgeableLimit = bridgeableEvents.size();
-        }
-    }
-
     public List<Node> drainBridgeableEvents() {
         List<Node> drained;
         if (cutOff && bridgeableLimit >= 0 && bridgeableLimit < bridgeableEvents.size()) {
