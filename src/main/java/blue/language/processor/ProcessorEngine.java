@@ -456,6 +456,7 @@ final class ProcessorEngine {
         private final Map<String, TerminationRecord> firstTerminations = new LinkedHashMap<>();
         private final Map<String, TerminationRecord> terminationEscalations = new LinkedHashMap<>();
         private final Set<String> cutOffScopes = new LinkedHashSet<>();
+        private final Set<LogicalDelivery> successfulLogicalDeliveries = new LinkedHashSet<>();
         private boolean rootFatalEvidenceAppended;
         private final CheckpointManager checkpointManager;
         private final TerminationService terminationService;
@@ -720,6 +721,33 @@ final class ProcessorEngine {
                     || (context != null && context.isTerminated());
         }
 
+        boolean isScopeActive(String scopePath) {
+            ScopeRuntimeContext context = runtime.existingScope(ProcessorEngine.normalizeScope(scopePath));
+            return (context == null || context.isActive()) && !shouldStopScopeWork(scopePath);
+        }
+
+        boolean hasSuccessfulLogicalDelivery(String scopePath,
+                                             String eventIdentity,
+                                             String handlerChannelKey,
+                                             String logicalDeliveryKey) {
+            return successfulLogicalDeliveries.contains(new LogicalDelivery(
+                    normalizeScope(scopePath),
+                    eventIdentity,
+                    handlerChannelKey,
+                    logicalDeliveryKey));
+        }
+
+        void recordSuccessfulLogicalDelivery(String scopePath,
+                                             String eventIdentity,
+                                             String handlerChannelKey,
+                                             String logicalDeliveryKey) {
+            successfulLogicalDeliveries.add(new LogicalDelivery(
+                    normalizeScope(scopePath),
+                    eventIdentity,
+                    handlerChannelKey,
+                    logicalDeliveryKey));
+        }
+
         void enterGracefulTermination(String scopePath, ContractBundle bundle, String reason) {
             terminate(scopePath, bundle, ScopeRuntimeContext.TerminationKind.GRACEFUL, reason);
         }
@@ -904,6 +932,43 @@ final class ProcessorEngine {
         private Node cloneEvent(Node event) {
             return event != null ? event.clone() : null;
         }
+
+        private static final class LogicalDelivery {
+            private final String scopePath;
+            private final String eventIdentity;
+            private final String handlerChannelKey;
+            private final String logicalDeliveryKey;
+
+            private LogicalDelivery(String scopePath,
+                                    String eventIdentity,
+                                    String handlerChannelKey,
+                                    String logicalDeliveryKey) {
+                this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
+                this.eventIdentity = Objects.requireNonNull(eventIdentity, "eventIdentity");
+                this.handlerChannelKey = Objects.requireNonNull(handlerChannelKey, "handlerChannelKey");
+                this.logicalDeliveryKey = Objects.requireNonNull(logicalDeliveryKey, "logicalDeliveryKey");
+            }
+
+            @Override
+            public boolean equals(Object other) {
+                if (this == other) {
+                    return true;
+                }
+                if (!(other instanceof LogicalDelivery)) {
+                    return false;
+                }
+                LogicalDelivery that = (LogicalDelivery) other;
+                return scopePath.equals(that.scopePath)
+                        && eventIdentity.equals(that.eventIdentity)
+                        && handlerChannelKey.equals(that.handlerChannelKey)
+                        && logicalDeliveryKey.equals(that.logicalDeliveryKey);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(scopePath, eventIdentity, handlerChannelKey, logicalDeliveryKey);
+            }
+        }
     }
 
     @FunctionalInterface
@@ -1010,7 +1075,9 @@ final class ProcessorEngine {
                     copy.add(ChannelDelivery.of(delivery.event(),
                             delivery.eventId(),
                             delivery.checkpointKey(),
-                            delivery.shouldProcess()));
+                            delivery.shouldProcess(),
+                            delivery.handlerChannelKey(),
+                            delivery.logicalDeliveryKey()));
                 }
             }
             return Collections.unmodifiableList(copy);

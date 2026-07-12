@@ -115,6 +115,18 @@ public interface ProcessingMetricsSink {
     default void incrementChannelEvaluations() {
     }
 
+    /**
+     * Records one handler dispatch through an explicitly routed channel delivery.
+     */
+    default void incrementRoutedChannelDeliveries() {
+    }
+
+    /**
+     * Records one eligible source delivery whose successful logical route was already dispatched.
+     */
+    default void incrementDeduplicatedChannelDeliveries() {
+    }
+
     default void addHandlerDiscoveryNanos(long nanos) {
     }
 

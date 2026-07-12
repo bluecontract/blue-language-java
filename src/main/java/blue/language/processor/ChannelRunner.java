@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.util.ProcessorContractConstants;
 
 import java.util.List;
 import java.util.Objects;
@@ -113,8 +114,7 @@ final class ChannelRunner {
             return;
         }
         metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
-        runHandlers(scopePath, bundle, channel.key(), eventForHandlers);
-        if (execution.shouldStopScopeWork(scopePath)) {
+        if (!runHandlers(scopePath, bundle, channel.key(), eventForHandlers)) {
             return;
         }
         long checkpointPersistStart = System.nanoTime();
@@ -208,20 +208,79 @@ final class ChannelRunner {
             if (eventForHandlers == null) {
                 continue;
             }
-            runHandlers(scopePath, bundle, channel.key(), eventForHandlers);
-            if (execution.shouldStopScopeWork(scopePath)) {
+            ContractBundle.ChannelBinding handlerChannel = resolveHandlerChannel(scopePath, bundle, channel, delivery);
+            if (handlerChannel == null) {
                 return;
             }
-            long checkpointPersistStart = System.nanoTime();
-            try {
-                checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, checkpointEvent);
-            } catch (RuntimeException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
-                        execution.fatalReason(ex, "Checkpoint error"));
+            String logicalDeliveryKey = delivery.logicalDeliveryKey();
+            if (logicalDeliveryKey != null
+                    && execution.hasSuccessfulLogicalDelivery(scopePath,
+                    eventSignature,
+                    handlerChannel.key(),
+                    logicalDeliveryKey)) {
+                metrics.incrementDeduplicatedChannelDeliveries();
+                if (!persistCheckpoint(scopePath, bundle, checkpoint, eventSignature, checkpointEvent)) {
+                    return;
+                }
+                continue;
+            }
+            if (delivery.handlerChannelKey() != null) {
+                metrics.incrementRoutedChannelDeliveries();
+            }
+            if (!runHandlers(scopePath, bundle, handlerChannel.key(), eventForHandlers)) {
                 return;
             }
+            if (logicalDeliveryKey != null) {
+                execution.recordSuccessfulLogicalDelivery(scopePath,
+                        eventSignature,
+                        handlerChannel.key(),
+                        logicalDeliveryKey);
+            }
+            if (!persistCheckpoint(scopePath, bundle, checkpoint, eventSignature, checkpointEvent)) {
+                return;
+            }
+        }
+    }
+
+    private ContractBundle.ChannelBinding resolveHandlerChannel(String scopePath,
+                                                                 ContractBundle bundle,
+                                                                 ContractBundle.ChannelBinding sourceChannel,
+                                                                 ChannelDelivery delivery) {
+        String handlerChannelKey = delivery.handlerChannelKey();
+        if (handlerChannelKey == null) {
+            return sourceChannel;
+        }
+        ContractBundle.ChannelBinding handlerChannel = bundle.channelBinding(handlerChannelKey);
+        if (handlerChannel != null && (ProcessorContractConstants.isProcessorManagedChannel(handlerChannel.contract())
+                || owner.registry().lookupChannel(handlerChannel.contract()).isPresent())) {
+            return handlerChannel;
+        }
+        String normalizedScope = execution.normalizeScope(scopePath);
+        execution.enterFatalTermination(scopePath,
+                bundle,
+                ProcessorErrorCategory.UnsupportedContract,
+                "Routed delivery handler channel '" + handlerChannelKey
+                        + "' is not a supported same-scope Channel at " + normalizedScope);
+        return null;
+    }
+
+    private boolean persistCheckpoint(String scopePath,
+                                      ContractBundle bundle,
+                                      CheckpointManager.CheckpointRecord checkpoint,
+                                      String eventSignature,
+                                      Node checkpointEvent) {
+        ProcessingMetricsSink metrics = owner.metricsSink();
+        long checkpointPersistStart = System.nanoTime();
+        try {
+            checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, checkpointEvent);
+            return true;
+        } catch (RuntimeException ex) {
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
+                    execution.fatalReason(ex, "Checkpoint error"));
+            return false;
+        } finally {
             metrics.addCheckpointPersistNanos(System.nanoTime() - checkpointPersistStart);
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointPersistStart);
         }
@@ -235,20 +294,20 @@ final class ChannelRunner {
         return fallbackSignature != null ? fallbackSignature : checkpointManager.eventIdentity(fallbackEvent);
     }
 
-    void runHandlers(String scopePath,
-                     ContractBundle bundle,
-                     String channelKey,
-                     Node event) {
+    boolean runHandlers(String scopePath,
+                        ContractBundle bundle,
+                        String channelKey,
+                        Node event) {
         ProcessingMetricsSink metrics = owner.metricsSink();
         long discoveryStart = System.nanoTime();
         List<ContractBundle.HandlerBinding> handlers = bundle.handlersFor(channelKey);
         metrics.addHandlerDiscoveryNanos(System.nanoTime() - discoveryStart);
         if (handlers.isEmpty()) {
-            return;
+            return execution.isScopeActive(scopePath);
         }
         for (ContractBundle.HandlerBinding handler : handlers) {
             if (execution.shouldStopScopeWork(scopePath)) {
-                break;
+                return false;
             }
             HandlerMatchContext matchContext = new HandlerMatchContext(scopePath,
                     handler.key(),
@@ -286,19 +345,20 @@ final class ChannelRunner {
                         bundle,
                         ex.errorCategory(),
                         execution.fatalReason(ex, "Handler execution failed"));
-                break;
+                return false;
             } catch (RuntimeException ex) {
                 execution.enterFatalTermination(scopePath,
                         bundle,
                         execution.fatalCategory(ex, ProcessorErrorCategory.HandlerExecutionError),
                         execution.fatalReason(ex, "Handler execution failed"));
-                break;
+                return false;
             } finally {
                 metrics.addHandlerExecutionNanos(System.nanoTime() - executionStart);
             }
             if (execution.shouldStopScopeWork(scopePath)) {
-                break;
+                return false;
             }
         }
+        return execution.isScopeActive(scopePath);
     }
 }

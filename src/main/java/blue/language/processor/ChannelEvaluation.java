@@ -75,7 +75,9 @@ public final class ChannelEvaluation {
                 copy.add(ChannelDelivery.of(delivery.event(),
                         delivery.eventId(),
                         delivery.checkpointKey(),
-                        delivery.shouldProcess()));
+                        delivery.shouldProcess(),
+                        delivery.handlerChannelKey(),
+                        delivery.logicalDeliveryKey()));
             }
         }
         return Collections.unmodifiableList(copy);
