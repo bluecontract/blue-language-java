@@ -390,7 +390,9 @@ public class MergeReverserTest {
                 "    - $pos: 1\n" +
                 "      value: C");
 
-        Node canonical = new MergeReverser().reverseToCanonicalOverlay(blue.resolve(derived));
+        Node preprocessed = blue.preprocess(derived.clone());
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(
+                blue.resolve(preprocessed.clone()), preprocessed);
         Node canonicalList = canonical.getAsNode("/list");
 
         assertEquals(2, canonicalList.getItems().size());
@@ -425,12 +427,14 @@ public class MergeReverserTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
+                "value: abc\n" +
                 "schema:\n" +
                 "  minLength: 2");
         nodeProvider.addSingleDocs(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
+                "value: abc\n" +
                 "schema:\n" +
                 "  minLength: 3");
 

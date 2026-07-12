@@ -113,7 +113,8 @@ public final class DocumentProcessingRuntime {
             return snapshot;
         }
         FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(snapshot.canonicalRoot());
-        return new ResolvedSnapshot(canonicalRoot, snapshot.frozenResolvedRoot(), canonicalRoot.blueId());
+        return new ResolvedSnapshot(canonicalRoot, snapshot.frozenResolvedRoot(), canonicalRoot.blueId(),
+                snapshot.provenanceIndex());
     }
 
     public Node document() {
@@ -402,7 +403,8 @@ public final class DocumentProcessingRuntime {
             ImmutablePatchPlanner.PatchPlan resolvedPlan = planning.resolvedPlanner.plan("/", snapshotPatch);
             ResolvedSnapshot next = new ResolvedSnapshot(canonicalPlan.root(),
                     resolvedPlan.root(),
-                    canonicalPlan.root().blueId());
+                    canonicalPlan.root().blueId(),
+                    snapshot.provenanceIndex());
             snapshot = snapshotManager.cacheSnapshot(next);
             commitMaterializedSnapshot(snapshot);
         } catch (RuntimeException ex) {
@@ -637,7 +639,9 @@ public final class DocumentProcessingRuntime {
         }
         ResolvedSnapshot next = new ResolvedSnapshot(result.canonicalRoot(),
                 result.resolvedRoot(),
-                result.canonicalRoot().blueId());
+                result.canonicalRoot().blueId(),
+                snapshot != null ? snapshot.provenanceIndex()
+                        : Collections.emptyMap());
         ResolvedSnapshot cached = snapshotManager.cacheSnapshot(next);
         snapshot = cached;
         commitMaterializedSnapshot(cached);

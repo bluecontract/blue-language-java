@@ -1,68 +1,200 @@
 package blue.language.snapshot;
 
 import blue.language.model.Node;
+import blue.language.utils.NodeToMapListOrValue;
 
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 
-public final class ResolvedReferenceCache implements FrozenNode.ResolvedReferenceInterner {
+/**
+ * Cache of content whose canonical identity has been verified against its BlueId.
+ *
+ * <p>Resolved graph nodes must never be inserted merely because they carry a
+ * {@code blueId}: inherited schema and other contextual contributions can make
+ * such a node differ from the standalone content addressed by that identity.</p>
+ */
+public final class ResolvedReferenceCache {
 
-    private final ConcurrentMap<String, FrozenNode> resolvedReferencesByBlueId = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, VerifiedReferenceEntry> entriesByBlueId = new ConcurrentHashMap<>();
+    private final ConcurrentMap<FrozenNode.ResolvedStructuralKey, FrozenNode> resolvedGraphNodesByStructure =
+            new ConcurrentHashMap<>();
+    private final FrozenNode.ResolvedStructuralInterner resolvedGraphInterner =
+            new FrozenNode.ResolvedStructuralInterner() {
+                @Override
+                public FrozenNode intern(FrozenNode.ResolvedStructuralKey structuralKey,
+                                         FrozenNode node) {
+                    FrozenNode existing = resolvedGraphNodesByStructure.putIfAbsent(
+                            structuralKey, node);
+                    return existing != null ? existing : node;
+                }
+            };
 
-    public Optional<FrozenNode> get(String blueId) {
-        return Optional.ofNullable(resolvedReferencesByBlueId.get(blueId));
+    public Optional<FrozenNode> getVerifiedCanonical(String blueId) {
+        VerifiedReferenceEntry entry = entriesByBlueId.get(blueId);
+        return Optional.ofNullable(entry != null ? entry.canonicalContent : null);
     }
 
-    public Node mutableCopy(String blueId) {
-        FrozenNode node = resolvedReferencesByBlueId.get(blueId);
-        return node != null ? node.toNode() : null;
+    public Optional<FrozenNode> getVerifiedResolved(String blueId) {
+        VerifiedReferenceEntry entry = entriesByBlueId.get(blueId);
+        FrozenNode resolved = entry != null ? entry.fullyResolvedContent : null;
+        if (resolved != null && resolved.isReferenceOnly()) {
+            throw new IllegalStateException("Verified resolved content is reference-only for blueId: " + blueId);
+        }
+        return Optional.ofNullable(resolved);
+    }
+
+    public FrozenNode putVerifiedCanonical(String blueId, FrozenNode canonicalContent) {
+        Objects.requireNonNull(blueId, "blueId");
+        requireCanonical(blueId, canonicalContent);
+        VerifiedReferenceEntry retained = entriesByBlueId.compute(blueId, (ignored, existing) -> {
+            if (existing != null) {
+                requireEquivalentCanonical(blueId, existing.canonicalContent, canonicalContent);
+                return existing;
+            }
+            return new VerifiedReferenceEntry(canonicalContent, null);
+        });
+        return retained.canonicalContent;
+    }
+
+    public FrozenNode getOrLoadVerifiedCanonical(String blueId,
+                                                 Supplier<FrozenNode> canonicalLoader) {
+        Objects.requireNonNull(blueId, "blueId");
+        Objects.requireNonNull(canonicalLoader, "canonicalLoader");
+        VerifiedReferenceEntry retained = entriesByBlueId.compute(blueId, (ignored, existing) -> {
+            if (existing != null) {
+                return existing;
+            }
+            FrozenNode loaded = canonicalLoader.get();
+            requireCanonical(blueId, loaded);
+            return new VerifiedReferenceEntry(loaded, null);
+        });
+        return retained.canonicalContent;
+    }
+
+    public FrozenNode putVerifiedResolved(String blueId,
+                                          FrozenNode canonicalContent,
+                                          FrozenNode fullyResolvedContent) {
+        Objects.requireNonNull(blueId, "blueId");
+        requireCanonical(blueId, canonicalContent);
+        requireVerifiedResolved(blueId, fullyResolvedContent);
+        VerifiedReferenceEntry retained = entriesByBlueId.compute(blueId, (ignored, existing) -> {
+            if (existing != null) {
+                requireEquivalentCanonical(blueId, existing.canonicalContent, canonicalContent);
+            }
+            FrozenNode retainedCanonical = existing != null ? existing.canonicalContent : canonicalContent;
+            FrozenNode retainedResolved = existing != null && existing.fullyResolvedContent != null
+                    ? existing.fullyResolvedContent
+                    : fullyResolvedContent;
+            return new VerifiedReferenceEntry(retainedCanonical, retainedResolved);
+        });
+        return retained.fullyResolvedContent;
     }
 
     public FrozenNode freezeResolved(Node node) {
-        return FrozenNode.fromResolvedNode(node, this);
+        return FrozenNode.fromResolvedNode(node, resolvedGraphInterner);
     }
 
-    public FrozenNode putIfAbsent(String blueId, FrozenNode node) {
-        FrozenNode existing = resolvedReferencesByBlueId.putIfAbsent(blueId, node);
-        return existing != null ? existing : node;
+    public FrozenNode freezeVerifiedResolved(String blueId, Node node) {
+        return FrozenNode.fromVerifiedResolvedNode(blueId, node, resolvedGraphInterner);
     }
 
-    public void indexResolved(FrozenNode node) {
+    /**
+     * Seeds structural sharing from a completed immutable graph without
+     * promoting any node to verified provider content.
+     */
+    public void rememberResolvedGraph(FrozenNode node) {
+        rememberResolvedGraph(node, new HashSet<>());
+    }
+
+    private void rememberResolvedGraph(FrozenNode node,
+                                       Set<FrozenNode.ResolvedStructuralKey> visited) {
         if (node == null) {
             return;
         }
-        if (node.getReferenceBlueId() != null && !node.isReferenceOnly()) {
-            putIfAbsent(node.getReferenceBlueId(), node);
+        FrozenNode.ResolvedStructuralKey structuralKey = node.resolvedStructuralKey();
+        if (!visited.add(structuralKey)) {
+            return;
         }
-        indexResolved(node.getType());
-        indexResolved(node.getItemType());
-        indexResolved(node.getKeyType());
-        indexResolved(node.getValueType());
-        indexResolved(node.getBlue());
+        resolvedGraphInterner.intern(structuralKey, node);
+        rememberResolvedGraph(node.getType(), visited);
+        rememberResolvedGraph(node.getItemType(), visited);
+        rememberResolvedGraph(node.getKeyType(), visited);
+        rememberResolvedGraph(node.getValueType(), visited);
+        rememberResolvedGraph(node.getBlue(), visited);
+        rememberResolvedGraph(node.getContracts(), visited);
         if (node.getItems() != null) {
-            node.getItems().forEach(this::indexResolved);
+            node.getItems().forEach(item -> rememberResolvedGraph(item, visited));
         }
         if (node.getProperties() != null) {
-            node.getProperties().values().forEach(this::indexResolved);
+            node.getProperties().values().forEach(child -> rememberResolvedGraph(child, visited));
         }
     }
 
     public int size() {
-        return resolvedReferencesByBlueId.size();
+        return entriesByBlueId.size();
     }
 
     public void clear() {
-        resolvedReferencesByBlueId.clear();
+        entriesByBlueId.clear();
+        resolvedGraphNodesByStructure.clear();
     }
 
-    @Override
-    public FrozenNode lookup(String blueId) {
-        return resolvedReferencesByBlueId.get(blueId);
+    public int resolvedGraphSize() {
+        return resolvedGraphNodesByStructure.size();
     }
 
-    @Override
-    public FrozenNode intern(String blueId, FrozenNode node) {
-        return putIfAbsent(blueId, node);
+    private void requireCanonical(String blueId, FrozenNode canonicalContent) {
+        Objects.requireNonNull(canonicalContent, "canonicalContent");
+        if (!canonicalContent.isStrictCanonical()) {
+            throw new IllegalArgumentException("Verified canonical content must be strict canonical.");
+        }
+        if (!canonicalContent.isStrictBlueIdValidation()) {
+            throw new IllegalArgumentException("Verified canonical content must pass strict BlueId validation.");
+        }
+        if (canonicalContent.isReferenceOnly()) {
+            throw new IllegalArgumentException("A pure reference is not verified materialized content: " + blueId);
+        }
+        if (!blueId.equals(canonicalContent.blueId())) {
+            throw new IllegalArgumentException("Verified canonical content hashes to "
+                    + canonicalContent.blueId() + ", not cache key " + blueId + ".");
+        }
+    }
+
+    private void requireVerifiedResolved(String blueId, FrozenNode resolvedContent) {
+        Objects.requireNonNull(resolvedContent, "fullyResolvedContent");
+        if (resolvedContent.isReferenceOnly()) {
+            throw new IllegalArgumentException("Verified resolved content must be materialized for blueId: " + blueId);
+        }
+        if (!resolvedContent.isVerifiedStandaloneContentFor(blueId)) {
+            throw new IllegalArgumentException("Resolved content was not verified as standalone content for blueId: "
+                    + blueId);
+        }
+    }
+
+    private void requireEquivalentCanonical(String blueId,
+                                            FrozenNode existing,
+                                            FrozenNode candidate) {
+        if (!NodeToMapListOrValue.get(existing.toNode())
+                .equals(NodeToMapListOrValue.get(candidate.toNode()))) {
+            throw new IllegalArgumentException("Conflicting verified canonical content for blueId: " + blueId);
+        }
+    }
+
+    private static final class VerifiedReferenceEntry {
+        private final FrozenNode canonicalContent;
+        private final FrozenNode fullyResolvedContent;
+
+        private VerifiedReferenceEntry(FrozenNode canonicalContent, FrozenNode fullyResolvedContent) {
+            if (canonicalContent == null) {
+                throw new IllegalArgumentException("canonicalContent must not be null");
+            }
+            this.canonicalContent = canonicalContent;
+            this.fullyResolvedContent = fullyResolvedContent;
+        }
     }
 }

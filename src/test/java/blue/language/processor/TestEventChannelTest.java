@@ -51,6 +51,7 @@ class TestEventChannelTest {
         DocumentProcessingResult testResult = blue.processDocument(afterRandom, testEvent);
         Node afterTest = testResult.document();
 
+        assertEquals(ProcessorStatus.SUCCESS, testResult.status(), testResult.failureReason());
         Node xNode = afterTest.getProperties().get("x");
         assertEquals(new BigInteger("1"), xNode.getValue());
     }

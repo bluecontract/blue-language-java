@@ -162,7 +162,9 @@ class DocumentProcessorGasTest {
         DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
 
         assertProcessedAccount(warm, types);
-        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(0, warmProvider.fetchCount(types.accountId));
+        assertEquals(1, warmProvider.fetchCount(types.moneyId));
+        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertTrue(warmBlue.resolvedReferenceCacheSize() >= warmCacheSizeBeforeProcessing);
         assertEquals(cold.totalGas(), warm.totalGas());
     }
@@ -200,7 +202,9 @@ class DocumentProcessorGasTest {
         DocumentProcessingResult warm = warmBlue.initializeDocument(warmOriginal);
 
         assertInitializedAccount(warm, types);
-        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(0, warmProvider.fetchCount(types.accountId));
+        assertEquals(1, warmProvider.fetchCount(types.moneyId));
+        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
@@ -241,7 +245,10 @@ class DocumentProcessorGasTest {
         DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
 
         assertProcessedPortfolio(warm, types);
-        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(0, warmProvider.fetchCount(types.portfolioId));
+        assertEquals(1, warmProvider.fetchCount(types.accountId));
+        assertEquals(1, warmProvider.fetchCount(types.moneyId));
+        assertEquals(2, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
@@ -277,7 +284,9 @@ class DocumentProcessorGasTest {
         DocumentProcessingResult warm = warmBlue.initializeDocument(original.clone());
 
         assertInitializedEmbeddedAccounts(warm, types);
-        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(0, warmProvider.fetchCount(types.accountId));
+        assertEquals(1, warmProvider.fetchCount(types.moneyId));
+        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
@@ -317,7 +326,9 @@ class DocumentProcessorGasTest {
         DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
 
         assertProcessedEmbeddedAccounts(warm, types);
-        assertEquals(0, warmProvider.fetchCount());
+        assertEquals(0, warmProvider.fetchCount(types.accountId));
+        assertEquals(1, warmProvider.fetchCount(types.moneyId));
+        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
@@ -512,7 +523,8 @@ class DocumentProcessorGasTest {
         Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
         Node document = setupBlue.preprocess(processingDocument(types));
         DocumentProcessingResult initialized = setupBlue.initializeDocument(document);
-        assertTrue(setupBlue.isInitialized(initialized.document()));
+        assertTrue(setupBlue.isInitialized(initialized.document()),
+                initialized.status() + ": " + initialized.failureReason());
         return initialized.document().clone();
     }
 

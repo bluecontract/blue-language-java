@@ -52,9 +52,14 @@ public class SchemaVerifierTest {
 
     @Test
     public void testRequiredNegative() throws Exception {
-        schema.required(true);
-        node.value(null); 
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+        Node type = new Node().properties("required", new Node()
+                .schema(new Schema().required(true)));
+        BasicNodeProvider provider = new BasicNodeProvider(type);
+        String typeBlueId = calculateBlueId(type);
+        Merger completedValueMerger = new Merger(mergingProcessor, provider);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> completedValueMerger.resolve(new Node().type(new Node().blueId(typeBlueId))));
     }
 
     @Test
@@ -414,7 +419,9 @@ public class SchemaVerifierTest {
 
     private void propagateAndVerify(Node target, Node source) {
         new SchemaPropagator().process(target, source, blueId -> null, null);
-        new SchemaVerifier().postProcess(target, source, blueId -> null, null);
+        SchemaVerifier verifier = new SchemaVerifier();
+        verifier.postProcess(target, source, blueId -> null, null);
+        verifier.validateCompleted(target, true, "/");
     }
 
 //

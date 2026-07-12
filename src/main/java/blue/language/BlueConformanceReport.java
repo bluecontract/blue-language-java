@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -17,11 +16,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public final class BlueConformanceReport {
 
     public static final String FIXTURE_MANIFEST_RESOURCE = "blue-language-1.0/fixtures/manifest.yaml";
+    public static final String CANDIDATE_FIXTURE_PACKAGE_IDENTITY =
+            "sha256:e4017fef531dafcda0477cb539170ce30cd15fe81d9c499d23e4104f92e97d0e";
+    public static final String CANDIDATE_BLUE_SPEC_SOURCE =
+            "feat/conformance-fixture-expansion@e5187af";
     private static final Set<String> REQUIRED_FIXTURE_IDS = requiredFixtureIds();
 
     private final String specVersion;
@@ -108,7 +110,8 @@ public final class BlueConformanceReport {
     }
 
     public boolean isReleaseGradeFixtureIdentity() {
-        return isReleaseGradeFixtureIdentity(fixturePackageIdentity);
+        return CANDIDATE_FIXTURE_PACKAGE_IDENTITY.equals(fixturePackageIdentity)
+                && isReleaseGradeFixtureIdentity(fixturePackageIdentity);
     }
 
     public boolean hasRequiredFixtureCoverage() {
@@ -287,87 +290,6 @@ public final class BlueConformanceReport {
     }
 
     private static Set<String> requiredFixtureIds() {
-        return set(
-                "L_no_profile_era_language_conformance_terms",
-                "coreRegistryTextNodeHashesToPublishedBlueId",
-                "coreRegistryIntegerNodeHashesToPublishedBlueId",
-                "coreRegistryDoubleNodeHashesToPublishedBlueId",
-                "coreRegistryBooleanNodeHashesToPublishedBlueId",
-                "coreRegistryDictionaryNodeHashesToPublishedBlueId",
-                "coreRegistryListNodeHashesToPublishedBlueId",
-                "changingCoreTypeDescriptionChangesBlueId",
-                "B_scalar_sugar_equivalence",
-                "B_list_sugar_equivalence",
-                "B_root_scalar",
-                "B_root_list",
-                "B_root_empty_object",
-                "B_root_pure_reference",
-                "B_root_null_rejected",
-                "B_plain_blueid_validation",
-                "B_empty_list",
-                "B_object_field_null_removal",
-                "B_empty_placeholder",
-                "B_null_list_element_rejected",
-                "B_empty_object_list_element_rejected",
-                "B_malformed_empty_rejected",
-                "B_large_integer_quoted_explicit_integer",
-                "B_unquoted_large_integer_rejected",
-                "B_integer_1_vs_double_1_0",
-                "B_double_1e0",
-                "B_invalid_this_placeholder_rejected",
-                "B_type_alias_rejected_in_direct_blueid_input",
-                "B_previous_invalid_blueid_rejected",
-                "B_pos_rejected",
-                "B_replace_rejected",
-                "R_blue_imports_type_itemType_keyType_valueType",
-                "R_source_null_list_to_empty",
-                "R_source_empty_object_list_to_empty",
-                "R_blue_imports",
-                "R_schema_value_shapes",
-                "R_schema_large_integer_minimum_with_type_alias",
-                "R_schema_integer_multiple_of_lcm_merge",
-                "R_enum_integer_vs_double",
-                "R_canonical_overlay_no_previous_no_pos",
-                "R_inherited_append_only_policy",
-                "R_inherited_item_type",
-                "R_inherited_keyType_valueType",
-                "R_provider_reference_canonicalizes_back",
-                "R_type_aliases_removed_from_canonical_overlay",
-                "R_contracts_merge_as_content",
-                "R_top_level_type_name_description_not_inherited",
-                "R_type_derived_field_removed",
-                "R_instance_field_kept",
-                "R_provider_reference_with_overlay_keeps_overlay",
-                "R_contracts_canonicalization_deterministic",
-                "R_child_field_labels_materialize_until_overridden",
-                "R_canonicalization_deterministic_for_same_resolved_view",
-                "F_provider_wrong_blueid_rejected",
-                "F_provider_missing_content_fails",
-                "F_expand_preserves_node_blueid",
-                "F_expand_nested_reference_preserves_node_blueid",
-                "F_expand_wrong_nested_provider_content_fails",
-                "F_expand_missing_nested_content_fails",
-                "F_collapse_preserves_node_blueid",
-                "F_collapse_nested_subtree_preserves_node_blueid",
-                "F_collapse_does_not_produce_mixed_blueid",
-                "C_circular_reference_set_ids",
-                "C_this_placeholder_rejected_outside_cyclic_api",
-                "C_zero_blueid_rejected_in_final_input",
-                "C_three_document_cycle_stable_order",
-                "C_duplicate_preliminary_ids_deterministic_or_rejected",
-                "B_double_negative_zero",
-                "B_double_overflow_rejected",
-                "B_payload_only_scalar_typed_identity",
-                "R_source_recursive_empty_object_list_to_empty",
-                "R_core_type_compatibility_nominal_by_blueid",
-                "R_view_path_root_is_empty_string",
-                "R_schema_enum_order_and_duplicates_canonical",
-                "R_schema_double_multiple_of_exact",
-                "R_schema_double_multiple_of_rejects_decimal_approximation",
-                "R_schema_wrong_kind_keywords_rejected");
-    }
-
-    private static Set<String> set(String... values) {
-        return Arrays.stream(values).collect(Collectors.toCollection(LinkedHashSet::new));
+        return new LinkedHashSet<>(loadFixtureIds());
     }
 }

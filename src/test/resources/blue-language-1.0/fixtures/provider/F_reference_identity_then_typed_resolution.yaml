@@ -1,0 +1,37 @@
+id: F_reference_identity_then_typed_resolution
+category: Provider
+operation: scenario
+description: an identity-only use of a pure reference does not certify content required by a later typed use
+provider:
+- requestedBlueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+  returnedNode:
+    name: Scenario Base Subject
+- requestedBlueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+  returnedNode:
+    name: Scenario Subject
+    type:
+      blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+    identifier: subject-1
+- requestedBlueId: 2P8Jn6pgcrqbEBYgsAr1mGYfNnifPFSUtjo5do8SYkax
+  returnedNode:
+    name: Scenario Typed Holder
+    subject:
+      type:
+        blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+      schema:
+        required: true
+steps:
+- action: calculateContentBlueId
+  source:
+    blueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+  expectedContentBlueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+- action: resolve
+  source:
+    type:
+      blueId: 2P8Jn6pgcrqbEBYgsAr1mGYfNnifPFSUtjo5do8SYkax
+    subject:
+      blueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+  expectedResolvedPaths:
+  - path: /subject/identifier
+    expectedNode:
+      value: subject-1

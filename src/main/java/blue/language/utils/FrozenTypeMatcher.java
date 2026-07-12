@@ -29,7 +29,7 @@ public final class FrozenTypeMatcher {
     private final Blue blue;
     private final Map<String, FrozenNode> resolvedReferenceCache = new HashMap<>();
     private final Map<String, Boolean> subtypeCache = new HashMap<>();
-    private final Map<String, Boolean> matchCache = new HashMap<>();
+    private final Map<MatchKey, Boolean> matchCache = new HashMap<>();
     private final Map<String, String> typeCompatibilityIdentityCache = new HashMap<>();
     private final Set<String> unresolvedReferenceCache = new HashSet<>();
     private final boolean resolveCandidateReferences;
@@ -54,7 +54,7 @@ public final class FrozenTypeMatcher {
     }
 
     private boolean matches(FrozenNode node, FrozenNode target) {
-        String key = node.blueId() + "->" + target.blueId();
+        MatchKey key = new MatchKey(node.resolvedStructuralKey(), target.resolvedStructuralKey());
         Boolean cached = matchCache.get(key);
         if (cached != null) {
             return cached;
@@ -830,5 +830,33 @@ public final class FrozenTypeMatcher {
 
     private boolean isDictionaryType(FrozenNode type) {
         return isSubtype(type, coreType(DICTIONARY_TYPE_BLUE_ID));
+    }
+
+    private static final class MatchKey {
+        private final FrozenNode.ResolvedStructuralKey candidate;
+        private final FrozenNode.ResolvedStructuralKey target;
+
+        private MatchKey(FrozenNode.ResolvedStructuralKey candidate,
+                         FrozenNode.ResolvedStructuralKey target) {
+            this.candidate = candidate;
+            this.target = target;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof MatchKey)) {
+                return false;
+            }
+            MatchKey that = (MatchKey) other;
+            return candidate.equals(that.candidate) && target.equals(that.target);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * candidate.hashCode() + target.hashCode();
+        }
     }
 }

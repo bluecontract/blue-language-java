@@ -24,4 +24,33 @@ public class SequentialMergingProcessor implements MergingProcessor {
     public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         mergingProcessors.forEach(e -> e.postProcess(target, source, nodeProvider, nodeResolver));
     }
+
+    @Override
+    public boolean hasCompletedValidation(Node node) {
+        for (MergingProcessor processor : mergingProcessors) {
+            if (processor.hasCompletedValidation(node)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean requiresReferenceMaterialization(Node node) {
+        for (MergingProcessor processor : mergingProcessors) {
+            if (processor.requiresReferenceMaterialization(node)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
+        for (MergingProcessor processor : mergingProcessors) {
+            if (processor.hasCompletedValidation(node)) {
+                processor.validateCompleted(node, semanticallyPresent, path);
+            }
+        }
+    }
 }

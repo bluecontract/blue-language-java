@@ -32,8 +32,51 @@ public class SchemaVerifier implements MergingProcessor {
             return;
 
         verifyWellFormed(schema);
+    }
 
-        verifyRequired(schema.getRequiredValue(), target);
+    @Override
+    public boolean hasCompletedValidation(Node node) {
+        return node != null && node.getSchema() != null;
+    }
+
+    @Override
+    public boolean requiresReferenceMaterialization(Node node) {
+        Schema schema = node != null ? node.getSchema() : null;
+        return schema != null && hasPayloadDependentKeyword(schema);
+    }
+
+    @Override
+    public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
+        Schema schema = node.getSchema();
+        if (schema == null) {
+            return;
+        }
+        try {
+            verifyWellFormed(schema);
+            onCompletedValidation(node, path);
+            verifyValue(schema, node, semanticallyPresent);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Schema validation failed at path " + path + ": "
+                    + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Test seam for counting completed semantic validations without shared mutable state.
+     *
+     * @param node completed resolved value
+     * @param path RFC 6901 path of the value
+     */
+    protected void onCompletedValidation(Node node, String path) {
+        // default implementation
+    }
+
+    private void verifyValue(Schema schema, Node target, boolean semanticallyPresent) {
+
+        verifyRequired(schema.getRequiredValue(), semanticallyPresent);
+        if (!semanticallyPresent) {
+            return;
+        }
         verifyMinLength(schema.getMinLengthExact(), target);
         verifyMaxLength(schema.getMaxLengthExact(), target);
         verifyMinimum(schema.getMinimumValue(), target);
@@ -47,6 +90,22 @@ public class SchemaVerifier implements MergingProcessor {
         verifyMinFields(schema.getMinFieldsExact(), target);
         verifyMaxFields(schema.getMaxFieldsExact(), target);
         verifyEnum(schema.getEnum(), target);
+    }
+
+    private boolean hasPayloadDependentKeyword(Schema schema) {
+        return schema.getMinLengthExact() != null
+                || schema.getMaxLengthExact() != null
+                || schema.getMinimumValue() != null
+                || schema.getMaximumValue() != null
+                || schema.getExclusiveMinimumValue() != null
+                || schema.getExclusiveMaximumValue() != null
+                || schema.getMultipleOfValue() != null
+                || schema.getMinItemsExact() != null
+                || schema.getMaxItemsExact() != null
+                || Boolean.TRUE.equals(schema.getUniqueItemsValue())
+                || schema.getMinFieldsExact() != null
+                || schema.getMaxFieldsExact() != null
+                || schema.getEnum() != null;
     }
 
     private void verifyWellFormed(Schema schema) {
@@ -97,15 +156,9 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyRequired(Boolean required, Node node) {
-        if (TRUE.equals(required) && !hasPayload(node))
+    private void verifyRequired(Boolean required, boolean semanticallyPresent) {
+        if (TRUE.equals(required) && !semanticallyPresent)
             throw new IllegalArgumentException("Required node has no value, items, or object fields.");
-    }
-
-    private boolean hasPayload(Node node) {
-        return node.getValue() != null
-                || node.getItems() != null
-                || (node.getProperties() != null && !node.getProperties().isEmpty());
     }
 
     private void verifyMinLength(BigInteger minLength, Node node) {
@@ -277,10 +330,7 @@ public class SchemaVerifier implements MergingProcessor {
             return;
         }
         if (node.getValue() == null) {
-            if (hasPayload(node)) {
-                throw wrongKind("enum", "scalar", node);
-            }
-            return;
+            throw wrongKind("enum", "scalar", node);
         }
 
         String nodeBlueId = comparableBlueId(node);
@@ -300,9 +350,6 @@ public class SchemaVerifier implements MergingProcessor {
 
     private Object requireScalarPayload(String keyword, Node node, Class<?> expectedClass, String expected) {
         Object value = node.getValue();
-        if (value == null && !hasPayload(node)) {
-            return null;
-        }
         if (!expectedClass.isInstance(value)) {
             throw wrongKind(keyword, expected, node);
         }
@@ -310,13 +357,13 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     private void requireListPayload(String keyword, Node node) {
-        if (node.getValue() != null || (node.getProperties() != null && !node.getProperties().isEmpty())) {
+        if (node.getItems() == null) {
             throw wrongKind(keyword, "List payload", node);
         }
     }
 
     private void requireObjectPayload(String keyword, Node node) {
-        if (node.getValue() != null || node.getItems() != null) {
+        if (node.getProperties() == null || node.getProperties().isEmpty()) {
             throw wrongKind(keyword, "Dictionary/object payload", node);
         }
     }

@@ -54,4 +54,15 @@ public final class BlueConformanceFailure {
     public BlueLanguageErrorCategory getErrorCategory() {
         return errorCategory;
     }
+
+    @Override
+    public String toString() {
+        return "BlueConformanceFailure{" +
+                "fixtureId='" + fixtureId + '\'' +
+                ", operation='" + operation + '\'' +
+                ", exceptionClass='" + exceptionClass + '\'' +
+                ", errorCategory=" + errorCategory +
+                ", message='" + message + '\'' +
+                '}';
+    }
 }

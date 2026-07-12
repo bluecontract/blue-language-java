@@ -5,12 +5,15 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedNodeProvenance;
 import blue.language.snapshot.ResolvedSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Frozen preview state for processor-side read-your-writes workflows.
@@ -43,6 +46,7 @@ public final class WorkingDocument {
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final ProcessingSnapshotManager snapshotManager;
     private final boolean materializedFallback;
+    private final Map<String, Set<ResolvedNodeProvenance>> provenanceByPath;
     private ResolvedSnapshot snapshot;
 
     WorkingDocument(String originScope,
@@ -60,6 +64,7 @@ public final class WorkingDocument {
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.snapshot = snapshot;
+        this.provenanceByPath = snapshot != null ? snapshot.provenanceIndex() : Collections.emptyMap();
         this.materializedFallback = materializedFallback;
     }
 
@@ -116,7 +121,8 @@ public final class WorkingDocument {
 
     public ResolvedSnapshot snapshot() {
         if (snapshot == null) {
-            snapshot = new ResolvedSnapshot(canonicalRoot, resolvedRoot, canonicalRoot.blueId());
+            snapshot = new ResolvedSnapshot(canonicalRoot, resolvedRoot, canonicalRoot.blueId(),
+                    provenanceByPath);
         }
         return snapshot;
     }

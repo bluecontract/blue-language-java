@@ -4,7 +4,7 @@ operation: lintPublishableDocumentation
 description: publishable Blue Language 1.0 files use the single conformance target
   and canonical section 1 heading
 publishableFiles:
-- language/1.0/spec.md
+- specifications/language/1.0/spec.md
 requiredHeadings:
 - '## 1. Scope, Goals, Versioning, and Conformance'
 forbiddenJoinedTerms:

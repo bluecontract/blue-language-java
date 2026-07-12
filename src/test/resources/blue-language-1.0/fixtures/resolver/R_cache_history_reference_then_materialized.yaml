@@ -1,0 +1,33 @@
+id: R_cache_history_reference_then_materialized
+category: Canonicalization
+operation: scenario
+description: reference-first history does not change canonical identity for either source representation
+provider:
+- requestedBlueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+  returnedNode:
+    name: Scenario Base Subject
+- requestedBlueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+  returnedNode:
+    name: Scenario Subject
+    type:
+      blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+    identifier: subject-1
+steps:
+- action: canonicalize
+  source:
+    blueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+  expectedCanonicalOverlay:
+    blueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+  expectedContentBlueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+- action: canonicalize
+  source:
+    name: Scenario Subject
+    type:
+      blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+    identifier: subject-1
+  expectedCanonicalOverlay:
+    name: Scenario Subject
+    type:
+      blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+    identifier: subject-1
+  expectedContentBlueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5

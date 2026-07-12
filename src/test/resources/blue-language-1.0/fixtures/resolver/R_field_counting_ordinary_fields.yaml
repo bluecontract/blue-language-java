@@ -1,0 +1,29 @@
+id: R_field_counting_ordinary_fields
+category: Schema
+operation: scenario
+description: minFields and maxFields count ordinary effective fields but not reserved metadata
+steps:
+- action: resolve
+  source:
+    name: Counted Object
+    description: reserved metadata is not an ordinary field
+    type: Dictionary
+    schema:
+      required: true
+      minFields: 1
+      maxFields: 1
+    field: present
+  expectedResolvedPaths:
+  - path: /field
+    expectedNode: {value: present}
+- action: resolve
+  expectError: true
+  expectedErrorCategory: SchemaViolation
+  source:
+    name: Counted Object
+    description: reserved metadata is not an ordinary field
+    type: Dictionary
+    schema:
+      required: true
+      maxFields: 0
+    field: present

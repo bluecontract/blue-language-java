@@ -1,5 +1,5 @@
 specVersion: '1.0'
-fixturePackageIdentity: sha256:3387cb4b6626fc56cec91d584b2df7f37c229e396dee990750ac50e762a1bc1d
+fixturePackageIdentity: sha256:e4017fef531dafcda0477cb539170ce30cd15fe81d9c499d23e4104f92e97d0e
 fixtures:
 - id: L_no_profile_era_language_conformance_terms
   category: DocumentationLint
@@ -232,3 +232,24 @@ fixtures:
 - id: R_schema_wrong_kind_keywords_rejected
   category: Schema
   path: resolver/R_schema_wrong_kind_keywords_rejected.yaml
+- id: F_reference_identity_then_typed_resolution
+  category: Provider
+  path: provider/F_reference_identity_then_typed_resolution.yaml
+- id: R_cache_history_reference_then_materialized
+  category: Canonicalization
+  path: resolver/R_cache_history_reference_then_materialized.yaml
+- id: R_cache_history_materialized_then_reference
+  category: Canonicalization
+  path: resolver/R_cache_history_materialized_then_reference.yaml
+- id: R_required_semantic_presence_completed_instance
+  category: Schema
+  path: resolver/R_required_semantic_presence_completed_instance.yaml
+- id: R_optional_schema_absence_and_wrong_kind
+  category: Schema
+  path: resolver/R_optional_schema_absence_and_wrong_kind.yaml
+- id: R_field_counting_ordinary_fields
+  category: Schema
+  path: resolver/R_field_counting_ordinary_fields.yaml
+- id: F_reference_only_content_is_not_materialized_content
+  category: Provider
+  path: provider/F_reference_only_content_is_not_materialized_content.yaml

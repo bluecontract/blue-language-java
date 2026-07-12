@@ -23,7 +23,8 @@ public final class BlueLanguageErrorClassifier {
                 || (lower.contains("requested") && lower.contains("blueid"))) {
             return BlueLanguageErrorCategory.ProviderBlueIdMismatch;
         }
-        if (lower.contains("provider returned no content")
+        if (lower.contains("provider returned reference-only content")
+                || lower.contains("provider returned no content")
                 || lower.contains("missing provider content")
                 || lower.contains("missing blue language fixture resource")
                 || lower.contains("missing fixture resource")) {

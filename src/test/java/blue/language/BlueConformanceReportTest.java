@@ -33,6 +33,7 @@ class BlueConformanceReportTest {
             "calculateCircularSetBlueIds",
             "preprocess",
             "resolve",
+            "scenario",
             "canonicalize",
             "calculateContentBlueId",
             "calculateSemanticBlueId",
@@ -66,6 +67,10 @@ class BlueConformanceReportTest {
         BlueConformanceReport report = blue.conformanceReport();
 
         assertEquals(BlueConformanceReport.computeFixturePackageIdentity(), report.getFixturePackageIdentity());
+        assertEquals(BlueConformanceReport.CANDIDATE_FIXTURE_PACKAGE_IDENTITY,
+                report.getFixturePackageIdentity());
+        assertEquals("feat/conformance-fixture-expansion@e5187af",
+                BlueConformanceReport.CANDIDATE_BLUE_SPEC_SOURCE);
         assertTrue(report.isReleaseGradeFixtureIdentity());
         assertTrue(BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles());
     }
@@ -126,7 +131,7 @@ class BlueConformanceReportTest {
     void runConformanceSuitePopulatesPassedAndFailedFixtureIds() {
         BlueConformanceReport report = new Blue().runConformanceSuite();
 
-        assertEquals(report.getFixtureIds(), report.getPassedFixtureIds());
+        assertEquals(report.getFixtureIds(), report.getPassedFixtureIds(), report.getFailures().toString());
         assertTrue(report.getFailedFixtureIds().isEmpty());
         assertTrue(report.getFailures().isEmpty());
         assertTrue(report.hasRequiredFixtureCoverage());

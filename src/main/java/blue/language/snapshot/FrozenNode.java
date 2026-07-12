@@ -47,7 +47,9 @@ public final class FrozenNode {
     private final boolean strictCanonical;
     private final boolean strictBlueIdValidation;
     private final boolean previousAnchorContext;
+    private final String verifiedContentBlueId;
     private final String blueId;
+    private final ResolvedStructuralKey resolvedStructuralKey;
 
     private FrozenNode(Builder builder) {
         this.name = builder.name;
@@ -70,8 +72,10 @@ public final class FrozenNode {
         this.strictCanonical = builder.strictCanonical;
         this.strictBlueIdValidation = builder.strictBlueIdValidation;
         this.previousAnchorContext = builder.previousAnchorContext;
+        this.verifiedContentBlueId = builder.verifiedContentBlueId;
         validatePayloadShape();
         this.blueId = computeBlueId();
+        this.resolvedStructuralKey = new ResolvedStructuralKey(this);
     }
 
     public static FrozenNode empty() {
@@ -86,8 +90,15 @@ public final class FrozenNode {
         return fromNode(node, false, null);
     }
 
-    public static FrozenNode fromResolvedNode(Node node, ResolvedReferenceInterner interner) {
+    public static FrozenNode fromResolvedNode(Node node, ResolvedStructuralInterner interner) {
         return fromNode(node, false, interner, false);
+    }
+
+    static FrozenNode fromVerifiedResolvedNode(String blueId,
+                                               Node node,
+                                               ResolvedStructuralInterner interner) {
+        Objects.requireNonNull(blueId, "blueId");
+        return fromNode(node, false, interner, false, false, blueId);
     }
 
     public static FrozenNode fromUncheckedCanonicalNode(Node node) {
@@ -98,26 +109,30 @@ public final class FrozenNode {
         return fromNode(node, strictCanonical, null, true);
     }
 
-    private static FrozenNode fromNode(Node node, boolean strictCanonical, ResolvedReferenceInterner interner) {
+    private static FrozenNode fromNode(Node node, boolean strictCanonical, ResolvedStructuralInterner interner) {
         return fromNode(node, strictCanonical, interner, strictCanonical);
     }
 
-    private static FrozenNode fromNode(Node node, boolean strictCanonical, ResolvedReferenceInterner interner, boolean strictBlueIdValidation) {
+    private static FrozenNode fromNode(Node node, boolean strictCanonical, ResolvedStructuralInterner interner, boolean strictBlueIdValidation) {
         return fromNode(node, strictCanonical, interner, strictBlueIdValidation, false);
     }
 
     private static FrozenNode fromNode(Node node,
                                        boolean strictCanonical,
-                                       ResolvedReferenceInterner interner,
+                                       ResolvedStructuralInterner interner,
                                        boolean strictBlueIdValidation,
                                        boolean previousAnchorContext) {
+        return fromNode(node, strictCanonical, interner, strictBlueIdValidation,
+                previousAnchorContext, null);
+    }
+
+    private static FrozenNode fromNode(Node node,
+                                       boolean strictCanonical,
+                                       ResolvedStructuralInterner interner,
+                                       boolean strictBlueIdValidation,
+                                       boolean previousAnchorContext,
+                                       String verifiedContentBlueId) {
         Objects.requireNonNull(node, "node");
-        if (!strictCanonical && interner != null && node.getBlueId() != null) {
-            FrozenNode cached = interner.lookup(node.getBlueId());
-            if (cached != null) {
-                return cached;
-            }
-        }
         FrozenNode frozen = builder()
                 .name(node.getName())
                 .description(node.getDescription())
@@ -141,16 +156,21 @@ public final class FrozenNode {
                 .strictCanonical(strictCanonical)
                 .strictBlueIdValidation(strictBlueIdValidation)
                 .previousAnchorContext(previousAnchorContext)
+                .verifiedContentBlueId(verifiedContentBlueId)
                 .build();
-        if (!strictCanonical && interner != null && node.getBlueId() != null && !node.isReferenceOnly()) {
-            return interner.intern(node.getBlueId(), frozen);
+        if (!strictCanonical && interner != null && verifiedContentBlueId == null) {
+            return interner.intern(frozen.resolvedStructuralKey(), frozen);
         }
         return frozen;
     }
 
+    public ResolvedStructuralKey resolvedStructuralKey() {
+        return resolvedStructuralKey;
+    }
+
     private static List<FrozenNode> freezeItems(List<Node> source,
                                                 boolean strictCanonical,
-                                                ResolvedReferenceInterner interner,
+                                                ResolvedStructuralInterner interner,
                                                 boolean strictBlueIdValidation) {
         List<FrozenNode> result = new ArrayList<>(source.size());
         for (Node item : source) {
@@ -170,7 +190,7 @@ public final class FrozenNode {
 
     private static Map<String, FrozenNode> freezeProperties(Map<String, Node> source,
                                                             boolean strictCanonical,
-                                                            ResolvedReferenceInterner interner,
+                                                            ResolvedStructuralInterner interner,
                                                             boolean strictBlueIdValidation) {
         if (source == null || source.isEmpty()) {
             return null;
@@ -396,6 +416,10 @@ public final class FrozenNode {
         return strictBlueIdValidation;
     }
 
+    boolean isVerifiedStandaloneContentFor(String expectedBlueId) {
+        return Objects.equals(expectedBlueId, verifiedContentBlueId);
+    }
+
     boolean isListElementContext() {
         return previousAnchorContext;
     }
@@ -517,7 +541,8 @@ public final class FrozenNode {
                 .inlineValue(inlineValue)
                 .strictCanonical(strictCanonical)
                 .strictBlueIdValidation(strictBlueIdValidation)
-                .previousAnchorContext(previousAnchorContext);
+                .previousAnchorContext(previousAnchorContext)
+                .verifiedContentBlueId(verifiedContentBlueId);
     }
 
     private String computeBlueId() {
@@ -700,6 +725,7 @@ public final class FrozenNode {
         private boolean strictCanonical = true;
         private boolean strictBlueIdValidation = true;
         private boolean previousAnchorContext;
+        private String verifiedContentBlueId;
 
         Builder name(String name) {
             this.name = name;
@@ -801,14 +827,119 @@ public final class FrozenNode {
             return this;
         }
 
+        Builder verifiedContentBlueId(String verifiedContentBlueId) {
+            this.verifiedContentBlueId = verifiedContentBlueId;
+            return this;
+        }
+
         FrozenNode build() {
             return new FrozenNode(this);
         }
     }
 
-    public interface ResolvedReferenceInterner {
-        FrozenNode lookup(String blueId);
+    public interface ResolvedStructuralInterner {
+        FrozenNode intern(ResolvedStructuralKey structuralKey, FrozenNode node);
+    }
 
-        FrozenNode intern(String blueId, FrozenNode node);
+    /**
+     * Exact immutable identity for one frozen representation.
+     *
+     * <p>This deliberately includes representation and provenance fields that
+     * semantic Content BlueIds omit. It is therefore suitable only for object
+     * interning, never for language identity.</p>
+     */
+    public static final class ResolvedStructuralKey {
+        private final List<Object> fields;
+        private final int hashCode;
+
+        private ResolvedStructuralKey(FrozenNode node) {
+            List<Object> exact = new ArrayList<>();
+            exact.add(node.name);
+            exact.add(node.description);
+            exact.add(keyOf(node.type));
+            exact.add(keyOf(node.itemType));
+            exact.add(keyOf(node.keyType));
+            exact.add(keyOf(node.valueType));
+            exact.add(node.value);
+            exact.add(keysOf(node.items));
+            exact.add(propertyKeysOf(node.properties));
+            exact.add(keyOf(node.contracts));
+            exact.add(node.referenceBlueId);
+            exact.add(node.schema != null ? schemaObject(node.schema) : null);
+            exact.add(node.mergePolicy);
+            exact.add(node.previousBlueId);
+            exact.add(node.position);
+            exact.add(keyOf(node.blue));
+            exact.add(node.inlineValue);
+            exact.add(node.strictCanonical);
+            exact.add(node.strictBlueIdValidation);
+            exact.add(node.previousAnchorContext);
+            this.fields = Collections.unmodifiableList(exact);
+            this.hashCode = fields.hashCode();
+        }
+
+        private static ResolvedStructuralKey keyOf(FrozenNode node) {
+            return node != null ? node.resolvedStructuralKey : null;
+        }
+
+        private static List<ResolvedStructuralKey> keysOf(List<FrozenNode> nodes) {
+            if (nodes == null) {
+                return null;
+            }
+            List<ResolvedStructuralKey> keys = new ArrayList<>(nodes.size());
+            for (FrozenNode node : nodes) {
+                keys.add(keyOf(node));
+            }
+            return Collections.unmodifiableList(keys);
+        }
+
+        private static List<PropertyKey> propertyKeysOf(Map<String, FrozenNode> properties) {
+            if (properties == null) {
+                return null;
+            }
+            List<PropertyKey> keys = new ArrayList<>(properties.size());
+            for (Map.Entry<String, FrozenNode> entry : properties.entrySet()) {
+                keys.add(new PropertyKey(entry.getKey(), keyOf(entry.getValue())));
+            }
+            return Collections.unmodifiableList(keys);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return this == other || other instanceof ResolvedStructuralKey
+                    && fields.equals(((ResolvedStructuralKey) other).fields);
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCode;
+        }
+    }
+
+    private static final class PropertyKey {
+        private final String name;
+        private final ResolvedStructuralKey value;
+
+        private PropertyKey(String name, ResolvedStructuralKey value) {
+            this.name = name;
+            this.value = value;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof PropertyKey)) {
+                return false;
+            }
+            PropertyKey that = (PropertyKey) other;
+            return Objects.equals(name, that.name) && Objects.equals(value, that.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, value);
+        }
     }
 }

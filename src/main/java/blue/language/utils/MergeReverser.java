@@ -9,13 +9,14 @@ import java.util.function.Function;
 
 import static blue.language.utils.Nodes.NodeField.*;
 import static blue.language.utils.Nodes.hasFieldsAndMayHaveFields;
+import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
 
 public class MergeReverser {
 
     /**
-     * @deprecated Use {@link #reverseToCanonicalOverlay(Node)} for Content
-     * BlueId identity or {@link #reverseToMinimizedOverlay(Node)} for
-     * author-facing minimized output.
+     * @deprecated Use {@code Blue.canonicalize(source)} or
+     * {@link #reverseToCanonicalOverlay(Node, Node)} for Content BlueId identity,
+     * or {@link #reverseToMinimizedOverlay(Node)} for author-facing minimized output.
      */
     @Deprecated
     public Node reverse(Node mergedNode) {
@@ -28,13 +29,29 @@ public class MergeReverser {
         return minimalNode;
     }
 
-    public Node reverseToCanonicalOverlay(Node mergedNode) {
+    /**
+     * Reconstructs a canonical overlay while retaining pure-reference provenance
+     * from the preprocessed source document.
+     *
+     * @param mergedNode completed resolved view
+     * @param sourceNode preprocessed source that produced the resolved view
+     * @return strict canonical overlay
+     */
+    public Node reverseToCanonicalOverlay(Node mergedNode, Node sourceNode) {
         Node minimalNode = new Node();
-        reverseNode(minimalNode, mergedNode, mergedNode.getType(), true);
+        reverseNode(minimalNode, mergedNode, mergedNode.getType(), true, sourceNode);
         return minimalNode;
     }
 
     private void reverseNode(Node minimal, Node merged, Node fromType, boolean canonicalOverlay) {
+        reverseNode(minimal, merged, fromType, canonicalOverlay, null);
+    }
+
+    private void reverseNode(Node minimal,
+                             Node merged,
+                             Node fromType,
+                             boolean canonicalOverlay,
+                             Node source) {
 
         if (merged.getBlueId() != null && fromType != null && merged.getBlueId().equals(fromType.getBlueId())) {
             return;
@@ -73,7 +90,9 @@ public class MergeReverser {
             Node fromTypeContracts = fromType != null ? fromType.getContracts() : null;
             if (!sameNodeBlueId(merged.getContracts(), fromTypeContracts)) {
                 Node minimalContracts = new Node();
-                reverseNode(minimalContracts, merged.getContracts(), fromTypeContracts, canonicalOverlay);
+                Node sourceContracts = source != null ? source.getContracts() : null;
+                reverseNode(minimalContracts, merged.getContracts(), fromTypeContracts,
+                        canonicalOverlay, sourceContracts);
                 if (!Nodes.isEmptyNode(minimalContracts)) {
                     minimal.contracts(minimalContracts);
                 }
@@ -83,9 +102,11 @@ public class MergeReverser {
         if (merged.getItems() != null) {
             List<Node> minimalItems = new ArrayList<>();
             if (canonicalOverlay) {
-                for (Node item : merged.getItems()) {
+                for (int index = 0; index < merged.getItems().size(); index++) {
+                    Node item = merged.getItems().get(index);
                     Node minimalItem = new Node();
-                    reverseNode(minimalItem, item, null, true);
+                    reverseNode(minimalItem, item, null, true,
+                            sourceItem(source, index, merged.getItems().size()));
                     if (Nodes.isEmptyNode(minimalItem)) {
                         minimalItems.add(Nodes.emptyPlaceholder());
                     } else {
@@ -106,7 +127,7 @@ public class MergeReverser {
                         continue;
                     }
                     Node minimalItem = new Node();
-                    reverseNode(minimalItem, merged.getItems().get(i), inheritedItems.get(i), false);
+                    reverseNode(minimalItem, merged.getItems().get(i), inheritedItems.get(i), false, null);
                     if (!Nodes.isEmptyNode(minimalItem)) {
                         minimalItem.position(i);
                         minimalItems.add(minimalItem);
@@ -115,7 +136,7 @@ public class MergeReverser {
 
                 for (int i = inheritedSize; i < merged.getItems().size(); i++) {
                     Node minimalItem = new Node();
-                    reverseNode(minimalItem, merged.getItems().get(i), null, false);
+                    reverseNode(minimalItem, merged.getItems().get(i), null, false, null);
                     minimalItems.add(minimalItem);
                 }
 
@@ -127,7 +148,7 @@ public class MergeReverser {
             } else {
                 for (Node item : merged.getItems()) {
                     Node minimalItem = new Node();
-                    reverseNode(minimalItem, item, null, false);
+                    reverseNode(minimalItem, item, null, false, null);
                     minimalItems.add(minimalItem);
                 }
                 minimal.items(minimalItems);
@@ -147,7 +168,11 @@ public class MergeReverser {
                     continue;
                 }
                 Node minimalProperty = new Node();
-                reverseNode(minimalProperty, mergedProperty, fromTypeProperty, canonicalOverlay);
+                Node sourceProperty = source != null && source.getProperties() != null
+                        ? source.getProperties().get(key)
+                        : null;
+                reverseNode(minimalProperty, mergedProperty, fromTypeProperty,
+                        canonicalOverlay, sourceProperty);
                 if (!Nodes.isEmptyNode(minimalProperty)) {
                     minimalProperties.put(key, minimalProperty);
                 }
@@ -157,6 +182,41 @@ public class MergeReverser {
             }
         }
 
+        if (canonicalOverlay && source != null && source.isReferenceOnly()) {
+            minimal.replaceWith(new Node().blueId(source.getBlueId()));
+        }
+
+    }
+
+    private Node sourceItem(Node source, int resolvedIndex, int resolvedSize) {
+        if (source == null || source.getItems() == null) {
+            return null;
+        }
+        List<Node> appended = new ArrayList<>();
+        for (Node item : source.getItems()) {
+            if (item.getPreviousBlueId() != null) {
+                continue;
+            }
+            if (item.getPosition() != null) {
+                if (item.getPosition() == resolvedIndex) {
+                    Node positioned = item.clone();
+                    positioned.position(null);
+                    if (positioned.getProperties() != null
+                            && positioned.getProperties().containsKey(LIST_CONTROL_REPLACE)) {
+                        return positioned.getProperties().get(LIST_CONTROL_REPLACE);
+                    }
+                    return positioned;
+                }
+                continue;
+            }
+            appended.add(item);
+        }
+        int appendedStart = resolvedSize - appended.size();
+        int appendedIndex = resolvedIndex - appendedStart;
+        if (appendedIndex >= 0 && appendedIndex < appended.size()) {
+            return appended.get(appendedIndex);
+        }
+        return null;
     }
 
     private boolean sameSchema(Schema left, Schema right) {

@@ -33,6 +33,7 @@ public final class BlueConformanceSuiteRunner {
             "calculateCircularSetBlueIds",
             "preprocess",
             "resolve",
+            "scenario",
             "canonicalize",
             "calculateContentBlueId",
             "calculateSemanticBlueId",
@@ -56,7 +57,7 @@ public final class BlueConformanceSuiteRunner {
             try {
                 runFixture(fixture);
                 passed.add(fixture.id);
-            } catch (RuntimeException | AssertionError e) {
+            } catch (RuntimeException | AssertionError | VirtualMachineError e) {
                 failures.add(failure(fixture, e));
             }
         }
@@ -132,6 +133,8 @@ public final class BlueConformanceSuiteRunner {
             assertCanonicalOverlayIsValidBlueIdInput((Node) actual);
         } else if ("resolve".equals(operation)) {
             assertExpectedNode(spec, "expectedResolved", (Node) actual);
+        } else if ("scenario".equals(operation)) {
+            // Step-specific assertions are performed while running the scenario.
         } else if ("expand".equals(operation)) {
             assertExpectedNode(spec, "expectedExpanded", (Node) actual);
             assertExpectedNodeBlueIdIfPresent(spec, (Node) actual, requirePresent(spec, "source"));
@@ -148,6 +151,10 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static Object runOperation(JsonNode spec, String operation) {
+        if ("scenario".equals(operation)) {
+            runScenario(spec);
+            return null;
+        }
         Blue blue = new Blue(provider(spec.get("provider")));
         if ("parseSource".equals(operation)) {
             return blue.parseSourceYaml(UncheckedObjectMapper.YAML_MAPPER.writeValueAsString(requirePresent(spec, "source")));
@@ -209,6 +216,88 @@ public final class BlueConformanceSuiteRunner {
             return null;
         }
         throw new IllegalArgumentException("Unsupported fixture operation: " + operation);
+    }
+
+    private static void runScenario(JsonNode spec) {
+        Blue blue = new Blue(provider(spec.get("provider")));
+        JsonNode steps = requireNonNull(spec, "steps");
+        if (!steps.isArray() || steps.size() == 0) {
+            throw new IllegalArgumentException("Scenario fixtures require at least one step.");
+        }
+        for (int index = 0; index < steps.size(); index++) {
+            JsonNode step = steps.get(index);
+            String action = requireNonNull(step, "action").asText();
+            boolean expectError = step.path("expectError").asBoolean(false);
+            if (expectError) {
+                try {
+                    runScenarioAction(blue, step, action);
+                } catch (RuntimeException expected) {
+                    assertExpectedErrorCategory(step, expected);
+                    continue;
+                }
+                throw new AssertionError("Scenario step " + index
+                        + " expected an error but succeeded: " + action);
+            }
+
+            Object actual = runScenarioAction(blue, step, action);
+            assertScenarioStep(step, action, actual);
+        }
+    }
+
+    private static Object runScenarioAction(Blue blue, JsonNode step, String action) {
+        Node source = readNode(requirePresent(step, "source"));
+        if ("resolve".equals(action)) {
+            return blue.resolve(source);
+        }
+        if ("canonicalize".equals(action)) {
+            return blue.canonicalize(source);
+        }
+        if ("calculateContentBlueId".equals(action)) {
+            return blue.calculateSemanticBlueId(source);
+        }
+        throw new IllegalArgumentException("Unsupported scenario action: " + action);
+    }
+
+    private static void assertScenarioStep(JsonNode step, String action, Object actual) {
+        if ("resolve".equals(action)) {
+            Node resolved = (Node) actual;
+            assertExpectedNodeIfPresent(step, "expectedResolved", resolved);
+            assertExpectedResolvedPaths(step, resolved);
+            return;
+        }
+        if ("canonicalize".equals(action)) {
+            Node canonical = (Node) actual;
+            assertExpectedNode(step, "expectedCanonicalOverlay", canonical);
+            assertCanonicalOverlayIsValidBlueIdInput(canonical);
+            if (step.has("expectedContentBlueId")) {
+                assertExpectedText(step, "expectedContentBlueId",
+                        BlueIdCalculator.calculateBlueId(canonical));
+            }
+            return;
+        }
+        if ("calculateContentBlueId".equals(action)) {
+            assertExpectedText(step, "expectedContentBlueId", (String) actual);
+            return;
+        }
+        throw new IllegalArgumentException("Unsupported scenario action: " + action);
+    }
+
+    private static void assertExpectedNodeIfPresent(JsonNode spec, String field, Node actual) {
+        if (spec.has(field)) {
+            assertExpectedNode(spec, field, actual);
+        }
+    }
+
+    private static void assertExpectedResolvedPaths(JsonNode step, Node resolved) {
+        JsonNode paths = step.get("expectedResolvedPaths");
+        if (paths == null) {
+            return;
+        }
+        for (JsonNode assertion : paths) {
+            String path = requireNonNull(assertion, "path").asText();
+            Node selected = BlueViewPath.select(resolved, path);
+            assertExpectedNode(assertion, "expectedNode", selected);
+        }
     }
 
     private static void runAssertViewPath(JsonNode spec) {
@@ -343,10 +432,87 @@ public final class BlueConformanceSuiteRunner {
         if (!OPERATIONS.contains(operation)) {
             throw new IllegalArgumentException("Unsupported fixture operation: " + operation);
         }
-        if (!spec.path("expectError").asBoolean(false)) {
+        if ("scenario".equals(operation)) {
+            validateScenarioMetadata(spec);
+        } else if (!spec.path("expectError").asBoolean(false)) {
             requireExpectedOutput(spec, operation);
         } else {
             validateExpectedErrorCategoryFields(spec);
+        }
+    }
+
+    private static void validateScenarioMetadata(JsonNode spec) {
+        JsonNode steps = requireNonNull(spec, "steps");
+        if (!steps.isArray() || steps.size() == 0) {
+            throw new IllegalArgumentException("Scenario fixtures require at least one step.");
+        }
+        Set<String> actions = new HashSet<>(Arrays.asList(
+                "resolve", "canonicalize", "calculateContentBlueId"));
+        for (JsonNode step : steps) {
+            String action = requireNonNull(step, "action").asText();
+            if (!actions.contains(action)) {
+                throw new IllegalArgumentException("Unsupported scenario action: " + action);
+            }
+            requireNonNull(step, "source");
+            if (step.path("expectError").asBoolean(false)) {
+                validateScenarioErrorStep(step);
+                continue;
+            }
+            validateScenarioSuccessStep(step, action);
+        }
+    }
+
+    private static void validateScenarioSuccessStep(JsonNode step, String action) {
+        Set<String> outputFields = scenarioOutputFields(step);
+        if ("resolve".equals(action)) {
+            JsonNode paths = step.get("expectedResolvedPaths");
+            if (paths != null && (!paths.isArray() || paths.size() == 0)) {
+                throw new IllegalArgumentException("expectedResolvedPaths must be a non-empty list.");
+            }
+            boolean hasPaths = paths != null && paths.isArray() && paths.size() > 0;
+            if (!step.has("expectedResolved") && !hasPaths) {
+                throw new IllegalArgumentException(
+                        "resolve requires expectedResolved or a non-empty expectedResolvedPaths list.");
+            }
+            requireOnlyScenarioOutputs(outputFields, "expectedResolved", "expectedResolvedPaths");
+            return;
+        }
+        if ("canonicalize".equals(action)) {
+            requireNonNull(step, "expectedCanonicalOverlay");
+            requireOnlyScenarioOutputs(outputFields,
+                    "expectedCanonicalOverlay", "expectedContentBlueId");
+            return;
+        }
+        requireNonNull(step, "expectedContentBlueId");
+        requireOnlyScenarioOutputs(outputFields, "expectedContentBlueId");
+    }
+
+    private static void validateScenarioErrorStep(JsonNode step) {
+        boolean one = step.has("expectedErrorCategory") ^ step.has("expectedErrorCategories");
+        if (!one) {
+            throw new IllegalArgumentException("Scenario error steps require exactly one error-category field.");
+        }
+        validateExpectedErrorCategoryFields(step);
+        if (!scenarioOutputFields(step).isEmpty()) {
+            throw new IllegalArgumentException("Scenario error steps cannot declare success-output assertions.");
+        }
+    }
+
+    private static Set<String> scenarioOutputFields(JsonNode step) {
+        Set<String> fields = new HashSet<>();
+        for (String field : Arrays.asList("expectedResolved", "expectedResolvedPaths",
+                "expectedCanonicalOverlay", "expectedContentBlueId", "expectedProvenance")) {
+            if (step.has(field)) {
+                fields.add(field);
+            }
+        }
+        return fields;
+    }
+
+    private static void requireOnlyScenarioOutputs(Set<String> actual, String... allowedFields) {
+        Set<String> allowed = new HashSet<>(Arrays.asList(allowedFields));
+        if (!allowed.containsAll(actual)) {
+            throw new IllegalArgumentException("Unsupported scenario assertions: " + actual);
         }
     }
 
@@ -394,6 +560,10 @@ public final class BlueConformanceSuiteRunner {
         }
         if ("resolve".equals(operation)) {
             requireNonNull(spec, "expectedResolved");
+            return;
+        }
+        if ("scenario".equals(operation)) {
+            requireNonNull(spec, "steps");
             return;
         }
         if ("expand".equals(operation)) {
@@ -608,8 +778,11 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static String readTextResource(String resource) {
+        String bundledResource = resource.startsWith("specifications/")
+                ? resource.substring("specifications/".length())
+                : resource;
         try (InputStream inputStream = BlueConformanceSuiteRunner.class.getClassLoader()
-                .getResourceAsStream(resource)) {
+                .getResourceAsStream(bundledResource)) {
             if (inputStream == null) {
                 throw new IllegalArgumentException("Missing publishable resource: " + resource);
             }

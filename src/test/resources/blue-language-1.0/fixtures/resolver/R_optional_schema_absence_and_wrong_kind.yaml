@@ -1,0 +1,47 @@
+id: R_optional_schema_absence_and_wrong_kind
+category: Schema
+operation: scenario
+description: optional absence skips payload checks while present incompatible kinds fail by family
+steps:
+- action: resolve
+  source:
+    type:
+      text: {schema: {minLength: 1, maxLength: 4}}
+      number: {schema: {minimum: 0, maximum: 10, multipleOf: 2}}
+      list: {schema: {minItems: 1, maxItems: 2, uniqueItems: true}}
+      object: {schema: {minFields: 1, maxFields: 2}}
+      choice: {schema: {enum: [allowed]}}
+    marker: present
+  expectedResolvedPaths:
+  - path: /marker
+    expectedNode: {value: present}
+- action: resolve
+  expectError: true
+  expectedErrorCategory: SchemaViolation
+  source:
+    schema: {minLength: 1}
+    items: [wrong]
+- action: resolve
+  expectError: true
+  expectedErrorCategory: SchemaViolation
+  source:
+    schema: {minimum: 0}
+    value: wrong
+- action: resolve
+  expectError: true
+  expectedErrorCategory: SchemaViolation
+  source:
+    schema: {minItems: 1}
+    value: wrong
+- action: resolve
+  expectError: true
+  expectedErrorCategory: SchemaViolation
+  source:
+    schema: {minFields: 1}
+    items: [wrong]
+- action: resolve
+  expectError: true
+  expectedErrorCategory: SchemaViolation
+  source:
+    schema: {enum: [allowed]}
+    items: [wrong]

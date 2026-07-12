@@ -393,7 +393,10 @@ class ResolvedSnapshotTest {
         ResolvedSnapshot instance = blue.loadSnapshot(productInstance(delegate, "from-preloaded-type"));
 
         assertEquals(0, countingProvider.fetchCount());
-        assertSame(precomputedType.frozenResolvedRoot(), instance.frozenResolvedRoot().getType());
+        assertNotSame(precomputedType.frozenResolvedRoot(), instance.frozenResolvedRoot().getType());
+        assertNull(precomputedType.frozenResolvedRoot().getReferenceBlueId());
+        assertEquals(precomputedType.blueId(),
+                instance.frozenResolvedRoot().getType().getReferenceBlueId());
         assertEquals("base", instance.resolvedRoot().getAsText("/baseLabel"));
     }
 

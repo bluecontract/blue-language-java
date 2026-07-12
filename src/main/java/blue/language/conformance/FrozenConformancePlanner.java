@@ -123,7 +123,7 @@ final class FrozenConformancePlanner {
         Node resolved = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
                 .resolve(canonical, Limits.NO_LIMITS);
         return new GeneralizedNode(reuseUnchangedSubtrees(node,
-                FrozenNode.fromResolvedNode(resolved, resolvedReferenceCache)), true, metadataFields);
+                resolvedReferenceCache.freezeResolved(resolved)), true, metadataFields);
     }
 
     private boolean hasTypeMetadata(FrozenNode node) {
@@ -220,7 +220,7 @@ final class FrozenConformancePlanner {
         Node resolvedType = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
                 .resolve(type.toNode(), Limits.NO_LIMITS);
         Node parentType = resolvedType.getType();
-        return parentType != null ? FrozenNode.fromResolvedNode(parentType, resolvedReferenceCache) : null;
+        return parentType != null ? resolvedReferenceCache.freezeResolved(parentType) : null;
     }
 
     private String typeReferenceBlueId(FrozenNode type) {
