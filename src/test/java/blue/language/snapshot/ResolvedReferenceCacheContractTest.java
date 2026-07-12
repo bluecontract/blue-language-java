@@ -2,11 +2,14 @@ package blue.language.snapshot;
 
 import blue.language.Blue;
 import blue.language.NodeProvider;
+import blue.language.merge.Merger;
+import blue.language.merge.Merger.SnapshotResolution;
 import blue.language.merge.Merger.VerifiedReferenceResolution;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,6 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ResolvedReferenceCacheContractTest {
+
+    @Test
+    void verifiedEvidenceProducerIsSealed() {
+        assertTrue(Modifier.isFinal(Merger.class.getModifiers()),
+                "Merger must be final because it issues verified resolution evidence");
+    }
 
     @Test
     void identityEquivalentCanonicalRepresentationsDoNotConflict() {
@@ -126,11 +135,13 @@ class ResolvedReferenceCacheContractTest {
         assertNotNull(verification);
         assertEquals(snapshot.blueId(), verification.requestedBlueId());
         assertEquals(verification.canonicalRoot().blueId(), verification.requestedBlueId());
-        java.lang.reflect.Constructor<?>[] constructors =
-                VerifiedReferenceResolution.class.getDeclaredConstructors();
-        for (java.lang.reflect.Constructor<?> constructor : constructors) {
-            assertFalse(Modifier.isPublic(constructor.getModifiers()));
-        }
+        assertSourceConstructorsArePrivate(VerifiedReferenceResolution.class);
+        assertSourceConstructorsArePrivate(SnapshotResolution.class);
+        assertNoPublicArbitraryResolutionFactory(Merger.class);
+        assertNoPublicArbitraryResolutionFactory(VerifiedReferenceResolution.class);
+        assertNoPublicArbitraryResolutionFactory(SnapshotResolution.class);
+        assertNoPublicArbitraryResolutionFactory(ResolvedSnapshot.class);
+        assertVerifiedCacheAcceptsOnlyEvidence();
     }
 
     @Test
@@ -281,5 +292,55 @@ class ResolvedReferenceCacheContractTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private void assertSourceConstructorsArePrivate(Class<?> type) {
+        int sourceConstructors = 0;
+        for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
+            if (constructor.isSynthetic()) {
+                assertFalse(Modifier.isPublic(constructor.getModifiers()),
+                        type.getSimpleName() + " compiler bridge must not be public");
+                continue;
+            }
+            sourceConstructors++;
+            assertTrue(Modifier.isPrivate(constructor.getModifiers()),
+                    type.getSimpleName() + " constructor must be private");
+        }
+        assertEquals(1, sourceConstructors,
+                type.getSimpleName() + " must have exactly one source constructor");
+    }
+
+    private void assertNoPublicArbitraryResolutionFactory(Class<?> type) {
+        for (Method method : type.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())
+                    || !Modifier.isStatic(method.getModifiers())) {
+                continue;
+            }
+            int frozenNodeParameters = 0;
+            boolean acceptsBlueId = false;
+            for (Class<?> parameterType : method.getParameterTypes()) {
+                acceptsBlueId |= parameterType == String.class;
+                frozenNodeParameters += parameterType == FrozenNode.class ? 1 : 0;
+            }
+            assertFalse(acceptsBlueId && frozenNodeParameters >= 2,
+                    type.getSimpleName() + "." + method.getName()
+                            + " must not accept an arbitrary BlueId/canonical/resolved tuple");
+        }
+    }
+
+    private void assertVerifiedCacheAcceptsOnlyEvidence() {
+        int verifiedWrites = 0;
+        for (Method method : ResolvedReferenceCache.class.getDeclaredMethods()) {
+            if (!"putVerifiedResolved".equals(method.getName())) {
+                continue;
+            }
+            verifiedWrites++;
+            assertEquals(1, method.getParameterTypes().length,
+                    "verified resolved cache writes must accept one evidence object");
+            assertEquals(VerifiedReferenceResolution.class, method.getParameterTypes()[0],
+                    "verified resolved cache writes must accept only resolver evidence");
+        }
+        assertEquals(1, verifiedWrites,
+                "there must be exactly one verified resolved cache-write API");
     }
 }

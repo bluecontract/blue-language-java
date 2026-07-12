@@ -29,7 +29,14 @@ import static blue.language.utils.Properties.LIST_TYPE;
 import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
 
-public class Merger implements NodeResolver {
+/**
+ * Concrete Blue Language merge engine.
+ *
+ * <p>This class is sealed because it issues verified reference-resolution
+ * evidence. Custom merge behavior must use {@link MergingProcessor}, which is
+ * the supported extension point.</p>
+ */
+public final class Merger implements NodeResolver {
 
     private final MergingProcessor mergingProcessor;
     private final NodeProvider nodeProvider;
