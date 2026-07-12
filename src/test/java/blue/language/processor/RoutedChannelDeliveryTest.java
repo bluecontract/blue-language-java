@@ -45,6 +45,7 @@ final class RoutedChannelDeliveryTest {
         assertEquals(1, handler.executions);
         assertCheckpoint(bundle, "source", true);
         assertCheckpoint(bundle, "target", false);
+        assertGas(fixture, 75L);
     }
 
     @Test
@@ -74,6 +75,7 @@ final class RoutedChannelDeliveryTest {
         assertEquals(Collections.singletonList("target"), handler.matchedChannels);
         assertEquals(Collections.singletonList("selected"), handler.payloads);
         assertEquals(1, handler.executions);
+        assertGas(fixture, 75L);
     }
 
     @Test
@@ -153,6 +155,7 @@ final class RoutedChannelDeliveryTest {
         assertFatalUnsupportedRoute(fixture);
         assertEquals(0, handler.executions);
         assertCheckpoint(bundle, "source", false);
+        assertGas(fixture, 155L);
     }
 
     @Test
@@ -219,8 +222,23 @@ final class RoutedChannelDeliveryTest {
         assertCheckpoint(bundle, "source-two", true);
         assertEquals(1, fixture.metrics.routedDeliveries);
         assertEquals(1, fixture.metrics.deduplicatedDeliveries);
-        assertEquals(100L, fixture.execution.runtime().totalGas(),
-                "two source matches and checkpoints, but one handler dispatch");
+        assertGas(fixture, 100L);
+    }
+
+    @Test
+    void staleRoutedDeliveryCostsOnlyCandidateAttempt() {
+        RoutingChannelProcessor channels = new RoutingChannelProcessor();
+        channels.deliver("stale-source", delivery("payload", null, "target", "operation-1"));
+        channels.markStale("stale-source");
+        HandlerProbe handler = new HandlerProbe(HandlerOutcome.SUCCESS);
+        Fixture fixture = fixture(channels, handler, document());
+        ContractBundle bundle = bundle("target", "stale-source", "target");
+
+        fixture.run("/", bundle, "stale-source", event("event-1"));
+
+        assertEquals(0, handler.executions);
+        assertCheckpoint(bundle, "stale-source", false);
+        assertGas(fixture, 5L);
     }
 
     @Test
@@ -242,6 +260,7 @@ final class RoutedChannelDeliveryTest {
         assertCheckpoint(bundle, "fresh-source", true);
         assertCheckpoint(bundle, "stale-source", false);
         assertEquals(0, fixture.metrics.deduplicatedDeliveries);
+        assertGas(fixture, 80L);
     }
 
     @Test
@@ -313,6 +332,7 @@ final class RoutedChannelDeliveryTest {
         assertEquals(0, fixture.metrics.deduplicatedDeliveries);
         assertCheckpoint(bundle, "source", false);
         assertEquals(ProcessorStatus.RUNTIME_FATAL, fixture.execution.result().status());
+        assertGas(fixture, 205L);
     }
 
     @Test
@@ -329,6 +349,7 @@ final class RoutedChannelDeliveryTest {
         assertEquals(1, handler.executions);
         assertCheckpoint(bundle, "source", false);
         assertEquals(ProcessorStatus.SUCCESS, fixture.execution.result().status());
+        assertGas(fixture, 105L);
     }
 
     @Test
@@ -447,6 +468,10 @@ final class RoutedChannelDeliveryTest {
         } else {
             assertNull(checkpoint.lastEvent(key), "unexpected checkpoint for " + key);
         }
+    }
+
+    private static void assertGas(Fixture fixture, long expected) {
+        assertEquals(expected, fixture.execution.runtime().totalGas());
     }
 
     private static void assertFatalUnsupportedRoute(Fixture fixture) {
