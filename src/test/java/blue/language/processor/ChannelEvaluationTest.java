@@ -66,6 +66,25 @@ class ChannelEvaluationTest {
         assertThrows(UnsupportedOperationException.class, () -> evaluation.deliveries().add(delivery));
     }
 
+    @Test
+    void deliveryCopiesPreserveRoutingMetadata() {
+        ChannelDelivery delivery = ChannelDelivery.of(amountEvent(4),
+                "event-4",
+                "source-checkpoint",
+                Boolean.TRUE,
+                "effective-channel",
+                "logical-delivery");
+
+        ChannelEvaluation evaluation = ChannelEvaluation.matchDeliveries(Collections.singletonList(delivery));
+
+        ChannelDelivery copied = evaluation.deliveries().get(0);
+        assertEquals("effective-channel", copied.handlerChannelKey());
+        assertEquals("logical-delivery", copied.logicalDeliveryKey());
+        assertEquals("source-checkpoint", copied.checkpointKey());
+        assertEquals("event-4", copied.eventId());
+        assertEquals(Boolean.TRUE, copied.shouldProcess());
+    }
+
     private static Node amountEvent(int amount) {
         return new Node().properties("amount", new Node().value(BigInteger.valueOf(amount)));
     }
