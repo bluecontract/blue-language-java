@@ -18,10 +18,46 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RootReferenceSnapshotTest {
+
+    private static final String SCENARIO_BASE_SUBJECT_ID =
+            "vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m";
+    private static final String SCENARIO_SUBJECT_ID =
+            "EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5";
+
+    @Test
+    void nestedReferenceThenMaterializedSnapshotsRemainIndependent() {
+        assertNestedSnapshotsRemainIndependent(true);
+    }
+
+    @Test
+    void nestedMaterializedThenReferenceSnapshotsRemainIndependent() {
+        assertNestedSnapshotsRemainIndependent(false);
+    }
+
+    @Test
+    void nestedEquivalentSnapshotsRetainTwoExactRepresentationsAndOneVerifiedIdentity() {
+        Node subject = new Node().name("Cache Cardinality Subject")
+                .properties("identifier", new Node().value("subject-1"));
+        String subjectId = new Blue().calculateBlueId(subject);
+        Node referenceHolder = new Node().properties("subject", reference(subjectId));
+        Node materializedHolder = new Node().properties("subject", subject);
+        Blue blue = new Blue();
+
+        ResolvedSnapshot referenced = blue.resolveToSnapshot(referenceHolder);
+        ResolvedSnapshot materialized = blue.resolveToSnapshot(materializedHolder);
+
+        assertNotSame(referenced, materialized);
+        assertEquals(referenced.blueId(), materialized.blueId());
+        assertEquals(2, blue.resolvedSnapshotCacheSize());
+        assertEquals(1, blue.resolvedReferenceCacheSize());
+        assertTrue(blue.cachedResolvedSnapshot(referenced.blueId()).isPresent());
+    }
 
     @Test
     void rootReferenceSnapshotDoesNotCertifyUnmaterializedContent() {
@@ -130,6 +166,47 @@ class RootReferenceSnapshotTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private void assertNestedSnapshotsRemainIndependent(boolean referenceFirst) {
+        Node baseSubject = new Node().name("Scenario Base Subject");
+        Node materializedSubject = new Node().name("Scenario Subject")
+                .type(reference(SCENARIO_BASE_SUBJECT_ID))
+                .properties("identifier", new Node().value("subject-1"));
+        BasicNodeProvider provider = new BasicNodeProvider(baseSubject, materializedSubject);
+        Blue blue = new Blue(provider);
+        Node referenceHolder = new Node().properties("subject", reference(SCENARIO_SUBJECT_ID));
+        Node materializedHolder = new Node().properties("subject", materializedSubject.clone());
+
+        assertEquals(SCENARIO_BASE_SUBJECT_ID, provider.getBlueIdByName("Scenario Base Subject"));
+        assertEquals(SCENARIO_SUBJECT_ID, provider.getBlueIdByName("Scenario Subject"));
+        String holderBlueId = blue.calculateBlueId(referenceHolder);
+        assertEquals(holderBlueId, blue.calculateBlueId(materializedHolder));
+
+        ResolvedSnapshot referenced;
+        ResolvedSnapshot materialized;
+        if (referenceFirst) {
+            referenced = assertDoesNotThrow(() -> blue.resolveToSnapshot(referenceHolder));
+            materialized = assertDoesNotThrow(() -> blue.resolveToSnapshot(materializedHolder));
+        } else {
+            materialized = assertDoesNotThrow(() -> blue.resolveToSnapshot(materializedHolder));
+            referenced = assertDoesNotThrow(() -> blue.resolveToSnapshot(referenceHolder));
+        }
+
+        assertEquals(holderBlueId, referenced.blueId());
+        assertEquals(holderBlueId, materialized.blueId());
+        assertNotSame(referenced, materialized);
+        assertTrue(referenced.frozenCanonicalRoot().property("subject").isReferenceOnly());
+        assertEquals(SCENARIO_SUBJECT_ID,
+                referenced.frozenCanonicalRoot().property("subject").getReferenceBlueId());
+        assertFalse(materialized.frozenCanonicalRoot().property("subject").isReferenceOnly());
+        assertEquals("Scenario Subject",
+                materialized.frozenCanonicalRoot().property("subject").getName());
+        assertEquals(SCENARIO_SUBJECT_ID,
+                referenced.frozenResolvedRoot().property("subject").getReferenceBlueId());
+        assertNull(materialized.frozenResolvedRoot().property("subject").getReferenceBlueId());
+        assertEquals("subject-1", materialized.resolvedRoot().getAsText("/subject/identifier"));
+        assertEquals(2, blue.resolvedSnapshotCacheSize());
     }
 
     private static final class Fixture {

@@ -1,7 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.model.Node;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.merge.Merger.VerifiedReferenceResolution;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -53,7 +53,6 @@ public final class ResolvedReferenceCache {
         requireCanonical(blueId, canonicalContent);
         VerifiedReferenceEntry retained = entriesByBlueId.compute(blueId, (ignored, existing) -> {
             if (existing != null) {
-                requireEquivalentCanonical(blueId, existing.canonicalContent, canonicalContent);
                 return existing;
             }
             return new VerifiedReferenceEntry(canonicalContent, null);
@@ -76,16 +75,15 @@ public final class ResolvedReferenceCache {
         return retained.canonicalContent;
     }
 
-    public FrozenNode putVerifiedResolved(String blueId,
-                                          FrozenNode canonicalContent,
-                                          FrozenNode fullyResolvedContent) {
+    public FrozenNode putVerifiedResolved(VerifiedReferenceResolution verification) {
+        Objects.requireNonNull(verification, "verification");
+        String blueId = verification.requestedBlueId();
+        FrozenNode canonicalContent = verification.canonicalRoot();
+        FrozenNode fullyResolvedContent = verification.resolvedRoot();
         Objects.requireNonNull(blueId, "blueId");
         requireCanonical(blueId, canonicalContent);
-        requireVerifiedResolved(blueId, fullyResolvedContent);
+        requireResolved(blueId, fullyResolvedContent);
         VerifiedReferenceEntry retained = entriesByBlueId.compute(blueId, (ignored, existing) -> {
-            if (existing != null) {
-                requireEquivalentCanonical(blueId, existing.canonicalContent, canonicalContent);
-            }
             FrozenNode retainedCanonical = existing != null ? existing.canonicalContent : canonicalContent;
             FrozenNode retainedResolved = existing != null && existing.fullyResolvedContent != null
                     ? existing.fullyResolvedContent
@@ -97,10 +95,6 @@ public final class ResolvedReferenceCache {
 
     public FrozenNode freezeResolved(Node node) {
         return FrozenNode.fromResolvedNode(node, resolvedGraphInterner);
-    }
-
-    public FrozenNode freezeVerifiedResolved(String blueId, Node node) {
-        return FrozenNode.fromVerifiedResolvedNode(blueId, node, resolvedGraphInterner);
     }
 
     /**
@@ -165,23 +159,10 @@ public final class ResolvedReferenceCache {
         }
     }
 
-    private void requireVerifiedResolved(String blueId, FrozenNode resolvedContent) {
+    private void requireResolved(String blueId, FrozenNode resolvedContent) {
         Objects.requireNonNull(resolvedContent, "fullyResolvedContent");
         if (resolvedContent.isReferenceOnly()) {
             throw new IllegalArgumentException("Verified resolved content must be materialized for blueId: " + blueId);
-        }
-        if (!resolvedContent.isVerifiedStandaloneContentFor(blueId)) {
-            throw new IllegalArgumentException("Resolved content was not verified as standalone content for blueId: "
-                    + blueId);
-        }
-    }
-
-    private void requireEquivalentCanonical(String blueId,
-                                            FrozenNode existing,
-                                            FrozenNode candidate) {
-        if (!NodeToMapListOrValue.get(existing.toNode())
-                .equals(NodeToMapListOrValue.get(candidate.toNode()))) {
-            throw new IllegalArgumentException("Conflicting verified canonical content for blueId: " + blueId);
         }
     }
 

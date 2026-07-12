@@ -47,7 +47,6 @@ public final class FrozenNode {
     private final boolean strictCanonical;
     private final boolean strictBlueIdValidation;
     private final boolean previousAnchorContext;
-    private final String verifiedContentBlueId;
     private final String blueId;
     private final ResolvedStructuralKey resolvedStructuralKey;
 
@@ -72,7 +71,6 @@ public final class FrozenNode {
         this.strictCanonical = builder.strictCanonical;
         this.strictBlueIdValidation = builder.strictBlueIdValidation;
         this.previousAnchorContext = builder.previousAnchorContext;
-        this.verifiedContentBlueId = builder.verifiedContentBlueId;
         validatePayloadShape();
         this.blueId = computeBlueId();
         this.resolvedStructuralKey = new ResolvedStructuralKey(this);
@@ -92,13 +90,6 @@ public final class FrozenNode {
 
     public static FrozenNode fromResolvedNode(Node node, ResolvedStructuralInterner interner) {
         return fromNode(node, false, interner, false);
-    }
-
-    static FrozenNode fromVerifiedResolvedNode(String blueId,
-                                               Node node,
-                                               ResolvedStructuralInterner interner) {
-        Objects.requireNonNull(blueId, "blueId");
-        return fromNode(node, false, interner, false, false, blueId);
     }
 
     public static FrozenNode fromUncheckedCanonicalNode(Node node) {
@@ -122,16 +113,6 @@ public final class FrozenNode {
                                        ResolvedStructuralInterner interner,
                                        boolean strictBlueIdValidation,
                                        boolean previousAnchorContext) {
-        return fromNode(node, strictCanonical, interner, strictBlueIdValidation,
-                previousAnchorContext, null);
-    }
-
-    private static FrozenNode fromNode(Node node,
-                                       boolean strictCanonical,
-                                       ResolvedStructuralInterner interner,
-                                       boolean strictBlueIdValidation,
-                                       boolean previousAnchorContext,
-                                       String verifiedContentBlueId) {
         Objects.requireNonNull(node, "node");
         FrozenNode frozen = builder()
                 .name(node.getName())
@@ -156,9 +137,8 @@ public final class FrozenNode {
                 .strictCanonical(strictCanonical)
                 .strictBlueIdValidation(strictBlueIdValidation)
                 .previousAnchorContext(previousAnchorContext)
-                .verifiedContentBlueId(verifiedContentBlueId)
                 .build();
-        if (!strictCanonical && interner != null && verifiedContentBlueId == null) {
+        if (!strictCanonical && interner != null) {
             return interner.intern(frozen.resolvedStructuralKey(), frozen);
         }
         return frozen;
@@ -416,10 +396,6 @@ public final class FrozenNode {
         return strictBlueIdValidation;
     }
 
-    boolean isVerifiedStandaloneContentFor(String expectedBlueId) {
-        return Objects.equals(expectedBlueId, verifiedContentBlueId);
-    }
-
     boolean isListElementContext() {
         return previousAnchorContext;
     }
@@ -541,8 +517,7 @@ public final class FrozenNode {
                 .inlineValue(inlineValue)
                 .strictCanonical(strictCanonical)
                 .strictBlueIdValidation(strictBlueIdValidation)
-                .previousAnchorContext(previousAnchorContext)
-                .verifiedContentBlueId(verifiedContentBlueId);
+                .previousAnchorContext(previousAnchorContext);
     }
 
     private String computeBlueId() {
@@ -725,7 +700,6 @@ public final class FrozenNode {
         private boolean strictCanonical = true;
         private boolean strictBlueIdValidation = true;
         private boolean previousAnchorContext;
-        private String verifiedContentBlueId;
 
         Builder name(String name) {
             this.name = name;
@@ -827,11 +801,6 @@ public final class FrozenNode {
             return this;
         }
 
-        Builder verifiedContentBlueId(String verifiedContentBlueId) {
-            this.verifiedContentBlueId = verifiedContentBlueId;
-            return this;
-        }
-
         FrozenNode build() {
             return new FrozenNode(this);
         }
@@ -844,7 +813,7 @@ public final class FrozenNode {
     /**
      * Exact immutable identity for one frozen representation.
      *
-     * <p>This deliberately includes representation and provenance fields that
+     * <p>This deliberately includes exact representation fields that
      * semantic Content BlueIds omit. It is therefore suitable only for object
      * interning, never for language identity.</p>
      */

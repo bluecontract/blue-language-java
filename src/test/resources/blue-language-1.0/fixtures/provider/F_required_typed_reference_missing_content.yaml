@@ -1,0 +1,23 @@
+id: F_required_typed_reference_missing_content
+category: Provider
+operation: resolve
+description: missing content required to validate a typed reference is provider-unavailable
+expectError: true
+expectedErrorCategory: ProviderUnavailable
+provider:
+- requestedBlueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+  returnedNode:
+    name: Scenario Base Subject
+- requestedBlueId: 6zwQDG7rVKE993zje8UYyXi1pWnNiUysCK9iRkUGUrT2
+  returnedNode:
+    name: Required Typed Reference Holder
+    subject:
+      type:
+        blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+      schema:
+        required: true
+source:
+  type:
+    blueId: 6zwQDG7rVKE993zje8UYyXi1pWnNiUysCK9iRkUGUrT2
+  subject:
+    blueId: FHWDoQowytnmgP2xdKmcjrczQxBipKRJvZV1qFq4Ftc5

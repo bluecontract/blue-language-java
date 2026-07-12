@@ -30,7 +30,6 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
-import blue.language.snapshot.ResolvedNodeProvenance;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
@@ -52,6 +51,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
@@ -70,7 +70,7 @@ public class Blue implements NodeResolver {
     private Limits globalLimits = NO_LIMITS;
     private DocumentProcessor documentProcessor;
     private final ConcurrentMap<String, ResolvedSnapshot> resolvedSnapshotsByBlueId = new ConcurrentHashMap<>();
-    private final ConcurrentMap<SnapshotCacheKey, ResolvedSnapshot>
+    private final ConcurrentMap<FrozenNode.ResolvedStructuralKey, ResolvedSnapshot>
             resolvedSnapshotsByCanonicalRepresentation = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Node> externalContractTypeNodes = new ConcurrentHashMap<>();
     private final List<ProcessingDocumentSnapshot> recentProcessingDocumentSnapshots = new ArrayList<>();
@@ -217,8 +217,10 @@ public class Blue implements NodeResolver {
 
     public ResolvedSnapshot resolveToSnapshot(Node node) {
         Node preprocessed = preprocess(node.clone());
-        Node resolved = resolve(preprocessed.clone());
-        return snapshotFromResolved(preprocessed, resolved, null);
+        Limits limits = combineWithGlobalLimits(NO_LIMITS);
+        Merger merger = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache);
+        return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
+                merger.resolveSnapshot(preprocessed, limits)));
     }
 
     public ResolvedSnapshot resolveToSnapshot(Object object) {
@@ -228,12 +230,11 @@ public class Blue implements NodeResolver {
     public ResolvedSnapshot loadSnapshot(Node canonical) {
         FrozenNode canonicalRoot = FrozenNode.fromNode(canonical);
         ResolvedSnapshot cached = resolvedSnapshotsByCanonicalRepresentation.get(
-                SnapshotCacheKey.of(canonicalRoot));
-        if (cached != null) {
+                canonicalRoot.resolvedStructuralKey());
+        if (cached != null && cached.verifiedReferenceResolution() != null) {
             return cached;
         }
-        Node resolved = resolve(canonicalRoot.toNode());
-        return snapshotFromResolved(canonicalRoot.toNode(), resolved, canonicalRoot);
+        return snapshotFromVerifiedCanonical(canonicalRoot);
     }
 
     public ResolvedSnapshot loadSnapshot(String blueId) {
@@ -246,7 +247,7 @@ public class Blue implements NodeResolver {
             throw new IllegalArgumentException("No content found for blueId: " + blueId);
         }
         Node canonical = nodes.size() == 1 ? providerContentWithoutRootIdentity(nodes.get(0)) : new Node().items(providerContentWithoutRootIdentity(nodes));
-        return loadSnapshot(canonical);
+        return snapshotFromVerifiedCanonical(FrozenNode.fromNode(canonical));
     }
 
     private Node providerContentWithoutRootIdentity(Node node) {
@@ -343,7 +344,7 @@ public class Blue implements NodeResolver {
     }
 
     public ResolvedSnapshot applyCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
-        return applyCanonicalPatch(snapshot, patch, nodeProvider);
+        return applyCanonicalPatch(snapshot, patch, this::snapshotFromVerifiedCanonical);
     }
 
     public Blue cacheResolvedSnapshot(ResolvedSnapshot snapshot) {
@@ -962,12 +963,17 @@ public class Blue implements NodeResolver {
     }
 
     private ResolvedSnapshot applyProcessingCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
-        return applyCanonicalPatch(snapshot, patch, processorSnapshotNodeProvider());
+        NodeProvider snapshotNodeProvider = processorSnapshotNodeProvider();
+        return applyCanonicalPatch(snapshot, patch,
+                canonicalRoot -> snapshotFromCanonical(canonicalRoot, snapshotNodeProvider));
     }
 
-    private ResolvedSnapshot applyCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch, NodeProvider snapshotNodeProvider) {
+    private ResolvedSnapshot applyCanonicalPatch(
+            ResolvedSnapshot snapshot,
+            JsonPatch patch,
+            Function<FrozenNode, ResolvedSnapshot> snapshotResolver) {
         CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
-        ResolvedSnapshot patchedSnapshot = snapshotFromCanonical(patched.root(), snapshotNodeProvider);
+        ResolvedSnapshot patchedSnapshot = snapshotResolver.apply(patched.root());
         if (!canMinimizePatchedOverride(patch)) {
             return patchedSnapshot;
         }
@@ -979,7 +985,7 @@ public class Blue implements NodeResolver {
             return patchedSnapshot;
         }
 
-        ResolvedSnapshot inheritedSnapshot = snapshotFromCanonical(withoutOverride.root(), snapshotNodeProvider);
+        ResolvedSnapshot inheritedSnapshot = snapshotResolver.apply(withoutOverride.root());
         FrozenNode patchedEffective = patchedSnapshot.resolvedAt(patched.path());
         FrozenNode inheritedEffective = inheritedSnapshot.resolvedAt(patched.path());
         if (patchedEffective != null
@@ -990,15 +996,27 @@ public class Blue implements NodeResolver {
         return patchedSnapshot;
     }
 
-    private ResolvedSnapshot snapshotFromCanonical(FrozenNode canonicalRoot, NodeProvider snapshotNodeProvider) {
+    private ResolvedSnapshot snapshotFromVerifiedCanonical(FrozenNode canonicalRoot) {
         ResolvedSnapshot cached = resolvedSnapshotsByCanonicalRepresentation.get(
-                SnapshotCacheKey.of(canonicalRoot));
+                canonicalRoot.resolvedStructuralKey());
+        if (cached != null && cached.verifiedReferenceResolution() != null) {
+            return cached;
+        }
+        Merger merger = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache);
+        return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
+                merger.resolveSnapshot(canonicalRoot, combineWithGlobalLimits(NO_LIMITS))));
+    }
+
+    private ResolvedSnapshot snapshotFromCanonical(FrozenNode canonicalRoot,
+                                                   NodeProvider snapshotNodeProvider) {
+        ResolvedSnapshot cached = resolvedSnapshotsByCanonicalRepresentation.get(
+                canonicalRoot.resolvedStructuralKey());
         if (cached != null) {
             return cached;
         }
+        Merger merger = new Merger(mergingProcessor, snapshotNodeProvider, resolvedReferenceCache);
         Node canonical = canonicalRoot.toNode();
-        Node resolved = new Merger(mergingProcessor, snapshotNodeProvider, resolvedReferenceCache)
-                .resolve(canonical.clone());
+        Node resolved = merger.resolve(canonical.clone(), combineWithGlobalLimits(NO_LIMITS));
         return snapshotFromResolved(canonical, resolved, canonicalRoot);
     }
 
@@ -1013,9 +1031,8 @@ public class Blue implements NodeResolver {
         }
         return cacheSnapshot(new ResolvedSnapshot(
                 canonicalRoot,
-                resolvedReferenceCache.freezeVerifiedResolved(canonicalRoot.blueId(), resolved),
-                canonicalRoot.blueId(),
-                snapshotProvenance(preprocessedSource, resolved)));
+                resolvedReferenceCache.freezeResolved(resolved),
+                canonicalRoot.blueId()));
     }
 
     private Set<String> processorContractPaths(Node root) {
@@ -1126,120 +1143,34 @@ public class Blue implements NodeResolver {
     }
 
     private ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
-        boolean materializedRoot = !snapshot.frozenCanonicalRoot().isReferenceOnly()
-                && !snapshot.frozenResolvedRoot().isReferenceOnly()
-                && snapshot.frozenCanonicalRoot().isStrictBlueIdValidation();
-        if (materializedRoot) {
-            resolvedReferenceCache.putVerifiedResolved(
-                    snapshot.blueId(), snapshot.frozenCanonicalRoot(), snapshot.frozenResolvedRoot());
+        if (snapshot.verifiedReferenceResolution() != null) {
+            resolvedReferenceCache.putVerifiedResolved(snapshot.verifiedReferenceResolution());
             resolvedSnapshotsByBlueId.putIfAbsent(snapshot.blueId(), snapshot);
         }
         resolvedReferenceCache.rememberResolvedGraph(snapshot.frozenResolvedRoot());
-        ResolvedSnapshot existing = resolvedSnapshotsByCanonicalRepresentation.putIfAbsent(
-                SnapshotCacheKey.of(snapshot.frozenCanonicalRoot()), snapshot);
-        return existing != null ? existing : snapshot;
+        FrozenNode.ResolvedStructuralKey key =
+                snapshot.frozenCanonicalRoot().resolvedStructuralKey();
+        while (true) {
+            ResolvedSnapshot existing = resolvedSnapshotsByCanonicalRepresentation.get(key);
+            if (existing == null) {
+                existing = resolvedSnapshotsByCanonicalRepresentation.putIfAbsent(key, snapshot);
+                if (existing == null) {
+                    return snapshot;
+                }
+            }
+            if (existing.verifiedReferenceResolution() == null
+                    && snapshot.verifiedReferenceResolution() != null) {
+                if (resolvedSnapshotsByCanonicalRepresentation.replace(key, existing, snapshot)) {
+                    return snapshot;
+                }
+                continue;
+            }
+            return existing;
+        }
     }
 
     private ResolvedSnapshot cacheProcessingSnapshot(ResolvedSnapshot snapshot) {
-        if (snapshot.frozenCanonicalRoot().isReferenceOnly()
-                || snapshot.frozenResolvedRoot().isReferenceOnly()) {
-            return cacheSnapshot(snapshot);
-        }
-        FrozenNode certifiedResolved = resolvedReferenceCache.freezeVerifiedResolved(
-                snapshot.blueId(), snapshot.resolvedRoot());
-        ResolvedSnapshot certified = new ResolvedSnapshot(
-                snapshot.frozenCanonicalRoot(),
-                certifiedResolved,
-                snapshot.blueId(),
-                snapshot.provenanceIndex());
-        return cacheSnapshot(certified);
-    }
-
-    private Map<String, Set<ResolvedNodeProvenance>> snapshotProvenance(Node source, Node resolved) {
-        Map<String, Set<ResolvedNodeProvenance>> provenance = new LinkedHashMap<>();
-        collectSnapshotProvenance(source, resolved, "/", provenance);
-        return provenance;
-    }
-
-    private static final class SnapshotCacheKey {
-        private final String blueId;
-        private final boolean sourceReference;
-        private final boolean strictBlueIdValidation;
-
-        private SnapshotCacheKey(String blueId,
-                                 boolean sourceReference,
-                                 boolean strictBlueIdValidation) {
-            this.blueId = blueId;
-            this.sourceReference = sourceReference;
-            this.strictBlueIdValidation = strictBlueIdValidation;
-        }
-
-        private static SnapshotCacheKey of(FrozenNode canonicalRoot) {
-            return new SnapshotCacheKey(canonicalRoot.blueId(),
-                    canonicalRoot.isReferenceOnly(),
-                    canonicalRoot.isStrictBlueIdValidation());
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (this == other) {
-                return true;
-            }
-            if (!(other instanceof SnapshotCacheKey)) {
-                return false;
-            }
-            SnapshotCacheKey that = (SnapshotCacheKey) other;
-            return sourceReference == that.sourceReference
-                    && strictBlueIdValidation == that.strictBlueIdValidation
-                    && blueId.equals(that.blueId);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = 31 * blueId.hashCode() + (sourceReference ? 1 : 0);
-            return 31 * result + (strictBlueIdValidation ? 1 : 0);
-        }
-    }
-
-    private void collectSnapshotProvenance(Node source,
-                                           Node resolved,
-                                           String path,
-                                           Map<String, Set<ResolvedNodeProvenance>> provenance) {
-        if (source == null) {
-            return;
-        }
-        Set<ResolvedNodeProvenance> kinds = new LinkedHashSet<>();
-        if (source.isReferenceOnly()) {
-            kinds.add(ResolvedNodeProvenance.SOURCE_REFERENCE);
-            if (resolved != null && !resolved.isReferenceOnly()) {
-                kinds.add(ResolvedNodeProvenance.PROVIDER_MATERIALIZED);
-            }
-        } else {
-            kinds.add(ResolvedNodeProvenance.INSTANCE_SUPPLIED);
-        }
-        provenance.put(path, kinds);
-
-        if (source.getProperties() != null) {
-            for (Map.Entry<String, Node> entry : source.getProperties().entrySet()) {
-                Node resolvedChild = resolved != null && resolved.getProperties() != null
-                        ? resolved.getProperties().get(entry.getKey()) : null;
-                collectSnapshotProvenance(entry.getValue(), resolvedChild,
-                        JsonPointer.append(path, entry.getKey()), provenance);
-            }
-        }
-        if (source.getContracts() != null) {
-            collectSnapshotProvenance(source.getContracts(),
-                    resolved != null ? resolved.getContracts() : null,
-                    JsonPointer.append(path, "contracts"), provenance);
-        }
-        if (source.getItems() != null) {
-            for (int index = 0; index < source.getItems().size(); index++) {
-                Node resolvedChild = resolved != null && resolved.getItems() != null
-                        && index < resolved.getItems().size() ? resolved.getItems().get(index) : null;
-                collectSnapshotProvenance(source.getItems().get(index), resolvedChild,
-                        JsonPointer.append(path, String.valueOf(index)), provenance);
-            }
-        }
+        return cacheSnapshot(snapshot);
     }
 
     private Limits combineWithGlobalLimits(Limits methodLimits) {

@@ -1,0 +1,14 @@
+id: B_nested_reference_materialized_equivalence
+category: BlueId
+operation: assertSameNodeBlueId
+description: a nested pure reference and its materialized subtree contribute the same identity
+left:
+  subject:
+    blueId: EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5
+right:
+  subject:
+    name: Scenario Subject
+    type:
+      blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
+    identifier: subject-1
+expectedNodeBlueId: 2d3KhkkP46dVGM7zD6bzq2wv6Yot6XY5vpmtK2kJHdWs

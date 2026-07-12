@@ -49,8 +49,10 @@ class FrozenNodeStructuralInternerTest {
                 materializedFirst.reference.frozenCanonicalRoot().resolvedStructuralKey());
         assertEquals(referenceFirst.materialized.frozenCanonicalRoot().resolvedStructuralKey(),
                 materializedFirst.materialized.frozenCanonicalRoot().resolvedStructuralKey());
-        assertEquals(referenceFirst.reference.provenanceAt("/"), materializedFirst.reference.provenanceAt("/"));
-        assertEquals(referenceFirst.materialized.provenanceAt("/"), materializedFirst.materialized.provenanceAt("/"));
+        assertEquals(referenceFirst.reference.frozenResolvedRoot().resolvedStructuralKey(),
+                materializedFirst.reference.frozenResolvedRoot().resolvedStructuralKey());
+        assertEquals(referenceFirst.materialized.frozenResolvedRoot().resolvedStructuralKey(),
+                materializedFirst.materialized.frozenResolvedRoot().resolvedStructuralKey());
         assertFalse(referenceFirst.reference.frozenResolvedRoot() == referenceFirst.materialized.frozenResolvedRoot());
     }
 

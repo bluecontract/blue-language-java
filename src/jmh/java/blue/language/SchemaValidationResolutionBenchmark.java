@@ -41,6 +41,10 @@ public class SchemaValidationResolutionBenchmark {
     private Node directSnapshotTemplate;
     private Node referencedSnapshotTemplate;
     private AtomicInteger alternatingSnapshotOrder;
+    private Blue alternatingNestedSnapshotBlue;
+    private Node nestedMaterializedSnapshotTemplate;
+    private Node nestedReferencedSnapshotTemplate;
+    private AtomicInteger alternatingNestedSnapshotOrder;
 
     @Setup(Level.Trial)
     public void setUp() {
@@ -81,6 +85,29 @@ public class SchemaValidationResolutionBenchmark {
                 alternatingProvider.getBlueIdByName("Alternating Snapshot Subject"));
         alternatingSnapshotBlue = new Blue(alternatingProvider);
         alternatingSnapshotOrder = new AtomicInteger();
+
+        Node nestedSubject = new Node().name("Alternating Nested Snapshot Subject")
+                .properties("identifier", new Node().value("benchmark-subject"));
+        String nestedSubjectId = new Blue().calculateBlueId(nestedSubject);
+        nestedMaterializedSnapshotTemplate = new Node().properties("subject", nestedSubject);
+        nestedReferencedSnapshotTemplate = new Node().properties(
+                "subject", reference(nestedSubjectId));
+        alternatingNestedSnapshotBlue = new Blue();
+        String nestedHolderBlueId = alternatingNestedSnapshotBlue.calculateBlueId(
+                nestedMaterializedSnapshotTemplate);
+        if (!nestedHolderBlueId.equals(alternatingNestedSnapshotBlue.calculateBlueId(
+                nestedReferencedSnapshotTemplate))) {
+            throw new IllegalStateException("Alternating nested snapshots must have one semantic identity.");
+        }
+        alternatingNestedSnapshotBlue.resolveToSnapshot(nestedMaterializedSnapshotTemplate);
+        alternatingNestedSnapshotBlue.resolveToSnapshot(nestedReferencedSnapshotTemplate);
+        if (alternatingNestedSnapshotBlue.resolvedSnapshotCacheSize() != 2
+                || alternatingNestedSnapshotBlue.resolvedReferenceCacheSize() != 1
+                || !alternatingNestedSnapshotBlue.cachedResolvedSnapshot(nestedHolderBlueId).isPresent()) {
+            throw new IllegalStateException(
+                    "Alternating nested snapshots must retain two exact forms and one verified identity.");
+        }
+        alternatingNestedSnapshotOrder = new AtomicInteger();
     }
 
     @Benchmark
@@ -124,6 +151,14 @@ public class SchemaValidationResolutionBenchmark {
                 ? directSnapshotTemplate
                 : referencedSnapshotTemplate;
         return alternatingSnapshotBlue.resolveToSnapshot(source.clone());
+    }
+
+    @Benchmark
+    public blue.language.snapshot.ResolvedSnapshot alternatingEquivalentNestedReferenceAndMaterializedSnapshots() {
+        Node source = (alternatingNestedSnapshotOrder.getAndIncrement() & 1) == 0
+                ? nestedMaterializedSnapshotTemplate
+                : nestedReferencedSnapshotTemplate;
+        return alternatingNestedSnapshotBlue.resolveToSnapshot(source.clone());
     }
 
     private Node materializedDocument(int width) {

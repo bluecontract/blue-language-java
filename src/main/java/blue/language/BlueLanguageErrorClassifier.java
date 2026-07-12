@@ -26,6 +26,7 @@ public final class BlueLanguageErrorClassifier {
         if (lower.contains("provider returned reference-only content")
                 || lower.contains("provider returned no content")
                 || lower.contains("missing provider content")
+                || lower.contains("no content found")
                 || lower.contains("missing blue language fixture resource")
                 || lower.contains("missing fixture resource")) {
             return BlueLanguageErrorCategory.ProviderUnavailable;

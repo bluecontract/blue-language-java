@@ -277,11 +277,9 @@ class ResolvedInstanceSchemaValidationTest {
                 .properties("identifier", new Node().value("subject-1"));
         fixture.delegate.addSingleNodes(referenced);
         String referenceId = fixture.blue.calculateBlueId(fixture.blue.preprocess(referenced.clone()));
-        Node resolvedReference = fixture.blue.resolve(referenced.clone()).blueId(referenceId);
+        ResolvedSnapshot verifiedSnapshot = fixture.blue.resolveToSnapshot(referenced);
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
-        FrozenNode canonicalReference = FrozenNode.fromNode(fixture.blue.preprocess(referenced.clone()));
-        cache.putVerifiedResolved(referenceId, canonicalReference,
-                cache.freezeVerifiedResolved(referenceId, resolvedReference));
+        cache.putVerifiedResolved(verifiedSnapshot.verifiedReferenceResolution());
         CountingProvider coldCounter = new CountingProvider(fixture.delegate);
         Merger merger = new Merger(defaultProcessor(), coldCounter, cache);
 
@@ -311,6 +309,19 @@ class ResolvedInstanceSchemaValidationTest {
 
         assertTrue(messageChain(failure).contains(expectedId));
         assertTrue(messageChain(failure).contains("Provider"), messageChain(failure));
+    }
+
+    @Test
+    void missingTypedReferenceContentIsProviderUnavailable() {
+        Fixture fixture = new Fixture();
+        String missingId = fixture.blue.calculateBlueId(new Node().name("Missing Required Subject"));
+
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> fixture.blue.resolve(fixture.holderInstance(reference(missingId))));
+
+        assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
+                BlueLanguageErrorClassifier.classify(failure), messageChain(failure));
+        assertEquals(1, fixture.provider.fetches(missingId));
     }
 
     @Test
@@ -528,8 +539,10 @@ class ResolvedInstanceSchemaValidationTest {
         assertEquals(publicCold.blueId(), processingWarm.blueId());
         assertEquals(referenceId, publicCold.canonicalAt("/0/subject").getReferenceBlueId());
         assertEquals(referenceId, processingCold.canonicalAt("/1/subject").getReferenceBlueId());
-        assertEquals(publicCold.provenanceAt("/0/subject"), processingCold.provenanceAt("/0/subject"));
-        assertEquals(publicCold.provenanceAt("/1/subject"), processingWarm.provenanceAt("/1/subject"));
+        assertEquals(publicCold.canonicalAt("/0/subject").resolvedStructuralKey(),
+                processingCold.canonicalAt("/0/subject").resolvedStructuralKey());
+        assertEquals(publicCold.resolvedAt("/1/subject").resolvedStructuralKey(),
+                processingWarm.resolvedAt("/1/subject").resolvedStructuralKey());
     }
 
     private static Schema required() {

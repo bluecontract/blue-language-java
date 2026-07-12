@@ -182,6 +182,21 @@ public class BlueLanguageConformanceFixtureTest {
     }
 
     @Test
+    void missingProviderMessagesClassifyAsProviderUnavailable() {
+        String[] messages = {
+                "No content found for blueId: missing",
+                "No content found for $previous blueId: missing",
+                "No content found for required blueId missing at path /subject."
+        };
+
+        for (String message : messages) {
+            assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
+                    BlueLanguageErrorClassifier.classify(new IllegalArgumentException(message)),
+                    message);
+        }
+    }
+
+    @Test
     void conformanceManifestIsAuthoritative() throws Exception {
         URL resource = getClass().getClassLoader().getResource(FIXTURE_PATH);
         assertTrue(resource != null);

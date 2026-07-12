@@ -322,7 +322,9 @@ class ResolvedSnapshotTest {
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider);
         ResolvedSnapshot original = blue.loadSnapshot(productInstance(delegate, "old"));
-        ResolvedSnapshot expectedTarget = blue.loadSnapshot(productInstance(delegate, "new"));
+        Node exactPatchedTarget = productInstance(delegate, "old")
+                .properties("local", new Node().value("new"));
+        ResolvedSnapshot expectedTarget = blue.loadSnapshot(exactPatchedTarget);
         int fetchesAfterPreloadingTarget = countingProvider.fetchCount();
 
         ResolvedSnapshot patched = blue.applyCanonicalPatch(original,

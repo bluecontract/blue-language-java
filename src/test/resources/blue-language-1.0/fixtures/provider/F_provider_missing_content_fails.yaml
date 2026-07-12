@@ -3,6 +3,7 @@ category: Provider
 operation: resolve
 description: missing provider content fails resolution
 expectError: true
+expectedErrorCategory: ProviderUnavailable
 source:
   type:
     blueId: 7CUvDJwdfytCjadRG1KLL2GrttK2LfdNvEA8HycjMCcv

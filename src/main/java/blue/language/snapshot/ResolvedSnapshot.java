@@ -1,15 +1,13 @@
 package blue.language.snapshot;
 
 import blue.language.model.Node;
+import blue.language.merge.Merger.SnapshotResolution;
+import blue.language.merge.Merger.VerifiedReferenceResolution;
 import blue.language.processor.model.JsonPatch;
 import blue.language.utils.JsonPointer;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 
 public final class ResolvedSnapshot {
 
@@ -17,23 +15,21 @@ public final class ResolvedSnapshot {
     private final FrozenNode resolvedRoot;
     private final Map<String, FrozenNode> canonicalIndex;
     private final Map<String, FrozenNode> resolvedIndex;
-    private final Map<String, Set<ResolvedNodeProvenance>> provenanceByPath;
+    private final VerifiedReferenceResolution verifiedReferenceResolution;
     private final String blueId;
 
     public ResolvedSnapshot(Node canonicalRoot, Node resolvedRoot, String blueId) {
-        this(FrozenNode.fromNode(canonicalRoot), FrozenNode.fromResolvedNode(resolvedRoot), blueId,
-                Collections.<String, Set<ResolvedNodeProvenance>>emptyMap());
+        this(FrozenNode.fromNode(canonicalRoot), FrozenNode.fromResolvedNode(resolvedRoot), blueId, null);
     }
 
     public ResolvedSnapshot(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String blueId) {
-        this(canonicalRoot, resolvedRoot, blueId,
-                Collections.<String, Set<ResolvedNodeProvenance>>emptyMap());
+        this(canonicalRoot, resolvedRoot, blueId, null);
     }
 
-    public ResolvedSnapshot(FrozenNode canonicalRoot,
-                            FrozenNode resolvedRoot,
-                            String blueId,
-                            Map<String, Set<ResolvedNodeProvenance>> provenanceByPath) {
+    private ResolvedSnapshot(FrozenNode canonicalRoot,
+                             FrozenNode resolvedRoot,
+                             String blueId,
+                             VerifiedReferenceResolution verifiedReferenceResolution) {
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
         if (!this.canonicalRoot.isStrictCanonical()) {
@@ -45,8 +41,17 @@ public final class ResolvedSnapshot {
         }
         this.canonicalIndex = this.canonicalRoot.pathIndex();
         this.resolvedIndex = this.resolvedRoot.pathIndex();
-        this.provenanceByPath = immutableProvenance(provenanceByPath);
+        this.verifiedReferenceResolution = verifiedReferenceResolution;
         this.blueId = expectedBlueId;
+    }
+
+    public static ResolvedSnapshot fromResolverResult(SnapshotResolution resolution) {
+        Objects.requireNonNull(resolution, "resolution");
+        return new ResolvedSnapshot(
+                resolution.canonicalRoot(),
+                resolution.resolvedRoot(),
+                resolution.canonicalRoot().blueId(),
+                resolution.verifiedReferenceResolution());
     }
 
     public Node canonicalRoot() {
@@ -91,17 +96,12 @@ public final class ResolvedSnapshot {
         return resolvedIndex;
     }
 
-    public Set<ResolvedNodeProvenance> provenanceAt(String pointer) {
-        Set<ResolvedNodeProvenance> provenance = provenanceByPath.get(JsonPointer.canonicalize(pointer));
-        return provenance != null ? provenance : Collections.<ResolvedNodeProvenance>emptySet();
-    }
-
-    public Map<String, Set<ResolvedNodeProvenance>> provenanceIndex() {
-        return provenanceByPath;
-    }
-
     public String blueId() {
         return blueId;
+    }
+
+    public VerifiedReferenceResolution verifiedReferenceResolution() {
+        return verifiedReferenceResolution;
     }
 
     public CanonicalOverlayPatchEngine canonicalPatchEngine() {
@@ -110,22 +110,6 @@ public final class ResolvedSnapshot {
 
     public CanonicalPatchResult applyCanonicalPatch(JsonPatch patch) {
         return canonicalPatchEngine().apply(patch);
-    }
-
-    private static Map<String, Set<ResolvedNodeProvenance>> immutableProvenance(
-            Map<String, Set<ResolvedNodeProvenance>> source) {
-        if (source == null || source.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        Map<String, Set<ResolvedNodeProvenance>> copy = new LinkedHashMap<>();
-        for (Map.Entry<String, Set<ResolvedNodeProvenance>> entry : source.entrySet()) {
-            String path = JsonPointer.canonicalize(entry.getKey());
-            Set<ResolvedNodeProvenance> values = entry.getValue() == null
-                    ? Collections.<ResolvedNodeProvenance>emptySet()
-                    : Collections.unmodifiableSet(new LinkedHashSet<>(entry.getValue()));
-            copy.put(path, values);
-        }
-        return Collections.unmodifiableMap(copy);
     }
 
 }

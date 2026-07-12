@@ -7,6 +7,7 @@ import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.JsonPointer;
+import blue.language.utils.MergeReverser;
 import blue.language.utils.Types;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
@@ -16,7 +17,10 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+
+import static blue.language.utils.limits.Limits.NO_LIMITS;
 
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
@@ -40,6 +44,54 @@ public class Merger implements NodeResolver {
         this.mergingProcessor = mergingProcessor;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.resolvedReferenceCache = resolvedReferenceCache;
+    }
+
+    /**
+     * Resolves one source and binds the exact strict canonical and completed
+     * resolved representations produced by this resolver invocation.
+     */
+    public SnapshotResolution resolveSnapshot(Node preprocessedSource, Limits limits) {
+        Objects.requireNonNull(preprocessedSource, "preprocessedSource");
+        Objects.requireNonNull(limits, "limits");
+        Node resolved = resolve(preprocessedSource.clone(), limits);
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(
+                resolved.clone(), preprocessedSource);
+        return snapshotResolution(FrozenNode.fromNode(canonical), resolved, limits);
+    }
+
+    /**
+     * Resolves an already-canonical source without accepting a caller-supplied
+     * resolved representation.
+     */
+    public SnapshotResolution resolveSnapshot(FrozenNode canonicalRoot, Limits limits) {
+        Objects.requireNonNull(canonicalRoot, "canonicalRoot");
+        Objects.requireNonNull(limits, "limits");
+        if (!canonicalRoot.isStrictCanonical()) {
+            throw new IllegalArgumentException("Snapshot resolution requires a strict canonical root.");
+        }
+        Node resolved = resolve(canonicalRoot.toNode(), limits);
+        return snapshotResolution(canonicalRoot, resolved, limits);
+    }
+
+    private SnapshotResolution snapshotResolution(FrozenNode canonicalRoot,
+                                                  Node resolved,
+                                                  Limits limits) {
+        FrozenNode frozenResolved = freezeResolved(resolved);
+        VerifiedReferenceResolution verification = null;
+        if (limits == NO_LIMITS
+                && canonicalRoot.isStrictBlueIdValidation()
+                && !canonicalRoot.isReferenceOnly()
+                && !frozenResolved.isReferenceOnly()) {
+            verification = new VerifiedReferenceResolution(
+                    canonicalRoot.blueId(), canonicalRoot, frozenResolved);
+        }
+        return new SnapshotResolution(canonicalRoot, frozenResolved, verification);
+    }
+
+    private FrozenNode freezeResolved(Node resolved) {
+        return resolvedReferenceCache != null
+                ? resolvedReferenceCache.freezeResolved(resolved)
+                : FrozenNode.fromResolvedNode(resolved);
     }
 
     public void merge(Node target, Node source, Limits limits) {
@@ -176,9 +228,10 @@ public class Merger implements NodeResolver {
         }
         FrozenNode canonical = resolvedReferenceCache.getVerifiedCanonical(blueId).orElse(null);
         if (canonical != null) {
-            FrozenNode frozenResolved = resolvedReferenceCache.freezeVerifiedResolved(blueId, resolvedType);
+            FrozenNode frozenResolved = resolvedReferenceCache.freezeResolved(resolvedType);
             if (!frozenResolved.isReferenceOnly()) {
-                resolvedReferenceCache.putVerifiedResolved(blueId, canonical, frozenResolved);
+                resolvedReferenceCache.putVerifiedResolved(new VerifiedReferenceResolution(
+                        blueId, canonical, frozenResolved));
             }
         }
     }
@@ -867,8 +920,8 @@ public class Merger implements NodeResolver {
                     canonical.toNode(), limits, Contribution.MATERIALIZED_REFERENCE);
             resolved.blueId(blueId);
             if (resolvedReferenceCache != null && limits == Limits.NO_LIMITS) {
-                resolvedReferenceCache.putVerifiedResolved(
-                        blueId, canonical, resolvedReferenceCache.freezeVerifiedResolved(blueId, resolved));
+                resolvedReferenceCache.putVerifiedResolved(new VerifiedReferenceResolution(
+                        blueId, canonical, resolvedReferenceCache.freezeResolved(resolved)));
             }
             if (limits == Limits.NO_LIMITS) {
                 rememberFullyResolved(state, blueId, resolved);
@@ -1177,6 +1230,62 @@ public class Merger implements NodeResolver {
         resultNode.description(node.getDescription());
         resultNode.blueId(node.getBlueId());
         return resultNode;
+    }
+
+    public static final class SnapshotResolution {
+        private final FrozenNode canonicalRoot;
+        private final FrozenNode resolvedRoot;
+        private final VerifiedReferenceResolution verifiedReferenceResolution;
+
+        private SnapshotResolution(FrozenNode canonicalRoot,
+                                   FrozenNode resolvedRoot,
+                                   VerifiedReferenceResolution verifiedReferenceResolution) {
+            this.canonicalRoot = canonicalRoot;
+            this.resolvedRoot = resolvedRoot;
+            this.verifiedReferenceResolution = verifiedReferenceResolution;
+        }
+
+        public FrozenNode canonicalRoot() {
+            return canonicalRoot;
+        }
+
+        public FrozenNode resolvedRoot() {
+            return resolvedRoot;
+        }
+
+        public VerifiedReferenceResolution verifiedReferenceResolution() {
+            return verifiedReferenceResolution;
+        }
+    }
+
+    /**
+     * Opaque proof that one unlimited resolver invocation completed for the
+     * exact strict canonical root. Only {@link Merger} can construct it.
+     */
+    public static final class VerifiedReferenceResolution {
+        private final String requestedBlueId;
+        private final FrozenNode canonicalRoot;
+        private final FrozenNode resolvedRoot;
+
+        private VerifiedReferenceResolution(String requestedBlueId,
+                                            FrozenNode canonicalRoot,
+                                            FrozenNode resolvedRoot) {
+            this.requestedBlueId = requestedBlueId;
+            this.canonicalRoot = canonicalRoot;
+            this.resolvedRoot = resolvedRoot;
+        }
+
+        public String requestedBlueId() {
+            return requestedBlueId;
+        }
+
+        public FrozenNode canonicalRoot() {
+            return canonicalRoot;
+        }
+
+        public FrozenNode resolvedRoot() {
+            return resolvedRoot;
+        }
     }
 
     private enum Contribution {
