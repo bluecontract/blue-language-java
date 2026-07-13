@@ -1,5 +1,5 @@
 specVersion: '1.0'
-fixturePackageIdentity: sha256:0408ae29f7ca400fe67e3da6aa54df25876327bee4e2b6eedf2bb20b2e608b0c
+fixturePackageIdentity: sha256:1a6e37d0da5aaffabc3f9fd63d6e59b5cc59aa92698e7569476c7d72e79e7ce3
 fixtures:
 - id: L_no_profile_era_language_conformance_terms
   category: DocumentationLint
@@ -265,3 +265,27 @@ fixtures:
 - id: F_reference_only_content_is_not_materialized_content
   category: Provider
   path: provider/F_reference_only_content_is_not_materialized_content.yaml
+- id: R_recursive_self_structural_type_resolves_finitely
+  category: Resolution
+  path: resolver/R_recursive_self_structural_type_resolves_finitely.yaml
+- id: R_recursive_mutual_structural_types_resolve_finitely
+  category: Resolution
+  path: resolver/R_recursive_mutual_structural_types_resolve_finitely.yaml
+- id: R_recursive_typed_reference_is_finite_and_canonical
+  category: Canonicalization
+  path: resolver/R_recursive_typed_reference_is_finite_and_canonical.yaml
+- id: R_recursive_self_inheritance_is_type_cycle
+  category: Resolution
+  path: resolver/R_recursive_self_inheritance_is_type_cycle.yaml
+- id: R_recursive_mutual_inheritance_is_type_cycle
+  category: Resolution
+  path: resolver/R_recursive_mutual_inheritance_is_type_cycle.yaml
+- id: R_recursive_structural_instance_validation
+  category: Resolution
+  path: resolver/R_recursive_structural_instance_validation.yaml
+- id: R_recursive_optional_branch_defers_required_descendants
+  category: Resolution
+  path: resolver/R_recursive_optional_branch_defers_required_descendants.yaml
+- id: R_recursive_nested_container_preserves_optional_absence
+  category: Resolution
+  path: resolver/R_recursive_nested_container_preserves_optional_absence.yaml

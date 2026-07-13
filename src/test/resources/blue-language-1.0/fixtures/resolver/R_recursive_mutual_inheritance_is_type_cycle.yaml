@@ -1,0 +1,20 @@
+id: R_recursive_mutual_inheritance_is_type_cycle
+category: Resolution
+operation: resolve
+description: mutually recursive inheritance remains an invalid type-chain cycle
+provider:
+- cyclicSet:
+  - name: Invalid Parent A
+    type:
+      blueId: this#1
+  - name: Invalid Parent B
+    type:
+      blueId: this#0
+  expectedMemberBlueIds:
+    Invalid Parent A: 6ehVYenTBkmGPCevyqgsEYDg7AjNreKRrW8KvGqGNhg7#0
+    Invalid Parent B: 6ehVYenTBkmGPCevyqgsEYDg7AjNreKRrW8KvGqGNhg7#1
+source:
+  type:
+    blueId: 6ehVYenTBkmGPCevyqgsEYDg7AjNreKRrW8KvGqGNhg7#0
+expectError: true
+expectedErrorCategory: TypeCycle

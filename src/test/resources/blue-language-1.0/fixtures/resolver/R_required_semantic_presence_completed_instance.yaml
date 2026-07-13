@@ -108,3 +108,12 @@ steps:
         type:
           blueId: vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m
         schema: {required: true}
+- action: resolve
+  expectError: true
+  expectedErrorCategory: SchemaViolation
+  source:
+    type:
+      field:
+        schema: {required: true}
+        contracts:
+          processor: configured

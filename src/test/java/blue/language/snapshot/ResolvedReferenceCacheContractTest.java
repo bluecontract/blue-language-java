@@ -6,6 +6,7 @@ import blue.language.merge.Merger;
 import blue.language.merge.Merger.SnapshotResolution;
 import blue.language.merge.Merger.VerifiedReferenceResolution;
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,41 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ResolvedReferenceCacheContractTest {
+
+    @Test
+    void frozenCanonicalTracksNestedCyclicSetReferencesWithoutChangingIdentity() {
+        String cyclicMemberId = "ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#0";
+        Node ordinary = new Node().properties("nested", new Node().value("value"));
+        Node recursive = ordinary.clone().properties("typed",
+                new Node().type(new Node().blueId(cyclicMemberId)));
+
+        FrozenNode frozenOrdinary = FrozenNode.fromNode(ordinary);
+        FrozenNode frozenRecursive = FrozenNode.fromNode(recursive);
+
+        assertFalse(frozenOrdinary.containsCyclicSetReference());
+        assertTrue(frozenRecursive.containsCyclicSetReference());
+        assertEquals(new Blue().calculateBlueId(recursive), frozenRecursive.blueId());
+        assertTrue(frozenOrdinary.withProperty("typed",
+                FrozenNode.fromNode(new Node().type(new Node().blueId(cyclicMemberId))))
+                .containsCyclicSetReference());
+    }
+
+    @Test
+    void frozenNodeDistinguishesNestedTypedObjectsFromSafeTypeRoots() {
+        FrozenNode nestedTypedObject = FrozenNode.fromResolvedNode(new Node()
+                .properties("branch", new Node().type(reference("branch-type"))
+                        .properties("declared", new Node().type("Text"))));
+        FrozenNode typedRoot = FrozenNode.fromResolvedNode(new Node()
+                .type(reference("parent-type"))
+                .properties("declared", new Node().schema(new Schema().required(true))));
+        FrozenNode untypedFixedObject = FrozenNode.fromResolvedNode(new Node()
+                .properties("branch", new Node()
+                        .properties("fixed", new Node().value("value"))));
+
+        assertTrue(nestedTypedObject.containsNestedTypedObjectPayload());
+        assertFalse(typedRoot.containsNestedTypedObjectPayload());
+        assertFalse(untypedFixedObject.containsNestedTypedObjectPayload());
+    }
 
     @Test
     void verifiedEvidenceProducerIsSealed() {

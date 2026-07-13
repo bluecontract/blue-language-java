@@ -47,6 +47,9 @@ public final class FrozenNode {
     private final boolean strictCanonical;
     private final boolean strictBlueIdValidation;
     private final boolean previousAnchorContext;
+    private final boolean containsCyclicSetReference;
+    private final boolean containsSchema;
+    private final boolean containsNestedTypedObjectPayload;
     private final String blueId;
     private final ResolvedStructuralKey resolvedStructuralKey;
 
@@ -71,6 +74,9 @@ public final class FrozenNode {
         this.strictCanonical = builder.strictCanonical;
         this.strictBlueIdValidation = builder.strictBlueIdValidation;
         this.previousAnchorContext = builder.previousAnchorContext;
+        this.containsCyclicSetReference = computeContainsCyclicSetReference();
+        this.containsSchema = computeContainsSchema();
+        this.containsNestedTypedObjectPayload = computeContainsNestedTypedObjectPayload();
         validatePayloadShape();
         this.blueId = computeBlueId();
         this.resolvedStructuralKey = new ResolvedStructuralKey(this);
@@ -396,6 +402,18 @@ public final class FrozenNode {
         return strictBlueIdValidation;
     }
 
+    public boolean containsCyclicSetReference() {
+        return containsCyclicSetReference;
+    }
+
+    public boolean containsSchema() {
+        return containsSchema;
+    }
+
+    public boolean containsNestedTypedObjectPayload() {
+        return containsNestedTypedObjectPayload;
+    }
+
     boolean isListElementContext() {
         return previousAnchorContext;
     }
@@ -528,6 +546,85 @@ public final class FrozenNode {
             return BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(this));
         }
         return computeResolvedStructuralBlueId();
+    }
+
+    private boolean computeContainsCyclicSetReference() {
+        if (referenceBlueId != null && referenceBlueId.indexOf('#') >= 0) {
+            return true;
+        }
+        if (containsCyclicSetReference(type)
+                || containsCyclicSetReference(itemType)
+                || containsCyclicSetReference(keyType)
+                || containsCyclicSetReference(valueType)
+                || containsCyclicSetReference(contracts)
+                || containsCyclicSetReference(blue)) {
+            return true;
+        }
+        if (items != null) {
+            for (FrozenNode item : items) {
+                if (containsCyclicSetReference(item)) {
+                    return true;
+                }
+            }
+        }
+        if (properties != null) {
+            for (FrozenNode property : properties.values()) {
+                if (containsCyclicSetReference(property)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsCyclicSetReference(FrozenNode node) {
+        return node != null && node.containsCyclicSetReference;
+    }
+
+    private boolean computeContainsSchema() {
+        if (schema != null
+                || containsSchema(type)
+                || containsSchema(itemType)
+                || containsSchema(keyType)
+                || containsSchema(valueType)
+                || containsSchema(contracts)
+                || containsSchema(blue)) {
+            return true;
+        }
+        if (items != null) {
+            for (FrozenNode item : items) {
+                if (containsSchema(item)) {
+                    return true;
+                }
+            }
+        }
+        if (properties != null) {
+            for (FrozenNode property : properties.values()) {
+                if (containsSchema(property)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsSchema(FrozenNode node) {
+        return node != null && node.containsSchema;
+    }
+
+    private boolean computeContainsNestedTypedObjectPayload() {
+        if (properties == null) {
+            return false;
+        }
+        for (FrozenNode property : properties.values()) {
+            if ((property.type != null
+                    && property.properties != null
+                    && !property.properties.isEmpty())
+                    || property.containsNestedTypedObjectPayload) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String computeResolvedStructuralBlueId() {

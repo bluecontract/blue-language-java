@@ -18,7 +18,9 @@ import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,6 +119,7 @@ public final class Merger implements NodeResolver {
         if (outermost) {
             state = new ResolutionState();
             state.rootInlineTypeDeclaration = isInlineTypeDeclaration(source);
+            state.rootSource = source;
             resolutionState = state;
             lastResolutionUsedNonDirectTrustedContent = false;
             limits.enterPathSegment("", source);
@@ -140,43 +143,61 @@ public final class Merger implements NodeResolver {
             throw new IllegalArgumentException("Document contains \"blue\" attribute. Preprocess document before merging.");
         }
 
+        TypeResolutionKey deferredTypeResolution = null;
         if (source.getType() != null) {
             Node typeNode = source.getType();
             String typeBlueId = typeNode.getBlueId();
-            FrozenNode cachedResolvedType = cachedResolvedReference(typeBlueId, limits);
-            boolean trackedType = cachedResolvedType == null && typeBlueId != null;
+            boolean materializedCyclicType = isMaterializedCyclicSetMemberType(typeNode);
+            FrozenNode cachedResolvedType = cachedResolvedType(typeBlueId, limits);
+            boolean trackedType = typeBlueId != null;
             TypeResolutionKey typeResolutionKey = trackedType
                     ? new TypeResolutionKey(typeBlueId, resolutionState.path.size())
                     : null;
-            if (trackedType && !beginResolvingType(typeResolutionKey)) {
+            if (trackedType && isResolvingType(typeResolutionKey)) {
                 throw new IllegalStateException("Cyclic type hierarchy at path "
                         + currentPath(resolutionState) + " for blueId: " + typeBlueId);
             }
+            boolean recursiveTypeBoundary = trackedType && isMaterializingType(typeBlueId);
+            boolean startedTypeResolution = trackedType && !recursiveTypeBoundary;
+            if (startedTypeResolution) {
+                beginResolvingType(typeResolutionKey);
+            }
             try {
-                if (cachedResolvedType != null) {
-                    Node resolvedType = cachedResolvedType.toNode();
-                    if (resolvedType.getBlueId() == null) {
-                        resolvedType.blueId(typeBlueId);
-                    }
-                    source.type(resolvedType);
-                    mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_DECLARATION);
-                } else {
-                    if (typeBlueId != null) {
-                        extendTypeReference(typeNode, typeBlueId);
-                    }
+                if (!recursiveTypeBoundary) {
+                    if (cachedResolvedType != null) {
+                        Node resolvedType = cachedResolvedType.toNode();
+                        if (resolvedType.getBlueId() == null) {
+                            resolvedType.blueId(typeBlueId);
+                        }
+                        source.type(resolvedType);
+                        mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                    } else {
+                        if (typeBlueId != null) {
+                            extendTypeReference(typeNode, typeBlueId);
+                        }
 
-                    Node resolvedType = resolveWithContribution(typeNode, limits, Contribution.TYPE_DECLARATION);
-                    cacheResolvedReference(typeBlueId, resolvedType, limits);
-                    source.type(resolvedType);
-                    mergeWithContribution(target, typeNode, limits, Contribution.TYPE_DECLARATION);
+                        Node resolvedType = resolveWithContribution(typeNode, limits, Contribution.TYPE_ROOT);
+                        cacheResolvedReference(typeBlueId, resolvedType, limits);
+                        source.type(resolvedType);
+                        mergeWithContribution(target, typeNode, limits, Contribution.TYPE_ROOT);
+                    }
+                }
+                if (startedTypeResolution && materializedCyclicType) {
+                    deferredTypeResolution = typeResolutionKey;
                 }
             } finally {
-                if (trackedType) {
-                    resolutionState.resolvingTypes.remove(typeResolutionKey);
+                if (startedTypeResolution && deferredTypeResolution == null) {
+                    finishResolvingType(typeResolutionKey);
                 }
             }
         }
-        mergeObject(target, source, limits);
+        try {
+            mergeObject(target, source, limits);
+        } finally {
+            if (deferredTypeResolution != null) {
+                finishResolvingType(deferredTypeResolution);
+            }
+        }
     }
 
     private void extendTypeReference(Node typeNode, String blueId) {
@@ -184,6 +205,9 @@ public final class Merger implements NodeResolver {
             return;
         }
         CanonicalReference canonicalReference = typeCanonicalReference(blueId, resolutionState);
+        if (canonicalReference.canonical.containsSchema()) {
+            resolutionState.schemaRequiresTypeSourceProvenance = true;
+        }
         typeNode.replaceWith(canonicalReference.canonical.toNode());
         typeNode.blueId(blueId);
     }
@@ -253,12 +277,88 @@ public final class Merger implements NodeResolver {
         return resolvedReferenceCache.getVerifiedResolved(blueId).orElse(null);
     }
 
-    private boolean beginResolvingType(TypeResolutionKey key) {
+    private FrozenNode cachedResolvedType(String blueId, Limits limits) {
+        FrozenNode cached = cachedResolvedReference(blueId, limits);
+        if (cached == null) {
+            return null;
+        }
+        ResolutionState state = resolutionState;
+        if (cached.containsSchema()) {
+            state.schemaRequiresTypeSourceProvenance = true;
+        }
+        if (!cached.containsNestedTypedObjectPayload()) {
+            return cached;
+        }
+        if (state.schemaRequiresTypeSourceProvenance) {
+            return null;
+        }
+        if (!state.rootSourceSchemaChecked) {
+            state.rootSourceContainsSchema = containsSchema(state.rootSource);
+            state.rootSourceSchemaChecked = true;
+            if (state.rootSourceContainsSchema) {
+                state.schemaRequiresTypeSourceProvenance = true;
+            }
+        }
+        return state.schemaRequiresTypeSourceProvenance ? null : cached;
+    }
+
+    private boolean containsSchema(Node root) {
+        if (root == null) {
+            return false;
+        }
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        List<Node> pending = new ArrayList<>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            Node node = pending.remove(pending.size() - 1);
+            if (node == null || !visited.add(node)) {
+                continue;
+            }
+            if (node.getSchema() != null) {
+                return true;
+            }
+            pending.add(node.getType());
+            pending.add(node.getItemType());
+            pending.add(node.getKeyType());
+            pending.add(node.getValueType());
+            pending.add(node.getContracts());
+            pending.add(node.getBlue());
+            if (node.getItems() != null) {
+                pending.addAll(node.getItems());
+            }
+            if (node.getProperties() != null) {
+                pending.addAll(node.getProperties().values());
+            }
+        }
+        return false;
+    }
+
+    private boolean isResolvingType(TypeResolutionKey key) {
+        return resolutionState.resolvingTypes != null
+                && resolutionState.resolvingTypes.contains(key);
+    }
+
+    private boolean isMaterializingType(String blueId) {
+        return resolutionState.materializingTypeBlueIds != null
+                && resolutionState.materializingTypeBlueIds.contains(blueId);
+    }
+
+    private void beginResolvingType(TypeResolutionKey key) {
         ResolutionState state = resolutionState;
         if (state.resolvingTypes == null) {
             state.resolvingTypes = new HashSet<>();
         }
-        return state.resolvingTypes.add(key);
+        if (state.materializingTypeBlueIds == null) {
+            state.materializingTypeBlueIds = new HashSet<>();
+        }
+        state.resolvingTypes.add(key);
+        state.materializingTypeBlueIds.add(key.blueId);
+    }
+
+    private void finishResolvingType(TypeResolutionKey key) {
+        ResolutionState state = resolutionState;
+        state.resolvingTypes.remove(key);
+        state.materializingTypeBlueIds.remove(key.blueId);
     }
 
     private void cacheResolvedReference(String blueId, Node resolvedType, Limits limits) {
@@ -281,13 +381,14 @@ public final class Merger implements NodeResolver {
 
     private void mergeObject(Node target, Node source, Limits limits) {
         ResolutionState state = resolutionState;
-        boolean tracksSchemaContribution = target.getSchema() != null || source.getSchema() != null;
-        boolean directSemanticContribution = (tracksSchemaContribution || !state.contributionFrames.isEmpty())
-                && isDirectSemanticContribution(source, state.contribution);
+        String path = currentPath(state);
+        boolean tracksSemanticPresence = tracksSemanticPresence(state, target, source, path);
         ContributionFrame frame = null;
-        if (tracksSchemaContribution) {
-            frame = new ContributionFrame(directSemanticContribution,
-                    isInheritedReferenceContribution(target, source));
+        if (tracksSemanticPresence) {
+            frame = new ContributionFrame(
+                    path, state.path.size(), isDirectSemanticContribution(source, state.contribution),
+                    isInheritedReferenceContribution(target, source),
+                    state.contribution != Contribution.CONTRACT_ROOT);
             state.contributionFrames.add(frame);
         }
         try {
@@ -306,7 +407,7 @@ public final class Merger implements NodeResolver {
                 limits.enterPathSegment("contracts", source.getContracts());
                 enterValidationPath("contracts", referenceExpansionAllowed);
                 try {
-                    mergeContracts(target, source.getContracts(), limits);
+                    mergeContractsWithContribution(target, source.getContracts(), limits);
                 } finally {
                     exitValidationPath();
                     limits.exitPathSegment();
@@ -327,7 +428,8 @@ public final class Merger implements NodeResolver {
                             enterValidationPath(key, referenceExpansionAllowed);
                         }
                         try {
-                            mergeProperty(target, key, value, limits);
+                            mergePropertyWithContribution(target, key, value, limits,
+                                    childContribution(state.contribution));
                         } finally {
                             if (trackValidationPath) {
                                 exitValidationPath();
@@ -349,15 +451,41 @@ public final class Merger implements NodeResolver {
                 observeCompletedPath(target, source, limits);
             }
         } finally {
-            boolean semanticContribution = directSemanticContribution;
-            if (tracksSchemaContribution) {
+            if (frame != null) {
                 state.contributionFrames.remove(state.contributionFrames.size() - 1);
-                semanticContribution = frame.semanticContribution;
-            }
-            if (semanticContribution && !state.contributionFrames.isEmpty()) {
-                state.contributionFrames.get(state.contributionFrames.size() - 1).semanticContribution = true;
+                boolean semanticContribution = frame.semanticContribution
+                        || frame.inheritedSemanticContribution;
+                if (semanticContribution) {
+                    presenceGate(state, frame.path).present = true;
+                }
+                if (semanticContribution && frame.propagatesToParent
+                        && !state.contributionFrames.isEmpty()) {
+                    state.contributionFrames.get(state.contributionFrames.size() - 1).semanticContribution = true;
+                }
             }
         }
+    }
+
+    private boolean tracksSemanticPresence(ResolutionState state,
+                                           Node target,
+                                           Node source,
+                                           String path) {
+        return state.contribution == Contribution.TYPE_ROOT
+                || state.contribution == Contribution.TYPE_DECLARATION
+                || target.getSchema() != null
+                || source.getSchema() != null
+                || !state.contributionFrames.isEmpty()
+                || (state.presenceGates != null && state.presenceGates.containsKey(path));
+    }
+
+    private Contribution childContribution(Contribution contribution) {
+        if (contribution == Contribution.TYPE_ROOT) {
+            return Contribution.TYPE_DECLARATION;
+        }
+        if (contribution == Contribution.CONTRACT_ROOT) {
+            return Contribution.CONTRACT_CONTENT;
+        }
+        return contribution;
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
@@ -784,12 +912,76 @@ public final class Merger implements NodeResolver {
         if (targetValue == null) {
             Node node = resolve(sourceValue, limits);
             target.getProperties().put(sourceKey, node);
+        } else if (requiresCyclicTypeCompletion(targetValue, sourceValue)) {
+            Node typedSource = sourceValue.clone()
+                    .type(new Node().blueId(targetValue.getType().getBlueId()));
+            merge(targetValue, typedSource, limits);
         } else if (hasListControls(sourceValue)) {
+            merge(targetValue, sourceValue, limits);
+        } else if (containsCyclicSetReference(sourceValue)) {
             merge(targetValue, sourceValue, limits);
         } else {
             Node node = resolve(sourceValue, limits);
             mergeObject(targetValue, node, limits);
         }
+    }
+
+    private void mergePropertyWithContribution(Node target,
+                                               String sourceKey,
+                                               Node sourceValue,
+                                               Limits limits,
+                                               Contribution contribution) {
+        ResolutionState state = resolutionState;
+        Contribution previous = state.contribution;
+        state.contribution = contribution;
+        try {
+            mergeProperty(target, sourceKey, sourceValue, limits);
+        } finally {
+            state.contribution = previous;
+        }
+    }
+
+    private boolean requiresCyclicTypeCompletion(Node inherited, Node source) {
+        if (source.getType() != null || inherited.getType() == null
+                || !inherited.getType().isReferenceOnly()) {
+            return false;
+        }
+        String inheritedTypeBlueId = inherited.getType().getBlueId();
+        return inheritedTypeBlueId != null && inheritedTypeBlueId.indexOf('#') >= 0;
+    }
+
+    private boolean containsCyclicSetReference(Node root) {
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        List<Node> pending = new ArrayList<>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            Node node = pending.remove(pending.size() - 1);
+            if (node == null || !visited.add(node)) {
+                continue;
+            }
+            String blueId = node.getBlueId();
+            if (blueId != null && blueId.indexOf('#') >= 0) {
+                return true;
+            }
+            pending.add(node.getType());
+            pending.add(node.getItemType());
+            pending.add(node.getKeyType());
+            pending.add(node.getValueType());
+            pending.add(node.getContracts());
+            pending.add(node.getBlue());
+            if (node.getItems() != null) {
+                pending.addAll(node.getItems());
+            }
+            if (node.getProperties() != null) {
+                pending.addAll(node.getProperties().values());
+            }
+        }
+        return false;
+    }
+
+    private boolean isMaterializedCyclicSetMemberType(Node type) {
+        String blueId = type.getBlueId();
+        return blueId != null && blueId.indexOf('#') >= 0 && !type.isReferenceOnly();
     }
 
     private void mergeContracts(Node target, Node sourceContracts, Limits limits) {
@@ -799,6 +991,19 @@ public final class Merger implements NodeResolver {
         }
         Node resolved = resolve(sourceContracts, limits);
         mergeObject(target.getContracts(), resolved, limits);
+    }
+
+    private void mergeContractsWithContribution(Node target,
+                                                Node sourceContracts,
+                                                Limits limits) {
+        ResolutionState state = resolutionState;
+        Contribution previous = state.contribution;
+        state.contribution = Contribution.CONTRACT_ROOT;
+        try {
+            mergeContracts(target, sourceContracts, limits);
+        } finally {
+            state.contribution = previous;
+        }
     }
 
     private boolean hasListControls(Node node) {
@@ -875,9 +1080,8 @@ public final class Merger implements NodeResolver {
         String path = currentPath(state);
         ValidationCandidate candidate = candidate(state, path);
         candidate.node = target;
-        if (hasConcretePayload(target)) {
-            candidate.semanticallyPresent = true;
-        }
+        candidate.presence = presenceGate(state, path);
+        bindAncestorPresenceGates(state, candidate);
         candidate.observed = true;
         if (needsReferenceContent) {
             if (!referenceExpansionAllowed) {
@@ -892,11 +1096,11 @@ public final class Merger implements NodeResolver {
             }
         }
         if (state.path.isEmpty()) {
-            candidate.semanticallyPresent = true;
+            candidate.presence.present = true;
         }
         ContributionFrame frame = state.contributionFrames.get(state.contributionFrames.size() - 1);
         if (frame.semanticContribution || frame.inheritedSemanticContribution) {
-            candidate.semanticallyPresent = true;
+            candidate.presence.present = true;
         }
         if (isIncomplete(state, path)) {
             candidate.complete = false;
@@ -913,13 +1117,40 @@ public final class Merger implements NodeResolver {
                                       String blueId,
                                       Limits limits,
                                       ResolutionState state) {
-        Node materialized = materializedReference(blueId, limits, state);
+        CanonicalReference canonicalReference = canonicalReference(blueId, state);
+        if (canonicalReference.canonical.containsCyclicSetReference()) {
+            materializeCyclicSetReference(target, blueId, limits, state, canonicalReference);
+            return;
+        }
+
+        Node materialized = materializedReference(blueId, limits, state, canonicalReference);
         Node mergeable = materialized.clone();
         if (mergeable.getBlueId() != null && !mergeable.isReferenceOnly()) {
             mergeable.blueId(null);
         }
         mergeObjectWithContribution(target, mergeable, limits, Contribution.MATERIALIZED_REFERENCE);
         target.blueId(blueId);
+    }
+
+    private void materializeCyclicSetReference(Node target,
+                                               String blueId,
+                                               Limits limits,
+                                               ResolutionState state,
+                                               CanonicalReference canonicalReference) {
+        if (state.materializingReferences == null) {
+            state.materializingReferences = new HashSet<>();
+        }
+        if (!state.materializingReferences.add(blueId)) {
+            throw new IllegalStateException("Cyclic reference materialization at path "
+                    + currentPath(state) + " for blueId: " + blueId);
+        }
+        try {
+            mergeWithContribution(target, canonicalReference.canonical.toNode(), limits,
+                    Contribution.MATERIALIZED_REFERENCE);
+            target.blueId(blueId);
+        } finally {
+            state.materializingReferences.remove(blueId);
+        }
     }
 
     private void materializeReferenceAtCurrentPath(Node target,
@@ -935,7 +1166,10 @@ public final class Merger implements NodeResolver {
         }
     }
 
-    private Node materializedReference(String blueId, Limits limits, ResolutionState state) {
+    private Node materializedReference(String blueId,
+                                       Limits limits,
+                                       ResolutionState state,
+                                       CanonicalReference canonicalReference) {
         if (limits == Limits.NO_LIMITS && state.fullyResolvedReferences != null) {
             Node existing = state.fullyResolvedReferences.get(blueId);
             if (existing != null) {
@@ -952,7 +1186,6 @@ public final class Merger implements NodeResolver {
             return materialized.clone();
         }
 
-        CanonicalReference canonicalReference = canonicalReference(blueId, state);
         FrozenNode canonical = canonicalReference.canonical;
         if (state.materializingReferences == null) {
             state.materializingReferences = new HashSet<>();
@@ -1176,10 +1409,16 @@ public final class Merger implements NodeResolver {
     }
 
     private boolean isDirectSemanticContribution(Node node, Contribution contribution) {
-        if (contribution != Contribution.INSTANCE && contribution != Contribution.TYPE_DECLARATION) {
+        if (node == null || contribution == Contribution.TYPE_METADATA) {
             return false;
         }
-        return node != null && (node.isReferenceOnly() || node.getValue() != null || node.getItems() != null);
+        if (contribution == Contribution.TYPE_ROOT) {
+            return node.getValue() != null || node.getItems() != null;
+        }
+        return node.isReferenceOnly()
+                || node.getValue() != null
+                || node.getItems() != null
+                || (node.getProperties() != null && !node.getProperties().isEmpty());
     }
 
     private boolean isInheritedReferenceContribution(Node target, Node source) {
@@ -1249,6 +1488,43 @@ public final class Merger implements NodeResolver {
         return candidate;
     }
 
+    private PresenceGate presenceGate(ResolutionState state, String path) {
+        if (state.presenceGates == null) {
+            state.presenceGates = new LinkedHashMap<>();
+        }
+        PresenceGate gate = state.presenceGates.get(path);
+        if (gate == null) {
+            gate = new PresenceGate();
+            state.presenceGates.put(path, gate);
+        }
+        return gate;
+    }
+
+    private void bindAncestorPresenceGates(ResolutionState state, ValidationCandidate candidate) {
+        int candidateDepth = state.path.size();
+        for (ContributionFrame frame : state.contributionFrames) {
+            if (frame.pathDepth == 0 || frame.pathDepth >= candidateDepth) {
+                continue;
+            }
+            PresenceGate gate = presenceGate(state, frame.path);
+            if (frame.semanticContribution || frame.inheritedSemanticContribution) {
+                gate.present = true;
+            }
+            if (!candidate.ancestorPresence.contains(gate)) {
+                candidate.ancestorPresence.add(gate);
+            }
+        }
+    }
+
+    private boolean ancestorsPresent(ValidationCandidate candidate) {
+        for (PresenceGate gate : candidate.ancestorPresence) {
+            if (!gate.present) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void validateCompletedCandidates(ResolutionState state) {
         if (state.candidates == null) {
             return;
@@ -1260,6 +1536,9 @@ public final class Merger implements NodeResolver {
             if (!candidate.complete) {
                 // Limited resolution deliberately returns a partial view. Skipped candidates
                 // are never certified as completed values and must not be semantically hashed.
+                continue;
+            }
+            if (!ancestorsPresent(candidate)) {
                 continue;
             }
             if (candidate.pendingReferenceBlueId != null) {
@@ -1282,7 +1561,7 @@ public final class Merger implements NodeResolver {
                 }
             }
             mergingProcessor.validateCompleted(candidate.node,
-                    candidate.semanticallyPresent,
+                    candidate.presence.present,
                     entry.getKey());
         }
     }
@@ -1380,18 +1659,28 @@ public final class Merger implements NodeResolver {
         if (metadataType == null || metadataType.getBlueId() == null) {
             return metadataType;
         }
-        FrozenNode cached = cachedResolvedReference(metadataType.getBlueId(), limits);
+        String typeBlueId = metadataType.getBlueId();
+        if (isMaterializingType(typeBlueId)) {
+            return new Node().blueId(typeBlueId);
+        }
+        FrozenNode cached = cachedResolvedReference(typeBlueId, limits);
         if (cached != null) {
             Node resolved = cached.toNode();
             if (resolved.getBlueId() == null) {
-                resolved.blueId(metadataType.getBlueId());
+                resolved.blueId(typeBlueId);
             }
             return resolved;
         }
-        extendTypeReference(metadataType, metadataType.getBlueId());
-        Node resolved = resolveWithContribution(metadataType, limits, Contribution.TYPE_METADATA);
-        cacheResolvedReference(metadataType.getBlueId(), resolved, limits);
-        return resolved;
+        TypeResolutionKey key = new TypeResolutionKey(typeBlueId, resolutionState.path.size());
+        beginResolvingType(key);
+        try {
+            extendTypeReference(metadataType, typeBlueId);
+            Node resolved = resolveWithContribution(metadataType, limits, Contribution.TYPE_METADATA);
+            cacheResolvedReference(typeBlueId, resolved, limits);
+            return resolved;
+        } finally {
+            finishResolvingType(key);
+        }
     }
 
     @Override
@@ -1402,6 +1691,7 @@ public final class Merger implements NodeResolver {
             BlueIdReferenceValidator.validate(node);
             state = new ResolutionState();
             state.rootInlineTypeDeclaration = isInlineTypeDeclaration(node);
+            state.rootSource = node;
             resolutionState = state;
             lastResolutionUsedNonDirectTrustedContent = false;
             limits.enterPathSegment("", node);
@@ -1488,9 +1778,12 @@ public final class Merger implements NodeResolver {
 
     private enum Contribution {
         INSTANCE,
+        TYPE_ROOT,
         TYPE_DECLARATION,
         TYPE_METADATA,
-        MATERIALIZED_REFERENCE
+        MATERIALIZED_REFERENCE,
+        CONTRACT_ROOT,
+        CONTRACT_CONTENT
     }
 
     private static final class ResolutionState {
@@ -1500,6 +1793,7 @@ public final class Merger implements NodeResolver {
         private boolean referenceExpansionAllowed = true;
         private Contribution contribution = Contribution.INSTANCE;
         private Map<String, ValidationCandidate> candidates;
+        private Map<String, PresenceGate> presenceGates;
         private Set<String> incompletePaths;
         private Map<String, CanonicalReference> canonicalReferences;
         private Map<String, ProviderLookup> providerLookups;
@@ -1507,8 +1801,13 @@ public final class Merger implements NodeResolver {
         private Set<String> materializingReferences;
         private Set<String> failedProviderReferences;
         private Set<TypeResolutionKey> resolvingTypes;
+        private Set<String> materializingTypeBlueIds;
         private boolean usedNonDirectTrustedContent;
         private boolean rootInlineTypeDeclaration;
+        private Node rootSource;
+        private boolean rootSourceSchemaChecked;
+        private boolean rootSourceContainsSchema;
+        private boolean schemaRequiresTypeSourceProvenance;
     }
 
     private enum LookupProvenance {
@@ -1539,20 +1838,35 @@ public final class Merger implements NodeResolver {
     private static final class ValidationCandidate {
         private Node node;
         private boolean observed;
-        private boolean semanticallyPresent;
+        private PresenceGate presence;
+        private final List<PresenceGate> ancestorPresence = new ArrayList<>();
         private boolean complete = true;
         private String pendingReferenceBlueId;
         private Limits pendingReferenceLimits;
     }
 
     private static final class ContributionFrame {
+        private final String path;
+        private final int pathDepth;
         private boolean semanticContribution;
         private final boolean inheritedSemanticContribution;
+        private final boolean propagatesToParent;
 
-        private ContributionFrame(boolean semanticContribution, boolean inheritedSemanticContribution) {
+        private ContributionFrame(String path,
+                                  int pathDepth,
+                                  boolean semanticContribution,
+                                  boolean inheritedSemanticContribution,
+                                  boolean propagatesToParent) {
+            this.path = path;
+            this.pathDepth = pathDepth;
             this.semanticContribution = semanticContribution;
             this.inheritedSemanticContribution = inheritedSemanticContribution;
+            this.propagatesToParent = propagatesToParent;
         }
+    }
+
+    private static final class PresenceGate {
+        private boolean present;
     }
 
     private static final class TypeResolutionKey {

@@ -53,7 +53,10 @@ public class MergeReverser {
                              boolean canonicalOverlay,
                              Node source) {
 
-        if (merged.getBlueId() != null && fromType != null && merged.getBlueId().equals(fromType.getBlueId())) {
+        if (merged.getBlueId() != null
+                && fromType != null
+                && merged.getBlueId().equals(fromType.getBlueId())
+                && !isCanonicalSourceReference(canonicalOverlay, source)) {
             return;
         }
 
@@ -88,9 +91,10 @@ public class MergeReverser {
         }
         if (merged.getContracts() != null) {
             Node fromTypeContracts = fromType != null ? fromType.getContracts() : null;
-            if (!sameNodeBlueId(merged.getContracts(), fromTypeContracts)) {
+            Node sourceContracts = source != null ? source.getContracts() : null;
+            if (!sameNodeBlueId(merged.getContracts(), fromTypeContracts)
+                    || isCanonicalSourceReference(canonicalOverlay, sourceContracts)) {
                 Node minimalContracts = new Node();
-                Node sourceContracts = source != null ? source.getContracts() : null;
                 reverseNode(minimalContracts, merged.getContracts(), fromTypeContracts,
                         canonicalOverlay, sourceContracts);
                 if (!Nodes.isEmptyNode(minimalContracts)) {
@@ -164,13 +168,14 @@ public class MergeReverser {
                 if (fromType != null && fromType.getProperties() != null) {
                     fromTypeProperty = fromType.getProperties().get(key);
                 }
-                if (sameNodeBlueId(mergedProperty, fromTypeProperty)) {
-                    continue;
-                }
-                Node minimalProperty = new Node();
                 Node sourceProperty = source != null && source.getProperties() != null
                         ? source.getProperties().get(key)
                         : null;
+                if (sameNodeBlueId(mergedProperty, fromTypeProperty)
+                        && !isCanonicalSourceReference(canonicalOverlay, sourceProperty)) {
+                    continue;
+                }
+                Node minimalProperty = new Node();
                 reverseNode(minimalProperty, mergedProperty, fromTypeProperty,
                         canonicalOverlay, sourceProperty);
                 if (!Nodes.isEmptyNode(minimalProperty)) {
@@ -238,6 +243,10 @@ public class MergeReverser {
             return false;
         }
         return comparisonBlueId(left).equals(comparisonBlueId(right));
+    }
+
+    private boolean isCanonicalSourceReference(boolean canonicalOverlay, Node source) {
+        return canonicalOverlay && source != null && source.isReferenceOnly();
     }
 
     private String comparisonBlueId(Node node) {

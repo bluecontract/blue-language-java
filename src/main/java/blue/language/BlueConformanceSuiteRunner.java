@@ -2,6 +2,9 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.provider.BasicNodeProvider;
+import blue.language.provider.CyclicAwareNodeProvider;
+import blue.language.provider.NodeContentHandler;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
@@ -398,7 +401,12 @@ public final class BlueConformanceSuiteRunner {
             throw new IllegalArgumentException("Fixture provider must be a list.");
         }
         Map<String, Node> nodesByBlueId = new LinkedHashMap<>();
+        List<NodeProvider> cyclicSetProviders = new ArrayList<>();
         for (JsonNode entry : providerSpec) {
+            if (entry.has("cyclicSet")) {
+                cyclicSetProviders.add(cyclicSetProvider(entry));
+                continue;
+            }
             String requestedBlueId = text(entry, "requestedBlueId", text(entry, "blueId", null));
             JsonNode nodeSpec = entry.has("returnedNode") ? entry.get("returnedNode") : entry.get("node");
             if (requestedBlueId == null || nodeSpec == null || nodeSpec.isNull()) {
@@ -406,10 +414,62 @@ public final class BlueConformanceSuiteRunner {
             }
             nodesByBlueId.put(requestedBlueId, readNode(nodeSpec));
         }
-        return blueId -> {
-            Node node = nodesByBlueId.get(blueId);
-            return node == null ? null : Collections.singletonList(node.clone());
-        };
+        return new FixtureNodeProvider(nodesByBlueId, cyclicSetProviders);
+    }
+
+    private static NodeProvider cyclicSetProvider(JsonNode entry) {
+        Node documentsNode = readNode(requireNonNull(entry, "cyclicSet"));
+        List<Node> documents = documentsNode.getItems();
+        if (documents == null || documents.isEmpty()) {
+            throw new IllegalArgumentException("Fixture cyclicSet must contain at least one document.");
+        }
+
+        Map<String, String> idsByName = new LinkedHashMap<>();
+        NodeProvider provider;
+        if (documents.size() == 1) {
+            Node document = new Blue().preprocess(documents.get(0).clone());
+            requireCyclicDocumentName(document, idsByName);
+            List<String> memberIds = CircularBlueIdCalculator.calculateCircularSetBlueIds(documents);
+            String memberId = memberIds.get(0);
+            idsByName.put(document.getName(), memberId);
+            provider = new SingletonCyclicSetProvider(document, memberId);
+        } else {
+            BasicNodeProvider basicProvider = new BasicNodeProvider(documentsNode);
+            for (Node document : documents) {
+                requireCyclicDocumentName(document, idsByName);
+                idsByName.put(document.getName(), basicProvider.getBlueIdByName(document.getName()));
+            }
+            provider = basicProvider;
+        }
+        assertExpectedCyclicMemberBlueIds(entry, idsByName);
+        return provider;
+    }
+
+    private static void requireCyclicDocumentName(Node document, Map<String, String> idsByName) {
+        String name = document.getName();
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Fixture cyclicSet documents require unique names.");
+        }
+        if (idsByName.containsKey(name)) {
+            throw new IllegalArgumentException("Duplicate fixture cyclicSet document name: " + name);
+        }
+    }
+
+    private static void assertExpectedCyclicMemberBlueIds(JsonNode entry,
+                                                           Map<String, String> actualIdsByName) {
+        JsonNode expected = requireNonNull(entry, "expectedMemberBlueIds");
+        if (!expected.isObject() || expected.size() != actualIdsByName.size()) {
+            throw new IllegalArgumentException(
+                    "expectedMemberBlueIds must map every cyclicSet document name exactly once.");
+        }
+        actualIdsByName.forEach((name, actualBlueId) -> {
+            JsonNode expectedBlueId = expected.get(name);
+            if (expectedBlueId == null || expectedBlueId.isNull()) {
+                throw new IllegalArgumentException(
+                        "Missing expected cyclic member BlueId for document: " + name);
+            }
+            assertEquals(expectedBlueId.asText(), actualBlueId);
+        });
     }
 
     private static void validateFixtureMatchesManifest(FixtureEntry fixture, JsonNode spec) {
@@ -840,6 +900,74 @@ public final class BlueConformanceSuiteRunner {
             return "/" + segment;
         }
         return path + "/" + segment;
+    }
+
+    private static final class FixtureNodeProvider
+            implements NodeProvider, CyclicAwareNodeProvider {
+        private final Map<String, Node> ordinaryNodesByBlueId;
+        private final List<NodeProvider> cyclicSetProviders;
+
+        private FixtureNodeProvider(Map<String, Node> ordinaryNodesByBlueId,
+                                    List<NodeProvider> cyclicSetProviders) {
+            this.ordinaryNodesByBlueId = ordinaryNodesByBlueId;
+            this.cyclicSetProviders = cyclicSetProviders;
+        }
+
+        @Override
+        public List<Node> fetchByBlueId(String blueId) {
+            Node ordinary = ordinaryNodesByBlueId.get(blueId);
+            if (ordinary != null) {
+                return Collections.singletonList(ordinary.clone());
+            }
+            for (NodeProvider provider : cyclicSetProviders) {
+                List<Node> nodes = provider.fetchByBlueId(blueId);
+                if (nodes != null) {
+                    return nodes;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public boolean hasVerifiedContentForBlueId(String blueId) {
+            if (ordinaryNodesByBlueId.containsKey(blueId)) {
+                return false;
+            }
+            for (NodeProvider provider : cyclicSetProviders) {
+                if (provider instanceof CyclicAwareNodeProvider
+                        && ((CyclicAwareNodeProvider) provider)
+                        .hasVerifiedContentForBlueId(blueId)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static final class SingletonCyclicSetProvider
+            implements NodeProvider, CyclicAwareNodeProvider {
+        private final String memberBlueId;
+        private final Node content;
+
+        private SingletonCyclicSetProvider(Node document, String memberBlueId) {
+            this.memberBlueId = memberBlueId;
+            String masterBlueId = memberBlueId.substring(0, memberBlueId.indexOf('#'));
+            JsonNode resolvedContent = NodeContentHandler.resolveThisReferences(
+                    UncheckedObjectMapper.JSON_MAPPER.valueToTree(document), masterBlueId, true);
+            this.content = UncheckedObjectMapper.JSON_MAPPER.treeToValue(resolvedContent, Node.class);
+        }
+
+        @Override
+        public List<Node> fetchByBlueId(String blueId) {
+            return memberBlueId.equals(blueId)
+                    ? Collections.singletonList(content.clone().blueId(memberBlueId))
+                    : null;
+        }
+
+        @Override
+        public boolean hasVerifiedContentForBlueId(String blueId) {
+            return memberBlueId.equals(blueId);
+        }
     }
 
     private static final class FixtureEntry {

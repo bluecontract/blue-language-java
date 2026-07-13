@@ -1,0 +1,54 @@
+id: R_recursive_typed_reference_is_finite_and_canonical
+category: Canonicalization
+operation: scenario
+description: materializing a typed reference backed by recursive types remains finite and canonicalizes to the source reference
+provider:
+- cyclicSet:
+  - name: Person
+    pet:
+      type:
+        blueId: this#1
+  - name: Dog
+    owner:
+      type:
+        blueId: this#0
+  expectedMemberBlueIds:
+    Person: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#1
+    Dog: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#0
+- requestedBlueId: Ha4wAQ2K4hYbhNty1bCRVKpaopgHXnqzKBGXkTkQpGQ2
+  returnedNode:
+    name: Fido
+    type:
+      blueId: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#0
+steps:
+- action: resolve
+  source:
+    type:
+      blueId: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#1
+    pet:
+      blueId: Ha4wAQ2K4hYbhNty1bCRVKpaopgHXnqzKBGXkTkQpGQ2
+  expectedResolvedPaths:
+  - path: /pet/type/owner/type/pet/type
+    expectedNode:
+      blueId: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#0
+- action: canonicalize
+  source:
+    type:
+      blueId: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#1
+    pet:
+      blueId: Ha4wAQ2K4hYbhNty1bCRVKpaopgHXnqzKBGXkTkQpGQ2
+  expectedCanonicalOverlay:
+    type:
+      blueId: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#1
+    pet:
+      blueId: Ha4wAQ2K4hYbhNty1bCRVKpaopgHXnqzKBGXkTkQpGQ2
+- action: resolve
+  source:
+    type:
+      blueId: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#1
+    pet:
+      blueId: Ha4wAQ2K4hYbhNty1bCRVKpaopgHXnqzKBGXkTkQpGQ2
+  expectedResolvedPaths:
+  - path: /pet/type/owner/type/pet/type
+    expectedNode:
+      blueId: ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#0

@@ -450,6 +450,190 @@ class ResolvedInstanceSchemaValidationTest {
     }
 
     @Test
+    void contractsDoNotSatisfyRequiredObjectPresence() {
+        Node type = new Node().name("Contract Metadata Holder")
+                .properties("field", new Node().schema(required())
+                        .contracts(new Node().properties("processor", new Node().value("configured"))));
+        BasicNodeProvider provider = new BasicNodeProvider(type);
+        String typeId = provider.getBlueIdByName("Contract Metadata Holder");
+
+        IllegalArgumentException inheritedFailure = assertThrows(IllegalArgumentException.class,
+                () -> new Blue(provider).resolve(new Node().type(reference(typeId))));
+        IllegalArgumentException instanceFailure = assertThrows(IllegalArgumentException.class,
+                () -> new Blue(provider).resolve(new Node().type(reference(typeId))
+                        .properties("field", new Node().contracts(new Node()
+                                .properties("processor", new Node().value("configured"))))));
+
+        assertTrue(inheritedFailure.getMessage().contains("/field"), inheritedFailure.getMessage());
+        assertTrue(instanceFailure.getMessage().contains("/field"), instanceFailure.getMessage());
+    }
+
+    @Test
+    void omittedOptionalTypedBranchDefersNestedRequiredFieldColdAndWarm() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node branch = new Node().name("Optional Branch")
+                .properties("actor", new Node().type("Text").schema(required()));
+        provider.addSingleNodes(branch);
+        String branchId = provider.getBlueIdByName("Optional Branch");
+        Node holder = new Node().name("Optional Branch Holder")
+                .properties("branch", new Node().type(reference(branchId)));
+        provider.addSingleNodes(holder);
+        String holderId = provider.getBlueIdByName("Optional Branch Holder");
+
+        Blue cold = new Blue(provider);
+        assertDoesNotThrow(() -> cold.resolve(new Node().type(reference(holderId))));
+
+        Blue warm = new Blue(provider);
+        assertDoesNotThrow(() -> warm.resolve(new Node().type(reference(holderId))
+                .properties("branch", new Node().properties("actor", new Node().value("Ada")))));
+        assertDoesNotThrow(() -> warm.resolve(new Node().type(reference(holderId))));
+    }
+
+    @Test
+    void nestedSchemaFreeTypeCachePreservesOptionalBranchAbsence() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node leaf = new Node().name("Declaration Leaf")
+                .properties("leafText", new Node().type("Text"));
+        provider.addSingleNodes(leaf);
+        String leafId = provider.getBlueIdByName("Declaration Leaf");
+        Node helper = new Node().name("Declaration Helper")
+                .properties("nested", new Node().type(reference(leafId)));
+        provider.addSingleNodes(helper);
+        String helperId = provider.getBlueIdByName("Declaration Helper");
+        Node branch = new Node().name("Nested Optional Branch")
+                .properties("helper", new Node().type(reference(helperId)))
+                .properties("actor", new Node().type("Text").schema(required()));
+        provider.addSingleNodes(branch);
+        String branchId = provider.getBlueIdByName("Nested Optional Branch");
+        Node holder = new Node().name("Nested Optional Branch Holder")
+                .properties("branch", new Node().type(reference(branchId)));
+        provider.addSingleNodes(holder);
+        String holderId = provider.getBlueIdByName("Nested Optional Branch Holder");
+        Blue blue = new Blue(provider);
+
+        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))
+                .properties("branch", new Node().properties("actor", new Node().value("Ada")))));
+
+        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))));
+    }
+
+    @Test
+    void instanceSchemaOverlayDoesNotReuseExpandedDeclarationsAsPayload() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node leaf = new Node().name("Overlay Declaration Leaf")
+                .properties("leafText", new Node().type("Text"));
+        provider.addSingleNodes(leaf);
+        String leafId = provider.getBlueIdByName("Overlay Declaration Leaf");
+        Node branch = new Node().name("Overlay Declaration Branch")
+                .properties("nested", new Node().type(reference(leafId)));
+        provider.addSingleNodes(branch);
+        String branchId = provider.getBlueIdByName("Overlay Declaration Branch");
+        Node holder = new Node().name("Overlay Declaration Holder")
+                .properties("branch", new Node().type(reference(branchId)));
+        provider.addSingleNodes(holder);
+        String holderId = provider.getBlueIdByName("Overlay Declaration Holder");
+        Blue blue = new Blue(provider);
+
+        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))));
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> blue.resolve(new Node().type(reference(holderId))
+                        .properties("branch", new Node().schema(required()))));
+
+        assertTrue(failure.getMessage().contains("/branch"), failure.getMessage());
+    }
+
+    @Test
+    void cachedSchemaDiscoveryPreventsLaterExpandedSiblingFromActivatingOptionalParent() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node requiredDeclaration = new Node().name("Cached Required Declaration")
+                .schema(required());
+        provider.addSingleNodes(requiredDeclaration);
+        String requiredDeclarationId = provider.getBlueIdByName("Cached Required Declaration");
+        Node leaf = new Node().name("Cached Sibling Leaf")
+                .properties("leafText", new Node().type("Text"));
+        provider.addSingleNodes(leaf);
+        String leafId = provider.getBlueIdByName("Cached Sibling Leaf");
+        Node expandedSibling = new Node().name("Cached Expanded Sibling")
+                .properties("nested", new Node().type(reference(leafId)));
+        provider.addSingleNodes(expandedSibling);
+        String expandedSiblingId = provider.getBlueIdByName("Cached Expanded Sibling");
+        Node branch = new Node().name("Cached Optional Parent")
+                .properties("requiredValue", new Node().type(reference(requiredDeclarationId)))
+                .properties("helper", new Node().type(reference(expandedSiblingId)));
+        provider.addSingleNodes(branch);
+        String branchId = provider.getBlueIdByName("Cached Optional Parent");
+        Node holder = new Node().name("Cached Optional Parent Holder")
+                .properties("branch", new Node().type(reference(branchId)));
+        provider.addSingleNodes(holder);
+        String holderId = provider.getBlueIdByName("Cached Optional Parent Holder");
+        Blue blue = new Blue(provider);
+
+        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(requiredDeclarationId))));
+        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(expandedSiblingId))));
+
+        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))));
+    }
+
+    @Test
+    void suppliedOrdinaryChildActivatesNestedRequiredField() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node branch = new Node().name("Activated Branch")
+                .properties("actor", new Node().type("Text").schema(required()));
+        provider.addSingleNodes(branch);
+        String branchId = provider.getBlueIdByName("Activated Branch");
+        Node holder = new Node().name("Activated Branch Holder")
+                .properties("branch", new Node().type(reference(branchId)));
+        provider.addSingleNodes(holder);
+        String holderId = provider.getBlueIdByName("Activated Branch Holder");
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> new Blue(provider).resolve(new Node().type(reference(holderId))
+                        .properties("branch", new Node()
+                                .properties("note", new Node().value("supplied")))));
+
+        assertTrue(failure.getMessage().contains("/branch/actor"), failure.getMessage());
+    }
+
+    @Test
+    void inheritedFixedFieldActivatesOptionalTypedBranch() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node branch = new Node().name("Fixed Branch")
+                .properties("marker", new Node().value("fixed"))
+                .properties("actor", new Node().type("Text").schema(required()));
+        provider.addSingleNodes(branch);
+        String branchId = provider.getBlueIdByName("Fixed Branch");
+        Node holder = new Node().name("Fixed Branch Holder")
+                .properties("branch", new Node().type(reference(branchId)));
+        provider.addSingleNodes(holder);
+        String holderId = provider.getBlueIdByName("Fixed Branch Holder");
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> new Blue(provider).resolve(new Node().type(reference(holderId))));
+
+        assertTrue(failure.getMessage().contains("/branch/actor"), failure.getMessage());
+    }
+
+    @Test
+    void directlyInheritedObjectSubtreeActivatesOptionalTypedBranch() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node branch = new Node().name("Declared Branch")
+                .properties("actor", new Node().type("Text").schema(required()));
+        provider.addSingleNodes(branch);
+        String branchId = provider.getBlueIdByName("Declared Branch");
+        Node holder = new Node().name("Declared Branch Holder")
+                .properties("branch", new Node().type(reference(branchId))
+                        .properties("marker", new Node().description("fixed subtree")));
+        provider.addSingleNodes(holder);
+        String holderId = provider.getBlueIdByName("Declared Branch Holder");
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> new Blue(provider).resolve(new Node().type(reference(holderId))));
+
+        assertTrue(failure.getMessage().contains("/branch/actor"), failure.getMessage());
+    }
+
+    @Test
     void referenceAndEquivalentMaterializedValueHaveSameCanonicalIdentity() {
         Fixture fixture = new Fixture();
         Node materialized = new Node().type(reference(fixture.concreteSubjectId))

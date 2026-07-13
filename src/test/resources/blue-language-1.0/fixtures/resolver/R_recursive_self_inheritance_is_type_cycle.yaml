@@ -1,0 +1,16 @@
+id: R_recursive_self_inheritance_is_type_cycle
+category: Resolution
+operation: resolve
+description: self-recursive inheritance remains an invalid type-chain cycle
+provider:
+- cyclicSet:
+  - name: Invalid Self Parent
+    type:
+      blueId: this#0
+  expectedMemberBlueIds:
+    Invalid Self Parent: 7vbftf2pyegtgLd3N1QA78ebfuU5KGyuzYhU5iVkA5dM#0
+source:
+  type:
+    blueId: 7vbftf2pyegtgLd3N1QA78ebfuU5KGyuzYhU5iVkA5dM#0
+expectError: true
+expectedErrorCategory: TypeCycle
