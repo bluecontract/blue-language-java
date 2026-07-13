@@ -1075,7 +1075,7 @@ public final class Merger implements NodeResolver {
         if (provider instanceof SequentialNodeProvider) {
             for (NodeProvider candidate : ((SequentialNodeProvider) provider).getNodeProviders()) {
                 ProviderLookup lookup = fetchWithProvenance(candidate, blueId);
-                if (lookup != null && !lookup.nodes.isEmpty()) {
+                if (lookup != null) {
                     return lookup;
                 }
             }
@@ -1091,7 +1091,7 @@ public final class Merger implements NodeResolver {
         } else {
             nodes = new VerifyingNodeProvider(provider).fetchByBlueId(blueId);
         }
-        if (nodes == null || nodes.isEmpty()) {
+        if (nodes == null) {
             return null;
         }
         List<Node> retained = new ArrayList<>(nodes.size());

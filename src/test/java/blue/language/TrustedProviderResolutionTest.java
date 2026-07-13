@@ -108,6 +108,86 @@ class TrustedProviderResolutionTest {
     }
 
     @Test
+    void trustedEmptyResultStopsBeforeTrustedFallback() {
+        Fixture fixture = new Fixture();
+        AtomicInteger emptyFetches = new AtomicInteger();
+        AtomicInteger fallbackFetches = new AtomicInteger();
+        NodeProvider trustedEmpty = blueId -> {
+            emptyFetches.incrementAndGet();
+            return Collections.emptyList();
+        };
+        NodeProvider trustedFallback = blueId -> {
+            fallbackFetches.incrementAndGet();
+            return Collections.singletonList(fixture.trustedType.clone());
+        };
+        Blue blue = new Blue(new SequentialNodeProvider(
+                NodeProviderWrapper.unverified(trustedEmpty),
+                NodeProviderWrapper.unverified(trustedFallback)));
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> blue.resolve(fixture.instance()));
+
+        assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
+                BlueLanguageErrorClassifier.classify(failure));
+        assertEquals(1, emptyFetches.get());
+        assertEquals(0, fallbackFetches.get());
+        assertEquals(0, blue.resolvedReferenceCacheSize());
+    }
+
+    @Test
+    void plainEmptyResultStopsBeforeTrustedFallback() {
+        Fixture fixture = new Fixture();
+        AtomicInteger emptyFetches = new AtomicInteger();
+        AtomicInteger fallbackFetches = new AtomicInteger();
+        NodeProvider plainEmpty = blueId -> {
+            emptyFetches.incrementAndGet();
+            return Collections.emptyList();
+        };
+        NodeProvider trustedFallback = blueId -> {
+            fallbackFetches.incrementAndGet();
+            return Collections.singletonList(fixture.trustedType.clone());
+        };
+        Blue blue = new Blue(new SequentialNodeProvider(
+                plainEmpty, NodeProviderWrapper.unverified(trustedFallback)));
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> blue.resolve(fixture.instance()));
+
+        assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
+                BlueLanguageErrorClassifier.classify(failure));
+        assertEquals(1, emptyFetches.get());
+        assertEquals(0, fallbackFetches.get());
+        assertEquals(0, blue.resolvedReferenceCacheSize());
+    }
+
+    @Test
+    void nestedSequentialEmptyResultRemainsTerminal() {
+        Fixture fixture = new Fixture();
+        AtomicInteger emptyFetches = new AtomicInteger();
+        AtomicInteger fallbackFetches = new AtomicInteger();
+        NodeProvider empty = blueId -> {
+            emptyFetches.incrementAndGet();
+            return Collections.emptyList();
+        };
+        NodeProvider trustedFallback = blueId -> {
+            fallbackFetches.incrementAndGet();
+            return Collections.singletonList(fixture.trustedType.clone());
+        };
+        NodeProvider nested = new SequentialNodeProvider(empty);
+        Blue blue = new Blue(new SequentialNodeProvider(
+                nested, NodeProviderWrapper.unverified(trustedFallback)));
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> blue.resolve(fixture.instance()));
+
+        assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
+                BlueLanguageErrorClassifier.classify(failure));
+        assertEquals(1, emptyFetches.get());
+        assertEquals(0, fallbackFetches.get());
+        assertEquals(0, blue.resolvedReferenceCacheSize());
+    }
+
+    @Test
     void plainWinnerBeforeTrustedProviderStillRequiresVerification() {
         Fixture fixture = new Fixture();
         AtomicInteger plainFetches = new AtomicInteger();
