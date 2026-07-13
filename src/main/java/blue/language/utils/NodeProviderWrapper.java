@@ -37,6 +37,14 @@ public class NodeProviderWrapper {
         return new UnverifiedNodeProvider(originalProvider);
     }
 
+    /**
+     * Identifies the existing explicit host-trust wrapper without extending
+     * that trust to adjacent providers in a composite.
+     */
+    public static boolean isExplicitlyHostTrusted(NodeProvider provider) {
+        return provider instanceof UnverifiedNodeProvider;
+    }
+
     private static boolean isAlreadyWrapped(NodeProvider originalProvider) {
         if (!(originalProvider instanceof SequentialNodeProvider)) {
             return false;
