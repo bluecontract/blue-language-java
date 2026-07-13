@@ -15,6 +15,7 @@ import blue.language.utils.MergeReverser;
 import blue.language.utils.Types;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIdReferenceValidator;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -1398,6 +1399,7 @@ public final class Merger implements NodeResolver {
         ResolutionState state = resolutionState;
         boolean outermost = state == null;
         if (outermost) {
+            BlueIdReferenceValidator.validate(node);
             state = new ResolutionState();
             state.rootInlineTypeDeclaration = isInlineTypeDeclaration(node);
             resolutionState = state;

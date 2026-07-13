@@ -1,0 +1,10 @@
+id: R_malformed_reference_blueid_rejected
+category: Resolution
+operation: resolve
+description: resolution rejects a malformed nested reference before provider lookup
+expectError: true
+expectedErrorCategory: InvalidBlueId
+source:
+  subject:
+    blueId: symbolic-type-name
+provider: []

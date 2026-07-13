@@ -482,77 +482,16 @@ public class Blue implements NodeResolver {
 
     public Node parseBlueIdInputYaml(String yaml) {
         Node node = YAML_MAPPER.readValue(yaml, Node.class);
-        validateBlueIdInputReferences(node, "/");
+        BlueIdReferenceValidator.validate(node);
         BlueIdCalculator.calculateBlueId(node);
         return node;
     }
 
     public Node parseBlueIdInputJson(String json) {
         Node node = JSON_MAPPER.readValue(json, Node.class);
-        validateBlueIdInputReferences(node, "/");
+        BlueIdReferenceValidator.validate(node);
         BlueIdCalculator.calculateBlueId(node);
         return node;
-    }
-
-    private void validateBlueIdInputReferences(Node node, String path) {
-        if (node == null) {
-            return;
-        }
-        if (node.getBlueId() != null) {
-            BlueIds.requireNoThisPlaceholderOutsideCyclicApi(node.getBlueId(), path + "/blueId");
-            BlueIds.requireBlueIdOrCyclicMember(node.getBlueId(), path + "/blueId");
-        }
-        if (node.getPreviousBlueId() != null) {
-            BlueIds.requirePlainBlueId(node.getPreviousBlueId(), path + "/$previous/blueId");
-        }
-        validateBlueIdInputReferences(node.getType(), appendPath(path, "type"));
-        validateBlueIdInputReferences(node.getItemType(), appendPath(path, "itemType"));
-        validateBlueIdInputReferences(node.getKeyType(), appendPath(path, "keyType"));
-        validateBlueIdInputReferences(node.getValueType(), appendPath(path, "valueType"));
-        validateBlueIdInputReferences(node.getBlue(), appendPath(path, "blue"));
-        validateBlueIdInputReferences(node.getContracts(), appendPath(path, "contracts"));
-        if (node.getItems() != null) {
-            for (int i = 0; i < node.getItems().size(); i++) {
-                validateBlueIdInputReferences(node.getItems().get(i), appendPath(path, String.valueOf(i)));
-            }
-        }
-        if (node.getProperties() != null) {
-            node.getProperties().forEach((key, value) ->
-                    validateBlueIdInputReferences(value, appendPath(path, key)));
-        }
-        validateBlueIdInputReferences(node.getSchema(), appendPath(path, "schema"));
-    }
-
-    private void validateBlueIdInputReferences(Schema schema, String path) {
-        if (schema == null) {
-            return;
-        }
-        validateBlueIdInputReferences(schema.getRequired(), appendPath(path, "required"));
-        validateBlueIdInputReferences(schema.getMinLength(), appendPath(path, "minLength"));
-        validateBlueIdInputReferences(schema.getMaxLength(), appendPath(path, "maxLength"));
-        validateBlueIdInputReferences(schema.getMinimum(), appendPath(path, "minimum"));
-        validateBlueIdInputReferences(schema.getMaximum(), appendPath(path, "maximum"));
-        validateBlueIdInputReferences(schema.getExclusiveMinimum(), appendPath(path, "exclusiveMinimum"));
-        validateBlueIdInputReferences(schema.getExclusiveMaximum(), appendPath(path, "exclusiveMaximum"));
-        validateBlueIdInputReferences(schema.getMultipleOf(), appendPath(path, "multipleOf"));
-        validateBlueIdInputReferences(schema.getMinItems(), appendPath(path, "minItems"));
-        validateBlueIdInputReferences(schema.getMaxItems(), appendPath(path, "maxItems"));
-        validateBlueIdInputReferences(schema.getUniqueItems(), appendPath(path, "uniqueItems"));
-        validateBlueIdInputReferences(schema.getMinFields(), appendPath(path, "minFields"));
-        validateBlueIdInputReferences(schema.getMaxFields(), appendPath(path, "maxFields"));
-        if (schema.getEnum() != null) {
-            for (int i = 0; i < schema.getEnum().size(); i++) {
-                validateBlueIdInputReferences(schema.getEnum().get(i), appendPath(path, "enum/" + i));
-            }
-        }
-    }
-
-    private String appendPath(String path, String segment) {
-        String prefix = path == null || path.isEmpty() ? "/" : path;
-        if ("/".equals(prefix)) {
-            return "/" + segment.replace("~", "~0").replace("/", "~1");
-        }
-        return prefix + "/" + segment.replace("~", "~0").replace("/", "~1");
     }
 
     public String nodeToYaml(Node node) {

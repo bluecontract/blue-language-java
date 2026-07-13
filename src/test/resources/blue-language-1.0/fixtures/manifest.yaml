@@ -1,5 +1,5 @@
 specVersion: '1.0'
-fixturePackageIdentity: sha256:226fc29d2c0977bda8d1908171fc00b4b8f2e86141501cc3d4c03d69a5fc224b
+fixturePackageIdentity: sha256:00b759364faac8c3d6f66190de8d6a0d362e02dadbfc1ff4c72688b6db502205
 fixtures:
 - id: L_no_profile_era_language_conformance_terms
   category: DocumentationLint
@@ -109,6 +109,9 @@ fixtures:
 - id: R_blue_imports
   category: Resolution
   path: resolver/R_blue_imports.yaml
+- id: R_malformed_reference_blueid_rejected
+  category: Resolution
+  path: resolver/R_malformed_reference_blueid_rejected.yaml
 - id: R_schema_value_shapes
   category: Schema
   path: resolver/R_schema_value_shapes.yaml

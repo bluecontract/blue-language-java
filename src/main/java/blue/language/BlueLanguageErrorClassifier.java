@@ -31,6 +31,11 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("missing fixture resource")) {
             return BlueLanguageErrorCategory.ProviderUnavailable;
         }
+        if (isMalformedBlueIdMessage(lower)) {
+            return lower.contains("$previous")
+                    ? BlueLanguageErrorCategory.ListControlViolation
+                    : BlueLanguageErrorCategory.InvalidBlueId;
+        }
         if (lower.contains("type cycle")
                 || lower.contains("cyclic type")) {
             return BlueLanguageErrorCategory.TypeCycle;
@@ -118,6 +123,12 @@ public final class BlueLanguageErrorClassifier {
             return BlueLanguageErrorCategory.InvalidSyntax;
         }
         return BlueLanguageErrorCategory.CanonicalizationError;
+    }
+
+    private static boolean isMalformedBlueIdMessage(String lower) {
+        return lower.contains("expected canonical base58 sha-256 blueid at ")
+                || lower.contains("invalid cyclic blueid member syntax at ")
+                || lower.contains("\"this\" blueid placeholders are valid only inside cyclic blueid calculation apis. path:");
     }
 
     private static String messageChain(Throwable throwable) {

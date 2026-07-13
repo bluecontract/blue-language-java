@@ -239,7 +239,7 @@ class ProcessingSnapshotProviderProvenanceTest {
     }
 
     @Test
-    void nonBlueIdSnapshotLookupDoesNotReachConfiguredProvider() {
+    void nonBlueIdFilterDoesNotReachConfiguredProvider() {
         AtomicInteger fetches = new AtomicInteger();
         PotentialBlueIdNodeProvider provider = new PotentialBlueIdNodeProvider(blueId -> {
             fetches.incrementAndGet();
@@ -248,14 +248,6 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         assertNull(provider.fetchByBlueId("symbolic-type-name"));
         assertFalse(provider.acceptsBlueId("symbolic-type-name"));
-        assertEquals(0, fetches.get());
-
-        Blue blue = new Blue(provider);
-        RuntimeException failure = assertThrows(RuntimeException.class,
-                () -> blue.initializeDocument(new Node()
-                        .type(reference("symbolic-type-name"))
-                        .contracts(new Node())));
-        assertProviderFailure(failure, BlueLanguageErrorCategory.ProviderUnavailable);
         assertEquals(0, fetches.get());
     }
 
