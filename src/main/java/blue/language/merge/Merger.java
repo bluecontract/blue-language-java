@@ -31,6 +31,7 @@ import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
 import static blue.language.utils.Properties.LIST_TYPE;
 import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
+import static blue.language.utils.Properties.CORE_TYPES;
 
 /**
  * Concrete Blue Language merge engine.
@@ -113,6 +114,7 @@ public final class Merger implements NodeResolver {
         boolean outermost = state == null;
         if (outermost) {
             state = new ResolutionState();
+            state.rootInlineTypeDeclaration = isInlineTypeDeclaration(source);
             resolutionState = state;
             lastResolutionUsedNonDirectTrustedContent = false;
             limits.enterPathSegment("", source);
@@ -864,6 +866,10 @@ public final class Merger implements NodeResolver {
             return;
         }
 
+        if (isRootInlineSchemaDeclaration(state, source)) {
+            return;
+        }
+
         String path = currentPath(state);
         ValidationCandidate candidate = candidate(state, path);
         candidate.node = target;
@@ -883,8 +889,7 @@ public final class Merger implements NodeResolver {
                 candidate.pendingReferenceLimits = null;
             }
         }
-        if (state.path.isEmpty()
-                && Boolean.TRUE.equals(target.getSchema().getRequiredValue())) {
+        if (state.path.isEmpty()) {
             candidate.semanticallyPresent = true;
         }
         ContributionFrame frame = state.contributionFrames.get(state.contributionFrames.size() - 1);
@@ -1183,6 +1188,43 @@ public final class Merger implements NodeResolver {
         return node.getProperties() != null && !node.getProperties().isEmpty();
     }
 
+    private boolean isInlineTypeDeclaration(Node node) {
+        return node != null
+                && node.getType() != null
+                && node.getType().getBlueId() == null
+                && !isBareCoreTypeAlias(node.getType());
+    }
+
+    private boolean isBareCoreTypeAlias(Node type) {
+        if (type.isInlineValue()
+                && type.getValue() instanceof String
+                && CORE_TYPES.contains(type.getValue())) {
+            return true;
+        }
+        return type.getName() != null
+                && CORE_TYPES.contains(type.getName())
+                && type.getDescription() == null
+                && type.getType() == null
+                && type.getItemType() == null
+                && type.getKeyType() == null
+                && type.getValueType() == null
+                && type.getValue() == null
+                && type.getItems() == null
+                && (type.getProperties() == null || type.getProperties().isEmpty())
+                && type.getContracts() == null
+                && type.getSchema() == null
+                && type.getMergePolicy() == null
+                && type.getPreviousBlueId() == null
+                && type.getPosition() == null
+                && type.getBlue() == null;
+    }
+
+    private boolean isRootInlineSchemaDeclaration(ResolutionState state, Node source) {
+        return state.path.isEmpty()
+                && state.rootInlineTypeDeclaration
+                && !hasConcretePayload(source);
+    }
+
     private ValidationCandidate candidate(ResolutionState state, String path) {
         if (state.candidates == null) {
             state.candidates = new LinkedHashMap<>();
@@ -1346,6 +1388,7 @@ public final class Merger implements NodeResolver {
         boolean outermost = state == null;
         if (outermost) {
             state = new ResolutionState();
+            state.rootInlineTypeDeclaration = isInlineTypeDeclaration(node);
             resolutionState = state;
             lastResolutionUsedNonDirectTrustedContent = false;
             limits.enterPathSegment("", node);
@@ -1452,6 +1495,7 @@ public final class Merger implements NodeResolver {
         private Set<String> failedProviderReferences;
         private Set<TypeResolutionKey> resolvingTypes;
         private boolean usedNonDirectTrustedContent;
+        private boolean rootInlineTypeDeclaration;
     }
 
     private enum LookupProvenance {

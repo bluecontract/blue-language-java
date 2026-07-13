@@ -11,10 +11,15 @@ import blue.language.utils.NodeToMapListOrValue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
+import static blue.language.utils.Properties.DICTIONARY_TYPE;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.lang.Boolean.TRUE;
 
@@ -363,9 +368,46 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     private void requireObjectPayload(String keyword, Node node) {
-        if (node.getProperties() == null || node.getProperties().isEmpty()) {
+        if (!hasEffectiveObjectKind(node)) {
             throw wrongKind(keyword, "Dictionary/object payload", node);
         }
+    }
+
+    private boolean hasEffectiveObjectKind(Node node) {
+        if (node.getProperties() != null && !node.getProperties().isEmpty()) {
+            return true;
+        }
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        Node type = node.getType();
+        while (type != null && visited.add(type)) {
+            if (DICTIONARY_TYPE_BLUE_ID.equals(type.getBlueId()) || isBareDictionaryAlias(type)) {
+                return true;
+            }
+            type = type.getType();
+        }
+        return false;
+    }
+
+    private boolean isBareDictionaryAlias(Node type) {
+        if (type.isInlineValue() && DICTIONARY_TYPE.equals(type.getValue())) {
+            return true;
+        }
+        return DICTIONARY_TYPE.equals(type.getName())
+                && type.getDescription() == null
+                && type.getType() == null
+                && type.getItemType() == null
+                && type.getKeyType() == null
+                && type.getValueType() == null
+                && type.getValue() == null
+                && type.getItems() == null
+                && (type.getProperties() == null || type.getProperties().isEmpty())
+                && type.getContracts() == null
+                && type.getBlueId() == null
+                && type.getSchema() == null
+                && type.getMergePolicy() == null
+                && type.getPreviousBlueId() == null
+                && type.getPosition() == null
+                && type.getBlue() == null;
     }
 
     private IllegalArgumentException wrongKind(String keyword, String expected, Node node) {
