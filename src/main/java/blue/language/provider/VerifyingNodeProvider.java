@@ -18,27 +18,31 @@ public class VerifyingNodeProvider implements NodeProvider {
     @Override
     public List<Node> fetchByBlueId(String blueId) {
         String requestedBlueId = BlueIds.requireBlueIdOrCyclicMember(blueId, "provider.fetchByBlueId");
-        if (requestedBlueId.contains("#")) {
-            if (!(delegate instanceof CyclicAwareNodeProvider)) {
-                throw new UnsupportedOperationException(
-                        "Provider verification for cyclic member BlueIds requires a cyclic-set-aware verifier: "
-                                + requestedBlueId);
-            }
-            if (!((CyclicAwareNodeProvider) delegate).hasVerifiedContentForBlueId(requestedBlueId)) {
-                throw new UnsupportedOperationException(
-                        "Provider verification for cyclic member BlueIds requires verified cyclic-set content: "
-                                + requestedBlueId);
-            }
-            return delegate.fetchByBlueId(blueId);
-        }
-
         List<Node> nodes = delegate.fetchByBlueId(blueId);
         if (nodes == null || nodes.isEmpty()) {
             return nodes;
         }
 
+        if (requestedBlueId.contains("#")) {
+            requireCyclicVerification(requestedBlueId);
+            return nodes;
+        }
+
         verifyPlainContent(requestedBlueId, nodes);
         return nodes;
+    }
+
+    private void requireCyclicVerification(String requestedBlueId) {
+        if (!(delegate instanceof CyclicAwareNodeProvider)) {
+            throw new UnsupportedOperationException(
+                    "Provider verification for cyclic member BlueIds requires a cyclic-set-aware verifier: "
+                            + requestedBlueId);
+        }
+        if (!((CyclicAwareNodeProvider) delegate).hasVerifiedContentForBlueId(requestedBlueId)) {
+            throw new UnsupportedOperationException(
+                    "Provider verification for cyclic member BlueIds requires verified cyclic-set content: "
+                            + requestedBlueId);
+        }
     }
 
     private void verifyPlainContent(String requestedBlueId, List<Node> nodes) {

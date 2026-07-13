@@ -1,5 +1,5 @@
 specVersion: '1.0'
-fixturePackageIdentity: sha256:0e0154e91e35ec95a8e00d9893e30edafd2487b2796f5597f7fad3878f73c6b9
+fixturePackageIdentity: sha256:0408ae29f7ca400fe67e3da6aa54df25876327bee4e2b6eedf2bb20b2e608b0c
 fixtures:
 - id: L_no_profile_era_language_conformance_terms
   category: DocumentationLint
@@ -172,6 +172,9 @@ fixtures:
 - id: F_provider_missing_content_fails
   category: Provider
   path: provider/F_provider_missing_content_fails.yaml
+- id: F_missing_cyclic_member_content_is_provider_unavailable
+  category: Provider
+  path: provider/F_missing_cyclic_member_content_is_provider_unavailable.yaml
 - id: F_required_typed_reference_missing_content
   category: Provider
   path: provider/F_required_typed_reference_missing_content.yaml

@@ -7,6 +7,7 @@ import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
@@ -19,6 +20,8 @@ import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Collections;
 import java.util.List;
@@ -270,6 +273,50 @@ class ProcessingSnapshotProviderProvenanceTest {
         assertEquals("cyclic", initialized.snapshot().resolvedRoot().getAsText("/fixed"));
     }
 
+    @ParameterizedTest(name = "host-trusted provider: {0}")
+    @ValueSource(booleans = {false, true})
+    void checkpointedCyclicEventSurvivesClonedDocumentSnapshotRebuild(boolean hostTrusted) {
+        BasicNodeProvider cyclicProvider = new BasicNodeProvider(UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "- name: Cyclic Checkpoint Event\n"
+                        + "  fixed: event\n"
+                        + "  peer:\n"
+                        + "    blueId: this#1\n"
+                        + "- name: Cyclic Checkpoint Companion\n"
+                        + "  fixed: companion\n"
+                        + "  peer:\n"
+                        + "    blueId: this#0\n",
+                Node.class));
+        String eventTypeBlueId = cyclicProvider.getBlueIdByName("Cyclic Checkpoint Event");
+        NodeProvider configuredProvider = hostTrusted
+                ? NodeProviderWrapper.unverified(cyclicProvider)
+                : cyclicProvider;
+        Blue blue = new Blue(configuredProvider);
+        Node channelType = new Node().name("Cyclic Checkpoint Channel");
+        String channelTypeBlueId = blue.calculateBlueId(channelType);
+        blue.registerExternalContractType(
+                channelTypeBlueId, channelType, new CyclicCheckpointChannelProcessor());
+        Node document = new Node().contracts(new Node().properties(
+                "incoming", new Node().type(reference(channelTypeBlueId))));
+        DocumentProcessingResult initialized = blue.initializeDocument(document);
+        Node firstEvent = cyclicEvent(eventTypeBlueId, 1);
+
+        DocumentProcessingResult first = blue.processDocument(initialized.document(), firstEvent);
+
+        assertSuccessfulSnapshot(first);
+        assertCheckpointEvent(first.document(), eventTypeBlueId, 1);
+
+        Node secondEvent = cyclicEvent(eventTypeBlueId, 2);
+        DocumentProcessingResult rebuilt = blue.processDocument(first.document().clone(), secondEvent);
+
+        assertSuccessfulSnapshot(rebuilt);
+        assertCheckpointEvent(rebuilt.document(), eventTypeBlueId, 2);
+
+        DocumentProcessingResult snapshotNative = blue.processDocument(first.snapshot(), secondEvent.clone());
+
+        assertSuccessfulSnapshot(snapshotNative);
+        assertCheckpointEvent(snapshotNative.document(), eventTypeBlueId, 2);
+    }
+
     @Test
     void processorProvidersPrecedeConfiguredFallback() {
         AtomicInteger bootstrapFallbackFetches = new AtomicInteger();
@@ -433,6 +480,28 @@ class ProcessingSnapshotProviderProvenanceTest {
         };
     }
 
+    private static Node cyclicEvent(String typeBlueId, int sequence) {
+        return new Node()
+                .type(reference(typeBlueId))
+                .properties("sequence", new Node().value(sequence));
+    }
+
+    private static void assertSuccessfulSnapshot(DocumentProcessingResult result) {
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertNotNull(result.snapshot());
+        assertEquals(result.snapshot().blueId(), result.snapshot().frozenCanonicalRoot().blueId());
+    }
+
+    private static void assertCheckpointEvent(Node document,
+                                              String expectedTypeBlueId,
+                                              int expectedSequence) {
+        assertEquals(expectedTypeBlueId,
+                document.getAsText("/contracts/checkpoint/lastEvents/incoming/type/blueId"));
+        assertEquals(expectedSequence,
+                document.getAsInteger("/contracts/checkpoint/lastEvents/incoming/sequence"));
+    }
+
     private static void assertProviderFailure(Throwable failure, BlueLanguageErrorCategory category) {
         assertEquals(category, BlueLanguageErrorClassifier.classify(failure), messageChain(failure));
     }
@@ -506,6 +575,22 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         @Override
         public boolean matches(PatchChannel contract, ChannelEvaluationContext context) {
+            return true;
+        }
+    }
+
+    public static final class CyclicCheckpointChannel extends ChannelContract {
+    }
+
+    private static final class CyclicCheckpointChannelProcessor
+            implements ChannelProcessor<CyclicCheckpointChannel> {
+        @Override
+        public Class<CyclicCheckpointChannel> contractType() {
+            return CyclicCheckpointChannel.class;
+        }
+
+        @Override
+        public boolean matches(CyclicCheckpointChannel contract, ChannelEvaluationContext context) {
             return true;
         }
     }
