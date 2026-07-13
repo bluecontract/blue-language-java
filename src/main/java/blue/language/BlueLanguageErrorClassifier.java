@@ -1,6 +1,18 @@
 package blue.language;
 
+import blue.language.utils.JsonPointer;
+
+import java.util.List;
+import java.util.Locale;
+
 public final class BlueLanguageErrorClassifier {
+
+    private static final String PLAIN_BLUE_ID_PREFIX =
+            "Expected canonical Base58 SHA-256 BlueId at ";
+    private static final String CYCLIC_BLUE_ID_PREFIX =
+            "Invalid cyclic BlueId member syntax at ";
+    private static final String THIS_BLUE_ID_PREFIX =
+            "\"this\" BlueId placeholders are valid only inside cyclic BlueId calculation APIs. Path: ";
 
     private BlueLanguageErrorClassifier() {
     }
@@ -9,8 +21,12 @@ public final class BlueLanguageErrorClassifier {
         if (throwable == null) {
             return BlueLanguageErrorCategory.CanonicalizationError;
         }
+        BlueLanguageErrorCategory malformedBlueId = classifyMalformedBlueId(throwable.getMessage());
+        if (malformedBlueId != null) {
+            return malformedBlueId;
+        }
         String message = messageChain(throwable);
-        String lower = message.toLowerCase();
+        String lower = message.toLowerCase(Locale.ROOT);
 
         if (lower.contains("duplicate key")) {
             return BlueLanguageErrorCategory.DuplicateKey;
@@ -30,11 +46,6 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("missing blue language fixture resource")
                 || lower.contains("missing fixture resource")) {
             return BlueLanguageErrorCategory.ProviderUnavailable;
-        }
-        if (isMalformedBlueIdMessage(lower)) {
-            return lower.contains("$previous")
-                    ? BlueLanguageErrorCategory.ListControlViolation
-                    : BlueLanguageErrorCategory.InvalidBlueId;
         }
         if (lower.contains("type cycle")
                 || lower.contains("cyclic type")) {
@@ -125,10 +136,39 @@ public final class BlueLanguageErrorClassifier {
         return BlueLanguageErrorCategory.CanonicalizationError;
     }
 
-    private static boolean isMalformedBlueIdMessage(String lower) {
-        return lower.contains("expected canonical base58 sha-256 blueid at ")
-                || lower.contains("invalid cyclic blueid member syntax at ")
-                || lower.contains("\"this\" blueid placeholders are valid only inside cyclic blueid calculation apis. path:");
+    private static BlueLanguageErrorCategory classifyMalformedBlueId(String message) {
+        String path = malformedBlueIdPath(message);
+        if (path == null) {
+            return null;
+        }
+        List<String> segments = JsonPointer.split(path);
+        int size = segments.size();
+        if (size >= 2
+                && "$previous".equals(segments.get(size - 2))
+                && "blueId".equals(segments.get(size - 1))) {
+            return BlueLanguageErrorCategory.ListControlViolation;
+        }
+        return BlueLanguageErrorCategory.InvalidBlueId;
+    }
+
+    private static String malformedBlueIdPath(String message) {
+        if (message == null) {
+            return null;
+        }
+        if (message.startsWith(PLAIN_BLUE_ID_PREFIX)) {
+            return withoutDiagnosticPeriod(message.substring(PLAIN_BLUE_ID_PREFIX.length()));
+        }
+        if (message.startsWith(CYCLIC_BLUE_ID_PREFIX)) {
+            return withoutDiagnosticPeriod(message.substring(CYCLIC_BLUE_ID_PREFIX.length()));
+        }
+        if (message.startsWith(THIS_BLUE_ID_PREFIX)) {
+            return message.substring(THIS_BLUE_ID_PREFIX.length());
+        }
+        return null;
+    }
+
+    private static String withoutDiagnosticPeriod(String path) {
+        return path.endsWith(".") ? path.substring(0, path.length() - 1) : path;
     }
 
     private static String messageChain(Throwable throwable) {

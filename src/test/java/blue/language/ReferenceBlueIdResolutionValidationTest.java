@@ -7,15 +7,20 @@ import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.BlueIds;
+import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -114,20 +119,63 @@ class ReferenceBlueIdResolutionValidationTest {
         assertEquals(0, fetches.get());
     }
 
-    @Test
-    void malformedPreviousReferenceRemainsAListControlViolationBeforeProviderLookup() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "requested",
+            "provider returned no content",
+            "wrong blueId",
+            "field$previous"
+    })
+    void malformedReferenceCategoryIsIndependentOfFieldName(String fieldName) {
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(countingMiss(fetches));
-        Node source = new Node().items(
-                new Node().previousBlueId(MALFORMED_BLUE_ID),
-                new Node().value("appended"));
 
         RuntimeException failure = assertThrows(RuntimeException.class,
-                () -> blue.resolve(source));
+                () -> blue.resolve(new Node().properties(fieldName, malformedReference())));
 
-        assertFailure(failure, BlueLanguageErrorCategory.ListControlViolation,
-                "/0/$previous/blueId");
+        assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId,
+                "/" + JsonPointer.escape(fieldName) + "/blueId");
         assertEquals(0, fetches.get());
+    }
+
+    @Test
+    void onlyActualPreviousPathIsListControlViolation() {
+        AtomicInteger fetches = new AtomicInteger();
+        Blue blue = new Blue(countingMiss(fetches));
+        Node previousSource = new Node().items(
+                new Node().previousBlueId(MALFORMED_BLUE_ID),
+                new Node().value("appended"));
+        Node ordinarySource = new Node().properties("field$previous", malformedReference());
+
+        RuntimeException previousFailure = assertThrows(RuntimeException.class,
+                () -> blue.resolve(previousSource));
+        RuntimeException ordinaryFailure = assertThrows(RuntimeException.class,
+                () -> blue.resolve(ordinarySource));
+
+        assertFailure(previousFailure, BlueLanguageErrorCategory.ListControlViolation,
+                "/0/$previous/blueId");
+        assertFailure(ordinaryFailure, BlueLanguageErrorCategory.InvalidBlueId,
+                "/field$previous/blueId");
+        assertEquals(0, fetches.get());
+    }
+
+    @Test
+    @ResourceLock(Resources.LOCALE)
+    void malformedReferenceClassificationIsLocaleIndependent() {
+        Locale original = Locale.getDefault();
+        AtomicInteger fetches = new AtomicInteger();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+
+            RuntimeException failure = assertThrows(RuntimeException.class,
+                    () -> new Blue(countingMiss(fetches)).resolve(nestedMalformedReference()));
+
+            assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId,
+                    "/subject/blueId");
+            assertEquals(0, fetches.get());
+        } finally {
+            Locale.setDefault(original);
+        }
     }
 
     @Test

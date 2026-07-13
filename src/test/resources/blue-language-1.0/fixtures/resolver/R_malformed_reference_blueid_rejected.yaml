@@ -1,10 +1,10 @@
 id: R_malformed_reference_blueid_rejected
 category: Resolution
 operation: resolve
-description: resolution rejects a malformed nested reference before provider lookup
+description: malformed reference classification is independent of ordinary field-name text
 expectError: true
 expectedErrorCategory: InvalidBlueId
 source:
-  subject:
+  "requested$previous":
     blueId: symbolic-type-name
 provider: []

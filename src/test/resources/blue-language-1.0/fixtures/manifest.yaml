@@ -1,5 +1,5 @@
 specVersion: '1.0'
-fixturePackageIdentity: sha256:00b759364faac8c3d6f66190de8d6a0d362e02dadbfc1ff4c72688b6db502205
+fixturePackageIdentity: sha256:0e0154e91e35ec95a8e00d9893e30edafd2487b2796f5597f7fad3878f73c6b9
 fixtures:
 - id: L_no_profile_era_language_conformance_terms
   category: DocumentationLint

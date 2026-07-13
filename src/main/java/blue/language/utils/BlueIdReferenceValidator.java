@@ -3,8 +3,10 @@ package blue.language.utils;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +14,9 @@ import java.util.Map;
  * Validates the syntax of every BlueId reference in a complete input graph.
  */
 public final class BlueIdReferenceValidator {
+
+    private static final String BLUE_ID_PATH = "/blueId";
+    private static final String PREVIOUS_BLUE_ID_PATH = "/$previous/blueId";
 
     private BlueIdReferenceValidator() {
     }
@@ -26,184 +31,329 @@ public final class BlueIdReferenceValidator {
             return;
         }
         try {
-            validateNodeFast(root, new IdentityHashMap<Node, Boolean>());
+            validateFast(root);
         } catch (IllegalArgumentException malformedReference) {
-            validateNodeDetailed(root,
-                    new ArrayList<String>(),
-                    new IdentityHashMap<Node, Boolean>());
+            validateDetailed(root);
             throw malformedReference;
         }
     }
 
-    private static void validateNodeFast(Node node, IdentityHashMap<Node, Boolean> visited) {
-        if (node == null) {
-            return;
-        }
-        String blueId = node.getBlueId();
-        String previousBlueId = node.getPreviousBlueId();
-        Node type = node.getType();
-        Node itemType = node.getItemType();
-        Node keyType = node.getKeyType();
-        Node valueType = node.getValueType();
-        Node blue = node.getBlue();
-        Node contracts = node.getContracts();
-        List<Node> items = node.getItems();
-        Map<String, Node> properties = node.getProperties();
-        Schema schema = node.getSchema();
-        if (blueId == null
-                && previousBlueId == null
-                && type == null
-                && itemType == null
-                && keyType == null
-                && valueType == null
-                && blue == null
-                && contracts == null
-                && items == null
-                && properties == null
-                && schema == null) {
-            // Reference-free leaves cannot recurse, so recording their identity only adds
-            // allocation and lookup cost to the common schema-free document case.
-            return;
-        }
-        if (visited.put(node, Boolean.TRUE) != null) {
-            return;
-        }
-        if (blueId != null) {
-            BlueIds.requireNoThisPlaceholderOutsideCyclicApi(blueId, "/blueId");
-            BlueIds.requireBlueIdOrCyclicMember(blueId, "/blueId");
-        }
-        if (previousBlueId != null) {
-            BlueIds.requirePlainBlueId(previousBlueId, "/$previous/blueId");
-        }
+    private static void validateFast(Node root) {
+        IdentityHashMap<Node, Boolean> visited = new IdentityHashMap<Node, Boolean>();
+        Deque<FastTraversalFrame> pending = new ArrayDeque<FastTraversalFrame>();
+        Node next = root;
 
-        validateNodeFast(type, visited);
-        validateNodeFast(itemType, visited);
-        validateNodeFast(keyType, visited);
-        validateNodeFast(valueType, visited);
-        validateNodeFast(blue, visited);
-        validateNodeFast(contracts, visited);
-
-        if (items != null) {
-            for (Node item : items) {
-                validateNodeFast(item, visited);
+        while (next != null || !pending.isEmpty()) {
+            if (next != null) {
+                Node node = next;
+                next = null;
+                if (!isReferenceFreeLeaf(node)
+                        && visited.put(node, Boolean.TRUE) == null) {
+                    validateReferences(node, BLUE_ID_PATH, PREVIOUS_BLUE_ID_PATH);
+                    if (hasChildren(node)) {
+                        pending.push(new FastTraversalFrame(node));
+                    }
+                }
+            }
+            while (next == null && !pending.isEmpty()) {
+                next = pending.peek().nextChild();
+                if (next == null) {
+                    pending.pop();
+                }
             }
         }
-        if (properties != null) {
-            for (Node property : properties.values()) {
-                validateNodeFast(property, visited);
-            }
-        }
-        validateSchemaFast(schema, visited);
     }
 
-    private static void validateSchemaFast(Schema schema, IdentityHashMap<Node, Boolean> visited) {
+    private static void validateDetailed(Node root) {
+        IdentityHashMap<Node, Boolean> visited = new IdentityHashMap<Node, Boolean>();
+        Deque<TraversalFrame> pending = new ArrayDeque<TraversalFrame>();
+        Deque<TraversalFrame> children = new ArrayDeque<TraversalFrame>();
+        pending.push(new TraversalFrame(root, null));
+
+        while (!pending.isEmpty()) {
+            TraversalFrame frame = pending.pop();
+            if (visited.put(frame.node, Boolean.TRUE) != null) {
+                continue;
+            }
+
+            validateReferencesDetailed(frame);
+            appendChildrenInOrder(frame, children);
+            while (!children.isEmpty()) {
+                pending.push(children.removeLast());
+            }
+        }
+    }
+
+    private static boolean isReferenceFreeLeaf(Node node) {
+        return node.getBlueId() == null
+                && node.getPreviousBlueId() == null
+                && node.getType() == null
+                && node.getItemType() == null
+                && node.getKeyType() == null
+                && node.getValueType() == null
+                && node.getBlue() == null
+                && node.getContracts() == null
+                && node.getItems() == null
+                && node.getProperties() == null
+                && node.getSchema() == null;
+    }
+
+    private static boolean hasChildren(Node node) {
+        return node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getBlue() != null
+                || node.getContracts() != null
+                || (node.getItems() != null && !node.getItems().isEmpty())
+                || (node.getProperties() != null && !node.getProperties().isEmpty())
+                || node.getSchema() != null;
+    }
+
+    private static void validateReferences(Node node, String blueIdPath, String previousBlueIdPath) {
+        if (node.getBlueId() != null) {
+            validateBlueId(node.getBlueId(), blueIdPath);
+        }
+        if (node.getPreviousBlueId() != null) {
+            BlueIds.requirePlainBlueId(node.getPreviousBlueId(), previousBlueIdPath);
+        }
+    }
+
+    private static void validateReferencesDetailed(TraversalFrame frame) {
+        if (frame.node.getBlueId() != null) {
+            try {
+                validateBlueId(frame.node.getBlueId(), BLUE_ID_PATH);
+            } catch (IllegalArgumentException malformedReference) {
+                validateBlueId(frame.node.getBlueId(), pointer(frame.path, "blueId"));
+                throw malformedReference;
+            }
+        }
+        if (frame.node.getPreviousBlueId() != null) {
+            try {
+                BlueIds.requirePlainBlueId(frame.node.getPreviousBlueId(), PREVIOUS_BLUE_ID_PATH);
+            } catch (IllegalArgumentException malformedReference) {
+                BlueIds.requirePlainBlueId(frame.node.getPreviousBlueId(),
+                        pointer(frame.path, "$previous", "blueId"));
+                throw malformedReference;
+            }
+        }
+    }
+
+    private static void validateBlueId(String blueId, String path) {
+        BlueIds.requireNoThisPlaceholderOutsideCyclicApi(blueId, path);
+        BlueIds.requireBlueIdOrCyclicMember(blueId, path);
+    }
+
+    private static void appendChildrenInOrder(TraversalFrame frame,
+                                              Deque<TraversalFrame> children) {
+        add(children, frame.node.getType(), frame.path, "type");
+        add(children, frame.node.getItemType(), frame.path, "itemType");
+        add(children, frame.node.getKeyType(), frame.path, "keyType");
+        add(children, frame.node.getValueType(), frame.path, "valueType");
+        add(children, frame.node.getBlue(), frame.path, "blue");
+        add(children, frame.node.getContracts(), frame.path, "contracts");
+
+        List<Node> items = frame.node.getItems();
+        if (items != null) {
+            for (int index = 0; index < items.size(); index++) {
+                add(children, items.get(index), frame.path, Integer.toString(index));
+            }
+        }
+        Map<String, Node> properties = frame.node.getProperties();
+        if (properties != null) {
+            for (Map.Entry<String, Node> property : properties.entrySet()) {
+                add(children, property.getValue(), frame.path, property.getKey());
+            }
+        }
+        appendSchemaChildrenInOrder(frame.node.getSchema(), frame.path, children);
+    }
+
+    private static void appendSchemaChildrenInOrder(Schema schema,
+                                                     PathSegment parent,
+                                                     Deque<TraversalFrame> children) {
         if (schema == null) {
             return;
         }
-        validateNodeFast(schema.getRequired(), visited);
-        validateNodeFast(schema.getMinLength(), visited);
-        validateNodeFast(schema.getMaxLength(), visited);
-        validateNodeFast(schema.getMinimum(), visited);
-        validateNodeFast(schema.getMaximum(), visited);
-        validateNodeFast(schema.getExclusiveMinimum(), visited);
-        validateNodeFast(schema.getExclusiveMaximum(), visited);
-        validateNodeFast(schema.getMultipleOf(), visited);
-        validateNodeFast(schema.getMinItems(), visited);
-        validateNodeFast(schema.getMaxItems(), visited);
-        validateNodeFast(schema.getUniqueItems(), visited);
-        validateNodeFast(schema.getMinFields(), visited);
-        validateNodeFast(schema.getMaxFields(), visited);
+        PathSegment schemaPath = new PathSegment(parent, "schema");
+        add(children, schema.getRequired(), schemaPath, "required");
+        add(children, schema.getMinLength(), schemaPath, "minLength");
+        add(children, schema.getMaxLength(), schemaPath, "maxLength");
+        add(children, schema.getMinimum(), schemaPath, "minimum");
+        add(children, schema.getMaximum(), schemaPath, "maximum");
+        add(children, schema.getExclusiveMinimum(), schemaPath, "exclusiveMinimum");
+        add(children, schema.getExclusiveMaximum(), schemaPath, "exclusiveMaximum");
+        add(children, schema.getMultipleOf(), schemaPath, "multipleOf");
+        add(children, schema.getMinItems(), schemaPath, "minItems");
+        add(children, schema.getMaxItems(), schemaPath, "maxItems");
+        add(children, schema.getUniqueItems(), schemaPath, "uniqueItems");
+        add(children, schema.getMinFields(), schemaPath, "minFields");
+        add(children, schema.getMaxFields(), schemaPath, "maxFields");
         if (schema.getEnum() != null) {
-            for (Node enumValue : schema.getEnum()) {
-                validateNodeFast(enumValue, visited);
-            }
-        }
-    }
-
-    private static void validateNodeDetailed(Node node,
-                                             List<String> path,
-                                             IdentityHashMap<Node, Boolean> visited) {
-        if (node == null || visited.put(node, Boolean.TRUE) != null) {
-            return;
-        }
-        if (node.getBlueId() != null) {
-            String blueIdPath = childPath(path, "blueId");
-            BlueIds.requireNoThisPlaceholderOutsideCyclicApi(node.getBlueId(), blueIdPath);
-            BlueIds.requireBlueIdOrCyclicMember(node.getBlueId(), blueIdPath);
-        }
-        if (node.getPreviousBlueId() != null) {
-            BlueIds.requirePlainBlueId(node.getPreviousBlueId(), childPath(path, "$previous", "blueId"));
-        }
-
-        validateChildDetailed(node.getType(), "type", path, visited);
-        validateChildDetailed(node.getItemType(), "itemType", path, visited);
-        validateChildDetailed(node.getKeyType(), "keyType", path, visited);
-        validateChildDetailed(node.getValueType(), "valueType", path, visited);
-        validateChildDetailed(node.getBlue(), "blue", path, visited);
-        validateChildDetailed(node.getContracts(), "contracts", path, visited);
-
-        if (node.getItems() != null) {
-            for (int index = 0; index < node.getItems().size(); index++) {
-                validateChildDetailed(node.getItems().get(index), Integer.toString(index), path, visited);
-            }
-        }
-        if (node.getProperties() != null) {
-            for (Map.Entry<String, Node> property : node.getProperties().entrySet()) {
-                validateChildDetailed(property.getValue(), property.getKey(), path, visited);
-            }
-        }
-        if (node.getSchema() != null) {
-            path.add("schema");
-            validateSchemaDetailed(node.getSchema(), path, visited);
-            path.remove(path.size() - 1);
-        }
-    }
-
-    private static void validateSchemaDetailed(Schema schema,
-                                               List<String> path,
-                                               IdentityHashMap<Node, Boolean> visited) {
-        validateChildDetailed(schema.getRequired(), "required", path, visited);
-        validateChildDetailed(schema.getMinLength(), "minLength", path, visited);
-        validateChildDetailed(schema.getMaxLength(), "maxLength", path, visited);
-        validateChildDetailed(schema.getMinimum(), "minimum", path, visited);
-        validateChildDetailed(schema.getMaximum(), "maximum", path, visited);
-        validateChildDetailed(schema.getExclusiveMinimum(), "exclusiveMinimum", path, visited);
-        validateChildDetailed(schema.getExclusiveMaximum(), "exclusiveMaximum", path, visited);
-        validateChildDetailed(schema.getMultipleOf(), "multipleOf", path, visited);
-        validateChildDetailed(schema.getMinItems(), "minItems", path, visited);
-        validateChildDetailed(schema.getMaxItems(), "maxItems", path, visited);
-        validateChildDetailed(schema.getUniqueItems(), "uniqueItems", path, visited);
-        validateChildDetailed(schema.getMinFields(), "minFields", path, visited);
-        validateChildDetailed(schema.getMaxFields(), "maxFields", path, visited);
-        if (schema.getEnum() != null) {
-            path.add("enum");
+            PathSegment enumPath = new PathSegment(schemaPath, "enum");
             for (int index = 0; index < schema.getEnum().size(); index++) {
-                validateChildDetailed(schema.getEnum().get(index), Integer.toString(index), path, visited);
+                add(children, schema.getEnum().get(index), enumPath, Integer.toString(index));
             }
-            path.remove(path.size() - 1);
         }
     }
 
-    private static void validateChildDetailed(Node child,
-                                              String segment,
-                                              List<String> path,
-                                              IdentityHashMap<Node, Boolean> visited) {
-        if (child == null) {
-            return;
+    private static void add(Deque<TraversalFrame> children,
+                            Node child,
+                            PathSegment parent,
+                            String segment) {
+        if (child != null) {
+            children.addLast(new TraversalFrame(child, new PathSegment(parent, segment)));
         }
-        path.add(segment);
-        validateNodeDetailed(child, path, visited);
-        path.remove(path.size() - 1);
     }
 
-    private static String childPath(List<String> path, String... childSegments) {
-        int originalSize = path.size();
-        for (String childSegment : childSegments) {
-            path.add(childSegment);
+    private static String pointer(PathSegment parent, String... finalSegments) {
+        int parentDepth = parent == null ? 0 : parent.depth;
+        String[] segments = new String[parentDepth + finalSegments.length];
+        PathSegment current = parent;
+        for (int index = parentDepth - 1; index >= 0; index--) {
+            segments[index] = current.segment;
+            current = current.parent;
         }
-        String pointer = JsonPointer.toPointer(path);
-        path.subList(originalSize, path.size()).clear();
-        return pointer;
+        System.arraycopy(finalSegments, 0, segments, parentDepth, finalSegments.length);
+
+        StringBuilder result = new StringBuilder(segments.length * 8);
+        for (String segment : segments) {
+            result.append('/').append(JsonPointer.escape(segment));
+        }
+        return result.length() == 0 ? "/" : result.toString();
     }
 
+    private static final class TraversalFrame {
+        private final Node node;
+        private final PathSegment path;
+
+        private TraversalFrame(Node node, PathSegment path) {
+            this.node = node;
+            this.path = path;
+        }
+    }
+
+    private static final class FastTraversalFrame {
+        private final Node node;
+        private int fixedIndex;
+        private int itemIndex;
+        private boolean propertiesStarted;
+        private Iterator<Node> properties;
+        private int schemaIndex;
+        private int enumIndex;
+
+        private FastTraversalFrame(Node node) {
+            this.node = node;
+        }
+
+        private Node nextChild() {
+            Node child;
+            while (fixedIndex < 6) {
+                child = fixedChild(fixedIndex++);
+                if (child != null) {
+                    return child;
+                }
+            }
+
+            List<Node> items = node.getItems();
+            while (items != null && itemIndex < items.size()) {
+                child = items.get(itemIndex++);
+                if (child != null) {
+                    return child;
+                }
+            }
+
+            if (!propertiesStarted) {
+                propertiesStarted = true;
+                if (node.getProperties() != null) {
+                    properties = node.getProperties().values().iterator();
+                }
+            }
+            while (properties != null && properties.hasNext()) {
+                child = properties.next();
+                if (child != null) {
+                    return child;
+                }
+            }
+
+            Schema schema = node.getSchema();
+            while (schema != null && schemaIndex < 13) {
+                child = schemaChild(schema, schemaIndex++);
+                if (child != null) {
+                    return child;
+                }
+            }
+            List<Node> enumValues = schema == null ? null : schema.getEnum();
+            while (enumValues != null && enumIndex < enumValues.size()) {
+                child = enumValues.get(enumIndex++);
+                if (child != null) {
+                    return child;
+                }
+            }
+            return null;
+        }
+
+        private Node fixedChild(int index) {
+            switch (index) {
+                case 0:
+                    return node.getType();
+                case 1:
+                    return node.getItemType();
+                case 2:
+                    return node.getKeyType();
+                case 3:
+                    return node.getValueType();
+                case 4:
+                    return node.getBlue();
+                case 5:
+                    return node.getContracts();
+                default:
+                    return null;
+            }
+        }
+
+        private static Node schemaChild(Schema schema, int index) {
+            switch (index) {
+                case 0:
+                    return schema.getRequired();
+                case 1:
+                    return schema.getMinLength();
+                case 2:
+                    return schema.getMaxLength();
+                case 3:
+                    return schema.getMinimum();
+                case 4:
+                    return schema.getMaximum();
+                case 5:
+                    return schema.getExclusiveMinimum();
+                case 6:
+                    return schema.getExclusiveMaximum();
+                case 7:
+                    return schema.getMultipleOf();
+                case 8:
+                    return schema.getMinItems();
+                case 9:
+                    return schema.getMaxItems();
+                case 10:
+                    return schema.getUniqueItems();
+                case 11:
+                    return schema.getMinFields();
+                case 12:
+                    return schema.getMaxFields();
+                default:
+                    return null;
+            }
+        }
+    }
+
+    private static final class PathSegment {
+        private final PathSegment parent;
+        private final String segment;
+        private final int depth;
+
+        private PathSegment(PathSegment parent, String segment) {
+            this.parent = parent;
+            this.segment = segment;
+            this.depth = parent == null ? 1 : parent.depth + 1;
+        }
+    }
 }
