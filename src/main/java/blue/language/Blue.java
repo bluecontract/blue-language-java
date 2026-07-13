@@ -23,6 +23,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.preprocess.Preprocessor;
 import blue.language.provider.BootstrapProvider;
+import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.registry.BlueCoreTypeRegistry;
@@ -1112,9 +1113,7 @@ public class Blue implements NodeResolver {
                 BootstrapProvider.INSTANCE,
                 BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider(),
                 registeredExtensionTypeProvider(),
-                blueId -> BlueIds.isPotentialBlueId(blueId)
-                        ? nodeProvider.fetchByBlueId(blueId)
-                        : null);
+                new PotentialBlueIdNodeProvider(nodeProvider));
     }
 
     private NodeProvider registeredExtensionTypeProvider() {

@@ -6,6 +6,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.provider.BootstrapProvider;
+import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.NodeProviderWrapper;
@@ -1072,6 +1073,12 @@ public final class Merger implements NodeResolver {
     }
 
     private ProviderLookup fetchWithProvenance(NodeProvider provider, String blueId) {
+        if (provider instanceof PotentialBlueIdNodeProvider) {
+            PotentialBlueIdNodeProvider filtered = (PotentialBlueIdNodeProvider) provider;
+            return filtered.acceptsBlueId(blueId)
+                    ? fetchWithProvenance(filtered.delegate(), blueId)
+                    : null;
+        }
         if (provider instanceof SequentialNodeProvider) {
             for (NodeProvider candidate : ((SequentialNodeProvider) provider).getNodeProviders()) {
                 ProviderLookup lookup = fetchWithProvenance(candidate, blueId);
@@ -1106,6 +1113,10 @@ public final class Merger implements NodeResolver {
     private boolean containsExplicitlyHostTrustedProvider(NodeProvider provider) {
         if (NodeProviderWrapper.isExplicitlyHostTrusted(provider)) {
             return true;
+        }
+        if (provider instanceof PotentialBlueIdNodeProvider) {
+            return containsExplicitlyHostTrustedProvider(
+                    ((PotentialBlueIdNodeProvider) provider).delegate());
         }
         if (provider instanceof SequentialNodeProvider) {
             for (NodeProvider candidate : ((SequentialNodeProvider) provider).getNodeProviders()) {

@@ -141,6 +141,7 @@ class DocumentProcessorGasTest {
         assertEquals(1, coldProvider.fetchCount(types.accountId));
         assertEquals(1, coldProvider.fetchCount(types.moneyId));
         assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
+        assertEquals(148L, cold.totalGas(), "cold configured-provider processing gas");
 
         int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
         coldProvider.reset();
@@ -150,7 +151,7 @@ class DocumentProcessorGasTest {
         assertProcessedAccount(coldReused, types);
         assertEquals(0, coldProvider.fetchCount());
         assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
-        assertEquals(cold.totalGas(), coldReused.totalGas());
+        assertEquals(148L, coldReused.totalGas(), "reused configured-provider processing gas");
 
         ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
         CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
@@ -166,7 +167,7 @@ class DocumentProcessorGasTest {
         assertEquals(1, warmProvider.fetchCount(types.moneyId));
         assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertTrue(warmBlue.resolvedReferenceCacheSize() >= warmCacheSizeBeforeProcessing);
-        assertEquals(cold.totalGas(), warm.totalGas());
+        assertEquals(148L, warm.totalGas(), "warm configured-provider processing gas");
     }
 
     @Test
