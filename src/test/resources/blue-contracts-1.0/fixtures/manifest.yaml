@@ -1,7 +1,7 @@
 specVersion: "1.0"
-fixturePackageIdentity: "sha256:2f197ca3bbdc41b75e772777cc48e51019754347e1bee26b5f3209b71d9bd9ca"
+fixturePackageIdentity: "sha256:22713df4d50a38b91762aea1e1a360019c1d16c2584ca1bac022305edb4c66d1"
 requiredFixtureSet: exact
-fixtureCount: 133
+fixtureCount: 136
 fixturePackageIdentityAlgorithm:
   digest: sha256
   lineEndings: LF
@@ -28,6 +28,7 @@ categories:
   Normalization: 3
   Patching: 19
   Pointer: 4
+  ProcessingDocument: 3
   Registry: 24
   Termination: 12
   TriggeredFIFO: 2
@@ -320,6 +321,15 @@ fixtures:
   - id: T040_pointer_trailing_slash_rejected
     category: Pointer
     path: pointer/T040_pointer_trailing_slash_rejected.yaml
+  - id: typeDerivedContractNotExecutedByCore
+    category: ProcessingDocument
+    path: processing-document/typeDerivedContractNotExecutedByCore.yaml
+  - id: materializedSelectedContractExecutes
+    category: ProcessingDocument
+    path: processing-document/materializedSelectedContractExecutes.yaml
+  - id: selectedTypeOnlyContractUsesInheritedEffectiveFields
+    category: ProcessingDocument
+    path: processing-document/selectedTypeOnlyContractUsesInheritedEffectiveFields.yaml
   - id: changingRuntimeTypeDescriptionChangesBlueId
     category: Registry
     path: registry/changingRuntimeTypeDescriptionChangesBlueId.yaml
