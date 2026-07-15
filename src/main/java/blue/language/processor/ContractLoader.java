@@ -11,11 +11,13 @@ import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 
-import java.util.Map;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -54,19 +56,40 @@ final class ContractLoader {
 
     ContractBundle load(ResolvedSnapshot snapshot, String scopePath) {
         Objects.requireNonNull(snapshot, "snapshot");
-        return load(snapshot.resolvedAt(scopePath), scopePath);
+        return load(snapshot.canonicalAt(scopePath), snapshot.resolvedAt(scopePath), scopePath);
     }
 
     ContractBundle load(FrozenNode scopeNode, String scopePath) {
-        return load(scopeNode, scopePath, ProcessingMetricsSink.NOOP);
+        return load(scopeNode, scopeNode, scopePath);
     }
 
     ContractBundle load(FrozenNode scopeNode, String scopePath, ProcessingMetricsSink metricsSink) {
+        return load(scopeNode, scopeNode, scopePath, metricsSink);
+    }
+
+    ContractBundle load(FrozenNode selectedScopeNode,
+                        FrozenNode effectiveScopeNode,
+                        String scopePath) {
+        return load(selectedScopeNode, effectiveScopeNode, scopePath, ProcessingMetricsSink.NOOP);
+    }
+
+    ContractBundle load(FrozenNode selectedScopeNode,
+                        FrozenNode effectiveScopeNode,
+                        String scopePath,
+                        ProcessingMetricsSink metricsSink) {
+        Node selectedScope = selectedScopeNode != null ? selectedScopeNode.toNode() : null;
+        return load(selectedScope, effectiveScopeNode, scopePath, metricsSink);
+    }
+
+    ContractBundle load(Node selectedScopeNode,
+                        FrozenNode effectiveScopeNode,
+                        String scopePath,
+                        ProcessingMetricsSink metricsSink) {
         ProcessingMetricsSink metrics = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
         long keyStart = System.nanoTime();
         BundleCacheKey key;
         try {
-            key = cacheKey(scopeNode, scopePath);
+            key = cacheKey(selectedScopeNode, effectiveScopeNode, scopePath);
         } finally {
             metrics.addBundleLoadCacheKeyBuildNanos(System.nanoTime() - keyStart);
         }
@@ -75,7 +98,7 @@ final class ContractLoader {
             metrics.incrementBundleLoadCacheHits();
             long reuseStart = System.nanoTime();
             try {
-                RuntimeMarkers runtimeMarkers = runtimeMarkers(scopeNode);
+                RuntimeMarkers runtimeMarkers = runtimeMarkers(selectedScopeNode, effectiveScopeNode);
                 metrics.incrementBundlesReused();
                 return cached.copyWithRuntimeMarkers(runtimeMarkers.markers,
                         runtimeMarkers.nodes,
@@ -89,36 +112,47 @@ final class ContractLoader {
         long buildStart = System.nanoTime();
         ContractBundle built;
         try {
-            built = build(scopeNode, scopePath);
+            built = build(selectedScopeNode, effectiveScopeNode, scopePath);
         } finally {
             metrics.addBundleLoadActualBuildNanos(System.nanoTime() - buildStart);
         }
         bundleCache.putIfAbsent(key, built);
         metrics.incrementBundlesBuilt();
-        RuntimeMarkers runtimeMarkers = runtimeMarkers(scopeNode);
+        RuntimeMarkers runtimeMarkers = runtimeMarkers(selectedScopeNode, effectiveScopeNode);
         return built.copyWithRuntimeMarkers(runtimeMarkers.markers,
                 runtimeMarkers.nodes,
                 runtimeMarkers.checkpointDeclared);
     }
 
-    private ContractBundle build(FrozenNode scopeNode, String scopePath) {
+    private ContractBundle build(Node selectedScopeNode,
+                                 FrozenNode effectiveScopeNode,
+                                 String scopePath) {
         ContractBundle.Builder builder = ContractBundle.builder();
-        if (scopeNode == null) {
+        if (selectedScopeNode == null) {
             return builder.build();
         }
-        FrozenNode contractsNode = scopeNode.getContracts();
-        if (contractsNode == null) {
+        Node selectedContractsNode = selectedScopeNode.getContracts();
+        if (selectedContractsNode == null) {
             return builder.build();
         }
-        if (contractsNode.getProperties() == null) {
-            if (contractsNode.isEmptyNode()) {
+        if (selectedContractsNode.getProperties() == null) {
+            if (Nodes.isEmptyNode(selectedContractsNode)) {
                 return builder.build();
             }
             throw new MustUnderstandFailureException("Contracts must be an object map",
                     ProcessorErrorCategory.InvalidProcessingDocument);
         }
 
-        Map<String, FrozenNode> contractNodes = new LinkedHashMap<>(contractsNode.getProperties());
+        FrozenNode effectiveContractsNode = property(effectiveScopeNode, "contracts");
+        Map<String, FrozenNode> effectiveContractNodes = effectiveContractsNode != null
+                && effectiveContractsNode.getProperties() != null
+                ? effectiveContractsNode.getProperties()
+                : java.util.Collections.emptyMap();
+        Map<String, FrozenNode> contractNodes = new LinkedHashMap<>();
+        for (String key : selectedContractsNode.getProperties().keySet()) {
+            validateContractKey(key);
+            contractNodes.put(key, effectiveContractNodes.get(key));
+        }
         Map<String, String> contractTypeBlueIds = new LinkedHashMap<>();
         for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
             String typeBlueId = typeBlueId(entry.getValue());
@@ -129,7 +163,6 @@ final class ContractLoader {
 
         for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
             String key = entry.getKey();
-            validateContractKey(key);
             String typeBlueId = contractTypeBlueIds.get(key);
             if (typeBlueId == null) {
                 throw new MustUnderstandFailureException(
@@ -206,13 +239,56 @@ final class ContractLoader {
         }
     }
 
-    private BundleCacheKey cacheKey(FrozenNode scopeNode, String scopePath) {
-        FrozenNode contractsNode = property(scopeNode, "contracts");
-        FrozenNode channelBindingsNode = property(scopeNode, "channelBindings");
+    private BundleCacheKey cacheKey(Node selectedScopeNode,
+                                    FrozenNode effectiveScopeNode,
+                                    String scopePath) {
+        FrozenNode contractsNode = property(effectiveScopeNode, "contracts");
+        FrozenNode channelBindingsNode = property(effectiveScopeNode, "channelBindings");
         return new BundleCacheKey(scopePath != null ? scopePath : "/",
                 registry.version(),
+                selectedContractKeysSignature(selectedScopeNode, contractsNode),
                 contractsSignature(contractsNode),
                 nodeSignature(channelBindingsNode));
+    }
+
+    private String selectedContractKeysSignature(Node selectedScopeNode, FrozenNode effectiveContractsNode) {
+        Node contractsNode = selectedScopeNode != null ? selectedScopeNode.getContracts() : null;
+        if (contractsNode == null) {
+            return effectiveContractsNode == null ? "<matches-effective>" : "<missing>";
+        }
+        Map<String, Node> properties = contractsNode.getProperties();
+        if (properties == null) {
+            if (Nodes.isEmptyNode(contractsNode)
+                    && (effectiveContractsNode == null || effectiveContractsNode.isEmptyNode())) {
+                return "<matches-effective>";
+            }
+            return Nodes.isEmptyNode(contractsNode) ? "<empty>" : "<non-object>";
+        }
+        Map<String, FrozenNode> effectiveProperties = effectiveContractsNode != null
+                ? effectiveContractsNode.getProperties()
+                : null;
+        if (sameOrderedKeys(properties, effectiveProperties)) {
+            return "<matches-effective>";
+        }
+        StringBuilder builder = new StringBuilder("contracts{");
+        for (String key : properties.keySet()) {
+            builder.append(key.length()).append(':').append(key).append(';');
+        }
+        return builder.append('}').toString();
+    }
+
+    private boolean sameOrderedKeys(Map<String, Node> selected, Map<String, FrozenNode> effective) {
+        if (effective == null || selected.size() != effective.size()) {
+            return false;
+        }
+        Iterator<String> selectedKeys = selected.keySet().iterator();
+        Iterator<String> effectiveKeys = effective.keySet().iterator();
+        while (selectedKeys.hasNext()) {
+            if (!Objects.equals(selectedKeys.next(), effectiveKeys.next())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String contractsSignature(FrozenNode contractsNode) {
@@ -260,17 +336,20 @@ final class ContractLoader {
         return node != null && node.getProperties() != null ? node.getProperties().get(key) : null;
     }
 
-    private RuntimeMarkers runtimeMarkers(FrozenNode scopeNode) {
+    private RuntimeMarkers runtimeMarkers(Node selectedScopeNode, FrozenNode effectiveScopeNode) {
         Map<String, MarkerContract> markers = new LinkedHashMap<>();
         Map<String, FrozenNode> markerNodes = new LinkedHashMap<>();
         boolean checkpointDeclared = false;
-        FrozenNode contractsNode = property(scopeNode, "contracts");
-        if (contractsNode == null || contractsNode.getProperties() == null) {
+        Node selectedContractsNode = selectedScopeNode != null ? selectedScopeNode.getContracts() : null;
+        FrozenNode effectiveContractsNode = property(effectiveScopeNode, "contracts");
+        if (selectedContractsNode == null
+                || selectedContractsNode.getProperties() == null
+                || effectiveContractsNode == null
+                || effectiveContractsNode.getProperties() == null) {
             return new RuntimeMarkers(markers, markerNodes, false);
         }
-        for (Map.Entry<String, FrozenNode> entry : contractsNode.getProperties().entrySet()) {
-            String key = entry.getKey();
-            FrozenNode node = entry.getValue();
+        for (String key : selectedContractsNode.getProperties().keySet()) {
+            FrozenNode node = effectiveContractsNode.getProperties().get(key);
             String typeBlueId = typeBlueId(node);
             if (typeBlueId == null) {
                 continue;
@@ -392,15 +471,18 @@ final class ContractLoader {
     private static final class BundleCacheKey {
         private final String scopePath;
         private final long registryVersion;
+        private final String selectedContractKeysSignature;
         private final String contractsSignature;
         private final String channelBindingsSignature;
 
         BundleCacheKey(String scopePath,
                        long registryVersion,
+                       String selectedContractKeysSignature,
                        String contractsSignature,
                        String channelBindingsSignature) {
             this.scopePath = scopePath;
             this.registryVersion = registryVersion;
+            this.selectedContractKeysSignature = selectedContractKeysSignature;
             this.contractsSignature = contractsSignature;
             this.channelBindingsSignature = channelBindingsSignature;
         }
@@ -416,13 +498,18 @@ final class ContractLoader {
             BundleCacheKey that = (BundleCacheKey) other;
             return registryVersion == that.registryVersion
                     && Objects.equals(scopePath, that.scopePath)
+                    && Objects.equals(selectedContractKeysSignature, that.selectedContractKeysSignature)
                     && Objects.equals(contractsSignature, that.contractsSignature)
                     && Objects.equals(channelBindingsSignature, that.channelBindingsSignature);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(scopePath, registryVersion, contractsSignature, channelBindingsSignature);
+            return Objects.hash(scopePath,
+                    registryVersion,
+                    selectedContractKeysSignature,
+                    contractsSignature,
+                    channelBindingsSignature);
         }
     }
 }
