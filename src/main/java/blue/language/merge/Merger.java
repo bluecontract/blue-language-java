@@ -179,7 +179,12 @@ public final class Merger implements NodeResolver {
                         Node resolvedType = resolveWithContribution(typeNode, limits, Contribution.TYPE_ROOT);
                         cacheResolvedReference(typeBlueId, resolvedType, limits);
                         source.type(resolvedType);
-                        mergeWithContribution(target, typeNode, limits, Contribution.TYPE_ROOT);
+                        // Align cold and warm resolution only when the completed type is safe to reuse.
+                        if (cachedResolvedType(typeBlueId, limits) != null) {
+                            mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                        } else {
+                            mergeWithContribution(target, typeNode, limits, Contribution.TYPE_ROOT);
+                        }
                     }
                 }
                 if (startedTypeResolution && materializedCyclicType) {
