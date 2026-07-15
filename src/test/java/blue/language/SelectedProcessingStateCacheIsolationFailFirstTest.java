@@ -118,7 +118,7 @@ class SelectedProcessingStateCacheIsolationFailFirstTest {
             assertTrue(hasAudit(returned), label);
             assertEquals("materialized", returned.getAsText("/materializedField"), label);
             assertEquals("compact", returned.getAsText("/selectedOnly"), label);
-            assertEquals(Boolean.TRUE, returned.get("auditRan"), label);
+            assertEquals(Boolean.TRUE, returned.get("/auditRan"), label);
         }
     }
 

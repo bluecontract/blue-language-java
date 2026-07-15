@@ -79,7 +79,8 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals(2, document.getAsInteger("/x"));
         assertEquals(1, updates.size());
         assertEquals("/x", updates.get(0).path());
-        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(2, manager.fromDocumentCalls);
+        assertEquals(0, manager.applyPatchCalls);
         assertEquals(1, manager.cacheSnapshotCalls);
         assertEquals(1, runtime.batchPatchCallsForTest());
         assertEquals(1, runtime.batchPatchEntriesForTest());
@@ -222,7 +223,7 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals("old", canonical.getAsText("/tags/0"));
         assertEquals("new", canonical.getAsText("/tags/1"));
         assertMissing(canonical, "/obsolete");
-        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(4, manager.fromDocumentCalls);
         assertEquals(0, manager.applyPatchCalls);
         assertEquals(4, manager.cacheSnapshotCalls);
         assertSnapshotConsistent(runtime.snapshot());
@@ -245,7 +246,7 @@ class DocumentProcessorSnapshotTransactionTest {
         runtime.applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
 
         assertEquals("USD", document.getAsText("/price/currency"));
-        assertEquals(1, manager.fromDocumentCalls);
+        assertEquals(2, manager.fromDocumentCalls);
         assertEquals(0, manager.applyPatchCalls);
         assertEquals(1, manager.cacheSnapshotCalls);
         assertEquals("Price", runtime.snapshot().resolvedRoot().getAsNode("/price/type").getName());
@@ -352,9 +353,9 @@ class DocumentProcessorSnapshotTransactionTest {
         runtime.directWrite("/checkpoint/lastEvent", null);
 
         assertMissing(document, "/checkpoint/lastEvent");
-        assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(1, manager.applyPatchCalls);
-        assertEquals(1, manager.cacheSnapshotCalls);
+        assertEquals(2, manager.fromDocumentCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(2, manager.cacheSnapshotCalls);
         assertMissing(runtime.snapshot().canonicalRoot(), "/checkpoint/lastEvent");
         assertSnapshotConsistent(runtime.snapshot());
     }
@@ -395,17 +396,21 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void directWriteSnapshotFailureRollsBackDocumentAndSnapshotTogether() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        manager.failApplyPatch = true;
         manager.failFromDocumentOnCall = 2;
         Node document = YAML_MAPPER.readValue("checkpoint:\n  lastEvent: evt-0", Node.class);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
+        ResolvedSnapshot before = runtime.snapshot();
 
-        assertThrows(IllegalStateException.class,
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
                 () -> runtime.directWrite("/checkpoint/lastEvent", new Node().value("evt-1")));
 
+        assertEquals("snapshot rebuild failed", failure.getMessage());
         assertEquals("evt-0", document.getAsText("/checkpoint/lastEvent"));
+        assertEquals(before.blueId(), runtime.snapshot().blueId());
+        assertEquals("evt-0", runtime.snapshot().canonicalRoot().getAsText("/checkpoint/lastEvent"));
         assertEquals(2, manager.fromDocumentCalls);
-        assertEquals(1, manager.applyPatchCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(0, manager.cacheSnapshotCalls);
     }
 
     @Test

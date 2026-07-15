@@ -153,7 +153,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         assertEquals(ProcessorStatus.SUCCESS, completed.status(), completed.failureReason());
         assertEquals(1, executions.get());
         assertTrue(hasSelectedContract(completed.document(), "audit"));
-        assertEquals(Boolean.TRUE, completed.document().get("auditRan"));
+        assertEquals(Boolean.TRUE, completed.document().get("/auditRan"));
 
         Node minimized = new MergeReverser().reverseToMinimizedOverlay(completed.resolvedDocument());
         Node transported = processor.jsonToNode(processor.nodeToJson(minimized));
