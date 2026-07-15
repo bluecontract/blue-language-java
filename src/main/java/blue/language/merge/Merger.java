@@ -147,7 +147,7 @@ public final class Merger implements NodeResolver {
         if (source.getType() != null) {
             Node typeNode = source.getType();
             String typeBlueId = typeNode.getBlueId();
-            boolean sameMaterializedTargetType = hasSameMaterializedDeclaredType(target, typeBlueId);
+            boolean typeContributionApplied = hasAppliedDeclaredTypeContribution(target, typeBlueId);
             boolean materializedCyclicType = isMaterializedCyclicSetMemberType(typeNode);
             FrozenNode cachedResolvedType = cachedResolvedType(typeBlueId, limits);
             boolean trackedType = typeBlueId != null;
@@ -171,8 +171,9 @@ public final class Merger implements NodeResolver {
                             resolvedType.blueId(typeBlueId);
                         }
                         source.type(resolvedType);
-                        if (!sameMaterializedTargetType) {
+                        if (!typeContributionApplied) {
                             mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                            recordAppliedDeclaredTypeContribution(target, typeBlueId);
                         }
                     } else {
                         if (typeBlueId != null) {
@@ -182,13 +183,14 @@ public final class Merger implements NodeResolver {
                         Node resolvedType = resolveWithContribution(typeNode, limits, Contribution.TYPE_ROOT);
                         cacheResolvedReference(typeBlueId, resolvedType, limits);
                         source.type(resolvedType);
-                        if (!sameMaterializedTargetType) {
+                        if (!typeContributionApplied) {
                             // Align cold and warm resolution only when the completed type is safe to reuse.
                             if (cachedResolvedType(typeBlueId, limits) != null) {
                                 mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
                             } else {
                                 mergeWithContribution(target, typeNode, limits, Contribution.TYPE_ROOT);
                             }
+                            recordAppliedDeclaredTypeContribution(target, typeBlueId);
                         }
                     }
                 }
@@ -210,12 +212,27 @@ public final class Merger implements NodeResolver {
         }
     }
 
-    private boolean hasSameMaterializedDeclaredType(Node target, String sourceTypeBlueId) {
-        Node targetType = target.getType();
-        return sourceTypeBlueId != null
-                && targetType != null
-                && sourceTypeBlueId.equals(targetType.getBlueId())
-                && !targetType.isReferenceOnly();
+    private boolean hasAppliedDeclaredTypeContribution(Node target, String sourceTypeBlueId) {
+        if (sourceTypeBlueId == null || resolutionState.appliedTypeContributions == null) {
+            return false;
+        }
+        Set<String> applied = resolutionState.appliedTypeContributions.get(target);
+        return applied != null && applied.contains(sourceTypeBlueId);
+    }
+
+    private void recordAppliedDeclaredTypeContribution(Node target, String sourceTypeBlueId) {
+        if (sourceTypeBlueId == null) {
+            return;
+        }
+        if (resolutionState.appliedTypeContributions == null) {
+            resolutionState.appliedTypeContributions = new IdentityHashMap<>();
+        }
+        Set<String> applied = resolutionState.appliedTypeContributions.get(target);
+        if (applied == null) {
+            applied = new HashSet<>();
+            resolutionState.appliedTypeContributions.put(target, applied);
+        }
+        applied.add(sourceTypeBlueId);
     }
 
     private void extendTypeReference(Node typeNode, String blueId) {
@@ -1816,6 +1833,7 @@ public final class Merger implements NodeResolver {
         private Map<String, CanonicalReference> canonicalReferences;
         private Map<String, ProviderLookup> providerLookups;
         private Map<String, Node> fullyResolvedReferences;
+        private Map<Node, Set<String>> appliedTypeContributions;
         private Set<String> materializingReferences;
         private Set<String> failedProviderReferences;
         private Set<TypeResolutionKey> resolvingTypes;
