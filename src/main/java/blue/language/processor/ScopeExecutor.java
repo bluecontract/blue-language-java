@@ -555,8 +555,8 @@ final class ScopeExecutor {
         }
     }
 
-    private Node selectedScopeAt(String normalizedScope) {
-        return ImmutablePatchPlanner.readNode(runtime.document(), normalizedScope);
+    private FrozenNode selectedScopeAt(String normalizedScope) {
+        return runtime.selectedFrozenAt(normalizedScope);
     }
 
     private String nextEmbeddedChildScope(String scopePath, ContractBundle bundle, Set<String> processed) {

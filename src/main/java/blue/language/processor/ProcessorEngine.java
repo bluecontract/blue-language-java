@@ -109,7 +109,7 @@ final class ProcessorEngine {
         long preprocessStart = System.nanoTime();
         Execution execution = null;
         try {
-            DocumentProcessingResult invalid = validateProcessingDocument(snapshot.resolvedRoot());
+            DocumentProcessingResult invalid = validateProcessingDocument(snapshot.frozenResolvedRoot());
             if (invalid != null) {
                 return invalid.withSnapshot(snapshot);
             }
@@ -162,6 +162,21 @@ final class ProcessorEngine {
         }
         if (document.getValue() != null || document.getItems() != null || document.isReferenceOnly()) {
             return DocumentProcessingResult.invalidProcessingDocument(document.clone(),
+                    "Invalid Processing Document: root scope must be an object");
+        }
+        return null;
+    }
+
+    private static DocumentProcessingResult validateProcessingDocument(FrozenNode document) {
+        if (document == null) {
+            throw new NullPointerException("document");
+        }
+        if (document.getBlue() != null) {
+            return DocumentProcessingResult.invalidProcessingDocument(document.toNode(),
+                    "Invalid Processing Document: root blue directive is not allowed");
+        }
+        if (document.getValue() != null || document.hasItems() || document.isReferenceOnly()) {
+            return DocumentProcessingResult.invalidProcessingDocument(document.toNode(),
                     "Invalid Processing Document: root scope must be an object");
         }
         return null;
@@ -629,7 +644,7 @@ final class ProcessorEngine {
             String reason = fatal != null ? fatal.reason : null;
             ResolvedSnapshot snapshot = runtime.snapshot();
             if (snapshot != null) {
-                return DocumentProcessingResult.ofSelected(runtime.document(),
+                return DocumentProcessingResult.ofSelected(runtime.selectedDocument(),
                         snapshot,
                         runtime.rootEmissions(),
                         runtime.totalGas(),

@@ -99,7 +99,7 @@ public final class DocumentProcessingRuntime {
                                      ProcessingSnapshotManager snapshotManager,
                                      ProcessingMetricsSink metrics) {
         ResolvedSnapshot processorSnapshot = processorSnapshot(Objects.requireNonNull(snapshot, "snapshot"));
-        this.materializedView = new MaterializedDocumentView(processorSnapshot.resolvedRoot());
+        this.materializedView = new MaterializedDocumentView(processorSnapshot.canonicalRoot());
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
         this.conformanceEngine = conformanceEngine;
@@ -120,8 +120,15 @@ public final class DocumentProcessingRuntime {
     }
 
     public Node document() {
+        if (!selectedDocumentBacked && snapshot != null) {
+            return snapshot.resolvedRoot();
+        }
         syncMaterializedView();
         return materializedView.root();
+    }
+
+    Node selectedDocument() {
+        return document();
     }
 
     void replaceDocument(Node document) {
@@ -266,6 +273,18 @@ public final class DocumentProcessingRuntime {
         ResolvedSnapshot current = snapshot();
         if (current != null) {
             return current.resolvedAt(normalized);
+        }
+        Node node = materializedView.nodeAt(normalized);
+        return node != null ? FrozenNode.fromResolvedNode(node) : null;
+    }
+
+    FrozenNode selectedFrozenAt(String path) {
+        String normalized = PointerUtils.normalizePointer(path);
+        if (!selectedDocumentBacked) {
+            ResolvedSnapshot current = snapshot();
+            if (current != null) {
+                return current.resolvedAt(normalized);
+            }
         }
         Node node = materializedView.nodeAt(normalized);
         return node != null ? FrozenNode.fromResolvedNode(node) : null;

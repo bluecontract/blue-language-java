@@ -77,8 +77,17 @@ final class ContractLoader {
                         FrozenNode effectiveScopeNode,
                         String scopePath,
                         ProcessingMetricsSink metricsSink) {
-        Node selectedScope = selectedScopeNode != null ? selectedScopeNode.toNode() : null;
+        Node selectedScope = selectedScopeNode != null ? selectedContractContainer(selectedScopeNode) : null;
         return load(selectedScope, effectiveScopeNode, scopePath, metricsSink);
+    }
+
+    private Node selectedContractContainer(FrozenNode selectedScopeNode) {
+        Node selectedScope = new Node();
+        FrozenNode selectedContracts = property(selectedScopeNode, "contracts");
+        if (selectedContracts != null) {
+            selectedScope.contracts(selectedContracts.toNode());
+        }
+        return selectedScope;
     }
 
     ContractBundle load(Node selectedScopeNode,
