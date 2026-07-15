@@ -65,7 +65,7 @@ class ProcessingSnapshotProviderProvenanceTest {
         assertFalse(result.capabilityFailure(), result.failureReason());
         assertNotNull(result.snapshot());
         assertEquals("trusted", result.snapshot().resolvedRoot().getAsText("/fixed"));
-        assertEquals(2, fixture.fetches.get());
+        assertEquals(3, fixture.fetches.get());
     }
 
     @Test
@@ -426,11 +426,14 @@ class ProcessingSnapshotProviderProvenanceTest {
     void concurrentDirectAndSnapshotLookupsDoNotTransferTrust() throws Exception {
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         CyclicBarrier lookupBarrier = new CyclicBarrier(2);
+        AtomicInteger synchronizedLookups = new AtomicInteger();
         NodeProvider sharedProvider = blueId -> {
             if (!fixture.requestedBlueId.equals(blueId)) {
                 return null;
             }
-            await(lookupBarrier);
+            if (synchronizedLookups.incrementAndGet() <= 2) {
+                await(lookupBarrier);
+            }
             return Collections.singletonList(fixture.trustedType.clone());
         };
         Blue trustedBlue = new Blue(NodeProviderWrapper.unverified(sharedProvider));

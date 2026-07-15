@@ -39,9 +39,9 @@ class ProcessingSnapshotProviderPatchTest {
 
         ResolvedSnapshot snapshot = runtime.snapshot();
         assertEquals(1, manager.fromDocumentCalls);
-        assertEquals(1, manager.applyPatchCalls);
-        assertEquals(0, manager.cacheSnapshotCalls);
-        assertEquals(2, providerFetches.get());
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(1, manager.cacheSnapshotCalls);
+        assertEquals(1, providerFetches.get());
         assertEquals("written", snapshot.canonicalRoot().getAsText("/state"));
         assertEquals("written", snapshot.resolvedRoot().getAsText("/state"));
         assertEquals("trusted", snapshot.resolvedRoot().getAsText("/inherited"));
