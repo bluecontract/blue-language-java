@@ -115,6 +115,13 @@ public class DocumentProcessor {
         return ProcessorEngine.initializeDocument(this, document);
     }
 
+    /**
+     * Initializes the snapshot's resolved root as the selected Processing Document.
+     * The canonical root remains the immutable identity companion.
+     *
+     * @param snapshot verified canonical and resolved document views
+     * @return the initialization result and its authoritative snapshot
+     */
     public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
         requireSnapshotManager();
         return ProcessorEngine.initializeDocument(this, snapshot);
@@ -124,6 +131,14 @@ public class DocumentProcessor {
         return ProcessorEngine.processDocument(this, document, event);
     }
 
+    /**
+     * Processes the snapshot's resolved root as the selected Processing Document.
+     * The canonical root remains the immutable identity companion.
+     *
+     * @param snapshot verified canonical and resolved document views
+     * @param event read-only Processing Event
+     * @return the processing result and its authoritative snapshot
+     */
     public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event) {
         requireSnapshotManager();
         return ProcessorEngine.processDocument(this, snapshot, event);

@@ -9,10 +9,9 @@ import java.util.Objects;
 /**
  * Mutable processor-facing document view.
  *
- * <p>For Node-backed processing this root is the Selected Document. For
- * snapshot-backed processing it remains the canonical materialization selected
- * by that API. Resolved reads come directly from {@link ResolvedSnapshot}
- * indexes.</p>
+ * <p>For Node-backed processing this root is the supplied Selected Document.
+ * For snapshot-backed processing it is the snapshot's resolved root. Canonical
+ * identity remains available separately from {@link ResolvedSnapshot}.</p>
  */
 final class MaterializedDocumentView {
 
@@ -39,7 +38,7 @@ final class MaterializedDocumentView {
     }
 
     void replaceWithSnapshot(ResolvedSnapshot snapshot) {
-        replaceWith(Objects.requireNonNull(snapshot, "snapshot").canonicalRoot());
+        replaceWith(Objects.requireNonNull(snapshot, "snapshot").resolvedRoot());
     }
 
     private Node cloneNode(Node node) {

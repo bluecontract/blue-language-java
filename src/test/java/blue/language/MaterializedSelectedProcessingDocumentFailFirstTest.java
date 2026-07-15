@@ -97,6 +97,22 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
     }
 
     @Test
+    void resolvedSnapshotCanBeInitializedWithoutResolvingItsTypedListAgain() {
+        SyntheticWorkflowProcessingFixture fixture = new SyntheticWorkflowProcessingFixture();
+        ResolvedSnapshot snapshot = fixture.blue.resolveToSnapshot(fixture.source.clone());
+
+        DocumentProcessingResult result = assertDoesNotThrow(
+                () -> fixture.blue.initializeDocument(snapshot));
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertEquals(1, fixture.handlerExecutions.get());
+        assertEquals("after", result.document().getAsText("/probe"));
+        Node concreteStep = result.document().getAsNode("/contracts/workflow/steps/0/type");
+        assertEquals("Synthetic Compute Step", concreteStep.getName());
+        assertTrue(fixture.blue.isNodeSubtypeOf(concreteStep, concreteStep.getType()));
+    }
+
+    @Test
     void initializationAndPatchPreserveSelectedContractsAndMaterializedFields() {
         AuditFixture fixture = new AuditFixture();
         AtomicInteger executions = new AtomicInteger();
@@ -141,21 +157,25 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
     }
 
     @Test
-    void compactSnapshotDoesNotSelectTypeDerivedAudit() {
+    void compactSnapshotSelectsItsResolvedAuditContract() {
         AuditFixture fixture = new AuditFixture();
         AtomicInteger executions = new AtomicInteger();
         Blue blue = fixture.newBlue(executions);
         ResolvedSnapshot compactSnapshot = blue.resolveToSnapshot(fixture.compact());
 
-        DocumentProcessingResult result = blue.initializeDocument(compactSnapshot);
+        DocumentProcessingResult initialized = blue.initializeDocument(compactSnapshot);
+        DocumentProcessingResult processed = blue.processDocument(
+                initialized.snapshot(), fixture.auditEvent());
 
-        assertEquals(0, executions.get());
-        assertFalse(hasContract(result.document(), "audit"));
-        assertNotNull(result.snapshot().resolvedNodeAt("/contracts/audit"));
+        assertEquals(1, executions.get());
+        assertTrue(hasContract(initialized.document(), "audit"));
+        assertTrue(hasContract(processed.document(), "audit"));
+        assertEquals(Boolean.TRUE, processed.document().get("/auditRan"));
+        assertNotNull(processed.snapshot().resolvedNodeAt("/contracts/audit"));
     }
 
     @Test
-    void genericSnapshotFromMaterializedInputDoesNotClaimSelectedMaterialization() {
+    void snapshotFromMaterializedInputRetainsResolvedSelection() {
         AuditFixture fixture = new AuditFixture();
         AtomicInteger executions = new AtomicInteger();
         Blue blue = fixture.newBlue(executions);
@@ -164,7 +184,7 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
         DocumentProcessingResult result = blue.initializeDocument(snapshot);
 
         assertEquals(0, executions.get());
-        assertFalse(hasContract(result.document(), "audit"));
+        assertSelectedMaterialization(result.document());
         assertNotNull(result.snapshot().resolvedNodeAt("/contracts/audit"));
     }
 

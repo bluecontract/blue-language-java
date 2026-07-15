@@ -480,7 +480,7 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
-    void snapshotNativeProcessingDoesNotBuildInitialSnapshotFromDocument() {
+    void snapshotNativeProcessingRebuildsAuthoritativeStateOnlyForCommittedWrites() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessor processor = new DocumentProcessor(null, manager)
                 .registerContractProcessor(new TestEventChannelProcessor())
@@ -508,7 +508,10 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult result = processor.processDocument(snapshot,
                 new TestEvent().eventId("evt-snapshot-native").toNode());
 
-        assertEquals(0, manager.fromDocumentCalls);
+        assertEquals(3, manager.fromDocumentCalls);
+        assertTrue(manager.fromDocumentInputs.stream()
+                .allMatch(node -> node.getContracts() != null),
+                "each write must resolve the complete canonical companion so parent constraints remain effective");
         assertTrue(manager.cacheSnapshotCalls > 0);
         assertEquals(9, result.snapshot().canonicalRoot().getAsInteger("/x"));
         assertSnapshotConsistent(result.snapshot());
@@ -733,6 +736,7 @@ class DocumentProcessorSnapshotTransactionTest {
         private boolean failCacheSnapshot;
         private boolean returnCurrentSnapshotOnApplyPatch;
         private int failFromDocumentOnCall;
+        private final List<Node> fromDocumentInputs = new java.util.ArrayList<>();
 
         private CountingSnapshotManager() {
             this(null, null, null);
@@ -755,6 +759,7 @@ class DocumentProcessorSnapshotTransactionTest {
         @Override
         public ResolvedSnapshot fromDocument(Node document) {
             fromDocumentCalls++;
+            fromDocumentInputs.add(document.clone());
             if (fromDocumentCalls == failFromDocumentOnCall) {
                 throw new IllegalStateException("snapshot rebuild failed");
             }

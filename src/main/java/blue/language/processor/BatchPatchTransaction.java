@@ -7,6 +7,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
@@ -62,10 +63,14 @@ final class BatchPatchTransaction {
                 : planning.resolvedPlanner().root();
         List<BatchPatchRecord> records = new ArrayList<>();
         for (JsonPatch patch : patches) {
-            ImmutablePatchPlanner.PatchPlan canonicalPlan =
-                    ImmutablePatchPlanner.forFrozen(workingCanonical).plan(originScopePath, patch);
-            ImmutablePatchPlanner.PatchPlan resolvedPlan =
-                    ImmutablePatchPlanner.forFrozen(workingResolved).plan(originScopePath, patch);
+            ImmutablePatchPlanner canonicalPlanner = ImmutablePatchPlanner.forFrozen(workingCanonical);
+            ImmutablePatchPlanner.PatchPlan canonicalPlan = planning.exactReplacement()
+                    ? canonicalPlanner.planWithExactReplacement(originScopePath, patch)
+                    : canonicalPlanner.plan(originScopePath, patch);
+            ImmutablePatchPlanner resolvedPlanner = ImmutablePatchPlanner.forFrozen(workingResolved);
+            ImmutablePatchPlanner.PatchPlan resolvedPlan = planning.exactReplacement()
+                    ? resolvedPlanner.planWithExactReplacement(originScopePath, patch)
+                    : resolvedPlanner.plan(originScopePath, patch);
             BatchPatchRecord record = new BatchPatchRecord(patch,
                     canonicalPlan,
                     resolvedPlan,
@@ -84,6 +89,11 @@ final class BatchPatchTransaction {
                 ? conformancePlan.canonicalRoot()
                 : workingCanonical;
         FrozenNode finalResolved = conformancePlan.root();
+        if (planning.exactReplacement()) {
+            ResolvedSnapshot authoritative = planning.resolveCanonical(finalCanonical);
+            finalCanonical = authoritative.frozenCanonicalRoot();
+            finalResolved = authoritative.frozenResolvedRoot();
+        }
         boolean includeGeneratedUpdates = conformancePlannerOverride != null && conformancePlannerOverride.applies();
 
         BatchPatchResult.UpdatePlan updatePlan = new BatchPatchResult.UpdatePlan(records,

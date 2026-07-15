@@ -99,7 +99,7 @@ public final class DocumentProcessingRuntime {
                                      ProcessingSnapshotManager snapshotManager,
                                      ProcessingMetricsSink metrics) {
         ResolvedSnapshot processorSnapshot = processorSnapshot(Objects.requireNonNull(snapshot, "snapshot"));
-        this.materializedView = new MaterializedDocumentView(processorSnapshot.canonicalRoot());
+        this.materializedView = new MaterializedDocumentView(processorSnapshot.resolvedRoot());
         this.emissionRegistry = new EmissionRegistry();
         this.gasMeter = new GasMeter();
         this.conformanceEngine = conformanceEngine;
@@ -307,7 +307,8 @@ public final class DocumentProcessingRuntime {
                     conformancePlannerOverride,
                     snapshotManager,
                     current,
-                    materializedFallback);
+                    materializedFallback,
+                    !selectedDocumentBacked);
         }
 
         Node root = materializedView.copyRoot();
@@ -320,7 +321,8 @@ public final class DocumentProcessingRuntime {
                 conformancePlannerOverride,
                 snapshotManager,
                 null,
-                true);
+                true,
+                false);
     }
 
     public Node nodeAt(String path) {
@@ -432,11 +434,9 @@ public final class DocumentProcessingRuntime {
             if (snapshotPatch == null) {
                 return;
             }
-            ImmutablePatchPlanner.PatchPlan canonicalPlan = planning.canonicalPlanner.plan("/", snapshotPatch);
-            ImmutablePatchPlanner.PatchPlan resolvedPlan = planning.resolvedPlanner.plan("/", snapshotPatch);
-            ResolvedSnapshot next = new ResolvedSnapshot(canonicalPlan.root(),
-                    resolvedPlan.root(),
-                    canonicalPlan.root().blueId());
+            ImmutablePatchPlanner.PatchPlan canonicalPlan =
+                    planning.canonicalPlanner.planWithExactReplacement("/", snapshotPatch);
+            ResolvedSnapshot next = planning.resolveCanonical(canonicalPlan.root());
             snapshot = snapshotManager.cacheSnapshot(next);
             commitMaterializedSnapshot(snapshot);
         } catch (RuntimeException ex) {
@@ -634,12 +634,14 @@ public final class DocumentProcessingRuntime {
     private PlanningContext planningContext(Node rollback) {
         if (snapshotManager == null || canPlanFromSelectedWithoutSnapshot()) {
             ImmutablePatchPlanner planner = ImmutablePatchPlanner.forMaterialized(rollback);
-            return new PlanningContext(null, planner, planner);
+            return new PlanningContext(null, planner, planner, false, null);
         }
         ResolvedSnapshot base = snapshot != null ? snapshot : snapshotFromDocument(rollback);
         return new PlanningContext(base,
                 ImmutablePatchPlanner.forSnapshot(base),
-                ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot()));
+                ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot()),
+                !selectedDocumentBacked,
+                !selectedDocumentBacked ? snapshotManager : null);
     }
 
     private boolean canPlanFromSelectedWithoutSnapshot() {
@@ -653,10 +655,15 @@ public final class DocumentProcessingRuntime {
         return selectedDocumentBacked && snapshotManager != null;
     }
 
-    static PlanningContext workingPlanningContext(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
+    static PlanningContext workingPlanningContext(FrozenNode canonicalRoot,
+                                                  FrozenNode resolvedRoot,
+                                                  boolean exactReplacement,
+                                                  ProcessingSnapshotManager snapshotManager) {
         return new PlanningContext(null,
                 ImmutablePatchPlanner.forFrozen(canonicalRoot),
-                ImmutablePatchPlanner.forFrozen(resolvedRoot));
+                ImmutablePatchPlanner.forFrozen(resolvedRoot),
+                exactReplacement,
+                exactReplacement ? snapshotManager : null);
     }
 
     private SnapshotPatchPlan prepareSnapshotPatch(ResolvedSnapshot base, JsonPatch patch) {
@@ -908,13 +915,19 @@ public final class DocumentProcessingRuntime {
         private final ResolvedSnapshot baseSnapshot;
         private final ImmutablePatchPlanner canonicalPlanner;
         private final ImmutablePatchPlanner resolvedPlanner;
+        private final boolean exactReplacement;
+        private final ProcessingSnapshotManager authoritativeSnapshotManager;
 
         private PlanningContext(ResolvedSnapshot baseSnapshot,
                                 ImmutablePatchPlanner canonicalPlanner,
-                                ImmutablePatchPlanner resolvedPlanner) {
+                                ImmutablePatchPlanner resolvedPlanner,
+                                boolean exactReplacement,
+                                ProcessingSnapshotManager authoritativeSnapshotManager) {
             this.baseSnapshot = baseSnapshot;
             this.canonicalPlanner = canonicalPlanner;
             this.resolvedPlanner = resolvedPlanner;
+            this.exactReplacement = exactReplacement;
+            this.authoritativeSnapshotManager = authoritativeSnapshotManager;
         }
 
         ResolvedSnapshot baseSnapshot() {
@@ -927,6 +940,17 @@ public final class DocumentProcessingRuntime {
 
         ImmutablePatchPlanner resolvedPlanner() {
             return resolvedPlanner;
+        }
+
+        boolean exactReplacement() {
+            return exactReplacement;
+        }
+
+        ResolvedSnapshot resolveCanonical(FrozenNode canonicalRoot) {
+            if (!exactReplacement || authoritativeSnapshotManager == null) {
+                throw new IllegalStateException("Authoritative snapshot resolution is unavailable");
+            }
+            return authoritativeSnapshotManager.fromDocument(canonicalRoot.toNode());
         }
     }
 

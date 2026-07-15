@@ -314,7 +314,11 @@ class ProcessingSnapshotProviderProvenanceTest {
         DocumentProcessingResult snapshotNative = blue.processDocument(first.snapshot(), secondEvent.clone());
 
         assertSuccessfulSnapshot(snapshotNative);
-        assertCheckpointEvent(snapshotNative.document(), eventTypeBlueId, 2);
+        assertCheckpointEvent(snapshotNative.canonicalDocument(), eventTypeBlueId, 2);
+        assertEquals("event", snapshotNative.document()
+                .getAsText("/contracts/checkpoint/lastEvents/incoming/fixed"));
+        assertEquals(2, snapshotNative.document()
+                .getAsInteger("/contracts/checkpoint/lastEvents/incoming/sequence"));
     }
 
     @Test

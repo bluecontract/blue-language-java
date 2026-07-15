@@ -173,7 +173,7 @@ public final class DocumentProcessingResult {
 
     public DocumentProcessingResult withSnapshot(ResolvedSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        return new DocumentProcessingResult(snapshot.canonicalRoot(),
+        return new DocumentProcessingResult(document,
                 triggeredEvents,
                 totalGas,
                 capabilityFailure,

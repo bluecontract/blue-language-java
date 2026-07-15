@@ -59,7 +59,7 @@ final class ProcessorEngine {
         } catch (RunTerminationException ignored) {
             // Initialization run terminated early (e.g., graceful root termination).
         } catch (MustUnderstandFailureException ex) {
-            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage(), ex.errorCategory());
+            return DocumentProcessingResult.capabilityFailure(snapshot.resolvedRoot(), ex.getMessage(), ex.errorCategory());
         }
         return execution.result();
     }
@@ -109,7 +109,7 @@ final class ProcessorEngine {
         long preprocessStart = System.nanoTime();
         Execution execution = null;
         try {
-            DocumentProcessingResult invalid = validateProcessingDocument(snapshot.canonicalRoot());
+            DocumentProcessingResult invalid = validateProcessingDocument(snapshot.resolvedRoot());
             if (invalid != null) {
                 return invalid.withSnapshot(snapshot);
             }
@@ -126,7 +126,7 @@ final class ProcessorEngine {
             // Processing terminated early; result still returned.
         } catch (MustUnderstandFailureException ex) {
             metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
-            return DocumentProcessingResult.capabilityFailure(snapshot.canonicalRoot(), ex.getMessage(), ex.errorCategory());
+            return DocumentProcessingResult.capabilityFailure(snapshot.resolvedRoot(), ex.getMessage(), ex.errorCategory());
         }
         long postStart = System.nanoTime();
         try {
