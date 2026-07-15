@@ -12,6 +12,7 @@ import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -61,6 +62,7 @@ final class BatchPatchTransaction {
         FrozenNode workingResolved = planning.baseSnapshot() != null
                 ? planning.baseSnapshot().frozenResolvedRoot()
                 : planning.resolvedPlanner().root();
+        boolean authoritativeResolutionRequired = false;
         List<BatchPatchRecord> records = new ArrayList<>();
         for (JsonPatch patch : patches) {
             ImmutablePatchPlanner canonicalPlanner = ImmutablePatchPlanner.forFrozen(workingCanonical);
@@ -71,6 +73,11 @@ final class BatchPatchTransaction {
             ImmutablePatchPlanner.PatchPlan resolvedPlan = planning.exactReplacement()
                     ? resolvedPlanner.planWithExactReplacement(originScopePath, patch)
                     : resolvedPlanner.plan(originScopePath, patch);
+            if (planning.exactReplacement()
+                    && requiresAuthoritativeResolution(
+                            workingCanonical, workingResolved, canonicalPlan, resolvedPlan, patch)) {
+                authoritativeResolutionRequired = true;
+            }
             BatchPatchRecord record = new BatchPatchRecord(patch,
                     canonicalPlan,
                     resolvedPlan,
@@ -89,7 +96,8 @@ final class BatchPatchTransaction {
                 ? conformancePlan.canonicalRoot()
                 : workingCanonical;
         FrozenNode finalResolved = conformancePlan.root();
-        if (planning.exactReplacement()) {
+        if (planning.exactReplacement()
+                && (authoritativeResolutionRequired || !conformancePlan.fullSnapshotRebuildAvoidable())) {
             ResolvedSnapshot authoritative = planning.resolveCanonical(finalCanonical);
             finalCanonical = authoritative.frozenCanonicalRoot();
             finalResolved = authoritative.frozenResolvedRoot();
@@ -119,6 +127,98 @@ final class BatchPatchTransaction {
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
+    }
+
+    private boolean requiresAuthoritativeResolution(FrozenNode canonicalRoot,
+                                                     FrozenNode resolvedRoot,
+                                                     ImmutablePatchPlanner.PatchPlan canonicalPlan,
+                                                     ImmutablePatchPlanner.PatchPlan resolvedPlan,
+                                                     JsonPatch patch) {
+        if (hasResolutionContext(canonicalRoot, canonicalPlan.path())
+                || hasResolutionContext(resolvedRoot, resolvedPlan.path())) {
+            return true;
+        }
+        if (!sameResolvedStructure(canonicalPlan.before(), resolvedPlan.before())) {
+            return true;
+        }
+        return patch.getOp() != JsonPatch.Op.REMOVE
+                && !isPlainValue(patch.getVal(), new IdentityHashMap<Node, Boolean>());
+    }
+
+    private boolean hasResolutionContext(FrozenNode root, String path) {
+        List<String> segments = JsonPointer.split(path);
+        ImmutablePatchPlanner planner = ImmutablePatchPlanner.forFrozen(root);
+        int ancestorCount = Math.max(1, segments.size());
+        for (int depth = 0; depth < ancestorCount; depth++) {
+            FrozenNode ancestor = planner.read(JsonPointer.toPointer(segments.subList(0, depth)));
+            if (ancestor != null && hasResolutionMetadata(ancestor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasResolutionMetadata(FrozenNode node) {
+        return node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getSchema() != null
+                || node.getMergePolicy() != null
+                || node.getReferenceBlueId() != null
+                || node.getPreviousBlueId() != null
+                || node.getPosition() != null
+                || node.getBlue() != null
+                || node.isInlineValue();
+    }
+
+    private boolean sameResolvedStructure(FrozenNode left, FrozenNode right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null || !left.blueId().equals(right.blueId())) {
+            return false;
+        }
+        FrozenNode normalizedLeft = FrozenNode.fromResolvedNode(left.toNode());
+        FrozenNode normalizedRight = FrozenNode.fromResolvedNode(right.toNode());
+        return normalizedLeft.resolvedStructuralKey().equals(normalizedRight.resolvedStructuralKey());
+    }
+
+    private boolean isPlainValue(Node node, IdentityHashMap<Node, Boolean> visited) {
+        if (node == null || visited.put(node, Boolean.TRUE) != null) {
+            return false;
+        }
+        if (node.getBlue() != null
+                || node.getBlueId() != null
+                || node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getPreviousBlueId() != null
+                || node.getPosition() != null
+                || node.getName() != null
+                || node.getDescription() != null
+                || node.getSchema() != null
+                || node.getContracts() != null
+                || node.getMergePolicy() != null
+                || node.isInlineValue()) {
+            return false;
+        }
+        if (node.getItems() != null) {
+            for (Node item : node.getItems()) {
+                if (!isPlainValue(item, visited)) {
+                    return false;
+                }
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Node property : node.getProperties().values()) {
+                if (!isPlainValue(property, visited)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private List<BatchPatchResult.GeneralizationMetadataWrite> generalizationMetadataWrites(

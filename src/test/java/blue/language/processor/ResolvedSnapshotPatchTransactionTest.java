@@ -20,6 +20,27 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ResolvedSnapshotPatchTransactionTest {
 
     @Test
+    void plainScalarReplacementKeepsSnapshotCoherentWithoutFullResolution() {
+        Blue blue = new Blue();
+        RecordingSnapshotManager manager = new RecordingSnapshotManager(blue);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                blue.resolveToSnapshot(new Node()
+                        .properties("counter", new Node().value(0))),
+                blue.conformanceEngine(),
+                manager);
+
+        runtime.applyPatch("/", JsonPatch.replace("/counter", new Node().value(1)));
+
+        ResolvedSnapshot result = runtime.snapshot();
+        assertEquals(1, result.canonicalRoot().getAsInteger("/counter"));
+        assertEquals(1, result.resolvedRoot().getAsInteger("/counter"));
+        assertEquals(1, runtime.document().getAsInteger("/counter"));
+        assertEquals(0, manager.inputs.size(),
+                "a plain value with no inherited contribution must stay on the immutable patch path");
+        assertPlainPathViewsEqual(blue, result, "/counter");
+    }
+
+    @Test
     void snapshotPatchKeepsAuthoredCanonicalValueAndResolvedEffectiveValue() {
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
@@ -102,6 +123,8 @@ class ResolvedSnapshotPatchTransactionTest {
         assertEquals(1, runtime.document().getAsInteger("/values/0"));
         assertEquals(2, runtime.document().getAsInteger("/values/1"));
         assertEquals(3, runtime.document().getAsInteger("/values/2"));
+        assertEquals(0, manager.inputs.size());
+        assertPlainPathViewsEqual(fixture.blue, runtime.snapshot(), "/values");
     }
 
     @Test
@@ -118,6 +141,8 @@ class ResolvedSnapshotPatchTransactionTest {
         assertEquals(2, runtime.document().getAsNode("/values").getItems().size());
         assertEquals(1, runtime.document().getAsInteger("/values/0"));
         assertEquals(2, runtime.document().getAsInteger("/values/1"));
+        assertEquals(0, manager.inputs.size());
+        assertPlainPathViewsEqual(fixture.blue, runtime.snapshot(), "/values");
     }
 
     @Test
@@ -126,8 +151,7 @@ class ResolvedSnapshotPatchTransactionTest {
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 fixture.blue.resolveToSnapshot(new Node()
-                        .properties("obsolete", new Node().value(true))
-                        .contracts(new Node())),
+                        .properties("obsolete", new Node().value(true))),
                 fixture.blue.conformanceEngine(),
                 manager);
 
@@ -136,7 +160,9 @@ class ResolvedSnapshotPatchTransactionTest {
         assertMissing(runtime.document(), "/obsolete");
         assertMissing(runtime.snapshot().canonicalRoot(), "/obsolete");
         assertMissing(runtime.snapshot().resolvedRoot(), "/obsolete");
-        assertEquals(1, manager.inputs.size());
+        assertEquals(0, manager.inputs.size());
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(runtime.snapshot().canonicalRoot()),
+                runtime.snapshot().blueId());
     }
 
     @Test
@@ -208,6 +234,12 @@ class ResolvedSnapshotPatchTransactionTest {
 
     private static void assertMissing(Node node, String path) {
         assertNull(ImmutablePatchPlanner.readNode(node, path));
+    }
+
+    private static void assertPlainPathViewsEqual(Blue blue, ResolvedSnapshot snapshot, String path) {
+        assertEquals(blue.nodeToJson(ImmutablePatchPlanner.readNode(snapshot.canonicalRoot(), path)),
+                blue.nodeToJson(ImmutablePatchPlanner.readNode(snapshot.resolvedRoot(), path)));
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(snapshot.canonicalRoot()), snapshot.blueId());
     }
 
     private static Node listDocument(int... values) {

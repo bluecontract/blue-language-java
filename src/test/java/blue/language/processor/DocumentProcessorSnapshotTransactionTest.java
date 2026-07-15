@@ -480,7 +480,7 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
-    void snapshotNativeProcessingRebuildsAuthoritativeStateOnlyForCommittedWrites() {
+    void snapshotNativeProcessingRebuildsOnlyWritesThatRequireResolution() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessor processor = new DocumentProcessor(null, manager)
                 .registerContractProcessor(new TestEventChannelProcessor())
@@ -508,10 +508,11 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult result = processor.processDocument(snapshot,
                 new TestEvent().eventId("evt-snapshot-native").toNode());
 
-        assertEquals(3, manager.fromDocumentCalls);
+        assertEquals(2, manager.fromDocumentCalls,
+                "plain scalar writes must use the coherent immutable snapshot path");
         assertTrue(manager.fromDocumentInputs.stream()
                 .allMatch(node -> node.getContracts() != null),
-                "each write must resolve the complete canonical companion so parent constraints remain effective");
+                "writes requiring resolution must retain the complete canonical companion");
         assertTrue(manager.cacheSnapshotCalls > 0);
         assertEquals(9, result.snapshot().canonicalRoot().getAsInteger("/x"));
         assertSnapshotConsistent(result.snapshot());
