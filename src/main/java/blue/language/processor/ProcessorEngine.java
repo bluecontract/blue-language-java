@@ -629,7 +629,8 @@ final class ProcessorEngine {
             String reason = fatal != null ? fatal.reason : null;
             ResolvedSnapshot snapshot = runtime.snapshot();
             if (snapshot != null) {
-                return DocumentProcessingResult.of(snapshot,
+                return DocumentProcessingResult.ofSelected(runtime.document(),
+                        snapshot,
                         runtime.rootEmissions(),
                         runtime.totalGas(),
                         status,

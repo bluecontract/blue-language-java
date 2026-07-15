@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.ConformancePlan;
+import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
@@ -10,8 +11,10 @@ import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 final class BatchPatchTransaction {
 
@@ -88,6 +91,8 @@ final class BatchPatchTransaction {
                 finalResolved,
                 conformancePlan.changedPaths(),
                 includeGeneratedUpdates);
+        List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
+                generalizationMetadataWrites(finalCanonical, finalResolved, conformancePlan.changedPaths());
         long buildUpdatesNanos = 0L;
         List<DocumentProcessingRuntime.DocumentUpdateData> updates = null;
         if (buildUpdates) {
@@ -95,20 +100,77 @@ final class BatchPatchTransaction {
             updates = updatePlan.build(materializationMetrics);
             buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
         }
-        if (!buildUpdates) {
-            return new BatchPatchResult(finalCanonical,
-                    finalResolved,
-                    updatePlan,
-                    patchPlanningNanos,
-                    conformanceNanos,
-                    buildUpdatesNanos);
-        }
         return new BatchPatchResult(finalCanonical,
                 finalResolved,
                 updates,
+                updatePlan,
+                patches,
+                metadataWrites,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
+    }
+
+    private List<BatchPatchResult.GeneralizationMetadataWrite> generalizationMetadataWrites(
+            FrozenNode finalCanonical,
+            FrozenNode finalResolved,
+            List<String> changedPaths) {
+        if (changedPaths == null || changedPaths.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<String> uniquePaths = new LinkedHashSet<>(changedPaths);
+        List<BatchPatchResult.GeneralizationMetadataWrite> writes = new ArrayList<>();
+        for (String path : uniquePaths) {
+            if (!isGeneralizationMetadataPath(path)) {
+                continue;
+            }
+            FrozenNode value = readGeneralizationMetadata(finalCanonical, path);
+            if (value == null) {
+                FrozenNode resolvedValue = readGeneralizationMetadata(finalResolved, path);
+                if (resolvedValue != null && resolvedValue.getReferenceBlueId() != null) {
+                    value = FrozenNode.fromResolvedNode(new Node().blueId(resolvedValue.getReferenceBlueId()));
+                }
+            }
+            if (value != null) {
+                writes.add(new BatchPatchResult.GeneralizationMetadataWrite(path, value));
+            }
+        }
+        return writes;
+    }
+
+    private FrozenNode readGeneralizationMetadata(FrozenNode root, String path) {
+        List<String> segments = JsonPointer.split(path);
+        String field = segments.get(segments.size() - 1);
+        String parentPath = JsonPointer.toPointer(segments.subList(0, segments.size() - 1));
+        FrozenNode parent = ImmutablePatchPlanner.forFrozen(root).read(parentPath);
+        if (parent == null) {
+            return null;
+        }
+        if ("type".equals(field)) {
+            return parent.getType();
+        }
+        if ("itemType".equals(field)) {
+            return parent.getItemType();
+        }
+        if ("keyType".equals(field)) {
+            return parent.getKeyType();
+        }
+        if ("valueType".equals(field)) {
+            return parent.getValueType();
+        }
+        return null;
+    }
+
+    private boolean isGeneralizationMetadataPath(String path) {
+        List<String> segments = JsonPointer.split(path);
+        if (segments.isEmpty()) {
+            return false;
+        }
+        String field = segments.get(segments.size() - 1);
+        return "type".equals(field)
+                || "itemType".equals(field)
+                || "keyType".equals(field)
+                || "valueType".equals(field);
     }
 
     private ConformancePlan planBatchConformance(FrozenNode canonicalRoot,

@@ -106,6 +106,27 @@ public final class DocumentProcessingResult {
                 null);
     }
 
+    static DocumentProcessingResult ofSelected(Node document,
+                                               ResolvedSnapshot snapshot,
+                                               List<Node> triggeredEvents,
+                                               long totalGas,
+                                               ProcessorStatus status,
+                                               ProcessorErrorCategory errorCategory,
+                                               String failureReason) {
+        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(triggeredEvents, "triggeredEvents");
+        return new DocumentProcessingResult(document,
+                new ArrayList<>(triggeredEvents),
+                totalGas,
+                status == ProcessorStatus.CAPABILITY_FAILURE
+                        || status == ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                failureReason,
+                status,
+                errorCategory,
+                snapshot);
+    }
+
     public static DocumentProcessingResult capabilityFailure(Node document, String reason) {
         return capabilityFailure(document, reason, ProcessorErrorCategory.UnsupportedContract);
     }

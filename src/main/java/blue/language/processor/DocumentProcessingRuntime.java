@@ -29,6 +29,7 @@ public final class DocumentProcessingRuntime {
     private final ProcessingSnapshotManager snapshotManager;
     private final ProcessingMetricsSink metrics;
     private final boolean lazyMaterializedCommits;
+    private final boolean selectedDocumentBacked;
     private ResolvedSnapshot snapshot;
     private boolean materializedViewStale;
     private boolean runTerminated;
@@ -76,6 +77,7 @@ public final class DocumentProcessingRuntime {
         this.snapshotManager = snapshotManager;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         this.lazyMaterializedCommits = false;
+        this.selectedDocumentBacked = true;
     }
 
     public DocumentProcessingRuntime(ResolvedSnapshot snapshot,
@@ -106,6 +108,7 @@ public final class DocumentProcessingRuntime {
         this.snapshot = processorSnapshot;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         this.lazyMaterializedCommits = true;
+        this.selectedDocumentBacked = false;
     }
 
     private ResolvedSnapshot processorSnapshot(ResolvedSnapshot snapshot) {
@@ -242,7 +245,9 @@ public final class DocumentProcessingRuntime {
     public ResolvedSnapshot snapshot() {
         if (snapshot == null && snapshotManager != null) {
             snapshot = snapshotFromDocument(materializedView.root());
-            materializedView.replaceWithSnapshot(snapshot);
+            if (!selectedDocumentBacked) {
+                materializedView.replaceWithSnapshot(snapshot);
+            }
         }
         return snapshot;
     }
@@ -362,6 +367,10 @@ public final class DocumentProcessingRuntime {
     }
 
     public void directWrite(String path, Node value) {
+        if (usesAuthoritativeSelectedSnapshot()) {
+            directWriteSelected(path, value);
+            return;
+        }
         if (snapshotManager != null && snapshot != null) {
             directWriteSnapshot(path, value);
             return;
@@ -382,6 +391,31 @@ public final class DocumentProcessingRuntime {
             commitSnapshotPatch(snapshotPatchPlan, resolvedPlan.root());
         } catch (RuntimeException ex) {
             materializedView.replaceWith(rollback);
+            snapshot = snapshotRollback;
+            materializedViewStale = false;
+            throw ex;
+        }
+    }
+
+    private void directWriteSelected(String path, Node value) {
+        Node selectedRollback = materializedView.copyRoot();
+        ResolvedSnapshot snapshotRollback = snapshot;
+        try {
+            Node before = ImmutablePatchPlanner.readNode(selectedRollback, path);
+            JsonPatch patch = directWritePatch(path, before, value);
+            if (patch == null) {
+                return;
+            }
+            Node tentativeSelected = selectedRollback.clone();
+            applyMaterializedDirectWrite(tentativeSelected, path, value);
+            ResolvedSnapshot authoritative = snapshotFromDocument(tentativeSelected);
+            ResolvedSnapshot cached = Objects.requireNonNull(snapshotManager.cacheSnapshot(authoritative),
+                    "cachedSnapshot");
+            materializedView.replaceWith(tentativeSelected);
+            snapshot = cached;
+            materializedViewStale = false;
+        } catch (RuntimeException ex) {
+            materializedView.replaceWith(selectedRollback);
             snapshot = snapshotRollback;
             materializedViewStale = false;
             throw ex;
@@ -411,22 +445,22 @@ public final class DocumentProcessingRuntime {
         }
     }
 
-    private void applyMaterializedDirectWrite(String path, Node value) {
+    private void applyMaterializedDirectWrite(Node root, String path, Node value) {
         if (value == null) {
-            removeMaterializedPath(path);
+            removeMaterializedPath(root, path);
         } else {
-            NodePathEditor.put(materializedView.root(), path, value.clone());
+            NodePathEditor.put(root, path, value.clone());
         }
     }
 
-    private void removeMaterializedPath(String path) {
+    private void removeMaterializedPath(Node root, String path) {
         List<String> segments = JsonPointer.split(path);
         if (segments.isEmpty()) {
-            materializedView.root().replaceWith(new Node());
+            root.replaceWith(new Node());
             return;
         }
         List<String> parentSegments = new ArrayList<>(segments.subList(0, segments.size() - 1));
-        Node parent = NodePathEditor.getOrNull(materializedView.root(), JsonPointer.toPointer(parentSegments));
+        Node parent = NodePathEditor.getOrNull(root, JsonPointer.toPointer(parentSegments));
         if (parent == null) {
             return;
         }
@@ -465,6 +499,7 @@ public final class DocumentProcessingRuntime {
         if (patches == null || patches.isEmpty()) {
             return Collections.emptyList();
         }
+        Node selectedRollback = selectedDocumentBacked ? materializedView.copyRoot() : null;
         ResolvedSnapshot snapshotRollback = snapshot;
         batchPatchCalls++;
         batchPatchEntries += patches.size();
@@ -475,7 +510,8 @@ public final class DocumentProcessingRuntime {
                     planning,
                     conformanceEngine,
                     conformancePlannerOverride,
-                    updateMaterializationMetrics());
+                    updateMaterializationMetrics(),
+                    !usesAuthoritativeSelectedSnapshot());
             BatchPatchResult result = transaction.apply();
             batchPatchPlanningNanos += result.patchPlanningNanos();
             batchPatchConformanceNanos += result.conformanceNanos();
@@ -484,18 +520,22 @@ public final class DocumentProcessingRuntime {
             metrics.addBatchPatchConformanceNanos(result.conformanceNanos());
             metrics.addBatchPatchBuildUpdatesNanos(result.buildUpdatesNanos());
             long commitStart = System.nanoTime();
+            List<DocumentUpdateData> updates;
             try {
-                commitBatchPatchResult(result);
+                updates = commitBatchPatchResult(result);
             } finally {
                 long commitNanos = System.nanoTime() - commitStart;
                 batchPatchCommitNanos += commitNanos;
                 metrics.addBatchPatchCommitNanos(commitNanos);
                 metrics.addSnapshotCommitNanos(commitNanos);
             }
-            return result.updates();
+            return updates;
         } catch (RuntimeException ex) {
             snapshot = snapshotRollback;
-            if (snapshotRollback != null) {
+            if (selectedRollback != null) {
+                materializedView.replaceWith(selectedRollback);
+                materializedViewStale = false;
+            } else if (snapshotRollback != null) {
                 materializedView.replaceWithSnapshot(snapshotRollback);
                 materializedViewStale = false;
             }
@@ -512,6 +552,7 @@ public final class DocumentProcessingRuntime {
         if (!canApplyPrecomputedPatch(originScopePath, patch, preview)) {
             return applyPatches(originScopePath, Collections.singletonList(patch));
         }
+        Node selectedRollback = selectedDocumentBacked ? materializedView.copyRoot() : null;
         ResolvedSnapshot snapshotRollback = snapshot;
         batchPatchCalls++;
         batchPatchEntries++;
@@ -519,25 +560,31 @@ public final class DocumentProcessingRuntime {
             long buildUpdatesStart = System.nanoTime();
             BatchPatchResult result;
             try {
-                result = preview.result().withMaterializationMetrics(updateMaterializationMetrics());
+                result = usesAuthoritativeSelectedSnapshot()
+                        ? preview.result()
+                        : preview.result().withMaterializationMetrics(updateMaterializationMetrics());
             } finally {
                 long buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
                 batchPatchBuildUpdatesNanos += buildUpdatesNanos;
                 metrics.addBatchPatchBuildUpdatesNanos(buildUpdatesNanos);
             }
             long commitStart = System.nanoTime();
+            List<DocumentUpdateData> updates;
             try {
-                commitBatchPatchResult(result);
+                updates = commitBatchPatchResult(result);
             } finally {
                 long commitNanos = System.nanoTime() - commitStart;
                 batchPatchCommitNanos += commitNanos;
                 metrics.addBatchPatchCommitNanos(commitNanos);
                 metrics.addSnapshotCommitNanos(commitNanos);
             }
-            return result.updates();
+            return updates;
         } catch (RuntimeException ex) {
             snapshot = snapshotRollback;
-            if (snapshotRollback != null) {
+            if (selectedRollback != null) {
+                materializedView.replaceWith(selectedRollback);
+                materializedViewStale = false;
+            } else if (snapshotRollback != null) {
                 materializedView.replaceWithSnapshot(snapshotRollback);
                 materializedViewStale = false;
             }
@@ -585,7 +632,7 @@ public final class DocumentProcessingRuntime {
     }
 
     private PlanningContext planningContext(Node rollback) {
-        if (snapshotManager == null) {
+        if (snapshotManager == null || canPlanFromSelectedWithoutSnapshot()) {
             ImmutablePatchPlanner planner = ImmutablePatchPlanner.forMaterialized(rollback);
             return new PlanningContext(null, planner, planner);
         }
@@ -593,6 +640,17 @@ public final class DocumentProcessingRuntime {
         return new PlanningContext(base,
                 ImmutablePatchPlanner.forSnapshot(base),
                 ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot()));
+    }
+
+    private boolean canPlanFromSelectedWithoutSnapshot() {
+        return usesAuthoritativeSelectedSnapshot()
+                && snapshot == null
+                && conformanceEngine == null
+                && (conformancePlannerOverride == null || !conformancePlannerOverride.applies());
+    }
+
+    private boolean usesAuthoritativeSelectedSnapshot() {
+        return selectedDocumentBacked && snapshotManager != null;
     }
 
     static PlanningContext workingPlanningContext(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
@@ -627,13 +685,33 @@ public final class DocumentProcessingRuntime {
         }
     }
 
-    private void commitBatchPatchResult(BatchPatchResult result) {
+    private List<DocumentUpdateData> commitBatchPatchResult(BatchPatchResult result) {
         if (snapshotManager == null) {
             Node next = result.resolvedRoot().toNode();
             materializedView.replaceWith(next);
             snapshot = null;
             materializedViewStale = false;
-            return;
+            return result.updates();
+        }
+        if (selectedDocumentBacked) {
+            Node tentativeSelected = tentativeSelectedRoot(result);
+            ResolvedSnapshot authoritative = snapshotFromDocument(tentativeSelected);
+            long buildUpdatesStart = System.nanoTime();
+            List<DocumentUpdateData> updates;
+            try {
+                updates = result.updatesAgainst(authoritative.frozenResolvedRoot(),
+                        updateMaterializationMetrics());
+            } finally {
+                long buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
+                batchPatchBuildUpdatesNanos += buildUpdatesNanos;
+                metrics.addBatchPatchBuildUpdatesNanos(buildUpdatesNanos);
+            }
+            ResolvedSnapshot cached = Objects.requireNonNull(snapshotManager.cacheSnapshot(authoritative),
+                    "cachedSnapshot");
+            materializedView.replaceWith(tentativeSelected);
+            snapshot = cached;
+            materializedViewStale = false;
+            return updates;
         }
         ResolvedSnapshot next = new ResolvedSnapshot(result.canonicalRoot(),
                 result.resolvedRoot(),
@@ -641,6 +719,19 @@ public final class DocumentProcessingRuntime {
         ResolvedSnapshot cached = snapshotManager.cacheSnapshot(next);
         snapshot = cached;
         commitMaterializedSnapshot(cached);
+        return result.updates();
+    }
+
+    private Node tentativeSelectedRoot(BatchPatchResult result) {
+        FrozenNode tentative = FrozenNode.fromResolvedNode(materializedView.copyRoot());
+        for (JsonPatch patch : result.requestedPatches()) {
+            tentative = ImmutablePatchPlanner.forFrozen(tentative).plan("/", patch).root();
+        }
+        Node tentativeSelected = tentative.toNode();
+        for (BatchPatchResult.GeneralizationMetadataWrite write : result.generalizationMetadataWrites()) {
+            NodePathEditor.put(tentativeSelected, write.path(), write.value().toNode());
+        }
+        return tentativeSelected;
     }
 
     private void commitMaterializedSnapshot(ResolvedSnapshot committed) {

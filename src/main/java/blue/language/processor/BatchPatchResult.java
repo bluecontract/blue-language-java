@@ -14,6 +14,8 @@ final class BatchPatchResult {
     private final FrozenNode resolvedRoot;
     private final List<DocumentProcessingRuntime.DocumentUpdateData> updates;
     private final UpdatePlan updatePlan;
+    private final List<JsonPatch> requestedPatches;
+    private final List<GeneralizationMetadataWrite> generalizationMetadataWrites;
     private final long patchPlanningNanos;
     private final long conformanceNanos;
     private final long buildUpdatesNanos;
@@ -30,11 +32,35 @@ final class BatchPatchResult {
                      long patchPlanningNanos,
                      long conformanceNanos,
                      long buildUpdatesNanos) {
+        this(canonicalRoot,
+                resolvedRoot,
+                updates,
+                null,
+                Collections.<JsonPatch>emptyList(),
+                Collections.<GeneralizationMetadataWrite>emptyList(),
+                patchPlanningNanos,
+                conformanceNanos,
+                buildUpdatesNanos);
+    }
+
+    BatchPatchResult(FrozenNode canonicalRoot,
+                     FrozenNode resolvedRoot,
+                     List<DocumentProcessingRuntime.DocumentUpdateData> updates,
+                     UpdatePlan updatePlan,
+                     List<JsonPatch> requestedPatches,
+                     List<GeneralizationMetadataWrite> generalizationMetadataWrites,
+                     long patchPlanningNanos,
+                     long conformanceNanos,
+                     long buildUpdatesNanos) {
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
-        this.updates = Collections.unmodifiableList(new ArrayList<>(
-                Objects.requireNonNull(updates, "updates")));
-        this.updatePlan = null;
+        this.updates = updates == null
+                ? null
+                : Collections.unmodifiableList(new ArrayList<>(updates));
+        this.updatePlan = updatePlan;
+        this.requestedPatches = copyPatches(requestedPatches);
+        this.generalizationMetadataWrites = Collections.unmodifiableList(new ArrayList<>(
+                Objects.requireNonNull(generalizationMetadataWrites, "generalizationMetadataWrites")));
         this.patchPlanningNanos = patchPlanningNanos;
         this.conformanceNanos = conformanceNanos;
         this.buildUpdatesNanos = buildUpdatesNanos;
@@ -50,6 +76,8 @@ final class BatchPatchResult {
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
         this.updates = null;
         this.updatePlan = Objects.requireNonNull(updatePlan, "updatePlan");
+        this.requestedPatches = Collections.emptyList();
+        this.generalizationMetadataWrites = Collections.emptyList();
         this.patchPlanningNanos = patchPlanningNanos;
         this.conformanceNanos = conformanceNanos;
         this.buildUpdatesNanos = buildUpdatesNanos;
@@ -65,6 +93,28 @@ final class BatchPatchResult {
 
     List<DocumentProcessingRuntime.DocumentUpdateData> updates() {
         return updates != null ? updates : updatePlan.build(null);
+    }
+
+    List<DocumentProcessingRuntime.DocumentUpdateData> updatesAgainst(
+            FrozenNode authoritativeResolvedRoot,
+            DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+        if (updatePlan != null) {
+            return updatePlan.build(materializationMetrics,
+                    Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
+        }
+        List<DocumentProcessingRuntime.DocumentUpdateData> rebound = new ArrayList<>(updates.size());
+        for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
+            rebound.add(update.withMaterializationMetrics(materializationMetrics));
+        }
+        return Collections.unmodifiableList(rebound);
+    }
+
+    List<JsonPatch> requestedPatches() {
+        return requestedPatches;
+    }
+
+    List<GeneralizationMetadataWrite> generalizationMetadataWrites() {
+        return generalizationMetadataWrites;
     }
 
     long patchPlanningNanos() {
@@ -84,6 +134,9 @@ final class BatchPatchResult {
             return new BatchPatchResult(canonicalRoot,
                     resolvedRoot,
                     updatePlan.build(metrics),
+                    updatePlan,
+                    requestedPatches,
+                    generalizationMetadataWrites,
                     patchPlanningNanos,
                     conformanceNanos,
                     buildUpdatesNanos);
@@ -95,9 +148,52 @@ final class BatchPatchResult {
         return new BatchPatchResult(canonicalRoot,
                 resolvedRoot,
                 rebound,
+                null,
+                requestedPatches,
+                generalizationMetadataWrites,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
+    }
+
+    private static List<JsonPatch> copyPatches(List<JsonPatch> patches) {
+        Objects.requireNonNull(patches, "requestedPatches");
+        List<JsonPatch> copy = new ArrayList<>(patches.size());
+        for (JsonPatch patch : patches) {
+            Objects.requireNonNull(patch, "patch");
+            switch (patch.getOp()) {
+                case ADD:
+                    copy.add(JsonPatch.add(patch.getPath(), patch.getVal().clone()));
+                    break;
+                case REPLACE:
+                    copy.add(JsonPatch.replace(patch.getPath(), patch.getVal().clone()));
+                    break;
+                case REMOVE:
+                    copy.add(JsonPatch.remove(patch.getPath()));
+                    break;
+                default:
+                    throw new IllegalStateException("Unsupported patch op: " + patch.getOp());
+            }
+        }
+        return Collections.unmodifiableList(copy);
+    }
+
+    static final class GeneralizationMetadataWrite {
+        private final String path;
+        private final FrozenNode value;
+
+        GeneralizationMetadataWrite(String path, FrozenNode value) {
+            this.path = Objects.requireNonNull(path, "path");
+            this.value = Objects.requireNonNull(value, "value");
+        }
+
+        String path() {
+            return path;
+        }
+
+        FrozenNode value() {
+            return value;
+        }
     }
 
     static final class UpdatePlan {
@@ -125,8 +221,15 @@ final class BatchPatchResult {
 
         List<DocumentProcessingRuntime.DocumentUpdateData> build(
                 DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+            return build(materializationMetrics, finalResolvedRoot);
+        }
+
+        List<DocumentProcessingRuntime.DocumentUpdateData> build(
+                DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                FrozenNode authoritativeResolvedRoot) {
             List<DocumentProcessingRuntime.DocumentUpdateData> built = new ArrayList<>();
-            ImmutablePatchPlanner finalResolvedPlanner = ImmutablePatchPlanner.forFrozen(finalResolvedRoot);
+            ImmutablePatchPlanner finalResolvedPlanner = ImmutablePatchPlanner.forFrozen(
+                    Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
             for (BatchPatchRecord record : records) {
                 FrozenNode after = null;
                 if (record.op() != JsonPatch.Op.REMOVE) {
