@@ -147,6 +147,7 @@ public final class Merger implements NodeResolver {
         if (source.getType() != null) {
             Node typeNode = source.getType();
             String typeBlueId = typeNode.getBlueId();
+            boolean sameMaterializedTargetType = hasSameMaterializedDeclaredType(target, typeBlueId);
             boolean materializedCyclicType = isMaterializedCyclicSetMemberType(typeNode);
             FrozenNode cachedResolvedType = cachedResolvedType(typeBlueId, limits);
             boolean trackedType = typeBlueId != null;
@@ -170,7 +171,9 @@ public final class Merger implements NodeResolver {
                             resolvedType.blueId(typeBlueId);
                         }
                         source.type(resolvedType);
-                        mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                        if (!sameMaterializedTargetType) {
+                            mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                        }
                     } else {
                         if (typeBlueId != null) {
                             extendTypeReference(typeNode, typeBlueId);
@@ -179,11 +182,13 @@ public final class Merger implements NodeResolver {
                         Node resolvedType = resolveWithContribution(typeNode, limits, Contribution.TYPE_ROOT);
                         cacheResolvedReference(typeBlueId, resolvedType, limits);
                         source.type(resolvedType);
-                        // Align cold and warm resolution only when the completed type is safe to reuse.
-                        if (cachedResolvedType(typeBlueId, limits) != null) {
-                            mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
-                        } else {
-                            mergeWithContribution(target, typeNode, limits, Contribution.TYPE_ROOT);
+                        if (!sameMaterializedTargetType) {
+                            // Align cold and warm resolution only when the completed type is safe to reuse.
+                            if (cachedResolvedType(typeBlueId, limits) != null) {
+                                mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                            } else {
+                                mergeWithContribution(target, typeNode, limits, Contribution.TYPE_ROOT);
+                            }
                         }
                     }
                 }
@@ -203,6 +208,14 @@ public final class Merger implements NodeResolver {
                 finishResolvingType(deferredTypeResolution);
             }
         }
+    }
+
+    private boolean hasSameMaterializedDeclaredType(Node target, String sourceTypeBlueId) {
+        Node targetType = target.getType();
+        return sourceTypeBlueId != null
+                && targetType != null
+                && sourceTypeBlueId.equals(targetType.getBlueId())
+                && !targetType.isReferenceOnly();
     }
 
     private void extendTypeReference(Node typeNode, String blueId) {
