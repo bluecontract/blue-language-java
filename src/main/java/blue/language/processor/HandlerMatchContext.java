@@ -64,13 +64,15 @@ public final class HandlerMatchContext {
     }
 
     /**
-     * Tests the event's declared type against the configured formal subtype relation.
+     * Tests whether the event's declared type has the expected declared identity
+     * or names it in a complete, provider-verified ancestry chain.
      *
-     * <p>This operation does not use structural payload conformance as a fallback.
-     * Missing events, declared types, or expected types are incompatible.</p>
+     * <p>This operation does not infer ancestry from structural compatibility.
+     * Missing events, declared identities, expected identities, or required
+     * provider content are incompatible.</p>
      */
-    public boolean eventTypeIsSubtypeOf(Node expectedType) {
-        return matchingService.eventTypeIsSubtypeOf(
+    public boolean eventDeclaredTypeIsSameOrDescendantOf(Node expectedType) {
+        return matchingService.eventDeclaredTypeIsSameOrDescendantOf(
                 event != null ? event.getType() : null,
                 expectedType);
     }
