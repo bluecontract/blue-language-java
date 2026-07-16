@@ -4,12 +4,10 @@ import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.BlueIds;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
 
@@ -18,14 +16,14 @@ import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
  */
 final class DeclaredTypeLineageMatcher {
 
-    private static final int CACHE_ENTRY_LIMIT = 256;
-    private static final int CACHED_ANCESTRY_LIMIT = 256;
+    static final int CACHE_INITIAL_CAPACITY = 64;
+    static final int CACHE_ENTRY_LIMIT = 4_096;
 
     private final NodeProvider provider;
-    private final Map<String, Set<String>> ancestryByCandidate =
-            new LinkedHashMap<String, Set<String>>(CACHE_ENTRY_LIMIT, 0.75f, true) {
+    private final Map<String, DirectParentFact> directParentByType =
+            new LinkedHashMap<String, DirectParentFact>(CACHE_INITIAL_CAPACITY, 0.75f, true) {
                 @Override
-                protected boolean removeEldestEntry(Map.Entry<String, Set<String>> eldest) {
+                protected boolean removeEldestEntry(Map.Entry<String, DirectParentFact> eldest) {
                     return size() > CACHE_ENTRY_LIMIT;
                 }
             };
@@ -50,32 +48,18 @@ final class DeclaredTypeLineageMatcher {
             return true;
         }
 
-        Set<String> ancestry = cachedAncestry(candidateId);
-        if (ancestry == null) {
-            ancestry = buildCompleteAncestry(candidateId);
-            if (ancestry == null) {
-                return false;
-            }
-            cacheIfBounded(candidateId, ancestry);
-        }
-        return ancestry.contains(expectedId);
+        return hasExpectedInCompleteAncestry(candidateId, expectedId);
     }
 
     int cacheSize() {
-        synchronized (ancestryByCandidate) {
-            return ancestryByCandidate.size();
+        synchronized (directParentByType) {
+            return directParentByType.size();
         }
     }
 
-    private Set<String> cachedAncestry(String candidateId) {
-        synchronized (ancestryByCandidate) {
-            return ancestryByCandidate.get(candidateId);
-        }
-    }
-
-    private Set<String> buildCompleteAncestry(String candidateId) {
+    private boolean hasExpectedInCompleteAncestry(String candidateId, String expectedId) {
         if (provider == null) {
-            return null;
+            return false;
         }
 
         LinkedHashSet<String> ancestry = new LinkedHashSet<String>();
@@ -85,55 +69,99 @@ final class DeclaredTypeLineageMatcher {
                 throw typeCycle(currentId, ancestry.size());
             }
             if (CORE_TYPE_BLUE_IDS.contains(currentId)) {
-                return immutable(ancestry);
+                return ancestry.contains(expectedId);
             }
 
-            List<Node> definitions = provider.fetchByBlueId(currentId);
-            if (definitions == null || definitions.isEmpty()) {
-                return null;
+            DirectParentFact fact = cachedFact(currentId);
+            if (fact == null) {
+                fact = fetchFact(currentId);
+                if (fact == null) {
+                    return false;
+                }
+                fact = cacheFact(currentId, fact);
             }
-            if (definitions.size() != 1) {
-                throw new IllegalStateException(String.format(
-                        "Expected a single node for declared type with blueId '%s', but found multiple.",
-                        currentId));
+            if (fact.isTerminal()) {
+                return ancestry.contains(expectedId);
             }
-
-            Node definition = definitions.get(0);
-            if (definition == null || definition.isReferenceOnly()) {
-                return null;
-            }
-            Node parent = definition.getType();
-            if (parent == null) {
-                return immutable(ancestry);
-            }
-            String parentId = parent.getBlueId();
-            if (parentId == null) {
-                return null;
-            }
-            BlueIds.requireBlueIdOrCyclicMember(parentId, "declaredTypeAncestry.type.blueId");
-            currentId = parentId;
+            currentId = fact.directParentId;
         }
     }
 
-    private void cacheIfBounded(String candidateId, Set<String> ancestry) {
-        if (ancestry.size() > CACHED_ANCESTRY_LIMIT) {
-            return;
+    private DirectParentFact fetchFact(String currentId) {
+        List<Node> definitions = provider.fetchByBlueId(currentId);
+        if (definitions == null || definitions.isEmpty()) {
+            return null;
         }
-        synchronized (ancestryByCandidate) {
-            Set<String> existing = ancestryByCandidate.get(candidateId);
-            if (existing == null) {
-                ancestryByCandidate.put(candidateId, ancestry);
-            }
+        if (definitions.size() != 1) {
+            throw new IllegalStateException(String.format(
+                    "Expected a single node for declared type with blueId '%s', but found multiple.",
+                    currentId));
+        }
+
+        Node definition = definitions.get(0);
+        if (definition == null || definition.isReferenceOnly()) {
+            return null;
+        }
+        Node parent = definition.getType();
+        if (parent == null) {
+            return DirectParentFact.NO_DECLARED_PARENT;
+        }
+        String parentId = parent.getBlueId();
+        if (parentId == null) {
+            return DirectParentFact.ANONYMOUS_DECLARED_PARENT;
+        }
+        BlueIds.requireBlueIdOrCyclicMember(parentId, "declaredTypeAncestry.type.blueId");
+        return DirectParentFact.parent(parentId);
+    }
+
+    private DirectParentFact cachedFact(String declaredTypeId) {
+        synchronized (directParentByType) {
+            return directParentByType.get(declaredTypeId);
         }
     }
 
-    private static Set<String> immutable(LinkedHashSet<String> ancestry) {
-        return Collections.unmodifiableSet(new LinkedHashSet<String>(ancestry));
+    private DirectParentFact cacheFact(String declaredTypeId, DirectParentFact fact) {
+        synchronized (directParentByType) {
+            DirectParentFact existing = directParentByType.get(declaredTypeId);
+            if (existing != null) {
+                return existing;
+            }
+            directParentByType.put(declaredTypeId, fact);
+            return fact;
+        }
     }
 
     private static IllegalStateException typeCycle(String repeatedId, int uniqueTypeCount) {
         return new IllegalStateException("Type cycle in declared type ancestry: "
                 + repeatedId + " was revisited after " + uniqueTypeCount
                 + " unique type declarations.");
+    }
+
+    private static final class DirectParentFact {
+        private static final DirectParentFact NO_DECLARED_PARENT =
+                new DirectParentFact(null, TerminalKind.NO_DECLARED_PARENT);
+        private static final DirectParentFact ANONYMOUS_DECLARED_PARENT =
+                new DirectParentFact(null, TerminalKind.ANONYMOUS_DECLARED_PARENT);
+
+        private final String directParentId;
+        private final TerminalKind terminalKind;
+
+        private DirectParentFact(String directParentId, TerminalKind terminalKind) {
+            this.directParentId = directParentId;
+            this.terminalKind = terminalKind;
+        }
+
+        private static DirectParentFact parent(String directParentId) {
+            return new DirectParentFact(directParentId, null);
+        }
+
+        private boolean isTerminal() {
+            return terminalKind != null;
+        }
+    }
+
+    private enum TerminalKind {
+        NO_DECLARED_PARENT,
+        ANONYMOUS_DECLARED_PARENT
     }
 }
