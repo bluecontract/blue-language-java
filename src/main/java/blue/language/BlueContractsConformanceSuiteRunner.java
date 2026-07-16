@@ -1,20 +1,26 @@
 package blue.language;
 
+import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
-import blue.language.conformance.ConformanceEngine;
+import blue.language.processor.ConformanceChangedPath;
+import blue.language.processor.ConformancePlannerOverride;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ProcessingDocumentValidator;
+import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.ProcessorFatalException;
 import blue.language.processor.conformance.MockExternalChannelProcessor;
 import blue.language.processor.conformance.MockHandlerProcessor;
 import blue.language.processor.conformance.MockTypeBlueIds;
 import blue.language.processor.conformance.ScriptedContractsRuntime;
+import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.PointerUtils;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.NodePathAccessor;
 import blue.language.utils.NodePathEditor;
 import blue.language.utils.NodeProviderWrapper;
@@ -292,18 +298,20 @@ public final class BlueContractsConformanceSuiteRunner {
         ScriptedContractsRuntime scriptedRuntime = new ScriptedContractsRuntime(spec.get("mockRuntime"), spec.get("typeGraph"));
         MockExternalChannelProcessor channelProcessor = new MockExternalChannelProcessor(scriptedRuntime);
         MockHandlerProcessor handlerProcessor = new MockHandlerProcessor(scriptedRuntime);
+        Blue fixtureBlue = !scriptedTypes.externalTypeNodesByBlueId.isEmpty()
+                ? new Blue(mockTypeProvider(scriptedTypes))
+                : null;
         DocumentProcessor.Builder processorBuilder = DocumentProcessor.builder()
                 .withMatchingService(new ContractMatchingService(new Blue()))
                 .registerContractProcessor(channelProcessor)
                 .registerContractProcessor(handlerProcessor);
-        if (!scriptedTypes.externalTypeNodesByBlueId.isEmpty()) {
-            Blue typeGraphBlue = new Blue(mockTypeProvider(scriptedTypes));
-            processorBuilder.withConformanceEngine(new ConformanceEngine(
-                    mockTypeProvider(scriptedTypes),
-                    typeGraphBlue.getMergingProcessor()));
+        if (fixtureBlue != null) {
+            processorBuilder.withConformanceEngine(fixtureBlue.conformanceEngine());
         }
         if (scriptedRuntime.hasFixtureTypeGraph()) {
-            processorBuilder.withConformancePlannerOverride(scriptedRuntime.conformancePlannerOverride());
+            processorBuilder.withSnapshotManager(fixtureSnapshotManager(fixtureBlue));
+            processorBuilder.withConformancePlannerOverride(
+                    fixtureGeneralizationPlanner(scriptedRuntime, scriptedTypes, document));
         }
         for (String channelTypeBlueId : scriptedTypes.channelTypeBlueIds) {
             processorBuilder.registerContractProcessor(channelTypeBlueId, channelProcessor);
@@ -324,6 +332,143 @@ public final class BlueContractsConformanceSuiteRunner {
             }
             assertProcessResult(spec, originalDocument, result, scriptedRuntime);
         }
+    }
+
+    private static ProcessingSnapshotManager fixtureSnapshotManager(Blue fixtureBlue) {
+        if (fixtureBlue == null) {
+            throw new IllegalArgumentException("Fixture type graph requires a fixture Blue instance");
+        }
+        return new ProcessingSnapshotManager() {
+            @Override
+            public ResolvedSnapshot fromDocument(Node document) {
+                return fixtureBlue.resolveToSnapshot(document);
+            }
+
+            @Override
+            public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+                return fixtureBlue.applyCanonicalPatch(snapshot, patch);
+            }
+
+            @Override
+            public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+                fixtureBlue.cacheResolvedSnapshot(snapshot);
+                return snapshot;
+            }
+        };
+    }
+
+    private static ConformancePlannerOverride fixtureGeneralizationPlanner(
+            ScriptedContractsRuntime scriptedRuntime,
+            ScriptedFixtureTypes scriptedTypes,
+            Node selectedRoot) {
+        ConformancePlannerOverride delegate = scriptedRuntime.conformancePlannerOverride();
+        Node initialSelectedRoot = selectedRoot.clone();
+        return new ConformancePlannerOverride() {
+            @Override
+            public boolean applies() {
+                return delegate.applies();
+            }
+
+            @Override
+            public ConformancePlan plan(FrozenNode canonicalRoot,
+                                        FrozenNode resolvedRoot,
+                                        List<ConformanceChangedPath> changedPaths) {
+                Node plannerRoot = resolvedRoot.toNode();
+                restoreFixtureTypeReferences(plannerRoot,
+                        canonicalRoot != null ? canonicalRoot.toNode() : null,
+                        initialSelectedRoot,
+                        scriptedTypes);
+                return delegate.plan(canonicalRoot,
+                        FrozenNode.fromResolvedNode(plannerRoot),
+                        changedPaths);
+            }
+        };
+    }
+
+    /*
+     * The scripted fixture planner names graph types by their declared BlueId,
+     * while the real fixture resolver expands those type references. Keep all
+     * effective fields from the resolved view and restore only type-reference
+     * metadata from the canonical/selected fixture views for that planner.
+     */
+    private static void restoreFixtureTypeReferences(Node resolved,
+                                                     Node canonical,
+                                                     Node selected,
+                                                     ScriptedFixtureTypes scriptedTypes) {
+        if (resolved == null) {
+            return;
+        }
+        resolved.type(fixturePlannerType(resolved.getType(),
+                canonical != null ? canonical.getType() : null,
+                selected != null ? selected.getType() : null,
+                scriptedTypes));
+        resolved.itemType(fixturePlannerType(resolved.getItemType(),
+                canonical != null ? canonical.getItemType() : null,
+                selected != null ? selected.getItemType() : null,
+                scriptedTypes));
+        resolved.keyType(fixturePlannerType(resolved.getKeyType(),
+                canonical != null ? canonical.getKeyType() : null,
+                selected != null ? selected.getKeyType() : null,
+                scriptedTypes));
+        resolved.valueType(fixturePlannerType(resolved.getValueType(),
+                canonical != null ? canonical.getValueType() : null,
+                selected != null ? selected.getValueType() : null,
+                scriptedTypes));
+        restoreFixtureTypeReferences(resolved.getContracts(),
+                canonical != null ? canonical.getContracts() : null,
+                selected != null ? selected.getContracts() : null,
+                scriptedTypes);
+        restoreFixtureTypeReferences(resolved.getBlue(),
+                canonical != null ? canonical.getBlue() : null,
+                selected != null ? selected.getBlue() : null,
+                scriptedTypes);
+        if (resolved.getProperties() != null) {
+            for (Map.Entry<String, Node> entry : resolved.getProperties().entrySet()) {
+                Node canonicalChild = canonical != null && canonical.getProperties() != null
+                        ? canonical.getProperties().get(entry.getKey())
+                        : null;
+                Node selectedChild = selected != null && selected.getProperties() != null
+                        ? selected.getProperties().get(entry.getKey())
+                        : null;
+                restoreFixtureTypeReferences(entry.getValue(), canonicalChild, selectedChild, scriptedTypes);
+            }
+        }
+        if (resolved.getItems() != null) {
+            for (int i = 0; i < resolved.getItems().size(); i++) {
+                Node canonicalItem = canonical != null
+                        && canonical.getItems() != null
+                        && i < canonical.getItems().size()
+                        ? canonical.getItems().get(i)
+                        : null;
+                Node selectedItem = selected != null
+                        && selected.getItems() != null
+                        && i < selected.getItems().size()
+                        ? selected.getItems().get(i)
+                        : null;
+                restoreFixtureTypeReferences(resolved.getItems().get(i), canonicalItem, selectedItem, scriptedTypes);
+            }
+        }
+    }
+
+    private static Node fixturePlannerType(Node resolvedType,
+                                           Node canonicalType,
+                                           Node selectedType,
+                                           ScriptedFixtureTypes scriptedTypes) {
+        if (resolvedType == null) {
+            return null;
+        }
+        if (canonicalType != null && canonicalType.getBlueId() != null) {
+            return canonicalType.clone();
+        }
+        if (selectedType != null && selectedType.getBlueId() != null) {
+            return selectedType.clone();
+        }
+        String fixtureTypeBlueId = scriptedTypes.externalTypeBlueId(resolvedType.getName());
+        if (fixtureTypeBlueId != null) {
+            return new Node().blueId(fixtureTypeBlueId);
+        }
+        restoreFixtureTypeReferences(resolvedType, canonicalType, selectedType, scriptedTypes);
+        return resolvedType;
     }
 
     private static Node withoutProcessorManagedMutationMarkers(Node document) {
@@ -1189,6 +1334,7 @@ public final class BlueContractsConformanceSuiteRunner {
         final Set<String> handlerTypeBlueIds = new LinkedHashSet<>();
         final Set<String> allTypeBlueIds = new LinkedHashSet<>();
         final Map<String, Node> externalTypeNodesByBlueId = new LinkedHashMap<>();
+        final Map<String, String> externalTypeBlueIdsByName = new LinkedHashMap<>();
 
         void addChannel(String blueId) {
             channelTypeBlueIds.add(blueId);
@@ -1202,7 +1348,14 @@ public final class BlueContractsConformanceSuiteRunner {
 
         void addExternalType(String blueId, Node node) {
             externalTypeNodesByBlueId.put(blueId, node);
+            if (node.getName() != null) {
+                externalTypeBlueIdsByName.put(node.getName(), blueId);
+            }
             allTypeBlueIds.add(blueId);
+        }
+
+        String externalTypeBlueId(String name) {
+            return name != null ? externalTypeBlueIdsByName.get(name) : null;
         }
     }
 

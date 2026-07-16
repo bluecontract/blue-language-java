@@ -7,12 +7,12 @@ import blue.language.snapshot.ResolvedSnapshot;
 import java.util.Objects;
 
 /**
- * Mutable processor-facing view generated from an immutable resolved snapshot.
+ * Mutable processor-facing document view.
  *
- * <p>The processor still exposes {@link Node} to existing handlers and result
- * objects, but the authoritative state is the snapshot. This adapter keeps the
- * mutable root synchronized with the latest canonical snapshot materialization,
- * while resolved reads come directly from {@link ResolvedSnapshot} indexes.</p>
+ * <p>For Node-backed processing this root is the Selected Document. For
+ * snapshot-backed processing it is the compact canonical backing for the
+ * logical resolved Selected Document. Resolved reads come directly from
+ * {@link ResolvedSnapshot} indexes.</p>
  */
 final class MaterializedDocumentView {
 

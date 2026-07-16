@@ -48,9 +48,21 @@ final class ImmutablePatchPlanner {
     }
 
     PatchPlan plan(String originScopePath, JsonPatch patch) {
+        return plan(originScopePath, patch, false);
+    }
+
+    PatchPlan planWithExactReplacement(String originScopePath, JsonPatch patch) {
+        return plan(originScopePath, patch, true);
+    }
+
+    private PatchPlan plan(String originScopePath, JsonPatch patch, boolean exactReplacement) {
         Objects.requireNonNull(originScopePath, "originScopePath");
         Objects.requireNonNull(patch, "patch");
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
+        if (exactReplacement
+                && (patch.getOp() == JsonPatch.Op.ADD || patch.getOp() == JsonPatch.Op.REPLACE)) {
+            return planExactValueWrite(normalizedScope, patch);
+        }
         CanonicalPatchResult result = new CanonicalOverlayPatchEngine(root).apply(patch);
         return new PatchPlan(result.root(),
                 result.before(),
@@ -59,6 +71,51 @@ final class ImmutablePatchPlanner {
                 result.path(),
                 normalizedScope,
                 computeCascadeScopes(normalizedScope));
+    }
+
+    private PatchPlan planExactValueWrite(String normalizedScope, JsonPatch patch) {
+        String path = PointerUtils.canonicalizePointer(patch.getPath());
+        if (patch.getOp() == JsonPatch.Op.ADD && targetsListMember(path)) {
+            CanonicalPatchResult result = new CanonicalOverlayPatchEngine(root).apply(patch);
+            return new PatchPlan(result.root(),
+                    result.before(),
+                    result.after(),
+                    result.op(),
+                    result.path(),
+                    normalizedScope,
+                    computeCascadeScopes(normalizedScope));
+        }
+        FrozenNode existing = read(path);
+        if (existing == null) {
+            CanonicalPatchResult added = new CanonicalOverlayPatchEngine(root)
+                    .apply(JsonPatch.add(path, patch.getVal()));
+            return new PatchPlan(added.root(),
+                    null,
+                    added.after(),
+                    patch.getOp(),
+                    path,
+                    normalizedScope,
+                    computeCascadeScopes(normalizedScope));
+        }
+        CanonicalPatchResult removed = new CanonicalOverlayPatchEngine(root).apply(JsonPatch.remove(path));
+        CanonicalPatchResult added = new CanonicalOverlayPatchEngine(removed.root())
+                .apply(JsonPatch.add(path, patch.getVal()));
+        return new PatchPlan(added.root(),
+                removed.before(),
+                added.after(),
+                patch.getOp(),
+                path,
+                normalizedScope,
+                computeCascadeScopes(normalizedScope));
+    }
+
+    private boolean targetsListMember(String path) {
+        List<String> segments = JsonPointer.split(path);
+        if (segments.isEmpty()) {
+            return false;
+        }
+        FrozenNode parent = read(JsonPointer.toPointer(segments.subList(0, segments.size() - 1)));
+        return parent != null && parent.hasItems();
     }
 
     FrozenNode read(String path) {

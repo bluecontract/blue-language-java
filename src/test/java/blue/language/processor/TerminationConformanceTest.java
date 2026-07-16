@@ -254,14 +254,17 @@ final class TerminationConformanceTest {
     }
 
     @Test
-    void terminationPreventsCheckpointAdvancement() {
+    void terminationPreventsCheckpointAdvancementButRetainsLazyCheckpoint() {
         Blue blue = blueWithLifecycleProbe(new ArrayList<String>());
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful"))).document();
 
         DocumentProcessingResult result = blue.processDocument(initialized, testEvent("checkpoint-cutoff"));
 
         assertNotNull(nodeOrNull(result.document(), "/contracts/checkpoint"));
-        assertNull(nodeOrNull(result.document(), "/contracts/checkpoint/lastEvents"));
+        Node lastEvents = nodeOrNull(result.document(), "/contracts/checkpoint/lastEvents");
+        assertNotNull(lastEvents);
+        assertNotNull(lastEvents.getProperties());
+        assertTrue(lastEvents.getProperties().isEmpty());
     }
 
     @Test

@@ -38,8 +38,8 @@ class ContractBundleCacheTest {
         DocumentProcessingResult duplicate = blue.processDocument(second.document(), event(blue, "evt-2"));
 
         assertEquals(new BigInteger("2"), duplicate.document().get("/count"));
-        assertTrue(metrics.bundleLoadCacheMisses > missesAfterFirst,
-                "first checkpoint-bearing run should build the checkpoint-shaped bundle once");
+        assertEquals(missesAfterFirst, metrics.bundleLoadCacheMisses,
+                "checkpoint payload changes should reuse the checkpoint-shaped bundle");
         assertTrue(hitsAfterSecond > 0, "second run should reuse at least one cached bundle");
         assertTrue(metrics.bundlesReused > 0, "bundle reuse metric should be incremented");
     }

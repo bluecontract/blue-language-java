@@ -69,7 +69,7 @@ class BlueConformanceReportTest {
         assertEquals(BlueConformanceReport.computeFixturePackageIdentity(), report.getFixturePackageIdentity());
         assertEquals(BlueConformanceReport.CANDIDATE_FIXTURE_PACKAGE_IDENTITY,
                 report.getFixturePackageIdentity());
-        assertEquals("feat/conformance-fixture-expansion@7893b51",
+        assertEquals("feat/conformance-fixture-expansion@a0f4914",
                 BlueConformanceReport.CANDIDATE_BLUE_SPEC_SOURCE);
         assertTrue(report.isReleaseGradeFixtureIdentity());
         assertTrue(BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles());

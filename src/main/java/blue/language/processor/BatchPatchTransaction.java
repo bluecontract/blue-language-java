@@ -2,16 +2,21 @@ package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.ConformancePlan;
+import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 final class BatchPatchTransaction {
 
@@ -57,12 +62,22 @@ final class BatchPatchTransaction {
         FrozenNode workingResolved = planning.baseSnapshot() != null
                 ? planning.baseSnapshot().frozenResolvedRoot()
                 : planning.resolvedPlanner().root();
+        boolean authoritativeResolutionRequired = false;
         List<BatchPatchRecord> records = new ArrayList<>();
         for (JsonPatch patch : patches) {
-            ImmutablePatchPlanner.PatchPlan canonicalPlan =
-                    ImmutablePatchPlanner.forFrozen(workingCanonical).plan(originScopePath, patch);
-            ImmutablePatchPlanner.PatchPlan resolvedPlan =
-                    ImmutablePatchPlanner.forFrozen(workingResolved).plan(originScopePath, patch);
+            ImmutablePatchPlanner canonicalPlanner = ImmutablePatchPlanner.forFrozen(workingCanonical);
+            ImmutablePatchPlanner.PatchPlan canonicalPlan = planning.exactReplacement()
+                    ? canonicalPlanner.planWithExactReplacement(originScopePath, patch)
+                    : canonicalPlanner.plan(originScopePath, patch);
+            ImmutablePatchPlanner resolvedPlanner = ImmutablePatchPlanner.forFrozen(workingResolved);
+            ImmutablePatchPlanner.PatchPlan resolvedPlan = planning.exactReplacement()
+                    ? resolvedPlanner.planWithExactReplacement(originScopePath, patch)
+                    : resolvedPlanner.plan(originScopePath, patch);
+            if (planning.exactReplacement()
+                    && requiresAuthoritativeResolution(
+                            workingCanonical, workingResolved, canonicalPlan, resolvedPlan, patch)) {
+                authoritativeResolutionRequired = true;
+            }
             BatchPatchRecord record = new BatchPatchRecord(patch,
                     canonicalPlan,
                     resolvedPlan,
@@ -81,6 +96,12 @@ final class BatchPatchTransaction {
                 ? conformancePlan.canonicalRoot()
                 : workingCanonical;
         FrozenNode finalResolved = conformancePlan.root();
+        if (planning.exactReplacement()
+                && (authoritativeResolutionRequired || !conformancePlan.fullSnapshotRebuildAvoidable())) {
+            ResolvedSnapshot authoritative = planning.resolveCanonical(finalCanonical);
+            finalCanonical = authoritative.frozenCanonicalRoot();
+            finalResolved = authoritative.frozenResolvedRoot();
+        }
         boolean includeGeneratedUpdates = conformancePlannerOverride != null && conformancePlannerOverride.applies();
 
         BatchPatchResult.UpdatePlan updatePlan = new BatchPatchResult.UpdatePlan(records,
@@ -88,6 +109,8 @@ final class BatchPatchTransaction {
                 finalResolved,
                 conformancePlan.changedPaths(),
                 includeGeneratedUpdates);
+        List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
+                generalizationMetadataWrites(finalCanonical, finalResolved, conformancePlan.changedPaths());
         long buildUpdatesNanos = 0L;
         List<DocumentProcessingRuntime.DocumentUpdateData> updates = null;
         if (buildUpdates) {
@@ -95,20 +118,169 @@ final class BatchPatchTransaction {
             updates = updatePlan.build(materializationMetrics);
             buildUpdatesNanos = System.nanoTime() - buildUpdatesStart;
         }
-        if (!buildUpdates) {
-            return new BatchPatchResult(finalCanonical,
-                    finalResolved,
-                    updatePlan,
-                    patchPlanningNanos,
-                    conformanceNanos,
-                    buildUpdatesNanos);
-        }
         return new BatchPatchResult(finalCanonical,
                 finalResolved,
                 updates,
+                updatePlan,
+                patches,
+                metadataWrites,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
+    }
+
+    private boolean requiresAuthoritativeResolution(FrozenNode canonicalRoot,
+                                                     FrozenNode resolvedRoot,
+                                                     ImmutablePatchPlanner.PatchPlan canonicalPlan,
+                                                     ImmutablePatchPlanner.PatchPlan resolvedPlan,
+                                                     JsonPatch patch) {
+        if (hasResolutionContext(canonicalRoot, canonicalPlan.path())
+                || hasResolutionContext(resolvedRoot, resolvedPlan.path())) {
+            return true;
+        }
+        if (!sameResolvedStructure(canonicalPlan.before(), resolvedPlan.before())) {
+            return true;
+        }
+        return patch.getOp() != JsonPatch.Op.REMOVE
+                && !isPlainValue(patch.getVal(), new IdentityHashMap<Node, Boolean>());
+    }
+
+    private boolean hasResolutionContext(FrozenNode root, String path) {
+        List<String> segments = JsonPointer.split(path);
+        ImmutablePatchPlanner planner = ImmutablePatchPlanner.forFrozen(root);
+        int ancestorCount = Math.max(1, segments.size());
+        for (int depth = 0; depth < ancestorCount; depth++) {
+            FrozenNode ancestor = planner.read(JsonPointer.toPointer(segments.subList(0, depth)));
+            if (ancestor != null && hasResolutionMetadata(ancestor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasResolutionMetadata(FrozenNode node) {
+        return node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getSchema() != null
+                || node.getMergePolicy() != null
+                || node.getReferenceBlueId() != null
+                || node.getPreviousBlueId() != null
+                || node.getPosition() != null
+                || node.getBlue() != null
+                || node.isInlineValue();
+    }
+
+    private boolean sameResolvedStructure(FrozenNode left, FrozenNode right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null || !left.blueId().equals(right.blueId())) {
+            return false;
+        }
+        FrozenNode normalizedLeft = FrozenNode.fromResolvedNode(left.toNode());
+        FrozenNode normalizedRight = FrozenNode.fromResolvedNode(right.toNode());
+        return normalizedLeft.resolvedStructuralKey().equals(normalizedRight.resolvedStructuralKey());
+    }
+
+    private boolean isPlainValue(Node node, IdentityHashMap<Node, Boolean> visited) {
+        if (node == null || visited.put(node, Boolean.TRUE) != null) {
+            return false;
+        }
+        if (node.getBlue() != null
+                || node.getBlueId() != null
+                || node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getPreviousBlueId() != null
+                || node.getPosition() != null
+                || node.getName() != null
+                || node.getDescription() != null
+                || node.getSchema() != null
+                || node.getContracts() != null
+                || node.getMergePolicy() != null
+                || node.isInlineValue()) {
+            return false;
+        }
+        if (node.getItems() != null) {
+            for (Node item : node.getItems()) {
+                if (!isPlainValue(item, visited)) {
+                    return false;
+                }
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Node property : node.getProperties().values()) {
+                if (!isPlainValue(property, visited)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private List<BatchPatchResult.GeneralizationMetadataWrite> generalizationMetadataWrites(
+            FrozenNode finalCanonical,
+            FrozenNode finalResolved,
+            List<String> changedPaths) {
+        if (changedPaths == null || changedPaths.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<String> uniquePaths = new LinkedHashSet<>(changedPaths);
+        List<BatchPatchResult.GeneralizationMetadataWrite> writes = new ArrayList<>();
+        for (String path : uniquePaths) {
+            if (!isGeneralizationMetadataPath(path)) {
+                continue;
+            }
+            FrozenNode value = readGeneralizationMetadata(finalCanonical, path);
+            if (value == null) {
+                FrozenNode resolvedValue = readGeneralizationMetadata(finalResolved, path);
+                if (resolvedValue != null && resolvedValue.getReferenceBlueId() != null) {
+                    value = FrozenNode.fromResolvedNode(new Node().blueId(resolvedValue.getReferenceBlueId()));
+                }
+            }
+            if (value != null) {
+                writes.add(new BatchPatchResult.GeneralizationMetadataWrite(path, value));
+            }
+        }
+        return writes;
+    }
+
+    private FrozenNode readGeneralizationMetadata(FrozenNode root, String path) {
+        List<String> segments = JsonPointer.split(path);
+        String field = segments.get(segments.size() - 1);
+        String parentPath = JsonPointer.toPointer(segments.subList(0, segments.size() - 1));
+        FrozenNode parent = ImmutablePatchPlanner.forFrozen(root).read(parentPath);
+        if (parent == null) {
+            return null;
+        }
+        if ("type".equals(field)) {
+            return parent.getType();
+        }
+        if ("itemType".equals(field)) {
+            return parent.getItemType();
+        }
+        if ("keyType".equals(field)) {
+            return parent.getKeyType();
+        }
+        if ("valueType".equals(field)) {
+            return parent.getValueType();
+        }
+        return null;
+    }
+
+    private boolean isGeneralizationMetadataPath(String path) {
+        List<String> segments = JsonPointer.split(path);
+        if (segments.isEmpty()) {
+            return false;
+        }
+        String field = segments.get(segments.size() - 1);
+        return "type".equals(field)
+                || "itemType".equals(field)
+                || "keyType".equals(field)
+                || "valueType".equals(field);
     }
 
     private ConformancePlan planBatchConformance(FrozenNode canonicalRoot,

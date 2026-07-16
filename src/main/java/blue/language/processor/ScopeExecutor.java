@@ -102,7 +102,8 @@ final class ScopeExecutor {
 
             long loadStart = System.nanoTime();
             try {
-                bundle = owner.contractLoader().load(scopeNode, normalizedScope, metrics);
+                bundle = owner.contractLoader().load(
+                        selectedScopeAt(normalizedScope), scopeNode, normalizedScope, metrics);
             } finally {
                 metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
             }
@@ -547,10 +548,15 @@ final class ScopeExecutor {
     private ContractBundle loadBundle(FrozenNode scopeNode, String normalizedScope, ProcessingMetricsSink metrics) {
         long loadStart = System.nanoTime();
         try {
-            return owner.contractLoader().load(scopeNode, normalizedScope, metrics);
+            return owner.contractLoader().load(
+                    selectedScopeAt(normalizedScope), scopeNode, normalizedScope, metrics);
         } finally {
             metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
         }
+    }
+
+    private FrozenNode selectedScopeAt(String normalizedScope) {
+        return runtime.selectedFrozenAt(normalizedScope);
     }
 
     private String nextEmbeddedChildScope(String scopePath, ContractBundle bundle, Set<String> processed) {

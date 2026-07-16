@@ -630,16 +630,20 @@ public class Blue implements NodeResolver {
         DocumentProcessor processor = ensureDocumentProcessor();
         long start = System.nanoTime();
         try {
-            ResolvedSnapshot cached = cachedProcessingSnapshotFor(document, processor);
-            if (cached != null) {
-                return rememberProcessingResultSnapshot(processor.processDocument(cached, event));
-            }
             return attachProcessingSnapshot(processor, processor.processDocument(document, event));
         } finally {
             processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
         }
     }
 
+    /**
+     * Processes the snapshot's resolved root as the selected Processing Document.
+     * The canonical root remains the immutable identity companion.
+     *
+     * @param snapshot verified canonical and resolved document views
+     * @param event read-only Processing Event
+     * @return the processing result and its authoritative snapshot
+     */
     public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event) {
         DocumentProcessor processor = ensureDocumentProcessor();
         long start = System.nanoTime();
@@ -667,6 +671,13 @@ public class Blue implements NodeResolver {
         return attachProcessingSnapshot(processor, processor.initializeDocument(document));
     }
 
+    /**
+     * Initializes the snapshot's resolved root as the selected Processing Document.
+     * The canonical root remains the immutable identity companion.
+     *
+     * @param snapshot verified canonical and resolved document views
+     * @return the initialization result and its authoritative snapshot
+     */
     public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
         return rememberProcessingResultSnapshot(ensureDocumentProcessor().initializeDocument(snapshot));
     }
@@ -798,26 +809,18 @@ public class Blue implements NodeResolver {
         return result;
     }
 
-    private ResolvedSnapshot cachedProcessingSnapshotFor(Node document, DocumentProcessor processor) {
-        if (document == null || !processor.supportsSnapshotProcessing()) {
+    private ResolvedSnapshot cachedProcessingSnapshotFor(Node document, ProcessingMetricsSink metrics) {
+        if (document == null) {
             return null;
         }
         long start = System.nanoTime();
-        ProcessingMetricsSink metrics = processor.processingMetricsSink();
         try {
-            ResolvedSnapshot identitySnapshot = recentProcessingSnapshotByIdentity(document);
-            if (identitySnapshot == null) {
+            FrozenNode.ResolvedStructuralKey selectedKey = selectedStructuralKey(document);
+            if (selectedKey == null) {
                 metrics.incrementProcessingSnapshotCacheMisses();
                 return null;
             }
-            String blueId;
-            try {
-                blueId = BlueIdCalculator.calculateUncheckedBlueId(document);
-            } catch (RuntimeException ex) {
-                metrics.incrementProcessingSnapshotCacheMisses();
-                return null;
-            }
-            ResolvedSnapshot cached = blueId.equals(identitySnapshot.blueId()) ? identitySnapshot : null;
+            ResolvedSnapshot cached = recentProcessingSnapshot(selectedKey);
             if (cached != null) {
                 metrics.incrementProcessingSnapshotCacheHits();
                 return cached;
@@ -829,10 +832,18 @@ public class Blue implements NodeResolver {
         }
     }
 
-    private ResolvedSnapshot recentProcessingSnapshotByIdentity(Node document) {
+    private FrozenNode.ResolvedStructuralKey selectedStructuralKey(Node document) {
+        try {
+            return FrozenNode.fromResolvedNode(document).resolvedStructuralKey();
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private ResolvedSnapshot recentProcessingSnapshot(FrozenNode.ResolvedStructuralKey selectedKey) {
         synchronized (recentProcessingDocumentSnapshots) {
             for (ProcessingDocumentSnapshot entry : recentProcessingDocumentSnapshots) {
-                if (entry.document == document) {
+                if (entry.selectedKey.equals(selectedKey)) {
                     return entry.snapshot;
                 }
             }
@@ -841,14 +852,18 @@ public class Blue implements NodeResolver {
     }
 
     private void rememberProcessingSnapshot(Node document, ResolvedSnapshot snapshot) {
+        FrozenNode.ResolvedStructuralKey selectedKey = selectedStructuralKey(document);
+        if (selectedKey == null) {
+            return;
+        }
         synchronized (recentProcessingDocumentSnapshots) {
             for (int i = recentProcessingDocumentSnapshots.size() - 1; i >= 0; i--) {
                 ProcessingDocumentSnapshot entry = recentProcessingDocumentSnapshots.get(i);
-                if (entry.document == document || entry.snapshot.blueId().equals(snapshot.blueId())) {
+                if (entry.selectedKey.equals(selectedKey)) {
                     recentProcessingDocumentSnapshots.remove(i);
                 }
             }
-            recentProcessingDocumentSnapshots.add(0, new ProcessingDocumentSnapshot(document, snapshot));
+            recentProcessingDocumentSnapshots.add(0, new ProcessingDocumentSnapshot(selectedKey, snapshot));
             while (recentProcessingDocumentSnapshots.size() > RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT) {
                 recentProcessingDocumentSnapshots.remove(recentProcessingDocumentSnapshots.size() - 1);
             }
@@ -856,11 +871,11 @@ public class Blue implements NodeResolver {
     }
 
     private static final class ProcessingDocumentSnapshot {
-        final Node document;
+        final FrozenNode.ResolvedStructuralKey selectedKey;
         final ResolvedSnapshot snapshot;
 
-        ProcessingDocumentSnapshot(Node document, ResolvedSnapshot snapshot) {
-            this.document = document;
+        ProcessingDocumentSnapshot(FrozenNode.ResolvedStructuralKey selectedKey, ResolvedSnapshot snapshot) {
+            this.selectedKey = selectedKey;
             this.snapshot = snapshot;
         }
     }
@@ -880,6 +895,13 @@ public class Blue implements NodeResolver {
         return new ProcessingSnapshotManager() {
             @Override
             public ResolvedSnapshot fromDocument(Node document) {
+                ProcessingMetricsSink metrics = documentProcessor != null
+                        ? documentProcessor.processingMetricsSink()
+                        : ProcessingMetricsSink.NOOP;
+                ResolvedSnapshot cached = cachedProcessingSnapshotFor(document, metrics);
+                if (cached != null) {
+                    return cached;
+                }
                 return resolveProcessingSnapshot(document);
             }
 

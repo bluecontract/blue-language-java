@@ -1,5 +1,5 @@
 specVersion: '1.0'
-fixturePackageIdentity: sha256:1a6e37d0da5aaffabc3f9fd63d6e59b5cc59aa92698e7569476c7d72e79e7ce3
+fixturePackageIdentity: sha256:9638c4c05b31fc3316227e7fcb76064407e3cfdafa63ec224b7591fea633ef1f
 fixtures:
 - id: L_no_profile_era_language_conformance_terms
   category: DocumentationLint
@@ -247,6 +247,9 @@ fixtures:
 - id: F_reference_identity_then_typed_resolution
   category: Provider
   path: provider/F_reference_identity_then_typed_resolution.yaml
+- id: F_typed_field_materializes_concrete_reference_once
+  category: Provider
+  path: provider/F_typed_field_materializes_concrete_reference_once.yaml
 - id: R_cache_history_reference_then_materialized
   category: Canonicalization
   path: resolver/R_cache_history_reference_then_materialized.yaml

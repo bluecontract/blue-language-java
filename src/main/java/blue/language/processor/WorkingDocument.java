@@ -43,6 +43,7 @@ public final class WorkingDocument {
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final ProcessingSnapshotManager snapshotManager;
     private final boolean materializedFallback;
+    private final boolean exactReplacement;
     private ResolvedSnapshot snapshot;
 
     WorkingDocument(String originScope,
@@ -52,7 +53,8 @@ public final class WorkingDocument {
                     ConformancePlannerOverride conformancePlannerOverride,
                     ProcessingSnapshotManager snapshotManager,
                     ResolvedSnapshot snapshot,
-                    boolean materializedFallback) {
+                    boolean materializedFallback,
+                    boolean exactReplacement) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
@@ -61,6 +63,7 @@ public final class WorkingDocument {
         this.snapshotManager = snapshotManager;
         this.snapshot = snapshot;
         this.materializedFallback = materializedFallback;
+        this.exactReplacement = exactReplacement;
     }
 
     public FrozenNode canonicalRoot() {
@@ -151,7 +154,8 @@ public final class WorkingDocument {
                                             FrozenNode baseResolved,
                                             JsonPatch patch) {
         DocumentProcessingRuntime.PlanningContext planning =
-                DocumentProcessingRuntime.workingPlanningContext(baseCanonical, baseResolved);
+                DocumentProcessingRuntime.workingPlanningContext(
+                        baseCanonical, baseResolved, exactReplacement, snapshotManager);
         BatchPatchResult result = new BatchPatchTransaction(originScope,
                 Collections.singletonList(Objects.requireNonNull(patch, "patch")),
                 planning,
