@@ -72,7 +72,7 @@ class HandlerMatchContextSubtypeTest {
         assertEquals(2, provider.lookupCount());
 
         assertTrue(child.eventTypeIsSubtypeOf(reference(types.expectedId)));
-        assertEquals(4, provider.lookupCount());
+        assertEquals(2, provider.lookupCount());
     }
 
     @Test
@@ -81,6 +81,9 @@ class HandlerMatchContextSubtypeTest {
         CountingMapProvider provider = new CountingMapProvider(types.definitions);
         ContractMatchingService matching = new ContractMatchingService(new Blue(provider));
 
+        assertFalse(context(types.event(types.unrelatedSameShapeId), matching)
+                .eventTypeIsSubtypeOf(reference(types.expectedId)));
+        assertEquals(1, provider.lookupCount());
         assertFalse(context(types.event(types.unrelatedSameShapeId), matching)
                 .eventTypeIsSubtypeOf(reference(types.expectedId)));
         assertEquals(1, provider.lookupCount());
@@ -130,6 +133,27 @@ class HandlerMatchContextSubtypeTest {
         assertTrue(frozenContext.eventTypeIsSubtypeOf(reference(types.expectedId)));
         assertTrue(context(types.event(types.childId), matching)
                 .eventTypeIsSubtypeOf(reference(types.expectedId)));
+    }
+
+    @Test
+    void pureReferenceSubtypeCacheIsBoundedAndEvictsLeastRecentlyUsedPair() {
+        TypeFixture types = TypeFixture.create();
+        CountingMapProvider unavailable = new CountingMapProvider(Collections.<String, Node>emptyMap());
+        ContractMatchingService matching = new ContractMatchingService(new Blue(unavailable));
+        Node expected = reference(types.expectedId);
+
+        for (int index = 0; index < 257; index++) {
+            String unavailableId = BlueIdCalculator.calculateBlueId(
+                    new Node().name("Unavailable Event " + index));
+            assertFalse(context(new Node().type(reference(unavailableId)), matching)
+                    .eventTypeIsSubtypeOf(expected));
+        }
+        assertEquals(257, unavailable.lookupCount());
+
+        String firstId = BlueIdCalculator.calculateBlueId(new Node().name("Unavailable Event 0"));
+        assertFalse(context(new Node().type(reference(firstId)), matching)
+                .eventTypeIsSubtypeOf(expected));
+        assertEquals(258, unavailable.lookupCount());
     }
 
     @Test
