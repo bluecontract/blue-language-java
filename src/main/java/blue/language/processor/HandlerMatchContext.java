@@ -63,6 +63,18 @@ public final class HandlerMatchContext {
         return markers;
     }
 
+    /**
+     * Tests the event's declared type against the configured formal subtype relation.
+     *
+     * <p>This operation does not use structural payload conformance as a fallback.
+     * Missing events, declared types, or expected types are incompatible.</p>
+     */
+    public boolean eventTypeIsSubtypeOf(Node expectedType) {
+        return matchingService.eventTypeIsSubtypeOf(
+                event != null ? event.getType() : null,
+                expectedType);
+    }
+
     public boolean matchesEventPattern(Node pattern) {
         if (pattern == null) {
             return true;
