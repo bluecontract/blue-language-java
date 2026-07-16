@@ -104,7 +104,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     }
 
     @Test
-    void oneCompleteClosureServesPositiveAndDefinitiveNegativeChecks() {
+    void cachedDirectEdgesServePositiveAndDefinitiveNegativeChecks() {
         TypeFixture types = TypeFixture.create();
         CountingMapProvider provider = new CountingMapProvider(types.definitions);
         ContractMatchingService matching = new ContractMatchingService(new Blue(provider));
@@ -118,7 +118,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         assertFalse(grandchild.eventDeclaredTypeIsSameOrDescendantOf(
                 reference(types.unrelatedSameShapeId)));
         assertEquals(3, provider.lookupCount());
-        assertEquals(1, matching.declaredTypeLineageCacheSize());
+        assertEquals(3, matching.declaredTypeLineageCacheSize());
     }
 
     @Test
@@ -137,11 +137,31 @@ class HandlerMatchContextDeclaredTypeLineageTest {
 
         assertTrue(child.eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
         assertEquals(3, provider.lookupCount());
-        assertEquals(1, matching.declaredTypeLineageCacheSize());
+        assertEquals(2, matching.declaredTypeLineageCacheSize());
     }
 
     @Test
-    void incompleteIdentityFreeParentIsNotAncestryProofOrCached() {
+    void verifiedPrefixEdgesSurviveALaterUnavailableAncestorAndEnableRecovery() {
+        TypeFixture types = TypeFixture.create();
+        MutableCountingProvider provider = new MutableCountingProvider();
+        provider.put(types.grandchildId, types.definitions.get(types.grandchildId));
+        ContractMatchingService matching = new ContractMatchingService(new Blue(provider));
+        HandlerMatchContext grandchild = context(types.event(types.grandchildId), matching);
+
+        assertFalse(grandchild.eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
+        assertEquals(2, provider.lookupCount());
+        assertEquals(1, matching.declaredTypeLineageCacheSize());
+
+        provider.put(types.childId, types.definitions.get(types.childId));
+        provider.put(types.expectedId, types.definitions.get(types.expectedId));
+
+        assertTrue(grandchild.eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
+        assertEquals(4, provider.lookupCount(), "the verified grandchild edge must be reused");
+        assertEquals(3, matching.declaredTypeLineageCacheSize());
+    }
+
+    @Test
+    void identityFreeParentIsADistinctCachedTerminalFact() {
         TypeFixture types = TypeFixture.create();
         Node incomplete = new Node().type(new Node().name("Anonymous Parent"));
         MutableCountingProvider provider = new MutableCountingProvider();
@@ -152,7 +172,11 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         assertFalse(context(types.event(types.childId), matching)
                 .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
         assertEquals(1, provider.lookupCount());
-        assertEquals(0, matching.declaredTypeLineageCacheSize());
+        assertEquals(1, matching.declaredTypeLineageCacheSize());
+
+        assertFalse(context(types.event(types.childId), matching)
+                .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
+        assertEquals(1, provider.lookupCount());
     }
 
     @Test
@@ -272,8 +296,8 @@ class HandlerMatchContextDeclaredTypeLineageTest {
 
             assertTrue(context(new Node().type(reference(candidate)), validMatching)
                     .eventDeclaredTypeIsSameOrDescendantOf(reference(expected)));
-            assertEquals(0, validMatching.declaredTypeLineageCacheSize(),
-                    "closures deeper than the cache bound must remain uncached");
+            assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT,
+                    validMatching.declaredTypeLineageCacheSize());
 
             String cycleTarget = syntheticId("Deep type " + (depth - 1));
             Map<String, Node> cyclic = deepChain(depth, expected, cycleTarget);
@@ -282,23 +306,50 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     }
 
     @Test
-    void cacheRetainsAtMost256CompleteClosuresAndSkipsDeeperClosures() {
-        String root = syntheticId("Cache root");
+    void directEdgeCacheIsLazyBoundedAndLeastRecentlyUsed() {
+        Node rootDefinition = new Node().name("Cache root");
+        String root = BlueIdCalculator.calculateBlueId(rootDefinition);
         Map<String, Node> definitions = new LinkedHashMap<String, Node>();
-        definitions.put(root, new Node().name("Cache root"));
-        for (int index = 0; index < 257; index++) {
-            definitions.put(syntheticId("Cache child " + index),
-                    new Node().type(reference(root)));
+        definitions.put(root, rootDefinition);
+        String[] children = new String[DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT];
+        for (int index = 0; index < children.length; index++) {
+            Node child = new Node().name("Cache child " + index).type(reference(root));
+            children[index] = BlueIdCalculator.calculateBlueId(child);
+            definitions.put(children[index], child);
         }
-        ContractMatchingService matching = unverifiedMatching(definitions);
+        CountingMapProvider provider = new CountingMapProvider(definitions);
+        ContractMatchingService matching = new ContractMatchingService(new Blue(provider));
 
-        for (int index = 0; index < 257; index++) {
-            assertTrue(context(
-                    new Node().type(reference(syntheticId("Cache child " + index))), matching)
+        assertEquals(64, DeclaredTypeLineageMatcher.CACHE_INITIAL_CAPACITY);
+        assertEquals(0, matching.declaredTypeLineageCacheSize());
+
+        for (int index = 0; index < children.length - 1; index++) {
+            assertTrue(context(new Node().type(reference(children[index])), matching)
                     .eventDeclaredTypeIsSameOrDescendantOf(reference(root)));
         }
+        assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT,
+                matching.declaredTypeLineageCacheSize());
+        assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT, provider.lookupCount());
 
-        assertEquals(256, matching.declaredTypeLineageCacheSize());
+        assertTrue(context(new Node().type(reference(children[0])), matching)
+                .eventDeclaredTypeIsSameOrDescendantOf(reference(root)));
+        assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT, provider.lookupCount());
+
+        assertTrue(context(new Node().type(reference(children[children.length - 1])), matching)
+                .eventDeclaredTypeIsSameOrDescendantOf(reference(root)));
+        assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT + 1, provider.lookupCount());
+
+        assertTrue(context(new Node().type(reference(children[0])), matching)
+                .eventDeclaredTypeIsSameOrDescendantOf(reference(root)));
+        assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT + 1, provider.lookupCount(),
+                "the recently accessed first edge must remain resident");
+
+        assertTrue(context(new Node().type(reference(children[1])), matching)
+                .eventDeclaredTypeIsSameOrDescendantOf(reference(root)));
+        assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT + 2, provider.lookupCount(),
+                "the least-recently-used second edge must have been evicted");
+        assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT,
+                matching.declaredTypeLineageCacheSize());
     }
 
     @Test
@@ -309,21 +360,52 @@ class HandlerMatchContextDeclaredTypeLineageTest {
                 new Blue(NodeProviderWrapper.unverified(provider)));
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
+            assertTrue(context(types.event(types.siblingId), matching)
+                    .eventDeclaredTypeIsSameOrDescendantOf(reference(types.commonId)));
             Future<Boolean> blocked = executor.submit(() -> context(types.event(types.childId), matching)
                     .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
             assertTrue(provider.awaitBlocked());
 
-            Future<Boolean> exact = executor.submit(() -> context(types.event(types.expectedId), matching)
-                    .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
-            assertTrue(exact.get(1, TimeUnit.SECONDS));
+            Future<Boolean> warm = executor.submit(() -> context(types.event(types.siblingId), matching)
+                    .eventDeclaredTypeIsSameOrDescendantOf(reference(types.commonId)));
+            assertTrue(warm.get(1, TimeUnit.SECONDS));
 
             provider.release();
             assertTrue(blocked.get(5, TimeUnit.SECONDS));
-            assertTrue(matching.declaredTypeLineageCacheSize() <= 256);
+            assertTrue(matching.declaredTypeLineageCacheSize()
+                    <= DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT);
         } finally {
             provider.release();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void concurrentWarmQueriesAreStableAndDoNotRepeatProviderWork() throws Exception {
+        TypeFixture types = TypeFixture.create();
+        CountingMapProvider provider = new CountingMapProvider(types.definitions);
+        ContractMatchingService matching = new ContractMatchingService(new Blue(provider));
+        HandlerMatchContext grandchild = context(types.event(types.grandchildId), matching);
+        assertTrue(grandchild.eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
+        assertEquals(3, provider.lookupCount());
+
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        try {
+            @SuppressWarnings("unchecked")
+            Future<Boolean>[] results = new Future[64];
+            for (int index = 0; index < results.length; index++) {
+                results[index] = executor.submit(() ->
+                        grandchild.eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
+            }
+            for (Future<Boolean> result : results) {
+                assertTrue(result.get(5, TimeUnit.SECONDS));
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertEquals(3, provider.lookupCount());
+        assertEquals(3, matching.declaredTypeLineageCacheSize());
     }
 
     @Test
@@ -406,7 +488,10 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         assertTrue(failure.getMessage().startsWith("Type cycle in declared type ancestry:"));
         assertEquals(BlueLanguageErrorCategory.TypeCycle,
                 BlueLanguageErrorClassifier.classify(failure));
-        assertEquals(0, matching.declaredTypeLineageCacheSize());
+        assertTrue(matching.declaredTypeLineageCacheSize() > 0,
+                "verified direct edges before cycle detection remain reusable");
+        assertTrue(matching.declaredTypeLineageCacheSize()
+                <= DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT);
     }
 
     private static Map<String, Node> deepChain(int depth, String root, String finalParent) {
@@ -449,6 +534,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         private final String expectedId;
         private final String childId;
         private final String grandchildId;
+        private final String commonId;
         private final String siblingId;
         private final String unrelatedSameShapeId;
         private final String unrelatedDifferentShapeId;
@@ -457,6 +543,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         private TypeFixture(String expectedId,
                             String childId,
                             String grandchildId,
+                            String commonId,
                             String siblingId,
                             String unrelatedSameShapeId,
                             String unrelatedDifferentShapeId,
@@ -464,6 +551,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
             this.expectedId = expectedId;
             this.childId = childId;
             this.grandchildId = grandchildId;
+            this.commonId = commonId;
             this.siblingId = siblingId;
             this.unrelatedSameShapeId = unrelatedSameShapeId;
             this.unrelatedDifferentShapeId = unrelatedDifferentShapeId;
@@ -499,6 +587,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
                     expectedId,
                     childId,
                     grandchildId,
+                    commonId,
                     siblingId,
                     unrelatedSameShapeId,
                     unrelatedDifferentShapeId,
