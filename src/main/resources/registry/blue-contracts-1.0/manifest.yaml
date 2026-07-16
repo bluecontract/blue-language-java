@@ -2,7 +2,7 @@ specVersion: "1.0"
 registryKind: Blue Contracts runtime type registry
 publishedBy: Blue Contracts and Processor 1.0
 canonicalizationRule: Standard Blue Language 1.0 baseline preprocessing resolves symbolic core type aliases and runtime registry aliases before BlueId calculation.
-conformanceFixturePackageIdentity: "sha256:2f197ca3bbdc41b75e772777cc48e51019754347e1bee26b5f3209b71d9bd9ca"
+conformanceFixturePackageIdentity: "sha256:22713df4d50a38b91762aea1e1a360019c1d16c2584ca1bac022305edb4c66d1"
 preprocessingEnvironment:
   coreRegistry: blue-language-1.0
   runtimeRegistry: blue-contracts-1.0
