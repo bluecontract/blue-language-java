@@ -21,6 +21,10 @@ public final class BlueContractsConformanceReport {
     public static final String FIXTURE_MANIFEST_RESOURCE = "blue-contracts-1.0/fixtures/manifest.yaml";
     public static final String BLUE_CONTRACTS_1_0_FIXTURE_PACKAGE_IDENTITY =
             "sha256:2f197ca3bbdc41b75e772777cc48e51019754347e1bee26b5f3209b71d9bd9ca";
+    public static final String CANDIDATE_FIXTURE_PACKAGE_IDENTITY =
+            "sha256:22713df4d50a38b91762aea1e1a360019c1d16c2584ca1bac022305edb4c66d1";
+    public static final String CANDIDATE_BLUE_SPEC_SOURCE =
+            "feat/conformance-fixture-expansion@a0f4914";
 
     private final String specVersion;
     private final String fixturePackageIdentity;
