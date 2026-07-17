@@ -88,6 +88,16 @@ class VerifiedReferenceMaterializationTest {
     }
 
     @Test
+    void resolvingCompletedTypedListsAgainRemainsStable() {
+        Fixture fixture = new Fixture();
+        Node resolved = fixture.blue.resolve(fixture.holderInstance());
+
+        Node resolvedAgain = assertDoesNotThrow(() -> fixture.blue.resolve(resolved));
+
+        assertEquals(fixture.blue.nodeToJson(resolved), fixture.blue.nodeToJson(resolvedAgain));
+    }
+
+    @Test
     void materializedTargetWithADifferentDeclaredTypeStillChecksCompatibility() {
         Fixture fixture = new Fixture();
         Node materializedTargetType = fixture.provider.fetchFirstByBlueId(fixture.documentTypeId)
