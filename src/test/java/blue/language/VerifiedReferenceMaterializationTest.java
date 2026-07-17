@@ -71,6 +71,33 @@ class VerifiedReferenceMaterializationTest {
     }
 
     @Test
+    void expandedTypeMetadataAloneDoesNotProveItsContributionWasApplied() {
+        Fixture fixture = new Fixture();
+        Node expandedType = fixture.provider.fetchFirstByBlueId(fixture.documentTypeId)
+                .clone()
+                .blueId(fixture.documentTypeId);
+        Node target = new Node().type(expandedType);
+        Node source = new Node().type(reference(fixture.documentTypeId));
+        Merger merger = new Merger(fixture.blue.getMergingProcessor(), fixture.provider,
+                new ResolvedReferenceCache());
+
+        merger.merge(target, source, NO_LIMITS);
+
+        assertNotNull(target.getAsNode("/steps/0"));
+        assertEquals(fixture.computeTypeId, target.getAsNode("/steps/0/type").getBlueId());
+    }
+
+    @Test
+    void resolvingCompletedTypedListsAgainRemainsStable() {
+        Fixture fixture = new Fixture();
+        Node resolved = fixture.blue.resolve(fixture.holderInstance());
+
+        Node resolvedAgain = assertDoesNotThrow(() -> fixture.blue.resolve(resolved));
+
+        assertEquals(fixture.blue.nodeToJson(resolved), fixture.blue.nodeToJson(resolvedAgain));
+    }
+
+    @Test
     void materializedTargetWithADifferentDeclaredTypeStillChecksCompatibility() {
         Fixture fixture = new Fixture();
         Node materializedTargetType = fixture.provider.fetchFirstByBlueId(fixture.documentTypeId)
