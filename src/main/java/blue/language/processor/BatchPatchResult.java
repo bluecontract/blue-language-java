@@ -5,7 +5,9 @@ import blue.language.processor.model.JsonPatch;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 final class BatchPatchResult {
@@ -14,7 +16,7 @@ final class BatchPatchResult {
     private final FrozenNode resolvedRoot;
     private final List<DocumentProcessingRuntime.DocumentUpdateData> updates;
     private final UpdatePlan updatePlan;
-    private final List<JsonPatch> requestedPatches;
+    private final List<ImmutableJsonPatch> requestedPatches;
     private final List<GeneralizationMetadataWrite> generalizationMetadataWrites;
     private final long patchPlanningNanos;
     private final long conformanceNanos;
@@ -36,7 +38,7 @@ final class BatchPatchResult {
                 resolvedRoot,
                 updates,
                 null,
-                Collections.<JsonPatch>emptyList(),
+                Collections.<ImmutableJsonPatch>emptyList(),
                 Collections.<GeneralizationMetadataWrite>emptyList(),
                 patchPlanningNanos,
                 conformanceNanos,
@@ -47,7 +49,7 @@ final class BatchPatchResult {
                      FrozenNode resolvedRoot,
                      List<DocumentProcessingRuntime.DocumentUpdateData> updates,
                      UpdatePlan updatePlan,
-                     List<JsonPatch> requestedPatches,
+                     List<ImmutableJsonPatch> requestedPatches,
                      List<GeneralizationMetadataWrite> generalizationMetadataWrites,
                      long patchPlanningNanos,
                      long conformanceNanos,
@@ -58,7 +60,8 @@ final class BatchPatchResult {
                 ? null
                 : Collections.unmodifiableList(new ArrayList<>(updates));
         this.updatePlan = updatePlan;
-        this.requestedPatches = copyPatches(requestedPatches);
+        this.requestedPatches = Collections.unmodifiableList(new ArrayList<>(
+                Objects.requireNonNull(requestedPatches, "requestedPatches")));
         this.generalizationMetadataWrites = Collections.unmodifiableList(new ArrayList<>(
                 Objects.requireNonNull(generalizationMetadataWrites, "generalizationMetadataWrites")));
         this.patchPlanningNanos = patchPlanningNanos;
@@ -109,7 +112,7 @@ final class BatchPatchResult {
         return Collections.unmodifiableList(rebound);
     }
 
-    List<JsonPatch> requestedPatches() {
+    List<ImmutableJsonPatch> requestedPatches() {
         return requestedPatches;
     }
 
@@ -156,28 +159,6 @@ final class BatchPatchResult {
                 buildUpdatesNanos);
     }
 
-    private static List<JsonPatch> copyPatches(List<JsonPatch> patches) {
-        Objects.requireNonNull(patches, "requestedPatches");
-        List<JsonPatch> copy = new ArrayList<>(patches.size());
-        for (JsonPatch patch : patches) {
-            Objects.requireNonNull(patch, "patch");
-            switch (patch.getOp()) {
-                case ADD:
-                    copy.add(JsonPatch.add(patch.getPath(), patch.getVal().clone()));
-                    break;
-                case REPLACE:
-                    copy.add(JsonPatch.replace(patch.getPath(), patch.getVal().clone()));
-                    break;
-                case REMOVE:
-                    copy.add(JsonPatch.remove(patch.getPath()));
-                    break;
-                default:
-                    throw new IllegalStateException("Unsupported patch op: " + patch.getOp());
-            }
-        }
-        return Collections.unmodifiableList(copy);
-    }
-
     static final class GeneralizationMetadataWrite {
         private final String path;
         private final FrozenNode value;
@@ -202,6 +183,7 @@ final class BatchPatchResult {
         private final FrozenNode finalResolvedRoot;
         private final List<String> generatedPaths;
         private final boolean includeGeneratedUpdates;
+        private final boolean[] laterOverlaps;
 
         UpdatePlan(List<BatchPatchRecord> records,
                    FrozenNode preConformanceResolvedRoot,
@@ -217,6 +199,7 @@ final class BatchPatchResult {
                     ? Collections.<String>emptyList()
                     : Collections.unmodifiableList(new ArrayList<>(generatedPaths));
             this.includeGeneratedUpdates = includeGeneratedUpdates;
+            this.laterOverlaps = computeLaterOverlaps(this.records);
         }
 
         List<DocumentProcessingRuntime.DocumentUpdateData> build(
@@ -230,10 +213,11 @@ final class BatchPatchResult {
             List<DocumentProcessingRuntime.DocumentUpdateData> built = new ArrayList<>();
             ImmutablePatchPlanner finalResolvedPlanner = ImmutablePatchPlanner.forFrozen(
                     Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
-            for (BatchPatchRecord record : records) {
+            for (int recordIndex = 0; recordIndex < records.size(); recordIndex++) {
+                BatchPatchRecord record = records.get(recordIndex);
                 FrozenNode after = null;
                 if (record.op() != JsonPatch.Op.REMOVE) {
-                    after = hasLaterOverlappingPatch(record)
+                    after = laterOverlaps[recordIndex]
                             ? record.afterAtPatchTime()
                             : finalResolvedPlanner.read(record.path());
                 }
@@ -267,19 +251,53 @@ final class BatchPatchResult {
             return records.isEmpty() ? "/" : records.get(0).originScope();
         }
 
-        private boolean hasLaterOverlappingPatch(BatchPatchRecord current) {
-            int currentIndex = records.indexOf(current);
-            for (int i = currentIndex + 1; i < records.size(); i++) {
-                if (pathsOverlap(current.path(), records.get(i).path())) {
-                    return true;
-                }
+        private static boolean[] computeLaterOverlaps(List<BatchPatchRecord> records) {
+            boolean[] overlaps = new boolean[records.size()];
+            PathTrie later = new PathTrie();
+            for (int index = records.size() - 1; index >= 0; index--) {
+                List<String> segments = records.get(index).parsedPath().segments();
+                overlaps[index] = later.overlaps(segments);
+                later.add(segments);
             }
-            return false;
+            return overlaps;
         }
 
-        private boolean pathsOverlap(String first, String second) {
-            return blue.language.processor.util.PointerUtils.descendantOrEqual(first, second)
-                    || blue.language.processor.util.PointerUtils.descendantOrEqual(second, first);
+        private static final class PathTrie {
+            private final Map<String, PathTrie> children = new HashMap<>();
+            private int terminalCount;
+            private int subtreeCount;
+
+            private void add(List<String> segments) {
+                PathTrie current = this;
+                current.subtreeCount++;
+                for (String segment : segments) {
+                    PathTrie child = current.children.get(segment);
+                    if (child == null) {
+                        child = new PathTrie();
+                        current.children.put(segment, child);
+                    }
+                    current = child;
+                    current.subtreeCount++;
+                }
+                current.terminalCount++;
+            }
+
+            private boolean overlaps(List<String> segments) {
+                PathTrie current = this;
+                if (current.terminalCount > 0) {
+                    return true;
+                }
+                for (String segment : segments) {
+                    current = current.children.get(segment);
+                    if (current == null) {
+                        return false;
+                    }
+                    if (current.terminalCount > 0) {
+                        return true;
+                    }
+                }
+                return current.subtreeCount > 0;
+            }
         }
     }
 }

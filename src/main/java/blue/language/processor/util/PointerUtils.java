@@ -1,6 +1,7 @@
 package blue.language.processor.util;
 
 import blue.language.utils.JsonPointer;
+import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,17 +31,11 @@ public final class PointerUtils {
     }
 
     public static boolean descendantOrEqual(String path, String ancestor) {
-        List<String> pathSegments = JsonPointer.split(normalizePointer(path));
-        List<String> ancestorSegments = JsonPointer.split(normalizePointer(ancestor));
-        if (ancestorSegments.size() > pathSegments.size()) {
-            return false;
-        }
-        for (int i = 0; i < ancestorSegments.size(); i++) {
-            if (!ancestorSegments.get(i).equals(pathSegments.get(i))) {
-                return false;
-            }
-        }
-        return true;
+        return descendantOrEqual(ParsedJsonPointer.parse(path), ParsedJsonPointer.parse(ancestor));
+    }
+
+    public static boolean descendantOrEqual(ParsedJsonPointer path, ParsedJsonPointer ancestor) {
+        return ancestor.isAncestorOfOrEqual(path);
     }
 
     public static boolean strictlyInside(String path, String ancestor) {

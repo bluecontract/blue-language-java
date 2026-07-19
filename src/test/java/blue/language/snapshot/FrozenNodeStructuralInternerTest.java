@@ -11,7 +11,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -121,7 +123,45 @@ class FrozenNodeStructuralInternerTest {
         assertEquals(direct.blueId(), withReferenceProvenance.blueId());
         assertFalse(direct.resolvedStructuralKey().equals(
                 withReferenceProvenance.resolvedStructuralKey()));
+        assertFalse(direct.sameResolvedStructure(withReferenceProvenance));
         assertTrue(matcher.matchesType(withReferenceProvenance, target));
+    }
+
+    @Test
+    void directResolvedStructureComparisonMatchesRefreezeNormalization() {
+        Node source = new Node().name("Subject")
+                .description("description")
+                .schema(new Schema().required(true))
+                .properties("field", new Node().value("value"));
+        FrozenNode canonical = FrozenNode.fromNode(source);
+        FrozenNode resolved = FrozenNode.fromResolvedNode(source.clone());
+
+        assertFalse(canonical.resolvedStructuralKey().equals(resolved.resolvedStructuralKey()));
+        assertTrue(canonical.sameResolvedStructure(resolved));
+        assertLegacyNormalizationParity(canonical, resolved);
+
+        FrozenNode listElement = FrozenNode.fromNode(
+                new Node().items(new Node().value("item"))).item(0);
+        FrozenNode rootValue = FrozenNode.fromNode(new Node().value("item"));
+        assertTrue(listElement.sameResolvedStructure(rootValue),
+                "list-element construction context is normalized away by refreezing");
+        assertLegacyNormalizationParity(listElement, rootValue);
+    }
+
+    @Test
+    void directResolvedStructureComparisonPreservesPropertyOrder() {
+        Map<String, Node> firstOrder = new LinkedHashMap<>();
+        firstOrder.put("a", new Node().value(1));
+        firstOrder.put("b", new Node().value(2));
+        Map<String, Node> secondOrder = new LinkedHashMap<>();
+        secondOrder.put("b", new Node().value(2));
+        secondOrder.put("a", new Node().value(1));
+        FrozenNode first = FrozenNode.fromResolvedNode(new Node().properties(firstOrder));
+        FrozenNode second = FrozenNode.fromResolvedNode(new Node().properties(secondOrder));
+
+        assertEquals(first.blueId(), second.blueId());
+        assertFalse(first.sameResolvedStructure(second));
+        assertLegacyNormalizationParity(first, second);
     }
 
     @ParameterizedTest(name = "{0}")
@@ -134,6 +174,9 @@ class FrozenNodeStructuralInternerTest {
         FrozenNode second = cache.freezeResolved(variant.apply(base.clone()));
 
         assertNotSame(first, second, field + " must participate in exact structural identity");
+        assertFalse(first.sameResolvedStructure(second),
+                field + " must participate in direct resolved structure comparison");
+        assertLegacyNormalizationParity(first, second);
     }
 
     private static Stream<Arguments> observableFieldVariants() {
@@ -156,6 +199,13 @@ class FrozenNodeStructuralInternerTest {
                 Arguments.of("blue", (UnaryOperator<Node>) node -> node.blue(new Node().value("directive"))),
                 Arguments.of("inlineValue", (UnaryOperator<Node>) node -> node.inlineValue(true))
         );
+    }
+
+    private static void assertLegacyNormalizationParity(FrozenNode left, FrozenNode right) {
+        boolean expected = FrozenNode.fromResolvedNode(left.toNode()).resolvedStructuralKey().equals(
+                FrozenNode.fromResolvedNode(right.toNode()).resolvedStructuralKey());
+        assertEquals(expected, left.sameResolvedStructure(right));
+        assertEquals(expected, right.sameResolvedStructure(left));
     }
 
     private void assertReferenceProvenanceIsIndependentOfInsertionOrder(boolean referenceFirst) {

@@ -33,6 +33,24 @@ public final class ConformanceEngine {
         this.resolvedReferenceCache = resolvedReferenceCache;
     }
 
+    /**
+     * Creates a planning view that can read published reference content while
+     * retaining all newly discovered reference and graph entries locally.
+     */
+    public ConformanceEngine transientView() {
+        if (resolvedReferenceCache == null) {
+            return this;
+        }
+        return transientView(resolvedReferenceCache.transientChild());
+    }
+
+    /** Creates a planning view backed by the supplied sequence-local cache. */
+    public ConformanceEngine transientView(ResolvedReferenceCache transientReferenceCache) {
+        return new ConformanceEngine(nodeProvider,
+                mergingProcessor,
+                Objects.requireNonNull(transientReferenceCache, "transientReferenceCache"));
+    }
+
     public ConformanceResult check(Node node) {
         if (node == null) {
             return ConformanceResult.conformant();

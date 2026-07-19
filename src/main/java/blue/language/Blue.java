@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -77,6 +78,8 @@ public class Blue implements NodeResolver {
     private final List<ProcessingDocumentSnapshot> recentProcessingDocumentSnapshots = new ArrayList<>();
     private final ResolvedReferenceCache resolvedReferenceCache = new ResolvedReferenceCache();
     private final DictionaryRegistry dictionaryRegistry = new DictionaryRegistry();
+    private final Set<ConformanceEngine> managedProcessorConformanceEngines =
+            Collections.newSetFromMap(new WeakHashMap<ConformanceEngine, Boolean>());
 
 
 
@@ -784,7 +787,18 @@ public class Blue implements NodeResolver {
     }
 
     private ConformanceEngine processorConformanceEngine() {
-        return new ConformanceEngine(processorSnapshotNodeProvider(), mergingProcessor, resolvedReferenceCache);
+        ConformanceEngine engine = new ConformanceEngine(
+                processorSnapshotNodeProvider(), mergingProcessor, resolvedReferenceCache);
+        synchronized (managedProcessorConformanceEngines) {
+            managedProcessorConformanceEngines.add(engine);
+        }
+        return engine;
+    }
+
+    private boolean isManagedProcessorConformanceEngine(ConformanceEngine engine) {
+        synchronized (managedProcessorConformanceEngines) {
+            return managedProcessorConformanceEngines.contains(engine);
+        }
     }
 
     private DocumentProcessingResult attachProcessingSnapshot(DocumentProcessor processor, DocumentProcessingResult result) {
@@ -892,6 +906,11 @@ public class Blue implements NodeResolver {
     }
 
     private ProcessingSnapshotManager processingSnapshotManager() {
+        return processingSnapshotManager(null);
+    }
+
+    private ProcessingSnapshotManager processingSnapshotManager(
+            ResolvedReferenceCache sequenceReferenceCache) {
         return new ProcessingSnapshotManager() {
             @Override
             public ResolvedSnapshot fromDocument(Node document) {
@@ -902,7 +921,65 @@ public class Blue implements NodeResolver {
                 if (cached != null) {
                     return cached;
                 }
-                return resolveProcessingSnapshot(document);
+                return sequenceReferenceCache == null
+                        ? resolveProcessingSnapshot(document)
+                        : resolveProcessingSnapshot(document, false, sequenceReferenceCache);
+            }
+
+            @Override
+            public ResolvedSnapshot fromDocumentTransient(Node document) {
+                ProcessingMetricsSink metrics = documentProcessor != null
+                        ? documentProcessor.processingMetricsSink()
+                        : ProcessingMetricsSink.NOOP;
+                ResolvedSnapshot cached = cachedProcessingSnapshotFor(document, metrics);
+                if (cached != null) {
+                    return cached;
+                }
+                ResolvedReferenceCache transientCache = sequenceReferenceCache != null
+                        ? sequenceReferenceCache
+                        : resolvedReferenceCache.transientChild();
+                return resolveProcessingSnapshot(document, false, transientCache);
+            }
+
+            @Override
+            public ProcessingSnapshotManager transientSequence() {
+                return sequenceReferenceCache != null
+                        ? this
+                        : processingSnapshotManager(resolvedReferenceCache.transientChild());
+            }
+
+            @Override
+            public ProcessingSnapshotManager forkTransientSequence() {
+                return sequenceReferenceCache != null
+                        ? processingSnapshotManager(sequenceReferenceCache.forkTransient())
+                        : transientSequence();
+            }
+
+            @Override
+            public void retainTransientState(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
+                if (sequenceReferenceCache != null) {
+                    sequenceReferenceCache.retainOnlyReachableFrom(canonicalRoot, resolvedRoot);
+                }
+            }
+
+            @Override
+            public boolean isTransientStateCurrent() {
+                return sequenceReferenceCache == null
+                        || sequenceReferenceCache.isCurrentGeneration();
+            }
+
+            @Override
+            public ConformanceEngine transientConformanceEngine(ConformanceEngine conformanceEngine) {
+                if (conformanceEngine == null) {
+                    return null;
+                }
+                ConformanceEngine currentConformanceEngine =
+                        isManagedProcessorConformanceEngine(conformanceEngine)
+                                ? processorConformanceEngine()
+                                : conformanceEngine;
+                return sequenceReferenceCache != null
+                        ? currentConformanceEngine.transientView(sequenceReferenceCache)
+                        : currentConformanceEngine.transientView();
             }
 
             @Override
@@ -912,16 +989,37 @@ public class Blue implements NodeResolver {
 
             @Override
             public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+                if (sequenceReferenceCache != null
+                        && !sequenceReferenceCache.isCurrentGeneration()) {
+                    return snapshot;
+                }
+                if (sequenceReferenceCache != null) {
+                    sequenceReferenceCache.promoteReferencesReachableFrom(
+                            snapshot.frozenCanonicalRoot());
+                }
                 return Blue.this.cacheProcessingSnapshot(snapshot);
             }
         };
     }
 
     private ResolvedSnapshot resolveProcessingSnapshot(Node node) {
+        return resolveProcessingSnapshot(node, true);
+    }
+
+    private ResolvedSnapshot resolveProcessingSnapshot(Node node, boolean publish) {
+        ResolvedReferenceCache resolutionCache = publish
+                ? resolvedReferenceCache
+                : resolvedReferenceCache.transientChild();
+        return resolveProcessingSnapshot(node, publish, resolutionCache);
+    }
+
+    private ResolvedSnapshot resolveProcessingSnapshot(Node node,
+                                                       boolean publish,
+                                                       ResolvedReferenceCache resolutionCache) {
         Node preprocessed = preprocess(node.clone());
-        Node resolved = new Merger(mergingProcessor, processorSnapshotNodeProvider(), resolvedReferenceCache)
+        Node resolved = new Merger(mergingProcessor, processorSnapshotNodeProvider(), resolutionCache)
                 .resolve(preprocessed.clone());
-        return snapshotFromResolved(preprocessed, resolved, null);
+        return snapshotFromResolved(preprocessed, resolved, null, publish, resolutionCache);
     }
 
     private ResolvedSnapshot applyProcessingCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
@@ -985,16 +1083,39 @@ public class Blue implements NodeResolver {
     private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource,
                                                   Node resolved,
                                                   FrozenNode authoritativeCanonicalRoot) {
+        return snapshotFromResolved(preprocessedSource, resolved, authoritativeCanonicalRoot, true);
+    }
+
+    private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource,
+                                                  Node resolved,
+                                                  FrozenNode authoritativeCanonicalRoot,
+                                                  boolean publish) {
+        return snapshotFromResolved(preprocessedSource,
+                resolved,
+                authoritativeCanonicalRoot,
+                publish,
+                resolvedReferenceCache);
+    }
+
+    private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource,
+                                                  Node resolved,
+                                                  FrozenNode authoritativeCanonicalRoot,
+                                                  boolean publish,
+                                                  ResolvedReferenceCache resolutionCache) {
         FrozenNode canonicalRoot = authoritativeCanonicalRoot;
         if (canonicalRoot == null) {
             Node canonical = new MergeReverser().reverseToCanonicalOverlay(
                     resolved.clone(), preprocessedSource);
             canonicalRoot = FrozenNode.fromNode(canonical);
         }
-        return cacheSnapshot(new ResolvedSnapshot(
+        FrozenNode resolvedRoot = publish
+                ? resolvedReferenceCache.freezeResolved(resolved)
+                : resolutionCache.freezeResolved(resolved);
+        ResolvedSnapshot snapshot = new ResolvedSnapshot(
                 canonicalRoot,
-                resolvedReferenceCache.freezeResolved(resolved),
-                canonicalRoot.blueId()));
+                resolvedRoot,
+                canonicalRoot.blueId());
+        return publish ? cacheSnapshot(snapshot) : snapshot;
     }
 
     private Set<String> processorContractPaths(Node root) {

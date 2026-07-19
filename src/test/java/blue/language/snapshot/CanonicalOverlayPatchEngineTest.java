@@ -176,4 +176,26 @@ class CanonicalOverlayPatchEngineTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new CanonicalOverlayPatchEngine(root).apply(JsonPatch.replace("/", new Node().value(1))));
     }
+
+    @Test
+    void mixedFreezeModeOverlayFallsBackToLegacyNormalization() {
+        FrozenNode resolvedDescendant = FrozenNode.fromResolvedNode(
+                new Node().properties("resolved", new Node().value("kept")));
+        FrozenNode existing = FrozenNode.fromNode(
+                new Node().properties("strict", new Node().value("kept")))
+                .withProperty("mixed", resolvedDescendant);
+        FrozenNode root = FrozenNode.empty().withProperty("target", existing);
+        Node overlay = new Node().properties("added", new Node().value("new"));
+
+        FrozenNode patched = new CanonicalOverlayPatchEngine(root)
+                .apply(JsonPatch.replace("/target", overlay))
+                .root()
+                .property("target");
+
+        Node legacyMerged = existing.toNode();
+        legacyMerged.properties("added", new Node().value("new"));
+        FrozenNode expected = FrozenNode.fromNode(legacyMerged);
+        assertEquals(expected.resolvedStructuralKey(), patched.resolvedStructuralKey());
+        assertEquals(expected.blueId(), patched.blueId());
+    }
 }

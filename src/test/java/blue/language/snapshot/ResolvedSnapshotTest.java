@@ -8,20 +8,41 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ResolvedSnapshotTest {
+
+    @Test
+    void deferredSnapshotIdentityMatchesTheValidatedConstructor() {
+        FrozenNode canonical = FrozenNode.fromNode(
+                new Node().properties("value", new Node().value("stable")));
+        FrozenNode resolved = FrozenNode.fromResolvedNode(canonical.toNode());
+
+        ResolvedSnapshot deferred = new ResolvedSnapshot(canonical, resolved);
+        ResolvedSnapshot validated = new ResolvedSnapshot(canonical, resolved, canonical.blueId());
+
+        assertEquals(validated.blueId(), deferred.blueId());
+        assertSame(deferred.blueId(), deferred.blueId());
+    }
 
     @Test
     void resolveToSnapshotExposesCanonicalResolvedAndBlueIdAsImmutableViews() {
@@ -135,6 +156,45 @@ class ResolvedSnapshotTest {
                 "    value: ok", Node.class));
 
         assertSame(snapshot.canonicalIndex().get("/deep/nested"), snapshot.canonicalAt("/deep/nested"));
+    }
+
+    @Test
+    void pathIndexesAreBuiltLazilyIndependentlyAndPublishedOnce() throws Exception {
+        ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue(
+                "deep:\n" +
+                "  nested:\n" +
+                "    value: ok", Node.class));
+        Field canonicalIndexField = ResolvedSnapshot.class.getDeclaredField("canonicalIndex");
+        Field resolvedIndexField = ResolvedSnapshot.class.getDeclaredField("resolvedIndex");
+        canonicalIndexField.setAccessible(true);
+        resolvedIndexField.setAccessible(true);
+
+        assertNull(canonicalIndexField.get(snapshot));
+        assertNull(resolvedIndexField.get(snapshot));
+        assertEquals(snapshot.frozenCanonicalRoot().blueId(), snapshot.blueId());
+        assertNull(canonicalIndexField.get(snapshot));
+        assertNull(resolvedIndexField.get(snapshot));
+
+        assertEquals("ok", snapshot.canonicalAt("/deep/nested").getValue());
+        Map<String, FrozenNode> canonicalIndex = snapshot.canonicalIndex();
+        assertSame(canonicalIndex, canonicalIndexField.get(snapshot));
+        assertNull(resolvedIndexField.get(snapshot));
+
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        try {
+            List<Callable<Map<String, FrozenNode>>> calls = new ArrayList<>();
+            for (int index = 0; index < 64; index++) {
+                calls.add(snapshot::resolvedIndex);
+            }
+            List<Future<Map<String, FrozenNode>>> futures = executor.invokeAll(calls);
+            Map<String, FrozenNode> resolvedIndex = futures.get(0).get(10, TimeUnit.SECONDS);
+            assertNotNull(resolvedIndexField.get(snapshot));
+            for (Future<Map<String, FrozenNode>> future : futures) {
+                assertSame(resolvedIndex, future.get(10, TimeUnit.SECONDS));
+            }
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test

@@ -80,6 +80,54 @@ test {
     }
 }
 
+def configureFocusedTest = { Test task ->
+    task.group = 'verification'
+    task.testClassesDirs = sourceSets.test.output.classesDirs
+    task.classpath = sourceSets.test.runtimeClasspath
+    task.dependsOn tasks.named('testClasses')
+    task.javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    task.useJUnitPlatform()
+    task.reports {
+        junitXml.required = false
+        html.required = true
+    }
+}
+
+tasks.register('identityDifferentialTest', Test) {
+    configureFocusedTest(delegate)
+    description = 'Runs Base58, canonical-byte, and frozen identity differential coverage.'
+    filter {
+        includeTestsMatching 'blue.language.utils.Base58Test'
+        includeTestsMatching 'blue.language.utils.Base58Sha256ProviderTest'
+        includeTestsMatching 'blue.language.utils.BlueIdCalculatorTest'
+        includeTestsMatching 'blue.language.snapshot.FrozenNodeTest'
+        includeTestsMatching 'blue.language.snapshot.FrozenNodeStructuralInternerTest'
+    }
+}
+
+tasks.register('patchSequenceDifferentialTest', Test) {
+    configureFocusedTest(delegate)
+    description = 'Runs deterministic sequential-patch parity and cursor semantic coverage.'
+    filter {
+        includeTestsMatching 'blue.language.processor.PatchSequenceRandomizedDifferentialTest'
+        includeTestsMatching 'blue.language.processor.SequentialPatchPlanningSessionTest'
+        includeTestsMatching 'blue.language.processor.PreparedPatchSequenceTest'
+        includeTestsMatching 'blue.language.processor.DocumentProcessorBatchPatchTest'
+    }
+}
+
+tasks.register('memoryIntegrationTest', Test) {
+    configureFocusedTest(delegate)
+    description = 'Runs bounded sequence-retention and weak-reference collectability stress tests.'
+    maxHeapSize = '512m'
+    forkEvery = 1
+    filter {
+        includeTestsMatching 'blue.language.processor.PatchSequenceRetentionStressTest'
+    }
+}
+
 jmh {
     includeTests = true
     jmhVersion = '1.37'

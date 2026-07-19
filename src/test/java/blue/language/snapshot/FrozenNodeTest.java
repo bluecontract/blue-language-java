@@ -1,6 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.Blue;
 import blue.language.utils.NodeToBlueIdInput;
@@ -9,15 +10,25 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FrozenNodeTest {
 
@@ -146,6 +157,41 @@ class FrozenNodeTest {
 
         for (int i = 0; i < 10; i++) {
             assertSame(first, frozen.blueId());
+        }
+    }
+
+    @Test
+    void repeatedResolvedStructuralKeyIsMemoized() {
+        FrozenNode frozen = FrozenNode.fromResolvedNode(new Node()
+                .properties("a", new Node().value("b"))
+                .properties("nested", new Node().properties("c", new Node().value("d"))));
+
+        assertSame(frozen.resolvedStructuralKey(), frozen.resolvedStructuralKey());
+    }
+
+    @Test
+    void lazyResolvedIdentityAndStructuralKeyPublishSafelyAcrossThreads() throws Exception {
+        FrozenNode frozen = FrozenNode.fromResolvedNode(new Node()
+                .properties("a", new Node().value("b"))
+                .properties("nested", new Node().properties("c", new Node().value("d"))));
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+        try {
+            List<Future<String>> identities = new ArrayList<>();
+            List<Future<FrozenNode.ResolvedStructuralKey>> keys = new ArrayList<>();
+            for (int index = 0; index < 64; index++) {
+                identities.add(pool.submit(frozen::blueId));
+                keys.add(pool.submit(frozen::resolvedStructuralKey));
+            }
+            String expectedIdentity = identities.get(0).get();
+            FrozenNode.ResolvedStructuralKey expectedKey = keys.get(0).get();
+            for (Future<String> identity : identities) {
+                assertSame(expectedIdentity, identity.get());
+            }
+            for (Future<FrozenNode.ResolvedStructuralKey> key : keys) {
+                assertSame(expectedKey, key.get());
+            }
+        } finally {
+            pool.shutdownNow();
         }
     }
 
@@ -353,6 +399,103 @@ class FrozenNodeTest {
     }
 
     @Test
+    void cachedListFoldPreservesPreviousEmptyAndNestedListIdentity() {
+        String previousBlueId = BlueIdCalculator.calculateBlueId(Collections.emptyList());
+        String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
+        Node list = new Node().items(
+                new Node().previousBlueId(previousBlueId),
+                Nodes.emptyPlaceholder(),
+                new Node().items(new Node().value("nested")),
+                new Node().name("labeled").value("tail"),
+                new Node().blueId(referenceBlueId),
+                new Node().schema(new Schema().required(true)),
+                new Node().value("contracted").contracts(
+                        new Node().properties("audit", new Node().value(true))));
+        FrozenNode frozen = FrozenNode.fromNode(list);
+
+        assertEquals(BlueIdCalculator.calculateBlueId(list.getItems()),
+                FrozenNode.calculateBlueId(frozen.getItems()));
+        assertEquals(BlueIdCalculator.calculateBlueId(list), frozen.blueId());
+    }
+
+    @Test
+    void cachedListFoldFallsBackToListContextValidation() {
+        FrozenNode invalidEmptyMarker = FrozenNode.fromNode(new Node().properties(
+                "$empty", new Node().value(false)));
+        FrozenNode emptyObject = FrozenNode.empty();
+        String previousBlueId = BlueIdCalculator.calculateBlueId(Collections.emptyList());
+        FrozenNode anchored = FrozenNode.fromNode(new Node().items(
+                new Node().previousBlueId(previousBlueId),
+                new Node().value("value")));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.calculateBlueId(Collections.singletonList(invalidEmptyMarker)));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.calculateBlueId(Collections.singletonList(emptyObject)));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.calculateBlueId(Arrays.asList(anchored.item(1), anchored.item(0))));
+    }
+
+    @Test
+    void frozenObjectOverlayRetainsUnchangedChildrenAndMatchesMutableIdentity() {
+        Schema originalSchema = new Schema().required(true);
+        Schema overlaySchema = new Schema().maxFields(4);
+        Node original = new Node()
+                .name("Original")
+                .description("kept")
+                .schema(originalSchema)
+                .contracts(new Node().properties("audit", new Node().value("old")))
+                .properties("keep", new Node().value("same"),
+                        "replace", new Node().value("old"));
+        Node overlay = new Node()
+                .name("Overlay")
+                .schema(overlaySchema)
+                .contracts(new Node().properties("audit", new Node().value("new")))
+                .properties("replace", new Node().value("new"),
+                        "add", new Node().value("added"));
+        FrozenNode frozenOriginal = FrozenNode.fromNode(original);
+        FrozenNode frozenOverlay = FrozenNode.fromNode(overlay);
+
+        FrozenNode merged = frozenOriginal.overlayObject(frozenOverlay);
+
+        Node expected = original.clone()
+                .name("Overlay")
+                .schema(overlaySchema.clone())
+                .contracts(overlay.getContracts().clone())
+                .properties("replace", overlay.getProperties().get("replace").clone())
+                .properties("add", overlay.getProperties().get("add").clone());
+        assertSame(frozenOriginal.property("keep"), merged.property("keep"));
+        assertSame(frozenOverlay.property("replace"), merged.property("replace"));
+        assertSame(frozenOverlay.getContracts(), merged.getContracts());
+        assertEquals("Overlay", merged.getName());
+        assertEquals("kept", merged.getDescription());
+        assertNull(merged.getSchema().getRequired());
+        assertEquals(BigInteger.valueOf(4), merged.getSchema().getMaxFieldsExact());
+        assertEquals(BlueIdCalculator.calculateBlueId(expected), merged.blueId());
+
+        FrozenNode scalar = FrozenNode.fromNode(new Node().value("replacement"));
+        assertSame(scalar, frozenOriginal.overlayObject(scalar));
+        assertNull(frozenOriginal.overlayObject(null));
+    }
+
+    @Test
+    void frozenSchemaIsClonedExactlyAtTheImmutableBoundary() {
+        AtomicInteger cloneCalls = new AtomicInteger();
+        CountingSchema source = new CountingSchema(cloneCalls);
+        source.required(true);
+        FrozenNode frozen = FrozenNode.fromResolvedNode(new Node().schema(source));
+
+        assertEquals(1, cloneCalls.get());
+        source.required(false);
+        Schema returned = frozen.getSchema();
+        returned.required(false);
+
+        assertTrue(frozen.getSchema().getRequiredValue());
+        assertFalse(returned.getRequiredValue());
+        assertEquals(3, cloneCalls.get());
+    }
+
+    @Test
     void rejectsInvalidCanonicalPayloadShapes() {
         assertThrows(IllegalArgumentException.class,
                 () -> FrozenNode.fromNode(new Node().value("x").properties("y", new Node().value(1))));
@@ -412,6 +555,20 @@ class FrozenNodeTest {
                 throw new IllegalArgumentException("Missing fixture resource: " + path);
             }
             return YAML_MAPPER.readTree(stream);
+        }
+    }
+
+    private static final class CountingSchema extends Schema {
+        private final AtomicInteger cloneCalls;
+
+        private CountingSchema(AtomicInteger cloneCalls) {
+            this.cloneCalls = cloneCalls;
+        }
+
+        @Override
+        public Schema clone() {
+            cloneCalls.incrementAndGet();
+            return super.clone();
         }
     }
 }

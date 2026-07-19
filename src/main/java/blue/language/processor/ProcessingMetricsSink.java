@@ -228,4 +228,88 @@ public interface ProcessingMetricsSink {
 
     default void incrementDocumentUpdateAfterMaterializations() {
     }
+
+    /** Records one reusable observable-sequential patch planning session. */
+    default void incrementPatchSequencesPrepared() {
+    }
+
+    /** Records patches accepted by reusable observable-sequential sessions. */
+    default void addPatchesPrepared(long count) {
+    }
+
+    /** Records use of the legacy standalone one-patch transaction path. */
+    default void incrementSingletonPatchTransactions() {
+    }
+
+    default void addSequencePlanningNanos(long nanos) {
+    }
+
+    default void addSequenceConformanceNanos(long nanos) {
+    }
+
+    default void addSequenceCommitNanos(long nanos) {
+    }
+
+    default void addSequenceFinalCacheCommitNanos(long nanos) {
+    }
+
+    default void incrementSequenceIntermediateSnapshotAdvances() {
+    }
+
+    default void incrementSequenceSharedSnapshotCacheInserts() {
+    }
+
+    default void incrementSequenceFinalSnapshotCacheInserts() {
+    }
+
+    default void incrementSequenceSuffixRebases() {
+    }
+
+    default void incrementSequenceStalePreviewFallbacks() {
+    }
+
+    default void incrementSequenceFallbackPatches() {
+    }
+
+    default void incrementParsedPointerCacheHits() {
+    }
+
+    default void incrementParsedPointerCacheMisses() {
+    }
+
+    default void incrementFrozenPatchValueHits() {
+    }
+
+    default void incrementPatchValueMaterializations() {
+    }
+
+    default void incrementFrozenNodesCreated() {
+    }
+
+    default void incrementFrozenNodesReused() {
+    }
+
+    default void incrementCanonicalIdentityCalculations() {
+    }
+
+    default void incrementResolvedIdentityCalculations() {
+    }
+
+    default void addCanonicalBytesWritten(long count) {
+    }
+
+    default void incrementJcsFallbacks() {
+    }
+
+    default void addBase58EncodeNanos(long nanos) {
+    }
+
+    default void addBase58DecodeNanos(long nanos) {
+    }
+
+    default void addBlueIdDigestNanos(long nanos) {
+    }
+
+    default void incrementResolvedStructuralKeyBuilds() {
+    }
 }

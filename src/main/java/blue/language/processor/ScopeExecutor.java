@@ -295,78 +295,89 @@ final class ScopeExecutor {
         if (patches == null || patches.isEmpty()) {
             return;
         }
-        for (int patchIndex = 0; patchIndex < patches.size(); patchIndex++) {
-            JsonPatch patch = patches.get(patchIndex);
-            if (execution.shouldStopScopeWork(scopePath)) {
-                return;
-            }
-            if (!allowReservedMutation) {
-                runtime.chargeBoundaryCheck();
-            }
-            try {
-                long boundaryStart = System.nanoTime();
-                validatePatchBoundary(scopePath, bundle, patch);
-                enforceReservedKeyWriteProtection(scopePath, patch, allowReservedMutation);
-                owner.metricsSink().addPatchBoundaryNanos(System.nanoTime() - boundaryStart);
-            } catch (ProcessorEngine.BoundaryViolationException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        ProcessorErrorCategory.BoundaryViolation,
-                        execution.fatalReason(ex, "Boundary violation"));
-                return;
-            } catch (ProcessorFailureException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        ex.errorCategory(),
-                        execution.fatalReason(ex, "Runtime fatal"));
-                return;
-            } catch (IllegalArgumentException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        ProcessorErrorCategory.InvalidPatch,
-                        execution.fatalReason(ex, "Boundary violation"));
-                return;
-            }
-            try {
-                long gasStart = System.nanoTime();
-                chargePatchGas(patch);
-                owner.metricsSink().addPatchGasNanos(System.nanoTime() - gasStart);
-                List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPrecomputedPatch(scopePath,
-                        patch,
-                        preview != null ? preview.patch(patchIndex) : null);
-                long routingStart = System.nanoTime();
-                for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
-                    routeDocumentUpdateAfterPatch(scopePath, bundle, update);
-                    if (execution.shouldStopScopeWork(scopePath)) {
-                        return;
-                    }
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     runtime.preparePatchSequence(scopePath, patches, preview)) {
+            for (int patchIndex = 0; patchIndex < sequence.size(); patchIndex++) {
+                JsonPatch patch = sequence.patchForValidation(patchIndex);
+                if (execution.shouldStopScopeWork(scopePath)) {
+                    return;
                 }
-                owner.metricsSink().addDocumentUpdateRoutingNanos(System.nanoTime() - routingStart);
-            } catch (ProcessorEngine.BoundaryViolationException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        ProcessorErrorCategory.BoundaryViolation,
-                        execution.fatalReason(ex, "Boundary violation"));
-                return;
-            } catch (MustUnderstandFailureException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        ex.errorCategory(),
-                        execution.fatalReason(ex, "Unsupported runtime contract"));
-                return;
-            } catch (ProcessorFailureException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        ex.errorCategory(),
-                        execution.fatalReason(ex, "Runtime fatal"));
-                return;
-            } catch (IllegalArgumentException | IllegalStateException ex) {
-                execution.enterFatalTermination(scopePath,
-                        bundle,
-                        execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
-                        execution.fatalReason(ex, "Runtime fatal"));
-                return;
+                if (!allowReservedMutation) {
+                    runtime.chargeBoundaryCheck();
+                }
+                try {
+                    long boundaryStart = System.nanoTime();
+                    validatePatchBoundary(scopePath, bundle, patch);
+                    enforceReservedKeyWriteProtection(scopePath, patch, allowReservedMutation);
+                    owner.metricsSink().addPatchBoundaryNanos(System.nanoTime() - boundaryStart);
+                } catch (ProcessorEngine.BoundaryViolationException ex) {
+                    execution.enterFatalTermination(scopePath,
+                            bundle,
+                            ProcessorErrorCategory.BoundaryViolation,
+                            execution.fatalReason(ex, "Boundary violation"));
+                    return;
+                } catch (ProcessorFailureException ex) {
+                    execution.enterFatalTermination(scopePath,
+                            bundle,
+                            ex.errorCategory(),
+                            execution.fatalReason(ex, "Runtime fatal"));
+                    return;
+                } catch (IllegalArgumentException ex) {
+                    execution.enterFatalTermination(scopePath,
+                            bundle,
+                            ProcessorErrorCategory.InvalidPatch,
+                            execution.fatalReason(ex, "Boundary violation"));
+                    return;
+                }
+                try {
+                    long gasStart = System.nanoTime();
+                    chargePatchGas(patch);
+                    owner.metricsSink().addPatchGasNanos(System.nanoTime() - gasStart);
+                    List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+                            sequence.applyNext(patchIndex);
+                    long routingStart = System.nanoTime();
+                    for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
+                        routeDocumentUpdateAfterPatch(scopePath, bundle, update);
+                        if (execution.shouldStopScopeWork(scopePath)) {
+                            return;
+                        }
+                    }
+                    owner.metricsSink().addDocumentUpdateRoutingNanos(System.nanoTime() - routingStart);
+                } catch (ProcessorEngine.BoundaryViolationException ex) {
+                    execution.enterFatalTermination(scopePath,
+                            bundle,
+                            ProcessorErrorCategory.BoundaryViolation,
+                            execution.fatalReason(ex, "Boundary violation"));
+                    return;
+                } catch (MustUnderstandFailureException ex) {
+                    execution.enterFatalTermination(scopePath,
+                            bundle,
+                            ex.errorCategory(),
+                            execution.fatalReason(ex, "Unsupported runtime contract"));
+                    return;
+                } catch (ProcessorFailureException ex) {
+                    execution.enterFatalTermination(scopePath,
+                            bundle,
+                            ex.errorCategory(),
+                            execution.fatalReason(ex, "Runtime fatal"));
+                    return;
+                } catch (IllegalArgumentException | IllegalStateException ex) {
+                    execution.enterFatalTermination(scopePath,
+                            bundle,
+                            execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
+                            execution.fatalReason(ex, "Runtime fatal"));
+                    return;
+                }
             }
+        } catch (RunTerminationException ex) {
+            // Root-scope fatal termination is the processor's control-flow signal.
+            // Do not reinterpret it as a snapshot-publication failure.
+            throw ex;
+        } catch (RuntimeException ex) {
+            execution.enterFatalTermination(scopePath,
+                    bundle,
+                    execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
+                    execution.fatalReason(ex, "Snapshot publication failed"));
         }
     }
 

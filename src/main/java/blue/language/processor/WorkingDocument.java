@@ -39,11 +39,13 @@ public final class WorkingDocument {
     private final String originScope;
     private FrozenNode canonicalRoot;
     private FrozenNode resolvedRoot;
-    private final ConformanceEngine conformanceEngine;
-    private final ConformancePlannerOverride conformancePlannerOverride;
     private final ProcessingSnapshotManager snapshotManager;
     private final boolean materializedFallback;
+    private final ConformanceEngine conformanceEngine;
+    private final ConformancePlannerOverride conformancePlannerOverride;
     private final boolean exactReplacement;
+    private final ProcessingMetricsSink metrics;
+    private ProcessingSnapshotManager workingSequenceManager;
     private ResolvedSnapshot snapshot;
 
     WorkingDocument(String originScope,
@@ -54,16 +56,21 @@ public final class WorkingDocument {
                     ProcessingSnapshotManager snapshotManager,
                     ResolvedSnapshot snapshot,
                     boolean materializedFallback,
-                    boolean exactReplacement) {
+                    boolean exactReplacement,
+                    ProcessingMetricsSink metrics) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
-        this.conformanceEngine = conformanceEngine;
-        this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.snapshot = snapshot;
         this.materializedFallback = materializedFallback;
+        this.conformanceEngine = conformanceEngine;
+        this.conformancePlannerOverride = conformancePlannerOverride;
         this.exactReplacement = exactReplacement;
+        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.workingSequenceManager = snapshotManager != null
+                ? snapshotManager.transientSequence()
+                : null;
     }
 
     public FrozenNode canonicalRoot() {
@@ -92,29 +99,69 @@ public final class WorkingDocument {
     }
 
     public WorkingDocument applyPatches(List<JsonPatch> patches) {
-        previewAndApplyPatches(patches);
+        applyPatches(patches, false);
         return this;
     }
 
     public Preview previewAndApplyPatches(List<JsonPatch> patches) {
+        return applyPatches(patches, true);
+    }
+
+    private Preview applyPatches(List<JsonPatch> patches, boolean createHandoff) {
         if (patches == null || patches.isEmpty()) {
             return Preview.empty(originScope);
         }
-        List<JsonPatch> copy = copyPatches(patches);
-        FrozenNode nextCanonical = canonicalRoot;
-        FrozenNode nextResolved = resolvedRoot;
-        List<PatchPreview> previews = new ArrayList<>(copy.size());
-        for (JsonPatch patch : copy) {
-            PatchPreview preview = previewSinglePatch(nextCanonical, nextResolved, patch);
-            BatchPatchResult result = preview.result();
-            previews.add(preview);
-            nextCanonical = result.canonicalRoot();
-            nextResolved = result.resolvedRoot();
+        List<JsonPatch> copiedPatches = new ArrayList<>(patches.size());
+        for (JsonPatch patch : patches) {
+            copiedPatches.add(ImmutableJsonPatch.copy(patch));
         }
-        canonicalRoot = nextCanonical;
-        resolvedRoot = nextResolved;
+        List<PatchPreview> previews = new ArrayList<>(copiedPatches.size());
+        ProcessingSnapshotManager sequenceManager = workingSequenceManager();
+        ConformanceEngine sequenceConformanceEngine = sequenceManager != null
+                ? sequenceManager.transientConformanceEngine(conformanceEngine)
+                : conformanceEngine != null ? conformanceEngine.transientView() : null;
+        DocumentProcessingRuntime.PlanningContext planning =
+                DocumentProcessingRuntime.workingPlanningContext(
+                        canonicalRoot, resolvedRoot, exactReplacement, sequenceManager);
+        SequentialPatchPlanningSession planningSession = new SequentialPatchPlanningSession(
+                this.originScope,
+                planning,
+                sequenceConformanceEngine,
+                conformancePlannerOverride,
+                NOOP_MATERIALIZATION_METRICS,
+                metrics);
+        try {
+            for (JsonPatch patch : copiedPatches) {
+                SequentialPatchPlanningSession.PlannedStep step =
+                        planningSession.planNext(patch);
+                previews.add(PatchPreview.from(step));
+            }
+        } catch (RuntimeException ex) {
+            if (sequenceManager != null) {
+                sequenceManager.retainTransientState(canonicalRoot, resolvedRoot);
+            }
+            throw ex;
+        }
+        canonicalRoot = planningSession.canonicalRoot();
+        resolvedRoot = planningSession.resolvedRoot();
         snapshot = null;
-        return new Preview(originScope, previews);
+        ProcessingSnapshotManager handoff = createHandoff && sequenceManager != null
+                ? sequenceManager.forkTransientSequence()
+                : null;
+        if (sequenceManager != null) {
+            sequenceManager.retainTransientState(canonicalRoot, resolvedRoot);
+        }
+        return new Preview(originScope, previews, handoff);
+    }
+
+    private ProcessingSnapshotManager workingSequenceManager() {
+        if (workingSequenceManager != null && !workingSequenceManager.isTransientStateCurrent()) {
+            workingSequenceManager = null;
+        }
+        if (workingSequenceManager == null && snapshotManager != null) {
+            workingSequenceManager = snapshotManager.transientSequence();
+        }
+        return workingSequenceManager;
     }
 
     public ResolvedSnapshot snapshot() {
@@ -138,7 +185,21 @@ public final class WorkingDocument {
 
     public ResolvedSnapshot commitSnapshot() {
         ResolvedSnapshot current = snapshot();
-        snapshot = snapshotManager != null ? snapshotManager.cacheSnapshot(current) : current;
+        if (snapshotManager == null) {
+            snapshot = current;
+            return snapshot;
+        }
+        boolean currentResolutionScope = workingSequenceManager == null
+                || workingSequenceManager.isTransientStateCurrent();
+        ProcessingSnapshotManager publicationManager = workingSequenceManager();
+        ResolvedSnapshot authoritative = exactReplacement && currentResolutionScope
+                ? current
+                : publicationManager.fromDocumentTransient(
+                        current.frozenCanonicalRoot().toNode());
+        snapshot = publicationManager.cacheSnapshot(authoritative);
+        canonicalRoot = snapshot.frozenCanonicalRoot();
+        resolvedRoot = snapshot.frozenResolvedRoot();
+        publicationManager.retainTransientState(canonicalRoot, resolvedRoot);
         return snapshot;
     }
 
@@ -150,59 +211,23 @@ public final class WorkingDocument {
         return materializedFallback;
     }
 
-    private PatchPreview previewSinglePatch(FrozenNode baseCanonical,
-                                            FrozenNode baseResolved,
-                                            JsonPatch patch) {
-        DocumentProcessingRuntime.PlanningContext planning =
-                DocumentProcessingRuntime.workingPlanningContext(
-                        baseCanonical, baseResolved, exactReplacement, snapshotManager);
-        BatchPatchResult result = new BatchPatchTransaction(originScope,
-                Collections.singletonList(Objects.requireNonNull(patch, "patch")),
-                planning,
-                conformanceEngine,
-                conformancePlannerOverride,
-                NOOP_MATERIALIZATION_METRICS,
-                false).apply();
-        return new PatchPreview(originScope,
-                patch,
-                baseCanonical,
-                baseResolved,
-                result);
-    }
-
-    private static List<JsonPatch> copyPatches(List<JsonPatch> patches) {
-        List<JsonPatch> copy = new ArrayList<>(patches.size());
-        for (JsonPatch patch : patches) {
-            copy.add(copyPatch(patch));
-        }
-        return Collections.unmodifiableList(copy);
-    }
-
-    private static JsonPatch copyPatch(JsonPatch patch) {
-        Objects.requireNonNull(patch, "patch");
-        switch (patch.getOp()) {
-            case ADD:
-                return JsonPatch.add(patch.getPath(), patch.getVal().clone());
-            case REPLACE:
-                return JsonPatch.replace(patch.getPath(), patch.getVal().clone());
-            case REMOVE:
-                return JsonPatch.remove(patch.getPath());
-            default:
-                throw new IllegalStateException("Unsupported patch op: " + patch.getOp());
-        }
-    }
-
     public static final class Preview {
         private final String originScope;
         private final List<PatchPreview> patches;
+        private final ProcessingSnapshotManager resolutionScope;
+        private ProcessingSnapshotManager sequenceSnapshotManager;
 
-        private Preview(String originScope, List<PatchPreview> patches) {
+        private Preview(String originScope,
+                        List<PatchPreview> patches,
+                        ProcessingSnapshotManager sequenceSnapshotManager) {
             this.originScope = PointerUtils.normalizeScope(originScope);
-            this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
+            this.patches = new ArrayList<>(patches);
+            this.resolutionScope = sequenceSnapshotManager;
+            this.sequenceSnapshotManager = sequenceSnapshotManager;
         }
 
         private static Preview empty(String originScope) {
-            return new Preview(originScope, Collections.<PatchPreview>emptyList());
+            return new Preview(originScope, Collections.<PatchPreview>emptyList(), null);
         }
 
         String originScope() {
@@ -216,18 +241,43 @@ public final class WorkingDocument {
         PatchPreview patch(int index) {
             return index >= 0 && index < patches.size() ? patches.get(index) : null;
         }
+
+        void release(int index) {
+            if (index >= 0 && index < patches.size()) {
+                patches.set(index, null);
+            }
+        }
+
+        void discardFrom(int index) {
+            for (int current = Math.max(0, index); current < patches.size(); current++) {
+                patches.set(current, null);
+            }
+            if (index <= 0) {
+                sequenceSnapshotManager = null;
+            }
+        }
+
+        ProcessingSnapshotManager takeSequenceSnapshotManager() {
+            ProcessingSnapshotManager retained = sequenceSnapshotManager;
+            sequenceSnapshotManager = null;
+            return retained;
+        }
+
+        boolean isResolutionScopeCurrent() {
+            return resolutionScope == null
+                    || resolutionScope.isTransientStateCurrent();
+        }
     }
 
     static final class PatchPreview {
         private final String originScope;
-        private final JsonPatch patch;
+        private final ImmutableJsonPatch patch;
         private final FrozenNode baseCanonical;
         private final FrozenNode baseResolved;
         private final BatchPatchResult result;
-        private final String valueBlueId;
 
         private PatchPreview(String originScope,
-                             JsonPatch patch,
+                             ImmutableJsonPatch patch,
                              FrozenNode baseCanonical,
                              FrozenNode baseResolved,
                              BatchPatchResult result) {
@@ -236,9 +286,15 @@ public final class WorkingDocument {
             this.baseCanonical = baseCanonical;
             this.baseResolved = baseResolved;
             this.result = result;
-            this.valueBlueId = patch.getOp() == JsonPatch.Op.REMOVE
-                    ? null
-                    : FrozenNode.fromResolvedNode(patch.getVal()).blueId();
+        }
+
+        static PatchPreview from(SequentialPatchPlanningSession.PlannedStep step) {
+            Objects.requireNonNull(step, "step");
+            return new PatchPreview(step.originScope(),
+                    step.patch(),
+                    step.baseCanonical(),
+                    step.baseResolved(),
+                    step.result());
         }
 
         String originScope() {
@@ -257,17 +313,24 @@ public final class WorkingDocument {
             return result;
         }
 
+        ImmutableJsonPatch patch() {
+            return patch;
+        }
+
+        boolean isBasedOn(FrozenNode actualCanonical, FrozenNode actualResolved) {
+            return SequentialPatchPlanningSession.sameRoots(baseCanonical,
+                    baseResolved,
+                    actualCanonical,
+                    actualResolved);
+        }
+
         boolean matches(JsonPatch candidate) {
-            if (candidate == null
-                    || patch.getOp() != candidate.getOp()
-                    || !PointerUtils.normalizePointer(patch.getPath())
-                    .equals(PointerUtils.normalizePointer(candidate.getPath()))) {
-                return false;
-            }
-            if (patch.getOp() == JsonPatch.Op.REMOVE) {
-                return true;
-            }
-            return valueBlueId.equals(FrozenNode.fromResolvedNode(candidate.getVal()).blueId());
+            return candidate != null && patch.matches(
+                    ImmutableJsonPatch.from(candidate, baseCanonical, baseResolved));
+        }
+
+        boolean matches(ImmutableJsonPatch candidate) {
+            return patch.matches(candidate);
         }
     }
 }

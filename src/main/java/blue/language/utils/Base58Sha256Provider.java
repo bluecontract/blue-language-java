@@ -12,35 +12,50 @@ import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 public class Base58Sha256Provider implements Function<Object, String> {
 
+    private static final ThreadLocal<MessageDigest> SHA_256 = new ThreadLocal<MessageDigest>() {
+        @Override
+        protected MessageDigest initialValue() {
+            try {
+                return MessageDigest.getInstance("SHA-256");
+            } catch (NoSuchAlgorithmException e) {
+                throw new AssertionError("Error calculating SHA-256 hash", e);
+            }
+        }
+    };
+
     @Override
     public String apply(Object object) {
-
-        String canonized = null;
         try {
-            String json = JSON_MAPPER.writeValueAsString(object);
-            try {
-                canonized = new JsonCanonicalizer(json).getEncodedString();
-            } catch (IOException e) {
-                if (object instanceof String || object instanceof Number || object instanceof Boolean || object == null) {
-                    String wrapped = new JsonCanonicalizer("[" + json + "]").getEncodedString();
-                    canonized = wrapped.substring(1, wrapped.length() - 1);
-                } else {
-                    throw e;
-                }
+            byte[] json = JSON_MAPPER.writeValueAsBytes(object);
+            byte[] canonical;
+            if (object instanceof String || object instanceof Number || object instanceof Boolean || object == null) {
+                byte[] wrapped = new byte[json.length + 2];
+                wrapped[0] = '[';
+                System.arraycopy(json, 0, wrapped, 1, json.length);
+                wrapped[wrapped.length - 1] = ']';
+                byte[] canonicalWrapped = new JsonCanonicalizer(wrapped).getEncodedUTF8();
+                canonical = new byte[canonicalWrapped.length - 2];
+                System.arraycopy(canonicalWrapped, 1, canonical, 0, canonical.length);
+            } else {
+                canonical = new JsonCanonicalizer(json).getEncodedUTF8();
             }
+            return Base58.encode(sha256Bytes(canonical));
         } catch (IOException e) {
             throw new IllegalArgumentException("Problem when generating canonized json.");
         }
-        byte[] hash = sha256(canonized);
-        return Base58.encode(hash);
     }
 
     public static byte[] sha256(String input) {
+        return sha256Bytes(input.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static byte[] sha256Bytes(byte[] input) {
+        MessageDigest digest = SHA_256.get();
+        digest.reset();
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return digest.digest(input.getBytes(StandardCharsets.UTF_8));
-        } catch (NoSuchAlgorithmException e) {
-            throw new AssertionError("Error calculating SHA-256 hash", e);
+            return digest.digest(input);
+        } finally {
+            digest.reset();
         }
     }
 

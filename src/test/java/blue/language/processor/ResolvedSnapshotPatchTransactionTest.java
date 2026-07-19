@@ -200,6 +200,41 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
+    void observableSequenceRefreezesSuffixAfterAuthoritativeCanonicalModeTransition() {
+        Blue blue = new Blue();
+        Node source = new Node().properties(
+                "first", new Node().value("initial"),
+                "second", new Node().value("initial"));
+        ResolvedSnapshot initial = blue.resolveToSnapshot(source);
+        List<JsonPatch> patches = Arrays.asList(
+                JsonPatch.replace("/first", new Node()
+                        .name("forces authoritative resolution")
+                        .properties("kept", new Node().value(true))),
+                JsonPatch.replace("/second", new Node().properties(
+                        "empty", new Node(),
+                        "kept", new Node().value("value"))));
+
+        DocumentProcessingRuntime optimized = new DocumentProcessingRuntime(
+                initial, null, new RecordingSnapshotManager(blue));
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     optimized.preparePatchSequence("/", patches, null)) {
+            sequence.applyNext(0);
+            sequence.applyNext(1);
+        }
+
+        DocumentProcessingRuntime reference = new DocumentProcessingRuntime(
+                initial, null, new RecordingSnapshotManager(blue));
+        reference.applyPatch("/", patches.get(0));
+        reference.applyPatch("/", patches.get(1));
+
+        assertEquals(blue.nodeToJson(reference.snapshot().canonicalRoot()),
+                blue.nodeToJson(optimized.snapshot().canonicalRoot()));
+        assertEquals(reference.snapshot().blueId(), optimized.snapshot().blueId());
+        assertMissing(optimized.snapshot().canonicalRoot(), "/second/empty");
+        assertEquals("value", optimized.snapshot().canonicalRoot().getAsText("/second/kept"));
+    }
+
+    @Test
     void snapshotDirectWriteRetainsParentConstraints() {
         ParentConstraintFixture fixture = new ParentConstraintFixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);

@@ -13,6 +13,7 @@ import blue.language.utils.SchemaToMapListOrValue;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,8 +51,9 @@ public final class FrozenNode {
     private final boolean containsCyclicSetReference;
     private final boolean containsSchema;
     private final boolean containsNestedTypedObjectPayload;
-    private final String blueId;
-    private final ResolvedStructuralKey resolvedStructuralKey;
+    private final boolean constructionModeNormalized;
+    private volatile String blueId;
+    private volatile ResolvedStructuralKey resolvedStructuralKey;
 
     private FrozenNode(Builder builder) {
         this.name = builder.name;
@@ -65,7 +67,7 @@ public final class FrozenNode {
         this.properties = freezeMap(builder.properties);
         this.contracts = builder.contracts;
         this.referenceBlueId = builder.referenceBlueId;
-        this.schema = builder.schema != null ? builder.schema.clone() : null;
+        this.schema = builder.schema;
         this.mergePolicy = builder.mergePolicy;
         this.previousBlueId = builder.previousBlueId;
         this.position = builder.position;
@@ -77,9 +79,9 @@ public final class FrozenNode {
         this.containsCyclicSetReference = computeContainsCyclicSetReference();
         this.containsSchema = computeContainsSchema();
         this.containsNestedTypedObjectPayload = computeContainsNestedTypedObjectPayload();
+        this.constructionModeNormalized = computeConstructionModeNormalized();
         validatePayloadShape();
-        this.blueId = computeBlueId();
-        this.resolvedStructuralKey = new ResolvedStructuralKey(this);
+        this.blueId = strictCanonical && builder.eagerBlueId ? computeBlueId() : null;
     }
 
     public static FrozenNode empty() {
@@ -151,7 +153,17 @@ public final class FrozenNode {
     }
 
     public ResolvedStructuralKey resolvedStructuralKey() {
-        return resolvedStructuralKey;
+        ResolvedStructuralKey key = resolvedStructuralKey;
+        if (key == null) {
+            synchronized (this) {
+                key = resolvedStructuralKey;
+                if (key == null) {
+                    key = new ResolvedStructuralKey(this);
+                    resolvedStructuralKey = key;
+                }
+            }
+        }
+        return key;
     }
 
     private static List<FrozenNode> freezeItems(List<Node> source,
@@ -193,12 +205,97 @@ public final class FrozenNode {
     }
 
     public static String calculateBlueId(List<FrozenNode> nodes) {
-        List<Object> objects = new ArrayList<>((nodes == null ? Collections.<FrozenNode>emptyList() : nodes).size());
         List<FrozenNode> source = nodes == null ? Collections.emptyList() : nodes;
+        if (canFoldCachedListBlueIds(source)) {
+            return foldCachedListBlueIds(source);
+        }
+        List<Object> objects = new ArrayList<>(source.size());
         for (int i = 0; i < source.size(); i++) {
             objects.add(FrozenNodeToBlueIdInput.getListElement(source.get(i), i));
         }
         return BlueIdCalculator.INSTANCE.calculate(objects);
+    }
+
+    /**
+     * Compares the exact resolved representation of two frozen nodes without
+     * materializing mutable {@link Node} graphs first.
+     *
+     * <p>The construction-mode fields are intentionally ignored. This matches
+     * converting both inputs through {@code toNode()} and
+     * {@code fromResolvedNode(...)} before comparing their structural keys.</p>
+     */
+    public boolean sameResolvedStructure(FrozenNode other) {
+        if (this == other) {
+            return true;
+        }
+        if (other == null
+                || !Objects.equals(name, other.name)
+                || !Objects.equals(description, other.description)
+                || !sameResolvedStructure(type, other.type)
+                || !sameResolvedStructure(itemType, other.itemType)
+                || !sameResolvedStructure(keyType, other.keyType)
+                || !sameResolvedStructure(valueType, other.valueType)
+                || !Objects.equals(value, other.value)
+                || !sameResolvedItems(items, other.items)
+                || !sameResolvedProperties(properties, other.properties)
+                || !sameResolvedStructure(contracts, other.contracts)
+                || !Objects.equals(referenceBlueId, other.referenceBlueId)
+                || !sameSchema(schema, other.schema)
+                || !Objects.equals(mergePolicy, other.mergePolicy)
+                || !Objects.equals(previousBlueId, other.previousBlueId)
+                || !Objects.equals(position, other.position)
+                || !sameResolvedStructure(blue, other.blue)) {
+            return false;
+        }
+        return inlineValue == other.inlineValue;
+    }
+
+    private static boolean sameResolvedStructure(FrozenNode left, FrozenNode right) {
+        return left == right || left != null && left.sameResolvedStructure(right);
+    }
+
+    private static boolean sameResolvedItems(List<FrozenNode> left, List<FrozenNode> right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null || left.size() != right.size()) {
+            return false;
+        }
+        for (int index = 0; index < left.size(); index++) {
+            if (!sameResolvedStructure(left.get(index), right.get(index))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean sameResolvedProperties(Map<String, FrozenNode> left,
+                                                  Map<String, FrozenNode> right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null || left.size() != right.size()) {
+            return false;
+        }
+        Iterator<Map.Entry<String, FrozenNode>> leftEntries = left.entrySet().iterator();
+        Iterator<Map.Entry<String, FrozenNode>> rightEntries = right.entrySet().iterator();
+        while (leftEntries.hasNext()) {
+            Map.Entry<String, FrozenNode> leftEntry = leftEntries.next();
+            Map.Entry<String, FrozenNode> rightEntry = rightEntries.next();
+            if (!Objects.equals(leftEntry.getKey(), rightEntry.getKey())
+                    || !sameResolvedStructure(leftEntry.getValue(), rightEntry.getValue())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean sameSchema(Schema left, Schema right) {
+        if (left == right) {
+            return true;
+        }
+        return left != null && right != null
+                && schemaObject(left).equals(schemaObject(right));
     }
 
     public Node toNode() {
@@ -233,7 +330,17 @@ public final class FrozenNode {
     }
 
     public String blueId() {
-        return blueId;
+        String identity = blueId;
+        if (identity == null) {
+            synchronized (this) {
+                identity = blueId;
+                if (identity == null) {
+                    identity = computeBlueId();
+                    blueId = identity;
+                }
+            }
+        }
+        return identity;
     }
 
     public String getName() {
@@ -418,6 +525,10 @@ public final class FrozenNode {
         return previousAnchorContext;
     }
 
+    boolean isConstructionModeNormalized() {
+        return constructionModeNormalized;
+    }
+
     public boolean isEmptyNode() {
         return name == null
                 && description == null
@@ -438,8 +549,18 @@ public final class FrozenNode {
     }
 
     public FrozenNode withProperty(String key, FrozenNode child) {
+        return withProperty(key, child, false);
+    }
+
+    FrozenNode withPropertyForPatch(String key, FrozenNode child) {
+        return withProperty(key, child, true);
+    }
+
+    private FrozenNode withProperty(String key, FrozenNode child, boolean deferBlueId) {
         if (OBJECT_CONTRACTS.equals(key)) {
-            return toBuilder().contracts(child == null || (strictCanonical && child.isEmptyNode()) ? null : child).build();
+            Builder next = toBuilder()
+                    .contracts(child == null || (strictCanonical && child.isEmptyNode()) ? null : child);
+            return (deferBlueId ? next.deferBlueId() : next).build();
         }
         Map<String, FrozenNode> next = properties != null
                 ? new LinkedHashMap<>(properties)
@@ -449,11 +570,56 @@ public final class FrozenNode {
         } else {
             next.put(key, child);
         }
-        return toBuilder().properties(next.isEmpty() ? null : next).build();
+        Builder builder = toBuilder().properties(next.isEmpty() ? null : next);
+        return (deferBlueId ? builder.deferBlueId() : builder).build();
     }
 
     public FrozenNode withItems(List<FrozenNode> nextItems) {
         return toBuilder().items(nextItems).build();
+    }
+
+    FrozenNode withItemsForPatch(List<FrozenNode> nextItems) {
+        return toBuilder().items(nextItems).deferBlueId().build();
+    }
+
+    /**
+     * Applies a non-null object overlay while retaining unchanged frozen
+     * children. Non-object replacements are returned unchanged.
+     */
+    public FrozenNode overlayObject(FrozenNode overlay) {
+        return overlayObject(overlay, false);
+    }
+
+    FrozenNode overlayObjectForPatch(FrozenNode overlay) {
+        return overlayObject(overlay, true);
+    }
+
+    private FrozenNode overlayObject(FrozenNode overlay, boolean deferBlueId) {
+        if (!isMergeableObject(this) || !isMergeableObject(overlay)) {
+            return overlay;
+        }
+
+        Builder merged = toBuilder();
+        if (overlay.properties != null) {
+            Map<String, FrozenNode> nextProperties = properties != null
+                    ? new LinkedHashMap<>(properties)
+                    : new LinkedHashMap<>();
+            nextProperties.putAll(overlay.properties);
+            merged.properties(nextProperties);
+        }
+        if (overlay.contracts != null) merged.contracts(overlay.contracts);
+        if (overlay.type != null) merged.type(overlay.type);
+        if (overlay.itemType != null) merged.itemType(overlay.itemType);
+        if (overlay.keyType != null) merged.keyType(overlay.keyType);
+        if (overlay.valueType != null) merged.valueType(overlay.valueType);
+        if (overlay.blue != null) merged.blue(overlay.blue);
+        if (overlay.schema != null) merged.schema(overlay.schema);
+        if (overlay.name != null) merged.name(overlay.name);
+        if (overlay.description != null) merged.description(overlay.description);
+        if (overlay.mergePolicy != null) merged.mergePolicy(overlay.mergePolicy);
+        if (overlay.previousBlueId != null) merged.previousBlueId(overlay.previousBlueId);
+        if (overlay.position != null) merged.position(overlay.position);
+        return (deferBlueId ? merged.deferBlueId() : merged).build();
     }
 
     public FrozenNode withoutPosition() {
@@ -488,6 +654,40 @@ public final class FrozenNode {
         if (strictCanonical && position != null) {
             throw new IllegalArgumentException("\"$pos\" overlays are not valid direct BlueId input.");
         }
+    }
+
+    private boolean computeConstructionModeNormalized() {
+        if (!hasNormalizedChild(type, false)
+                || !hasNormalizedChild(itemType, false)
+                || !hasNormalizedChild(keyType, false)
+                || !hasNormalizedChild(valueType, false)
+                || !hasNormalizedChild(contracts, false)
+                || !hasNormalizedChild(blue, false)) {
+            return false;
+        }
+        if (items != null) {
+            for (FrozenNode item : items) {
+                if (!hasNormalizedChild(item, true)) {
+                    return false;
+                }
+            }
+        }
+        if (properties != null) {
+            for (FrozenNode property : properties.values()) {
+                if (!hasNormalizedChild(property, false)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean hasNormalizedChild(FrozenNode child, boolean listElement) {
+        return child == null
+                || child.strictCanonical == strictCanonical
+                && child.strictBlueIdValidation == strictBlueIdValidation
+                && child.previousAnchorContext == listElement
+                && child.constructionModeNormalized;
     }
 
     private void indexPaths(String path, Map<String, FrozenNode> index) {
@@ -543,9 +743,120 @@ public final class FrozenNode {
             if (!strictBlueIdValidation) {
                 return BlueIdCalculator.calculateUncheckedBlueId(toNode());
             }
+            if (isPayloadOnlyList()) {
+                return calculateBlueId(items);
+            }
             return BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(this));
         }
         return computeResolvedStructuralBlueId();
+    }
+
+    private boolean isPayloadOnlyList() {
+        return items != null
+                && name == null
+                && description == null
+                && type == null
+                && itemType == null
+                && keyType == null
+                && valueType == null
+                && value == null
+                && properties == null
+                && contracts == null
+                && referenceBlueId == null
+                && schema == null
+                && mergePolicy == null
+                && previousBlueId == null
+                && position == null
+                && blue == null;
+    }
+
+    private static boolean canFoldCachedListBlueIds(List<FrozenNode> nodes) {
+        for (int index = 0; index < nodes.size(); index++) {
+            FrozenNode node = nodes.get(index);
+            if (node == null
+                    || !node.strictCanonical
+                    || !node.strictBlueIdValidation
+                    || node.isEmptyNode()) {
+                return false;
+            }
+            if (node.properties != null && node.properties.containsKey(LIST_CONTROL_EMPTY)
+                    && !isEmptyPlaceholder(node)) {
+                return false;
+            }
+            if (node.previousBlueId != null
+                    && (index != 0 || !node.isPreviousOnly())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String foldCachedListBlueIds(List<FrozenNode> nodes) {
+        String accumulator = HASH.apply(Collections.singletonMap("$list", "empty"));
+        int start = 0;
+        if (!nodes.isEmpty() && nodes.get(0).isPreviousOnly()) {
+            accumulator = nodes.get(0).previousBlueId;
+            start = 1;
+        }
+        for (int index = start; index < nodes.size(); index++) {
+            FrozenNode node = nodes.get(index);
+            String elementBlueId = isEmptyPlaceholder(node)
+                    ? BlueIdCalculator.INSTANCE.calculate(
+                            Collections.<String, Object>singletonMap(LIST_CONTROL_EMPTY, true))
+                    : node.blueId();
+            Map<String, Object> cons = new TreeMap<>(String::compareTo);
+            cons.put("elem", reference(elementBlueId));
+            cons.put("prev", reference(accumulator));
+            accumulator = HASH.apply(Collections.singletonMap("$listCons", cons));
+        }
+        return accumulator;
+    }
+
+    private static boolean isEmptyPlaceholder(FrozenNode node) {
+        if (node == null || node.properties == null || node.properties.size() != 1) {
+            return false;
+        }
+        FrozenNode marker = node.properties.get(LIST_CONTROL_EMPTY);
+        return marker != null
+                && Boolean.TRUE.equals(marker.value)
+                && marker.name == null
+                && marker.description == null
+                && marker.type == null
+                && marker.itemType == null
+                && marker.keyType == null
+                && marker.valueType == null
+                && marker.items == null
+                && marker.properties == null
+                && marker.contracts == null
+                && marker.referenceBlueId == null
+                && marker.schema == null
+                && marker.mergePolicy == null
+                && marker.previousBlueId == null
+                && marker.position == null
+                && marker.blue == null
+                && node.name == null
+                && node.description == null
+                && node.type == null
+                && node.itemType == null
+                && node.keyType == null
+                && node.valueType == null
+                && node.value == null
+                && node.items == null
+                && node.contracts == null
+                && node.referenceBlueId == null
+                && node.schema == null
+                && node.mergePolicy == null
+                && node.previousBlueId == null
+                && node.position == null
+                && node.blue == null;
+    }
+
+    private static boolean isMergeableObject(FrozenNode node) {
+        return node != null
+                && node.value == null
+                && node.items == null
+                && !node.isReferenceOnly()
+                && node.previousBlueId == null;
     }
 
     private boolean computeContainsCyclicSetReference() {
@@ -797,6 +1108,7 @@ public final class FrozenNode {
         private boolean strictCanonical = true;
         private boolean strictBlueIdValidation = true;
         private boolean previousAnchorContext;
+        private boolean eagerBlueId = true;
 
         Builder name(String name) {
             this.name = name;
@@ -898,6 +1210,11 @@ public final class FrozenNode {
             return this;
         }
 
+        Builder deferBlueId() {
+            this.eagerBlueId = false;
+            return this;
+        }
+
         FrozenNode build() {
             return new FrozenNode(this);
         }
@@ -945,7 +1262,7 @@ public final class FrozenNode {
         }
 
         private static ResolvedStructuralKey keyOf(FrozenNode node) {
-            return node != null ? node.resolvedStructuralKey : null;
+            return node != null ? node.resolvedStructuralKey() : null;
         }
 
         private static List<ResolvedStructuralKey> keysOf(List<FrozenNode> nodes) {

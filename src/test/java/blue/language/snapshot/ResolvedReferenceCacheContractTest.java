@@ -108,6 +108,76 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
+    void transientChildReadsParentButKeepsNewEntriesAndGraphNodesLocal() {
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = parent.transientChild();
+        ResolvedReferenceCache sibling = parent.transientChild();
+        FrozenNode published = parent.freezeResolved(new Node().value("published"));
+        FrozenNode local = child.freezeResolved(new Node().value("local"));
+
+        assertSame(published, child.freezeResolved(new Node().value("published")));
+        assertSame(local, child.freezeResolved(new Node().value("local")));
+        assertEquals(1, parent.resolvedGraphSize());
+        assertEquals(1, child.resolvedGraphSize());
+        assertNotEquals(local, sibling.freezeResolved(new Node().value("local")));
+        assertEquals(1, parent.resolvedGraphSize());
+    }
+
+    @Test
+    void transientChildKeepsLocalFirstWinsIdentityAfterParentPublishesEquivalentContent() {
+        Node materializedSubject = new Node().name("Scenario Subject")
+                .type(reference("vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m"))
+                .properties("identifier", new Node().value("subject-1"));
+        String subjectId = new Blue().calculateBlueId(materializedSubject);
+        FrozenNode referenced = FrozenNode.fromNode(new Node().properties(
+                "subject", reference(subjectId)));
+        FrozenNode materialized = FrozenNode.fromNode(new Node().properties(
+                "subject", materializedSubject));
+        String holderId = referenced.blueId();
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = parent.transientChild();
+
+        assertSame(referenced, child.putVerifiedCanonical(holderId, referenced));
+        assertSame(materialized, parent.putVerifiedCanonical(holderId, materialized));
+        assertSame(referenced, child.putVerifiedCanonical(holderId, materialized));
+        assertSame(referenced,
+                child.getVerifiedCanonical(holderId).orElseThrow(AssertionError::new));
+
+        FrozenNode localGraph = child.freezeResolved(new Node().value("same graph"));
+        parent.freezeResolved(new Node().value("same graph"));
+        assertSame(localGraph, child.freezeResolved(new Node().value("same graph")));
+    }
+
+    @Test
+    void parentInvalidationClearsAStaleChildAndPreventsOldEvidencePromotion() {
+        ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
+        VerifiedReferenceResolution evidence = verified.verifiedReferenceResolution();
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = parent.transientChild();
+
+        child.putVerifiedResolved(evidence);
+        child.freezeResolved(new Node().value("local graph"));
+        assertEquals(1, child.size());
+        assertEquals(1, child.resolvedGraphSize());
+
+        parent.clear();
+
+        assertFalse(child.isCurrentGeneration());
+        ResolvedReferenceCache staleFork = child.forkTransient();
+        assertFalse(staleFork.isCurrentGeneration(),
+                "forking must preserve the source scope's generation witness");
+        assertFalse(child.getVerifiedCanonical(evidence.requestedBlueId()).isPresent());
+        assertFalse(child.getVerifiedResolved(evidence.requestedBlueId()).isPresent());
+        assertEquals(0, child.resolvedGraphSize());
+        assertFalse(child.isCurrentGeneration(),
+                "touching a stale scope must not certify previews from its old generation");
+        child.promoteReferencesReachableFrom(FrozenNode.fromNode(new Node()
+                .type(reference(evidence.requestedBlueId()))));
+        assertEquals(0, parent.size(),
+                "evidence retained before invalidation must never be re-promoted");
+    }
+
+    @Test
     void unrelatedResolvedContentCannotBeCertified() throws Exception {
         assertArbitrarySnapshotCannotCertifyContent(false);
         assertValidEvidenceWinsConcurrentRaceWithArbitrarySnapshots();

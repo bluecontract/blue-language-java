@@ -2,8 +2,8 @@ package blue.language.snapshot;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.processor.util.PointerUtils;
 import blue.language.utils.JsonPointer;
+import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,16 +27,33 @@ public final class CanonicalOverlayPatchEngine {
 
     public CanonicalPatchResult apply(JsonPatch patch) {
         Objects.requireNonNull(patch, "patch");
-        String path = PointerUtils.canonicalizePointer(patch.getPath());
-        List<String> segments = JsonPointer.split(path);
+        ParsedJsonPointer path = ParsedJsonPointer.parse(patch.getPath());
+        FrozenNode value = patch.getOp() == JsonPatch.Op.REMOVE ? null : freezePatchValue(patch.getVal());
+        return apply(patch.getOp(), path, value);
+    }
+
+    /**
+     * Applies a patch whose pointer and immutable value were prepared at the
+     * transaction boundary. This avoids reparsing paths and refreezing values
+     * in each canonical/resolved planning layer.
+     */
+    public CanonicalPatchResult apply(JsonPatch.Op op,
+                                      ParsedJsonPointer parsedPath,
+                                      FrozenNode value) {
+        Objects.requireNonNull(op, "op");
+        Objects.requireNonNull(parsedPath, "parsedPath");
+        String path = parsedPath.pointer();
+        List<String> segments = parsedPath.segments();
         if (segments.isEmpty()) {
             throw new IllegalArgumentException("Canonical overlay patches cannot target the root document");
         }
+        if (op != JsonPatch.Op.REMOVE) {
+            Objects.requireNonNull(value, "value");
+        }
 
-        FrozenNode before = read(root, segments, patch.getOp() == JsonPatch.Op.ADD);
-        FrozenNode value = patch.getOp() == JsonPatch.Op.REMOVE ? null : freezePatchValue(patch.getVal());
+        FrozenNode before = read(root, segments, op == JsonPatch.Op.ADD, path);
         FrozenNode nextRoot;
-        switch (patch.getOp()) {
+        switch (op) {
             case ADD:
                 nextRoot = add(root, segments, value, path);
                 break;
@@ -47,11 +64,11 @@ public final class CanonicalOverlayPatchEngine {
                 nextRoot = remove(root, segments, path);
                 break;
             default:
-                throw new UnsupportedOperationException("Unsupported patch op: " + patch.getOp());
+                throw new UnsupportedOperationException("Unsupported patch op: " + op);
         }
 
-        FrozenNode after = patch.getOp() == JsonPatch.Op.REMOVE ? null : read(nextRoot, segments, false);
-        return new CanonicalPatchResult(nextRoot, before, after, patch.getOp(), path);
+        FrozenNode after = op == JsonPatch.Op.REMOVE ? null : read(nextRoot, segments, false, path);
+        return new CanonicalPatchResult(nextRoot, before, after, op, path);
     }
 
     private FrozenNode freezePatchValue(Node value) {
@@ -104,7 +121,7 @@ public final class CanonicalOverlayPatchEngine {
             FrozenNode nextChild = write(child, tail, value, path, mode);
             List<FrozenNode> nextItems = new ArrayList<>(node.getItems());
             nextItems.set(index, nextChild);
-            return node.withItems(nextItems);
+            return node.withItemsForPatch(nextItems);
         }
 
         if (node.getValue() != null) {
@@ -119,7 +136,7 @@ public final class CanonicalOverlayPatchEngine {
             child = emptyNodeForRootMode();
         }
         FrozenNode nextChild = write(child, tail, value, path, mode);
-        return node.withProperty(segment, nextChild);
+        return node.withPropertyForPatch(segment, nextChild);
     }
 
     private FrozenNode writeLeaf(FrozenNode node,
@@ -134,7 +151,7 @@ public final class CanonicalOverlayPatchEngine {
                     throw new IllegalStateException("Only add supports append token '-' at path: " + path);
                 }
                 nextItems.add(value);
-                return node.withItems(nextItems);
+                return node.withItemsForPatch(nextItems);
             }
 
             int index = parseArrayIndex(leaf, path);
@@ -144,19 +161,19 @@ public final class CanonicalOverlayPatchEngine {
                         throw new IllegalStateException("Array index out of bounds for add: " + path);
                     }
                     nextItems.add(index, value);
-                    return node.withItems(nextItems);
+                    return node.withItemsForPatch(nextItems);
                 case REPLACE:
                     if (index < 0 || index >= nextItems.size()) {
                         throw new IllegalStateException("Array index out of bounds for replace: " + path);
                     }
                     nextItems.set(index, value);
-                    return node.withItems(nextItems);
+                    return node.withItemsForPatch(nextItems);
                 case REMOVE:
                     if (index < 0 || index >= nextItems.size()) {
                         throw new IllegalStateException("Array index out of bounds for remove: " + path);
                     }
                     nextItems.remove(index);
-                    return node.withItems(nextItems);
+                    return node.withItemsForPatch(nextItems);
                 default:
                     throw new UnsupportedOperationException("Unsupported patch mode: " + mode);
             }
@@ -175,55 +192,49 @@ public final class CanonicalOverlayPatchEngine {
             throw new IllegalStateException("Path does not exist for remove: " + path);
         }
         FrozenNode nextValue = mode == WriteMode.REPLACE ? mergeObjectReplacement(existing, value) : value;
-        return node.withProperty(leaf, mode == WriteMode.REMOVE ? null : nextValue);
+        return node.withPropertyForPatch(leaf, mode == WriteMode.REMOVE ? null : nextValue);
     }
 
     private FrozenNode mergeObjectReplacement(FrozenNode existing, FrozenNode replacement) {
         if (!isMergeableObject(existing) || !isMergeableObject(replacement)) {
             return replacement;
         }
+        if (canUseFrozenOverlay(existing, replacement)) {
+            return existing.overlayObjectForPatch(replacement);
+        }
+
         Node merged = existing.toNode();
         Node overlay = replacement.toNode();
         if (overlay.getProperties() != null) {
             overlay.getProperties().forEach((key, value) -> merged.properties(key, value.clone()));
         }
-        if (overlay.getContracts() != null) {
-            merged.contracts(overlay.getContracts().clone());
-        }
-        if (overlay.getType() != null) {
-            merged.type(overlay.getType().clone());
-        }
-        if (overlay.getItemType() != null) {
-            merged.itemType(overlay.getItemType().clone());
-        }
-        if (overlay.getKeyType() != null) {
-            merged.keyType(overlay.getKeyType().clone());
-        }
-        if (overlay.getValueType() != null) {
-            merged.valueType(overlay.getValueType().clone());
-        }
-        if (overlay.getBlue() != null) {
-            merged.blue(overlay.getBlue().clone());
-        }
-        if (overlay.getSchema() != null) {
-            merged.schema(overlay.getSchema().clone());
-        }
-        if (overlay.getName() != null) {
-            merged.name(overlay.getName());
-        }
-        if (overlay.getDescription() != null) {
-            merged.description(overlay.getDescription());
-        }
-        if (overlay.getMergePolicy() != null) {
-            merged.mergePolicy(overlay.getMergePolicy());
-        }
-        if (overlay.getPreviousBlueId() != null) {
-            merged.previousBlueId(overlay.getPreviousBlueId());
-        }
-        if (overlay.getPosition() != null) {
-            merged.position(overlay.getPosition());
-        }
+        if (overlay.getContracts() != null) merged.contracts(overlay.getContracts().clone());
+        if (overlay.getType() != null) merged.type(overlay.getType().clone());
+        if (overlay.getItemType() != null) merged.itemType(overlay.getItemType().clone());
+        if (overlay.getKeyType() != null) merged.keyType(overlay.getKeyType().clone());
+        if (overlay.getValueType() != null) merged.valueType(overlay.getValueType().clone());
+        if (overlay.getBlue() != null) merged.blue(overlay.getBlue().clone());
+        if (overlay.getSchema() != null) merged.schema(overlay.getSchema().clone());
+        if (overlay.getName() != null) merged.name(overlay.getName());
+        if (overlay.getDescription() != null) merged.description(overlay.getDescription());
+        if (overlay.getMergePolicy() != null) merged.mergePolicy(overlay.getMergePolicy());
+        if (overlay.getPreviousBlueId() != null) merged.previousBlueId(overlay.getPreviousBlueId());
+        if (overlay.getPosition() != null) merged.position(overlay.getPosition());
         return freezePatchValue(merged);
+    }
+
+    private boolean canUseFrozenOverlay(FrozenNode existing, FrozenNode replacement) {
+        return sameFreezeMode(root, existing)
+                && sameFreezeMode(root, replacement)
+                && !existing.isListElementContext()
+                && !replacement.isListElementContext()
+                && existing.isConstructionModeNormalized()
+                && replacement.isConstructionModeNormalized();
+    }
+
+    private boolean sameFreezeMode(FrozenNode left, FrozenNode right) {
+        return left.isStrictCanonical() == right.isStrictCanonical()
+                && left.isStrictBlueIdValidation() == right.isStrictBlueIdValidation();
     }
 
     private boolean isMergeableObject(FrozenNode node) {
@@ -234,7 +245,10 @@ public final class CanonicalOverlayPatchEngine {
                 && node.getPreviousBlueId() == null;
     }
 
-    private FrozenNode read(FrozenNode node, List<String> segments, boolean beforeAdd) {
+    private FrozenNode read(FrozenNode node,
+                            List<String> segments,
+                            boolean beforeAdd,
+                            String renderedPath) {
         FrozenNode current = node;
         for (int i = 0; i < segments.size(); i++) {
             if (current == null) {
@@ -246,7 +260,7 @@ public final class CanonicalOverlayPatchEngine {
                 if ("-".equals(segment)) {
                     return beforeAdd && last ? null : current.item(current.getItems().size() - 1);
                 }
-                current = current.item(parseArrayIndex(segment, JsonPointer.toPointer(segments)));
+                current = current.item(parseArrayIndex(segment, renderedPath));
             } else {
                 current = current.property(segment);
             }

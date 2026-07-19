@@ -2,23 +2,24 @@ package blue.language.processor;
 
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
+import blue.language.utils.ParsedJsonPointer;
 
 import java.util.List;
 
 final class BatchPatchRecord {
 
-    private final JsonPatch patch;
+    private final ParsedJsonPointer parsedPath;
     private final ImmutablePatchPlanner.PatchPlan canonicalPlan;
     private final ImmutablePatchPlanner.PatchPlan resolvedPlan;
     private final FrozenNode beforeAtPatchTime;
     private final FrozenNode afterAtPatchTime;
     private final boolean processorManagedConformanceBypass;
 
-    BatchPatchRecord(JsonPatch patch,
+    BatchPatchRecord(ImmutableJsonPatch patch,
                      ImmutablePatchPlanner.PatchPlan canonicalPlan,
                      ImmutablePatchPlanner.PatchPlan resolvedPlan,
                      boolean processorManagedConformanceBypass) {
-        this.patch = patch;
+        this.parsedPath = patch.path();
         this.canonicalPlan = canonicalPlan;
         this.resolvedPlan = resolvedPlan;
         this.beforeAtPatchTime = resolvedPlan.before();
@@ -26,8 +27,8 @@ final class BatchPatchRecord {
         this.processorManagedConformanceBypass = processorManagedConformanceBypass;
     }
 
-    JsonPatch patch() {
-        return patch;
+    ParsedJsonPointer parsedPath() {
+        return parsedPath;
     }
 
     ImmutablePatchPlanner.PatchPlan canonicalPlan() {

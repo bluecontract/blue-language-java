@@ -258,6 +258,13 @@ public final class Merger implements NodeResolver {
         if (cached != null) {
             return rememberCanonical(state, blueId, cached, true);
         }
+        FrozenNode transientTrusted = resolvedReferenceCache != null
+                ? resolvedReferenceCache.getTransientTrustedCanonical(blueId).orElse(null)
+                : null;
+        if (transientTrusted != null) {
+            state.usedNonDirectTrustedContent = true;
+            return rememberCanonical(state, blueId, transientTrusted, false);
+        }
 
         if (!hasExplicitlyHostTrustedProvider) {
             FrozenNode canonical = canCacheDirectCanonical(blueId)
@@ -276,6 +283,8 @@ public final class Merger implements NodeResolver {
         FrozenNode canonical = loaded.canonical;
         if (loaded.directlyVerified && canCacheDirectCanonical(blueId)) {
             canonical = resolvedReferenceCache.putVerifiedCanonical(blueId, canonical);
+        } else if (!loaded.directlyVerified && resolvedReferenceCache != null) {
+            canonical = resolvedReferenceCache.putTransientTrustedCanonical(blueId, canonical);
         }
         return rememberCanonical(state, blueId, canonical, loaded.directlyVerified);
     }
@@ -401,7 +410,9 @@ public final class Merger implements NodeResolver {
             return;
         }
         CanonicalReference local = localCanonicalReference(resolutionState, blueId);
-        if (local == null || !local.directlyVerified) {
+        if (local == null
+                || !local.directlyVerified
+                || resolutionState.usedNonDirectTrustedContent) {
             return;
         }
         FrozenNode canonical = resolvedReferenceCache.getVerifiedCanonical(blueId).orElse(null);
@@ -1235,6 +1246,7 @@ public final class Merger implements NodeResolver {
                     canonical.toNode(), limits, Contribution.MATERIALIZED_REFERENCE);
             resolved.blueId(blueId);
             if (canonicalReference.directlyVerified
+                    && !state.usedNonDirectTrustedContent
                     && resolvedReferenceCache != null && limits == Limits.NO_LIMITS) {
                 resolvedReferenceCache.putVerifiedResolved(new VerifiedReferenceResolution(
                         blueId, canonical, resolvedReferenceCache.freezeResolved(resolved)));
@@ -1260,6 +1272,13 @@ public final class Merger implements NodeResolver {
         if (cached != null) {
             return rememberCanonical(state, blueId, cached, true);
         }
+        FrozenNode transientTrusted = resolvedReferenceCache != null
+                ? resolvedReferenceCache.getTransientTrustedCanonical(blueId).orElse(null)
+                : null;
+        if (transientTrusted != null) {
+            state.usedNonDirectTrustedContent = true;
+            return rememberCanonical(state, blueId, transientTrusted, false);
+        }
 
         if (state.failedProviderReferences != null && state.failedProviderReferences.contains(blueId)) {
             throw new IllegalArgumentException("Unable to materialize required reference at path "
@@ -1280,6 +1299,8 @@ public final class Merger implements NodeResolver {
             FrozenNode canonical = loaded.canonical;
             if (loaded.directlyVerified && canCacheDirectCanonical(blueId)) {
                 canonical = resolvedReferenceCache.putVerifiedCanonical(blueId, canonical);
+            } else if (!loaded.directlyVerified && resolvedReferenceCache != null) {
+                canonical = resolvedReferenceCache.putTransientTrustedCanonical(blueId, canonical);
             }
             return rememberCanonical(state, blueId, canonical, loaded.directlyVerified);
         } catch (RuntimeException ex) {

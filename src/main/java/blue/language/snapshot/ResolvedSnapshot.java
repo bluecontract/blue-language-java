@@ -13,10 +13,10 @@ public final class ResolvedSnapshot {
 
     private final FrozenNode canonicalRoot;
     private final FrozenNode resolvedRoot;
-    private final Map<String, FrozenNode> canonicalIndex;
-    private final Map<String, FrozenNode> resolvedIndex;
+    private volatile Map<String, FrozenNode> canonicalIndex;
+    private volatile Map<String, FrozenNode> resolvedIndex;
     private final VerifiedReferenceResolution verifiedReferenceResolution;
-    private final String blueId;
+    private volatile String blueId;
 
     public ResolvedSnapshot(Node canonicalRoot, Node resolvedRoot, String blueId) {
         this(FrozenNode.fromNode(canonicalRoot), FrozenNode.fromResolvedNode(resolvedRoot), blueId, null);
@@ -24,6 +24,21 @@ public final class ResolvedSnapshot {
 
     public ResolvedSnapshot(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String blueId) {
         this(canonicalRoot, resolvedRoot, blueId, null);
+    }
+
+    /**
+     * Creates an immutable snapshot whose canonical identity is calculated on
+     * first request. This is useful for short-lived runtime checkpoints that
+     * may never be published outside their active patch sequence.
+     */
+    public ResolvedSnapshot(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
+        this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
+        this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
+        if (!this.canonicalRoot.isStrictCanonical()) {
+            throw new IllegalArgumentException("Snapshot canonical root must be strict canonical FrozenNode.");
+        }
+        this.verifiedReferenceResolution = null;
+        this.blueId = null;
     }
 
     private ResolvedSnapshot(FrozenNode canonicalRoot,
@@ -39,8 +54,6 @@ public final class ResolvedSnapshot {
         if (!expectedBlueId.equals(Objects.requireNonNull(blueId, "blueId"))) {
             throw new IllegalArgumentException("Snapshot blueId must match canonical root blueId.");
         }
-        this.canonicalIndex = this.canonicalRoot.pathIndex();
-        this.resolvedIndex = this.resolvedRoot.pathIndex();
         this.verifiedReferenceResolution = verifiedReferenceResolution;
         this.blueId = expectedBlueId;
     }
@@ -71,11 +84,11 @@ public final class ResolvedSnapshot {
     }
 
     public FrozenNode canonicalAt(String pointer) {
-        return canonicalIndex.get(JsonPointer.canonicalize(pointer));
+        return canonicalIndex().get(JsonPointer.canonicalize(pointer));
     }
 
     public FrozenNode resolvedAt(String pointer) {
-        return resolvedIndex.get(JsonPointer.canonicalize(pointer));
+        return resolvedIndex().get(JsonPointer.canonicalize(pointer));
     }
 
     public Node canonicalNodeAt(String pointer) {
@@ -89,15 +102,45 @@ public final class ResolvedSnapshot {
     }
 
     public Map<String, FrozenNode> canonicalIndex() {
-        return canonicalIndex;
+        Map<String, FrozenNode> index = canonicalIndex;
+        if (index == null) {
+            synchronized (this) {
+                index = canonicalIndex;
+                if (index == null) {
+                    index = canonicalRoot.pathIndex();
+                    canonicalIndex = index;
+                }
+            }
+        }
+        return index;
     }
 
     public Map<String, FrozenNode> resolvedIndex() {
-        return resolvedIndex;
+        Map<String, FrozenNode> index = resolvedIndex;
+        if (index == null) {
+            synchronized (this) {
+                index = resolvedIndex;
+                if (index == null) {
+                    index = resolvedRoot.pathIndex();
+                    resolvedIndex = index;
+                }
+            }
+        }
+        return index;
     }
 
     public String blueId() {
-        return blueId;
+        String identity = blueId;
+        if (identity == null) {
+            synchronized (this) {
+                identity = blueId;
+                if (identity == null) {
+                    identity = canonicalRoot.blueId();
+                    blueId = identity;
+                }
+            }
+        }
+        return identity;
     }
 
     public VerifiedReferenceResolution verifiedReferenceResolution() {
