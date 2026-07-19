@@ -67,10 +67,10 @@ public class MergeReverser {
             minimal.value(merged.getValue());
         }
 
-        setTypeIfDifferent(merged, fromType, minimal, Node::getType, Node::type);
-        setTypeIfDifferent(merged, fromType, minimal, Node::getItemType, Node::itemType);
-        setTypeIfDifferent(merged, fromType, minimal, Node::getKeyType, Node::keyType);
-        setTypeIfDifferent(merged, fromType, minimal, Node::getValueType, Node::valueType);
+        setTypeIfDifferent(merged, fromType, minimal, canonicalOverlay, Node::getType, Node::type);
+        setTypeIfDifferent(merged, fromType, minimal, canonicalOverlay, Node::getItemType, Node::itemType);
+        setTypeIfDifferent(merged, fromType, minimal, canonicalOverlay, Node::getKeyType, Node::keyType);
+        setTypeIfDifferent(merged, fromType, minimal, canonicalOverlay, Node::getValueType, Node::valueType);
         preservePayloadTypeForMetadataOverride(merged, minimal);
 
         if (merged.getName() != null && (fromType == null || !merged.getName().equals(fromType.getName()))) {
@@ -253,15 +253,37 @@ public class MergeReverser {
         return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
     }
 
-    private void setTypeIfDifferent(Node merged, Node fromType, Node minimal,
+    private void setTypeIfDifferent(Node merged, Node fromType, Node minimal, boolean canonicalOverlay,
                                     Function<Node, Node> typeGetter,
                                     BiConsumer<Node, Node> typeSetter) {
         Node mergedType = typeGetter.apply(merged);
-        if (mergedType != null && (fromType == null || typeGetter.apply(fromType) == null ||
-                                   !typeGetter.apply(fromType).getBlueId().equals(mergedType.getBlueId()))) {
-            Node typeNode = new Node().blueId(mergedType.getBlueId());
-            typeSetter.accept(minimal, typeNode);
+        Node inheritedType = fromType != null ? typeGetter.apply(fromType) : null;
+        if (mergedType == null || sameOverlayType(mergedType, inheritedType, canonicalOverlay)) {
+            return;
         }
+
+        typeSetter.accept(minimal, overlayTypeNode(mergedType, canonicalOverlay));
+    }
+
+    private Node overlayTypeNode(Node mergedType, boolean canonicalOverlay) {
+        if (canonicalOverlay || mergedType.getBlueId() != null) {
+            return new Node().blueId(mergedType.getBlueId());
+        }
+
+        Node minimalType = new Node();
+        reverseNode(minimalType, mergedType, mergedType.getType(), false);
+        return minimalType;
+    }
+
+    private boolean sameOverlayType(Node mergedType, Node inheritedType, boolean canonicalOverlay) {
+        if (inheritedType == null) {
+            return false;
+        }
+        if (canonicalOverlay) {
+            return inheritedType.getBlueId() != null
+                    && inheritedType.getBlueId().equals(mergedType.getBlueId());
+        }
+        return sameNodeBlueId(mergedType, inheritedType);
     }
 
     private void preservePayloadTypeForMetadataOverride(Node merged, Node minimal) {
