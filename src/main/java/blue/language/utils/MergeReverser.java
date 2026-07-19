@@ -145,7 +145,7 @@ public class MergeReverser {
                 }
 
                 if (!minimalItems.isEmpty()) {
-                    String itemsBlueId = BlueIdCalculator.calculateBlueId(inheritedItems);
+                    String itemsBlueId = resolvedListBlueId(inheritedItems);
                     minimalItems.add(0, new Node().previousBlueId(itemsBlueId));
                     minimal.items(minimalItems);
                 }
@@ -251,6 +251,14 @@ public class MergeReverser {
 
     private String comparisonBlueId(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+    }
+
+    private String resolvedListBlueId(List<Node> nodes) {
+        List<Node> inputs = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            inputs.add(NodeToBlueIdInput.stripResolvedBlueIdMetadata(node.clone()));
+        }
+        return BlueIdCalculator.calculateBlueId(inputs);
     }
 
     private void setTypeIfDifferent(Node merged, Node fromType, Node minimal, boolean canonicalOverlay,

@@ -125,6 +125,64 @@ class MergeReverserInlineTypeTest {
     }
 
     @Test
+    void anonymousSubtypeWithInheritedTypedListRoundTripsAcrossIndependentProviders() {
+        BasicNodeProvider writerProvider = providerWithTypedListParent();
+        Blue writer = new Blue(writerProvider);
+        String parentBlueId = writerProvider.getBlueIdByName("Typed List Parent");
+        Node source = writer.yamlToNode(
+                "type:\n" +
+                "  name: Anonymous Child\n" +
+                "  type:\n" +
+                "    blueId: " + parentBlueId + "\n" +
+                "childValue: present");
+        ResolvedSnapshot original = writer.resolveToSnapshot(source);
+        String resolvedBefore = writer.nodeToJson(original.resolvedRoot());
+
+        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+
+        BasicNodeProvider readerProvider = providerWithTypedListParent();
+        Blue reader = new Blue(readerProvider);
+        ResolvedSnapshot reloaded = reader.resolveToSnapshot(
+                reader.jsonToNode(writer.nodeToJson(minimized)));
+
+        assertNotNull(minimized.getType());
+        assertNull(minimized.getType().getBlueId(), "The anonymous subtype must remain inline.");
+        assertEquals(parentBlueId, minimized.getType().getType().getBlueId());
+        assertEquals(original.blueId(), reloaded.blueId());
+        assertEquals(resolvedBefore, reader.nodeToJson(reloaded.resolvedRoot()));
+    }
+
+    @Test
+    void anonymousSubtypeMinimizesInheritedListWithResolvedTypeMetadata() {
+        String leafBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Resolved Leaf"));
+        String parentBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Resolved Parent"));
+        Node inheritedItem = new Node().properties("val", new Node()
+                .type(new Node().blueId(leafBlueId).name("Resolved Leaf"))
+                .properties("note", new Node().value("inherited")));
+        Node parent = new Node()
+                .blueId(parentBlueId)
+                .name("Resolved Parent")
+                .properties("steps", new Node().items(inheritedItem));
+        Node anonymousType = new Node()
+                .name("Anonymous Child")
+                .type(parent)
+                .properties("steps", new Node().items(
+                        inheritedItem.clone(),
+                        new Node().properties("note", new Node().value("child"))));
+        Node resolvedInstance = new Node().type(anonymousType);
+
+        Node minimized = new MergeReverser().reverseToMinimizedOverlay(resolvedInstance);
+
+        Node minimizedType = minimized.getType();
+        assertNotNull(minimizedType);
+        assertNull(minimizedType.getBlueId());
+        assertEquals(parentBlueId, minimizedType.getType().getBlueId());
+        assertEquals(2, minimizedType.getAsNode("/steps").getItems().size());
+        assertNotNull(minimizedType.getAsNode("/steps").getItems().get(0).getPreviousBlueId());
+        BlueIdCalculator.calculateBlueId(minimized);
+    }
+
+    @Test
     void namedTypeRemainsAReferenceInTheMinimizedOverlay() {
         BasicNodeProvider writerProvider = providerWithNamedAppendOnlyType();
         BasicNodeProvider readerProvider = providerWithNamedAppendOnlyType();
@@ -192,6 +250,24 @@ class MergeReverserInlineTypeTest {
                 "mergePolicy: append-only\n" +
                 "items:\n" +
                 "  - A");
+        return provider;
+    }
+
+    private static BasicNodeProvider providerWithTypedListParent() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Typed List Leaf\n" +
+                "description: Named type used by an inherited list item");
+        String leafBlueId = provider.getBlueIdByName("Typed List Leaf");
+        provider.addSingleDocs(
+                "name: Typed List Parent\n" +
+                "steps:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - val:\n" +
+                "        type:\n" +
+                "          blueId: " + leafBlueId + "\n" +
+                "        note: inherited");
         return provider;
     }
 
