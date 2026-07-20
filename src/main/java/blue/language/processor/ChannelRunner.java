@@ -335,9 +335,9 @@ final class ChannelRunner {
                     false);
             metrics.incrementHandlersExecuted();
             long executionStart = System.nanoTime();
-            try {
-                ProcessorEngine.executeHandler(owner, handler.contract(), context);
-                context.applyBufferedEffects();
+            try (ProcessorExecutionContext ownedContext = context) {
+                ProcessorEngine.executeHandler(owner, handler.contract(), ownedContext);
+                ownedContext.applyBufferedEffects();
             } catch (RunTerminationException ex) {
                 throw ex;
             } catch (ProcessorFatalException ex) {

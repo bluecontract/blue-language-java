@@ -1,3 +1,38 @@
+## Unreleased (next 3.1.0 release candidate)
+
+### Feat
+
+- add immutable `FrozenJsonPatch` APIs for direct frozen patch-value handoff
+- add configurable per-runtime cache policy, cache statistics, and idempotent runtime close
+- add production-path processing metrics snapshots and conservative patch-impact classification
+
+### Performance
+
+- stream supported strict frozen canonical inputs directly into BlueId digests while retaining
+  the generic JCS fallback and compatibility oracle
+- reuse resolved metadata for dependency-proven basic scalar typed-leaf replacements
+- bound reloadable derived snapshots, aliases, recent-processing state, shared verified-reference
+  acceleration, and structural interning while preserving authoritative and active pinned evidence
+- replace hot implicit decimal/index regex compilation with exact ASCII scans
+
+### Compatibility
+
+- retain all existing mutable patch APIs and Java 8 bytecode targeting
+- preserve full-resolution fallbacks for schema, fixed-value type, reference, collection,
+  contracts-changing, custom-merger, and unknown-capability cases
+- add reproducible source-release archives and JVM descriptor compatibility reporting
+
+### Fix
+
+- keep nested transient planning scopes from closing parent reference state
+- serialize shared processor-registry and type-resolution updates against processing and reject
+  lock upgrades instead of deadlocking
+- defensively own mutable raw map, list, and array payloads while preserving Jackson/JCS enum
+  and array behavior
+- drain work admitted through `Blue` runtime APIs during close and reject new or re-entrant
+  cache-sensitive work
+- isolate retained conformance views from refreshed cache generations
+
 ## v2.0.0 (2026-05-13)
 
 ### Feat

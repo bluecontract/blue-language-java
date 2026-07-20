@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
@@ -211,6 +212,14 @@ public final class DocumentProcessingRuntime {
 
     public void chargePatchAddOrReplace(Node value) {
         gasMeter.chargePatchAddOrReplace(value);
+    }
+
+    public void chargeFrozenPatchAddOrReplace(FrozenNode value) {
+        gasMeter.chargeFrozenPatchAddOrReplace(value);
+    }
+
+    public void chargeFrozenPatchAddOrReplace(long authoredCanonicalSizeBytes) {
+        gasMeter.chargeFrozenPatchAddOrReplace(authoredCanonicalSizeBytes);
     }
 
     public void chargePatchRemove() {
@@ -537,6 +546,29 @@ public final class DocumentProcessingRuntime {
         if (patches == null || patches.isEmpty()) {
             return Collections.emptyList();
         }
+        return applyPatchInputs(originScopePath, PatchInput.mutableList(patches));
+    }
+
+    public DocumentUpdateData applyFrozenPatch(String originScopePath, FrozenJsonPatch patch) {
+        if (patch == null) {
+            return null;
+        }
+        List<DocumentUpdateData> updates = applyFrozenPatches(
+                originScopePath, Collections.singletonList(patch));
+        return updates.isEmpty() ? null : updates.get(0);
+    }
+
+    /** Applies frozen patches as one rollback-all atomic transaction. */
+    public List<DocumentUpdateData> applyFrozenPatches(String originScopePath,
+                                                       List<FrozenJsonPatch> patches) {
+        if (patches == null || patches.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return applyPatchInputs(originScopePath, PatchInput.frozenList(patches));
+    }
+
+    private List<DocumentUpdateData> applyPatchInputs(String originScopePath,
+                                                      List<PatchInput> patches) {
         Node selectedRollback = selectedDocumentBacked ? materializedView.copyRoot() : null;
         ResolvedSnapshot snapshotRollback = snapshot;
         batchPatchCalls++;
@@ -547,7 +579,7 @@ public final class DocumentProcessingRuntime {
         }
         try {
             PlanningContext planning = planningContext(materializedView.root());
-            BatchPatchTransaction transaction = new BatchPatchTransaction(originScopePath,
+            BatchPatchTransaction transaction = BatchPatchTransaction.fromInputs(originScopePath,
                     patches,
                     planning,
                     currentConformanceEngine(),
@@ -638,6 +670,18 @@ public final class DocumentProcessingRuntime {
     PreparedPatchSequence preparePatchSequence(String originScopePath,
                                                List<JsonPatch> patches,
                                                WorkingDocument.Preview preview) {
+        return new PreparedPatchSequence(originScopePath, PatchInput.mutableList(patches), preview);
+    }
+
+    PreparedPatchSequence prepareFrozenPatchSequence(String originScopePath,
+                                                     List<FrozenJsonPatch> patches,
+                                                     WorkingDocument.Preview preview) {
+        return new PreparedPatchSequence(originScopePath, PatchInput.frozenList(patches), preview);
+    }
+
+    PreparedPatchSequence preparePatchInputSequence(String originScopePath,
+                                                    List<PatchInput> patches,
+                                                    WorkingDocument.Preview preview) {
         return new PreparedPatchSequence(originScopePath, patches, preview);
     }
 
@@ -966,7 +1010,7 @@ public final class DocumentProcessingRuntime {
         private final String originScope;
         private final int patchCount;
         private final WorkingDocument.Preview preview;
-        private final List<JsonPatch> patches;
+        private final List<PatchInput> patches;
         private ProcessingSnapshotManager sequenceSnapshotManager;
         private ProcessingSnapshotManager previousActiveSequenceSnapshotManager;
         private boolean sequenceSnapshotManagerActivated;
@@ -979,15 +1023,12 @@ public final class DocumentProcessingRuntime {
         private boolean counted;
 
         private PreparedPatchSequence(String originScope,
-                                      List<JsonPatch> requestedPatches,
+                                      List<PatchInput> requestedPatches,
                                       WorkingDocument.Preview preview) {
             this.originScope = PointerUtils.normalizeScope(originScope);
             this.preview = preview;
-            List<JsonPatch> checkedPatches = Objects.requireNonNull(requestedPatches, "patches");
-            this.patches = new ArrayList<>(checkedPatches.size());
-            for (JsonPatch patch : checkedPatches) {
-                this.patches.add(ImmutableJsonPatch.copy(patch));
-            }
+            List<PatchInput> checkedPatches = Objects.requireNonNull(requestedPatches, "patches");
+            this.patches = new ArrayList<>(checkedPatches);
             this.patchCount = this.patches.size();
         }
 
@@ -996,6 +1037,10 @@ public final class DocumentProcessingRuntime {
         }
 
         JsonPatch patchForValidation(int patchIndex) {
+            return patchAt(patchIndex).legacyPatch();
+        }
+
+        PatchInput patchInputForValidation(int patchIndex) {
             return patchAt(patchIndex);
         }
 
@@ -1003,7 +1048,7 @@ public final class DocumentProcessingRuntime {
             if (closed) {
                 throw new IllegalStateException("Patch sequence is already closed");
             }
-            JsonPatch authoredPatch = patchAt(patchIndex);
+            PatchInput authoredPatch = patchAt(patchIndex);
             if (!counted) {
                 patchSequencesPrepared++;
                 batchPatchCalls++;
@@ -1109,11 +1154,11 @@ public final class DocumentProcessingRuntime {
             }
         }
 
-        private JsonPatch patchAt(int patchIndex) {
+        private PatchInput patchAt(int patchIndex) {
             if (patchIndex < 0 || patchIndex >= patchCount) {
                 throw new IndexOutOfBoundsException("Patch index outside prepared sequence: " + patchIndex);
             }
-            JsonPatch patch = patches.get(patchIndex);
+            PatchInput patch = patches.get(patchIndex);
             if (patch == null) {
                 throw new IllegalStateException("Patch was already consumed: " + patchIndex);
             }
@@ -1184,7 +1229,11 @@ public final class DocumentProcessingRuntime {
                     || sequenceSnapshotManager.isTransientStateCurrent()) {
                 return;
             }
+            ProcessingSnapshotManager invalid = sequenceSnapshotManager;
             deactivateSequenceSnapshotManager();
+            closePlanningSession();
+            sequenceSnapshotManager = null;
+            invalid.releaseTransientState();
             sequenceSnapshotManager = snapshotManager != null
                     ? snapshotManager.transientSequence()
                     : null;
@@ -1249,16 +1298,45 @@ public final class DocumentProcessingRuntime {
                         promoteCurrentSequenceSnapshot(manager);
                     }
                 }
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
+                ProcessingSnapshotManager failedManager = sequenceSnapshotManager;
                 deactivateSequenceSnapshotManager();
+                sequenceSnapshotManager = null;
+                try {
+                    closePlanningSession();
+                } catch (RuntimeException | Error cleanupFailure) {
+                    if (ex != cleanupFailure) {
+                        ex.addSuppressed(cleanupFailure);
+                    }
+                }
+                if (failedManager != null) {
+                    try {
+                        failedManager.releaseTransientState();
+                    } catch (RuntimeException | Error cleanupFailure) {
+                        if (ex != cleanupFailure) {
+                            ex.addSuppressed(cleanupFailure);
+                        }
+                    }
+                }
                 throw ex;
             }
+            ProcessingSnapshotManager managerToRelease = sequenceSnapshotManager;
             deactivateSequenceSnapshotManager();
-            planningSession = null;
+            closePlanningSession();
             sequenceSnapshotManager = null;
             observedCanonical = null;
             observedResolved = null;
             closed = true;
+            if (managerToRelease != null) {
+                managerToRelease.releaseTransientState();
+            }
+        }
+
+        private void closePlanningSession() {
+            if (planningSession != null) {
+                planningSession.close();
+                planningSession = null;
+            }
         }
     }
 

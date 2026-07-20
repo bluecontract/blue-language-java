@@ -6,17 +6,30 @@ on:
       - next
     paths:
       - '.cz.toml'
+      - '.github/**'
+      - 'CHANGELOG.md'
+      - 'LICENSE*'
+      - 'README*'
       - 'build.gradle'
-      - 'settings.gradle.kts'
+      - 'settings.gradle*'
+      - 'docs/**'
       - 'gradle.properties'
       - 'gradle/wrapper/**'
       - 'gradlew'
       - 'gradlew.bat'
       - 'src/**'
+      - 'tools/**'
+
+permissions:
+  contents: read
 
 env:
   CI: true
-  GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+  BLUE_RELEASE_CHANNEL: rc
+
+concurrency:
+  group: release-rc-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   ReleaseRC:
@@ -27,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.WORKFLOW_PAT }}
+          persist-credentials: false
 
       - name: Fetch master and tags
         run: git fetch origin master:refs/remotes/origin/master --tags
@@ -56,14 +69,100 @@ jobs:
         id: version
         run: node .github/scripts/prepare-rc-release.js
 
+      - name: Verify release authorization
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: node .github/scripts/verify-release-readiness.js
+
       - name: Commit and tag RC version
         run: |
           git add .cz.toml
-          git commit -m "chore: release ${{ steps.version.outputs.version }}"
+          git commit --allow-empty -m "chore: release ${{ steps.version.outputs.version }}"
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
 
       - name: Execute Gradle build
-        run: ./gradlew clean build
+        run: >-
+          ./gradlew clean build identityDifferentialTest
+          patchSequenceDifferentialTest memoryIntegrationTest cacheLifecycleTest
+          jmhClasses sourceReleaseArchive
+
+      - name: Verify binary API compatibility
+        run: |
+          baseline_root="$(mktemp -d)"
+          master_dir="${baseline_root}/master"
+          previous_rc_dir="${baseline_root}/previous-rc"
+          current_version='${{ steps.version.outputs.version }}'
+          rc_series="${current_version%-rc.*}"
+          previous_rc_tag=''
+          while IFS= read -r candidate_tag; do
+            if [[ "$candidate_tag" != "v${current_version}" ]]; then
+              previous_rc_tag="$candidate_tag"
+              break
+            fi
+          done < <(git tag --list "v${rc_series}-rc.*" --sort=-version:refname)
+
+          git worktree add --detach "$master_dir" origin/master
+          if [[ -n "$previous_rc_tag" ]]; then
+            git worktree add --detach "$previous_rc_dir" "$previous_rc_tag"
+          fi
+          cleanup() {
+            git worktree remove --force "$master_dir" || true
+            if [[ -n "$previous_rc_tag" ]]; then
+              git worktree remove --force "$previous_rc_dir" || true
+            fi
+          }
+          trap cleanup EXIT
+
+          BLUE_RELEASE_CHANNEL=stable "$master_dir/gradlew" -p "$master_dir" jar --no-daemon
+          if [[ -n "$previous_rc_tag" ]]; then
+            BLUE_RELEASE_CHANNEL=rc "$previous_rc_dir/gradlew" -p "$previous_rc_dir" jar --no-daemon
+          fi
+          mapfile -t master_jars < <(find "$master_dir/build/libs" -maxdepth 1 -type f \
+            -name 'blue-language-java-*.jar' \
+            ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-jmh.jar')
+          mapfile -t candidate_jars < <(find build/libs -maxdepth 1 -type f \
+            -name 'blue-language-java-*.jar' \
+            ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-jmh.jar')
+          test "${#master_jars[@]}" -eq 1
+          test "${#candidate_jars[@]}" -eq 1
+          tools/check-binary-api.sh \
+            "${master_jars[0]}" \
+            "${candidate_jars[0]}" \
+            build/reports/binary-api/master-to-candidate.txt
+          if [[ -n "$previous_rc_tag" ]]; then
+            mapfile -t previous_rc_jars < <(find "$previous_rc_dir/build/libs" -maxdepth 1 -type f \
+              -name 'blue-language-java-*.jar' \
+              ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-jmh.jar')
+            test "${#previous_rc_jars[@]}" -eq 1
+            tools/check-binary-api.sh \
+              "${previous_rc_jars[0]}" \
+              "${candidate_jars[0]}" \
+              build/reports/binary-api/previous-rc-to-candidate.txt
+            printf 'Previous RC baseline: %s\n' "$previous_rc_tag" \
+              > build/reports/binary-api/previous-rc-baseline.txt
+          else
+            printf 'Previous RC baseline: none; master is the only baseline\n' \
+              > build/reports/binary-api/previous-rc-baseline.txt
+          fi
+
+      # Publish the unique version reservation before any remote artifact upload.
+      # A failed release can then advance to a new RC instead of reusing a
+      # coordinate that a previous attempt may already have uploaded.
+      - name: Push release commit and tag
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          gh auth setup-git
+          git push origin HEAD:next --follow-tags
+
+      - name: Verify immutable release tag provenance
+        run: |
+          release_commit="$(git rev-parse HEAD)"
+          local_tag_commit="$(git rev-parse 'v${{ steps.version.outputs.version }}^{}')"
+          remote_tag_commit="$(git ls-remote origin 'refs/tags/v${{ steps.version.outputs.version }}^{}' | awk '{print $1}')"
+          test -n "$remote_tag_commit"
+          test "$release_commit" = "$local_tag_commit"
+          test "$release_commit" = "$remote_tag_commit"
 
       - name: Execute Gradle publish
         run: ./gradlew publish
@@ -78,9 +177,6 @@ jobs:
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
         run: ./gradlew jreleaserFullRelease
 
-      - name: Push release commit and tag
-        run: git push origin HEAD:next --follow-tags
-
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
         if: always()
@@ -89,4 +185,6 @@ jobs:
           path: |
             build/libs
             build/publications
+            build/release
+            build/reports/binary-api
             build/jreleaser

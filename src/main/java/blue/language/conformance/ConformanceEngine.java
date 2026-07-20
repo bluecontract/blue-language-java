@@ -1,7 +1,9 @@
 package blue.language.conformance;
 
+import blue.language.BlueCachePolicy;
 import blue.language.NodeProvider;
 import blue.language.merge.Merger;
+import blue.language.merge.IncrementalMergingProcessorCapability;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
@@ -15,11 +17,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public final class ConformanceEngine {
+public final class ConformanceEngine implements AutoCloseable {
 
     private final NodeProvider nodeProvider;
     private final MergingProcessor mergingProcessor;
     private final ResolvedReferenceCache resolvedReferenceCache;
+    private final boolean ownsReferenceCache;
 
     public ConformanceEngine(NodeProvider nodeProvider, MergingProcessor mergingProcessor) {
         this(nodeProvider, mergingProcessor, null);
@@ -28,9 +31,49 @@ public final class ConformanceEngine {
     public ConformanceEngine(NodeProvider nodeProvider,
                              MergingProcessor mergingProcessor,
                              ResolvedReferenceCache resolvedReferenceCache) {
+        this(nodeProvider, mergingProcessor, resolvedReferenceCache, false);
+    }
+
+    /**
+     * Creates an engine with an independent bounded reference cache that is
+     * released when the engine is closed. This is suitable for handles whose
+     * lifetime may outlast the runtime configuration that created them.
+     */
+    public static ConformanceEngine withIsolatedCache(
+            NodeProvider nodeProvider,
+            MergingProcessor mergingProcessor,
+            BlueCachePolicy cachePolicy) {
+        return new ConformanceEngine(nodeProvider,
+                mergingProcessor,
+                new ResolvedReferenceCache(Objects.requireNonNull(cachePolicy, "cachePolicy")),
+                true);
+    }
+
+    /**
+     * Creates an engine with an independent cache seeded from the verified
+     * entries that are caller-pinned in {@code seedSource} at creation time.
+     * Later source-cache invalidation cannot affect this engine, and entries
+     * discovered by this engine cannot be published back to the source.
+     */
+    public static ConformanceEngine withIsolatedCache(
+            NodeProvider nodeProvider,
+            MergingProcessor mergingProcessor,
+            ResolvedReferenceCache seedSource) {
+        return new ConformanceEngine(nodeProvider,
+                mergingProcessor,
+                Objects.requireNonNull(seedSource, "seedSource")
+                        .isolatedCopyOfPinnedVerifiedEntries(),
+                true);
+    }
+
+    private ConformanceEngine(NodeProvider nodeProvider,
+                              MergingProcessor mergingProcessor,
+                              ResolvedReferenceCache resolvedReferenceCache,
+                              boolean ownsReferenceCache) {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = Objects.requireNonNull(mergingProcessor, "mergingProcessor");
         this.resolvedReferenceCache = resolvedReferenceCache;
+        this.ownsReferenceCache = ownsReferenceCache;
     }
 
     /**
@@ -41,14 +84,35 @@ public final class ConformanceEngine {
         if (resolvedReferenceCache == null) {
             return this;
         }
-        return transientView(resolvedReferenceCache.transientChild());
+        return new ConformanceEngine(nodeProvider,
+                mergingProcessor,
+                resolvedReferenceCache.transientChild(),
+                true);
     }
 
     /** Creates a planning view backed by the supplied sequence-local cache. */
     public ConformanceEngine transientView(ResolvedReferenceCache transientReferenceCache) {
         return new ConformanceEngine(nodeProvider,
                 mergingProcessor,
-                Objects.requireNonNull(transientReferenceCache, "transientReferenceCache"));
+                Objects.requireNonNull(transientReferenceCache, "transientReferenceCache"),
+                false);
+    }
+
+    @Override
+    public void close() {
+        if (ownsReferenceCache && resolvedReferenceCache != null) {
+            resolvedReferenceCache.close();
+        }
+    }
+
+    /**
+     * Returns whether this engine uses the exact built-in merge pipeline that
+     * participates in conservative value-only dependency analysis.
+     */
+    public boolean supportsIncrementalValueResolution() {
+        return mergingProcessor instanceof IncrementalMergingProcessorCapability
+                && ((IncrementalMergingProcessorCapability) mergingProcessor)
+                .supportsIncrementalValueResolution();
     }
 
     public ConformanceResult check(Node node) {

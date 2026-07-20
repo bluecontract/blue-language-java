@@ -289,6 +289,18 @@ final class ScopeExecutor {
                        List<JsonPatch> patches,
                        boolean allowReservedMutation,
                        WorkingDocument.Preview preview) {
+        handlePatchInputs(scopePath,
+                bundle,
+                PatchInput.mutableList(patches),
+                allowReservedMutation,
+                preview);
+    }
+
+    void handlePatchInputs(String scopePath,
+                           ContractBundle bundle,
+                           List<PatchInput> patches,
+                           boolean allowReservedMutation,
+                           WorkingDocument.Preview preview) {
         if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
@@ -296,9 +308,9 @@ final class ScopeExecutor {
             return;
         }
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
-                     runtime.preparePatchSequence(scopePath, patches, preview)) {
+                     runtime.preparePatchInputSequence(scopePath, patches, preview)) {
             for (int patchIndex = 0; patchIndex < sequence.size(); patchIndex++) {
-                JsonPatch patch = sequence.patchForValidation(patchIndex);
+                PatchInput patch = sequence.patchInputForValidation(patchIndex);
                 if (execution.shouldStopScopeWork(scopePath)) {
                     return;
                 }
@@ -381,11 +393,16 @@ final class ScopeExecutor {
         }
     }
 
-    private void chargePatchGas(JsonPatch patch) {
-        switch (patch.getOp()) {
+    private void chargePatchGas(PatchInput patch) {
+        switch (patch.op()) {
             case ADD:
             case REPLACE:
-                runtime.chargePatchAddOrReplace(patch.getVal());
+                if (patch.isFrozen()) {
+                    runtime.chargeFrozenPatchAddOrReplace(
+                            patch.frozenAuthoredCanonicalSizeBytes());
+                } else {
+                    runtime.chargePatchAddOrReplace(patch.mutableValue());
+                }
                 break;
             case REMOVE:
                 runtime.chargePatchRemove();
@@ -734,12 +751,12 @@ final class ScopeExecutor {
         }
     }
 
-    private void validatePatchBoundary(String scopePath, ContractBundle bundle, JsonPatch patch) {
+    private void validatePatchBoundary(String scopePath, ContractBundle bundle, PatchInput patch) {
         if (bundle == null) {
             return;
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = PointerUtils.assertValidRuntimePointer(patch.getPath());
+        String targetPath = PointerUtils.assertValidRuntimePointer(patch.authoredPath());
 
         if ("/".equals(targetPath)) {
             throw new ProcessorEngine.BoundaryViolationException("Patch path '/' is forbidden");
@@ -766,13 +783,13 @@ final class ScopeExecutor {
     }
 
     private void enforceReservedKeyWriteProtection(String scopePath,
-                                                   JsonPatch patch,
+                                                   PatchInput patch,
                                                    boolean allowReservedMutation) {
         if (allowReservedMutation) {
             return;
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = PointerUtils.assertValidRuntimePointer(patch.getPath());
+        String targetPath = PointerUtils.assertValidRuntimePointer(patch.authoredPath());
         String contractsPointer = ProcessorEngine.resolvePointer(normalizedScope, ProcessorPointerConstants.RELATIVE_CONTRACTS);
         if (targetPath.equals(contractsPointer)) {
             enforceContractsMapReservedSubtreePreservation(normalizedScope, patch);
@@ -794,8 +811,8 @@ final class ScopeExecutor {
         }
     }
 
-    private void enforceContractsMapReservedSubtreePreservation(String scopePath, JsonPatch patch) {
-        if (patch.getOp() == JsonPatch.Op.REMOVE) {
+    private void enforceContractsMapReservedSubtreePreservation(String scopePath, PatchInput patch) {
+        if (patch.op() == JsonPatch.Op.REMOVE) {
             for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
                 String reservedPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.relativeContractsEntry(key));
                 if (runtime.canonicalNodeAt(reservedPointer) != null) {
@@ -805,21 +822,47 @@ final class ScopeExecutor {
             }
             return;
         }
-        Node replacement = patch.getVal();
+        Node replacement = patch.mutableValue();
+        FrozenNode frozenReplacement = patch.frozenValue();
         for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
             String reservedPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.relativeContractsEntry(key));
-            Node existing = runtime.canonicalNodeAt(reservedPointer);
-            if (existing == null) {
-                continue;
+            boolean equal;
+            if (patch.isFrozen()) {
+                FrozenNode existing = runtime.canonicalFrozenAt(reservedPointer);
+                if (existing == null) {
+                    continue;
+                }
+                FrozenNode proposed = frozenReplacement != null
+                        ? frozenReplacement.property(key)
+                        : null;
+                equal = semanticallyEqual(existing, proposed);
+            } else {
+                Node existing = runtime.canonicalNodeAt(reservedPointer);
+                if (existing == null) {
+                    continue;
+                }
+                Node proposed = replacement != null && replacement.getProperties() != null
+                        ? replacement.getProperties().get(key)
+                        : null;
+                equal = semanticallyEqual(existing, proposed);
             }
-            Node proposed = replacement != null && replacement.getProperties() != null
-                    ? replacement.getProperties().get(key)
-                    : null;
-            if (!semanticallyEqual(existing, proposed)) {
+            if (!equal) {
                 throw new ProcessorFailureException(ProcessorErrorCategory.ReservedKeyWrite,
                         "Replacing /contracts must preserve reserved key '" + key + "'");
             }
         }
+    }
+
+    private boolean semanticallyEqual(FrozenNode left, FrozenNode right) {
+        if (left == null || right == null) {
+            return left == right;
+        }
+        // Reserved runtime subtrees are stored as unchecked canonical state,
+        // while a public FrozenJsonPatch carries a strict authored value.  The
+        // boundary's historical oracle is the unchecked identity used by the
+        // mutable lane, so normalize both representations to that identity.
+        return BlueIdCalculator.calculateUncheckedBlueId(left.toNode())
+                .equals(BlueIdCalculator.calculateUncheckedBlueId(right.toNode()));
     }
 
     private boolean semanticallyEqual(Node left, Node right) {

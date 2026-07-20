@@ -6,11 +6,17 @@ import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 
+import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Maintains the mapping between contract BlueIds and their processors.
@@ -24,63 +30,167 @@ public class ContractProcessorRegistry {
     private final Map<String, HandlerProcessor<? extends HandlerContract>> handlerProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ContractProcessor<? extends MarkerContract>> markerProcessorsByBlueId = new LinkedHashMap<>();
+    private final Map<String, ContractProcessor<? extends Contract>> processorsView =
+            Collections.unmodifiableMap(
+                    new AbstractMap<String, ContractProcessor<? extends Contract>>() {
+                        private final Set<Entry<String, ContractProcessor<? extends Contract>>> entries =
+                                new AbstractSet<Entry<String, ContractProcessor<? extends Contract>>>() {
+                                    @Override
+                                    public Iterator<Entry<String, ContractProcessor<? extends Contract>>> iterator() {
+                                        synchronized (ContractProcessorRegistry.this) {
+                                            return Collections.unmodifiableMap(
+                                                    new LinkedHashMap<>(processorsByBlueId))
+                                                    .entrySet()
+                                                    .iterator();
+                                        }
+                                    }
+
+                                    @Override
+                                    public int size() {
+                                        synchronized (ContractProcessorRegistry.this) {
+                                            return processorsByBlueId.size();
+                                        }
+                                    }
+
+                                    @Override
+                                    public boolean contains(Object entry) {
+                                        synchronized (ContractProcessorRegistry.this) {
+                                            return processorsByBlueId.entrySet().contains(entry);
+                                        }
+                                    }
+                                };
+
+                        @Override
+                        public ContractProcessor<? extends Contract> get(Object key) {
+                            synchronized (ContractProcessorRegistry.this) {
+                                return processorsByBlueId.get(key);
+                            }
+                        }
+
+                        @Override
+                        public boolean containsKey(Object key) {
+                            synchronized (ContractProcessorRegistry.this) {
+                                return processorsByBlueId.containsKey(key);
+                            }
+                        }
+
+                        @Override
+                        public int size() {
+                            synchronized (ContractProcessorRegistry.this) {
+                                return processorsByBlueId.size();
+                            }
+                        }
+
+                        @Override
+                        public Set<Entry<String, ContractProcessor<? extends Contract>>> entrySet() {
+                            return entries;
+                        }
+                    });
+    private final ReentrantReadWriteLock configurationLock = new ReentrantReadWriteLock();
     private long version;
 
+    Lock configurationReadLock() {
+        return configurationLock.readLock();
+    }
+
+    Lock configurationWriteLock() {
+        return configurationLock.writeLock();
+    }
+
+    boolean isConfigurationReadHeldByCurrentThread() {
+        return configurationLock.getReadHoldCount() > 0;
+    }
+
     public <T extends HandlerContract> void registerHandler(HandlerProcessor<T> processor) {
-        Objects.requireNonNull(processor, "processor");
-        registerBlueIds(processor.contractType(), processor);
-        handlerProcessors.put(processor.contractType(), processor);
+        mutateConfiguration(() -> registerHandlerInternal(processor));
     }
 
     public <T extends ChannelContract> void registerChannel(ChannelProcessor<T> processor) {
-        Objects.requireNonNull(processor, "processor");
-        registerBlueIds(processor.contractType(), processor);
-        channelProcessors.put(processor.contractType(), processor);
+        mutateConfiguration(() -> registerChannelInternal(processor));
     }
 
     public <T extends MarkerContract> void registerMarker(ContractProcessor<T> processor) {
-        Objects.requireNonNull(processor, "processor");
-        registerBlueIds(processor.contractType(), processor);
-        markerProcessors.put(processor.contractType(), processor);
+        mutateConfiguration(() -> registerMarkerInternal(processor));
     }
 
     public void register(ContractProcessor<? extends Contract> processor) {
+        mutateConfiguration(() -> registerInternal(processor));
+    }
+
+    public void register(String blueId, ContractProcessor<? extends Contract> processor) {
+        mutateConfiguration(() -> {
+            Objects.requireNonNull(processor, "processor");
+            if (blueId == null || blueId.isEmpty()) {
+                throw new IllegalArgumentException("blueId must not be empty");
+            }
+            registerBlueId(blueId, processor);
+            registerClassLookup(processor);
+        });
+    }
+
+    private void registerInternal(ContractProcessor<? extends Contract> processor) {
         Objects.requireNonNull(processor, "processor");
         if (processor instanceof HandlerProcessor) {
             @SuppressWarnings("unchecked")
             HandlerProcessor<? extends HandlerContract> handler = (HandlerProcessor<? extends HandlerContract>) processor;
-            registerHandler(handler);
+            registerHandlerInternal(handler);
         } else if (processor instanceof ChannelProcessor) {
             @SuppressWarnings("unchecked")
             ChannelProcessor<? extends ChannelContract> channel = (ChannelProcessor<? extends ChannelContract>) processor;
-            registerChannel(channel);
+            registerChannelInternal(channel);
         } else if (processor.contractType() != null && MarkerContract.class.isAssignableFrom(processor.contractType())) {
             @SuppressWarnings("unchecked")
             ContractProcessor<? extends MarkerContract> marker = (ContractProcessor<? extends MarkerContract>) processor;
-            registerMarker(marker);
+            registerMarkerInternal(marker);
         } else {
             throw new IllegalArgumentException("Unsupported processor type: " + processor.getClass().getName());
         }
     }
 
-    public void register(String blueId, ContractProcessor<? extends Contract> processor) {
+    private <T extends HandlerContract> void registerHandlerInternal(HandlerProcessor<T> processor) {
         Objects.requireNonNull(processor, "processor");
-        if (blueId == null || blueId.isEmpty()) {
-            throw new IllegalArgumentException("blueId must not be empty");
-        }
-        registerBlueId(blueId, processor);
-        registerClassLookup(processor);
+        registerBlueIds(processor.contractType(), processor);
+        handlerProcessors.put(processor.contractType(), processor);
     }
 
-    public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Class<? extends HandlerContract> type) {
+    private <T extends ChannelContract> void registerChannelInternal(ChannelProcessor<T> processor) {
+        Objects.requireNonNull(processor, "processor");
+        registerBlueIds(processor.contractType(), processor);
+        channelProcessors.put(processor.contractType(), processor);
+    }
+
+    private <T extends MarkerContract> void registerMarkerInternal(ContractProcessor<T> processor) {
+        Objects.requireNonNull(processor, "processor");
+        registerBlueIds(processor.contractType(), processor);
+        markerProcessors.put(processor.contractType(), processor);
+    }
+
+    private void mutateConfiguration(Runnable mutation) {
+        if (configurationLock.getReadHoldCount() > 0
+                && !configurationLock.isWriteLockedByCurrentThread()) {
+            throw new IllegalStateException(
+                    "Contract processor configuration cannot change during active processing");
+        }
+        Lock write = configurationWriteLock();
+        write.lock();
+        try {
+            synchronized (this) {
+                mutation.run();
+            }
+        } finally {
+            write.unlock();
+        }
+    }
+
+    public synchronized Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Class<? extends HandlerContract> type) {
         return Optional.ofNullable(handlerProcessors.get(type));
     }
 
-    public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
+    public synchronized Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
         return Optional.ofNullable(handlerProcessorsByBlueId.get(blueId));
     }
 
-    public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(HandlerContract contract) {
+    public synchronized Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(HandlerContract contract) {
         if (contract == null) {
             return Optional.empty();
         }
@@ -90,15 +200,15 @@ public class ContractProcessorRegistry {
                 : lookupHandler(contract.getClass().asSubclass(HandlerContract.class));
     }
 
-    public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Class<? extends ChannelContract> type) {
+    public synchronized Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Class<? extends ChannelContract> type) {
         return Optional.ofNullable(channelProcessors.get(type));
     }
 
-    public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
+    public synchronized Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
         return Optional.ofNullable(channelProcessorsByBlueId.get(blueId));
     }
 
-    public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(ChannelContract contract) {
+    public synchronized Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(ChannelContract contract) {
         if (contract == null) {
             return Optional.empty();
         }
@@ -108,15 +218,15 @@ public class ContractProcessorRegistry {
                 : lookupChannel(contract.getClass().asSubclass(ChannelContract.class));
     }
 
-    public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Class<? extends MarkerContract> type) {
+    public synchronized Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Class<? extends MarkerContract> type) {
         return Optional.ofNullable(markerProcessors.get(type));
     }
 
-    public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
+    public synchronized Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
         return Optional.ofNullable(markerProcessorsByBlueId.get(blueId));
     }
 
-    public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(MarkerContract contract) {
+    public synchronized Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(MarkerContract contract) {
         if (contract == null) {
             return Optional.empty();
         }
@@ -126,11 +236,11 @@ public class ContractProcessorRegistry {
                 : lookupMarker(contract.getClass().asSubclass(MarkerContract.class));
     }
 
-    public Map<String, ContractProcessor<? extends Contract>> processors() {
-        return Collections.unmodifiableMap(processorsByBlueId);
+    public synchronized Map<String, ContractProcessor<? extends Contract>> processors() {
+        return processorsView;
     }
 
-    long version() {
+    synchronized long version() {
         return version;
     }
 

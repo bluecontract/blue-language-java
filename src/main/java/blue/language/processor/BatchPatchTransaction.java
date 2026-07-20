@@ -16,7 +16,7 @@ import java.util.List;
  */
 final class BatchPatchTransaction {
 
-    private final List<JsonPatch> patches;
+    private final List<PatchInput> patches;
     private final PatchPlanningEngine planningEngine;
     private final boolean buildUpdates;
 
@@ -55,6 +55,24 @@ final class BatchPatchTransaction {
                           DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
                           boolean buildUpdates,
                           ProcessingMetricsSink metrics) {
+        this.patches = PatchInput.mutableList(patches);
+        this.planningEngine = new PatchPlanningEngine(originScopePath,
+                planning,
+                conformanceEngine,
+                conformancePlannerOverride,
+                materializationMetrics,
+                metrics);
+        this.buildUpdates = buildUpdates;
+    }
+
+    private BatchPatchTransaction(List<PatchInput> patches,
+                                  String originScopePath,
+                                  DocumentProcessingRuntime.PlanningContext planning,
+                                  ConformanceEngine conformanceEngine,
+                                  ConformancePlannerOverride conformancePlannerOverride,
+                                  DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                                  boolean buildUpdates,
+                                  ProcessingMetricsSink metrics) {
         this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
         this.planningEngine = new PatchPlanningEngine(originScopePath,
                 planning,
@@ -65,7 +83,25 @@ final class BatchPatchTransaction {
         this.buildUpdates = buildUpdates;
     }
 
+    static BatchPatchTransaction fromInputs(String originScopePath,
+                                            List<PatchInput> patches,
+                                            DocumentProcessingRuntime.PlanningContext planning,
+                                            ConformanceEngine conformanceEngine,
+                                            ConformancePlannerOverride conformancePlannerOverride,
+                                            DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                                            boolean buildUpdates,
+                                            ProcessingMetricsSink metrics) {
+        return new BatchPatchTransaction(patches,
+                originScopePath,
+                planning,
+                conformanceEngine,
+                conformancePlannerOverride,
+                materializationMetrics,
+                buildUpdates,
+                metrics);
+    }
+
     BatchPatchResult apply() {
-        return planningEngine.planAtomic(patches, buildUpdates);
+        return planningEngine.planAtomicInputs(patches, buildUpdates);
     }
 }

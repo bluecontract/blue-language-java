@@ -11,21 +11,29 @@ import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.TypeClassResolver;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Facade over the processor engine; retains public API for Document processing.
  */
-public class DocumentProcessor {
+public class DocumentProcessor implements AutoCloseable {
 
     private final ContractProcessorRegistry contractRegistry;
     private final TypeClassResolver contractTypeResolver;
     private final NodeToObjectConverter contractConverter;
     private final ContractLoader contractLoader;
-    private final ConformanceEngine conformanceEngine;
-    private final ConformancePlannerOverride conformancePlannerOverride;
-    private final ProcessingSnapshotManager snapshotManager;
-    private final ContractMatchingService matchingService;
-    private ProcessingMetricsSink metricsSink;
+    private ConformanceEngine conformanceEngine;
+    private ConformancePlannerOverride conformancePlannerOverride;
+    private ProcessingSnapshotManager snapshotManager;
+    private ContractMatchingService matchingService;
+    private volatile ProcessingMetricsSink metricsSink;
+    private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
+    private final Lock lifecycleRead = lifecycleLock.readLock();
+    private final Lock lifecycleWrite = lifecycleLock.writeLock();
+    private volatile boolean closed;
+    private volatile boolean cachesCleared;
+    private volatile boolean clearRequested;
 
     public DocumentProcessor() {
         this(ContractProcessorRegistryBuilder.create().registerDefaults().build());
@@ -93,11 +101,15 @@ public class DocumentProcessor {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
         this.contractTypeResolver = Objects.requireNonNull(contractTypeResolver, "contractTypeResolver");
         this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
-        this.contractLoader = new ContractLoader(contractRegistry, contractConverter, this.contractTypeResolver);
+        this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
+        this.contractLoader = new ContractLoader(
+                contractRegistry,
+                contractConverter,
+                this.contractTypeResolver,
+                this.matchingService.cachePolicy());
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
-        this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
         this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
     }
 
@@ -112,7 +124,15 @@ public class DocumentProcessor {
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
-        return ProcessorEngine.initializeDocument(this, document);
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            return ProcessorEngine.initializeDocument(this, document);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
     }
 
     /**
@@ -123,12 +143,28 @@ public class DocumentProcessor {
      * @return the initialization result and its authoritative snapshot
      */
     public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot) {
-        requireSnapshotManager();
-        return ProcessorEngine.initializeDocument(this, snapshot);
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            requireSnapshotManager();
+            return ProcessorEngine.initializeDocument(this, snapshot);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
     }
 
     public DocumentProcessingResult processDocument(Node document, Node event) {
-        return ProcessorEngine.processDocument(this, document, event);
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            return ProcessorEngine.processDocument(this, document, event);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
     }
 
     /**
@@ -140,30 +176,76 @@ public class DocumentProcessor {
      * @return the processing result and its authoritative snapshot
      */
     public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event) {
-        requireSnapshotManager();
-        return ProcessorEngine.processDocument(this, snapshot, event);
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            requireSnapshotManager();
+            return ProcessorEngine.processDocument(this, snapshot, event);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
     }
 
     public boolean isInitialized(Node document) {
-        return ProcessorEngine.isInitialized(this, document);
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            return ProcessorEngine.isInitialized(this, document);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
     }
 
     public boolean isInitialized(ResolvedSnapshot snapshot) {
-        return ProcessorEngine.isInitialized(this, snapshot);
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            return ProcessorEngine.isInitialized(this, snapshot);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
     }
 
     public DocumentProcessor registerContractProcessor(ContractProcessor<? extends Contract> processor) {
-        Objects.requireNonNull(processor, "processor");
-        contractRegistry.register(processor);
-        registerAnnotatedContractType(processor.contractType());
-        return this;
+        rejectWriteUpgrade();
+        Lock configurationWrite = contractRegistry.configurationWriteLock();
+        configurationWrite.lock();
+        lifecycleWrite.lock();
+        try {
+            ensureOpen();
+            Objects.requireNonNull(processor, "processor");
+            contractRegistry.register(processor);
+            registerAnnotatedContractType(processor.contractType());
+            clearCachesInternal();
+            return this;
+        } finally {
+            lifecycleWrite.unlock();
+            configurationWrite.unlock();
+        }
     }
 
     public DocumentProcessor registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
-        Objects.requireNonNull(processor, "processor");
-        contractRegistry.register(blueId, processor);
-        contractTypeResolver.register(blueId, processor.contractType());
-        return this;
+        rejectWriteUpgrade();
+        Lock configurationWrite = contractRegistry.configurationWriteLock();
+        configurationWrite.lock();
+        lifecycleWrite.lock();
+        try {
+            ensureOpen();
+            Objects.requireNonNull(processor, "processor");
+            contractRegistry.register(blueId, processor);
+            contractTypeResolver.register(blueId, processor.contractType());
+            clearCachesInternal();
+            return this;
+        } finally {
+            lifecycleWrite.unlock();
+            configurationWrite.unlock();
+        }
     }
 
     public ContractProcessorRegistry getContractRegistry() {
@@ -215,13 +297,151 @@ public class DocumentProcessor {
     }
 
     public DocumentProcessor processingMetricsSink(ProcessingMetricsSink metricsSink) {
-        this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
-        return this;
+        rejectWriteUpgrade();
+        lifecycleWrite.lock();
+        try {
+            ensureOpen();
+            this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+            return this;
+        } finally {
+            lifecycleWrite.unlock();
+        }
+    }
+
+    /** Releases every reloadable contract-plan and matching cache owned by this processor. */
+    public void clearCaches() {
+        if (lifecycleLock.getReadHoldCount() > 0) {
+            clearRequested = true;
+            return;
+        }
+        lifecycleWrite.lock();
+        try {
+            clearCachesInternal();
+            clearRequested = false;
+        } finally {
+            lifecycleWrite.unlock();
+        }
+    }
+
+    /** Returns the number of reloadable processor-plan cache entries. */
+    public int cacheEntryCount() {
+        int loaderEntries = contractLoader.cacheSize();
+        ContractMatchingService currentMatchingService = matchingService;
+        int matchingEntries = currentMatchingService != null
+                ? currentMatchingService.cacheEntryCount() : 0;
+        return Integer.MAX_VALUE - loaderEntries < matchingEntries
+                ? Integer.MAX_VALUE
+                : loaderEntries + matchingEntries;
+    }
+
+    /** Returns the approximate retained weight of reloadable processor-plan caches. */
+    public long cacheWeightBytes() {
+        long loaderWeight = contractLoader.cacheWeightBytes();
+        ContractMatchingService currentMatchingService = matchingService;
+        long matchingWeight = currentMatchingService != null
+                ? currentMatchingService.cacheWeightBytes() : 0L;
+        return Long.MAX_VALUE - loaderWeight < matchingWeight
+                ? Long.MAX_VALUE
+                : loaderWeight + matchingWeight;
     }
 
     public Map<String, MarkerContract> markersFor(Node scopeNode, String scopePath) {
-        ContractBundle bundle = contractLoader.load(FrozenNode.fromResolvedNode(scopeNode), scopePath);
-        return bundle.markers();
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            ContractBundle bundle = contractLoader.load(
+                    FrozenNode.fromResolvedNode(scopeNode), scopePath);
+            return bundle.markers();
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    /** Returns whether this processor has released its reloadable caches. */
+    public boolean isClosed() {
+        return closed;
+    }
+
+    /** Invalidates processor work and releases every reloadable plan/matching cache. */
+    @Override
+    public void close() {
+        closed = true;
+        if (lifecycleLock.getReadHoldCount() > 0) {
+            clearRequested = true;
+            return;
+        }
+        lifecycleWrite.lock();
+        try {
+            clearCachesIfNeeded();
+        } finally {
+            lifecycleWrite.unlock();
+        }
+    }
+
+    private void clearCachesInternal() {
+        contractLoader.clearCaches();
+        ContractMatchingService currentMatchingService = matchingService;
+        if (currentMatchingService != null) {
+            currentMatchingService.clearCaches();
+        }
+    }
+
+    private void releaseLifecycleRead() {
+        lifecycleRead.unlock();
+        if ((closed || clearRequested) && lifecycleLock.getReadHoldCount() == 0) {
+            lifecycleWrite.lock();
+            try {
+                clearCachesIfNeeded();
+            } finally {
+                lifecycleWrite.unlock();
+            }
+        }
+    }
+
+    private void releaseLifecycleReadAndConfiguration(Lock configurationRead) {
+        try {
+            releaseLifecycleRead();
+        } finally {
+            configurationRead.unlock();
+        }
+    }
+
+    private void clearCachesIfNeeded() {
+        if (closed) {
+            if (!cachesCleared) {
+                clearCachesInternal();
+                cachesCleared = true;
+            }
+            detachRuntimeCollaborators();
+            clearRequested = false;
+        } else if (clearRequested) {
+            clearCachesInternal();
+            clearRequested = false;
+        }
+    }
+
+    private void rejectWriteUpgrade() {
+        if (lifecycleLock.getReadHoldCount() > 0
+                || contractRegistry.isConfigurationReadHeldByCurrentThread()) {
+            throw new IllegalStateException(
+                    "Document processor configuration cannot change during active processing");
+        }
+    }
+
+    private void detachRuntimeCollaborators() {
+        conformanceEngine = null;
+        conformancePlannerOverride = null;
+        snapshotManager = null;
+        matchingService = null;
+        metricsSink = ProcessingMetricsSink.NOOP;
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException("Document processor is closed");
+        }
     }
 
     private void requireSnapshotManager() {

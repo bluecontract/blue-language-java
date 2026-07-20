@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.BlueCachePolicy;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
@@ -21,8 +22,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
@@ -44,14 +43,22 @@ final class ContractLoader {
     private final ContractProcessorRegistry registry;
     private final NodeToObjectConverter converter;
     private final TypeClassResolver typeResolver;
-    private final ConcurrentMap<BundleCacheKey, ContractBundle> bundleCache = new ConcurrentHashMap<>();
+    private final BundleCache bundleCache;
 
     ContractLoader(ContractProcessorRegistry registry,
                    NodeToObjectConverter converter,
                    TypeClassResolver typeResolver) {
+        this(registry, converter, typeResolver, BlueCachePolicy.boundedDefaults());
+    }
+
+    ContractLoader(ContractProcessorRegistry registry,
+                   NodeToObjectConverter converter,
+                   TypeClassResolver typeResolver,
+                   BlueCachePolicy cachePolicy) {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.converter = Objects.requireNonNull(converter, "converter");
         this.typeResolver = Objects.requireNonNull(typeResolver, "typeResolver");
+        this.bundleCache = new BundleCache(Objects.requireNonNull(cachePolicy, "cachePolicy"));
     }
 
     ContractBundle load(ResolvedSnapshot snapshot, String scopePath) {
@@ -131,6 +138,18 @@ final class ContractLoader {
         return built.copyWithRuntimeMarkers(runtimeMarkers.markers,
                 runtimeMarkers.nodes,
                 runtimeMarkers.checkpointDeclared);
+    }
+
+    void clearCaches() {
+        bundleCache.clear();
+    }
+
+    int cacheSize() {
+        return bundleCache.size();
+    }
+
+    long cacheWeightBytes() {
+        return bundleCache.currentWeightBytes();
     }
 
     private ContractBundle build(Node selectedScopeNode,
@@ -461,6 +480,109 @@ final class ContractLoader {
         }
         FrozenNode type = node.getType();
         return type.getReferenceBlueId() != null ? type.getReferenceBlueId() : type.blueId();
+    }
+
+    private static final class BundleCache {
+        private final int maximumEntries;
+        private final long maximumWeightBytes;
+        private final long maximumEntryWeightBytes;
+        private final LinkedHashMap<BundleCacheKey, BundleCacheEntry> entries =
+                new LinkedHashMap<BundleCacheKey, BundleCacheEntry>(16, 0.75f, true);
+        private long currentWeightBytes;
+
+        private BundleCache(BlueCachePolicy policy) {
+            this.maximumEntries = policy.conformancePlanMaxEntries();
+            this.maximumWeightBytes = policy.conformancePlanMaxWeightBytes();
+            this.maximumEntryWeightBytes = Math.min(
+                    policy.maximumDerivedEntryWeightBytes(), maximumWeightBytes);
+        }
+
+        private synchronized ContractBundle get(BundleCacheKey key) {
+            BundleCacheEntry entry = entries.get(key);
+            return entry != null ? entry.bundle : null;
+        }
+
+        private synchronized void putIfAbsent(BundleCacheKey key, ContractBundle bundle) {
+            if (entries.containsKey(key)) {
+                entries.get(key);
+                return;
+            }
+            long weight = estimateWeight(key, bundle);
+            if (weight > maximumEntryWeightBytes || weight > maximumWeightBytes) {
+                return;
+            }
+            entries.put(key, new BundleCacheEntry(bundle, weight));
+            currentWeightBytes = saturatedAdd(currentWeightBytes, weight);
+            evictToBounds();
+        }
+
+        private synchronized void clear() {
+            entries.clear();
+            currentWeightBytes = 0L;
+        }
+
+        private synchronized int size() {
+            return entries.size();
+        }
+
+        private synchronized long currentWeightBytes() {
+            return currentWeightBytes;
+        }
+
+        private void evictToBounds() {
+            Iterator<Map.Entry<BundleCacheKey, BundleCacheEntry>> iterator =
+                    entries.entrySet().iterator();
+            while ((entries.size() > maximumEntries
+                    || currentWeightBytes > maximumWeightBytes) && iterator.hasNext()) {
+                BundleCacheEntry eldest = iterator.next().getValue();
+                currentWeightBytes -= eldest.weightBytes;
+                iterator.remove();
+            }
+        }
+
+        private long estimateWeight(BundleCacheKey key, ContractBundle bundle) {
+            long weight = 256L;
+            weight = saturatedAdd(weight, retainedString(key.scopePath));
+            weight = saturatedAdd(weight, retainedString(key.selectedContractKeysSignature));
+            weight = saturatedAdd(weight, retainedString(key.contractsSignature));
+            weight = saturatedAdd(weight, retainedString(key.channelBindingsSignature));
+            weight = saturatedAdd(weight, 192L * bundle.channels().size());
+            weight = saturatedAdd(weight, 160L * bundle.markers().size());
+            weight = saturatedAdd(weight, 64L * bundle.embeddedPaths().size());
+            for (String path : bundle.embeddedPaths()) {
+                weight = saturatedAdd(weight, retainedString(path));
+            }
+            for (Map.Entry<String, FrozenNode> entry : bundle.contractNodes().entrySet()) {
+                weight = saturatedAdd(weight, 96L + retainedString(entry.getKey()));
+                weight = saturatedAdd(weight, entry.getValue().approximateRetainedWeightBytes());
+            }
+            for (String channelKey : bundle.channels().keySet()) {
+                weight = saturatedAdd(weight, retainedString(channelKey));
+                weight = saturatedAdd(weight, 160L * bundle.handlersFor(channelKey).size());
+            }
+            for (String markerKey : bundle.markers().keySet()) {
+                weight = saturatedAdd(weight, retainedString(markerKey));
+            }
+            return weight;
+        }
+
+        private long retainedString(String value) {
+            return value != null ? 48L + 2L * value.length() : 0L;
+        }
+
+        private long saturatedAdd(long left, long right) {
+            return Long.MAX_VALUE - left < right ? Long.MAX_VALUE : left + right;
+        }
+    }
+
+    private static final class BundleCacheEntry {
+        private final ContractBundle bundle;
+        private final long weightBytes;
+
+        private BundleCacheEntry(ContractBundle bundle, long weightBytes) {
+            this.bundle = Objects.requireNonNull(bundle, "bundle");
+            this.weightBytes = weightBytes;
+        }
     }
 
     private static final class RuntimeMarkers {

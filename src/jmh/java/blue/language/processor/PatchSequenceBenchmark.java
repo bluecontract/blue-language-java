@@ -80,7 +80,7 @@ public class PatchSequenceBenchmark {
     @State(Scope.Thread)
     public static class SequenceState {
 
-        @Param({"1", "8", "64"})
+        @Param({"1", "8", "64", "128"})
         public int patchCount;
 
         @Param({"medium-sibling", "medium-repeated", "deep-sibling", "deep-repeated"})

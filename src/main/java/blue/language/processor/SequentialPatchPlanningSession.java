@@ -16,11 +16,12 @@ import java.util.Objects;
  * step fails, which lets callers safely retain an already-planned prefix or
  * rebase an unconsumed suffix onto an observed runtime state.</p>
  */
-final class SequentialPatchPlanningSession {
+final class SequentialPatchPlanningSession implements AutoCloseable {
 
     private final String originScope;
     private final PatchPlanningEngine planningEngine;
     private final ProcessingMetricsSink metrics;
+    private final ConformanceEngine conformanceEngine;
     private FrozenNode canonicalRoot;
     private FrozenNode resolvedRoot;
     private boolean metricsStarted;
@@ -47,6 +48,7 @@ final class SequentialPatchPlanningSession {
         this.originScope = PointerUtils.normalizeScope(Objects.requireNonNull(originScope, "originScope"));
         Objects.requireNonNull(planning, "planning");
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.conformanceEngine = conformanceEngine;
         this.canonicalRoot = planning.baseSnapshot() != null
                 ? planning.baseSnapshot().frozenCanonicalRoot()
                 : planning.canonicalPlanner().root();
@@ -62,6 +64,13 @@ final class SequentialPatchPlanningSession {
                 false);
     }
 
+    @Override
+    public void close() {
+        if (conformanceEngine != null) {
+            conformanceEngine.close();
+        }
+    }
+
     List<ImmutableJsonPatch> preparePatches(List<JsonPatch> patches) {
         return planningEngine.preparePatches(patches, canonicalRoot, resolvedRoot);
     }
@@ -74,6 +83,17 @@ final class SequentialPatchPlanningSession {
                                     FrozenNode actualCanonicalRoot,
                                     FrozenNode actualResolvedRoot) {
         return planningEngine.preparePatch(patch, actualCanonicalRoot, actualResolvedRoot);
+    }
+
+    ImmutableJsonPatch preparePatch(PatchInput patch,
+                                    FrozenNode actualCanonicalRoot,
+                                    FrozenNode actualResolvedRoot) {
+        return planningEngine.preparePatch(patch, actualCanonicalRoot, actualResolvedRoot);
+    }
+
+    PlannedStep planNext(PatchInput patch) {
+        return planNext(planningEngine.preparePatch(
+                Objects.requireNonNull(patch, "patch"), canonicalRoot, resolvedRoot));
     }
 
     PlannedStep planNext(JsonPatch patch) {

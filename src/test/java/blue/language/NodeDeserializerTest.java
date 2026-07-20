@@ -522,6 +522,25 @@ public class NodeDeserializerTest {
     }
 
     @Test
+    public void explicitIntegerStringsRetainCanonicalAsciiGrammar() throws Exception {
+        Node negativeZero = YAML_MAPPER.readValue(
+                "schema:\n" +
+                "  minimum:\n" +
+                "    type: Integer\n" +
+                "    value: \"-0\"", Node.class);
+
+        assertEquals("-0", negativeZero.getSchema().getMinimum().getRawValue());
+        Node preprocessedNegativeZero = new Blue().preprocess(negativeZero);
+        assertEquals(BigInteger.ZERO, preprocessedNegativeZero.getSchema().getMinimum().getValue());
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "schema:\n  minimum:\n    type: Integer\n    value: \"01\"", Node.class));
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "schema:\n  minimum:\n    type: Integer\n    value: \"+1\"", Node.class));
+        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                "schema:\n  minimum:\n    type: Integer\n    value: \"\u0661\"", Node.class));
+    }
+
+    @Test
     public void schemaEnumRejectsContractsOnExplicitScalar() {
         assertThrows(RuntimeException.class,
                 () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - value: 1\n      contracts: {}", Node.class));

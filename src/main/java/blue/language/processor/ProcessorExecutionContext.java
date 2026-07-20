@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.conformance.ScriptedContractsRuntime;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 
@@ -11,8 +12,12 @@ import java.util.Objects;
 
 /**
  * Lightweight wrapper passed to contract processors while executing.
+ *
+ * <p>The context is valid only for its handler invocation. The processor
+ * runtime closes it after applying or abandoning buffered effects; later
+ * effect mutation and working-document creation are rejected.</p>
  */
-public final class ProcessorExecutionContext {
+public final class ProcessorExecutionContext implements AutoCloseable {
 
     private final ProcessorEngine.Execution execution;
     private final ContractBundle bundle;
@@ -23,6 +28,7 @@ public final class ProcessorExecutionContext {
     private final boolean allowReservedMutation;
     private final ContractEffectBuffer effects = new ContractEffectBuffer();
     private boolean effectsApplied;
+    private boolean closed;
 
     ProcessorExecutionContext(ProcessorEngine.Execution execution,
                               ContractBundle bundle,
@@ -90,6 +96,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void applyPatch(JsonPatch patch) {
+        ensureOpen();
         if (patch == null) {
             return;
         }
@@ -97,6 +104,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void applyPatches(List<JsonPatch> patches) {
+        ensureOpen();
         if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
@@ -106,7 +114,16 @@ public final class ProcessorExecutionContext {
         effects.addPatches(patches);
     }
 
+    /**
+     * Buffers patches with a precomputed preview.
+     *
+     * <p>When this context accepts a non-empty patch list, it owns the preview
+     * and releases it after the buffered effects are consumed or abandoned.
+     * If execution has already stopped or the list is empty, ownership remains
+     * with the caller.</p>
+     */
     public void applyPreviewedPatches(List<JsonPatch> patches, WorkingDocument.Preview preview) {
+        ensureOpen();
         if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
@@ -116,7 +133,43 @@ public final class ProcessorExecutionContext {
         effects.addPreviewedPatches(patches, preview);
     }
 
+    public void applyFrozenPatch(FrozenJsonPatch patch) {
+        ensureOpen();
+        if (patch == null) {
+            return;
+        }
+        applyFrozenPatches(Collections.singletonList(patch));
+    }
+
+    public void applyFrozenPatches(List<FrozenJsonPatch> patches) {
+        ensureOpen();
+        if (execution.shouldStopScopeWork(scopePath)) {
+            return;
+        }
+        if (patches == null || patches.isEmpty()) {
+            return;
+        }
+        effects.addFrozenPatches(patches);
+    }
+
+    /**
+     * Frozen-patch counterpart of {@link #applyPreviewedPatches(List, WorkingDocument.Preview)}.
+     * Accepting a non-empty patch list transfers preview ownership to this context.
+     */
+    public void applyPreviewedFrozenPatches(List<FrozenJsonPatch> patches,
+                                            WorkingDocument.Preview preview) {
+        ensureOpen();
+        if (execution.shouldStopScopeWork(scopePath)) {
+            return;
+        }
+        if (patches == null || patches.isEmpty()) {
+            return;
+        }
+        effects.addPreviewedFrozenPatches(patches, preview);
+    }
+
     public void emitEvent(Node emission) {
+        ensureOpen();
         if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
@@ -129,6 +182,18 @@ public final class ProcessorExecutionContext {
             return;
         }
         effectsApplied = true;
+        Throwable failure = null;
+        try {
+            applyBufferedEffectsNow();
+        } catch (RuntimeException | Error ex) {
+            failure = ex;
+            throw ex;
+        } finally {
+            closeEffects(failure);
+        }
+    }
+
+    private void applyBufferedEffectsNow() {
         if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
@@ -143,7 +208,7 @@ public final class ProcessorExecutionContext {
             runtime().addGas(effects.gas());
         }
         for (ContractEffectBuffer.PatchBatch patchBatch : effects.patchBatches()) {
-            execution.handlePatches(scopePath,
+            execution.handlePatchInputs(scopePath,
                     bundle,
                     patchBatch.patches(),
                     allowReservedMutation,
@@ -174,7 +239,33 @@ public final class ProcessorExecutionContext {
         }
     }
 
+    /** Discards buffered work and releases every transferred preview. */
+    @Override
+    public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        effectsApplied = true;
+        effects.close();
+    }
+
+    private void closeEffects(Throwable primaryFailure) {
+        try {
+            close();
+        } catch (RuntimeException | Error cleanupFailure) {
+            if (primaryFailure != null) {
+                if (primaryFailure != cleanupFailure) {
+                    primaryFailure.addSuppressed(cleanupFailure);
+                }
+            } else {
+                throw cleanupFailure;
+            }
+        }
+    }
+
     public void consumeGas(long units) {
+        ensureOpen();
         if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
@@ -182,6 +273,7 @@ public final class ProcessorExecutionContext {
     }
 
     public void throwFatal(String reason) {
+        ensureOpen();
         applyBufferedEffects();
         throw new ProcessorFatalException(reason,
                 execution.partialResult(),
@@ -214,10 +306,12 @@ public final class ProcessorExecutionContext {
     }
 
     public WorkingDocument newWorkingDocument() {
+        ensureOpen();
         return runtime().workingDocument(scopePath);
     }
 
     public WorkingDocument newWorkingDocument(String originScope) {
+        ensureOpen();
         return runtime().workingDocument(originScope);
     }
 
@@ -229,11 +323,19 @@ public final class ProcessorExecutionContext {
     }
 
     public void terminateGracefully(String reason) {
+        ensureOpen();
         effects.terminate(ScopeRuntimeContext.TerminationKind.GRACEFUL, reason);
     }
 
     public void terminateFatally(String reason) {
+        ensureOpen();
         effects.terminate(ScopeRuntimeContext.TerminationKind.FATAL, reason);
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException("Processor execution context is closed");
+        }
     }
 
     private boolean emitEventNow(Node emission) {

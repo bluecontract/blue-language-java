@@ -14,9 +14,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -149,6 +152,189 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
+    void promotionTraversesInheritedCanonicalEntriesToReachLocalDependencies() {
+        Node nestedContent = new Node().value("nested");
+        ResolvedSnapshot nestedSnapshot = new Blue().resolveToSnapshot(nestedContent);
+        String nestedId = nestedSnapshot.blueId();
+        Node holderContent = new Node().properties("nested", reference(nestedId));
+        FrozenNode holderCanonical = FrozenNode.fromNode(holderContent);
+        String holderId = holderCanonical.blueId();
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = parent.transientChild();
+
+        parent.putVerifiedCanonical(holderId, holderCanonical);
+        child.putVerifiedResolved(nestedSnapshot.verifiedReferenceResolution());
+
+        child.promoteReferencesReachableFrom(FrozenNode.fromNode(reference(holderId)));
+
+        assertSame(nestedSnapshot.frozenCanonicalRoot(),
+                parent.getVerifiedCanonical(nestedId).orElseThrow(AssertionError::new));
+        assertSame(nestedSnapshot.frozenResolvedRoot(),
+                parent.getVerifiedResolved(nestedId).orElseThrow(AssertionError::new));
+    }
+
+    @Test
+    void concurrentCanonicalMissesShareOneProviderLoad() throws Exception {
+        FrozenNode canonical = FrozenNode.fromNode(new Node().value("single-flight"));
+        String blueId = canonical.blueId();
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        AtomicInteger loads = new AtomicInteger();
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        try {
+            List<Future<FrozenNode>> lookups = new ArrayList<>();
+            for (int index = 0; index < 8; index++) {
+                lookups.add(executor.submit(() -> cache.getOrLoadVerifiedCanonical(
+                        blueId,
+                        () -> {
+                            loads.incrementAndGet();
+                            loaderEntered.countDown();
+                            awaitUnchecked(releaseLoader);
+                            return canonical;
+                        })));
+            }
+
+            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            releaseLoader.countDown();
+
+            for (Future<FrozenNode> lookup : lookups) {
+                assertSame(canonical, lookup.get(5, TimeUnit.SECONDS));
+            }
+            assertEquals(1, loads.get());
+        } finally {
+            releaseLoader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void providerLoadDoesNotHoldTheLegacyCollisionStripe() throws Exception {
+        FrozenNode[] collision = canonicalNodesWhoseBlueIdsSharedLegacyStripe();
+        FrozenNode first = collision[0];
+        FrozenNode second = collision[1];
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<FrozenNode> firstLookup = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(first.blueId(), () -> {
+                        Future<FrozenNode> nested = executor.submit(() ->
+                                cache.getOrLoadVerifiedCanonical(
+                                        second.blueId(), () -> second));
+                        try {
+                            assertSame(second, nested.get(2, TimeUnit.SECONDS));
+                        } catch (Exception failure) {
+                            throw new IllegalStateException(
+                                    "colliding provider lookup could not complete", failure);
+                        }
+                        return first;
+                    }));
+
+            assertSame(first, firstLookup.get(5, TimeUnit.SECONDS));
+            assertSame(second,
+                    cache.getVerifiedCanonical(second.blueId())
+                            .orElseThrow(AssertionError::new));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void clearStartsANewGenerationLoadWithoutWaitingForTheOldProvider() throws Exception {
+        FrozenNode canonical = FrozenNode.fromNode(new Node().value("generation-flight"));
+        String blueId = canonical.blueId();
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        CountDownLatch oldLoaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseOldLoader = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<FrozenNode> oldLookup = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(blueId, () -> {
+                        oldLoaderEntered.countDown();
+                        awaitUnchecked(releaseOldLoader);
+                        return canonical;
+                    }));
+            assertTrue(oldLoaderEntered.await(5, TimeUnit.SECONDS));
+
+            cache.clear();
+            Future<FrozenNode> newLookup = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(blueId, () -> canonical));
+
+            assertSame(canonical, newLookup.get(2, TimeUnit.SECONDS));
+            releaseOldLoader.countDown();
+            assertSame(canonical, oldLookup.get(5, TimeUnit.SECONDS));
+            assertSame(canonical,
+                    cache.getVerifiedCanonical(blueId).orElseThrow(AssertionError::new));
+        } finally {
+            releaseOldLoader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void recursiveCanonicalLoadsFailDeterministicallyAndRemainRetryable() {
+        FrozenNode first = FrozenNode.fromNode(new Node().value("recursive-first"));
+        FrozenNode second = FrozenNode.fromNode(new Node().value("recursive-second"));
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+
+        IllegalStateException direct = assertThrows(IllegalStateException.class,
+                () -> cache.getOrLoadVerifiedCanonical(first.blueId(), () ->
+                        cache.getOrLoadVerifiedCanonical(first.blueId(), () -> first)));
+        assertEquals("Recursive verified reference load: " + first.blueId(),
+                direct.getMessage());
+
+        IllegalStateException indirect = assertThrows(IllegalStateException.class,
+                () -> cache.getOrLoadVerifiedCanonical(first.blueId(), () ->
+                        cache.getOrLoadVerifiedCanonical(second.blueId(), () ->
+                                cache.getOrLoadVerifiedCanonical(
+                                        first.blueId(), () -> first))));
+        assertEquals("Recursive verified reference load: " + first.blueId(),
+                indirect.getMessage());
+
+        IllegalStateException acrossClear = assertThrows(IllegalStateException.class,
+                () -> cache.getOrLoadVerifiedCanonical(first.blueId(), () -> {
+                    cache.clear();
+                    return cache.getOrLoadVerifiedCanonical(first.blueId(), () -> first);
+                }));
+        assertEquals("Recursive verified reference load: " + first.blueId(),
+                acrossClear.getMessage());
+        assertSame(first,
+                cache.getOrLoadVerifiedCanonical(first.blueId(), () -> first));
+    }
+
+    @Test
+    void closeDuringProviderLoadDoesNotDeadlockOrPublishLateContent() throws Exception {
+        FrozenNode canonical = FrozenNode.fromNode(new Node().value("closing-flight"));
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<FrozenNode> lookup = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(canonical.blueId(), () -> {
+                        loaderEntered.countDown();
+                        awaitUnchecked(releaseLoader);
+                        return canonical;
+                    }));
+            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+
+            cache.close();
+            releaseLoader.countDown();
+
+            ExecutionException failure = assertThrows(
+                    ExecutionException.class,
+                    () -> lookup.get(5, TimeUnit.SECONDS));
+            assertTrue(failure.getCause() instanceof IllegalStateException);
+            assertEquals("Resolved reference cache is closed",
+                    failure.getCause().getMessage());
+            assertEquals(0, cache.cacheStats().verifiedEntries());
+        } finally {
+            releaseLoader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void parentInvalidationClearsAStaleChildAndPreventsOldEvidencePromotion() {
         ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
         VerifiedReferenceResolution evidence = verified.verifiedReferenceResolution();
@@ -175,6 +361,156 @@ class ResolvedReferenceCacheContractTest {
                 .type(reference(evidence.requestedBlueId()))));
         assertEquals(0, parent.size(),
                 "evidence retained before invalidation must never be re-promoted");
+    }
+
+    @Test
+    void closingParentReleasesLeakedTransientChildState() {
+        ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache leakedChild = parent.transientChild();
+
+        leakedChild.putVerifiedResolved(verified.verifiedReferenceResolution());
+        leakedChild.putTransientTrustedCanonical(
+                verified.blueId(), verified.frozenCanonicalRoot());
+        leakedChild.freezeResolved(new Node().value("local graph"));
+        assertTrue(leakedChild.cacheStats().verifiedCurrentWeightBytes() > 0L);
+        assertTrue(leakedChild.cacheStats().transientTrustedCurrentWeightBytes() > 0L);
+        assertTrue(leakedChild.cacheStats().structuralCurrentWeightBytes() > 0L);
+
+        parent.close();
+
+        assertEquals(0, leakedChild.cacheStats().verifiedEntries());
+        assertEquals(0, leakedChild.cacheStats().transientTrustedEntries());
+        assertEquals(0, leakedChild.cacheStats().structuralEntries());
+        assertEquals(0L, leakedChild.cacheStats().verifiedCurrentWeightBytes());
+        assertEquals(0L, leakedChild.cacheStats().transientTrustedCurrentWeightBytes());
+        assertEquals(0L, leakedChild.cacheStats().structuralCurrentWeightBytes());
+        assertThrows(IllegalStateException.class,
+                () -> leakedChild.getVerifiedCanonical(verified.blueId()));
+    }
+
+    @Test
+    void closingTransientChildDoesNotInvalidateParentOrSibling() {
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = parent.transientChild();
+        ResolvedReferenceCache sibling = parent.transientChild();
+        child.freezeResolved(new Node().value("child-local"));
+
+        child.close();
+        child.close();
+
+        assertThrows(IllegalStateException.class,
+                () -> child.freezeResolved(new Node().value("closed")));
+        assertEquals(0, child.cacheStats().structuralEntries());
+        assertTrue(parent.isCurrentGeneration());
+        assertTrue(sibling.isCurrentGeneration());
+        parent.freezeResolved(new Node().value("parent-still-open"));
+        sibling.freezeResolved(new Node().value("sibling-still-open"));
+    }
+
+    @Test
+    void closingTransientChildRetainsAggregateLifetimeHighWaterMarks() {
+        ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = parent.transientChild();
+        child.putVerifiedResolved(verified.verifiedReferenceResolution());
+        child.putTransientTrustedCanonical(
+                verified.blueId(), verified.frozenCanonicalRoot());
+        child.freezeResolved(new Node().value("local graph"));
+
+        child.close();
+
+        ResolvedReferenceCache.CacheStats stats = parent.cacheStats();
+        assertEquals(0, stats.verifiedEntries());
+        assertEquals(0, stats.transientTrustedEntries());
+        assertEquals(0, stats.structuralEntries());
+        assertTrue(stats.verifiedHighWaterWeightBytes() > 0L);
+        assertTrue(stats.transientTrustedHighWaterWeightBytes() > 0L);
+        assertTrue(stats.structuralHighWaterWeightBytes() > 0L);
+    }
+
+    @Test
+    void closingIntermediateTransientScopeInvalidatesAndReleasesDescendants() {
+        ResolvedReferenceCache root = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = root.transientChild();
+        ResolvedReferenceCache grandchild = child.transientChild();
+        grandchild.freezeResolved(new Node().value("local"));
+
+        child.close();
+
+        assertFalse(child.isCurrentGeneration());
+        assertFalse(grandchild.isCurrentGeneration());
+        assertEquals(0, grandchild.cacheStats().structuralEntries());
+        assertThrows(IllegalStateException.class,
+                () -> grandchild.freezeResolved(new Node().value("local")));
+        assertThrows(IllegalStateException.class,
+                () -> grandchild.freezeResolved(new Node().value("other")));
+        assertThrows(IllegalStateException.class, child::transientChild);
+        assertThrows(IllegalStateException.class, grandchild::transientChild);
+        assertTrue(root.isCurrentGeneration());
+    }
+
+    @Test
+    void pinningThroughTransientChildDelegatesOwnershipToRoot() {
+        ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
+        ResolvedReferenceCache parent = new ResolvedReferenceCache();
+        ResolvedReferenceCache child = parent.transientChild();
+
+        child.putPinnedVerifiedResolved(verified.verifiedReferenceResolution());
+
+        assertEquals(1, parent.cacheStats().pinnedVerifiedEntries());
+        assertEquals(1, parent.cacheStats().verifiedEntries());
+        assertEquals(0, child.cacheStats().pinnedVerifiedEntries());
+        assertSame(verified.frozenResolvedRoot(),
+                parent.getVerifiedResolved(verified.blueId()).orElseThrow(AssertionError::new));
+    }
+
+    @Test
+    void isolatedPinnedCopyExcludesDerivedEntriesAndHasIndependentLifecycle() {
+        ResolvedSnapshot pinned = new Blue().resolveToSnapshot(new Node().value("pinned"));
+        ResolvedSnapshot derived = new Blue().resolveToSnapshot(new Node().value("derived"));
+        ResolvedReferenceCache source = new ResolvedReferenceCache();
+        source.putPinnedVerifiedResolved(pinned.verifiedReferenceResolution());
+        source.putVerifiedResolved(derived.verifiedReferenceResolution());
+
+        ResolvedReferenceCache firstCopy = source.isolatedCopyOfPinnedVerifiedEntries();
+        assertSame(pinned.frozenResolvedRoot(),
+                firstCopy.getVerifiedResolved(pinned.blueId()).orElseThrow(AssertionError::new));
+        assertFalse(firstCopy.getVerifiedResolved(derived.blueId()).isPresent());
+
+        firstCopy.close();
+        assertSame(pinned.frozenResolvedRoot(),
+                source.getVerifiedResolved(pinned.blueId()).orElseThrow(AssertionError::new));
+
+        ResolvedReferenceCache retainedCopy = source.isolatedCopyOfPinnedVerifiedEntries();
+        source.close();
+        assertSame(pinned.frozenResolvedRoot(),
+                retainedCopy.getVerifiedResolved(pinned.blueId()).orElseThrow(AssertionError::new));
+        retainedCopy.close();
+    }
+
+    @Test
+    void staleOrClosedTransientChildCannotPublishPinnedEvidenceToRoot() {
+        VerifiedReferenceResolution evidence = new Blue()
+                .resolveToSnapshot(new Node().value("verified"))
+                .verifiedReferenceResolution();
+        ResolvedReferenceCache root = new ResolvedReferenceCache();
+        ResolvedReferenceCache stale = root.transientChild();
+
+        root.clear();
+
+        assertFalse(stale.isCurrentGeneration());
+        assertThrows(IllegalStateException.class,
+                () -> stale.putPinnedVerifiedResolved(evidence));
+        assertEquals(0, root.cacheStats().verifiedEntries());
+        assertEquals(0, root.cacheStats().pinnedVerifiedEntries());
+
+        ResolvedReferenceCache closed = root.transientChild();
+        closed.close();
+        assertThrows(IllegalStateException.class,
+                () -> closed.putPinnedVerifiedResolved(evidence));
+        assertEquals(0, root.cacheStats().verifiedEntries());
+        assertEquals(0, root.cacheStats().pinnedVerifiedEntries());
     }
 
     @Test
@@ -398,6 +734,29 @@ class ResolvedReferenceCacheContractTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private static FrozenNode[] canonicalNodesWhoseBlueIdsSharedLegacyStripe() {
+        Map<Integer, FrozenNode> firstByStripe = new HashMap<>();
+        for (int index = 0; index < 1024; index++) {
+            FrozenNode candidate = FrozenNode.fromNode(
+                    new Node().value("legacy-loading-stripe-" + index));
+            int stripe = (candidate.blueId().hashCode() & Integer.MAX_VALUE) % 64;
+            FrozenNode first = firstByStripe.putIfAbsent(stripe, candidate);
+            if (first != null && !first.blueId().equals(candidate.blueId())) {
+                return new FrozenNode[]{first, candidate};
+            }
+        }
+        throw new AssertionError("could not find colliding canonical BlueIds");
+    }
+
+    private static void awaitUnchecked(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("interrupted while awaiting test gate", interrupted);
+        }
     }
 
     private void assertSourceConstructorsArePrivate(Class<?> type) {

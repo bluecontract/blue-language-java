@@ -601,7 +601,11 @@ class ProcessingSnapshotProviderPatchTest {
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             assertEquals(1, provider.fetchesFor(typeBlueId));
-            runtime.applyPatch("/", JsonPatch.add("/nested", new Node().value("reentrant")));
+            try (DocumentProcessingRuntime.PreparedPatchSequence nested =
+                         runtime.preparePatchSequence("/", Collections.singletonList(
+                                 JsonPatch.add("/nested", new Node().value("reentrant"))), null)) {
+                nested.applyNext(0);
+            }
             assertEquals(1, provider.fetchesFor(typeBlueId));
             sequence.applyNext(1);
             assertEquals(1, provider.fetchesFor(typeBlueId),

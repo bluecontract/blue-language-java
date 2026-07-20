@@ -6,15 +6,22 @@ import blue.language.utils.BlueIdCalculator;
 import blue.language.Blue;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.Nodes;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -23,7 +30,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -356,6 +366,243 @@ class FrozenNodeTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void rawJsonValueContainersAreOwnedImmutableSnapshots() {
+        List<Object> nested = new ArrayList<>();
+        nested.add("before");
+        Map<String, Object> raw = new LinkedHashMap<>();
+        raw.put("nested", nested);
+        String[] array = new String[] {"first", "second"};
+        raw.put("array", array);
+        FrozenNode frozen = FrozenNode.fromNode(new Node().value(raw));
+        String blueId = frozen.blueId();
+
+        nested.set(0, "after");
+        array[0] = "after";
+        raw.put("extra", true);
+
+        Map<String, Object> captured = (Map<String, Object>) frozen.getValue();
+        List<Object> capturedNested = (List<Object>) captured.get("nested");
+        assertEquals(Collections.singletonList("before"), capturedNested);
+        assertArrayEquals(new String[] {"first", "second"},
+                (String[]) captured.get("array"));
+        assertFalse(captured.containsKey("extra"));
+        assertEquals(blueId, frozen.blueId());
+        assertThrows(UnsupportedOperationException.class,
+                () -> captured.put("mutation", true));
+        assertThrows(UnsupportedOperationException.class,
+                () -> capturedNested.set(0, "mutation"));
+        ((String[]) captured.get("array"))[0] = "caller mutation";
+        assertArrayEquals(new String[] {"first", "second"},
+                (String[]) ((Map<?, ?>) frozen.getValue()).get("array"));
+
+        Map<String, Object> materialized = (Map<String, Object>) frozen.toNode().getValue();
+        ((List<Object>) materialized.get("nested")).set(0, "mutable copy");
+        materialized.put("new", true);
+        assertEquals(Collections.singletonList("before"), capturedNested);
+        assertFalse(captured.containsKey("new"));
+    }
+
+    @Test
+    void rawJsonValueContainersRejectNestedNonFiniteNumbers() {
+        Map<String, Object> nested = new LinkedHashMap<>();
+        nested.put("values", Arrays.<Object>asList(1, Float.NaN));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromNode(new Node().value(nested)));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromNode(new Node().value(Double.POSITIVE_INFINITY)));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromNode(new Node().value(Float.NEGATIVE_INFINITY)));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromNode(new Node().value(
+                        new float[] {1.0f, Float.NaN})));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromNode(new Node().value(new Object[] {
+                        Collections.singletonMap("values",
+                                new double[] {1.0d, Double.POSITIVE_INFINITY})})));
+    }
+
+    @Test
+    void rawArraysPreserveLegacyTypeBytesAndRemainOwnedAcrossAccessors() {
+        byte[] source = new byte[] {1, 2};
+        FrozenNode frozen = FrozenNode.fromNode(new Node().value(source));
+        String expected = BlueIdCalculator.calculateBlueId(
+                new Node().value(new byte[] {1, 2}));
+
+        source[0] = 9;
+        byte[] exposed = (byte[]) frozen.getValue();
+        exposed[1] = 9;
+        byte[] materialized = (byte[]) frozen.toNode().getValue();
+        materialized[0] = 8;
+
+        assertEquals(expected, frozen.blueId());
+        assertArrayEquals(new byte[] {1, 2}, (byte[]) frozen.getValue());
+        assertArrayEquals(new byte[] {1, 2}, (byte[]) frozen.toNode().getValue());
+        assertEquals(frozen.resolvedStructuralKey(),
+                FrozenNode.fromNode(new Node().value(new byte[] {1, 2}))
+                        .resolvedStructuralKey());
+        assertNotEquals(frozen.resolvedStructuralKey(),
+                FrozenNode.fromNode(new Node().value(new Byte[] {1, 2}))
+                        .resolvedStructuralKey());
+    }
+
+    @Test
+    void charactersAndCharacterArraysRetainLegacyRepresentationAndRuntimeType() {
+        List<Node> cases = Arrays.asList(
+                new Node().value(Character.valueOf('x')),
+                new Node().value(new Character[] {'x', null, '\u20ac'}),
+                new Node().value(new char[] {'x', '\u20ac'}));
+
+        for (Node authored : cases) {
+            FrozenNode frozen = FrozenNode.fromNode(authored);
+            assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
+            assertEquals(authored.getValue().getClass(), frozen.getValue().getClass());
+            assertEquals(authored.getValue().getClass(), frozen.toNode().getValue().getClass());
+        }
+        assertArrayEquals(new Character[] {'x', null, '\u20ac'},
+                (Character[]) FrozenNode.fromNode(cases.get(1)).getValue());
+        assertArrayEquals(new char[] {'x', '\u20ac'},
+                (char[]) FrozenNode.fromNode(cases.get(2)).getValue());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void enumValuesRemainImmutableAndPreserveLegacyWireIdentity() {
+        Map<String, Object> raw = new LinkedHashMap<>();
+        raw.put("default", DefaultWireEnum.DEFAULT_VALUE);
+        raw.put("annotated", AnnotatedWireEnum.ANNOTATED_VALUE);
+        Node authored = new Node().value(raw);
+
+        FrozenNode frozen = FrozenNode.fromNode(authored);
+        Map<String, Object> captured = (Map<String, Object>) frozen.getValue();
+        Map<String, Object> materialized = (Map<String, Object>) frozen.toNode().getRawValue();
+
+        assertSame(DefaultWireEnum.DEFAULT_VALUE, captured.get("default"));
+        assertSame(AnnotatedWireEnum.ANNOTATED_VALUE, captured.get("annotated"));
+        assertSame(DefaultWireEnum.DEFAULT_VALUE, materialized.get("default"));
+        assertSame(AnnotatedWireEnum.ANNOTATED_VALUE, materialized.get("annotated"));
+        assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
+        assertThrows(UnsupportedOperationException.class,
+                () -> captured.put("mutation", DefaultWireEnum.DEFAULT_VALUE));
+    }
+
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void concreteAndInterfaceContainerArraysCloneAndFreezeWithoutArrayStore() {
+        TreeMap<String, Object> tree = new TreeMap<>();
+        tree.put("key", "tree");
+        List<Object> arrays = Arrays.asList(
+                new ArrayList[] {new ArrayList<>(Collections.singletonList("array-list"))},
+                new LinkedList[] {new LinkedList<>(Collections.singletonList("linked-list"))},
+                new HashMap[] {new HashMap<>(Collections.singletonMap("key", "hash-map"))},
+                new TreeMap[] {tree},
+                new List[] {new ArrayList<>(Collections.singletonList("list"))},
+                new Map[] {new HashMap<>(Collections.singletonMap("key", "map"))},
+                new Object[] {
+                        new ArrayList<>(Collections.singletonList("object-list")),
+                        new HashMap<>(Collections.singletonMap("key", "object-map"))
+                });
+
+        for (Object array : arrays) {
+            Node authored = new Node().value(array);
+            Node cloned = assertDoesNotThrow(authored::clone);
+            assertEquals(array.getClass(), cloned.getValue().getClass());
+
+            FrozenNode frozen = assertDoesNotThrow(() -> FrozenNode.fromNode(authored));
+            String identity = frozen.blueId();
+            assertEquals(BlueIdCalculator.calculateBlueId(authored), identity);
+            assertEquals(array.getClass(), frozen.getValue().getClass());
+            assertEquals(array.getClass(), frozen.toNode().getValue().getClass());
+
+            Object exposed = frozen.getValue();
+            Object first = Array.get(exposed, 0);
+            if (first instanceof List) {
+                ((List) first).add("caller mutation");
+            } else if (first instanceof Map) {
+                ((Map) first).put("caller", "mutation");
+            }
+            assertEquals(identity, frozen.blueId());
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unhandledConcreteContainerArraysFallBackToOwnedObjectArrays() {
+        List<Object> customNested = new ArrayList<>(Collections.<Object>singletonList("custom-before"));
+        CustomJsonList custom = new CustomJsonList();
+        custom.add(customNested);
+        Object customArray = new CustomJsonList[] {custom};
+
+        List<Object> singletonNested = new ArrayList<>(Collections.<Object>singletonList("singleton-before"));
+        List<Object> singleton = Collections.<Object>singletonList(singletonNested);
+        Object singletonArray = Array.newInstance(singleton.getClass(), 1);
+        Array.set(singletonArray, 0, singleton);
+
+        for (Object sourceArray : Arrays.asList(customArray, singletonArray)) {
+            Node authored = new Node().value(sourceArray);
+            String expectedBlueId = BlueIdCalculator.calculateBlueId(authored);
+
+            Node cloned = assertDoesNotThrow(authored::clone);
+            FrozenNode frozen = assertDoesNotThrow(() -> FrozenNode.fromNode(authored));
+
+            assertEquals(Object[].class, cloned.getRawValue().getClass());
+            assertEquals(Object[].class, frozen.getValue().getClass());
+            assertEquals(Object[].class, frozen.toNode().getRawValue().getClass());
+            assertEquals(expectedBlueId, BlueIdCalculator.calculateBlueId(cloned));
+            assertEquals(expectedBlueId, frozen.blueId());
+        }
+
+        customNested.set(0, "custom-after");
+        singletonNested.set(0, "singleton-after");
+
+        Node customClone = new Node().value(customArray).clone();
+        FrozenNode singletonFrozen = FrozenNode.fromNode(new Node().value(singletonArray));
+        customNested.set(0, "custom-later");
+        singletonNested.set(0, "singleton-later");
+
+        List<Object> clonedCustom = (List<Object>) ((List<?>)
+                ((Object[]) customClone.getRawValue())[0]).get(0);
+        assertEquals(Collections.<Object>singletonList("custom-after"), clonedCustom);
+
+        Object[] exposed = (Object[]) singletonFrozen.getValue();
+        List<Object> exposedNested = (List<Object>) ((List<?>) exposed[0]).get(0);
+        assertEquals(Collections.<Object>singletonList("singleton-after"), exposedNested);
+        exposedNested.set(0, "caller-mutation");
+        assertEquals("singleton-after", ((List<?>) ((List<?>)
+                ((Object[]) singletonFrozen.getValue())[0]).get(0)).get(0));
+    }
+
+    @Test
+    void frozenNodesRejectNonJsonMutableValueObjectsAndCyclicContainers() {
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromResolvedNode(new Node().value(new StringBuilder("mutable"))));
+
+        List<Object> cyclic = new ArrayList<>();
+        cyclic.add(cyclic);
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromResolvedNode(new Node().value(cyclic)));
+
+        Object[] cyclicArray = new Object[1];
+        cyclicArray[0] = cyclicArray;
+        assertThrows(IllegalArgumentException.class,
+                () -> FrozenNode.fromResolvedNode(new Node().value(cyclicArray)));
+    }
+
+    private static final class CustomJsonList extends ArrayList<Object> {
+        private static final long serialVersionUID = 1L;
+    }
+
+    private enum DefaultWireEnum {
+        DEFAULT_VALUE
+    }
+
+    private enum AnnotatedWireEnum {
+        @JsonProperty("wire-value")
+        ANNOTATED_VALUE
+    }
+
+    @Test
     void pathIndexAndAtResolveObjectAndListPointersWithoutMaterializingWholeTree() {
         FrozenNode frozen = FrozenNode.fromNode(YAML_MAPPER.readValue(
                 "profile:\n" +
@@ -493,6 +740,36 @@ class FrozenNodeTest {
         assertTrue(frozen.getSchema().getRequiredValue());
         assertFalse(returned.getRequiredValue());
         assertEquals(3, cloneCalls.get());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void frozenSchemaDeeplyOwnsRawJsonValuesAcrossMutableBoundaries() {
+        Map<String, Object> raw = new LinkedHashMap<>();
+        raw.put("label", "before");
+        Schema source = new Schema().enumValues(Collections.singletonList(
+                new Node().value(raw)));
+        FrozenNode frozen = FrozenNode.fromNode(new Node().schema(source));
+        String blueId = frozen.blueId();
+
+        raw.put("label", "after");
+        raw.put("extra", true);
+        Map<String, Object> returned = (Map<String, Object>) frozen.getSchema()
+                .getEnum().get(0).getValue();
+        assertEquals("before", returned.get("label"));
+        assertFalse(returned.containsKey("extra"));
+
+        returned.put("label", "caller mutation");
+        Map<String, Object> reread = (Map<String, Object>) frozen.getSchema()
+                .getEnum().get(0).getValue();
+        assertEquals("before", reread.get("label"));
+        assertEquals(blueId, frozen.blueId());
+
+        Map<String, Object> materialized = (Map<String, Object>) frozen.toNode()
+                .getSchema().getEnum().get(0).getValue();
+        materialized.put("label", "materialized mutation");
+        assertEquals("before", ((Map<?, ?>) frozen.getSchema()
+                .getEnum().get(0).getValue()).get("label"));
     }
 
     @Test

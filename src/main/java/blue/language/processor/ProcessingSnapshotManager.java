@@ -43,9 +43,24 @@ public interface ProcessingSnapshotManager {
         // Historical managers have no explicit transient cache to prune.
     }
 
+    /** Releases a transient manager after its preview/sequence ownership ends. */
+    default void releaseTransientState() {
+        // Historical managers have no explicitly owned transient state.
+    }
+
     /** Whether this transient scope still belongs to the manager's current cache generation. */
     default boolean isTransientStateCurrent() {
         return true;
+    }
+
+    /**
+     * Whether this manager accepts dependency-proven value-only snapshot
+     * updates without invoking {@link #fromDocumentTransient(Node)}.
+     *
+     * <p>The default is deliberately conservative for custom managers.</p>
+     */
+    default boolean supportsIncrementalValueResolution() {
+        return false;
     }
 
     /**

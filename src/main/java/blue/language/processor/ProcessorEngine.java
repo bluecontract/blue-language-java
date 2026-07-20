@@ -613,6 +613,14 @@ final class ProcessorEngine {
             scopeExecutor.handlePatches(scopePath, bundle, patches, allowReservedMutation, preview);
         }
 
+        void handlePatchInputs(String scopePath,
+                               ContractBundle bundle,
+                               List<PatchInput> patches,
+                               boolean allowReservedMutation,
+                               WorkingDocument.Preview preview) {
+            scopeExecutor.handlePatchInputs(scopePath, bundle, patches, allowReservedMutation, preview);
+        }
+
         ProcessorExecutionContext createContext(String scopePath,
                                                 ContractBundle bundle,
                                                 Node event) {

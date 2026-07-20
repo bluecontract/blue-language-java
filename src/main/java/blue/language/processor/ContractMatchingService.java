@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.FrozenTypeMatcher;
@@ -11,6 +12,7 @@ import blue.language.utils.FrozenTypeMatcher;
 public final class ContractMatchingService {
 
     private final Blue blue;
+    private final BlueCachePolicy cachePolicy;
     private final FrozenTypeMatcher matcher;
     private final DeclaredTypeLineageMatcher declaredTypeLineageMatcher;
 
@@ -20,9 +22,13 @@ public final class ContractMatchingService {
 
     public ContractMatchingService(Blue blue) {
         this.blue = blue;
+        this.cachePolicy = blue != null
+                ? blue.cachePolicy()
+                : BlueCachePolicy.boundedDefaults();
         this.matcher = new FrozenTypeMatcher(blue);
         this.declaredTypeLineageMatcher = new DeclaredTypeLineageMatcher(
-                blue != null ? blue.getNodeProvider() : null);
+                blue != null ? blue.getNodeProvider() : null,
+                cachePolicy);
     }
 
     Blue blue() {
@@ -35,6 +41,32 @@ public final class ContractMatchingService {
 
     int declaredTypeLineageCacheSize() {
         return declaredTypeLineageMatcher.cacheSize();
+    }
+
+    BlueCachePolicy cachePolicy() {
+        return cachePolicy;
+    }
+
+    int matcherCacheSize() {
+        return matcher.cacheEntryCount();
+    }
+
+    int cacheEntryCount() {
+        return matcher.cacheEntryCount() + declaredTypeLineageMatcher.cacheSize();
+    }
+
+    long cacheWeightBytes() {
+        long matcherWeight = matcher.cacheWeightBytes();
+        long lineageWeight = declaredTypeLineageMatcher.cacheWeightBytes();
+        return Long.MAX_VALUE - matcherWeight < lineageWeight
+                ? Long.MAX_VALUE
+                : matcherWeight + lineageWeight;
+    }
+
+    /** Releases matching, reference-resolution, and declared-lineage caches. */
+    public void clearCaches() {
+        matcher.clearCaches();
+        declaredTypeLineageMatcher.clearCaches();
     }
 
     public boolean matches(FrozenNode event, FrozenNode pattern) {

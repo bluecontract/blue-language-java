@@ -419,10 +419,34 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private BigInteger parseExplicitInteger(String value) {
-        if (value == null || !value.matches("-?(0|[1-9]\\d*)")) {
+        if (!isCanonicalDecimalInteger(value)) {
             throw new IllegalArgumentException("Explicit Integer scalar values must be canonical decimal strings.");
         }
         return new BigInteger(value);
+    }
+
+    private boolean isCanonicalDecimalInteger(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        int index = value.charAt(0) == '-' ? 1 : 0;
+        if (index == value.length()) {
+            return false;
+        }
+        char firstDigit = value.charAt(index);
+        if (firstDigit == '0') {
+            return index + 1 == value.length();
+        }
+        if (firstDigit < '1' || firstDigit > '9') {
+            return false;
+        }
+        for (index++; index < value.length(); index++) {
+            char digit = value.charAt(index);
+            if (digit < '0' || digit > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean isIntegerType(Node type) {

@@ -83,7 +83,7 @@ public class NodePathAccessor {
                 return node.getContracts();
         }
 
-        if (segment.matches("\\d+")) {
+        if (isAsciiDigits(segment)) {
             int itemIndex = Integer.parseInt(segment);
             List<Node> items = node.getItems();
             if (items == null || itemIndex >= items.size()) {
@@ -123,7 +123,7 @@ public class NodePathAccessor {
                 return node.getContracts();
         }
 
-        if (segment.matches("\\d+")) {
+        if (isAsciiDigits(segment)) {
             int itemIndex = Integer.parseInt(segment);
             List<Node> items = node.getItems();
             if (items == null || itemIndex >= items.size()) {
@@ -137,6 +137,19 @@ public class NodePathAccessor {
             throw new IllegalArgumentException("Property not found: " + segment);
         }
         return properties.get(segment);
+    }
+
+    private static boolean isAsciiDigits(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            char digit = value.charAt(index);
+            if (digit < '0' || digit > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Node link(Node node, Function<Node, Node> linkingProvider) {

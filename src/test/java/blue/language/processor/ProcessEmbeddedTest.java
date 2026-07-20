@@ -484,7 +484,9 @@ class ProcessEmbeddedTest {
         Node rootTerminated = terminatedMarker(processed, "/");
         assertNull(rootTerminated);
         // Dynamic embedded paths mutation is allowed for the paths field.
-        assertNotNull(processed.getProperties().get("itShouldHappen"));
+        assertNotNull(processed.getProperties().get("itShouldHappen"),
+                processResult.status() + ": " + processResult.failureReason()
+                        + "\n" + blue.nodeToYaml(processed));
         assertNull(processed.getProperties().get("mustNotHappen"));
     }
 

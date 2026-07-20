@@ -13,7 +13,22 @@ plugins {
 }
 
 group = "blue.language"
-version = determineProjectVersion()
+version = project.findProperty('releaseVersion') ?: determineProjectVersion()
+
+def releaseChannel = System.getenv('BLUE_RELEASE_CHANNEL')
+if (releaseChannel != null && !['rc', 'stable'].contains(releaseChannel)) {
+    throw new GradleException("BLUE_RELEASE_CHANNEL must be either 'rc' or 'stable'")
+}
+def releaseVersion = project.version.toString()
+if (releaseChannel == 'rc' && !(releaseVersion ==~ /\d+\.\d+\.\d+-rc\.\d+/)) {
+    throw new GradleException(
+            "BLUE_RELEASE_CHANNEL=rc requires an x.y.z-rc.n version, found '${releaseVersion}'")
+}
+if (releaseChannel == 'stable' && !(releaseVersion ==~ /\d+\.\d+\.\d+/)) {
+    throw new GradleException(
+            "BLUE_RELEASE_CHANNEL=stable requires an x.y.z version, found '${releaseVersion}'")
+}
+def isReleaseCandidate = releaseChannel == 'rc'
 
 base {
     archivesName = "blue-language-java"
@@ -104,6 +119,7 @@ tasks.register('identityDifferentialTest', Test) {
         includeTestsMatching 'blue.language.utils.BlueIdCalculatorTest'
         includeTestsMatching 'blue.language.snapshot.FrozenNodeTest'
         includeTestsMatching 'blue.language.snapshot.FrozenNodeStructuralInternerTest'
+        includeTestsMatching 'blue.language.snapshot.FrozenCanonicalDigesterTest'
     }
 }
 
@@ -125,6 +141,20 @@ tasks.register('memoryIntegrationTest', Test) {
     forkEvery = 1
     filter {
         includeTestsMatching 'blue.language.processor.PatchSequenceRetentionStressTest'
+    }
+}
+
+tasks.register('cacheLifecycleTest', Test) {
+    configureFocusedTest(delegate)
+    description = 'Runs weighted-cache, reference-cache, and runtime lifecycle contracts.'
+    filter {
+        includeTestsMatching 'blue.language.BlueCacheLifecycleTest'
+        includeTestsMatching 'blue.language.BlueCachePolicyTest'
+        includeTestsMatching 'blue.language.WeightedLruCacheTest'
+        includeTestsMatching 'blue.language.processor.ProcessorOwnedCacheLifecycleTest'
+        includeTestsMatching 'blue.language.snapshot.FrozenNodeRetainedWeightTest'
+        includeTestsMatching 'blue.language.snapshot.ResolvedReferenceCacheContractTest'
+        includeTestsMatching 'blue.language.utils.FrozenTypeMatcherCachePolicyTest'
     }
 }
 
@@ -157,6 +187,96 @@ sourceSets.main.output.dir genResourcesDir, builtBy: generateBuildProperties
 
 tasks.withType(GenerateModuleMetadata) {
     enabled = false
+}
+
+def sourceReleaseMetadataDir = layout.buildDirectory.dir('generated/source-release-metadata')
+def sourceReleaseChecksumFile = layout.buildDirectory.file(
+        "release/blue-language-java-${project.version}-source-release.zip.sha256")
+tasks.register('generateSourceReleaseMetadata') {
+    inputs.file('.cz.toml')
+    inputs.property('releaseVersion', project.version.toString())
+    outputs.file(sourceReleaseMetadataDir.map { it.file('.cz.toml') })
+    doLast {
+        def output = sourceReleaseMetadataDir.get().file('.cz.toml').asFile
+        output.parentFile.mkdirs()
+        output.text = file('.cz.toml').getText('UTF-8').replaceFirst(
+                /(?m)^version\s*=\s*"[^"]+"/,
+                "version = \"${project.version}\"")
+    }
+}
+
+tasks.register('sourceReleaseArchive', Zip) {
+    group = 'distribution'
+    description = 'Creates a reproducible, metadata-free source archive for public release review.'
+    archiveBaseName = 'blue-language-java'
+    archiveVersion = project.version
+    archiveClassifier = 'source-release'
+    destinationDirectory = layout.buildDirectory.dir('release')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    dependsOn tasks.named('generateSourceReleaseMetadata')
+    outputs.file(sourceReleaseChecksumFile)
+    eachFile { details ->
+        details.permissions { permissions ->
+            permissions.unix(details.path.endsWith('/gradlew') || details.path.endsWith('.sh')
+                    ? 0755
+                    : 0644)
+        }
+    }
+
+    into("blue-language-java-${project.version}") {
+        from(rootDir) {
+            include 'CHANGELOG.md'
+            include 'LICENSE*'
+            include 'README*'
+            include 'build.gradle'
+            include 'settings.gradle*'
+            include 'gradle.properties'
+            include 'gradlew'
+            include 'gradlew.bat'
+            include 'gradle/**'
+            include '.github/**'
+            include 'docs/**'
+            include 'src/**'
+            include 'tools/**'
+
+            exclude '**/.DS_Store'
+            exclude '**/._*'
+            exclude '**/*.jfr'
+            exclude '**/*.hprof'
+            exclude '**/*.heapdump'
+            exclude '**/*.db'
+            exclude '**/*.sqlite*'
+            exclude '**/node_modules/**'
+            exclude '**/.gradle/**'
+            exclude '**/build/**'
+            exclude '**/*.zip'
+            exclude '**/*.tar'
+            exclude '**/*.tar.gz'
+            exclude '**/*.tgz'
+        }
+        from(sourceReleaseMetadataDir) {
+            include '.cz.toml'
+        }
+    }
+
+    doLast {
+        def archive = archiveFile.get().asFile
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        archive.withInputStream { input ->
+            byte[] buffer = new byte[8192]
+            int read
+            while ((read = input.read(buffer)) != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        def hash = digest.digest().collect {
+            String.format('%02x', ((byte) it) & 0xff)
+        }.join()
+        def checksum = sourceReleaseChecksumFile.get().asFile
+        checksum.parentFile.mkdirs()
+        checksum.setText("${hash}  ${archive.name}\n", 'UTF-8')
+    }
 }
 
 publishing {
@@ -214,6 +334,17 @@ if (System.getenv('CI')) {
         project {
             description = 'Java client library for Blue Language'
             copyright = '© 2024 Blue Company. Licensed under the MIT License'
+        }
+        if (isReleaseCandidate) {
+            release {
+                github {
+                    // The RC workflow creates, pushes, and verifies the annotated
+                    // tag before upload. Stable releases retain JReleaser defaults.
+                    skipTag = true
+                    prerelease.enabled = true
+                    makeLatest = 'false'
+                }
+            }
         }
 
         deploy {

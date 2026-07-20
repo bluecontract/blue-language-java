@@ -1,22 +1,25 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-final class ContractEffectBuffer {
+final class ContractEffectBuffer implements AutoCloseable {
 
     private long gas;
     private String invalidGasReason;
-    private final List<JsonPatch> patches = new ArrayList<>();
+    private final List<PatchInput> patches = new ArrayList<>();
     private final List<PatchBatch> patchBatches = new ArrayList<>();
     private final List<Node> emittedEvents = new ArrayList<>();
     private TerminationRequest terminationRequest;
+    private boolean closed;
 
     void addGas(long units) {
+        ensureOpen();
         if (units < 0) {
             invalidGasReason = "Gas amount must be non-negative";
             return;
@@ -39,27 +42,32 @@ final class ContractEffectBuffer {
     }
 
     void addPatches(List<JsonPatch> input) {
-        addPatches(input, null);
+        addPatchInputs(PatchInput.mutableList(input), null);
     }
 
     void addPreviewedPatches(List<JsonPatch> input, WorkingDocument.Preview preview) {
-        addPatches(input, preview);
+        addPatchInputs(PatchInput.mutableList(input), preview);
     }
 
-    private void addPatches(List<JsonPatch> input, WorkingDocument.Preview preview) {
+    void addFrozenPatches(List<FrozenJsonPatch> input) {
+        addPatchInputs(PatchInput.frozenList(input), null);
+    }
+
+    void addPreviewedFrozenPatches(List<FrozenJsonPatch> input, WorkingDocument.Preview preview) {
+        addPatchInputs(PatchInput.frozenList(input), preview);
+    }
+
+    private void addPatchInputs(List<PatchInput> input, WorkingDocument.Preview preview) {
+        ensureOpen();
         if (input == null || input.isEmpty()) {
             return;
         }
-        List<JsonPatch> batch = new ArrayList<>(input.size());
-        for (JsonPatch patch : input) {
-            JsonPatch copied = copyPatch(patch);
-            patches.add(copied);
-            batch.add(copied);
-        }
+        List<PatchInput> batch = new ArrayList<>(input);
+        patches.addAll(batch);
         patchBatches.add(new PatchBatch(batch, preview));
     }
 
-    List<JsonPatch> patches() {
+    List<PatchInput> patches() {
         return Collections.unmodifiableList(patches);
     }
 
@@ -68,6 +76,7 @@ final class ContractEffectBuffer {
     }
 
     void emit(Node event) {
+        ensureOpen();
         emittedEvents.add(event != null ? event.clone() : null);
     }
 
@@ -76,6 +85,7 @@ final class ContractEffectBuffer {
     }
 
     void terminate(ScopeRuntimeContext.TerminationKind kind, String reason) {
+        ensureOpen();
         if (terminationRequest == null) {
             terminationRequest = new TerminationRequest(kind, reason);
         }
@@ -85,16 +95,42 @@ final class ContractEffectBuffer {
         return terminationRequest;
     }
 
-    private JsonPatch copyPatch(JsonPatch patch) {
-        switch (patch.getOp()) {
-            case ADD:
-                return JsonPatch.add(patch.getPath(), patch.getVal().clone());
-            case REPLACE:
-                return JsonPatch.replace(patch.getPath(), patch.getVal().clone());
-            case REMOVE:
-                return JsonPatch.remove(patch.getPath());
-            default:
-                throw new IllegalStateException("Unsupported patch op: " + patch.getOp());
+    /** Releases every preview whose ownership was transferred into this buffer. */
+    @Override
+    public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        Throwable failure = null;
+        for (PatchBatch patchBatch : patchBatches) {
+            try {
+                patchBatch.closePreview();
+            } catch (RuntimeException | Error ex) {
+                if (failure == null) {
+                    failure = ex;
+                } else if (failure != ex) {
+                    failure.addSuppressed(ex);
+                }
+            }
+        }
+        patches.clear();
+        patchBatches.clear();
+        emittedEvents.clear();
+        terminationRequest = null;
+        gas = 0L;
+        invalidGasReason = null;
+        if (failure instanceof RuntimeException) {
+            throw (RuntimeException) failure;
+        }
+        if (failure instanceof Error) {
+            throw (Error) failure;
+        }
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException("Contract effect buffer is closed");
         }
     }
 
@@ -117,20 +153,28 @@ final class ContractEffectBuffer {
     }
 
     static final class PatchBatch {
-        private final List<JsonPatch> patches;
-        private final WorkingDocument.Preview preview;
+        private final List<PatchInput> patches;
+        private WorkingDocument.Preview preview;
 
-        private PatchBatch(List<JsonPatch> patches, WorkingDocument.Preview preview) {
+        private PatchBatch(List<PatchInput> patches, WorkingDocument.Preview preview) {
             this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
             this.preview = preview;
         }
 
-        List<JsonPatch> patches() {
+        List<PatchInput> patches() {
             return patches;
         }
 
         WorkingDocument.Preview preview() {
             return preview;
+        }
+
+        private void closePreview() {
+            WorkingDocument.Preview retained = preview;
+            preview = null;
+            if (retained != null) {
+                retained.close();
+            }
         }
     }
 }

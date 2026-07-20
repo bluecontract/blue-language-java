@@ -164,7 +164,8 @@ class DocumentProcessorGasTest {
 
         assertProcessedAccount(warm, types);
         assertEquals(0, warmProvider.fetchCount(types.accountId));
-        assertEquals(1, warmProvider.fetchCount(types.moneyId));
+        assertEquals(1, warmProvider.fetchCount(types.moneyId),
+                warmProvider.fetchCountsByBlueId.toString());
         assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertTrue(warmBlue.resolvedReferenceCacheSize() >= warmCacheSizeBeforeProcessing);
         assertEquals(148L, warm.totalGas(), "warm configured-provider processing gas");
@@ -204,7 +205,8 @@ class DocumentProcessorGasTest {
 
         assertInitializedAccount(warm, types);
         assertEquals(0, warmProvider.fetchCount(types.accountId));
-        assertEquals(1, warmProvider.fetchCount(types.moneyId));
+        assertEquals(1, warmProvider.fetchCount(types.moneyId),
+                warmProvider.fetchCountsByBlueId.toString());
         assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
@@ -247,7 +249,8 @@ class DocumentProcessorGasTest {
 
         assertProcessedPortfolio(warm, types);
         assertEquals(0, warmProvider.fetchCount(types.portfolioId));
-        assertEquals(1, warmProvider.fetchCount(types.accountId));
+        assertEquals(1, warmProvider.fetchCount(types.accountId),
+                warmProvider.fetchCountsByBlueId.toString());
         assertEquals(1, warmProvider.fetchCount(types.moneyId));
         assertEquals(2, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());

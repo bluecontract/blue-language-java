@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.util.NodeCanonicalizer;
+import blue.language.snapshot.FrozenNode;
 
 /**
  * Tracks and charges gas usage for a processing run.
@@ -48,6 +49,17 @@ final class GasMeter {
         add(GasCharges.patchAddOrReplace(payloadSizeCharge(value)));
     }
 
+    void chargeFrozenPatchAddOrReplace(FrozenNode value) {
+        add(GasCharges.patchAddOrReplace(frozenPayloadSizeCharge(value)));
+    }
+
+    void chargeFrozenPatchAddOrReplace(long authoredCanonicalSizeBytes) {
+        if (authoredCanonicalSizeBytes < 0L) {
+            throw new IllegalArgumentException("Authored canonical size must be non-negative");
+        }
+        add(GasCharges.patchAddOrReplace(payloadSizeCharge(authoredCanonicalSizeBytes)));
+    }
+
     void chargePatchRemove() {
         add(GasCharges.PATCH_REMOVE);
     }
@@ -87,7 +99,14 @@ final class GasMeter {
     }
 
     private long payloadSizeCharge(Node node) {
-        long bytes = NodeCanonicalizer.canonicalSize(node);
+        return payloadSizeCharge(NodeCanonicalizer.canonicalSize(node));
+    }
+
+    private long frozenPayloadSizeCharge(FrozenNode node) {
+        return payloadSizeCharge(NodeCanonicalizer.canonicalFrozenSize(node));
+    }
+
+    private long payloadSizeCharge(long bytes) {
         return (bytes + 99L) / 100L;
     }
 
