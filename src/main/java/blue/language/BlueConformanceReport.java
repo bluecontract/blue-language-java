@@ -21,9 +21,9 @@ public final class BlueConformanceReport {
 
     public static final String FIXTURE_MANIFEST_RESOURCE = "blue-language-1.0/fixtures/manifest.yaml";
     public static final String CANDIDATE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:9638c4c05b31fc3316227e7fcb76064407e3cfdafa63ec224b7591fea633ef1f";
+            "sha256:274f62aa1e9a1b189f0dd9c832900160edf7e1fd837adb0da5aa717dc9e3c42d";
     public static final String CANDIDATE_BLUE_SPEC_SOURCE =
-            "feat/conformance-fixture-expansion@a0f4914";
+            "feat/conformance-fixture-expansion@07814f5";
     private static final Set<String> REQUIRED_FIXTURE_IDS = requiredFixtureIds();
 
     private final String specVersion;

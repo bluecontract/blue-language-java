@@ -1,5 +1,5 @@
 specVersion: '1.0'
-fixturePackageIdentity: sha256:9638c4c05b31fc3316227e7fcb76064407e3cfdafa63ec224b7591fea633ef1f
+fixturePackageIdentity: sha256:274f62aa1e9a1b189f0dd9c832900160edf7e1fd837adb0da5aa717dc9e3c42d
 fixtures:
 - id: L_no_profile_era_language_conformance_terms
   category: DocumentationLint
@@ -157,6 +157,9 @@ fixtures:
 - id: R_provider_reference_with_overlay_keeps_overlay
   category: Canonicalization
   path: resolver/R_provider_reference_with_overlay_keeps_overlay.yaml
+- id: R_minimized_overlay_preserves_pure_reference_identity
+  category: Canonicalization
+  path: resolver/R_minimized_overlay_preserves_pure_reference_identity.yaml
 - id: R_contracts_canonicalization_deterministic
   category: Canonicalization
   path: resolver/R_contracts_canonicalization_deterministic.yaml

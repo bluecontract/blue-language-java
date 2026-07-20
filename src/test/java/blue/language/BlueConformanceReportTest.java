@@ -35,6 +35,7 @@ class BlueConformanceReportTest {
             "resolve",
             "scenario",
             "canonicalize",
+            "assertMinimizedOverlayRoundTrip",
             "calculateContentBlueId",
             "calculateSemanticBlueId",
             "expand",
@@ -69,7 +70,7 @@ class BlueConformanceReportTest {
         assertEquals(BlueConformanceReport.computeFixturePackageIdentity(), report.getFixturePackageIdentity());
         assertEquals(BlueConformanceReport.CANDIDATE_FIXTURE_PACKAGE_IDENTITY,
                 report.getFixturePackageIdentity());
-        assertEquals("feat/conformance-fixture-expansion@a0f4914",
+        assertEquals("feat/conformance-fixture-expansion@07814f5",
                 BlueConformanceReport.CANDIDATE_BLUE_SPEC_SOURCE);
         assertTrue(report.isReleaseGradeFixtureIdentity());
         assertTrue(BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles());

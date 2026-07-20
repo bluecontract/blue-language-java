@@ -7,8 +7,10 @@ import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.NodeContentHandler;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.utils.MergeReverser;
 import blue.language.utils.Nodes;
 import blue.language.utils.Properties;
 import blue.language.utils.UncheckedObjectMapper;
@@ -38,6 +40,7 @@ public final class BlueConformanceSuiteRunner {
             "resolve",
             "scenario",
             "canonicalize",
+            "assertMinimizedOverlayRoundTrip",
             "calculateContentBlueId",
             "calculateSemanticBlueId",
             "expand",
@@ -125,7 +128,9 @@ public final class BlueConformanceSuiteRunner {
             }
         } else if ("calculateCircularSetBlueIds".equals(operation)) {
             assertExpectedTextList(spec, "expectedBlueIds", (List<String>) actual);
-        } else if ("calculateContentBlueId".equals(operation) || "calculateSemanticBlueId".equals(operation)) {
+        } else if ("calculateContentBlueId".equals(operation)
+                || "calculateSemanticBlueId".equals(operation)
+                || "assertMinimizedOverlayRoundTrip".equals(operation)) {
             assertExpectedText(spec, "expectedContentBlueId", (String) actual);
         } else if ("parseSource".equals(operation) || "parseBlueIdInput".equals(operation)) {
             assertExpectedNode(spec, "expectedParsed", (Node) actual);
@@ -157,6 +162,9 @@ public final class BlueConformanceSuiteRunner {
         if ("scenario".equals(operation)) {
             runScenario(spec);
             return null;
+        }
+        if ("assertMinimizedOverlayRoundTrip".equals(operation)) {
+            return runMinimizedOverlayRoundTrip(spec);
         }
         Blue blue = new Blue(provider(spec.get("provider")));
         if ("parseSource".equals(operation)) {
@@ -219,6 +227,24 @@ public final class BlueConformanceSuiteRunner {
             return null;
         }
         throw new IllegalArgumentException("Unsupported fixture operation: " + operation);
+    }
+
+    private static String runMinimizedOverlayRoundTrip(JsonNode spec) {
+        Node source = readNode(requirePresent(spec, "source"));
+        Blue writer = new Blue(provider(spec.get("provider")));
+        ResolvedSnapshot original = writer.resolveToSnapshot(source);
+        assertExpectedText(spec, "expectedContentBlueId", original.blueId());
+
+        Node minimized = new MergeReverser()
+                .reverseToMinimizedOverlay(original.resolvedRoot());
+        Blue reader = new Blue(provider(spec.get("provider")));
+        ResolvedSnapshot reloaded = reader.resolveToSnapshot(minimized);
+
+        assertEquals(original.blueId(), reloaded.blueId());
+        assertEquals(
+                original.frozenResolvedRoot().resolvedStructuralKey(),
+                reloaded.frozenResolvedRoot().resolvedStructuralKey());
+        return reloaded.blueId();
     }
 
     private static void runScenario(JsonNode spec) {
@@ -602,7 +628,9 @@ public final class BlueConformanceSuiteRunner {
             requireNonNull(spec, "expectedBlueIds");
             return;
         }
-        if ("calculateContentBlueId".equals(operation) || "calculateSemanticBlueId".equals(operation)) {
+        if ("calculateContentBlueId".equals(operation)
+                || "calculateSemanticBlueId".equals(operation)
+                || "assertMinimizedOverlayRoundTrip".equals(operation)) {
             requireNonNull(spec, "expectedContentBlueId");
             return;
         }

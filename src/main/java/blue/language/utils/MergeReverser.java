@@ -171,6 +171,11 @@ public class MergeReverser {
                 Node sourceProperty = source != null && source.getProperties() != null
                         ? source.getProperties().get(key)
                         : null;
+                if (isNonDerivableMaterializedReference(
+                        mergedProperty, fromTypeProperty, canonicalOverlay)) {
+                    minimalProperties.put(key, new Node().blueId(mergedProperty.getBlueId()));
+                    continue;
+                }
                 if (sameNodeBlueId(mergedProperty, fromTypeProperty)
                         && !isCanonicalSourceReference(canonicalOverlay, sourceProperty)) {
                     continue;
@@ -247,6 +252,16 @@ public class MergeReverser {
 
     private boolean isCanonicalSourceReference(boolean canonicalOverlay, Node source) {
         return canonicalOverlay && source != null && source.isReferenceOnly();
+    }
+
+    private boolean isNonDerivableMaterializedReference(Node mergedProperty,
+                                                        Node fromTypeProperty,
+                                                        boolean canonicalOverlay) {
+        return !canonicalOverlay
+                && mergedProperty.getBlueId() != null
+                && !mergedProperty.isReferenceOnly()
+                && (fromTypeProperty == null
+                || !Objects.equals(mergedProperty.getBlueId(), fromTypeProperty.getBlueId()));
     }
 
     private String comparisonBlueId(Node node) {
