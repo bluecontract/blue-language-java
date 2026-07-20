@@ -3,6 +3,8 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
+import blue.language.merge.IncrementalMergingProcessorCapability;
+import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
@@ -18,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
@@ -310,6 +313,96 @@ class PatchImpactIncrementalResolutionTest {
     }
 
     @Test
+    void requestAwareTransparentWrapperAllowsIncrementalResolution() {
+        Fixture fixture = Fixture.withBasicStatusTypeContribution();
+        RequestAwareWrapper wrapper = new RequestAwareWrapper(
+                fixture.blue.getMergingProcessor(), null);
+        Blue wrappedBlue = new Blue(fixture.provider, wrapper);
+        ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                base,
+                wrappedBlue.conformanceEngine(),
+                wrappedBlue.getDocumentProcessor().snapshotManager(),
+                metrics);
+        FullOracleSnapshotManager oracleManager = new FullOracleSnapshotManager(wrappedBlue, false);
+        DocumentProcessingRuntime oracle = new DocumentProcessingRuntime(
+                base,
+                wrappedBlue.conformanceEngine(),
+                oracleManager);
+
+        JsonPatch patch = JsonPatch.replace("/status", new Node().value("confirmed"));
+        runtime.applyPatch("/", patch);
+        oracle.applyPatch("/", patch);
+
+        assertSnapshotEquals(wrappedBlue, oracle.snapshot(), runtime.snapshot());
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(1L, snapshot.counter("incrementalSnapshotResolutions"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("incrementalMergerCapabilityRequests"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("incrementalMergerCapabilityAllowed"), snapshot.toString());
+        assertTrue(wrapper.requestCalls >= 2,
+                "both conformance and snapshot manager should consult the same request-aware capability");
+    }
+
+    @Test
+    void requestAwareGuardedWrapperDeniesProtectedRegion() {
+        Fixture fixture = Fixture.withBasicStatusTypeContribution();
+        RequestAwareWrapper wrapper = new RequestAwareWrapper(
+                fixture.blue.getMergingProcessor(), "/status");
+        Blue wrappedBlue = new Blue(fixture.provider, wrapper);
+        ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        FullOracleSnapshotManager manager = new FullOracleSnapshotManager(wrappedBlue, true);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                base,
+                new ConformanceEngine(wrappedBlue.getNodeProvider(), wrapper),
+                manager,
+                metrics);
+
+        runtime.applyPatch("/", JsonPatch.replace("/status", new Node().value("confirmed")));
+
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(1L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("fullSnapshotFallbackReason.CUSTOM_MERGING_PROCESSOR"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("incrementalMergerCapabilityRequests"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("incrementalMergerCapabilityDenied"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("incrementalMergerCapabilityDeniedByConformance"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("incrementalMergerCapabilityDeniedBySnapshotManager"), snapshot.toString());
+        assertEquals(1, manager.fullResolutions);
+    }
+
+    @Test
+    void dishonestCapabilityDemonstratesTruthfulWrapperContract() {
+        Fixture fixture = Fixture.withBasicStatusTypeContribution();
+        DishonestWrapper wrapper = new DishonestWrapper(fixture.blue.getMergingProcessor());
+        Blue wrappedBlue = new Blue(fixture.provider, wrapper);
+        ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
+                base,
+                wrappedBlue.conformanceEngine(),
+                wrappedBlue.getDocumentProcessor().snapshotManager(),
+                metrics);
+        FullOracleSnapshotManager oracleManager = new FullOracleSnapshotManager(wrappedBlue, false);
+        DocumentProcessingRuntime oracle = new DocumentProcessingRuntime(
+                base,
+                wrappedBlue.conformanceEngine(),
+                oracleManager);
+
+        JsonPatch patch = JsonPatch.replace("/status", new Node().value("confirmed"));
+        incremental.applyPatch("/", patch);
+        oracle.applyPatch("/", patch);
+
+        assertEquals(1L, metrics.snapshot().counter("incrementalSnapshotResolutions"));
+        assertEquals(0L, metrics.snapshot().counter("fullSnapshotFallbacks"));
+        assertNotEquals(wrappedBlue.nodeToJson(oracle.snapshot().resolvedRoot()),
+                wrappedBlue.nodeToJson(incremental.snapshot().resolvedRoot()),
+                "Language trusts request-aware capabilities and does not run an expensive dishonesty oracle");
+    }
+
+
+    @Test
     void impactModelCarriesTypedBoundaryAndDependencyEvidence() {
         Fixture fixture = Fixture.withFixedStatusSubtype();
         ResolvedSnapshot base = fixture.snapshot();
@@ -360,6 +453,12 @@ class PatchImpactIncrementalResolutionTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private static ResolvedSnapshot snapshot(Blue blue, Fixture fixture) {
+        return blue.resolveToSnapshot(new Node()
+                .type(reference(fixture.documentTypeId))
+                .properties("status", new Node().value("draft")));
     }
 
     private static final class Fixture {
@@ -512,6 +611,119 @@ class PatchImpactIncrementalResolutionTest {
         @Override
         public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
             delegate.validateCompleted(node, semanticallyPresent, path);
+        }
+    }
+
+    private static final class RequestAwareWrapper implements MergingProcessor, IncrementalMergingProcessorCapability {
+        private final MergingProcessor delegate;
+        private final String deniedPath;
+        private int requestCalls;
+
+        private RequestAwareWrapper(MergingProcessor delegate, String deniedPath) {
+            this.delegate = delegate;
+            this.deniedPath = deniedPath;
+        }
+
+        @Override
+        public void process(Node target,
+                            Node source,
+                            NodeProvider nodeProvider,
+                            NodeResolver nodeResolver) {
+            delegate.process(target, source, nodeProvider, nodeResolver);
+        }
+
+        @Override
+        public void postProcess(Node target,
+                                Node source,
+                                NodeProvider nodeProvider,
+                                NodeResolver nodeResolver) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+        }
+
+        @Override
+        public boolean hasCompletedValidation(Node node) {
+            return delegate.hasCompletedValidation(node);
+        }
+
+        @Override
+        public boolean requiresReferenceMaterialization(Node node) {
+            return delegate.requiresReferenceMaterialization(node);
+        }
+
+        @Override
+        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
+            delegate.validateCompleted(node, semanticallyPresent, path);
+        }
+
+        @Override
+        public boolean supportsIncrementalValueResolution() {
+            return false;
+        }
+
+        @Override
+        public boolean supportsIncrementalValueResolution(IncrementalValueResolutionRequest request) {
+            requestCalls++;
+            if (deniedPath != null && deniedPath.equals(request.changedPath())) {
+                return false;
+            }
+            return delegate instanceof IncrementalMergingProcessorCapability
+                    && ((IncrementalMergingProcessorCapability) delegate)
+                    .supportsIncrementalValueResolution(request);
+        }
+    }
+
+    private static final class DishonestWrapper implements MergingProcessor, IncrementalMergingProcessorCapability {
+        private final MergingProcessor delegate;
+
+        private DishonestWrapper(MergingProcessor delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void process(Node target,
+                            Node source,
+                            NodeProvider nodeProvider,
+                            NodeResolver nodeResolver) {
+            delegate.process(target, source, nodeProvider, nodeResolver);
+        }
+
+        @Override
+        public void postProcess(Node target,
+                                Node source,
+                                NodeProvider nodeProvider,
+                                NodeResolver nodeResolver) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+            if (target.getProperties() != null
+                    && target.getProperties().get("status") != null
+                    && target.getProperties().get("status").getValue() != null) {
+                target.properties("wrapperObservedStatus",
+                        new Node().value(String.valueOf(target.getProperties().get("status").getValue())));
+            }
+        }
+
+        @Override
+        public boolean hasCompletedValidation(Node node) {
+            return delegate.hasCompletedValidation(node);
+        }
+
+        @Override
+        public boolean requiresReferenceMaterialization(Node node) {
+            return delegate.requiresReferenceMaterialization(node);
+        }
+
+        @Override
+        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
+            delegate.validateCompleted(node, semanticallyPresent, path);
+        }
+
+        @Override
+        public boolean supportsIncrementalValueResolution() {
+            return true;
+        }
+
+        @Override
+        public boolean supportsIncrementalValueResolution(IncrementalValueResolutionRequest request) {
+            return true;
         }
     }
 }

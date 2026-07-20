@@ -274,7 +274,7 @@ class ResolvedSnapshotPatchTransactionTest {
     private static void assertPlainPathViewsEqual(Blue blue, ResolvedSnapshot snapshot, String path) {
         assertEquals(blue.nodeToJson(ImmutablePatchPlanner.readNode(snapshot.canonicalRoot(), path)),
                 blue.nodeToJson(ImmutablePatchPlanner.readNode(snapshot.resolvedRoot(), path)));
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(snapshot.canonicalRoot()), snapshot.blueId());
+        assertEquals(snapshot.frozenCanonicalRoot().blueId(), snapshot.blueId());
     }
 
     private static Node listDocument(int... values) {

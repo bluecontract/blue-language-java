@@ -42,11 +42,11 @@ final class ContractEffectBuffer implements AutoCloseable {
     }
 
     void addPatches(List<JsonPatch> input) {
-        addPatchInputs(PatchInput.mutableList(input), null);
+        addPatchInputs(PatchInput.mutableList(input, PatchSource.CUSTOM_PROCESSOR), null);
     }
 
     void addPreviewedPatches(List<JsonPatch> input, WorkingDocument.Preview preview) {
-        addPatchInputs(PatchInput.mutableList(input), preview);
+        addPatchInputs(PatchInput.mutableList(input, PatchSource.CUSTOM_PROCESSOR), preview);
     }
 
     void addFrozenPatches(List<FrozenJsonPatch> input) {

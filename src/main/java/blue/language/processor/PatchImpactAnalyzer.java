@@ -1,7 +1,10 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
@@ -120,7 +123,10 @@ final class PatchImpactAnalyzer {
         boolean collectionChange = collectionBoundary != null
                 || parentIsList(canonicalRoot, path)
                 || parentIsList(resolvedRoot, path);
-        boolean contractsChange = containsSegment(path, "contracts");
+        boolean processorManagedStateChange = isProcessorManagedStateChange(
+                canonicalPlan.originScope(), path);
+        boolean contractsChange = !processorManagedStateChange
+                && containsSegment(path, "contracts");
         boolean typeChange = containsAnySegment(path, "type", "itemType", "keyType", "valueType");
         boolean schemaChange = containsSegment(path, "schema");
         boolean referenceChange = containsAnySegment(path, "blueId", "blue", "$previous", "$pos");
@@ -140,6 +146,7 @@ final class PatchImpactAnalyzer {
                 canonicalPlan,
                 resolvedPlan,
                 collectionChange,
+                processorManagedStateChange,
                 contractsChange,
                 typeChange,
                 schemaChange,
@@ -164,6 +171,8 @@ final class PatchImpactAnalyzer {
                     patch,
                     canonicalPlan,
                     resolvedPlan,
+                    canonicalPlan.originScope(),
+                    typedBoundaries,
                     kind,
                     typeDependency,
                     safeBasicTypeDependency,
@@ -172,6 +181,7 @@ final class PatchImpactAnalyzer {
                     referenceDependency,
                     siblingDependency,
                     collectionChange,
+                    processorManagedStateChange,
                     contractsChange,
                     typeChange,
                     schemaChange,
@@ -203,6 +213,8 @@ final class PatchImpactAnalyzer {
                                          ImmutableJsonPatch patch,
                                          ImmutablePatchPlanner.PatchPlan canonicalPlan,
                                          ImmutablePatchPlanner.PatchPlan resolvedPlan,
+                                         String originScope,
+                                         List<String> typedBoundaries,
                                          PatchImpact.Kind kind,
                                          boolean typeDependency,
                                          boolean safeBasicTypeDependency,
@@ -211,6 +223,7 @@ final class PatchImpactAnalyzer {
                                          boolean referenceDependency,
                                          boolean siblingDependency,
                                          boolean collectionChange,
+                                         boolean processorManagedStateChange,
                                          boolean contractsChange,
                                          boolean typeChange,
                                          boolean schemaChange,
@@ -218,6 +231,9 @@ final class PatchImpactAnalyzer {
                                          boolean mergePolicyChange) {
         if (path.isRoot()) {
             return Decision.fallback(PatchImpact.FallbackReason.ROOT_REPLACEMENT);
+        }
+        if (processorManagedStateChange) {
+            return Decision.local();
         }
         if (contractsChange) {
             return Decision.fallback(PatchImpact.FallbackReason.CONTRACTS_CHANGED);
@@ -260,12 +276,32 @@ final class PatchImpactAnalyzer {
         if (conformancePlannerOverride != null && conformancePlannerOverride.applies()) {
             return Decision.fallback(PatchImpact.FallbackReason.CUSTOM_CONFORMANCE_PLANNER);
         }
-        if (conformanceEngine == null || !conformanceEngine.supportsIncrementalValueResolution()) {
+        IncrementalValueResolutionRequest request = new IncrementalValueResolutionRequest(
+                originScope,
+                path.pointer(),
+                patch.op().name(),
+                canonicalPlan.before(),
+                canonicalPlan.after(),
+                resolvedPlan.before(),
+                resolvedPlan.after(),
+                typedBoundaries,
+                typeChange,
+                schemaChange,
+                referenceChange,
+                collectionChange,
+                contractsChange);
+        metrics.incrementIncrementalMergerCapabilityRequests();
+        if (conformanceEngine == null || !conformanceEngine.supportsIncrementalValueResolution(request)) {
+            metrics.incrementIncrementalMergerCapabilityDenied();
+            metrics.incrementIncrementalMergerCapabilityDeniedByConformance();
             return Decision.fallback(PatchImpact.FallbackReason.CUSTOM_MERGING_PROCESSOR);
         }
-        if (snapshotManager == null || !snapshotManager.supportsIncrementalValueResolution()) {
+        if (snapshotManager == null || !snapshotManager.supportsIncrementalValueResolution(request)) {
+            metrics.incrementIncrementalMergerCapabilityDenied();
+            metrics.incrementIncrementalMergerCapabilityDeniedBySnapshotManager();
             return Decision.fallback(PatchImpact.FallbackReason.UNKNOWN_PROCESSOR_CAPABILITY);
         }
+        metrics.incrementIncrementalMergerCapabilityAllowed();
         return Decision.local();
     }
 
@@ -372,6 +408,7 @@ final class PatchImpactAnalyzer {
                                       ImmutablePatchPlanner.PatchPlan canonicalPlan,
                                       ImmutablePatchPlanner.PatchPlan resolvedPlan,
                                       boolean collectionChange,
+                                      boolean processorManagedStateChange,
                                       boolean contractsChange,
                                       boolean typeChange,
                                       boolean schemaChange,
@@ -379,6 +416,9 @@ final class PatchImpactAnalyzer {
                                       boolean mergePolicyChange) {
         if (path.isRoot()) {
             return PatchImpact.Kind.ROOT_REPLACEMENT;
+        }
+        if (processorManagedStateChange) {
+            return PatchImpact.Kind.PROCESSOR_MANAGED_STATE;
         }
         if (contractsChange) {
             return PatchImpact.Kind.CONTRACT_OR_PROCESSING_STRUCTURE;
@@ -436,6 +476,10 @@ final class PatchImpactAnalyzer {
                 break;
             case MERGE_POLICY:
                 metrics.incrementPatchImpactMergePolicy();
+                break;
+            case PROCESSOR_MANAGED_STATE:
+                metrics.incrementPatchImpactProcessorManagedState();
+                metrics.incrementProcessorManagedMarkerPatches();
                 break;
             case CONTRACT_OR_PROCESSING_STRUCTURE:
                 metrics.incrementPatchImpactContractsOrProcessing();
@@ -594,6 +638,12 @@ final class PatchImpactAnalyzer {
             }
         }
         return false;
+    }
+
+    private boolean isProcessorManagedStateChange(String originScope,
+                                                  ParsedJsonPointer path) {
+        String relativePath = PointerUtils.relativizePointer(originScope, path.pointer());
+        return PointerUtils.descendantOrEqual(relativePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
     }
 
     private static final class Decision {

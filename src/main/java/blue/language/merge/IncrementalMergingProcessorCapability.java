@@ -14,4 +14,13 @@ public interface IncrementalMergingProcessorCapability {
      * snapshot resolution.
      */
     boolean supportsIncrementalValueResolution();
+
+    /**
+     * Request-aware variant for transparent wrappers. Existing implementations
+     * keep their historical behavior through this conservative default.
+     */
+    default boolean supportsIncrementalValueResolution(
+            IncrementalValueResolutionRequest request) {
+        return supportsIncrementalValueResolution();
+    }
 }

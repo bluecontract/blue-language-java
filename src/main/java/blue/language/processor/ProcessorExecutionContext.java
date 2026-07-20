@@ -307,12 +307,12 @@ public final class ProcessorExecutionContext implements AutoCloseable {
 
     public WorkingDocument newWorkingDocument() {
         ensureOpen();
-        return runtime().workingDocument(scopePath);
+        return runtime().workingDocument(scopePath, PatchSource.CUSTOM_PROCESSOR);
     }
 
     public WorkingDocument newWorkingDocument(String originScope) {
         ensureOpen();
-        return runtime().workingDocument(originScope);
+        return runtime().workingDocument(originScope, PatchSource.CUSTOM_PROCESSOR);
     }
 
     public boolean documentContains(String absolutePointer) {

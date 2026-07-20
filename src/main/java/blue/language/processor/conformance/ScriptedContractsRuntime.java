@@ -8,6 +8,7 @@ import blue.language.processor.ConformanceChangedPath;
 import blue.language.processor.ConformancePlannerOverride;
 import blue.language.processor.DocumentProcessingRuntime;
 import blue.language.processor.HandlerMatchContext;
+import blue.language.processor.PatchSource;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.ProcessorErrorCategory;
 import blue.language.processor.ProcessorFailureException;
@@ -235,12 +236,15 @@ public final class ScriptedContractsRuntime {
                 JsonPatch patch = runtime.nodeAt(path) == null
                         ? JsonPatch.add(path, channel)
                         : JsonPatch.replace(path, channel);
-                runtime.applyPatches(scopePath, Collections.singletonList(patch));
+                runtime.applyPatches(scopePath, Collections.singletonList(patch),
+                        PatchSource.CONFORMANCE_FIXTURE);
             }
             if (mutation.removeChannelKey != null) {
                 String path = contractPath(scopePath, mutation.removeChannelKey);
                 if (runtime.nodeAt(path) != null) {
-                    runtime.applyPatches(scopePath, Collections.singletonList(JsonPatch.remove(path)));
+                    runtime.applyPatches(scopePath,
+                            Collections.singletonList(JsonPatch.remove(path)),
+                            PatchSource.CONFORMANCE_FIXTURE);
                 }
             }
         }

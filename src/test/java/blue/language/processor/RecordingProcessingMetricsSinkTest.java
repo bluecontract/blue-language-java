@@ -80,4 +80,22 @@ class RecordingProcessingMetricsSinkTest {
                 snapshot.counter("incrementalSnapshotResolutions"));
         assertEquals(iterations - 1L, snapshot.gauge("cache.plans.highWaterBytes"));
     }
+
+    @Test
+    void mutablePatchAttributionUsesFixedSourceNames() {
+        RecordingProcessingMetricsSink sink = new RecordingProcessingMetricsSink();
+
+        sink.incrementMutablePatchValuesFrozen(PatchSource.PROCESSOR_INITIALIZATION_MARKER);
+        sink.incrementMutablePatchValuesFrozen(PatchSource.CONFORMANCE_FIXTURE);
+        sink.incrementMutablePatchValuesFrozen(null);
+
+        ProcessingMetricsSnapshot snapshot = sink.snapshot();
+        assertEquals(3L, snapshot.counter("mutablePatchValuesFrozen"));
+        assertEquals(1L, snapshot.counter(
+                "mutablePatchValuesFrozenBySource.PROCESSOR_INITIALIZATION_MARKER"));
+        assertEquals(1L, snapshot.counter(
+                "mutablePatchValuesFrozenBySource.CONFORMANCE_FIXTURE"));
+        assertEquals(1L, snapshot.counter(
+                "mutablePatchValuesFrozenBySource.UNKNOWN_INTERNAL"));
+    }
 }

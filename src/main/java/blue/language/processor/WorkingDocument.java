@@ -50,6 +50,7 @@ public final class WorkingDocument implements AutoCloseable {
     private final ConformanceEngine conformanceEngine;
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final boolean exactReplacement;
+    private final PatchSource mutablePatchSource;
     private final ProcessingMetricsSink metrics;
     private ProcessingSnapshotManager workingSequenceManager;
     private ResolvedSnapshot snapshot;
@@ -64,6 +65,7 @@ public final class WorkingDocument implements AutoCloseable {
                     ResolvedSnapshot snapshot,
                     boolean materializedFallback,
                     boolean exactReplacement,
+                    PatchSource mutablePatchSource,
                     ProcessingMetricsSink metrics) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
@@ -74,6 +76,9 @@ public final class WorkingDocument implements AutoCloseable {
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.exactReplacement = exactReplacement;
+        this.mutablePatchSource = mutablePatchSource != null
+                ? mutablePatchSource
+                : PatchSource.UNKNOWN_INTERNAL;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         this.workingSequenceManager = snapshotManager != null
                 ? snapshotManager.transientSequence()
@@ -106,12 +111,12 @@ public final class WorkingDocument implements AutoCloseable {
     }
 
     public WorkingDocument applyPatches(List<JsonPatch> patches) {
-        applyPatchInputs(PatchInput.mutableList(patches), false);
+        applyPatchInputs(PatchInput.mutableList(patches, mutablePatchSource), false);
         return this;
     }
 
     public Preview previewAndApplyPatches(List<JsonPatch> patches) {
-        return applyPatchInputs(PatchInput.mutableList(patches), true);
+        return applyPatchInputs(PatchInput.mutableList(patches, mutablePatchSource), true);
     }
 
     public WorkingDocument applyFrozenPatch(FrozenJsonPatch patch) {

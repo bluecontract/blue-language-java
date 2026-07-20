@@ -25,6 +25,7 @@ final class PatchImpact {
         SCHEMA_METADATA,
         REFERENCE_OR_BLUE_ID,
         MERGE_POLICY,
+        PROCESSOR_MANAGED_STATE,
         CONTRACT_OR_PROCESSING_STRUCTURE,
         ROOT_REPLACEMENT,
         UNKNOWN

@@ -652,8 +652,9 @@ final class ProcessorEngine {
             String reason = fatal != null ? fatal.reason : null;
             ResolvedSnapshot snapshot = runtime.snapshot();
             if (snapshot != null) {
+                ResolvedSnapshot publishedSnapshot = publishableSnapshot(snapshot, owner.metricsSink());
                 return DocumentProcessingResult.ofSelected(runtime.selectedDocument(),
-                        snapshot,
+                        publishedSnapshot,
                         runtime.rootEmissions(),
                         runtime.totalGas(),
                         status,
@@ -666,6 +667,51 @@ final class ProcessorEngine {
                     status,
                     category,
                     reason);
+        }
+
+        private ResolvedSnapshot publishableSnapshot(ResolvedSnapshot snapshot,
+                                                     ProcessingMetricsSink metrics) {
+            ProcessingMetricsSink sink = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+            sink.incrementProcessorPublicationInvariantChecks();
+            ResolvedSnapshot published = snapshot;
+            if (!isStrictPublishable(published)) {
+                sink.incrementProcessorPublicationCanonicalizations();
+                sink.incrementProcessorPublicationCanonicalMaterializations();
+                sink.incrementProcessorPublicationStrictBlueIdCalculations();
+                long canonicalizationStart = System.nanoTime();
+                try {
+                    published = published.toStrictBlueIdValidatedCanonical();
+                } catch (RuntimeException exception) {
+                    sink.incrementProcessorPublishedUncheckedCanonical();
+                    sink.incrementProcessorPublicationIdentityMismatches();
+                    throw exception;
+                } finally {
+                    sink.addProcessorPublicationCanonicalizationNanos(
+                            Math.max(1L, System.nanoTime() - canonicalizationStart));
+                }
+            }
+
+            if (!isStrictPublishable(published)) {
+                sink.incrementProcessorPublishedUncheckedCanonical();
+                sink.incrementProcessorPublicationIdentityMismatches();
+                throw new IllegalStateException(
+                        "Processor result snapshot must be strict canonical with strict BlueId validation.");
+            }
+            String snapshotBlueId = published.blueId();
+            String canonicalBlueId = published.frozenCanonicalRoot().blueId();
+            if (!Objects.equals(snapshotBlueId, canonicalBlueId)) {
+                sink.incrementProcessorPublicationIdentityMismatches();
+                throw new IllegalStateException(
+                        "Processor result snapshot BlueId must match canonical root BlueId.");
+            }
+            sink.incrementProcessorPublishedStrictCanonical();
+            return published;
+        }
+
+        private boolean isStrictPublishable(ResolvedSnapshot snapshot) {
+            FrozenNode canonicalRoot = snapshot.frozenCanonicalRoot();
+            return canonicalRoot.isStrictCanonical()
+                    && canonicalRoot.isStrictBlueIdValidation();
         }
 
         DocumentProcessingResult partialResult() {

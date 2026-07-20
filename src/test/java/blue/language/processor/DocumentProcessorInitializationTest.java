@@ -1,19 +1,32 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
+import blue.language.provider.BasicNodeProvider;
 import blue.language.processor.contracts.RemovePropertyContractProcessor;
+import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
+import blue.language.processor.model.FrozenJsonPatch;
+import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorInitializationTest {
+
+    private static final String CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID =
+            "n1dTwJjYLh4mvRbrBiQ56fLj8skq8pGo8eyPhmTtBJH";
 
     @Test
     void initializeDocumentEmitsRootLifecycleEvent() {
@@ -40,6 +53,361 @@ class DocumentProcessorInitializationTest {
                 .get("documentId");
         assertNotNull(lifecycleDocId);
         assertEquals(markerDocId.getValue(), lifecycleDocId.getValue());
+    }
+
+    @Test
+    void initializationMarkerUsesFrozenPatchAndLocalProcessorStateResolution() {
+        Blue blue = ProcessorTestSupport.blue();
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        Node original = blue.yamlToNode("name: Minimal Doc\n" +
+                "contracts: {}\n");
+        ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
+        String oldMaterializedDocumentId = BlueIdCalculator.calculateUncheckedBlueId(
+                preInitialization.frozenCanonicalRoot().toNode());
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        Node initialized = result.document()
+                .getContracts()
+                .getProperties()
+                .get("initialized");
+        assertEquals(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
+                initialized.getType().getBlueId());
+        assertEquals(oldMaterializedDocumentId,
+                initialized.getProperties().get("documentId").getValue());
+        assertEquals(lifecycleDocumentId(result.triggeredEvents().get(0)),
+                initialized.getProperties().get("documentId").getValue());
+
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
+        assertEquals(0L, snapshot.counter(
+                "mutablePatchValuesFrozenBySource.PROCESSOR_INITIALIZATION_MARKER"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdUncheckedCalculations"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdNodeMaterializations"), snapshot.toString());
+    }
+
+    @Test
+    void snapshotBackedInitializationMarkerUsesIncrementalProcessorStateResolution() {
+        Blue blue = ProcessorTestSupport.blue();
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        ResolvedSnapshot preInitialization = blue.resolveToSnapshot(blue.yamlToNode(
+                "name: Snapshot Minimal Doc\n" +
+                        "contracts: {}\n"));
+
+        DocumentProcessingResult result = blue.initializeDocument(preInitialization);
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("incrementalSnapshotResolutions"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdUncheckedCalculations"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdNodeMaterializations"), snapshot.toString());
+    }
+
+    @Test
+    void initializationDocumentIdUsesUncheckedIdentityWhenCanonicalBlueIdDiffers() {
+        Blue blue = ProcessorTestSupport.blue();
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        Node original = blue.yamlToNode(
+                "name: Nested List Divergence\n" +
+                        "bex:\n" +
+                        "  do:\n" +
+                        "    - - 1\n" +
+                        "      - 2\n" +
+                        "contracts: {}\n");
+        ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
+        String canonical = preInitialization.frozenCanonicalRoot().blueId();
+        String unchecked = uncheckedInitializationId(preInitialization.frozenCanonicalRoot());
+        assertNotEquals(canonical, unchecked,
+                "canonical=" + canonical + ", unchecked=" + unchecked);
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        String markerDocumentId = markerDocumentId(result.document(), "/");
+        assertEquals(unchecked, markerDocumentId,
+                "canonical=" + canonical + ", unchecked=" + unchecked);
+        assertEquals(unchecked, lifecycleDocumentId(result.triggeredEvents().get(0)));
+        assertNotEquals(canonical, markerDocumentId);
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
+    }
+
+    @Test
+    void initializationDocumentIdUsesMaterializedUncheckedOracleAcrossIdentityShapes() {
+        Blue blue = ProcessorTestSupport.blue();
+        List<String> fixtures = new ArrayList<>(Arrays.asList(
+                "name: Simple Object Shape\n" +
+                        "status: draft\n" +
+                        "contracts: {}\n",
+                "name: Simple Scalar Fields Shape\n" +
+                        "count: 7\n" +
+                        "active: true\n" +
+                        "label: text\n" +
+                        "contracts: {}\n",
+                "name: Payload Only List Shape\n" +
+                        "payload:\n" +
+                        "  - alpha\n" +
+                        "  - beta\n" +
+                        "contracts: {}\n",
+                "name: Nested Payload Only List Shape\n" +
+                        "payload:\n" +
+                        "  - - alpha\n" +
+                        "    - beta\n" +
+                        "  - gamma\n" +
+                        "contracts: {}\n",
+                "name: Metadata Bearing List Shape\n" +
+                        "payload:\n" +
+                        "  name: Metadata Bearing List\n" +
+                        "  type:\n" +
+                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                        "  items:\n" +
+                        "    - alpha\n" +
+                        "    - beta\n" +
+                        "contracts: {}\n",
+                "name: Object Elements List Shape\n" +
+                        "rows:\n" +
+                        "  - id: one\n" +
+                        "    amount: 1\n" +
+                        "  - id: two\n" +
+                        "    amount: 2\n" +
+                        "contracts: {}\n",
+                "name: Scalar Elements List Shape\n" +
+                        "scalars: [one, 2, true]\n" +
+                        "contracts: {}\n",
+                "name: Typed Scalar Elements List Shape\n" +
+                        "typedScalars:\n" +
+                        "  items:\n" +
+                        "    - type: Integer\n" +
+                        "      value: 1\n" +
+                        "    - type: Text\n" +
+                        "      value: two\n" +
+                        "contracts: {}\n",
+                "name: Empty List Control Shape\n" +
+                        "emptyControl:\n" +
+                        "  items:\n" +
+                        "    - $empty: true\n" +
+                        "    - value: tail\n" +
+                        "contracts: {}\n",
+                "name: BEX Operator Map Shape\n" +
+                        "bex:\n" +
+                        "  do:\n" +
+                        "    - \"$get\": [/invoice/status]\n" +
+                        "    - \"$literal\":\n" +
+                        "        - [accepted, pending]\n" +
+                        "contracts: {}\n",
+                "name: Contracts Containing Lists Shape\n" +
+                        "contracts:\n" +
+                        "  lifecycleWithList:\n" +
+                        "    type:\n" +
+                        "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                        "    values:\n" +
+                        "      - [a, b]\n" +
+                        "      - {kind: c}\n",
+                "name: Embedded Documents Containing Lists Shape\n" +
+                        "child:\n" +
+                        "  name: Embedded List Child\n" +
+                        "  values:\n" +
+                        "    - [a, b]\n" +
+                        "  contracts: {}\n" +
+                        "contracts:\n" +
+                        "  embedded:\n" +
+                        "    type:\n" +
+                        "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                        "    paths:\n" +
+                        "      - /child\n"));
+
+        for (String yaml : fixtures) {
+            assertInitializationUsesUncheckedIdentityAndReloads(blue, yaml);
+        }
+
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Blue previousBlue = ProcessorTestSupport.blue(provider);
+        Node previous = previousBlue.yamlToNode(
+                "items:\n" +
+                        "  - previous-a\n" +
+                        "  - previous-b\n");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(previous.getItems());
+        provider.addListAndItsItems(previous.getItems());
+        assertInitializationUsesUncheckedIdentityAndReloads(previousBlue,
+                "name: Previous List Control Shape\n" +
+                        "history:\n" +
+                        "  type:\n" +
+                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                        "  mergePolicy: append-only\n" +
+                        "  items:\n" +
+                        "    - $previous:\n" +
+                        "        blueId: " + previousBlueId + "\n" +
+                        "    - after\n" +
+                        "contracts: {}\n");
+    }
+
+    @Test
+    void bexShapedNestedListsUseHistoricalUncheckedInitializationIdentity() {
+        Blue blue = ProcessorTestSupport.blue();
+        List<String> fixtures = Arrays.asList(
+                "name: Compute Do Payload List\n" +
+                        "compute:\n" +
+                        "  do:\n" +
+                        "    - - 1\n" +
+                        "      - 2\n" +
+                        "contracts: {}\n",
+                "name: Nested Operand Lists\n" +
+                        "compute:\n" +
+                        "  expr:\n" +
+                        "    - \"$add\":\n" +
+                        "        - [1, 2]\n" +
+                        "        - [3, [4, 5]]\n" +
+                        "contracts: {}\n",
+                "name: Operation Maps In List\n" +
+                        "compute:\n" +
+                        "  do:\n" +
+                        "    - \"$set\": [/status, confirmed]\n" +
+                        "    - \"$emit\": [{kind: done}]\n" +
+                        "contracts: {}\n",
+                "name: List Containing Payload List\n" +
+                        "operands:\n" +
+                        "  - before\n" +
+                        "  - - nested\n" +
+                        "    - [operand]\n" +
+                        "contracts: {}\n",
+                "name: Mixed Operands\n" +
+                        "operands:\n" +
+                        "  - 1\n" +
+                        "  - {kind: object}\n" +
+                        "  - [a, {b: c}, [d]]\n" +
+                        "contracts: {}\n",
+                "name: Empty Operand List\n" +
+                        "operands: []\n" +
+                        "contracts: {}\n",
+                "name: Single Element List\n" +
+                        "operands:\n" +
+                        "  - [only]\n" +
+                        "contracts: {}\n",
+                "name: Multiple Nested Levels\n" +
+                        "operands:\n" +
+                        "  - - - - deep\n" +
+                        "contracts: {}\n");
+
+        for (String yaml : fixtures) {
+            assertInitializationUsesUncheckedIdentityAndReloads(blue, yaml);
+        }
+    }
+
+    @Test
+    void embeddedScopeInitializationDocumentIdsUseTheirOwnUncheckedPreInitializationIdentity() {
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerExternalContractType(CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID,
+                new Node().name("CaptureLifecycleDocumentId"),
+                new CaptureLifecycleDocumentIdProcessor());
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        Node original = blue.yamlToNode(
+                "name: Embedded Nested List\n" +
+                        "child:\n" +
+                        "  name: Child Nested List\n" +
+                        "  payload:\n" +
+                        "    do:\n" +
+                        "      - - 1\n" +
+                        "        - [2, 3]\n" +
+                        "  contracts:\n" +
+                        "    lifecycle:\n" +
+                        "      type:\n" +
+                        "        blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                        "    captureChildId:\n" +
+                        "      channel: lifecycle\n" +
+                        "      type:\n" +
+                        "        blueId: " + CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID + "\n" +
+                        "      propertyKey: /childLifecycleDocumentId\n" +
+                        "contracts:\n" +
+                        "  embedded:\n" +
+                        "    type:\n" +
+                        "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                        "    paths:\n" +
+                        "      - /child\n" +
+                        "  lifecycle:\n" +
+                        "    type:\n" +
+                        "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                        "  captureRootId:\n" +
+                        "    channel: lifecycle\n" +
+                        "    type:\n" +
+                        "      blueId: " + CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID + "\n" +
+                        "    propertyKey: /rootLifecycleDocumentId\n");
+        ResolvedSnapshot preInitialization = blue.getDocumentProcessor()
+                .snapshotManager()
+                .fromDocument(original.clone());
+        FrozenNode rootBefore = preInitialization.frozenCanonicalRoot();
+        FrozenNode childBefore = rootBefore.property("child");
+        String rootUnchecked = uncheckedInitializationId(rootBefore);
+        String childUnchecked = uncheckedInitializationId(childBefore);
+        assertNotEquals(childBefore.blueId(), childUnchecked,
+                "canonical=" + childBefore.blueId() + ", unchecked=" + childUnchecked);
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        Node initialized = result.document();
+        assertEquals(rootUnchecked, markerDocumentId(initialized, "/"));
+        assertEquals(childUnchecked, markerDocumentId(initialized, "/child"));
+        assertEquals(rootUnchecked, initialized.getAsText("/rootLifecycleDocumentId"));
+        assertEquals(childUnchecked, initialized.getAsText("/child/childLifecycleDocumentId"));
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
+        assertEquals(2L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(2L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
+        assertEquals(2L, snapshot.counter("initializationDocumentIdUncheckedCalculations"), snapshot.toString());
+        assertEquals(2L, snapshot.counter("initializationDocumentIdNodeMaterializations"), snapshot.toString());
+    }
+
+    @Test
+    void initializeCurrentScopeIfNeededUsesUncheckedInitializationIdentityBeforeFatalBoundaryStop() {
+        Blue blue = ProcessorTestSupport.blue();
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        Node original = blue.yamlToNode(
+                "name: Non Object Embedded Child\n" +
+                        "payload:\n" +
+                        "  - - 1\n" +
+                        "    - 2\n" +
+                        "child: scalar\n" +
+                        "contracts:\n" +
+                        "  embedded:\n" +
+                        "    type:\n" +
+                        "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                        "    paths:\n" +
+                        "      - /child\n");
+        ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
+        String unchecked = uncheckedInitializationId(preInitialization.frozenCanonicalRoot());
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertNotNull(result.failureReason());
+        assertEquals(unchecked, markerDocumentId(result.document(), "/"));
+        assertEquals(unchecked, lifecycleDocumentId(result.triggeredEvents().get(0)));
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
     }
 
     @Test
@@ -424,5 +792,86 @@ class DocumentProcessorInitializationTest {
         Node childLifecycle = initialized.getProperties().get("childLifecycle");
         assertNotNull(childLifecycle, "Parent should observe child lifecycle through Embedded Node channel");
         assertEquals(new BigInteger("1"), childLifecycle.getValue());
+    }
+
+    private static void assertInitializationUsesUncheckedIdentityAndReloads(Blue blue, String yaml) {
+        Node original = blue.yamlToNode(yaml);
+        ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
+        String unchecked = uncheckedInitializationId(preInitialization.frozenCanonicalRoot());
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+
+        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertEquals(unchecked, markerDocumentId(result.document(), "/"), yaml);
+        assertTrue(hasLifecycleDocumentId(result, unchecked), yaml);
+        ResolvedSnapshot finalSnapshot = blue.resolveToSnapshot(result.document().clone());
+        ResolvedSnapshot reloaded = blue.resolveToSnapshot(
+                blue.jsonToNode(blue.nodeToJson(result.document())));
+        assertEquals(finalSnapshot.blueId(), reloaded.blueId(), yaml);
+        assertEquals(blue.nodeToJson(finalSnapshot.canonicalRoot()),
+                blue.nodeToJson(reloaded.canonicalRoot()), yaml);
+        assertEquals(blue.nodeToJson(finalSnapshot.resolvedRoot()),
+                blue.nodeToJson(reloaded.resolvedRoot()), yaml);
+    }
+
+    private static String uncheckedInitializationId(FrozenNode node) {
+        return BlueIdCalculator.calculateUncheckedBlueId(node.toNode());
+    }
+
+    private static String markerDocumentId(Node document, String scope) {
+        String prefix = "/".equals(scope) ? "" : scope;
+        return document.getAsText(prefix + "/contracts/initialized/documentId");
+    }
+
+    private static String lifecycleDocumentId(Node event) {
+        Node documentId = event != null && event.getProperties() != null
+                ? event.getProperties().get("documentId")
+                : null;
+        Object value = documentId != null ? documentId.getValue() : null;
+        return value != null ? String.valueOf(value) : null;
+    }
+
+    private static boolean hasLifecycleDocumentId(DocumentProcessingResult result, String documentId) {
+        for (Node event : result.triggeredEvents()) {
+            if (documentId.equals(lifecycleDocumentId(event))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @TypeBlueId(CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID)
+    public static final class CaptureLifecycleDocumentId extends HandlerContract {
+        private String propertyKey;
+
+        public String getPropertyKey() {
+            return propertyKey;
+        }
+
+        public void setPropertyKey(String propertyKey) {
+            this.propertyKey = propertyKey;
+        }
+    }
+
+    private static final class CaptureLifecycleDocumentIdProcessor
+            implements HandlerProcessor<CaptureLifecycleDocumentId> {
+        @Override
+        public Class<CaptureLifecycleDocumentId> contractType() {
+            return CaptureLifecycleDocumentId.class;
+        }
+
+        @Override
+        public void execute(CaptureLifecycleDocumentId contract, ProcessorExecutionContext context) {
+            String documentId = lifecycleDocumentId(context.event());
+            if (documentId == null) {
+                throw new IllegalStateException("Lifecycle event missing documentId");
+            }
+            String propertyKey = contract.getPropertyKey() != null
+                    ? contract.getPropertyKey()
+                    : "/capturedDocumentId";
+            context.applyFrozenPatch(FrozenJsonPatch.add(
+                    context.resolvePointer(propertyKey),
+                    FrozenNode.fromNode(new Node().value(documentId))));
+        }
     }
 }

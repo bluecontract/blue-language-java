@@ -251,6 +251,9 @@ final class PatchPlanningEngine {
             for (BatchPatchRecord record : records) {
                 if (record.impact().localResolutionProvenSafe()) {
                     metrics.incrementIncrementalSnapshotResolutions();
+                    if (record.impact().kind() == PatchImpact.Kind.PROCESSOR_MANAGED_STATE) {
+                        metrics.incrementProcessorManagedMarkerIncrementalResolutions();
+                    }
                     metrics.addIncrementalBoundaryPathDepth(record.impact().path().depth());
                     metrics.addIncrementalBoundaryNodeCount(1L);
                 }

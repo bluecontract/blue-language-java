@@ -4,6 +4,7 @@ import blue.language.BlueCachePolicy;
 import blue.language.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.IncrementalMergingProcessorCapability;
+import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
@@ -113,6 +114,12 @@ public final class ConformanceEngine implements AutoCloseable {
         return mergingProcessor instanceof IncrementalMergingProcessorCapability
                 && ((IncrementalMergingProcessorCapability) mergingProcessor)
                 .supportsIncrementalValueResolution();
+    }
+
+    public boolean supportsIncrementalValueResolution(IncrementalValueResolutionRequest request) {
+        return mergingProcessor instanceof IncrementalMergingProcessorCapability
+                && ((IncrementalMergingProcessorCapability) mergingProcessor)
+                .supportsIncrementalValueResolution(request);
     }
 
     public ConformanceResult check(Node node) {

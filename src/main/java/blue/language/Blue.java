@@ -8,6 +8,7 @@ import blue.language.dictionary.ExportContext;
 import blue.language.dictionary.TypeDictionary;
 import blue.language.merge.Merger;
 import blue.language.merge.IncrementalMergingProcessorCapability;
+import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.merge.processor.*;
@@ -1843,6 +1844,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
 
         @Override
+        public boolean supportsIncrementalValueResolution(IncrementalValueResolutionRequest request) {
+            return snapshotMergingProcessor instanceof IncrementalMergingProcessorCapability
+                    && ((IncrementalMergingProcessorCapability) snapshotMergingProcessor)
+                    .supportsIncrementalValueResolution(request);
+        }
+
+        @Override
         public ConformanceEngine transientConformanceEngine(ConformanceEngine conformanceEngine) {
             if (conformanceEngine == null) {
                 return null;
@@ -2155,11 +2163,11 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     private ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
-        Objects.requireNonNull(snapshot, "snapshot");
+        ResolvedSnapshot publishable = publishableCacheSnapshot(snapshot);
         CacheSnapshotPublication publication;
         synchronized (lifecycleLock) {
             ensureOpen();
-            publication = cacheSnapshotLocked(snapshot);
+            publication = cacheSnapshotLocked(publishable);
         }
         publication.emit();
         return publication.result;
@@ -2167,6 +2175,7 @@ public class Blue implements NodeResolver, AutoCloseable {
 
     /** Caller holds lifecycleLock, which linearizes publication with invalidation. */
     private CacheSnapshotPublication cacheSnapshotLocked(ResolvedSnapshot snapshot) {
+        snapshot = publishableCacheSnapshot(snapshot);
         if (snapshot.verifiedReferenceResolution() != null) {
             resolvedReferenceCache.putVerifiedResolved(snapshot.verifiedReferenceResolution());
         }
@@ -2228,6 +2237,7 @@ public class Blue implements NodeResolver, AutoCloseable {
                     && !transientReferenceCache.isCurrentGeneration()) {
                 return snapshot;
             }
+            snapshot = publishableCacheSnapshot(snapshot, metricsSink());
             if (transientReferenceCache != null) {
                 transientReferenceCache.promoteReferencesReachableFrom(
                         snapshot.frozenCanonicalRoot());
@@ -2239,7 +2249,7 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     private void pinSnapshot(ResolvedSnapshot snapshot) {
-        Objects.requireNonNull(snapshot, "snapshot");
+        snapshot = publishableCacheSnapshot(snapshot);
         ensureOpen();
         if (snapshot.verifiedReferenceResolution() != null) {
             resolvedReferenceCache.putPinnedVerifiedResolved(snapshot.verifiedReferenceResolution());
@@ -2281,6 +2291,33 @@ public class Blue implements NodeResolver, AutoCloseable {
                     selected.verifiedReferenceResolution());
         }
         gauges.emit(metrics);
+    }
+
+    private ResolvedSnapshot publishableCacheSnapshot(ResolvedSnapshot snapshot) {
+        return publishableCacheSnapshot(snapshot, null);
+    }
+
+    private ResolvedSnapshot publishableCacheSnapshot(ResolvedSnapshot snapshot,
+                                                      ProcessingMetricsSink metrics) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        FrozenNode canonicalRoot = snapshot.frozenCanonicalRoot();
+        if (canonicalRoot.isStrictCanonical()
+                && canonicalRoot.isStrictBlueIdValidation()) {
+            return snapshot;
+        }
+        if (metrics != null) {
+            metrics.incrementProcessorPublicationCanonicalizations();
+            metrics.incrementProcessorPublicationCanonicalMaterializations();
+            metrics.incrementProcessorPublicationStrictBlueIdCalculations();
+            long canonicalizationStart = System.nanoTime();
+            try {
+                return snapshot.toStrictBlueIdValidatedCanonical();
+            } finally {
+                metrics.addProcessorPublicationCanonicalizationNanos(
+                        Math.max(1L, System.nanoTime() - canonicalizationStart));
+            }
+        }
+        return snapshot.toStrictBlueIdValidatedCanonical();
     }
 
     private void replacePinnedSnapshot(FrozenNode.ResolvedStructuralKey key,

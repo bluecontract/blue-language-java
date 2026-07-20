@@ -402,6 +402,7 @@ class FrozenJsonPatchApiTest {
                 snapshot,
                 false,
                 true,
+                PatchSource.LEGACY_PUBLIC_API,
                 ProcessingMetricsSink.NOOP);
     }
 

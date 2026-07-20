@@ -460,6 +460,90 @@ public interface ProcessingMetricsSink {
         addMetric("patchImpactContractsOrProcessing", 1L);
     }
 
+    default void incrementPatchImpactProcessorManagedState() {
+        addMetric("patchImpactProcessorManagedState", 1L);
+    }
+
+    default void incrementProcessorManagedMarkerPatches() {
+        addMetric("processorManagedMarkerPatches", 1L);
+    }
+
+    default void incrementProcessorManagedMarkerIncrementalResolutions() {
+        addMetric("processorManagedMarkerIncrementalResolutions", 1L);
+    }
+
+    default void incrementInitializationDocumentIdUncheckedCalculations() {
+        addMetric("initializationDocumentIdUncheckedCalculations", 1L);
+    }
+
+    default void incrementInitializationDocumentIdNodeMaterializations() {
+        addMetric("initializationDocumentIdNodeMaterializations", 1L);
+    }
+
+    default void incrementInitializationDocumentIdFrozenUncheckedCalculations() {
+        addMetric("initializationDocumentIdFrozenUncheckedCalculations", 1L);
+    }
+
+    default void incrementProcessorInputStrictCanonical() {
+        addMetric("processorInputStrictCanonical", 1L);
+    }
+
+    default void incrementProcessorInputUncheckedCanonical() {
+        addMetric("processorInputUncheckedCanonical", 1L);
+    }
+
+    default void incrementProcessorPublishedStrictCanonical() {
+        addMetric("processorPublishedStrictCanonical", 1L);
+    }
+
+    default void incrementProcessorPublishedUncheckedCanonical() {
+        addMetric("processorPublishedUncheckedCanonical", 1L);
+    }
+
+    default void incrementProcessorPublicationCanonicalizations() {
+        addMetric("processorPublicationCanonicalizations", 1L);
+    }
+
+    default void addProcessorPublicationCanonicalizationNanos(long nanos) {
+        addMetric("processorPublicationCanonicalizationNanos", nanos);
+    }
+
+    default void incrementProcessorPublicationCanonicalMaterializations() {
+        addMetric("processorPublicationCanonicalMaterializations", 1L);
+    }
+
+    default void incrementProcessorPublicationStrictBlueIdCalculations() {
+        addMetric("processorPublicationStrictBlueIdCalculations", 1L);
+    }
+
+    default void incrementProcessorPublicationIdentityMismatches() {
+        addMetric("processorPublicationIdentityMismatches", 1L);
+    }
+
+    default void incrementProcessorPublicationInvariantChecks() {
+        addMetric("processorPublicationInvariantChecks", 1L);
+    }
+
+    default void incrementIncrementalMergerCapabilityRequests() {
+        addMetric("incrementalMergerCapabilityRequests", 1L);
+    }
+
+    default void incrementIncrementalMergerCapabilityAllowed() {
+        addMetric("incrementalMergerCapabilityAllowed", 1L);
+    }
+
+    default void incrementIncrementalMergerCapabilityDenied() {
+        addMetric("incrementalMergerCapabilityDenied", 1L);
+    }
+
+    default void incrementIncrementalMergerCapabilityDeniedByConformance() {
+        addMetric("incrementalMergerCapabilityDeniedByConformance", 1L);
+    }
+
+    default void incrementIncrementalMergerCapabilityDeniedBySnapshotManager() {
+        addMetric("incrementalMergerCapabilityDeniedBySnapshotManager", 1L);
+    }
+
     default void incrementPatchImpactRootReplacement() {
         addMetric("patchImpactRootReplacement", 1L);
     }
@@ -598,7 +682,13 @@ public interface ProcessingMetricsSink {
     }
 
     default void incrementMutablePatchValuesFrozen() {
+        incrementMutablePatchValuesFrozen(PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    default void incrementMutablePatchValuesFrozen(PatchSource source) {
+        PatchSource fixedSource = source != null ? source : PatchSource.UNKNOWN_INTERNAL;
         addMetric("mutablePatchValuesFrozen", 1L);
+        addMetric("mutablePatchValuesFrozenBySource." + fixedSource.name(), 1L);
     }
 
     default void incrementFrozenPatchValuesMaterialized() {

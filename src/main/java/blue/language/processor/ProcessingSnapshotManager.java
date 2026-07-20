@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -61,6 +62,11 @@ public interface ProcessingSnapshotManager {
      */
     default boolean supportsIncrementalValueResolution() {
         return false;
+    }
+
+    default boolean supportsIncrementalValueResolution(
+            IncrementalValueResolutionRequest request) {
+        return supportsIncrementalValueResolution();
     }
 
     /**

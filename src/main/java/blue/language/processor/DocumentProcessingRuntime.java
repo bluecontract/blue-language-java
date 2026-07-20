@@ -110,6 +110,7 @@ public final class DocumentProcessingRuntime {
                                      ConformancePlannerOverride conformancePlannerOverride,
                                      ProcessingSnapshotManager snapshotManager,
                                      ProcessingMetricsSink metrics) {
+        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         ResolvedSnapshot processorSnapshot = processorSnapshot(Objects.requireNonNull(snapshot, "snapshot"));
         this.materializedView = new MaterializedDocumentView(processorSnapshot.canonicalRoot());
         this.emissionRegistry = new EmissionRegistry();
@@ -118,17 +119,17 @@ public final class DocumentProcessingRuntime {
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.snapshot = processorSnapshot;
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         this.lazyMaterializedCommits = true;
         this.selectedDocumentBacked = false;
     }
 
     private ResolvedSnapshot processorSnapshot(ResolvedSnapshot snapshot) {
-        if (!snapshot.frozenCanonicalRoot().isStrictBlueIdValidation()) {
-            return snapshot;
+        if (snapshot.frozenCanonicalRoot().isStrictBlueIdValidation()) {
+            metrics.incrementProcessorInputStrictCanonical();
+        } else {
+            metrics.incrementProcessorInputUncheckedCanonical();
         }
-        FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(snapshot.canonicalRoot());
-        return new ResolvedSnapshot(canonicalRoot, snapshot.frozenResolvedRoot(), canonicalRoot.blueId());
+        return snapshot;
     }
 
     public Node document() {
@@ -331,6 +332,10 @@ public final class DocumentProcessingRuntime {
     }
 
     public WorkingDocument workingDocument(String originScopePath) {
+        return workingDocument(originScopePath, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    WorkingDocument workingDocument(String originScopePath, PatchSource mutablePatchSource) {
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
         ResolvedSnapshot current = snapshot;
         boolean materializedFallback = false;
@@ -351,6 +356,7 @@ public final class DocumentProcessingRuntime {
                     current,
                     materializedFallback,
                     !selectedDocumentBacked,
+                    mutablePatchSource,
                     metrics);
         }
 
@@ -366,6 +372,7 @@ public final class DocumentProcessingRuntime {
                 null,
                 true,
                 false,
+                mutablePatchSource,
                 metrics);
     }
 
@@ -535,18 +542,28 @@ public final class DocumentProcessingRuntime {
     }
 
     public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch) {
+        return applyPatch(originScopePath, patch, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch, PatchSource source) {
         if (patch == null) {
             return null;
         }
-        List<DocumentUpdateData> updates = applyPatches(originScopePath, Collections.singletonList(patch));
+        List<DocumentUpdateData> updates = applyPatches(originScopePath, Collections.singletonList(patch), source);
         return updates.isEmpty() ? null : updates.get(0);
     }
 
     public List<DocumentUpdateData> applyPatches(String originScopePath, List<JsonPatch> patches) {
+        return applyPatches(originScopePath, patches, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    public List<DocumentUpdateData> applyPatches(String originScopePath,
+                                                 List<JsonPatch> patches,
+                                                 PatchSource source) {
         if (patches == null || patches.isEmpty()) {
             return Collections.emptyList();
         }
-        return applyPatchInputs(originScopePath, PatchInput.mutableList(patches));
+        return applyPatchInputs(originScopePath, PatchInput.mutableList(patches, source));
     }
 
     public DocumentUpdateData applyFrozenPatch(String originScopePath, FrozenJsonPatch patch) {

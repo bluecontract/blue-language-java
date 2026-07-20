@@ -14,27 +14,41 @@ final class PatchInput {
 
     private final JsonPatch mutablePatch;
     private final FrozenJsonPatch frozenPatch;
+    private final PatchSource source;
 
-    private PatchInput(JsonPatch mutablePatch, FrozenJsonPatch frozenPatch) {
+    private PatchInput(JsonPatch mutablePatch, FrozenJsonPatch frozenPatch, PatchSource source) {
         this.mutablePatch = mutablePatch;
         this.frozenPatch = frozenPatch;
+        this.source = source != null ? source : PatchSource.UNKNOWN_INTERNAL;
     }
 
     static PatchInput mutable(JsonPatch patch) {
-        return patch == null ? null : new PatchInput(ImmutableJsonPatch.copy(patch), null);
+        return mutable(patch, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    static PatchInput mutable(JsonPatch patch, PatchSource source) {
+        return patch == null
+                ? null
+                : new PatchInput(ImmutableJsonPatch.copy(patch), null, source);
     }
 
     static PatchInput frozen(FrozenJsonPatch patch) {
-        return patch == null ? null : new PatchInput(null, patch);
+        return patch == null
+                ? null
+                : new PatchInput(null, patch, PatchSource.UNKNOWN_INTERNAL);
     }
 
     static List<PatchInput> mutableList(List<JsonPatch> patches) {
+        return mutableList(patches, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    static List<PatchInput> mutableList(List<JsonPatch> patches, PatchSource source) {
         if (patches == null || patches.isEmpty()) {
             return Collections.emptyList();
         }
         List<PatchInput> captured = new ArrayList<>(patches.size());
         for (JsonPatch patch : patches) {
-            captured.add(mutable(patch));
+            captured.add(mutable(patch, source));
         }
         return Collections.unmodifiableList(captured);
     }
@@ -60,6 +74,10 @@ final class PatchInput {
 
     boolean isFrozen() {
         return frozenPatch != null;
+    }
+
+    PatchSource source() {
+        return source;
     }
 
     Node mutableValue() {
@@ -88,7 +106,7 @@ final class PatchInput {
                                FrozenNode canonicalRoot,
                                FrozenNode resolvedRoot) {
         return mutablePatch != null
-                ? context.prepare(mutablePatch, canonicalRoot, resolvedRoot)
+                ? context.prepare(mutablePatch, canonicalRoot, resolvedRoot, source)
                 : context.prepare(frozenPatch, canonicalRoot, resolvedRoot);
     }
 }

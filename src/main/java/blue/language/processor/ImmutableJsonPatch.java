@@ -172,6 +172,13 @@ final class ImmutableJsonPatch {
         ImmutableJsonPatch prepare(JsonPatch patch,
                                    FrozenNode canonicalRoot,
                                    FrozenNode resolvedRoot) {
+            return prepare(patch, canonicalRoot, resolvedRoot, PatchSource.LEGACY_PUBLIC_API);
+        }
+
+        ImmutableJsonPatch prepare(JsonPatch patch,
+                                   FrozenNode canonicalRoot,
+                                   FrozenNode resolvedRoot,
+                                   PatchSource source) {
             Objects.requireNonNull(patch, "patch");
             Objects.requireNonNull(canonicalRoot, "canonicalRoot");
             Objects.requireNonNull(resolvedRoot, "resolvedRoot");
@@ -191,7 +198,7 @@ final class ImmutableJsonPatch {
             }
 
             Node value = Objects.requireNonNull(patch.getVal(), "patch value");
-            metrics.incrementMutablePatchValuesFrozen();
+            metrics.incrementMutablePatchValuesFrozen(source);
             FrozenNode canonical = freeze(value, canonicalRoot);
             FrozenNode resolved;
             if (sameFreezeMode(canonicalRoot, resolvedRoot)) {

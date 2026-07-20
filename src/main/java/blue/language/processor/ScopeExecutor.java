@@ -5,10 +5,10 @@ import blue.language.processor.conformance.ScriptedContractsRuntime;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
-import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
@@ -58,7 +58,7 @@ final class ScopeExecutor {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         Set<String> processedEmbedded = new LinkedHashSet<>();
         ContractBundle bundle = null;
-        Node preInitSnapshot = null;
+        FrozenNode preInitSnapshot = null;
         ScopeRuntimeContext scopeContext = runtime.scope(normalizedScope);
         if ("/".equals(normalizedScope)) {
             runtime.setScopeEmbeddedDepth(normalizedScope, 0);
@@ -97,7 +97,7 @@ final class ScopeExecutor {
 
             if (preInitSnapshot == null) {
                 FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
-                preInitSnapshot = (canonicalScopeNode != null ? canonicalScopeNode : scopeNode).toNode();
+                preInitSnapshot = canonicalScopeNode != null ? canonicalScopeNode : scopeNode;
             }
 
             long loadStart = System.nanoTime();
@@ -157,7 +157,7 @@ final class ScopeExecutor {
         }
 
         runtime.chargeInitialization();
-        String documentId = BlueIdCalculator.calculateUncheckedBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
+        String documentId = initializationDocumentId(preInitSnapshot);
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
         ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
@@ -625,12 +625,30 @@ final class ScopeExecutor {
         return value != null ? String.valueOf(value) : null;
     }
 
+    /**
+     * Compatibility invariant:
+     * /contracts/initialized/documentId is the historical unchecked identity of
+     * the selected pre-initialization node. It is not the canonical state BlueId.
+     * These values can differ for payload-only lists. Do not replace this
+     * calculation with FrozenNode.blueId().
+     */
+    private String initializationDocumentId(FrozenNode preInitializationSnapshot) {
+        ProcessingMetricsSink metrics = owner.metricsSink();
+        metrics.incrementInitializationDocumentIdUncheckedCalculations();
+        Node materialized;
+        if (preInitializationSnapshot != null) {
+            metrics.incrementInitializationDocumentIdNodeMaterializations();
+            materialized = preInitializationSnapshot.toNode();
+        } else {
+            materialized = new Node();
+        }
+        return BlueIdCalculator.calculateUncheckedBlueId(materialized);
+    }
+
     private void addInitializationMarker(ProcessorExecutionContext context, String documentId) {
-        Node marker = new Node()
-                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
-                .properties("documentId", new Node().value(documentId));
+        FrozenNode marker = ProcessorMarkerFactory.initialized(documentId);
         String pointer = context.resolvePointer(ProcessorPointerConstants.RELATIVE_INITIALIZED);
-        context.applyPatch(JsonPatch.add(pointer, marker));
+        context.applyFrozenPatch(FrozenJsonPatch.add(pointer, marker));
         context.applyBufferedEffects();
     }
 
@@ -640,8 +658,7 @@ final class ScopeExecutor {
             return;
         }
         FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
-        String documentId = BlueIdCalculator.calculateUncheckedBlueId(
-                canonicalScopeNode != null ? canonicalScopeNode.toNode() : new Node());
+        String documentId = initializationDocumentId(canonicalScopeNode);
         runtime.chargeInitialization();
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
         ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
