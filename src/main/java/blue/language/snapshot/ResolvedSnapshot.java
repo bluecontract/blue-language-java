@@ -99,6 +99,11 @@ public final class ResolvedSnapshot {
         return canonicalIndex().get(JsonPointer.canonicalize(pointer));
     }
 
+    public String canonicalBlueIdAt(String pointer) {
+        FrozenNode node = canonicalAt(pointer);
+        return node != null ? node.blueId() : null;
+    }
+
     public FrozenNode resolvedAt(String pointer) {
         return resolvedIndex().get(JsonPointer.canonicalize(pointer));
     }
