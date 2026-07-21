@@ -1,0 +1,695 @@
+package blue.language.processor;
+
+import blue.language.Blue;
+import blue.language.NodeProvider;
+import blue.language.model.Node;
+import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.provider.BasicNodeProvider;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.Properties;
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ScopeSourceProjectionTest {
+
+    @Test
+    void snapshotCaptureDoesNotAdoptASuccessfulButDifferentCanonicalReresolution() {
+        Blue blue = ProcessorTestSupport.blue();
+        ResolvedSnapshot authoritative = blue.resolveToSnapshot(new Node()
+                .name("Authoritative Snapshot Scope")
+                .properties("state", text("captured")));
+        SuccessfulButAlteredSnapshotManager manager =
+                new SuccessfulButAlteredSnapshotManager(authoritative);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                authoritative, null, manager);
+
+        String actual = runtime.calculatePreInitializationScopeContentBlueId("/");
+
+        assertEquals(authoritative.blueId(), actual);
+        assertSame(authoritative, manager.capturedSnapshot,
+                "snapshot-backed identity must use the current immutable Phase 1 snapshot");
+        assertEquals(0, manager.fromDocumentTransientCalls,
+                "canonical identity input must not be re-resolved merely to capture snapshot state");
+
+        ResolvedSnapshot altered = manager.fromDocumentTransient(authoritative.canonicalRoot());
+        assertFalse(altered.frozenResolvedRoot()
+                        .sameResolvedStructure(authoritative.frozenResolvedRoot()),
+                "the forbidden re-resolution path is intentionally successful but different");
+        assertEquals(1, manager.fromDocumentTransientCalls);
+    }
+
+    @Test
+    void inheritedListControlsProjectAsARealStandaloneSourceOverlay() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Controlled Scope Type\n"
+                        + "list:\n"
+                        + "  type: List\n"
+                        + "  mergePolicy: positional\n"
+                        + "  items:\n"
+                        + "    - A\n"
+                        + "    - B");
+        String scopeTypeBlueId = provider.getBlueIdByName("Controlled Scope Type");
+        Blue blue = ProcessorTestSupport.blue(provider);
+        Node inheritedItems = blue.resolve(new Node().type(reference(scopeTypeBlueId)))
+                .getAsNode("/list");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedItems.getItems());
+        provider.addListAndItsItems(inheritedItems.getItems());
+        Node source = blue.yamlToNode(
+                "type:\n"
+                        + "  blueId: " + scopeTypeBlueId + "\n"
+                        + "list:\n"
+                        + "  type: List\n"
+                        + "  mergePolicy: positional\n"
+                        + "  items:\n"
+                        + "    - $previous:\n"
+                        + "        blueId: " + previousBlueId + "\n"
+                        + "    - $pos: 1\n"
+                        + "      value: C");
+        ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
+
+        ScopeSourceProjection nodeProjection = ScopeSourceProjection.project(
+                "/",
+                FrozenNode.fromResolvedNode(source),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+        ScopeSourceProjection snapshotProjection = ScopeSourceProjection.project(
+                "/",
+                captured.frozenCanonicalRoot(),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+
+        String expected = blue.calculateSemanticBlueId(source);
+        assertEquals(expected, nodeProjection.contentBlueId());
+        assertEquals(expected, snapshotProjection.contentBlueId());
+        assertTrue(nodeProjection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.frozenResolvedRoot()));
+        assertTrue(snapshotProjection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.frozenResolvedRoot()));
+        List<FrozenNode> nodeItems = nodeProjection.standaloneSource()
+                .property("list").getItems();
+        assertNotNull(nodeItems);
+        assertEquals(previousBlueId, nodeItems.get(0).getPreviousBlueId(),
+                "Node-backed capture must retain the authored anchor provenance");
+        List<FrozenNode> snapshotItems = snapshotProjection.standaloneSource()
+                .property("list").getItems();
+        assertEquals(1, snapshotItems.size(),
+                "snapshot projection must not invent an external anchor dependency");
+        assertEquals(Integer.valueOf(1), snapshotItems.get(0).getPosition());
+
+        DocumentProcessingResult nodeResult = blue.initializeDocument(source.clone());
+        DocumentProcessingResult snapshotResult = blue.initializeDocument(captured);
+        assertInitializationIdentity(nodeResult, expected);
+        assertInitializationIdentity(snapshotResult, expected);
+    }
+
+    @Test
+    void snapshotProjectionDoesNotRequireSyntheticPreviousListProviderContent() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Embedded Positional List Scope Type\n"
+                        + "list:\n"
+                        + "  type: List\n"
+                        + "  mergePolicy: positional\n"
+                        + "  items:\n"
+                        + "    - A\n"
+                        + "    - B");
+        String scopeTypeBlueId = provider.getBlueIdByName(
+                "Embedded Positional List Scope Type");
+        Blue blue = ProcessorTestSupport.blue(provider);
+        Node source = blue.yamlToNode(
+                "type:\n"
+                        + "  blueId: " + scopeTypeBlueId + "\n"
+                        + "list:\n"
+                        + "  items:\n"
+                        + "    - $pos: 1\n"
+                        + "      value: C");
+        ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
+
+        ScopeSourceProjection nodeProjection = ScopeSourceProjection.project(
+                "/",
+                FrozenNode.fromResolvedNode(source),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+        ScopeSourceProjection snapshotProjection = ScopeSourceProjection.project(
+                "/",
+                captured.frozenCanonicalRoot(),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+
+        String expected = blue.calculateSemanticBlueId(source);
+        assertEquals(expected, nodeProjection.contentBlueId());
+        assertEquals(expected, snapshotProjection.contentBlueId());
+        assertTrue(snapshotProjection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.frozenResolvedRoot()));
+        assertInitializationIdentity(blue.initializeDocument(source.clone()), expected);
+        assertInitializationIdentity(blue.initializeDocument(captured), expected);
+    }
+
+    @Test
+    void snapshotProjectionRestoresPureReferenceInsideInheritedListReplacement() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Reference List Scope Type\n"
+                        + "list:\n"
+                        + "  type: List\n"
+                        + "  mergePolicy: positional\n"
+                        + "  items:\n"
+                        + "    - A\n"
+                        + "    - B");
+        Node referenced = new Node()
+                .name("Replacement Entry")
+                .properties("payload", text("verified"));
+        provider.addSingleNodes(referenced);
+        String scopeTypeBlueId = provider.getBlueIdByName("Reference List Scope Type");
+        String referencedBlueId = provider.getBlueIdByName("Replacement Entry");
+        Blue blue = ProcessorTestSupport.blue(provider);
+        Node inheritedList = blue.resolve(new Node().type(reference(scopeTypeBlueId)))
+                .getAsNode("/list");
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        provider.addListAndItsItems(inheritedList.getItems());
+        Node source = blue.yamlToNode(
+                "type:\n"
+                        + "  blueId: " + scopeTypeBlueId + "\n"
+                        + "list:\n"
+                        + "  type: List\n"
+                        + "  mergePolicy: positional\n"
+                        + "  items:\n"
+                        + "    - $previous:\n"
+                        + "        blueId: " + previousBlueId + "\n"
+                        + "    - $pos: 1\n"
+                        + "      $replace:\n"
+                        + "        blueId: " + referencedBlueId);
+        ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
+
+        ScopeSourceProjection projection = ScopeSourceProjection.project(
+                "/",
+                captured.frozenCanonicalRoot(),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+
+        String expected = blue.calculateSemanticBlueId(source);
+        assertEquals(expected, projection.contentBlueId());
+        assertTrue(projection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.frozenResolvedRoot()));
+        FrozenNode replacement = projection.standaloneSource().property("list")
+                .getItems().get(0).property("$replace");
+        assertTrue(replacement.isReferenceOnly());
+        assertEquals(referencedBlueId, replacement.getReferenceBlueId());
+
+        assertInitializationIdentity(blue.initializeDocument(source.clone()), expected);
+        assertInitializationIdentity(blue.initializeDocument(captured), expected);
+    }
+
+    @Test
+    void embeddedParentTypedScopeKeepsListsLabelsAndReferencesAcrossNodeAndSnapshotInputs() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node referenced = new Node()
+                .name("Combined Projection Reference")
+                .properties("payload", text("verified"));
+        Node referencedContract = new Node()
+                .name("Combined Projection Lifecycle Channel")
+                .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
+        provider.addSingleNodes(referenced, referencedContract);
+        String referencedBlueId = provider.getBlueIdByName(referenced.getName());
+        String referencedContractBlueId = provider.getBlueIdByName(referencedContract.getName());
+
+        Node childType = new Node()
+                .name("Combined Embedded Child Type")
+                .description("Combined embedded description")
+                .properties("entries", new Node()
+                        .type(reference(Properties.LIST_TYPE_BLUE_ID))
+                        .mergePolicy("positional")
+                        .items(Arrays.asList(
+                                new Node()
+                                        .name("Equal Nested Label")
+                                        .properties("nested", new Node().items(Arrays.asList(
+                                                text("inherited-a"), text("inherited-b")))),
+                                text("inherited-tail"))));
+        provider.addSingleNodes(childType);
+        String childTypeBlueId = provider.getBlueIdByName(childType.getName());
+
+        Node rootType = new Node()
+                .name("Combined Embedded Root Type")
+                .properties("child", new Node().type(reference(childTypeBlueId)));
+        provider.addSingleNodes(rootType);
+        String rootTypeBlueId = provider.getBlueIdByName(rootType.getName());
+
+        Blue blue = ProcessorTestSupport.blue(provider);
+        List<Node> inheritedItems = blue.resolve(new Node().type(reference(childTypeBlueId)))
+                .getAsNode("/entries").getItems();
+        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedItems);
+        provider.addListAndItsItems(inheritedItems);
+        Node selectedChild = new Node()
+                .properties("entries", new Node()
+                        .type(reference(Properties.LIST_TYPE_BLUE_ID))
+                        .mergePolicy("positional")
+                        .items(Arrays.asList(
+                        new Node().previousBlueId(previousBlueId),
+                        new Node().position(0).properties("$replace", new Node()
+                                .name("Equal Nested Label")
+                                .properties("nested", new Node().items(Arrays.asList(
+                                        text("inherited-a"), text("inherited-b"))))
+                                .properties("selected", text("local"))),
+                        reference(referencedBlueId))))
+                .contracts(new Node().properties(
+                        "referenceEvidence", reference(referencedContractBlueId)));
+        Node source = new Node()
+                .type(reference(rootTypeBlueId))
+                .properties("child", selectedChild)
+                .contracts(new Node().properties("embedded", new Node()
+                        .type(reference(RuntimeBlueIds.PROCESS_EMBEDDED))
+                        .properties("paths", new Node().items(Arrays.asList(text("/child"))))));
+        Node standaloneChild = selectedChild.clone().type(reference(childTypeBlueId));
+        String expected = blue.calculateSemanticBlueId(standaloneChild);
+        ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
+
+        ScopeSourceProjection snapshotProjection = ScopeSourceProjection.project(
+                "/child",
+                captured.canonicalAt("/child"),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+        DocumentProcessingResult nodeResult = blue.initializeDocument(source.clone());
+        DocumentProcessingResult snapshotResult = blue.initializeDocument(captured);
+
+        assertEquals(expected, snapshotProjection.contentBlueId());
+        assertTrue(snapshotProjection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.resolvedAt("/child")));
+        assertScopeInitializationIdentity(nodeResult, "/child", expected);
+        assertScopeInitializationIdentity(snapshotResult, "/child", expected);
+    }
+
+    @Test
+    void providerBackedPureReferenceAtSelectedRootRetainsItsSourceProvenance() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node referencedScope = new Node()
+                .name("Referenced Scope")
+                .description("Provider-backed selected root")
+                .properties("state", text("ready"));
+        provider.addSingleNodes(referencedScope);
+        String referencedBlueId = provider.getBlueIdByName(referencedScope.getName());
+        Blue blue = ProcessorTestSupport.blue(provider);
+        ResolvedSnapshot captured = blue.resolveToSnapshot(reference(referencedBlueId));
+
+        ScopeSourceProjection projection = ScopeSourceProjection.project(
+                "/",
+                captured.frozenCanonicalRoot(),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+
+        assertTrue(projection.standaloneSource().isReferenceOnly());
+        assertEquals(referencedBlueId, projection.standaloneSource().getReferenceBlueId());
+        assertEquals(referencedBlueId, projection.contentBlueId());
+        assertTrue(projection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.frozenResolvedRoot()));
+
+        assertInvalidProcessingDocument(
+                blue.initializeDocument(reference(referencedBlueId)));
+        assertInvalidProcessingDocument(blue.initializeDocument(captured));
+    }
+
+    @Test
+    void protocolIdentityPreservesPureReferencesInPropertyListAndContracts() {
+        Node referencedPayload = new Node()
+                .name("Protocol Reference Payload")
+                .properties("payload", text("verified"));
+        Node referencedLifecycleChannel = new Node()
+                .name("Protocol Reference Lifecycle Channel")
+                .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
+        String payloadBlueId = BlueIdCalculator.calculateBlueId(referencedPayload);
+        String channelBlueId = BlueIdCalculator.calculateBlueId(referencedLifecycleChannel);
+        Node source = new Node()
+                .properties("propertyReference", reference(payloadBlueId))
+                .properties("list", new Node().items(Arrays.asList(
+                        reference(payloadBlueId), text("tail"))))
+                .contracts(new Node().properties(
+                        "referencedLifecycle", reference(channelBlueId)));
+
+        Blue oracle = ProcessorTestSupport.blue(referenceProvider(
+                referencedPayload, referencedLifecycleChannel));
+        String expected = oracle.calculateSemanticBlueId(source.clone());
+
+        Blue projectionBlue = ProcessorTestSupport.blue(referenceProvider(
+                referencedPayload, referencedLifecycleChannel));
+        ResolvedSnapshot captured = projectionBlue.resolveToSnapshot(source.clone());
+
+        ScopeSourceProjection projection = ScopeSourceProjection.project(
+                "/",
+                captured.frozenCanonicalRoot(),
+                captured,
+                projectionBlue.getDocumentProcessor().snapshotManager());
+
+        assertEquals(expected, projection.contentBlueId());
+        assertTrue(projection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.frozenResolvedRoot()));
+        assertTrue(projection.standaloneSource().property("propertyReference").isReferenceOnly());
+        assertTrue(projection.standaloneSource().property("list")
+                .getItems().get(0).isReferenceOnly());
+        assertTrue(projection.standaloneSource().getContracts()
+                .property("referencedLifecycle").isReferenceOnly());
+
+        Blue nodeExecution = ProcessorTestSupport.blue(referenceProvider(
+                referencedPayload, referencedLifecycleChannel));
+        assertInitializationIdentity(nodeExecution.initializeDocument(source.clone()), expected);
+        assertInitializationIdentity(nodeExecution.initializeDocument(source.clone()), expected);
+
+        Blue snapshotProducer = ProcessorTestSupport.blue(referenceProvider(
+                referencedPayload, referencedLifecycleChannel));
+        ResolvedSnapshot snapshotInput = snapshotProducer.resolveToSnapshot(source.clone());
+        Blue snapshotExecution = ProcessorTestSupport.blue(referenceProvider(
+                referencedPayload, referencedLifecycleChannel));
+        assertInitializationIdentity(snapshotExecution.initializeDocument(snapshotInput), expected);
+        assertInitializationIdentity(snapshotExecution.initializeDocument(snapshotInput), expected);
+    }
+
+    @Test
+    void providerFailureForPureReferenceContractTerminatesBeforeInitiation() {
+        Node referencedLifecycleChannel = new Node()
+                .name("Unavailable Protocol Reference Lifecycle Channel")
+                .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
+        String channelBlueId = BlueIdCalculator.calculateBlueId(referencedLifecycleChannel);
+        Node source = new Node().contracts(new Node().properties(
+                "referencedLifecycle", reference(channelBlueId)));
+
+        DocumentProcessingResult missing = ProcessorTestSupport.blue(
+                blueId -> null).initializeDocument(source.clone());
+        assertProviderFailureBeforeInitiation(
+                missing, ProcessorErrorCategory.ProviderUnavailable, channelBlueId);
+
+        NodeProvider mismatchProvider = blueId -> channelBlueId.equals(blueId)
+                ? Collections.singletonList(new Node().name("Wrong Contract Content"))
+                : null;
+        DocumentProcessingResult mismatch = ProcessorTestSupport.blue(
+                mismatchProvider).initializeDocument(source.clone());
+        assertProviderFailureBeforeInitiation(
+                mismatch, ProcessorErrorCategory.ProviderBlueIdMismatch, channelBlueId);
+    }
+
+    @Test
+    void structuralProofMismatchTerminatesBeforeInitiation() {
+        Blue configured = ProcessorTestSupport.blue();
+        DocumentProcessor configuredProcessor = configured.getDocumentProcessor();
+        String proofChildBlueId = BlueIdCalculator.calculateBlueId(
+                new Node().name("Same BlueId Proof Child"));
+        ProcessingSnapshotManager mismatchManager = new ProofMismatchSnapshotManager(
+                configuredProcessor.snapshotManager(), proofChildBlueId);
+        DocumentProcessor processor = DocumentProcessor.builder()
+                .withSnapshotManager(mismatchManager)
+                .withConformanceEngine(configuredProcessor.conformanceEngine())
+                .withMatchingService(configuredProcessor.matchingService())
+                .build();
+        Node source = configured.yamlToNode(
+                "name: Structural Proof Mismatch\ncontracts: {}\n");
+
+        DocumentProcessingResult result = processor.initializeDocument(source);
+
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
+        assertEquals(ProcessorErrorCategory.InternalProcessorError,
+                result.errorCategory(), result.failureReason());
+        assertTrue(result.failureReason().contains(
+                "Standalone selected-scope projection changed the resolved view"),
+                result.failureReason());
+        assertTrue(result.failureReason().contains("/proofChild"), result.failureReason());
+        assertFalse(hasNode(result.document(), "/contracts/initialized"));
+        assertTrue(hasNode(result.document(), "/contracts/terminated"));
+        for (Node event : result.triggeredEvents()) {
+            String eventType = event.getType() != null ? event.getType().getBlueId() : null;
+            assertNotEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, eventType,
+                    "structural proof failure must precede lifecycle initiation");
+        }
+    }
+
+    @Test
+    void projectionPreservesReferencesPreprocessingAndFinalListControlSemantics() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node referenced = new Node()
+                .name("Projection Reference")
+                .properties("payload", text("verified"));
+        provider.addSingleNodes(referenced);
+        String referencedBlueId = provider.getBlueIdByName(referenced.getName());
+
+        List<Node> previousItems = Arrays.asList(text("old-a"), text("old-b"));
+        String previousBlueId = BlueIdCalculator.calculateBlueId(previousItems);
+        provider.addList(previousItems);
+
+        Node replacement = new Node()
+                .position(0)
+                .properties("$replace", reference(referencedBlueId));
+        Node controlledList = new Node()
+                .type(reference(Properties.LIST_TYPE_BLUE_ID))
+                .items(Arrays.asList(
+                        new Node().previousBlueId(previousBlueId),
+                        replacement,
+                        new Node().items(Arrays.asList(text("nested-a"), text("nested-b")))));
+        Node source = new Node()
+                .properties("preprocessed", new Node().type("Text").value("alias-source"))
+                .properties("propertyReference", reference(referencedBlueId))
+                .properties("controlledList", controlledList)
+                .contracts(new Node().properties("referenceEvidence", reference(referencedBlueId)));
+        Blue blue = ProcessorTestSupport.blue(provider);
+        ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
+
+        ScopeSourceProjection projection = ScopeSourceProjection.project(
+                "/",
+                captured.frozenCanonicalRoot(),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+        FrozenNode projectedSource = projection.standaloneSource();
+        FrozenNode projectedList = projectedSource.property("controlledList");
+
+        assertEquals(blue.calculateSemanticBlueId(source), projection.contentBlueId());
+        assertTrue(projection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.frozenResolvedRoot()));
+        assertTrue(projectedSource.property("propertyReference").isReferenceOnly());
+        assertTrue(projectedSource.getContracts().property("referenceEvidence").isReferenceOnly());
+        assertEquals(Properties.TEXT_TYPE_BLUE_ID,
+                projectedSource.property("preprocessed").getType().getReferenceBlueId());
+        assertNotNull(projectedList);
+        assertEquals(3, projectedList.getItems().size());
+        assertTrue(projectedList.getItems().get(0).isReferenceOnly());
+        assertEquals(referencedBlueId,
+                projectedList.getItems().get(0).getReferenceBlueId());
+        assertTrue(projectedList.getItems().get(2).hasItems());
+        for (FrozenNode item : projectedList.getItems()) {
+            assertFalse(item.getPreviousBlueId() != null || item.getPosition() != null,
+                    "canonical standalone projection must preserve final list semantics, not controls");
+        }
+    }
+
+    private static Node reference(String blueId) {
+        return new Node().blueId(blueId);
+    }
+
+    private static void assertInitializationIdentity(DocumentProcessingResult result,
+                                                     String expected) {
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(expected,
+                result.document().getAsText("/contracts/initialized/documentId"));
+        assertTrue(result.triggeredEvents().stream().anyMatch(event -> event.getType() != null
+                && blue.language.processor.registry.RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED
+                .equals(event.getType().getBlueId())
+                && expected.equals(event.getAsText("/documentId"))));
+    }
+
+    private static void assertScopeInitializationIdentity(DocumentProcessingResult result,
+                                                          String scopePath,
+                                                          String expected) {
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(expected, result.document().getAsText(
+                scopePath + "/contracts/initialized/documentId"));
+    }
+
+    private static void assertInvalidProcessingDocument(DocumentProcessingResult result) {
+        assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                result.status(), result.failureReason());
+        assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
+                result.errorCategory(), result.failureReason());
+        assertEquals(0L, result.totalGas());
+        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.document().isReferenceOnly());
+    }
+
+    private static void assertProviderFailureBeforeInitiation(
+            DocumentProcessingResult result,
+            ProcessorErrorCategory expectedCategory,
+            String requestedBlueId) {
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
+        assertEquals(expectedCategory, result.errorCategory(), result.failureReason());
+        assertTrue(result.failureReason().contains(requestedBlueId), result.failureReason());
+        assertFalse(hasNode(result.document(), "/contracts/initialized"));
+        assertTrue(hasNode(result.document(), "/contracts/terminated"));
+        for (Node event : result.triggeredEvents()) {
+            String eventType = event.getType() != null ? event.getType().getBlueId() : null;
+            assertNotEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, eventType,
+                    "provider failure must precede lifecycle initiation");
+        }
+    }
+
+    private static Node text(String value) {
+        return new Node().value(value);
+    }
+
+    private static BasicNodeProvider referenceProvider(Node... nodes) {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node[] copies = new Node[nodes.length];
+        for (int index = 0; index < nodes.length; index++) {
+            copies[index] = nodes[index].clone();
+        }
+        provider.addSingleNodes(copies);
+        return provider;
+    }
+
+    private static boolean hasNode(Node document, String path) {
+        try {
+            return document.getAsNode(path) != null;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static final class ProofMismatchSnapshotManager
+            implements ProcessingSnapshotManager {
+        private final ProcessingSnapshotManager delegate;
+        private final String proofChildBlueId;
+
+        private ProofMismatchSnapshotManager(ProcessingSnapshotManager delegate,
+                                             String proofChildBlueId) {
+            this.delegate = delegate;
+            this.proofChildBlueId = proofChildBlueId;
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            return withProofChild(delegate.fromDocument(document), "captured");
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransient(Node document) {
+            return withProofChild(delegate.fromDocumentTransient(document), "captured");
+        }
+
+        @Override
+        public String calculateScopeContentBlueId(String scopePath,
+                                                  FrozenNode selectedScope,
+                                                  ResolvedSnapshot capturedDocumentSnapshot) {
+            return ScopeSourceProjection.project(
+                    scopePath,
+                    selectedScope,
+                    capturedDocumentSnapshot,
+                    new ProjectionMismatchSnapshotManager(delegate, proofChildBlueId))
+                    .contentBlueId();
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+            return delegate.applyPatch(snapshot, patch);
+        }
+
+        @Override
+        public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+            return delegate.cacheSnapshot(snapshot);
+        }
+
+        private ResolvedSnapshot withProofChild(ResolvedSnapshot snapshot, String state) {
+            Node resolved = snapshot.resolvedRoot();
+            resolved.properties("proofChild", new Node()
+                    .blueId(proofChildBlueId)
+                    .properties("state", text(state)));
+            return new ResolvedSnapshot(
+                    snapshot.frozenCanonicalRoot(),
+                    FrozenNode.fromResolvedNode(resolved),
+                    snapshot.blueId());
+        }
+    }
+
+    private static final class SuccessfulButAlteredSnapshotManager
+            implements ProcessingSnapshotManager {
+        private final ResolvedSnapshot authoritative;
+        private int fromDocumentTransientCalls;
+        private ResolvedSnapshot capturedSnapshot;
+
+        private SuccessfulButAlteredSnapshotManager(ResolvedSnapshot authoritative) {
+            this.authoritative = authoritative;
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            return fromDocumentTransient(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransient(Node document) {
+            fromDocumentTransientCalls++;
+            Node alteredResolved = authoritative.resolvedRoot();
+            alteredResolved.properties("state", text("successfully-reresolved-differently"));
+            return new ResolvedSnapshot(
+                    authoritative.frozenCanonicalRoot(),
+                    FrozenNode.fromResolvedNode(alteredResolved),
+                    authoritative.blueId());
+        }
+
+        @Override
+        public String calculateScopeContentBlueId(String scopePath,
+                                                  FrozenNode selectedScope,
+                                                  ResolvedSnapshot capturedDocumentSnapshot) {
+            capturedSnapshot = capturedDocumentSnapshot;
+            return capturedDocumentSnapshot.blueId();
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+            throw new UnsupportedOperationException("not used by the capture regression");
+        }
+    }
+
+    private static final class ProjectionMismatchSnapshotManager
+            implements ProcessingSnapshotManager {
+        private final ProcessingSnapshotManager delegate;
+        private final String proofChildBlueId;
+
+        private ProjectionMismatchSnapshotManager(ProcessingSnapshotManager delegate,
+                                                  String proofChildBlueId) {
+            this.delegate = delegate;
+            this.proofChildBlueId = proofChildBlueId;
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            return mismatched(delegate.fromDocument(document));
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransient(Node document) {
+            return mismatched(delegate.fromDocumentTransient(document));
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+            return delegate.applyPatch(snapshot, patch);
+        }
+
+        private ResolvedSnapshot mismatched(ResolvedSnapshot snapshot) {
+            Node resolved = snapshot.resolvedRoot();
+            resolved.properties("proofChild", new Node()
+                    .blueId(proofChildBlueId)
+                    .properties("state", text("projected")));
+            return new ResolvedSnapshot(
+                    snapshot.frozenCanonicalRoot(),
+                    FrozenNode.fromResolvedNode(resolved),
+                    snapshot.blueId());
+        }
+    }
+}

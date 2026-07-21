@@ -64,7 +64,10 @@ public class MergeReverser {
                 && (fromType == null
                 || fromType.getValue() == null
                 || !Objects.equals(merged.getValue(), fromType.getValue()))) {
-            minimal.value(merged.getValue());
+            minimal.value(merged.getValue())
+                    .inlineValue(source != null
+                            ? source.isInlineValue()
+                            : merged.isInlineValue());
         }
 
         setTypeIfDifferent(merged, fromType, minimal, canonicalOverlay, Node::getType, Node::type);
@@ -73,10 +76,22 @@ public class MergeReverser {
         setTypeIfDifferent(merged, fromType, minimal, canonicalOverlay, Node::getValueType, Node::valueType);
         preservePayloadTypeForMetadataOverride(merged, minimal);
 
-        if (merged.getName() != null && (fromType == null || !merged.getName().equals(fromType.getName()))) {
+        // Canonicalization must retain explicit instance labels even when the
+        // effective type happens to carry the same text. Root labels are never
+        // inherited from a type, and source provenance is the only way to
+        // distinguish an explicit equal label from an absent one. The optional
+        // author-facing minimizer has no source provenance and keeps its
+        // historical value-diff behavior.
+        if (canonicalOverlay && source != null && source.getName() != null) {
+            minimal.name(source.getName());
+        } else if (merged.getName() != null
+                && (fromType == null || !merged.getName().equals(fromType.getName()))) {
             minimal.name(merged.getName());
         }
-        if (merged.getDescription() != null && (fromType == null || !merged.getDescription().equals(fromType.getDescription()))) {
+        if (canonicalOverlay && source != null && source.getDescription() != null) {
+            minimal.description(source.getDescription());
+        } else if (merged.getDescription() != null
+                && (fromType == null || !merged.getDescription().equals(fromType.getDescription()))) {
             minimal.description(merged.getDescription());
         }
 

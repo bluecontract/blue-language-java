@@ -9,7 +9,6 @@ import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.MergeReverser;
 import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.Test;
@@ -188,8 +187,9 @@ class ProcessingDocumentStateInvariantFailFirstTest {
     private static Node expectedInitializedSelected(AuditFixture fixture, Node selectedBefore) {
         Node expected = selectedBefore.clone();
         Blue identityBlue = fixture.newBlue(new AtomicInteger());
-        String preInitializationIdentity = BlueIdCalculator.calculateUncheckedBlueId(
-                identityBlue.resolveToSnapshot(selectedBefore.clone()).frozenCanonicalRoot().toNode());
+        String preInitializationIdentity = identityBlue.resolveToSnapshot(selectedBefore.clone())
+                .frozenCanonicalRoot()
+                .blueId();
         Node marker = new Node()
                 .type(reference(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
                 .properties("documentId", text(preInitializationIdentity));

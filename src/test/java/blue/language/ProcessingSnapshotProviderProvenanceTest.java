@@ -65,7 +65,8 @@ class ProcessingSnapshotProviderProvenanceTest {
         assertFalse(result.capabilityFailure(), result.failureReason());
         assertNotNull(result.snapshot());
         assertEquals("trusted", result.snapshot().resolvedRoot().getAsText("/fixed"));
-        assertEquals(3, fixture.fetches.get());
+        assertEquals(5, fixture.fetches.get(),
+                "scope identity performs one additional verified full-pipeline resolution");
     }
 
     @Test

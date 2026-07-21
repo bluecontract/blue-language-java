@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.Blue;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
@@ -100,6 +101,7 @@ public class DocumentProcessor implements AutoCloseable {
                              ProcessingMetricsSink metricsSink) {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
         this.contractTypeResolver = Objects.requireNonNull(contractTypeResolver, "contractTypeResolver");
+        registerRegistryContractTypes(this.contractRegistry, this.contractTypeResolver);
         this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
         this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
         this.contractLoader = new ContractLoader(
@@ -230,6 +232,15 @@ public class DocumentProcessor implements AutoCloseable {
         }
     }
 
+    /**
+     * Registers a processor for an explicit BlueId without supplying provider
+     * content for that BlueId.
+     *
+     * <p>For standalone initialization, configure a verified provider-backed
+     * snapshot manager/Blue runtime or use the exact-canonical-content overload.
+     * Otherwise a scope that requires the registered type fails before
+     * initiation with {@link ProcessorErrorCategory#ProviderUnavailable}.</p>
+     */
     public DocumentProcessor registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
         rejectWriteUpgrade();
         Lock configurationWrite = contractRegistry.configurationWriteLock();
@@ -240,6 +251,36 @@ public class DocumentProcessor implements AutoCloseable {
             Objects.requireNonNull(processor, "processor");
             contractRegistry.register(blueId, processor);
             contractTypeResolver.register(blueId, processor.contractType());
+            clearCachesInternal();
+            return this;
+        } finally {
+            lifecycleWrite.unlock();
+            configurationWrite.unlock();
+        }
+    }
+
+    /**
+     * Registers an external contract processor together with its exact
+     * canonical Blue type content. The content is cloned and verified against
+     * {@code blueId} before the registry is mutated.
+     */
+    public DocumentProcessor registerContractProcessor(
+            String blueId,
+            Node canonicalTypeNode,
+            ContractProcessor<? extends Contract> processor) {
+        rejectWriteUpgrade();
+        Lock configurationWrite = contractRegistry.configurationWriteLock();
+        configurationWrite.lock();
+        lifecycleWrite.lock();
+        try {
+            ensureOpen();
+            Objects.requireNonNull(processor, "processor");
+            registerExactContractProcessor(
+                    contractRegistry,
+                    contractTypeResolver,
+                    blueId,
+                    canonicalTypeNode,
+                    processor);
             clearCachesInternal();
             return this;
         } finally {
@@ -278,6 +319,24 @@ public class DocumentProcessor implements AutoCloseable {
 
     ProcessingSnapshotManager snapshotManager() {
         return snapshotManager;
+    }
+
+    ProcessingSnapshotManager scopeIdentitySnapshotManager() {
+        if (snapshotManager != null) {
+            return snapshotManager;
+        }
+        ContractMatchingService currentMatchingService = matchingService;
+        Blue languageRuntime = currentMatchingService != null
+                ? currentMatchingService.blue()
+                : null;
+        if (languageRuntime == null) {
+            return new RegisteredContractScopeIdentitySnapshotManager(contractRegistry);
+        }
+        DocumentProcessor languageProcessor = languageRuntime.getDocumentProcessor();
+        ProcessingSnapshotManager languageManager = languageProcessor != this
+                ? languageProcessor.snapshotManager()
+                : null;
+        return languageManager != null ? languageManager.transientSequence() : null;
     }
 
     ContractMatchingService matchingService() {
@@ -458,6 +517,57 @@ public class DocumentProcessor implements AutoCloseable {
         return new TypeClassResolver("blue.language.processor.model");
     }
 
+    private static void registerRegistryContractTypes(
+            ContractProcessorRegistry registry,
+            TypeClassResolver resolver) {
+        synchronized (resolver) {
+            for (Map.Entry<String, Class<? extends Contract>> entry
+                    : registry.registeredContractTypes().entrySet()) {
+                resolver.register(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    private static void registerExactContractProcessor(
+            ContractProcessorRegistry registry,
+            TypeClassResolver resolver,
+            String blueId,
+            Node canonicalTypeNode,
+            ContractProcessor<? extends Contract> processor) {
+        Objects.requireNonNull(processor, "processor");
+        Class<? extends Contract> contractType = processor.contractType();
+        Lock configurationWrite = registry.configurationWriteLock();
+        configurationWrite.lock();
+        try {
+            synchronized (resolver) {
+                requireCompatibleTypeRegistration(resolver, blueId, contractType);
+                // Registry validation (canonical BlueId and processor shape) is
+                // mutation-free on failure. With both configuration locks held,
+                // the following resolver registration cannot conflict.
+                registry.register(blueId, canonicalTypeNode, processor);
+                resolver.register(blueId, contractType);
+            }
+        } finally {
+            configurationWrite.unlock();
+        }
+    }
+
+    private static void requireCompatibleTypeRegistration(
+            TypeClassResolver resolver,
+            String blueId,
+            Class<? extends Contract> contractType) {
+        if (blueId == null || blueId.isEmpty()) {
+            throw new IllegalArgumentException("blueId must not be empty");
+        }
+        if (contractType == null) {
+            throw new IllegalArgumentException("clazz must not be null");
+        }
+        Class<?> existing = resolver.resolveClass(blueId);
+        if (existing != null && !existing.equals(contractType)) {
+            throw new IllegalStateException("Duplicate BlueId value: " + blueId);
+        }
+    }
+
     private void registerAnnotatedContractType(Class<? extends Contract> contractType) {
         if (contractType != null && contractType.isAnnotationPresent(TypeBlueId.class)) {
             contractTypeResolver.registerAnnotatedClass(contractType);
@@ -503,10 +613,30 @@ public class DocumentProcessor implements AutoCloseable {
             return this;
         }
 
+        /**
+         * Registers a processor mapping without supplying provider content.
+         * Standalone initialization that needs this type fails with
+         * {@link ProcessorErrorCategory#ProviderUnavailable} unless a verified
+         * provider-backed manager/Blue runtime is configured.
+         */
         public Builder registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
             Objects.requireNonNull(processor, "processor");
             this.contractRegistry.register(blueId, processor);
             this.contractTypeResolver.register(blueId, processor.contractType());
+            return this;
+        }
+
+        public Builder registerContractProcessor(
+                String blueId,
+                Node canonicalTypeNode,
+                ContractProcessor<? extends Contract> processor) {
+            Objects.requireNonNull(processor, "processor");
+            registerExactContractProcessor(
+                    this.contractRegistry,
+                    this.contractTypeResolver,
+                    blueId,
+                    canonicalTypeNode,
+                    processor);
             return this;
         }
 

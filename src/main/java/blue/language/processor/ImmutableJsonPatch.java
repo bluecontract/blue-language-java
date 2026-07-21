@@ -98,6 +98,23 @@ final class ImmutableJsonPatch {
         return resolvedValue;
     }
 
+    ImmutableJsonPatch withResolvedValue(FrozenNode replacement) {
+        if (op == JsonPatch.Op.REMOVE) {
+            return this;
+        }
+        FrozenNode checked = Objects.requireNonNull(replacement, "resolved patch value");
+        if (checked.isStrictCanonical()) {
+            throw new IllegalArgumentException("Resolved patch value must use resolved construction mode");
+        }
+        return new ImmutableJsonPatch(op,
+                authoredPath,
+                path,
+                authoredValue,
+                canonicalValue,
+                checked,
+                metrics);
+    }
+
     FrozenNode valueFor(FrozenNode root) {
         if (op == JsonPatch.Op.REMOVE) {
             return null;

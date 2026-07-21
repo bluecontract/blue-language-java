@@ -298,14 +298,12 @@ public final class BlueContractsConformanceSuiteRunner {
         ScriptedContractsRuntime scriptedRuntime = new ScriptedContractsRuntime(spec.get("mockRuntime"), spec.get("typeGraph"));
         MockExternalChannelProcessor channelProcessor = new MockExternalChannelProcessor(scriptedRuntime);
         MockHandlerProcessor handlerProcessor = new MockHandlerProcessor(scriptedRuntime);
-        Blue fixtureBlue = !scriptedTypes.externalTypeNodesByBlueId.isEmpty()
-                ? new Blue(mockTypeProvider(scriptedTypes))
-                : null;
+        Blue fixtureBlue = new Blue(mockTypeProvider(scriptedTypes));
         DocumentProcessor.Builder processorBuilder = DocumentProcessor.builder()
-                .withMatchingService(new ContractMatchingService(new Blue()))
+                .withMatchingService(new ContractMatchingService(fixtureBlue))
                 .registerContractProcessor(channelProcessor)
                 .registerContractProcessor(handlerProcessor);
-        if (fixtureBlue != null) {
+        if (!scriptedTypes.externalTypeNodesByBlueId.isEmpty()) {
             processorBuilder.withConformanceEngine(fixtureBlue.conformanceEngine());
         }
         if (scriptedRuntime.hasFixtureTypeGraph()) {
@@ -335,9 +333,6 @@ public final class BlueContractsConformanceSuiteRunner {
     }
 
     private static ProcessingSnapshotManager fixtureSnapshotManager(Blue fixtureBlue) {
-        if (fixtureBlue == null) {
-            throw new IllegalArgumentException("Fixture type graph requires a fixture Blue instance");
-        }
         return new ProcessingSnapshotManager() {
             @Override
             public ResolvedSnapshot fromDocument(Node document) {
@@ -533,7 +528,7 @@ public final class BlueContractsConformanceSuiteRunner {
         assertCheckpointLastEvents(spec, result.document());
         assertStoredObjectKeys(spec, result.document());
         assertPointerReadsAndWrites(spec, result.document());
-        assertInitializationContentBlueIdInput(spec, originalDocument, result.document());
+        assertInitializationContentBlueIdInput(spec, result);
         assertRuntimeInsertionNormalizedValues(spec, result);
         assertGasByteView(spec, result);
         assertProcessorEventTypes(spec, result);
@@ -622,7 +617,8 @@ public final class BlueContractsConformanceSuiteRunner {
             for (JsonNode path : exists) {
                 Node actual = nodeAt(document, path.asText());
                 if (actual == null) {
-                    throw new AssertionError("Expected document path to exist: " + path.asText());
+                    throw new AssertionError("Expected document path to exist: " + path.asText()
+                            + " in " + nodeDebug(document));
                 }
             }
         }
@@ -768,21 +764,46 @@ public final class BlueContractsConformanceSuiteRunner {
         }
     }
 
-    private static void assertInitializationContentBlueIdInput(JsonNode spec, Node originalDocument, Node document) {
+    private static void assertInitializationContentBlueIdInput(JsonNode spec,
+                                                               DocumentProcessingResult result) {
         if (!spec.has("expectedInitializationContentBlueIdInput")) {
             return;
         }
         JsonNode assertion = spec.get("expectedInitializationContentBlueIdInput");
-        String excludesPath = text(assertion, "excludesPath", null);
-        if (excludesPath != null) {
-            assertTrue(nodeAt(originalDocument, excludesPath) == null,
-                    "Initialization Content BlueId input unexpectedly included " + excludesPath);
-        }
-        Node documentId = nodeAt(document, "/contracts/initialized/documentId");
+        String scope = text(assertion, "scope", "/");
+        JsonNode expectedNode = requireNonNull(assertion, "expectedContentBlueId");
+        assertTrue(expectedNode.isTextual() && !expectedNode.asText().isEmpty(),
+                "expectedInitializationContentBlueIdInput.expectedContentBlueId must be a non-empty string");
+        String expectedContentBlueId = expectedNode.asText();
+        Node documentId = nodeAt(result.document(), initializedMarkerPath(scope) + "/documentId");
         assertTrue(documentId != null && documentId.getValue() != null,
                 "Initialized marker documentId is missing");
-        assertEquals(blueId(originalDocument), String.valueOf(documentId.getValue()),
-                "Initialization documentId");
+        assertEquals(expectedContentBlueId,
+                String.valueOf(documentId.getValue()),
+                "Initialized marker documentId at " + scope);
+
+        boolean lifecycleMatched = false;
+        for (Node event : result.triggeredEvents()) {
+            Node type = event != null ? event.getType() : null;
+            Node eventDocumentId = event != null && event.getProperties() != null
+                    ? event.getProperties().get("documentId")
+                    : null;
+            if (type != null
+                    && RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED.equals(type.getBlueId())
+                    && eventDocumentId != null
+                    && expectedContentBlueId.equals(String.valueOf(eventDocumentId.getValue()))) {
+                lifecycleMatched = true;
+                break;
+            }
+        }
+        assertTrue(lifecycleMatched,
+                "Document Processing Initiated event did not carry the published Content BlueId at " + scope);
+    }
+
+    private static String initializedMarkerPath(String scope) {
+        return "/".equals(scope)
+                ? "/contracts/initialized"
+                : scope + "/contracts/initialized";
     }
 
     private static void assertRuntimeInsertionNormalizedValues(JsonNode spec, DocumentProcessingResult result) {
@@ -1291,6 +1312,14 @@ public final class BlueContractsConformanceSuiteRunner {
     }
 
     private static Node mockTypeNode(String name, String blueId) {
+        if (MockTypeBlueIds.LEGACY_MOCK_HANDLER.equals(blueId)
+                || MockTypeBlueIds.LEGACY_MOCK_EXTERNAL_CHANNEL.equals(blueId)) {
+            // The legacy fixture identifiers are the exact Content BlueIds of
+            // these standalone name-only type documents. Return valid provider
+            // content so strict scope identity and later patch re-resolution do
+            // not have to accept a node containing both blueId and siblings.
+            return new Node().name(name);
+        }
         return new Node().blueId(blueId).name(name);
     }
 

@@ -139,13 +139,12 @@ class ContractBundleCacheTest {
     }
 
     private Blue configuredBlue(RecordingMetrics metrics) {
-        DocumentProcessor processor = DocumentProcessor.builder()
-                .withProcessingMetricsSink(metrics)
-                .registerContractProcessor(new TestEventChannelProcessor())
-                .registerContractProcessor(new IncrementPropertyContractProcessor())
-                .registerContractProcessor(new SetPropertyContractProcessor())
-                .build();
-        return ProcessorTestSupport.blue().documentProcessor(processor);
+        Blue blue = ProcessorTestSupport.blue();
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        return blue;
     }
 
     private Node event(Blue blue, String eventId) {

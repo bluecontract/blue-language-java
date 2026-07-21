@@ -34,6 +34,10 @@ final class ProcessorEngine {
 
     static DocumentProcessingResult initializeDocument(DocumentProcessor owner, Node document) {
         Objects.requireNonNull(document, "document");
+        DocumentProcessingResult invalid = validateProcessingDocument(document);
+        if (invalid != null) {
+            return invalid;
+        }
         if (isInitialized(owner, document)) {
             throw new IllegalStateException("Document already initialized");
         }
@@ -50,6 +54,10 @@ final class ProcessorEngine {
 
     static DocumentProcessingResult initializeDocument(DocumentProcessor owner, ResolvedSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
+        DocumentProcessingResult invalid = validateProcessingDocument(snapshot.frozenResolvedRoot());
+        if (invalid != null) {
+            return invalid.withSnapshot(snapshot);
+        }
         if (isInitialized(owner, snapshot)) {
             throw new IllegalStateException("Document already initialized");
         }

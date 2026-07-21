@@ -1,10 +1,12 @@
 package blue.language.processor;
 
+import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
+import blue.language.utils.BlueIdCalculator;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -24,6 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class ContractProcessorRegistry {
 
     private final Map<String, ContractProcessor<? extends Contract>> processorsByBlueId = new LinkedHashMap<>();
+    private final Map<String, Node> canonicalTypeNodesByBlueId = new LinkedHashMap<>();
     private final Map<Class<? extends HandlerContract>, HandlerProcessor<? extends HandlerContract>> handlerProcessors = new LinkedHashMap<>();
     private final Map<Class<? extends ChannelContract>, ChannelProcessor<? extends ChannelContract>> channelProcessors = new LinkedHashMap<>();
     private final Map<Class<? extends MarkerContract>, ContractProcessor<? extends MarkerContract>> markerProcessors = new LinkedHashMap<>();
@@ -117,6 +120,15 @@ public class ContractProcessorRegistry {
         mutateConfiguration(() -> registerInternal(processor));
     }
 
+    /**
+     * Registers a processor mapping for an explicit BlueId without supplying
+     * provider content for that BlueId.
+     *
+     * <p>A standalone processor cannot calculate initialization Content BlueIds
+     * from this registration alone. It must also have a verified provider-backed
+     * snapshot manager/Blue runtime or exact canonical registration evidence;
+     * otherwise initialization fails explicitly with {@code ProviderUnavailable}.</p>
+     */
     public void register(String blueId, ContractProcessor<? extends Contract> processor) {
         mutateConfiguration(() -> {
             Objects.requireNonNull(processor, "processor");
@@ -125,6 +137,27 @@ public class ContractProcessorRegistry {
             }
             registerBlueId(blueId, processor);
             registerClassLookup(processor);
+        });
+    }
+
+    /**
+     * Registers both the Java processor mapping and the exact canonical Blue
+     * type content needed to resolve that mapping outside a configured
+     * Language runtime.
+     *
+     * <p>The legacy {@link #register(String, ContractProcessor)} overload does
+     * not imply any type content. In particular, a Java class name is never
+     * interpreted as the canonical node for the supplied BlueId.</p>
+     */
+    public void register(String blueId,
+                         Node canonicalTypeNode,
+                         ContractProcessor<? extends Contract> processor) {
+        mutateConfiguration(() -> {
+            Objects.requireNonNull(processor, "processor");
+            Node canonical = validatedCanonicalTypeNode(blueId, canonicalTypeNode);
+            registerBlueId(blueId, processor);
+            registerClassLookup(processor);
+            canonicalTypeNodesByBlueId.put(blueId, canonical);
         });
     }
 
@@ -240,6 +273,23 @@ public class ContractProcessorRegistry {
         return processorsView;
     }
 
+    synchronized Node canonicalTypeNode(String blueId) {
+        Node canonical = canonicalTypeNodesByBlueId.get(blueId);
+        return canonical != null ? canonical.clone() : null;
+    }
+
+    synchronized Map<String, Class<? extends Contract>> registeredContractTypes() {
+        Map<String, Class<? extends Contract>> registered = new LinkedHashMap<>();
+        for (Map.Entry<String, ContractProcessor<? extends Contract>> entry
+                : processorsByBlueId.entrySet()) {
+            Class<? extends Contract> contractType = entry.getValue().contractType();
+            if (contractType != null) {
+                registered.put(entry.getKey(), contractType);
+            }
+        }
+        return Collections.unmodifiableMap(registered);
+    }
+
     synchronized long version() {
         return version;
     }
@@ -265,24 +315,97 @@ public class ContractProcessorRegistry {
         }
     }
 
+    private Node validatedCanonicalTypeNode(String blueId, Node canonicalTypeNode) {
+        if (blueId == null || blueId.isEmpty()) {
+            throw new IllegalArgumentException("blueId must not be empty");
+        }
+        Objects.requireNonNull(canonicalTypeNode, "canonicalTypeNode");
+        Node canonical = canonicalTypeNode.clone();
+        String suppliedRootBlueId = canonical.getBlueId();
+        if (canonical.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "Missing provider content for registered contract BlueId " + blueId);
+        }
+        if (suppliedRootBlueId != null) {
+            if (!blueId.equals(suppliedRootBlueId)) {
+                throw providerBlueIdMismatch(blueId, suppliedRootBlueId);
+            }
+            canonical.blueId(null);
+        }
+        String calculatedBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        if (!blueId.equals(calculatedBlueId)) {
+            throw providerBlueIdMismatch(blueId, calculatedBlueId);
+        }
+        return canonical;
+    }
+
+    private IllegalArgumentException providerBlueIdMismatch(String requestedBlueId,
+                                                            String actualBlueId) {
+        return new IllegalArgumentException("Provider returned content with BlueId " + actualBlueId
+                + " for requested BlueId " + requestedBlueId + ".");
+    }
+
     private void registerBlueId(String blueId, ContractProcessor<? extends Contract> processor) {
+        if (blueId == null || blueId.isEmpty()) {
+            throw new IllegalArgumentException("blueId must not be empty");
+        }
+        ProcessorKind kind = requireSupportedProcessor(processor);
+        ContractProcessor<? extends Contract> existing = processorsByBlueId.get(blueId);
+        if (existing != null
+                && !Objects.equals(existing.contractType(), processor.contractType())) {
+            throw new IllegalStateException("Duplicate BlueId value: " + blueId);
+        }
         processorsByBlueId.put(blueId, processor);
         version++;
-        if (processor instanceof HandlerProcessor) {
+        if (kind == ProcessorKind.HANDLER) {
             @SuppressWarnings("unchecked")
             HandlerProcessor<? extends HandlerContract> handler = (HandlerProcessor<? extends HandlerContract>) processor;
             handlerProcessorsByBlueId.put(blueId, handler);
-        } else if (processor instanceof ChannelProcessor) {
+        } else if (kind == ProcessorKind.CHANNEL) {
             @SuppressWarnings("unchecked")
             ChannelProcessor<? extends ChannelContract> channel = (ChannelProcessor<? extends ChannelContract>) processor;
             channelProcessorsByBlueId.put(blueId, channel);
-        } else if (processor.contractType() != null && MarkerContract.class.isAssignableFrom(processor.contractType())) {
+        } else {
             @SuppressWarnings("unchecked")
             ContractProcessor<? extends MarkerContract> marker = (ContractProcessor<? extends MarkerContract>) processor;
             markerProcessorsByBlueId.put(blueId, marker);
-        } else {
-            throw new IllegalArgumentException("Unsupported processor type: " + processor.getClass().getName());
         }
+    }
+
+    private ProcessorKind requireSupportedProcessor(
+            ContractProcessor<? extends Contract> processor) {
+        Objects.requireNonNull(processor, "processor");
+        Class<? extends Contract> contractType = processor.contractType();
+        if (processor instanceof HandlerProcessor) {
+            if (contractType != null
+                    && HandlerContract.class.isAssignableFrom(contractType)) {
+                return ProcessorKind.HANDLER;
+            }
+            throw unsupportedProcessor(processor);
+        }
+        if (processor instanceof ChannelProcessor) {
+            if (contractType != null
+                    && ChannelContract.class.isAssignableFrom(contractType)) {
+                return ProcessorKind.CHANNEL;
+            }
+            throw unsupportedProcessor(processor);
+        }
+        if (contractType != null && MarkerContract.class.isAssignableFrom(contractType)) {
+            return ProcessorKind.MARKER;
+        }
+        throw unsupportedProcessor(processor);
+    }
+
+    private IllegalArgumentException unsupportedProcessor(
+            ContractProcessor<? extends Contract> processor) {
+        return new IllegalArgumentException(
+                "Unsupported processor type: " + processor.getClass().getName());
+    }
+
+    private enum ProcessorKind {
+        HANDLER,
+        CHANNEL,
+        MARKER
     }
 
     private void registerClassLookup(ContractProcessor<? extends Contract> processor) {

@@ -405,6 +405,34 @@ public class MergeReverserTest {
     }
 
     @Test
+    public void canonicalOverlayPreservesExplicitRootLabelsEqualToTypeLabels() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        Node canonicalType = new Node()
+                .name("Same Label")
+                .description("Same Description");
+        nodeProvider.addSingleNodes(canonicalType);
+        String typeBlueId = nodeProvider.getBlueIdByName(canonicalType.getName());
+        Blue blue = new Blue(nodeProvider);
+        Node source = new Node()
+                .name(canonicalType.getName())
+                .description(canonicalType.getDescription())
+                .type(new Node().blueId(typeBlueId));
+
+        Node preprocessed = blue.preprocess(source.clone());
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(
+                blue.resolve(preprocessed.clone()), preprocessed);
+        Node expectedCanonical = source.clone();
+
+        assertEquals("Same Label", canonical.getName());
+        assertEquals("Same Description", canonical.getDescription());
+        assertEquals(BlueIdCalculator.calculateBlueId(expectedCanonical),
+                blue.calculateSemanticBlueId(source));
+        assertNotEquals(blue.calculateSemanticBlueId(
+                        new Node().type(new Node().blueId(typeBlueId))),
+                blue.calculateSemanticBlueId(source));
+    }
+
+    @Test
     public void preservesScalarOverrideThatDiffersFromType() throws Exception {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(

@@ -975,6 +975,11 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Registers a processor mapping for {@code blueId} without supplying type
+     * content. The configured provider must already be able to return verified
+     * content for that BlueId; no Java class-name node is synthesized.
+     */
     public Blue registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
         ensureOpen();
         if (processor == null) {
@@ -1009,7 +1014,8 @@ public class Blue implements NodeResolver, AutoCloseable {
         ProcessingMetricsSink metrics;
         CacheGaugeSnapshot gauges;
         try {
-            target.registerContractProcessor(blueId, processor);
+            target.registerContractProcessor(
+                    blueId, validatedCanonicalType, processor);
             synchronized (lifecycleLock) {
                 externalContractTypeNodes.put(blueId, validatedCanonicalType);
                 // The extension provider is consulted by snapshot resolution. Any

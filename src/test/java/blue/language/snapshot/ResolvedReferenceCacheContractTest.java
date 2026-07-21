@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -205,6 +206,108 @@ class ResolvedReferenceCacheContractTest {
             assertEquals(1, loads.get());
         } finally {
             releaseLoader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void publishedEntryAfterOwnedFlightInstallCompletesWaitingLookupWithoutProviderLoad() throws Exception {
+        FrozenNode canonical = FrozenNode.fromNode(new Node().value("published-during-flight"));
+        String blueId = canonical.blueId();
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        CountDownLatch ownerInstalled = new CountDownLatch(1);
+        CountDownLatch waiterAwaiting = new CountDownLatch(1);
+        CountDownLatch releaseOwner = new CountDownLatch(1);
+        AtomicBoolean blockFirstOwner = new AtomicBoolean(true);
+        AtomicInteger loads = new AtomicInteger();
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        ResolvedReferenceCache.setCanonicalLoadObserverForTesting(installedBlueId -> {
+            if (blueId.equals(installedBlueId) && blockFirstOwner.compareAndSet(true, false)) {
+                ownerInstalled.countDown();
+                awaitUnchecked(releaseOwner);
+            }
+        });
+        ResolvedReferenceCache.setCanonicalLoadWaitObserverForTesting(waitingBlueId -> {
+            if (blueId.equals(waitingBlueId)) {
+                waiterAwaiting.countDown();
+            }
+        });
+        try {
+            Future<FrozenNode> owner = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(blueId, () -> {
+                        loads.incrementAndGet();
+                        return canonical;
+                    }));
+            assertTrue(ownerInstalled.await(5, TimeUnit.SECONDS));
+            Future<FrozenNode> waiter = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(blueId, () -> {
+                        loads.incrementAndGet();
+                        return canonical;
+                    }));
+            assertTrue(waiterAwaiting.await(5, TimeUnit.SECONDS));
+
+            assertSame(canonical, cache.putVerifiedCanonical(blueId, canonical));
+            releaseOwner.countDown();
+
+            assertSame(canonical, owner.get(5, TimeUnit.SECONDS));
+            assertSame(canonical, waiter.get(5, TimeUnit.SECONDS));
+            assertEquals(0, loads.get());
+        } finally {
+            ResolvedReferenceCache.setCanonicalLoadWaitObserverForTesting(null);
+            ResolvedReferenceCache.setCanonicalLoadObserverForTesting(null);
+            releaseOwner.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void generationChangeAfterOwnedFlightInstallReleasesWaitingLookup() throws Exception {
+        FrozenNode canonical = FrozenNode.fromNode(new Node().value("generation-during-flight"));
+        String blueId = canonical.blueId();
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        CountDownLatch ownerInstalled = new CountDownLatch(1);
+        CountDownLatch waiterAwaiting = new CountDownLatch(1);
+        CountDownLatch releaseOwner = new CountDownLatch(1);
+        AtomicBoolean blockFirstOwner = new AtomicBoolean(true);
+        AtomicInteger loads = new AtomicInteger();
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        ResolvedReferenceCache.setCanonicalLoadObserverForTesting(installedBlueId -> {
+            if (blueId.equals(installedBlueId) && blockFirstOwner.compareAndSet(true, false)) {
+                ownerInstalled.countDown();
+                awaitUnchecked(releaseOwner);
+            }
+        });
+        ResolvedReferenceCache.setCanonicalLoadWaitObserverForTesting(waitingBlueId -> {
+            if (blueId.equals(waitingBlueId)) {
+                waiterAwaiting.countDown();
+            }
+        });
+        try {
+            Future<FrozenNode> owner = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(blueId, () -> {
+                        loads.incrementAndGet();
+                        return canonical;
+                    }));
+            assertTrue(ownerInstalled.await(5, TimeUnit.SECONDS));
+            Future<FrozenNode> waiter = executor.submit(() ->
+                    cache.getOrLoadVerifiedCanonical(blueId, () -> {
+                        loads.incrementAndGet();
+                        return canonical;
+                    }));
+            assertTrue(waiterAwaiting.await(5, TimeUnit.SECONDS));
+
+            cache.clear();
+            releaseOwner.countDown();
+
+            assertSame(canonical, owner.get(5, TimeUnit.SECONDS));
+            assertSame(canonical, waiter.get(5, TimeUnit.SECONDS));
+            assertSame(canonical,
+                    cache.getVerifiedCanonical(blueId).orElseThrow(AssertionError::new));
+            assertTrue(loads.get() >= 1);
+        } finally {
+            ResolvedReferenceCache.setCanonicalLoadWaitObserverForTesting(null);
+            ResolvedReferenceCache.setCanonicalLoadObserverForTesting(null);
+            releaseOwner.countDown();
             executor.shutdownNow();
         }
     }

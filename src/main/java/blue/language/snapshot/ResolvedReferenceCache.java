@@ -22,6 +22,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -63,6 +64,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
     private long structuralHighWaterWeight;
     private long structuralEvictions;
     private long structuralOversizedRejections;
+    private static volatile Consumer<String> canonicalLoadObserver;
+    private static volatile Consumer<String> canonicalLoadWaitObserver;
 
     public ResolvedReferenceCache() {
         this(BlueCachePolicy.boundedDefaults());
@@ -314,22 +317,31 @@ public final class ResolvedReferenceCache implements AutoCloseable {
 
             try {
                 if (ownsLoad) {
-                    // Another flight may have published after this thread's
-                    // initial cache check but before it installed a new flight.
-                    // Recheck after winning ownership so that late contenders
-                    // do not invoke the provider a second time.
-                    synchronized (cacheGeneration.mutationLock) {
-                        if (loadingGeneration != cacheGeneration.value.get()) {
-                            continue;
+                    try {
+                        notifyCanonicalLoadInstalled(blueId);
+                        // Another flight may have published after this thread's
+                        // initial cache check but before it installed a new flight.
+                        // Recheck after winning ownership so that late contenders
+                        // do not invoke the provider a second time.
+                        synchronized (cacheGeneration.mutationLock) {
+                            if (loadingGeneration != cacheGeneration.value.get()) {
+                                flight.result.completeExceptionally(
+                                        RetryVerifiedReferenceLoadException.INSTANCE);
+                                continue;
+                            }
+                            ensureCurrentGeneration();
+                            VerifiedReferenceEntry published = entriesByBlueId.get(blueId);
+                            if (published == null) {
+                                published = inheritedEntry(blueId);
+                            }
+                            if (published != null) {
+                                flight.result.complete(published.canonicalContent);
+                                return published.canonicalContent;
+                            }
                         }
-                        ensureCurrentGeneration();
-                        VerifiedReferenceEntry published = entriesByBlueId.get(blueId);
-                        if (published == null) {
-                            published = inheritedEntry(blueId);
-                        }
-                        if (published != null) {
-                            return published.canonicalContent;
-                        }
+                    } catch (RuntimeException | Error failure) {
+                        flight.result.completeExceptionally(failure);
+                        throw failure;
                     }
                 }
 
@@ -354,7 +366,12 @@ public final class ResolvedReferenceCache implements AutoCloseable {
                         }
                     }
                 } else {
-                    loaded = awaitCanonicalLoad(flight);
+                    notifyCanonicalLoadWait(blueId);
+                    try {
+                        loaded = awaitCanonicalLoad(flight);
+                    } catch (RetryVerifiedReferenceLoadException retry) {
+                        continue;
+                    }
                 }
 
                 synchronized (cacheGeneration.mutationLock) {
@@ -396,6 +413,28 @@ public final class ResolvedReferenceCache implements AutoCloseable {
         return false;
     }
 
+    static void setCanonicalLoadObserverForTesting(Consumer<String> observer) {
+        canonicalLoadObserver = observer;
+    }
+
+    static void setCanonicalLoadWaitObserverForTesting(Consumer<String> observer) {
+        canonicalLoadWaitObserver = observer;
+    }
+
+    private static void notifyCanonicalLoadInstalled(String blueId) {
+        Consumer<String> observer = canonicalLoadObserver;
+        if (observer != null) {
+            observer.accept(blueId);
+        }
+    }
+
+    private static void notifyCanonicalLoadWait(String blueId) {
+        Consumer<String> observer = canonicalLoadWaitObserver;
+        if (observer != null) {
+            observer.accept(blueId);
+        }
+    }
+
     private static FrozenNode awaitCanonicalLoad(CanonicalLoadFlight flight) {
         try {
             return flight.result.join();
@@ -414,6 +453,15 @@ public final class ResolvedReferenceCache implements AutoCloseable {
             throw (Error) failure;
         }
         return new IllegalStateException("Verified reference load failed", failure);
+    }
+
+    private static final class RetryVerifiedReferenceLoadException extends RuntimeException {
+        private static final RetryVerifiedReferenceLoadException INSTANCE =
+                new RetryVerifiedReferenceLoadException();
+
+        private RetryVerifiedReferenceLoadException() {
+            super("Verified reference load generation changed", null, false, false);
+        }
     }
 
     public FrozenNode putVerifiedResolved(VerifiedReferenceResolution verification) {

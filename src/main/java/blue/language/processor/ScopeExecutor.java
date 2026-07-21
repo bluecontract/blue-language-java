@@ -58,7 +58,6 @@ final class ScopeExecutor {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         Set<String> processedEmbedded = new LinkedHashSet<>();
         ContractBundle bundle = null;
-        FrozenNode preInitSnapshot = null;
         ScopeRuntimeContext scopeContext = runtime.scope(normalizedScope);
         if ("/".equals(normalizedScope)) {
             runtime.setScopeEmbeddedDepth(normalizedScope, 0);
@@ -95,17 +94,20 @@ final class ScopeExecutor {
                 return;
             }
 
-            if (preInitSnapshot == null) {
-                FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
-                preInitSnapshot = canonicalScopeNode != null ? canonicalScopeNode : scopeNode;
-            }
-
-            long loadStart = System.nanoTime();
             try {
-                bundle = owner.contractLoader().load(
-                        selectedScopeAt(normalizedScope), scopeNode, normalizedScope, metrics);
-            } finally {
-                metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
+                bundle = loadBundle(scopeNode, normalizedScope, metrics);
+            } catch (RuntimeException failure) {
+                ProcessorErrorCategory category = ScopeIdentityErrorMapper.from(failure);
+                if (category != ProcessorErrorCategory.ProviderUnavailable
+                        && category != ProcessorErrorCategory.ProviderBlueIdMismatch) {
+                    throw failure;
+                }
+                execution.enterFatalTermination(normalizedScope,
+                        null,
+                        category,
+                        execution.fatalReason(failure,
+                                "Contract Recognition Resolution failed"));
+                return;
             }
             bundles.put(normalizedScope, bundle);
 
@@ -126,13 +128,10 @@ final class ScopeExecutor {
             processedEmbedded.add(childScope);
             scopeContext.recordProcessedEmbeddedPath(childScope);
             runtime.setScopeEmbeddedDepth(childScope, runtime.scopeEmbeddedDepth(normalizedScope) + 1);
+            FrozenNode selectedChildNode = runtime.selectedFrozenAt(childScope);
             FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
-                if (!isObjectScope(childNode)) {
-                    if (!finalizeAfterInitialization) {
-                        continue;
-                    }
-                    initializeCurrentScopeIfNeeded(normalizedScope, bundle);
+                if (!isObjectScope(selectedChildNode) || !isObjectScope(childNode)) {
                     execution.enterFatalTermination(normalizedScope,
                             bundle,
                             ProcessorErrorCategory.BoundaryViolation,
@@ -157,11 +156,23 @@ final class ScopeExecutor {
         }
 
         runtime.chargeInitialization();
-        String documentId = initializationDocumentId(preInitSnapshot);
+        String documentId;
+        try {
+            documentId = runtime.calculatePreInitializationScopeContentBlueId(
+                    normalizedScope, owner.scopeIdentitySnapshotManager());
+        } catch (RuntimeException ex) {
+            execution.enterFatalTermination(normalizedScope,
+                    bundle,
+                    ScopeIdentityErrorMapper.from(ex),
+                    execution.fatalReason(ex, "Scope Content BlueId calculation failed"));
+            return;
+        }
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
         ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
-        addInitializationMarker(context, documentId);
+        if (!execution.shouldStopScopeWork(normalizedScope)) {
+            addInitializationMarker(context, documentId);
+        }
         if (finalizeAfterInitialization && !execution.shouldStopScopeWork(normalizedScope)) {
             ContractBundle refreshed = refreshBundle(normalizedScope);
             finalizeScope(normalizedScope, refreshed);
@@ -523,14 +534,10 @@ final class ScopeExecutor {
                 bundle = refreshBundle(normalizedScope);
                 continue;
             }
+            FrozenNode selectedChildNode = runtime.selectedFrozenAt(childScope);
             FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
-                if (!isObjectScope(childNode)) {
-                    if ("initialize".equals(eventKind(event))) {
-                        bundle = refreshBundle(normalizedScope);
-                        continue;
-                    }
-                    initializeCurrentScopeIfNeeded(normalizedScope, bundle);
+                if (!isObjectScope(selectedChildNode) || !isObjectScope(childNode)) {
                     execution.enterFatalTermination(normalizedScope,
                             bundle,
                             ProcessorErrorCategory.BoundaryViolation,
@@ -576,8 +583,11 @@ final class ScopeExecutor {
     private ContractBundle loadBundle(FrozenNode scopeNode, String normalizedScope, ProcessingMetricsSink metrics) {
         long loadStart = System.nanoTime();
         try {
+            FrozenNode selectedScope = selectedScopeAt(normalizedScope);
+            FrozenNode recognitionScope = runtime.contractRecognitionScope(
+                    selectedScope, scopeNode);
             return owner.contractLoader().load(
-                    selectedScopeAt(normalizedScope), scopeNode, normalizedScope, metrics);
+                    selectedScope, recognitionScope, normalizedScope, metrics);
         } finally {
             metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
         }
@@ -612,37 +622,8 @@ final class ScopeExecutor {
         return node != null
                 && node.getValue() == null
                 && !node.hasItems()
-                && !node.isReferenceOnly()
+                && node.getReferenceBlueId() == null
                 && node.getPreviousBlueId() == null;
-    }
-
-    private String eventKind(Node event) {
-        if (event == null || event.getProperties() == null) {
-            return null;
-        }
-        Node kind = event.getProperties().get("kind");
-        Object value = kind != null ? kind.getValue() : null;
-        return value != null ? String.valueOf(value) : null;
-    }
-
-    /**
-     * Compatibility invariant:
-     * /contracts/initialized/documentId is the historical unchecked identity of
-     * the selected pre-initialization node. It is not the canonical state BlueId.
-     * These values can differ for payload-only lists. Do not replace this
-     * calculation with FrozenNode.blueId().
-     */
-    private String initializationDocumentId(FrozenNode preInitializationSnapshot) {
-        ProcessingMetricsSink metrics = owner.metricsSink();
-        metrics.incrementInitializationDocumentIdUncheckedCalculations();
-        Node materialized;
-        if (preInitializationSnapshot != null) {
-            metrics.incrementInitializationDocumentIdNodeMaterializations();
-            materialized = preInitializationSnapshot.toNode();
-        } else {
-            materialized = new Node();
-        }
-        return BlueIdCalculator.calculateUncheckedBlueId(materialized);
     }
 
     private void addInitializationMarker(ProcessorExecutionContext context, String documentId) {
@@ -650,22 +631,6 @@ final class ScopeExecutor {
         String pointer = context.resolvePointer(ProcessorPointerConstants.RELATIVE_INITIALIZED);
         context.applyFrozenPatch(FrozenJsonPatch.add(pointer, marker));
         context.applyBufferedEffects();
-    }
-
-    private void initializeCurrentScopeIfNeeded(String scopePath, ContractBundle bundle) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        if (runtime.hasInitializationMarker(normalizedScope) || execution.shouldStopScopeWork(normalizedScope)) {
-            return;
-        }
-        FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
-        String documentId = initializationDocumentId(canonicalScopeNode);
-        runtime.chargeInitialization();
-        Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
-        ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
-        deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
-        if (!execution.shouldStopScopeWork(normalizedScope)) {
-            addInitializationMarker(context, documentId);
-        }
     }
 
     private void finalizeScope(String scopePath, ContractBundle bundle) {
@@ -874,10 +839,9 @@ final class ScopeExecutor {
         if (left == null || right == null) {
             return left == right;
         }
-        // Reserved runtime subtrees are stored as unchecked canonical state,
-        // while a public FrozenJsonPatch carries a strict authored value.  The
-        // boundary's historical oracle is the unchecked identity used by the
-        // mutable lane, so normalize both representations to that identity.
+        // Reserved runtime subtrees can arrive through different construction
+        // modes; compare their authored form so preservation checks remain
+        // representation-insensitive.
         return BlueIdCalculator.calculateUncheckedBlueId(left.toNode())
                 .equals(BlueIdCalculator.calculateUncheckedBlueId(right.toNode()));
     }

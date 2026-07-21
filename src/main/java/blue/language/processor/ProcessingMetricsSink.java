@@ -472,6 +472,14 @@ public interface ProcessingMetricsSink {
         addMetric("processorManagedMarkerIncrementalResolutions", 1L);
     }
 
+    default void incrementInitializationDocumentIdContentBlueIdCalculations() {
+        addMetric("initializationDocumentIdContentBlueIdCalculations", 1L);
+    }
+
+    default void incrementInitializationDocumentIdCanonicalMaterializations() {
+        addMetric("initializationDocumentIdCanonicalMaterializations", 1L);
+    }
+
     default void incrementInitializationDocumentIdUncheckedCalculations() {
         addMetric("initializationDocumentIdUncheckedCalculations", 1L);
     }

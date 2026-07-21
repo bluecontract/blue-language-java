@@ -19,6 +19,7 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
+import blue.language.processor.registry.RuntimeBlueIds;
 import java.math.BigInteger;
 import org.junit.jupiter.api.Test;
 
@@ -42,8 +43,10 @@ class ExternalContractIntegrationTest {
     void builderRegistersExternalContractsByExplicitBlueIdAndExecutesThem() {
         ExternalAddAmountProcessor.reset();
         DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(CHANNEL_BLUE_ID, new ExternalAlwaysChannelProcessor())
-                .registerContractProcessor(HANDLER_BLUE_ID, new ExternalAddAmountProcessor())
+                .registerContractProcessor(CHANNEL_BLUE_ID,
+                        externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
+                .registerContractProcessor(HANDLER_BLUE_ID,
+                        externalTypeNode(ExternalAddAmount.class), new ExternalAddAmountProcessor())
                 .build();
 
         Blue blue = new Blue();
@@ -109,7 +112,8 @@ class ExternalContractIntegrationTest {
     @Test
     void unknownExternalContractTypeProducesCapabilityFailureWithoutMutation() {
         DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(CHANNEL_BLUE_ID, new ExternalAlwaysChannelProcessor())
+                .registerContractProcessor(CHANNEL_BLUE_ID,
+                        externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(counterDocument(UNKNOWN_BLUE_ID));
@@ -126,8 +130,10 @@ class ExternalContractIntegrationTest {
     void handlerProcessorCanUseSharedFrozenEventPatternMatching() {
         MatchingAddAmountProcessor.reset();
         DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(CHANNEL_BLUE_ID, new ExternalAlwaysChannelProcessor())
-                .registerContractProcessor(MATCHING_HANDLER_BLUE_ID, new MatchingAddAmountProcessor())
+                .registerContractProcessor(CHANNEL_BLUE_ID,
+                        externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
+                .registerContractProcessor(MATCHING_HANDLER_BLUE_ID,
+                        externalTypeNode(MatchingAddAmount.class), new MatchingAddAmountProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -181,8 +187,7 @@ class ExternalContractIntegrationTest {
                 "      blueId: " + CAPTURE_HANDLER_BLUE_ID + "\n" +
                 "    channel: incoming\n");
 
-        DocumentProcessingResult initialized = processor.initializeDocument(document);
-        processor.processDocument(initialized.document(), amountEvent(1));
+        processor.processDocument(markInitialized(document), amountEvent(1));
 
         assertTrue(CaptureEventFlagProcessor.executed);
         assertFalse(CaptureEventFlagProcessor.sawNormalizedFlag);
@@ -199,8 +204,8 @@ class ExternalContractIntegrationTest {
         Blue blue = new Blue();
         Node document = blue.yamlToNode(counterDocument(SEQUENCE_CHANNEL_BLUE_ID, HANDLER_BLUE_ID));
 
-        DocumentProcessingResult initialized = processor.initializeDocument(document);
-        DocumentProcessingResult first = processor.processDocument(initialized.document(), sequencedAmountEvent(7, 10));
+        DocumentProcessingResult first = processor.processDocument(
+                markInitialized(document), sequencedAmountEvent(7, 10));
         DocumentProcessingResult stale = processor.processDocument(first.document(), sequencedAmountEvent(100, 8));
         DocumentProcessingResult fresh = processor.processDocument(stale.document(), sequencedAmountEvent(5, 11));
 
@@ -216,9 +221,12 @@ class ExternalContractIntegrationTest {
     void handlerProcessorCanDeriveChannelFromAnotherScopeContractDuringLoading() {
         DerivingAddAmountProcessor.reset();
         DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(CHANNEL_BLUE_ID, new ExternalAlwaysChannelProcessor())
-                .registerContractProcessor(OPERATION_BLUE_ID, new ExternalOperationProcessor())
-                .registerContractProcessor(DERIVED_HANDLER_BLUE_ID, new DerivingAddAmountProcessor())
+                .registerContractProcessor(CHANNEL_BLUE_ID,
+                        externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
+                .registerContractProcessor(OPERATION_BLUE_ID,
+                        externalTypeNode(ExternalOperation.class), new ExternalOperationProcessor())
+                .registerContractProcessor(DERIVED_HANDLER_BLUE_ID,
+                        externalTypeNode(DerivingAddAmount.class), new DerivingAddAmountProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -251,8 +259,10 @@ class ExternalContractIntegrationTest {
     void channelEvaluationCanReturnMultipleDeliveriesWithIndependentCheckpoints() {
         ExternalAddAmountProcessor.reset();
         DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(MULTI_DELIVERY_CHANNEL_BLUE_ID, new MultiDeliveryChannelProcessor())
-                .registerContractProcessor(HANDLER_BLUE_ID, new ExternalAddAmountProcessor())
+                .registerContractProcessor(MULTI_DELIVERY_CHANNEL_BLUE_ID,
+                        externalTypeNode(MultiDeliveryChannel.class), new MultiDeliveryChannelProcessor())
+                .registerContractProcessor(HANDLER_BLUE_ID,
+                        externalTypeNode(ExternalAddAmount.class), new ExternalAddAmountProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(counterDocument(MULTI_DELIVERY_CHANNEL_BLUE_ID, HANDLER_BLUE_ID));
@@ -274,9 +284,12 @@ class ExternalContractIntegrationTest {
         DelegatingChannelProcessor.reset();
         CaptureEventFlagProcessor.reset();
         DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(CHANNEL_BLUE_ID, new ExternalAlwaysChannelProcessor())
-                .registerContractProcessor(DELEGATING_CHANNEL_BLUE_ID, new DelegatingChannelProcessor())
-                .registerContractProcessor(CAPTURE_HANDLER_BLUE_ID, new CaptureEventFlagProcessor())
+                .registerContractProcessor(CHANNEL_BLUE_ID,
+                        externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
+                .registerContractProcessor(DELEGATING_CHANNEL_BLUE_ID,
+                        externalTypeNode(DelegatingChannel.class), new DelegatingChannelProcessor())
+                .registerContractProcessor(CAPTURE_HANDLER_BLUE_ID,
+                        externalTypeNode(CaptureEventFlag.class), new CaptureEventFlagProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -308,8 +321,10 @@ class ExternalContractIntegrationTest {
     @Test
     void derivedHandlerWithoutSameScopeChannelIsInert() {
         DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(OPERATION_BLUE_ID, new ExternalOperationProcessor())
-                .registerContractProcessor(DERIVED_HANDLER_BLUE_ID, new DerivingAddAmountProcessor())
+                .registerContractProcessor(OPERATION_BLUE_ID,
+                        externalTypeNode(ExternalOperation.class), new ExternalOperationProcessor())
+                .registerContractProcessor(DERIVED_HANDLER_BLUE_ID,
+                        externalTypeNode(DerivingAddAmount.class), new DerivingAddAmountProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -365,6 +380,13 @@ class ExternalContractIntegrationTest {
 
     private static Node externalTypeNode(Class<?> type) {
         return new Node().name(type.getSimpleName());
+    }
+
+    private static Node markInitialized(Node document) {
+        document.getContracts().properties("initialized", new Node()
+                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
+                .properties("documentId", new Node().value("existing")));
+        return document;
     }
 
     public static final class ExternalAlwaysChannel extends ChannelContract {

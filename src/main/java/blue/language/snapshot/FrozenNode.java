@@ -293,12 +293,15 @@ public final class FrozenNode {
     }
 
     /**
-     * Compares the exact resolved representation of two frozen nodes without
+     * Compares the exact resolved graph content of two frozen nodes without
      * materializing mutable {@link Node} graphs first.
      *
-     * <p>The construction-mode fields are intentionally ignored. This matches
-     * converting both inputs through {@code toNode()} and
-     * {@code fromResolvedNode(...)} before comparing their structural keys.</p>
+     * <p>Construction-mode fields and object-property insertion order are
+     * intentionally ignored. Object payloads are keyed maps in the Language
+     * model, while list-element order remains significant. This comparison is
+     * therefore stricter than semantic BlueId equality but may be less strict
+     * than {@link #resolvedStructuralKey()}, which preserves representation
+     * details needed by the structural interner.</p>
      */
     public boolean sameResolvedStructure(FrozenNode other) {
         if (this == other) {
@@ -324,7 +327,10 @@ public final class FrozenNode {
                 || !sameResolvedStructure(blue, other.blue)) {
             return false;
         }
-        return inlineValue == other.inlineValue;
+        // inlineValue records construction/serialization form only. It is
+        // normalized away by resolution and is not part of resolved semantic
+        // structure (unlike list order and the keyed object content above).
+        return true;
     }
 
     private static boolean sameResolvedStructure(FrozenNode left, FrozenNode right) {
@@ -354,13 +360,10 @@ public final class FrozenNode {
         if (left == null || right == null || left.size() != right.size()) {
             return false;
         }
-        Iterator<Map.Entry<String, FrozenNode>> leftEntries = left.entrySet().iterator();
-        Iterator<Map.Entry<String, FrozenNode>> rightEntries = right.entrySet().iterator();
-        while (leftEntries.hasNext()) {
-            Map.Entry<String, FrozenNode> leftEntry = leftEntries.next();
-            Map.Entry<String, FrozenNode> rightEntry = rightEntries.next();
-            if (!Objects.equals(leftEntry.getKey(), rightEntry.getKey())
-                    || !sameResolvedStructure(leftEntry.getValue(), rightEntry.getValue())) {
+        for (Map.Entry<String, FrozenNode> leftEntry : left.entrySet()) {
+            if (!right.containsKey(leftEntry.getKey())
+                    || !sameResolvedStructure(
+                    leftEntry.getValue(), right.get(leftEntry.getKey()))) {
                 return false;
             }
         }

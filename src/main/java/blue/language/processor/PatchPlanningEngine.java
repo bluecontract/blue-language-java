@@ -192,16 +192,18 @@ final class PatchPlanningEngine {
             ImmutablePatchPlanner.PatchPlan canonicalPlan = exactReplacement
                     ? canonicalPlanner.planWithExactReplacement(originScopePath, prepared)
                     : canonicalPlanner.plan(originScopePath, prepared);
+            ImmutableJsonPatch resolvedPatch = resolveProcessorManagedValue(
+                    prepared, canonicalPlan);
             ImmutablePatchPlanner resolvedPlanner = ImmutablePatchPlanner.forFrozen(workingResolved);
             ImmutablePatchPlanner.PatchPlan resolvedPlan = exactReplacement
-                    ? resolvedPlanner.planWithExactReplacement(originScopePath, prepared)
-                    : resolvedPlanner.plan(originScopePath, prepared);
+                    ? resolvedPlanner.planWithExactReplacement(originScopePath, resolvedPatch)
+                    : resolvedPlanner.plan(originScopePath, resolvedPatch);
             PatchImpact impact = impactAnalyzer.analyze(exactReplacement,
                     workingCanonical,
                     workingResolved,
                     canonicalPlan,
                     resolvedPlan,
-                    prepared);
+                    resolvedPatch);
             if (impact.resolvedScalarMetadataPreservationRequired()) {
                 resolvedPlan = resolvedPlanner.planWithPreservedResolvedScalarMetadata(
                         originScopePath, prepared);
@@ -211,7 +213,7 @@ final class PatchPlanningEngine {
                     && authoritativeFallbackReason == null) {
                 authoritativeFallbackReason = impact.fallbackReason();
             }
-            BatchPatchRecord record = new BatchPatchRecord(prepared,
+            BatchPatchRecord record = new BatchPatchRecord(resolvedPatch,
                     canonicalPlan,
                     resolvedPlan,
                     impact,
@@ -437,5 +439,19 @@ final class PatchPlanningEngine {
         String relativePath = PointerUtils.relativizePointer(result.originScope(), result.path());
         String initialized = ProcessorPointerConstants.RELATIVE_INITIALIZED;
         return PointerUtils.descendantOrEqual(relativePath, initialized);
+    }
+
+    private ImmutableJsonPatch resolveProcessorManagedValue(
+            ImmutableJsonPatch patch,
+            ImmutablePatchPlanner.PatchPlan canonicalPlan) {
+        if (!exactReplacement
+                || authoritativeSnapshotManager == null
+                || patch.op() == JsonPatch.Op.REMOVE
+                || !isProcessorManagedConformanceBypass(canonicalPlan)) {
+            return patch;
+        }
+        ResolvedSnapshot resolvedValue = authoritativeSnapshotManager.fromDocumentTransient(
+                patch.canonicalValue().toNode());
+        return patch.withResolvedValue(resolvedValue.frozenResolvedRoot());
     }
 }

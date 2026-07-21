@@ -4,6 +4,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
@@ -312,6 +313,42 @@ public final class DocumentProcessingRuntime {
         return node != null ? FrozenNode.fromResolvedNode(node) : null;
     }
 
+    /**
+     * Builds the resolved scope view required for contract recognition without
+     * mutating the selected document or replacing its canonical references.
+     */
+    FrozenNode contractRecognitionScope(FrozenNode selectedScope,
+                                        FrozenNode resolvedScope) {
+        if (selectedScope == null || resolvedScope == null
+                || selectedScope.getContracts() == null
+                || selectedScope.getContracts().getProperties() == null
+                || resolvedScope.getContracts() == null
+                || resolvedScope.getContracts().getProperties() == null) {
+            return resolvedScope;
+        }
+        ProcessingSnapshotManager manager = currentSnapshotManager();
+        Node recognitionScope = null;
+        for (String key : selectedScope.getContracts().getProperties().keySet()) {
+            FrozenNode effectiveContract = resolvedScope.getContracts().property(key);
+            if (effectiveContract == null || !effectiveContract.isReferenceOnly()) {
+                continue;
+            }
+            if (manager == null) {
+                throw new IllegalStateException(
+                        "Contract Recognition Resolution requires provider content for contract '"
+                                + key + "' at scope without a ProcessingSnapshotManager");
+            }
+            FrozenNode materialized = manager.materializeVerifiedReference(effectiveContract);
+            if (recognitionScope == null) {
+                recognitionScope = resolvedScope.toNode();
+            }
+            recognitionScope.getContracts().properties(key, materialized.toNode());
+        }
+        return recognitionScope != null
+                ? FrozenNode.fromResolvedNode(recognitionScope)
+                : resolvedScope;
+    }
+
     public Node canonicalNodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
@@ -329,6 +366,96 @@ public final class DocumentProcessingRuntime {
         }
         Node node = materializedView.nodeAt(normalized);
         return node != null ? FrozenNode.fromResolvedNode(node) : null;
+    }
+
+    /**
+     * Captures the current selected scope and its immutable canonical/resolved
+     * companion, then calculates that scope's standalone Content BlueId through
+     * the owning Language pipeline.
+     *
+     * <p>This method must be called at the protocol capture point. Both captured
+     * values are immutable and are obtained before the manager is invoked, so a
+     * later lifecycle mutation cannot change the identity input.</p>
+     */
+    public String calculatePreInitializationScopeContentBlueId(String scopePath) {
+        return calculatePreInitializationScopeContentBlueId(scopePath, null);
+    }
+
+    String calculatePreInitializationScopeContentBlueId(
+            String scopePath,
+            ProcessingSnapshotManager scopeIdentitySnapshotManager) {
+        String normalized = PointerUtils.normalizeScope(scopePath);
+        metrics.incrementInitializationDocumentIdContentBlueIdCalculations();
+        ProcessingSnapshotManager manager = currentSnapshotManager();
+        boolean releaseScopeIdentityManager = false;
+        if (manager == null) {
+            manager = scopeIdentitySnapshotManager;
+            releaseScopeIdentityManager = manager != null;
+        }
+        if (manager == null) {
+            throw new IllegalStateException(
+                    "Scope Content BlueId calculation requires a ProcessingSnapshotManager at scope "
+                            + normalized);
+        }
+
+        Throwable calculationFailure = null;
+        try {
+            // Capture the exact Phase 1 selected contribution before any
+            // identity work. Node-backed runtimes retain real Source overlay
+            // syntax and can be resolved afresh. Snapshot-backed runtimes are
+            // backed by Canonical Identity Input, which Blue Language §13.2
+            // does not require to re-resolve as ordinary Source syntax; their
+            // already-verified immutable snapshot is therefore authoritative.
+            syncMaterializedView();
+            Node selectedSource = materializedView.nodeAt(normalized);
+            FrozenNode selectedScopeContribution = selectedSource != null
+                    ? FrozenNode.fromResolvedNode(selectedSource)
+                    : null;
+            ResolvedSnapshot capturedSnapshot;
+            if (!selectedDocumentBacked && snapshot != null) {
+                // Canonical Identity Input is not required to have Source
+                // semantics (Blue Language §13.2). Even a successful
+                // re-resolution could therefore produce a different view.
+                // The current immutable snapshot is the verified Phase 1
+                // evidence for snapshot-backed processing.
+                capturedSnapshot = snapshot;
+            } else {
+                capturedSnapshot = manager.fromDocumentTransient(
+                        materializedView.copyRoot());
+            }
+            if (capturedSnapshot == null) {
+                throw new IllegalStateException(
+                        "Scope Content BlueId calculation could not capture a resolved processing state at scope "
+                                + normalized);
+            }
+
+            FrozenNode resolvedScope = capturedSnapshot.resolvedAt(normalized);
+            if (resolvedScope == null) {
+                throw new IllegalStateException(
+                        "Scope Content BlueId calculation requires an existing selected scope at " + normalized);
+            }
+            if (selectedScopeContribution == null) {
+                selectedScopeContribution = capturedSnapshot.canonicalAt(normalized);
+            }
+            metrics.incrementInitializationDocumentIdCanonicalMaterializations();
+            return manager.calculateScopeContentBlueId(
+                    normalized, selectedScopeContribution, capturedSnapshot);
+        } catch (RuntimeException | Error failure) {
+            calculationFailure = failure;
+            throw failure;
+        } finally {
+            if (releaseScopeIdentityManager) {
+                try {
+                    manager.releaseTransientState();
+                } catch (RuntimeException | Error cleanupFailure) {
+                    if (calculationFailure != null) {
+                        calculationFailure.addSuppressed(cleanupFailure);
+                    } else {
+                        throw cleanupFailure;
+                    }
+                }
+            }
+        }
     }
 
     public WorkingDocument workingDocument(String originScopePath) {
@@ -489,7 +616,23 @@ public final class DocumentProcessingRuntime {
             }
             ImmutablePatchPlanner.PatchPlan canonicalPlan =
                     planning.canonicalPlanner.planWithExactReplacement("/", snapshotPatch);
-            ResolvedSnapshot next = planning.resolveCanonical(canonicalPlan.root());
+            ResolvedSnapshot next;
+            try {
+                next = planning.resolveCanonical(canonicalPlan.root());
+            } catch (RuntimeException resolutionFailure) {
+                if (!isTerminationMarkerProviderFailure(path, value, resolutionFailure)) {
+                    throw resolutionFailure;
+                }
+                // A fatal provider error must remain reportable even though the
+                // unavailable reference is still present elsewhere in the
+                // document. The base snapshot already contains its verified
+                // resolved lane, so splice only the processor-owned marker into
+                // both immutable lanes without attempting provider resolution a
+                // second time.
+                ImmutablePatchPlanner.PatchPlan resolvedPlan =
+                        planning.resolvedPlanner.planWithExactReplacement("/", snapshotPatch);
+                next = new ResolvedSnapshot(canonicalPlan.root(), resolvedPlan.root());
+            }
             snapshot = currentSnapshotManager().cacheSnapshot(next);
             commitMaterializedSnapshot(snapshot);
             markStateAdvanced(true);
@@ -497,6 +640,21 @@ public final class DocumentProcessingRuntime {
             snapshot = snapshotRollback;
             throw ex;
         }
+    }
+
+    private boolean isTerminationMarkerProviderFailure(String path,
+                                                       Node value,
+                                                       RuntimeException failure) {
+        String normalizedPath = PointerUtils.canonicalizePointer(path);
+        Node type = value != null ? value.getType() : null;
+        if (!normalizedPath.endsWith(ProcessorPointerConstants.RELATIVE_TERMINATED)
+                || type == null
+                || !RuntimeBlueIds.PROCESSING_TERMINATED_MARKER.equals(type.getBlueId())) {
+            return false;
+        }
+        ProcessorErrorCategory category = ScopeIdentityErrorMapper.from(failure);
+        return category == ProcessorErrorCategory.ProviderUnavailable
+                || category == ProcessorErrorCategory.ProviderBlueIdMismatch;
     }
 
     private void applyMaterializedDirectWrite(Node root, String path, Node value) {

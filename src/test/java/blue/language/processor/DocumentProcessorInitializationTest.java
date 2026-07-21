@@ -37,6 +37,7 @@ class DocumentProcessorInitializationTest {
         DocumentProcessingResult result = blue.initializeDocument(original);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
+        assertNull(result.errorCategory(), result.failureReason());
         assertTrue(blue.isInitialized(result.document()));
         assertEquals(1, result.triggeredEvents().size());
 
@@ -63,8 +64,7 @@ class DocumentProcessorInitializationTest {
         Node original = blue.yamlToNode("name: Minimal Doc\n" +
                 "contracts: {}\n");
         ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
-        String oldMaterializedDocumentId = BlueIdCalculator.calculateUncheckedBlueId(
-                preInitialization.frozenCanonicalRoot().toNode());
+        String expectedDocumentId = preInitialization.frozenCanonicalRoot().blueId();
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
@@ -75,7 +75,7 @@ class DocumentProcessorInitializationTest {
                 .get("initialized");
         assertEquals(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
                 initialized.getType().getBlueId());
-        assertEquals(oldMaterializedDocumentId,
+        assertEquals(expectedDocumentId,
                 initialized.getProperties().get("documentId").getValue());
         assertEquals(lifecycleDocumentId(result.triggeredEvents().get(0)),
                 initialized.getProperties().get("documentId").getValue());
@@ -89,8 +89,8 @@ class DocumentProcessorInitializationTest {
         assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdUncheckedCalculations"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdNodeMaterializations"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
@@ -113,12 +113,12 @@ class DocumentProcessorInitializationTest {
         assertEquals(1L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
         assertEquals(1L, snapshot.counter("incrementalSnapshotResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdUncheckedCalculations"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdNodeMaterializations"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
+        assertEquals(1L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
-    void initializationDocumentIdUsesUncheckedIdentityWhenCanonicalBlueIdDiffers() {
+    void initializationDocumentIdUsesContentBlueIdWhenUncheckedIdentityDiffers() {
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -139,10 +139,10 @@ class DocumentProcessorInitializationTest {
 
         assertFalse(result.capabilityFailure(), result.failureReason());
         String markerDocumentId = markerDocumentId(result.document(), "/");
-        assertEquals(unchecked, markerDocumentId,
+        assertEquals(canonical, markerDocumentId,
                 "canonical=" + canonical + ", unchecked=" + unchecked);
-        assertEquals(unchecked, lifecycleDocumentId(result.triggeredEvents().get(0)));
-        assertNotEquals(canonical, markerDocumentId);
+        assertEquals(canonical, lifecycleDocumentId(result.triggeredEvents().get(0)));
+        assertNotEquals(unchecked, markerDocumentId);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(1L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
@@ -152,7 +152,7 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void initializationDocumentIdUsesMaterializedUncheckedOracleAcrossIdentityShapes() {
+    void initializationDocumentIdUsesContentBlueIdAcrossIdentityShapes() {
         Blue blue = ProcessorTestSupport.blue();
         List<String> fixtures = new ArrayList<>(Arrays.asList(
                 "name: Simple Object Shape\n" +
@@ -236,7 +236,7 @@ class DocumentProcessorInitializationTest {
                         "      - /child\n"));
 
         for (String yaml : fixtures) {
-            assertInitializationUsesUncheckedIdentityAndReloads(blue, yaml);
+            assertInitializationUsesContentBlueIdAndReloads(blue, yaml);
         }
 
         BasicNodeProvider provider = new BasicNodeProvider();
@@ -247,7 +247,7 @@ class DocumentProcessorInitializationTest {
                         "  - previous-b\n");
         String previousBlueId = BlueIdCalculator.calculateBlueId(previous.getItems());
         provider.addListAndItsItems(previous.getItems());
-        assertInitializationUsesUncheckedIdentityAndReloads(previousBlue,
+        assertInitializationUsesContentBlueIdAndReloads(previousBlue,
                 "name: Previous List Control Shape\n" +
                         "history:\n" +
                         "  type:\n" +
@@ -261,7 +261,7 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void bexShapedNestedListsUseHistoricalUncheckedInitializationIdentity() {
+    void bexShapedNestedListsUseContentBlueIdInitializationIdentity() {
         Blue blue = ProcessorTestSupport.blue();
         List<String> fixtures = Arrays.asList(
                 "name: Compute Do Payload List\n" +
@@ -308,13 +308,15 @@ class DocumentProcessorInitializationTest {
                         "contracts: {}\n");
 
         for (String yaml : fixtures) {
-            assertInitializationUsesUncheckedIdentityAndReloads(blue, yaml);
+            assertInitializationUsesContentBlueIdAndReloads(blue, yaml);
         }
     }
 
     @Test
-    void embeddedScopeInitializationDocumentIdsUseTheirOwnUncheckedPreInitializationIdentity() {
-        Blue blue = ProcessorTestSupport.blue();
+    void embeddedScopeInitializationDocumentIdsUseTheirOwnContentPreInitializationIdentity() {
+        BasicNodeProvider identityProvider = new BasicNodeProvider();
+        identityProvider.addSingleNodes(new Node().name("CaptureLifecycleDocumentId"));
+        Blue blue = ProcessorTestSupport.blue(identityProvider);
         blue.registerExternalContractType(CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID,
                 new Node().name("CaptureLifecycleDocumentId"),
                 new CaptureLifecycleDocumentIdProcessor());
@@ -351,35 +353,39 @@ class DocumentProcessorInitializationTest {
                         "    type:\n" +
                         "      blueId: " + CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID + "\n" +
                         "    propertyKey: /rootLifecycleDocumentId\n");
-        ResolvedSnapshot preInitialization = blue.getDocumentProcessor()
-                .snapshotManager()
-                .fromDocument(original.clone());
-        FrozenNode rootBefore = preInitialization.frozenCanonicalRoot();
-        FrozenNode childBefore = rootBefore.property("child");
-        String rootUnchecked = uncheckedInitializationId(rootBefore);
-        String childUnchecked = uncheckedInitializationId(childBefore);
-        assertNotEquals(childBefore.blueId(), childUnchecked,
-                "canonical=" + childBefore.blueId() + ", unchecked=" + childUnchecked);
+        Node standaloneChildBeforeLifecycle = original.getAsNode("/child").clone();
+        ResolvedSnapshot childPreInitialization = blue.resolveToSnapshot(standaloneChildBeforeLifecycle);
+        String childContentBlueId = childPreInitialization.blueId();
+        String childUnchecked = uncheckedInitializationId(childPreInitialization.frozenCanonicalRoot());
+        assertNotEquals(childContentBlueId, childUnchecked,
+                "canonical=" + childContentBlueId + ", unchecked=" + childUnchecked);
+
+        Node rootAfterChildPhase1 = original.clone();
+        Node childAfterPhase1 = rootAfterChildPhase1.getAsNode("/child");
+        childAfterPhase1.properties("childLifecycleDocumentId", new Node().value(childContentBlueId));
+        childAfterPhase1.getContracts().properties(
+                "initialized", ProcessorMarkerFactory.initialized(childContentBlueId).toNode());
+        String rootContentBlueId = blue.calculateSemanticBlueId(rootAfterChildPhase1);
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
         Node initialized = result.document();
-        assertEquals(rootUnchecked, markerDocumentId(initialized, "/"));
-        assertEquals(childUnchecked, markerDocumentId(initialized, "/child"));
-        assertEquals(rootUnchecked, initialized.getAsText("/rootLifecycleDocumentId"));
-        assertEquals(childUnchecked, initialized.getAsText("/child/childLifecycleDocumentId"));
+        assertEquals(rootContentBlueId, markerDocumentId(initialized, "/"));
+        assertEquals(childContentBlueId, markerDocumentId(initialized, "/child"));
+        assertEquals(rootContentBlueId, initialized.getAsText("/rootLifecycleDocumentId"));
+        assertEquals(childContentBlueId, initialized.getAsText("/child/childLifecycleDocumentId"));
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(2L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
         assertEquals(2L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
-        assertEquals(2L, snapshot.counter("initializationDocumentIdUncheckedCalculations"), snapshot.toString());
-        assertEquals(2L, snapshot.counter("initializationDocumentIdNodeMaterializations"), snapshot.toString());
+        assertEquals(2L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
+        assertEquals(2L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
-    void initializeCurrentScopeIfNeededUsesUncheckedInitializationIdentityBeforeFatalBoundaryStop() {
+    void nonObjectEmbeddedChildTerminatesDuringPhase1WithoutInitialization() {
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -395,19 +401,18 @@ class DocumentProcessorInitializationTest {
                         "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
                         "    paths:\n" +
                         "      - /child\n");
-        ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
-        String unchecked = uncheckedInitializationId(preInitialization.frozenCanonicalRoot());
-
         DocumentProcessingResult result = blue.initializeDocument(original);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
-        assertNotNull(result.failureReason());
-        assertEquals(unchecked, markerDocumentId(result.document(), "/"));
-        assertEquals(unchecked, lifecycleDocumentId(result.triggeredEvents().get(0)));
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertEquals(ProcessorErrorCategory.BoundaryViolation, result.errorCategory());
+        assertNull(result.document().getContracts().getProperties().get("initialized"));
+        assertTrue(result.triggeredEvents().stream().noneMatch(event -> event.getType() != null
+                && RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED.equals(event.getType().getBlueId())));
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
     }
 
     @Test
@@ -794,16 +799,15 @@ class DocumentProcessorInitializationTest {
         assertEquals(new BigInteger("1"), childLifecycle.getValue());
     }
 
-    private static void assertInitializationUsesUncheckedIdentityAndReloads(Blue blue, String yaml) {
+    private static void assertInitializationUsesContentBlueIdAndReloads(Blue blue, String yaml) {
         Node original = blue.yamlToNode(yaml);
-        ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
-        String unchecked = uncheckedInitializationId(preInitialization.frozenCanonicalRoot());
+        String contentBlueId = independentRootInitializationContentBlueId(blue, original);
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
-        assertEquals(unchecked, markerDocumentId(result.document(), "/"), yaml);
-        assertTrue(hasLifecycleDocumentId(result, unchecked), yaml);
+        assertEquals(contentBlueId, markerDocumentId(result.document(), "/"), yaml);
+        assertTrue(hasLifecycleDocumentId(result, contentBlueId), yaml);
         ResolvedSnapshot finalSnapshot = blue.resolveToSnapshot(result.document().clone());
         ResolvedSnapshot reloaded = blue.resolveToSnapshot(
                 blue.jsonToNode(blue.nodeToJson(result.document())));
@@ -812,6 +816,31 @@ class DocumentProcessorInitializationTest {
                 blue.nodeToJson(reloaded.canonicalRoot()), yaml);
         assertEquals(blue.nodeToJson(finalSnapshot.resolvedRoot()),
                 blue.nodeToJson(reloaded.resolvedRoot()), yaml);
+    }
+
+    private static String independentRootInitializationContentBlueId(Blue blue, Node original) {
+        Node preRootLifecycle = original.clone();
+        Node contracts = original.getContracts();
+        Node embedded = contracts != null && contracts.getProperties() != null
+                ? contracts.getProperties().get("embedded")
+                : null;
+        Node paths = embedded != null && embedded.getProperties() != null
+                ? embedded.getProperties().get("paths")
+                : null;
+        if (paths != null && paths.getItems() != null) {
+            for (Node pathNode : paths.getItems()) {
+                String childPath = String.valueOf(pathNode.getValue());
+                Node childSource = original.getAsNode(childPath).clone();
+                String childContentBlueId = blue.calculateSemanticBlueId(childSource);
+                Node childAfterPhase1 = preRootLifecycle.getAsNode(childPath);
+                if (childAfterPhase1.getContracts() == null) {
+                    childAfterPhase1.contracts(new Node());
+                }
+                childAfterPhase1.getContracts().properties(
+                        "initialized", ProcessorMarkerFactory.initialized(childContentBlueId).toNode());
+            }
+        }
+        return blue.calculateSemanticBlueId(preRootLifecycle);
     }
 
     private static String uncheckedInitializationId(FrozenNode node) {
