@@ -396,6 +396,18 @@ blue.cacheResolvedSnapshot(first);
 Cache hits improve performance but do not change document identity or processor
 gas accounting.
 
+Cache bounds are selected per `Blue` runtime:
+
+```java
+Blue serviceRuntime = Blue.withCachePolicy(BlueCachePolicy.lowMemoryDefaults());
+Blue batchRuntime = Blue.withCachePolicy(BlueCachePolicy.highThroughputDefaults());
+Blue noReloadableCaches = Blue.withCachePolicy(BlueCachePolicy.disabled());
+```
+
+`boundedDefaults()` is the conservative production default. `disabled()` turns
+off reloadable acceleration caches while preserving snapshots explicitly pinned
+with `cacheResolvedSnapshot(...)`.
+
 ## Dictionary-Aware Export
 
 A dictionary is a named collection of known Blue type definitions. When you send

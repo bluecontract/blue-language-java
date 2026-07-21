@@ -172,14 +172,31 @@ jmh {
 }
 
 ext.genResourcesDir = file("$buildDir/generated-resources")
+def sourceDateEpoch = providers.environmentVariable('SOURCE_DATE_EPOCH')
 task generateBuildProperties {
     ext.buildPropertiesFile = file("$genResourcesDir/blue/language/build.properties")
     inputs.property('buildVersion', project.version.toString())
+    inputs.property('sourceDateEpoch', sourceDateEpoch.orNull ?: '')
     outputs.file(buildPropertiesFile)
     doLast {
+        def epoch = sourceDateEpoch.orNull
+        def buildInstant
+        if (epoch != null && !epoch.trim().isEmpty()) {
+            try {
+                buildInstant = java.time.Instant.ofEpochSecond(Long.parseLong(epoch.trim()))
+            } catch (NumberFormatException exception) {
+                throw new GradleException("SOURCE_DATE_EPOCH must be a Unix epoch second", exception)
+            }
+        } else {
+            buildInstant = java.time.Instant.now()
+        }
+        def buildTimestamp = java.time.format.DateTimeFormatter
+                .ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
+                .withZone(java.time.ZoneOffset.UTC)
+                .format(buildInstant)
         buildPropertiesFile.text = """\
                 |blue-language-java.build.version=$project.version
-                |blue-language-java.build.timestamp=${new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")}
+                |blue-language-java.build.timestamp=${buildTimestamp}
         """.stripMargin().trim()
     }
 }
@@ -278,6 +295,67 @@ tasks.register('sourceReleaseArchive', Zip) {
         checksum.parentFile.mkdirs()
         checksum.setText("${hash}  ${archive.name}\n", 'UTF-8')
     }
+}
+
+def sourceReleaseArchiveTask = tasks.named('sourceReleaseArchive', Zip)
+tasks.register('verifySourceReleaseArchive') {
+    group = 'verification'
+    description = 'Checks the source release archive for required files and local-only debris.'
+    dependsOn sourceReleaseArchiveTask
+    inputs.file(sourceReleaseArchiveTask.flatMap { it.archiveFile })
+    doLast {
+        def archive = sourceReleaseArchiveTask.get().archiveFile.get().asFile
+        def names = []
+        archive.withInputStream { input ->
+            def zip = new java.util.zip.ZipInputStream(input)
+            try {
+                def entry = zip.getNextEntry()
+                while (entry != null) {
+                    names.add(entry.name)
+                    zip.closeEntry()
+                    entry = zip.getNextEntry()
+                }
+            } finally {
+                zip.close()
+            }
+        }
+        def forbidden = names.findAll { name ->
+            name.contains('__MACOSX/')
+                    || name.endsWith('/.DS_Store')
+                    || name.contains('/._')
+                    || name.contains('/build/')
+                    || name.contains('/docs/performance/')
+                    || name.endsWith('/Archive.zip')
+        }
+        if (!forbidden.isEmpty()) {
+            throw new GradleException("Source release archive contains forbidden entries: "
+                    + forbidden.take(20))
+        }
+        def root = "blue-language-java-${project.version}/".toString()
+        def required = [
+                root + '.cz.toml',
+                root + 'build.gradle',
+                root + 'settings.gradle.kts',
+                root + 'README.md',
+                root + 'src/main/java/blue/language/Blue.java'
+        ]
+        def missing = required.findAll { requiredName -> !names.contains(requiredName) }
+        if (!missing.isEmpty()) {
+            throw new GradleException("Source release archive is missing required entries: "
+                    + missing)
+        }
+    }
+}
+
+tasks.register('rcVerify') {
+    group = 'verification'
+    description = 'Runs the local blue-language-java release-candidate verification gates.'
+    dependsOn tasks.named('check')
+    dependsOn tasks.named('identityDifferentialTest')
+    dependsOn tasks.named('patchSequenceDifferentialTest')
+    dependsOn tasks.named('memoryIntegrationTest')
+    dependsOn tasks.named('cacheLifecycleTest')
+    dependsOn tasks.named('verifySourceReleaseArchive')
 }
 
 publishing {

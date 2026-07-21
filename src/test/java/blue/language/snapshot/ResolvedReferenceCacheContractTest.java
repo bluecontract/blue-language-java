@@ -1,6 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.Blue;
+import blue.language.BlueCachePolicy;
 import blue.language.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.Merger.SnapshotResolution;
@@ -427,6 +428,40 @@ class ResolvedReferenceCacheContractTest {
         assertTrue(stats.verifiedHighWaterWeightBytes() > 0L);
         assertTrue(stats.transientTrustedHighWaterWeightBytes() > 0L);
         assertTrue(stats.structuralHighWaterWeightBytes() > 0L);
+    }
+
+    @Test
+    void transientTrustedReferencesRespectPolicyBoundsAndDisabledMode() {
+        Blue blue = new Blue();
+        ResolvedSnapshot first = blue.resolveToSnapshot(new Node().value("trusted-1"));
+        ResolvedSnapshot second = blue.resolveToSnapshot(new Node().value("trusted-2"));
+        BlueCachePolicy oneEntryPolicy = BlueCachePolicy.builder()
+                .transientReferences(1, 1024L * 1024L)
+                .maximumDerivedEntryWeightBytes(1024L * 1024L)
+                .build();
+        ResolvedReferenceCache parent = new ResolvedReferenceCache(oneEntryPolicy);
+        ResolvedReferenceCache child = parent.transientChild();
+
+        child.putTransientTrustedCanonical(first.blueId(), first.frozenCanonicalRoot());
+        child.putTransientTrustedCanonical(second.blueId(), second.frozenCanonicalRoot());
+
+        ResolvedReferenceCache.CacheStats boundedStats = child.cacheStats();
+        assertEquals(1, boundedStats.transientTrustedEntries());
+        assertEquals(1L, boundedStats.transientTrustedEvictions());
+        assertFalse(child.getTransientTrustedCanonical(first.blueId()).isPresent());
+        assertTrue(child.getTransientTrustedCanonical(second.blueId()).isPresent());
+
+        ResolvedReferenceCache disabledParent =
+                new ResolvedReferenceCache(BlueCachePolicy.disabled());
+        ResolvedReferenceCache disabledChild = disabledParent.transientChild();
+        assertSame(first.frozenCanonicalRoot(), disabledChild.putTransientTrustedCanonical(
+                first.blueId(), first.frozenCanonicalRoot()));
+
+        ResolvedReferenceCache.CacheStats disabledStats = disabledChild.cacheStats();
+        assertEquals(0, disabledStats.transientTrustedEntries());
+        assertEquals(0L, disabledStats.transientTrustedCurrentWeightBytes());
+        assertEquals(1L, disabledStats.transientTrustedOversizedRejections());
+        assertFalse(disabledChild.getTransientTrustedCanonical(first.blueId()).isPresent());
     }
 
     @Test

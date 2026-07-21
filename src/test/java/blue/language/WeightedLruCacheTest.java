@@ -34,6 +34,19 @@ class WeightedLruCacheTest {
     }
 
     @Test
+    void zeroBoundsDisableRetentionWithoutThrowing() {
+        WeightedLruCache<String, String> cache = new WeightedLruCache<>(0, 0L, 0L,
+                value -> value.length());
+
+        assertNull(cache.put("a", "value"));
+
+        assertNull(cache.get("a"));
+        assertEquals(0, cache.size());
+        assertEquals(0L, cache.currentWeight());
+        assertEquals(1L, cache.oversizedRejections());
+    }
+
+    @Test
     void clearReportsReleasedWeight() {
         WeightedLruCache<String, String> cache = new WeightedLruCache<>(4, 100L, 100L,
                 value -> value.length());

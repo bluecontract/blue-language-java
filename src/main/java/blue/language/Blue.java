@@ -609,9 +609,9 @@ public class Blue implements NodeResolver, AutoCloseable {
                     reference.transientTrustedHighWaterWeightBytes(),
                     0L,
                     0L,
-                    0L,
-                    0L,
-                    true));
+                    reference.transientTrustedEvictions(),
+                    reference.transientTrustedOversizedRejections(),
+                    false));
             regions.put(STRUCTURAL_INTERNER_CACHE, new BlueCacheStats.Region(
                     reference.structuralEntries(),
                     reference.structuralCurrentWeightBytes(),

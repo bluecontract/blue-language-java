@@ -4,8 +4,47 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueCachePolicyTest {
+
+    private static final long MIB = 1024L * 1024L;
+
+    @Test
+    void boundedDefaultsAreConservativePerRuntimeBounds() {
+        BlueCachePolicy policy = BlueCachePolicy.boundedDefaults();
+
+        assertEquals(128, policy.derivedSnapshotMaxEntries());
+        assertEquals(64L * MIB, policy.derivedSnapshotMaxWeightBytes());
+        assertEquals(256, policy.canonicalAliasMaxEntries());
+        assertEquals(16L * MIB, policy.canonicalAliasMaxWeightBytes());
+        assertEquals(8_192, policy.resolvedStructuralMaxEntries());
+        assertEquals(64L * MIB, policy.resolvedStructuralMaxWeightBytes());
+        assertEquals(2_048, policy.transientReferenceMaxEntries());
+        assertEquals(32L * MIB, policy.transientReferenceMaxWeightBytes());
+        assertEquals(4_096, policy.conformancePlanMaxEntries());
+        assertEquals(32L * MIB, policy.conformancePlanMaxWeightBytes());
+        assertEquals(16L * MIB, policy.maximumDerivedEntryWeightBytes());
+    }
+
+    @Test
+    void namedProfilesCoverLowMemoryHighThroughputAndDisabledModes() {
+        BlueCachePolicy lowMemory = BlueCachePolicy.lowMemoryDefaults();
+        BlueCachePolicy defaults = BlueCachePolicy.boundedDefaults();
+        BlueCachePolicy highThroughput = BlueCachePolicy.highThroughputDefaults();
+        BlueCachePolicy disabled = BlueCachePolicy.disabled();
+
+        assertTrue(lowMemory.derivedSnapshotMaxWeightBytes()
+                < defaults.derivedSnapshotMaxWeightBytes());
+        assertTrue(defaults.derivedSnapshotMaxWeightBytes()
+                < highThroughput.derivedSnapshotMaxWeightBytes());
+        assertEquals(256L * MIB, highThroughput.derivedSnapshotMaxWeightBytes());
+        assertEquals(128L * MIB, highThroughput.transientReferenceMaxWeightBytes());
+        assertEquals(0, disabled.derivedSnapshotMaxEntries());
+        assertEquals(0L, disabled.derivedSnapshotMaxWeightBytes());
+        assertEquals(0, disabled.transientReferenceMaxEntries());
+        assertEquals(0L, disabled.maximumDerivedEntryWeightBytes());
+    }
 
     @Test
     void builderProducesImmutableExplicitBounds() {

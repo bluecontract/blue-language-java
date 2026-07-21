@@ -4,6 +4,7 @@
 
 - add immutable `FrozenJsonPatch` APIs for direct frozen patch-value handoff
 - add configurable per-runtime cache policy, cache statistics, and idempotent runtime close
+- add explicit low-memory, high-throughput, and disabled cache policy profiles
 - add production-path processing metrics snapshots and conservative patch-impact classification
 
 ### Performance
@@ -13,6 +14,8 @@
 - reuse resolved metadata for dependency-proven basic scalar typed-leaf replacements
 - bound reloadable derived snapshots, aliases, recent-processing state, shared verified-reference
   acceleration, and structural interning while preserving authoritative and active pinned evidence
+- make conservative per-runtime cache bounds the default profile and keep the previous larger
+  bounds behind an explicit high-throughput profile
 - replace hot implicit decimal/index regex compilation with exact ASCII scans
 
 ### Compatibility
@@ -21,6 +24,7 @@
 - preserve full-resolution fallbacks for schema, fixed-value type, reference, collection,
   contracts-changing, custom-merger, and unknown-capability cases
 - add reproducible source-release archives and JVM descriptor compatibility reporting
+- honor `SOURCE_DATE_EPOCH` for reproducible build metadata timestamps
 
 ### Fix
 
@@ -32,6 +36,7 @@
 - drain work admitted through `Blue` runtime APIs during close and reject new or re-entrant
   cache-sensitive work
 - isolate retained conformance views from refreshed cache generations
+- bound transient trusted reference retention and report its real eviction/rejection counters
 
 ## v2.0.0 (2026-05-13)
 

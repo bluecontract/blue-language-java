@@ -27,8 +27,8 @@ final class WeightedLruCache<K, V> {
                             long maximumWeight,
                             long maximumEntryWeight,
                             Weigher<V> weigher) {
-        if (maximumEntries <= 0 || maximumWeight <= 0L || maximumEntryWeight <= 0L) {
-            throw new IllegalArgumentException("Cache bounds must be positive");
+        if (maximumEntries < 0 || maximumWeight < 0L || maximumEntryWeight < 0L) {
+            throw new IllegalArgumentException("Cache bounds must not be negative");
         }
         if (weigher == null) {
             throw new IllegalArgumentException("weigher must not be null");
@@ -58,6 +58,11 @@ final class WeightedLruCache<K, V> {
     public synchronized V put(K key, V value) {
         if (key == null || value == null) {
             throw new IllegalArgumentException("Cache keys and values must not be null");
+        }
+        if (maximumEntries == 0 || maximumWeight == 0L || maximumEntryWeight == 0L) {
+            oversizedRejections++;
+            Entry<V> previous = entries.get(key);
+            return previous != null ? previous.value : null;
         }
         long weight = Math.max(1L, weigher.weightOf(value));
         if (weight > maximumEntryWeight || weight > maximumWeight) {

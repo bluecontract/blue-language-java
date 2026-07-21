@@ -57,6 +57,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
     private long verifiedOversizedRejections;
     private long trustedCurrentWeight;
     private long trustedHighWaterWeight;
+    private long trustedEvictions;
+    private long trustedOversizedRejections;
     private long structuralCurrentWeight;
     private long structuralHighWaterWeight;
     private long structuralEvictions;
@@ -728,12 +730,31 @@ public final class ResolvedReferenceCache implements AutoCloseable {
     }
 
     private void recordTrustedInsertion(String blueId, FrozenNode node) {
+        long weight = trustedWeight(blueId, node);
+        if (cachePolicy.transientReferenceMaxEntries() <= 0
+                || weight > cachePolicy.maximumDerivedEntryWeightBytes()
+                || weight > cachePolicy.transientReferenceMaxWeightBytes()) {
+            transientTrustedCanonicalByBlueId.remove(blueId, node);
+            trustedOversizedRejections++;
+            return;
+        }
         trustedInsertionOrder.remove(blueId);
         trustedInsertionOrder.add(blueId);
-        trustedCurrentWeight = saturatedAdd(
-                trustedCurrentWeight,
-                trustedWeight(blueId, node));
+        trustedCurrentWeight = saturatedAdd(trustedCurrentWeight, weight);
         trustedHighWaterWeight = Math.max(trustedHighWaterWeight, trustedCurrentWeight);
+        evictTrustedToBounds();
+    }
+
+    private void evictTrustedToBounds() {
+        while (transientTrustedCanonicalByBlueId.size() > cachePolicy.transientReferenceMaxEntries()
+                || trustedCurrentWeight > cachePolicy.transientReferenceMaxWeightBytes()) {
+            if (trustedInsertionOrder.isEmpty()) {
+                return;
+            }
+            String victim = trustedInsertionOrder.iterator().next();
+            removeTrustedEntry(victim);
+            trustedEvictions++;
+        }
     }
 
     private void recordStructuralInsertion(FrozenNode.ResolvedStructuralKey key,
@@ -877,6 +898,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
             int transientTrustedEntries = 0;
             long transientTrustedCurrentWeightBytes = 0L;
             long transientTrustedHighWaterWeightBytes = 0L;
+            long transientTrustedEvictions = 0L;
+            long transientTrustedOversizedRejections = 0L;
             int structuralEntries = 0;
             long structuralCurrentWeightBytes = 0L;
             long structuralHighWaterWeightBytes = 0L;
@@ -902,6 +925,11 @@ public final class ResolvedReferenceCache implements AutoCloseable {
                 transientTrustedHighWaterWeightBytes = saturatedAdd(
                         transientTrustedHighWaterWeightBytes,
                         local.transientTrustedHighWaterWeightBytes());
+                transientTrustedEvictions = saturatedAdd(
+                        transientTrustedEvictions, local.transientTrustedEvictions());
+                transientTrustedOversizedRejections = saturatedAdd(
+                        transientTrustedOversizedRejections,
+                        local.transientTrustedOversizedRejections());
                 structuralEntries = saturatedAdd(structuralEntries, local.structuralEntries());
                 structuralCurrentWeightBytes = saturatedAdd(
                         structuralCurrentWeightBytes, local.structuralCurrentWeightBytes());
@@ -928,6 +956,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
                     transientTrustedEntries,
                     transientTrustedCurrentWeightBytes,
                     cacheGeneration.trustedHighWaterWeight,
+                    transientTrustedEvictions,
+                    transientTrustedOversizedRejections,
                     structuralEntries,
                     structuralCurrentWeightBytes,
                     cacheGeneration.structuralHighWaterWeight,
@@ -947,6 +977,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
                 transientTrustedCanonicalByBlueId.size(),
                 trustedCurrentWeight,
                 trustedHighWaterWeight,
+                trustedEvictions,
+                trustedOversizedRejections,
                 resolvedGraphNodesByStructure.size(),
                 structuralCurrentWeight,
                 structuralHighWaterWeight,
@@ -1202,6 +1234,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
         private final int transientTrustedEntries;
         private final long transientTrustedCurrentWeightBytes;
         private final long transientTrustedHighWaterWeightBytes;
+        private final long transientTrustedEvictions;
+        private final long transientTrustedOversizedRejections;
         private final int structuralEntries;
         private final long structuralCurrentWeightBytes;
         private final long structuralHighWaterWeightBytes;
@@ -1217,6 +1251,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
                            int transientTrustedEntries,
                            long transientTrustedCurrentWeightBytes,
                            long transientTrustedHighWaterWeightBytes,
+                           long transientTrustedEvictions,
+                           long transientTrustedOversizedRejections,
                            int structuralEntries,
                            long structuralCurrentWeightBytes,
                            long structuralHighWaterWeightBytes,
@@ -1231,6 +1267,8 @@ public final class ResolvedReferenceCache implements AutoCloseable {
             this.transientTrustedEntries = transientTrustedEntries;
             this.transientTrustedCurrentWeightBytes = transientTrustedCurrentWeightBytes;
             this.transientTrustedHighWaterWeightBytes = transientTrustedHighWaterWeightBytes;
+            this.transientTrustedEvictions = transientTrustedEvictions;
+            this.transientTrustedOversizedRejections = transientTrustedOversizedRejections;
             this.structuralEntries = structuralEntries;
             this.structuralCurrentWeightBytes = structuralCurrentWeightBytes;
             this.structuralHighWaterWeightBytes = structuralHighWaterWeightBytes;
@@ -1255,6 +1293,10 @@ public final class ResolvedReferenceCache implements AutoCloseable {
         public long transientTrustedCurrentWeightBytes() { return transientTrustedCurrentWeightBytes; }
 
         public long transientTrustedHighWaterWeightBytes() { return transientTrustedHighWaterWeightBytes; }
+
+        public long transientTrustedEvictions() { return transientTrustedEvictions; }
+
+        public long transientTrustedOversizedRejections() { return transientTrustedOversizedRejections; }
 
         public int structuralEntries() { return structuralEntries; }
 

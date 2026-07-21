@@ -89,6 +89,25 @@ class BlueCacheLifecycleTest {
     }
 
     @Test
+    void disabledPolicySkipsReloadableRetentionButKeepsExplicitPins() {
+        Blue blue = Blue.withCachePolicy(BlueCachePolicy.disabled());
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(20));
+
+        assertEquals(0, blue.cacheStats().region("derivedResolvedSnapshots").entries());
+        assertEquals(0, blue.cacheStats().region("canonicalAliases").entries());
+        assertEquals(0, blue.cacheStats().region("recentProcessingSnapshots").entries());
+        assertEquals(0, blue.cacheStats().region("verifiedReferences").entries());
+
+        blue.cacheResolvedSnapshot(snapshot);
+
+        assertSame(snapshot, blue.cachedResolvedSnapshot(snapshot.blueId())
+                .orElseThrow(AssertionError::new));
+        assertEquals(1, blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries());
+        assertTrue(blue.cacheStats().region("derivedResolvedSnapshots")
+                .oversizedRejections() > 0L);
+    }
+
+    @Test
     void configurationRefreshPreservesCallerPinnedAuthoritativeContent() {
         Blue blue = new Blue(node -> null);
         ResolvedSnapshot authoritative = blue.resolveToSnapshot(document(17));
