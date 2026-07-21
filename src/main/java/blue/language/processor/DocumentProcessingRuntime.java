@@ -2,7 +2,9 @@ package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
@@ -109,6 +111,7 @@ public final class DocumentProcessingRuntime {
                                      ConformancePlannerOverride conformancePlannerOverride,
                                      ProcessingSnapshotManager snapshotManager,
                                      ProcessingMetricsSink metrics) {
+        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         ResolvedSnapshot processorSnapshot = processorSnapshot(Objects.requireNonNull(snapshot, "snapshot"));
         this.materializedView = new MaterializedDocumentView(processorSnapshot.canonicalRoot());
         this.emissionRegistry = new EmissionRegistry();
@@ -117,17 +120,17 @@ public final class DocumentProcessingRuntime {
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.snapshot = processorSnapshot;
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         this.lazyMaterializedCommits = true;
         this.selectedDocumentBacked = false;
     }
 
     private ResolvedSnapshot processorSnapshot(ResolvedSnapshot snapshot) {
-        if (!snapshot.frozenCanonicalRoot().isStrictBlueIdValidation()) {
-            return snapshot;
+        if (snapshot.frozenCanonicalRoot().isStrictBlueIdValidation()) {
+            metrics.incrementProcessorInputStrictCanonical();
+        } else {
+            metrics.incrementProcessorInputUncheckedCanonical();
         }
-        FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(snapshot.canonicalRoot());
-        return new ResolvedSnapshot(canonicalRoot, snapshot.frozenResolvedRoot(), canonicalRoot.blueId());
+        return snapshot;
     }
 
     public Node document() {
@@ -211,6 +214,14 @@ public final class DocumentProcessingRuntime {
 
     public void chargePatchAddOrReplace(Node value) {
         gasMeter.chargePatchAddOrReplace(value);
+    }
+
+    public void chargeFrozenPatchAddOrReplace(FrozenNode value) {
+        gasMeter.chargeFrozenPatchAddOrReplace(value);
+    }
+
+    public void chargeFrozenPatchAddOrReplace(long authoredCanonicalSizeBytes) {
+        gasMeter.chargeFrozenPatchAddOrReplace(authoredCanonicalSizeBytes);
     }
 
     public void chargePatchRemove() {
@@ -302,6 +313,42 @@ public final class DocumentProcessingRuntime {
         return node != null ? FrozenNode.fromResolvedNode(node) : null;
     }
 
+    /**
+     * Builds the resolved scope view required for contract recognition without
+     * mutating the selected document or replacing its canonical references.
+     */
+    FrozenNode contractRecognitionScope(FrozenNode selectedScope,
+                                        FrozenNode resolvedScope) {
+        if (selectedScope == null || resolvedScope == null
+                || selectedScope.getContracts() == null
+                || selectedScope.getContracts().getProperties() == null
+                || resolvedScope.getContracts() == null
+                || resolvedScope.getContracts().getProperties() == null) {
+            return resolvedScope;
+        }
+        ProcessingSnapshotManager manager = currentSnapshotManager();
+        Node recognitionScope = null;
+        for (String key : selectedScope.getContracts().getProperties().keySet()) {
+            FrozenNode effectiveContract = resolvedScope.getContracts().property(key);
+            if (effectiveContract == null || !effectiveContract.isReferenceOnly()) {
+                continue;
+            }
+            if (manager == null) {
+                throw new IllegalStateException(
+                        "Contract Recognition Resolution requires provider content for contract '"
+                                + key + "' at scope without a ProcessingSnapshotManager");
+            }
+            FrozenNode materialized = manager.materializeVerifiedReference(effectiveContract);
+            if (recognitionScope == null) {
+                recognitionScope = resolvedScope.toNode();
+            }
+            recognitionScope.getContracts().properties(key, materialized.toNode());
+        }
+        return recognitionScope != null
+                ? FrozenNode.fromResolvedNode(recognitionScope)
+                : resolvedScope;
+    }
+
     public Node canonicalNodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
@@ -321,7 +368,101 @@ public final class DocumentProcessingRuntime {
         return node != null ? FrozenNode.fromResolvedNode(node) : null;
     }
 
+    /**
+     * Captures the current selected scope and its immutable canonical/resolved
+     * companion, then calculates that scope's standalone Content BlueId through
+     * the owning Language pipeline.
+     *
+     * <p>This method must be called at the protocol capture point. Both captured
+     * values are immutable and are obtained before the manager is invoked, so a
+     * later lifecycle mutation cannot change the identity input.</p>
+     */
+    public String calculatePreInitializationScopeContentBlueId(String scopePath) {
+        return calculatePreInitializationScopeContentBlueId(scopePath, null);
+    }
+
+    String calculatePreInitializationScopeContentBlueId(
+            String scopePath,
+            ProcessingSnapshotManager scopeIdentitySnapshotManager) {
+        String normalized = PointerUtils.normalizeScope(scopePath);
+        metrics.incrementInitializationDocumentIdContentBlueIdCalculations();
+        ProcessingSnapshotManager manager = currentSnapshotManager();
+        boolean releaseScopeIdentityManager = false;
+        if (manager == null) {
+            manager = scopeIdentitySnapshotManager;
+            releaseScopeIdentityManager = manager != null;
+        }
+        if (manager == null) {
+            throw new IllegalStateException(
+                    "Scope Content BlueId calculation requires a ProcessingSnapshotManager at scope "
+                            + normalized);
+        }
+
+        Throwable calculationFailure = null;
+        try {
+            // Capture the exact Phase 1 selected contribution before any
+            // identity work. Node-backed runtimes retain real Source overlay
+            // syntax and can be resolved afresh. Snapshot-backed runtimes are
+            // backed by Canonical Identity Input, which Blue Language §13.2
+            // does not require to re-resolve as ordinary Source syntax; their
+            // already-verified immutable snapshot is therefore authoritative.
+            syncMaterializedView();
+            Node selectedSource = materializedView.nodeAt(normalized);
+            FrozenNode selectedScopeContribution = selectedSource != null
+                    ? FrozenNode.fromResolvedNode(selectedSource)
+                    : null;
+            ResolvedSnapshot capturedSnapshot;
+            if (!selectedDocumentBacked && snapshot != null) {
+                // Canonical Identity Input is not required to have Source
+                // semantics (Blue Language §13.2). Even a successful
+                // re-resolution could therefore produce a different view.
+                // The current immutable snapshot is the verified Phase 1
+                // evidence for snapshot-backed processing.
+                capturedSnapshot = snapshot;
+            } else {
+                capturedSnapshot = manager.fromDocumentTransient(
+                        materializedView.copyRoot());
+            }
+            if (capturedSnapshot == null) {
+                throw new IllegalStateException(
+                        "Scope Content BlueId calculation could not capture a resolved processing state at scope "
+                                + normalized);
+            }
+
+            FrozenNode resolvedScope = capturedSnapshot.resolvedAt(normalized);
+            if (resolvedScope == null) {
+                throw new IllegalStateException(
+                        "Scope Content BlueId calculation requires an existing selected scope at " + normalized);
+            }
+            if (selectedScopeContribution == null) {
+                selectedScopeContribution = capturedSnapshot.canonicalAt(normalized);
+            }
+            metrics.incrementInitializationDocumentIdCanonicalMaterializations();
+            return manager.calculateScopeContentBlueId(
+                    normalized, selectedScopeContribution, capturedSnapshot);
+        } catch (RuntimeException | Error failure) {
+            calculationFailure = failure;
+            throw failure;
+        } finally {
+            if (releaseScopeIdentityManager) {
+                try {
+                    manager.releaseTransientState();
+                } catch (RuntimeException | Error cleanupFailure) {
+                    if (calculationFailure != null) {
+                        calculationFailure.addSuppressed(cleanupFailure);
+                    } else {
+                        throw cleanupFailure;
+                    }
+                }
+            }
+        }
+    }
+
     public WorkingDocument workingDocument(String originScopePath) {
+        return workingDocument(originScopePath, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    WorkingDocument workingDocument(String originScopePath, PatchSource mutablePatchSource) {
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
         ResolvedSnapshot current = snapshot;
         boolean materializedFallback = false;
@@ -342,6 +483,7 @@ public final class DocumentProcessingRuntime {
                     current,
                     materializedFallback,
                     !selectedDocumentBacked,
+                    mutablePatchSource,
                     metrics);
         }
 
@@ -357,6 +499,7 @@ public final class DocumentProcessingRuntime {
                 null,
                 true,
                 false,
+                mutablePatchSource,
                 metrics);
     }
 
@@ -473,7 +616,23 @@ public final class DocumentProcessingRuntime {
             }
             ImmutablePatchPlanner.PatchPlan canonicalPlan =
                     planning.canonicalPlanner.planWithExactReplacement("/", snapshotPatch);
-            ResolvedSnapshot next = planning.resolveCanonical(canonicalPlan.root());
+            ResolvedSnapshot next;
+            try {
+                next = planning.resolveCanonical(canonicalPlan.root());
+            } catch (RuntimeException resolutionFailure) {
+                if (!isTerminationMarkerProviderFailure(path, value, resolutionFailure)) {
+                    throw resolutionFailure;
+                }
+                // A fatal provider error must remain reportable even though the
+                // unavailable reference is still present elsewhere in the
+                // document. The base snapshot already contains its verified
+                // resolved lane, so splice only the processor-owned marker into
+                // both immutable lanes without attempting provider resolution a
+                // second time.
+                ImmutablePatchPlanner.PatchPlan resolvedPlan =
+                        planning.resolvedPlanner.planWithExactReplacement("/", snapshotPatch);
+                next = new ResolvedSnapshot(canonicalPlan.root(), resolvedPlan.root());
+            }
             snapshot = currentSnapshotManager().cacheSnapshot(next);
             commitMaterializedSnapshot(snapshot);
             markStateAdvanced(true);
@@ -481,6 +640,21 @@ public final class DocumentProcessingRuntime {
             snapshot = snapshotRollback;
             throw ex;
         }
+    }
+
+    private boolean isTerminationMarkerProviderFailure(String path,
+                                                       Node value,
+                                                       RuntimeException failure) {
+        String normalizedPath = PointerUtils.canonicalizePointer(path);
+        Node type = value != null ? value.getType() : null;
+        if (!normalizedPath.endsWith(ProcessorPointerConstants.RELATIVE_TERMINATED)
+                || type == null
+                || !RuntimeBlueIds.PROCESSING_TERMINATED_MARKER.equals(type.getBlueId())) {
+            return false;
+        }
+        ProcessorErrorCategory category = ScopeIdentityErrorMapper.from(failure);
+        return category == ProcessorErrorCategory.ProviderUnavailable
+                || category == ProcessorErrorCategory.ProviderBlueIdMismatch;
     }
 
     private void applyMaterializedDirectWrite(Node root, String path, Node value) {
@@ -526,17 +700,50 @@ public final class DocumentProcessingRuntime {
     }
 
     public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch) {
+        return applyPatch(originScopePath, patch, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch, PatchSource source) {
         if (patch == null) {
             return null;
         }
-        List<DocumentUpdateData> updates = applyPatches(originScopePath, Collections.singletonList(patch));
+        List<DocumentUpdateData> updates = applyPatches(originScopePath, Collections.singletonList(patch), source);
         return updates.isEmpty() ? null : updates.get(0);
     }
 
     public List<DocumentUpdateData> applyPatches(String originScopePath, List<JsonPatch> patches) {
+        return applyPatches(originScopePath, patches, PatchSource.LEGACY_PUBLIC_API);
+    }
+
+    public List<DocumentUpdateData> applyPatches(String originScopePath,
+                                                 List<JsonPatch> patches,
+                                                 PatchSource source) {
         if (patches == null || patches.isEmpty()) {
             return Collections.emptyList();
         }
+        return applyPatchInputs(originScopePath, PatchInput.mutableList(patches, source));
+    }
+
+    public DocumentUpdateData applyFrozenPatch(String originScopePath, FrozenJsonPatch patch) {
+        if (patch == null) {
+            return null;
+        }
+        List<DocumentUpdateData> updates = applyFrozenPatches(
+                originScopePath, Collections.singletonList(patch));
+        return updates.isEmpty() ? null : updates.get(0);
+    }
+
+    /** Applies frozen patches as one rollback-all atomic transaction. */
+    public List<DocumentUpdateData> applyFrozenPatches(String originScopePath,
+                                                       List<FrozenJsonPatch> patches) {
+        if (patches == null || patches.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return applyPatchInputs(originScopePath, PatchInput.frozenList(patches));
+    }
+
+    private List<DocumentUpdateData> applyPatchInputs(String originScopePath,
+                                                      List<PatchInput> patches) {
         Node selectedRollback = selectedDocumentBacked ? materializedView.copyRoot() : null;
         ResolvedSnapshot snapshotRollback = snapshot;
         batchPatchCalls++;
@@ -547,7 +754,7 @@ public final class DocumentProcessingRuntime {
         }
         try {
             PlanningContext planning = planningContext(materializedView.root());
-            BatchPatchTransaction transaction = new BatchPatchTransaction(originScopePath,
+            BatchPatchTransaction transaction = BatchPatchTransaction.fromInputs(originScopePath,
                     patches,
                     planning,
                     currentConformanceEngine(),
@@ -638,6 +845,18 @@ public final class DocumentProcessingRuntime {
     PreparedPatchSequence preparePatchSequence(String originScopePath,
                                                List<JsonPatch> patches,
                                                WorkingDocument.Preview preview) {
+        return new PreparedPatchSequence(originScopePath, PatchInput.mutableList(patches), preview);
+    }
+
+    PreparedPatchSequence prepareFrozenPatchSequence(String originScopePath,
+                                                     List<FrozenJsonPatch> patches,
+                                                     WorkingDocument.Preview preview) {
+        return new PreparedPatchSequence(originScopePath, PatchInput.frozenList(patches), preview);
+    }
+
+    PreparedPatchSequence preparePatchInputSequence(String originScopePath,
+                                                    List<PatchInput> patches,
+                                                    WorkingDocument.Preview preview) {
         return new PreparedPatchSequence(originScopePath, patches, preview);
     }
 
@@ -966,7 +1185,7 @@ public final class DocumentProcessingRuntime {
         private final String originScope;
         private final int patchCount;
         private final WorkingDocument.Preview preview;
-        private final List<JsonPatch> patches;
+        private final List<PatchInput> patches;
         private ProcessingSnapshotManager sequenceSnapshotManager;
         private ProcessingSnapshotManager previousActiveSequenceSnapshotManager;
         private boolean sequenceSnapshotManagerActivated;
@@ -979,15 +1198,12 @@ public final class DocumentProcessingRuntime {
         private boolean counted;
 
         private PreparedPatchSequence(String originScope,
-                                      List<JsonPatch> requestedPatches,
+                                      List<PatchInput> requestedPatches,
                                       WorkingDocument.Preview preview) {
             this.originScope = PointerUtils.normalizeScope(originScope);
             this.preview = preview;
-            List<JsonPatch> checkedPatches = Objects.requireNonNull(requestedPatches, "patches");
-            this.patches = new ArrayList<>(checkedPatches.size());
-            for (JsonPatch patch : checkedPatches) {
-                this.patches.add(ImmutableJsonPatch.copy(patch));
-            }
+            List<PatchInput> checkedPatches = Objects.requireNonNull(requestedPatches, "patches");
+            this.patches = new ArrayList<>(checkedPatches);
             this.patchCount = this.patches.size();
         }
 
@@ -996,6 +1212,10 @@ public final class DocumentProcessingRuntime {
         }
 
         JsonPatch patchForValidation(int patchIndex) {
+            return patchAt(patchIndex).legacyPatch();
+        }
+
+        PatchInput patchInputForValidation(int patchIndex) {
             return patchAt(patchIndex);
         }
 
@@ -1003,7 +1223,7 @@ public final class DocumentProcessingRuntime {
             if (closed) {
                 throw new IllegalStateException("Patch sequence is already closed");
             }
-            JsonPatch authoredPatch = patchAt(patchIndex);
+            PatchInput authoredPatch = patchAt(patchIndex);
             if (!counted) {
                 patchSequencesPrepared++;
                 batchPatchCalls++;
@@ -1109,11 +1329,11 @@ public final class DocumentProcessingRuntime {
             }
         }
 
-        private JsonPatch patchAt(int patchIndex) {
+        private PatchInput patchAt(int patchIndex) {
             if (patchIndex < 0 || patchIndex >= patchCount) {
                 throw new IndexOutOfBoundsException("Patch index outside prepared sequence: " + patchIndex);
             }
-            JsonPatch patch = patches.get(patchIndex);
+            PatchInput patch = patches.get(patchIndex);
             if (patch == null) {
                 throw new IllegalStateException("Patch was already consumed: " + patchIndex);
             }
@@ -1184,7 +1404,11 @@ public final class DocumentProcessingRuntime {
                     || sequenceSnapshotManager.isTransientStateCurrent()) {
                 return;
             }
+            ProcessingSnapshotManager invalid = sequenceSnapshotManager;
             deactivateSequenceSnapshotManager();
+            closePlanningSession();
+            sequenceSnapshotManager = null;
+            invalid.releaseTransientState();
             sequenceSnapshotManager = snapshotManager != null
                     ? snapshotManager.transientSequence()
                     : null;
@@ -1249,16 +1473,45 @@ public final class DocumentProcessingRuntime {
                         promoteCurrentSequenceSnapshot(manager);
                     }
                 }
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
+                ProcessingSnapshotManager failedManager = sequenceSnapshotManager;
                 deactivateSequenceSnapshotManager();
+                sequenceSnapshotManager = null;
+                try {
+                    closePlanningSession();
+                } catch (RuntimeException | Error cleanupFailure) {
+                    if (ex != cleanupFailure) {
+                        ex.addSuppressed(cleanupFailure);
+                    }
+                }
+                if (failedManager != null) {
+                    try {
+                        failedManager.releaseTransientState();
+                    } catch (RuntimeException | Error cleanupFailure) {
+                        if (ex != cleanupFailure) {
+                            ex.addSuppressed(cleanupFailure);
+                        }
+                    }
+                }
                 throw ex;
             }
+            ProcessingSnapshotManager managerToRelease = sequenceSnapshotManager;
             deactivateSequenceSnapshotManager();
-            planningSession = null;
+            closePlanningSession();
             sequenceSnapshotManager = null;
             observedCanonical = null;
             observedResolved = null;
             closed = true;
+            if (managerToRelease != null) {
+                managerToRelease.releaseTransientState();
+            }
+        }
+
+        private void closePlanningSession() {
+            if (planningSession != null) {
+                planningSession.close();
+                planningSession = null;
+            }
         }
     }
 

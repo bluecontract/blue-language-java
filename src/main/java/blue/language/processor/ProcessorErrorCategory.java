@@ -7,6 +7,8 @@ public enum ProcessorErrorCategory {
     InvalidProcessingDocument,
     UnsupportedContract,
     InvalidReservedMarker,
+    ProviderUnavailable,
+    ProviderBlueIdMismatch,
     InvalidRuntimePointer,
     BoundaryViolation,
     ReservedKeyWrite,

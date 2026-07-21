@@ -11,6 +11,7 @@ import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -484,7 +485,9 @@ class ProcessEmbeddedTest {
         Node rootTerminated = terminatedMarker(processed, "/");
         assertNull(rootTerminated);
         // Dynamic embedded paths mutation is allowed for the paths field.
-        assertNotNull(processed.getProperties().get("itShouldHappen"));
+        assertNotNull(processed.getProperties().get("itShouldHappen"),
+                processResult.status() + ": " + processResult.failureReason()
+                        + "\n" + blue.nodeToYaml(processed));
         assertNull(processed.getProperties().get("mustNotHappen"));
     }
 
@@ -619,6 +622,47 @@ class ProcessEmbeddedTest {
         Blue blue = ProcessorTestSupport.blue();
         DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
 
+        Node rootTerminated = terminatedMarker(result.document(), "/");
+        assertNotNull(rootTerminated);
+        assertEquals("fatal", rootTerminated.getProperties().get("cause").getValue());
+    }
+
+    @Test
+    void embeddedPathSelectingPureReferenceIsBoundaryViolationBeforeInitialization() {
+        Node childType = new Node()
+                .name("Referenced Embedded Context Type")
+                .properties("inherited", new Node().value("forces typed materialization"));
+        Node referenced = new Node()
+                .name("Referenced Object Is Not A Selected Object Node")
+                .properties("payload", new Node().value("provider content"));
+        BasicNodeProvider provider = new BasicNodeProvider(childType, referenced);
+        String childTypeBlueId = provider.getBlueIdByName(childType.getName());
+        Node parentType = new Node()
+                .name("Referenced Embedded Parent Type")
+                .properties("child", new Node().type(new Node().blueId(childTypeBlueId)));
+        provider.addSingleNodes(parentType);
+        String parentTypeBlueId = provider.getBlueIdByName(parentType.getName());
+        String referencedBlueId = provider.getBlueIdByName(referenced.getName());
+        String yaml = "name: Referenced Embedded\n" +
+                "type:\n" +
+                "  blueId: " + parentTypeBlueId + "\n" +
+                "child:\n" +
+                "  blueId: " + referencedBlueId + "\n" +
+                "contracts:\n" +
+                "  embedded:\n" +
+                "    type:\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
+                "    paths:\n" +
+                "      - /child\n";
+
+        Blue blue = ProcessorTestSupport.blue(provider);
+        DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
+
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
+        assertEquals(ProcessorErrorCategory.BoundaryViolation,
+                result.errorCategory(), result.failureReason());
+        assertTrue(result.document().getProperties().get("child").isReferenceOnly(),
+                "the referenced child must not be initialized or mutated as an active scope");
         Node rootTerminated = terminatedMarker(result.document(), "/");
         assertNotNull(rootTerminated);
         assertEquals("fatal", rootTerminated.getProperties().get("cause").getValue());

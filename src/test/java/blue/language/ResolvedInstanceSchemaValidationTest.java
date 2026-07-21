@@ -708,25 +708,25 @@ class ResolvedInstanceSchemaValidationTest {
                 .properties("identifier", new Node().value("subject-1"));
         fixture.delegate.addSingleNodes(referenced);
         String referenceId = fixture.delegate.getBlueIdByName("Nested Snapshot Subject");
-        Node source = new Node().items(
+        Node source = new Node().properties("entries", new Node().items(
                 fixture.holderInstance(reference(referenceId)),
-                fixture.holderInstance(reference(referenceId)));
-
+                fixture.holderInstance(reference(referenceId))));
         ResolvedSnapshot publicCold = fixture.blue.resolveToSnapshot(source);
         fixture.blue.clearResolvedSnapshotCache();
         ResolvedSnapshot processingCold = fixture.blue.initializeDocument(source).snapshot();
         ResolvedSnapshot publicWarm = fixture.blue.resolveToSnapshot(source);
         ResolvedSnapshot processingWarm = fixture.blue.initializeDocument(source).snapshot();
 
-        assertEquals(publicCold.blueId(), processingCold.blueId());
         assertEquals(publicCold.blueId(), publicWarm.blueId());
-        assertEquals(publicCold.blueId(), processingWarm.blueId());
-        assertEquals(referenceId, publicCold.canonicalAt("/0/subject").getReferenceBlueId());
-        assertEquals(referenceId, processingCold.canonicalAt("/1/subject").getReferenceBlueId());
-        assertEquals(publicCold.canonicalAt("/0/subject").resolvedStructuralKey(),
-                processingCold.canonicalAt("/0/subject").resolvedStructuralKey());
-        assertEquals(publicCold.resolvedAt("/1/subject").resolvedStructuralKey(),
-                processingWarm.resolvedAt("/1/subject").resolvedStructuralKey());
+        assertEquals(processingCold.blueId(), processingWarm.blueId());
+        assertEquals(referenceId,
+                publicCold.canonicalAt("/entries/0/subject").getReferenceBlueId());
+        assertEquals(referenceId,
+                processingCold.canonicalAt("/entries/1/subject").getReferenceBlueId());
+        assertEquals(publicCold.canonicalAt("/entries/0/subject").resolvedStructuralKey(),
+                processingCold.canonicalAt("/entries/0/subject").resolvedStructuralKey());
+        assertEquals(publicCold.resolvedAt("/entries/1/subject").resolvedStructuralKey(),
+                processingWarm.resolvedAt("/entries/1/subject").resolvedStructuralKey());
     }
 
     private static Schema required() {

@@ -1,13 +1,16 @@
 package blue.language.processor;
 
+import blue.language.BlueCachePolicy;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.BlueIds;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
 
@@ -20,16 +23,24 @@ final class DeclaredTypeLineageMatcher {
     static final int CACHE_ENTRY_LIMIT = 4_096;
 
     private final NodeProvider provider;
+    private final int maximumEntries;
+    private final long maximumWeightBytes;
+    private final long maximumEntryWeightBytes;
     private final Map<String, DirectParentFact> directParentByType =
-            new LinkedHashMap<String, DirectParentFact>(CACHE_INITIAL_CAPACITY, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, DirectParentFact> eldest) {
-                    return size() > CACHE_ENTRY_LIMIT;
-                }
-            };
+            new LinkedHashMap<String, DirectParentFact>(CACHE_INITIAL_CAPACITY, 0.75f, true);
+    private long currentWeightBytes;
 
     DeclaredTypeLineageMatcher(NodeProvider provider) {
+        this(provider, BlueCachePolicy.boundedDefaults());
+    }
+
+    DeclaredTypeLineageMatcher(NodeProvider provider, BlueCachePolicy cachePolicy) {
         this.provider = provider;
+        BlueCachePolicy policy = Objects.requireNonNull(cachePolicy, "cachePolicy");
+        this.maximumEntries = policy.conformancePlanMaxEntries();
+        this.maximumWeightBytes = policy.conformancePlanMaxWeightBytes();
+        this.maximumEntryWeightBytes = Math.min(
+                policy.maximumDerivedEntryWeightBytes(), maximumWeightBytes);
     }
 
     boolean isSameOrDescendant(Node candidateType, Node expectedType) {
@@ -54,6 +65,19 @@ final class DeclaredTypeLineageMatcher {
     int cacheSize() {
         synchronized (directParentByType) {
             return directParentByType.size();
+        }
+    }
+
+    long cacheWeightBytes() {
+        synchronized (directParentByType) {
+            return currentWeightBytes;
+        }
+    }
+
+    void clearCaches() {
+        synchronized (directParentByType) {
+            directParentByType.clear();
+            currentWeightBytes = 0L;
         }
     }
 
@@ -126,9 +150,35 @@ final class DeclaredTypeLineageMatcher {
             if (existing != null) {
                 return existing;
             }
+            long weight = factWeight(declaredTypeId, fact);
+            if (weight > maximumEntryWeightBytes || weight > maximumWeightBytes) {
+                return fact;
+            }
             directParentByType.put(declaredTypeId, fact);
+            currentWeightBytes += weight;
+            evictToBounds();
             return fact;
         }
+    }
+
+    private void evictToBounds() {
+        Iterator<Map.Entry<String, DirectParentFact>> iterator =
+                directParentByType.entrySet().iterator();
+        while ((directParentByType.size() > maximumEntries
+                || currentWeightBytes > maximumWeightBytes) && iterator.hasNext()) {
+            Map.Entry<String, DirectParentFact> eldest = iterator.next();
+            currentWeightBytes -= factWeight(eldest.getKey(), eldest.getValue());
+            iterator.remove();
+        }
+    }
+
+    private long factWeight(String declaredTypeId, DirectParentFact fact) {
+        long weight = 112L + retainedString(declaredTypeId);
+        return weight + retainedString(fact.directParentId);
+    }
+
+    private long retainedString(String value) {
+        return value != null ? 48L + 2L * value.length() : 0L;
     }
 
     private static IllegalStateException typeCycle(String repeatedId, int uniqueTypeCount) {

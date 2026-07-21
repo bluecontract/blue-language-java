@@ -67,6 +67,18 @@ public final class ResolvedSnapshot {
                 resolution.verifiedReferenceResolution());
     }
 
+    public ResolvedSnapshot toStrictBlueIdValidatedCanonical() {
+        if (canonicalRoot.isStrictCanonical()
+                && canonicalRoot.isStrictBlueIdValidation()) {
+            return this;
+        }
+        FrozenNode strictCanonicalRoot = FrozenNode.fromNode(canonicalRoot.toNode());
+        return new ResolvedSnapshot(strictCanonicalRoot,
+                resolvedRoot,
+                strictCanonicalRoot.blueId(),
+                verifiedReferenceResolution);
+    }
+
     public Node canonicalRoot() {
         return canonicalRoot.toNode();
     }
@@ -85,6 +97,11 @@ public final class ResolvedSnapshot {
 
     public FrozenNode canonicalAt(String pointer) {
         return canonicalIndex().get(JsonPointer.canonicalize(pointer));
+    }
+
+    public String canonicalBlueIdAt(String pointer) {
+        FrozenNode node = canonicalAt(pointer);
+        return node != null ? node.blueId() : null;
     }
 
     public FrozenNode resolvedAt(String pointer) {

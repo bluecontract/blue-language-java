@@ -471,6 +471,12 @@ final class ProcessorProcessEventContextTest {
                         "    type:\n" +
                         "      blueId: " + TEST_EVENT_CHANNEL_TYPE + "\n" +
                         handler("read", "events", 0));
+        // This test exercises handler failure mapping, not initialization
+        // identity. Make that precondition explicit instead of relying on an
+        // invented provider node for the registered Java contract classes.
+        document.getContracts().properties("initialized", new Node()
+                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
+                .properties("documentId", new Node().value("existing")));
         AtomicInteger freezerCalls = new AtomicInteger();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner,
                 document,

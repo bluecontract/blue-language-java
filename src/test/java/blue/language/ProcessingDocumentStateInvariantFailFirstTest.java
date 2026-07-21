@@ -187,7 +187,9 @@ class ProcessingDocumentStateInvariantFailFirstTest {
     private static Node expectedInitializedSelected(AuditFixture fixture, Node selectedBefore) {
         Node expected = selectedBefore.clone();
         Blue identityBlue = fixture.newBlue(new AtomicInteger());
-        String preInitializationIdentity = identityBlue.resolveToSnapshot(selectedBefore.clone()).blueId();
+        String preInitializationIdentity = identityBlue.resolveToSnapshot(selectedBefore.clone())
+                .frozenCanonicalRoot()
+                .blueId();
         Node marker = new Node()
                 .type(reference(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
                 .properties("documentId", text(preInitializationIdentity));

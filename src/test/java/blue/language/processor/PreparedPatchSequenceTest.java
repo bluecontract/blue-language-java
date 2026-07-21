@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.CanonicalPatchResult;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -128,6 +130,54 @@ class PreparedPatchSequenceTest {
         for (int index = 0; index < preview.size(); index++) {
             assertNull(preview.patch(index), "consumed preview entry " + index + " should be releasable");
         }
+    }
+
+    @Test
+    void frozenPreviewWithIdentityEquivalentDifferentRepresentationIsReplanned() {
+        Node materialized = new Node().properties("payload", new Node().value("value"));
+        FrozenNode materializedValue = FrozenNode.fromNode(materialized);
+        FrozenNode referenceValue = FrozenNode.fromNode(
+                new Node().blueId(materializedValue.blueId()));
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        List<FrozenJsonPatch> previewPatches = Arrays.asList(
+                FrozenJsonPatch.add("/slot", materializedValue));
+        WorkingDocument.Preview preview = runtime.workingDocument("/")
+                .previewAndApplyFrozenPatches(previewPatches);
+        List<FrozenJsonPatch> requested = Arrays.asList(
+                FrozenJsonPatch.add("/slot", referenceValue));
+
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     runtime.prepareFrozenPatchSequence("/", requested, preview)) {
+            sequence.applyNext(0);
+        }
+
+        Node committed = runtime.document().getNode("/slot");
+        assertTrue(committed.isReferenceOnly());
+        assertEquals(referenceValue.blueId(), committed.getBlueId());
+        assertEquals(1, runtime.sequenceStalePreviewFallbacksForTest());
+    }
+
+    @Test
+    void mutablePreviewWithIdentityEquivalentDifferentRepresentationIsReplanned() {
+        Node materialized = new Node().properties("payload", new Node().value("value"));
+        String blueId = FrozenNode.fromNode(materialized).blueId();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        List<JsonPatch> previewPatches = Arrays.asList(
+                JsonPatch.add("/slot", materialized));
+        WorkingDocument.Preview preview = runtime.workingDocument("/")
+                .previewAndApplyPatches(previewPatches);
+        List<JsonPatch> requested = Arrays.asList(
+                JsonPatch.add("/slot", new Node().blueId(blueId)));
+
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     runtime.preparePatchSequence("/", requested, preview)) {
+            sequence.applyNext(0);
+        }
+
+        Node committed = runtime.document().getNode("/slot");
+        assertTrue(committed.isReferenceOnly());
+        assertEquals(blueId, committed.getBlueId());
+        assertEquals(1, runtime.sequenceStalePreviewFallbacksForTest());
     }
 
     @Test
@@ -268,6 +318,39 @@ class PreparedPatchSequenceTest {
         assertNull(preview.patch(2));
         assertEquals(1, manager.cacheSnapshotCalls,
                 "closing after an intermediate advance must promote the surviving prefix");
+    }
+
+    @Test
+    void transientManagerOwnershipReleasesWorkingPreviewAndSequenceScopes() {
+        ReleasingSnapshotManager manager = new ReleasingSnapshotManager();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                new Node(), null, manager);
+        List<JsonPatch> patches = Collections.singletonList(
+                JsonPatch.add("/value", new Node().value(1)));
+
+        WorkingDocument firstWorking = runtime.workingDocument("/");
+        WorkingDocument.Preview discarded = firstWorking.previewAndApplyPatches(patches);
+        firstWorking.close();
+        discarded.close();
+        assertEquals(2, manager.releaseCalls);
+
+        WorkingDocument secondWorking = runtime.workingDocument("/");
+        WorkingDocument.Preview transferred = secondWorking.previewAndApplyPatches(patches);
+        secondWorking.close();
+        int beforeTransfer = manager.releaseCalls;
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     runtime.preparePatchSequence("/", patches, transferred)) {
+            sequence.applyNext(0);
+            transferred.close();
+            assertEquals(beforeTransfer, manager.releaseCalls,
+                    "a transferred preview no longer owns the handoff scope");
+        }
+
+        assertEquals(beforeTransfer + 1, manager.releaseCalls,
+                "the prepared sequence releases the transferred scope");
+        assertEquals(manager.openCalls, manager.releaseCalls);
+        assertThrows(IllegalStateException.class,
+                () -> secondWorking.applyPatch(JsonPatch.remove("/value")));
     }
 
     @Test
@@ -458,6 +541,65 @@ class PreparedPatchSequenceTest {
                 throw new IllegalStateException("simulated final cache failure");
             }
             return super.cacheSnapshot(snapshot);
+        }
+    }
+
+    private static final class ReleasingSnapshotManager extends CountingSnapshotManager {
+        private int openCalls;
+        private int releaseCalls;
+
+        @Override
+        public ProcessingSnapshotManager transientSequence() {
+            openCalls++;
+            return new ReleasingScope(this);
+        }
+    }
+
+    private static final class ReleasingScope implements ProcessingSnapshotManager {
+        private final ReleasingSnapshotManager owner;
+        private boolean released;
+
+        private ReleasingScope(ReleasingSnapshotManager owner) {
+            this.owner = owner;
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            return owner.fromDocument(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransient(Node document) {
+            return owner.fromDocument(document);
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
+            return owner.applyPatch(snapshot, patch);
+        }
+
+        @Override
+        public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+            return owner.cacheSnapshot(snapshot);
+        }
+
+        @Override
+        public ProcessingSnapshotManager transientSequence() {
+            return this;
+        }
+
+        @Override
+        public ProcessingSnapshotManager forkTransientSequence() {
+            owner.openCalls++;
+            return new ReleasingScope(owner);
+        }
+
+        @Override
+        public void releaseTransientState() {
+            if (!released) {
+                released = true;
+                owner.releaseCalls++;
+            }
         }
     }
 

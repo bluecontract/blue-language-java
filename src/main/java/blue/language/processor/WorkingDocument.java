@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
@@ -20,8 +21,13 @@ import java.util.Objects;
  * type generalization, and Type Generalization Policy enforcement. It never
  * commits to the processor runtime, emits cascades, charges gas, or writes
  * processor-managed markers.</p>
+ *
+ * <p>A working document owns transient snapshot-planning state and must be
+ * closed when the read-your-writes session is finished. A preview returned by
+ * this object has an independent handoff lease and remains valid after the
+ * working document itself is closed.</p>
  */
-public final class WorkingDocument {
+public final class WorkingDocument implements AutoCloseable {
 
     private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_MATERIALIZATION_METRICS =
             new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
@@ -44,9 +50,11 @@ public final class WorkingDocument {
     private final ConformanceEngine conformanceEngine;
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final boolean exactReplacement;
+    private final PatchSource mutablePatchSource;
     private final ProcessingMetricsSink metrics;
     private ProcessingSnapshotManager workingSequenceManager;
     private ResolvedSnapshot snapshot;
+    private boolean closed;
 
     WorkingDocument(String originScope,
                     FrozenNode canonicalRoot,
@@ -57,6 +65,7 @@ public final class WorkingDocument {
                     ResolvedSnapshot snapshot,
                     boolean materializedFallback,
                     boolean exactReplacement,
+                    PatchSource mutablePatchSource,
                     ProcessingMetricsSink metrics) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
@@ -67,6 +76,9 @@ public final class WorkingDocument {
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.exactReplacement = exactReplacement;
+        this.mutablePatchSource = mutablePatchSource != null
+                ? mutablePatchSource
+                : PatchSource.UNKNOWN_INTERNAL;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         this.workingSequenceManager = snapshotManager != null
                 ? snapshotManager.transientSequence()
@@ -99,23 +111,36 @@ public final class WorkingDocument {
     }
 
     public WorkingDocument applyPatches(List<JsonPatch> patches) {
-        applyPatches(patches, false);
+        applyPatchInputs(PatchInput.mutableList(patches, mutablePatchSource), false);
         return this;
     }
 
     public Preview previewAndApplyPatches(List<JsonPatch> patches) {
-        return applyPatches(patches, true);
+        return applyPatchInputs(PatchInput.mutableList(patches, mutablePatchSource), true);
     }
 
-    private Preview applyPatches(List<JsonPatch> patches, boolean createHandoff) {
+    public WorkingDocument applyFrozenPatch(FrozenJsonPatch patch) {
+        if (patch == null) {
+            return this;
+        }
+        return applyFrozenPatches(Collections.singletonList(patch));
+    }
+
+    public WorkingDocument applyFrozenPatches(List<FrozenJsonPatch> patches) {
+        applyPatchInputs(PatchInput.frozenList(patches), false);
+        return this;
+    }
+
+    public Preview previewAndApplyFrozenPatches(List<FrozenJsonPatch> patches) {
+        return applyPatchInputs(PatchInput.frozenList(patches), true);
+    }
+
+    private Preview applyPatchInputs(List<PatchInput> patches, boolean createHandoff) {
+        ensureOpen();
         if (patches == null || patches.isEmpty()) {
             return Preview.empty(originScope);
         }
-        List<JsonPatch> copiedPatches = new ArrayList<>(patches.size());
-        for (JsonPatch patch : patches) {
-            copiedPatches.add(ImmutableJsonPatch.copy(patch));
-        }
-        List<PatchPreview> previews = new ArrayList<>(copiedPatches.size());
+        List<PatchPreview> previews = new ArrayList<>(patches.size());
         ProcessingSnapshotManager sequenceManager = workingSequenceManager();
         ConformanceEngine sequenceConformanceEngine = sequenceManager != null
                 ? sequenceManager.transientConformanceEngine(conformanceEngine)
@@ -131,7 +156,7 @@ public final class WorkingDocument {
                 NOOP_MATERIALIZATION_METRICS,
                 metrics);
         try {
-            for (JsonPatch patch : copiedPatches) {
+            for (PatchInput patch : patches) {
                 SequentialPatchPlanningSession.PlannedStep step =
                         planningSession.planNext(patch);
                 previews.add(PatchPreview.from(step));
@@ -141,21 +166,45 @@ public final class WorkingDocument {
                 sequenceManager.retainTransientState(canonicalRoot, resolvedRoot);
             }
             throw ex;
+        } finally {
+            planningSession.close();
         }
         canonicalRoot = planningSession.canonicalRoot();
         resolvedRoot = planningSession.resolvedRoot();
         snapshot = null;
-        ProcessingSnapshotManager handoff = createHandoff && sequenceManager != null
-                ? sequenceManager.forkTransientSequence()
-                : null;
-        if (sequenceManager != null) {
-            sequenceManager.retainTransientState(canonicalRoot, resolvedRoot);
+        ProcessingSnapshotManager handoff = null;
+        try {
+            handoff = createHandoff && sequenceManager != null
+                    ? sequenceManager.forkTransientSequence()
+                    : null;
+            if (sequenceManager != null) {
+                sequenceManager.retainTransientState(canonicalRoot, resolvedRoot);
+            }
+            return new Preview(originScope, previews, handoff);
+        } catch (RuntimeException | Error ex) {
+            releaseAfterFailedHandoff(handoff, ex);
+            throw ex;
         }
-        return new Preview(originScope, previews, handoff);
+    }
+
+    private static void releaseAfterFailedHandoff(ProcessingSnapshotManager handoff,
+                                                  Throwable primaryFailure) {
+        if (handoff == null) {
+            return;
+        }
+        try {
+            handoff.releaseTransientState();
+        } catch (RuntimeException | Error cleanupFailure) {
+            if (primaryFailure != cleanupFailure) {
+                primaryFailure.addSuppressed(cleanupFailure);
+            }
+        }
     }
 
     private ProcessingSnapshotManager workingSequenceManager() {
+        ensureOpen();
         if (workingSequenceManager != null && !workingSequenceManager.isTransientStateCurrent()) {
+            workingSequenceManager.releaseTransientState();
             workingSequenceManager = null;
         }
         if (workingSequenceManager == null && snapshotManager != null) {
@@ -184,6 +233,7 @@ public final class WorkingDocument {
     }
 
     public ResolvedSnapshot commitSnapshot() {
+        ensureOpen();
         ResolvedSnapshot current = snapshot();
         if (snapshotManager == null) {
             snapshot = current;
@@ -203,6 +253,25 @@ public final class WorkingDocument {
         return snapshot;
     }
 
+    @Override
+    public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        ProcessingSnapshotManager manager = workingSequenceManager;
+        workingSequenceManager = null;
+        if (manager != null) {
+            manager.releaseTransientState();
+        }
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException("Working document is closed");
+        }
+    }
+
     /**
      * Returns true when this preview had to freeze a materialized runtime tree
      * because no processor snapshot was available at creation time.
@@ -211,11 +280,12 @@ public final class WorkingDocument {
         return materializedFallback;
     }
 
-    public static final class Preview {
+    public static final class Preview implements AutoCloseable {
         private final String originScope;
         private final List<PatchPreview> patches;
-        private final ProcessingSnapshotManager resolutionScope;
+        private ProcessingSnapshotManager resolutionScope;
         private ProcessingSnapshotManager sequenceSnapshotManager;
+        private boolean closed;
 
         private Preview(String originScope,
                         List<PatchPreview> patches,
@@ -253,11 +323,20 @@ public final class WorkingDocument {
                 patches.set(current, null);
             }
             if (index <= 0) {
+                ProcessingSnapshotManager manager = sequenceSnapshotManager;
                 sequenceSnapshotManager = null;
+                resolutionScope = null;
+                closed = true;
+                if (manager != null) {
+                    manager.releaseTransientState();
+                }
             }
         }
 
         ProcessingSnapshotManager takeSequenceSnapshotManager() {
+            if (closed) {
+                return null;
+            }
             ProcessingSnapshotManager retained = sequenceSnapshotManager;
             sequenceSnapshotManager = null;
             return retained;
@@ -266,6 +345,11 @@ public final class WorkingDocument {
         boolean isResolutionScopeCurrent() {
             return resolutionScope == null
                     || resolutionScope.isTransientStateCurrent();
+        }
+
+        @Override
+        public void close() {
+            discardFrom(0);
         }
     }
 
@@ -327,6 +411,15 @@ public final class WorkingDocument {
         boolean matches(JsonPatch candidate) {
             return candidate != null && patch.matches(
                     ImmutableJsonPatch.from(candidate, baseCanonical, baseResolved));
+        }
+
+        boolean matches(PatchInput candidate) {
+            if (candidate == null) {
+                return false;
+            }
+            ImmutableJsonPatch.PreparationContext preparation =
+                    ImmutableJsonPatch.preparationContext(ProcessingMetricsSink.NOOP);
+            return patch.matches(candidate.prepare(preparation, baseCanonical, baseResolved));
         }
 
         boolean matches(ImmutableJsonPatch candidate) {

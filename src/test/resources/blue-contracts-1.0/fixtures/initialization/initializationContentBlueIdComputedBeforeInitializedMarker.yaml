@@ -11,7 +11,7 @@ initialDocument:
       paths:
         - /child
   child:
-    value: before-init
+    state: before-init
 event:
   kind: initialize
 expectedStatus: success
@@ -19,6 +19,7 @@ expectedInitializationContentBlueIdInput:
   scope: /
   timing: after-phase-1-before-initialized-marker
   excludesPath: /contracts/initialized
+  expectedContentBlueId: xivoDTohkrQjSffU6WVdsJAsEKhWvxDw2PQEjkV66KR
 expectedDocumentPathExists:
   - /contracts/initialized/documentId
 assertions:

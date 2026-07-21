@@ -5,6 +5,7 @@ import blue.language.utils.BlueNumbers;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
@@ -312,7 +313,7 @@ public class Node implements Cloneable {
 
         this.name = source.name;
         this.description = source.description;
-        this.value = source.value;
+        this.value = copyValue(source.value, new IdentityHashMap<Object, Object>());
         this.blueId = source.blueId;
         this.mergePolicy = source.mergePolicy;
         this.previousBlueId = source.previousBlueId;
@@ -339,6 +340,134 @@ public class Node implements Cloneable {
         this.schema = source.schema != null ? source.schema.clone() : null;
         this.blue = source.blue != null ? source.blue.clone() : null;
         return this;
+    }
+
+    /** Deep-copies JSON container values so a cloned Node owns its mutable payload graph. */
+    private static Object copyValue(Object source, IdentityHashMap<Object, Object> copies) {
+        if (source == null || source instanceof String || source instanceof Number
+                || source instanceof Boolean || source instanceof Character
+                || source instanceof Enum) {
+            return source;
+        }
+        Object existing = copies.get(source);
+        if (existing != null) {
+            return existing;
+        }
+        if (source instanceof List) {
+            List<?> values = (List<?>) source;
+            List<Object> copy = copyListLike(values);
+            copies.put(source, copy);
+            for (Object value : values) {
+                copy.add(copyValue(value, copies));
+            }
+            return copy;
+        }
+        if (source instanceof Map) {
+            Map<?, ?> values = (Map<?, ?>) source;
+            Map<Object, Object> copy = copyMapLike(values);
+            copies.put(source, copy);
+            for (Map.Entry<?, ?> entry : values.entrySet()) {
+                copy.put(entry.getKey(), copyValue(entry.getValue(), copies));
+            }
+            return copy;
+        }
+        if (source.getClass().isArray()) {
+            int length = Array.getLength(source);
+            Class<?> componentType = source.getClass().getComponentType();
+            Class<?> copyComponentType = canRetainArrayComponentType(
+                    source, componentType, new IdentityHashMap<Object, Boolean>())
+                    ? componentType
+                    : Object.class;
+            Object copy = Array.newInstance(copyComponentType, length);
+            copies.put(source, copy);
+            for (int index = 0; index < length; index++) {
+                Array.set(copy, index, copyValue(Array.get(source, index), copies));
+            }
+            return copy;
+        }
+        return source;
+    }
+
+    /**
+     * A container is copied to an owned standard implementation. That copy is not
+     * always assignable to a concrete array component such as a Jackson or JDK
+     * implementation class. Predict the copied element types before allocating the
+     * array so cycles point at the final array rather than an abandoned typed copy.
+     */
+    private static boolean canRetainArrayComponentType(
+            Object source,
+            Class<?> componentType,
+            IdentityHashMap<Object, Boolean> visitingArrays) {
+        if (componentType.isPrimitive()) {
+            return true;
+        }
+        if (visitingArrays.put(source, Boolean.TRUE) != null) {
+            return true;
+        }
+        try {
+            int length = Array.getLength(source);
+            for (int index = 0; index < length; index++) {
+                Class<?> copiedType = copiedValueType(
+                        Array.get(source, index), visitingArrays);
+                if (copiedType != null && !componentType.isAssignableFrom(copiedType)) {
+                    return false;
+                }
+            }
+            return true;
+        } finally {
+            visitingArrays.remove(source);
+        }
+    }
+
+    private static Class<?> copiedValueType(
+            Object source,
+            IdentityHashMap<Object, Boolean> visitingArrays) {
+        if (source == null) {
+            return null;
+        }
+        if (source instanceof List) {
+            return source instanceof LinkedList ? LinkedList.class : ArrayList.class;
+        }
+        if (source instanceof Map) {
+            if (source instanceof TreeMap) {
+                return TreeMap.class;
+            }
+            if (source instanceof LinkedHashMap) {
+                return LinkedHashMap.class;
+            }
+            if (source instanceof HashMap) {
+                return HashMap.class;
+            }
+            return LinkedHashMap.class;
+        }
+        if (source.getClass().isArray()) {
+            Class<?> componentType = source.getClass().getComponentType();
+            return canRetainArrayComponentType(source, componentType, visitingArrays)
+                    ? source.getClass()
+                    : Object[].class;
+        }
+        return source.getClass();
+    }
+
+    private static List<Object> copyListLike(List<?> source) {
+        if (source instanceof LinkedList) {
+            return new LinkedList<>();
+        }
+        return new ArrayList<>(source.size());
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Map<Object, Object> copyMapLike(Map<?, ?> source) {
+        if (source instanceof TreeMap) {
+            return new TreeMap(((TreeMap) source).comparator());
+        }
+        if (source instanceof LinkedHashMap) {
+            return new LinkedHashMap<>();
+        }
+        if (source instanceof HashMap) {
+            return new HashMap<>();
+        }
+        return new LinkedHashMap<>();
     }
 
     public Object get(String path) {

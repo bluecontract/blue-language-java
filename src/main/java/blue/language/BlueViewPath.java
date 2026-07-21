@@ -82,7 +82,7 @@ public final class BlueViewPath {
     }
 
     private static Node item(Node node, String indexSegment) {
-        if (node.getItems() == null || !indexSegment.matches("0|[1-9]\\d*")) {
+        if (node.getItems() == null || !isCanonicalArrayIndex(indexSegment)) {
             return null;
         }
         int index;
@@ -92,6 +92,26 @@ public final class BlueViewPath {
             return null;
         }
         return index < node.getItems().size() ? node.getItems().get(index) : null;
+    }
+
+    private static boolean isCanonicalArrayIndex(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        char first = value.charAt(0);
+        if (first == '0') {
+            return value.length() == 1;
+        }
+        if (first < '1' || first > '9') {
+            return false;
+        }
+        for (int index = 1; index < value.length(); index++) {
+            char digit = value.charAt(index);
+            if (digit < '0' || digit > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String unescape(String segment) {

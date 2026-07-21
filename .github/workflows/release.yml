@@ -3,17 +3,25 @@ name: Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-stable
+  cancel-in-progress: false
+
 jobs:
   Release:
     runs-on: ubuntu-latest
     env:
       CI: true
+      BLUE_RELEASE_CHANNEL: stable
     steps:
       - name: Check out
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.WORKFLOW_PAT }}
+          persist-credentials: false
 
       - name: Check if branch is master
         run: |
@@ -38,7 +46,10 @@ jobs:
         uses: gradle/gradle-build-action@v2
     
       - name: Execute Gradle build
-        run: ./gradlew clean build
+        run: >-
+          ./gradlew clean build identityDifferentialTest
+          patchSequenceDifferentialTest memoryIntegrationTest cacheLifecycleTest
+          jmhClasses sourceReleaseArchive
     
       - name: Execute Gradle publish
         run: ./gradlew publish
@@ -61,4 +72,5 @@ jobs:
           path: |
             build/libs
             build/publications
+            build/release
             build/jreleaser

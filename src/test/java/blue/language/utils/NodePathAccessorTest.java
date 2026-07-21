@@ -81,6 +81,15 @@ class NodePathAccessorTest {
     }
 
     @Test
+    void listIndexesRemainAsciiAndUnicodeDigitsRemainPropertyNames() {
+        Node node = new Node().properties("\u0660", new Node().value("property"));
+
+        assertEquals("property", NodePathAccessor.get(node, "/\u0660"));
+        assertThrows(IllegalArgumentException.class,
+                () -> NodePathAccessor.get(rootNode, "/a/\u0660"));
+    }
+
+    @Test
     void testValuePrecedence() {
         Node nodeWithValue = new Node().name("Test").value("TestValue");
         Node nodeWithoutValue = new Node().name("Test");

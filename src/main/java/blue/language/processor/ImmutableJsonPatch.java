@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.ParsedJsonPointer;
@@ -19,13 +20,15 @@ final class ImmutableJsonPatch {
     private final FrozenNode canonicalValue;
     private final FrozenNode resolvedValue;
     private final String valueBlueId;
+    private final ProcessingMetricsSink metrics;
 
     private ImmutableJsonPatch(JsonPatch.Op op,
                                String authoredPath,
                                ParsedJsonPointer path,
                                Node authoredValue,
                                FrozenNode canonicalValue,
-                               FrozenNode resolvedValue) {
+                               FrozenNode resolvedValue,
+                               ProcessingMetricsSink metrics) {
         this.op = Objects.requireNonNull(op, "op");
         this.authoredPath = Objects.requireNonNull(authoredPath, "authoredPath");
         this.path = Objects.requireNonNull(path, "path");
@@ -33,6 +36,7 @@ final class ImmutableJsonPatch {
         this.canonicalValue = canonicalValue;
         this.resolvedValue = resolvedValue;
         this.valueBlueId = op == JsonPatch.Op.REMOVE ? null : resolvedValue.blueId();
+        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
     }
 
     static PreparationContext preparationContext(ProcessingMetricsSink metrics) {
@@ -63,6 +67,13 @@ final class ImmutableJsonPatch {
                 .prepare(patch, canonicalRoot, resolvedRoot);
     }
 
+    static ImmutableJsonPatch from(FrozenJsonPatch patch,
+                                   FrozenNode canonicalRoot,
+                                   FrozenNode resolvedRoot) {
+        return new PreparationContext(ProcessingMetricsSink.NOOP)
+                .prepare(patch, canonicalRoot, resolvedRoot);
+    }
+
     JsonPatch.Op op() {
         return op;
     }
@@ -87,6 +98,23 @@ final class ImmutableJsonPatch {
         return resolvedValue;
     }
 
+    ImmutableJsonPatch withResolvedValue(FrozenNode replacement) {
+        if (op == JsonPatch.Op.REMOVE) {
+            return this;
+        }
+        FrozenNode checked = Objects.requireNonNull(replacement, "resolved patch value");
+        if (checked.isStrictCanonical()) {
+            throw new IllegalArgumentException("Resolved patch value must use resolved construction mode");
+        }
+        return new ImmutableJsonPatch(op,
+                authoredPath,
+                path,
+                authoredValue,
+                canonicalValue,
+                checked,
+                metrics);
+    }
+
     FrozenNode valueFor(FrozenNode root) {
         if (op == JsonPatch.Op.REMOVE) {
             return null;
@@ -102,20 +130,31 @@ final class ImmutableJsonPatch {
         if (candidate == null || op != candidate.op || !path.equals(candidate.path)) {
             return false;
         }
-        return op == JsonPatch.Op.REMOVE || valueBlueId.equals(candidate.valueBlueId);
+        return op == JsonPatch.Op.REMOVE
+                || valueBlueId.equals(candidate.valueBlueId)
+                && canonicalValue.resolvedStructuralKey().equals(
+                        candidate.canonicalValue.resolvedStructuralKey());
     }
 
     JsonPatch materialize() {
         switch (op) {
             case ADD:
-                return JsonPatch.add(authoredPath, authoredValue.clone());
+                return JsonPatch.add(authoredPath, materializedAuthoredValue());
             case REPLACE:
-                return JsonPatch.replace(authoredPath, authoredValue.clone());
+                return JsonPatch.replace(authoredPath, materializedAuthoredValue());
             case REMOVE:
                 return JsonPatch.remove(authoredPath);
             default:
                 throw new IllegalStateException("Unsupported patch op: " + op);
         }
+    }
+
+    private Node materializedAuthoredValue() {
+        if (authoredValue != null) {
+            return authoredValue.clone();
+        }
+        metrics.incrementFrozenPatchValuesMaterialized();
+        return canonicalValue.toNode();
     }
 
     private static FrozenNode freeze(Node value, FrozenNode modeRoot) {
@@ -150,6 +189,13 @@ final class ImmutableJsonPatch {
         ImmutableJsonPatch prepare(JsonPatch patch,
                                    FrozenNode canonicalRoot,
                                    FrozenNode resolvedRoot) {
+            return prepare(patch, canonicalRoot, resolvedRoot, PatchSource.LEGACY_PUBLIC_API);
+        }
+
+        ImmutableJsonPatch prepare(JsonPatch patch,
+                                   FrozenNode canonicalRoot,
+                                   FrozenNode resolvedRoot,
+                                   PatchSource source) {
             Objects.requireNonNull(patch, "patch");
             Objects.requireNonNull(canonicalRoot, "canonicalRoot");
             Objects.requireNonNull(resolvedRoot, "resolvedRoot");
@@ -165,10 +211,11 @@ final class ImmutableJsonPatch {
             }
 
             if (op == JsonPatch.Op.REMOVE) {
-                return new ImmutableJsonPatch(op, authoredPath, parsed, null, null, null);
+                return new ImmutableJsonPatch(op, authoredPath, parsed, null, null, null, metrics);
             }
 
             Node value = Objects.requireNonNull(patch.getVal(), "patch value");
+            metrics.incrementMutablePatchValuesFrozen(source);
             FrozenNode canonical = freeze(value, canonicalRoot);
             FrozenNode resolved;
             if (sameFreezeMode(canonicalRoot, resolvedRoot)) {
@@ -177,7 +224,33 @@ final class ImmutableJsonPatch {
             } else {
                 resolved = freeze(value, resolvedRoot);
             }
-            return new ImmutableJsonPatch(op, authoredPath, parsed, value, canonical, resolved);
+            return new ImmutableJsonPatch(op, authoredPath, parsed, value, canonical, resolved, metrics);
+        }
+
+        ImmutableJsonPatch prepare(FrozenJsonPatch patch,
+                                   FrozenNode canonicalRoot,
+                                   FrozenNode resolvedRoot) {
+            Objects.requireNonNull(patch, "patch");
+            Objects.requireNonNull(canonicalRoot, "canonicalRoot");
+            Objects.requireNonNull(resolvedRoot, "resolvedRoot");
+            JsonPatch.Op op = Objects.requireNonNull(patch.getOp(), "patch op");
+            String authoredPath = Objects.requireNonNull(patch.getPath(), "patch path");
+            ParsedJsonPointer parsed = patch.parsedPath();
+            if (op == JsonPatch.Op.REMOVE) {
+                return new ImmutableJsonPatch(op, authoredPath, parsed, null, null, null, metrics);
+            }
+
+            FrozenNode authored = Objects.requireNonNull(patch.getValue(), "patch value");
+            metrics.incrementFrozenPatchValuesAccepted();
+            FrozenNode canonical = FrozenNode.authoredValueInModeOf(authored, canonicalRoot);
+            FrozenNode resolved;
+            if (sameFreezeMode(canonicalRoot, resolvedRoot)) {
+                resolved = canonical;
+                metrics.incrementFrozenPatchValueHits();
+            } else {
+                resolved = FrozenNode.authoredValueInModeOf(authored, resolvedRoot);
+            }
+            return new ImmutableJsonPatch(op, authoredPath, parsed, null, canonical, resolved, metrics);
         }
 
         int cachedPointerCount() {

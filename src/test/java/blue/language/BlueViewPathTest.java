@@ -50,4 +50,18 @@ class BlueViewPathTest {
         assertThrows(IllegalArgumentException.class, () -> BlueViewPath.split("/bad~2escape"));
         assertThrows(IllegalArgumentException.class, () -> BlueViewPath.split("/bad~"));
     }
+
+    @Test
+    void arrayIndexesRemainCanonicalAsciiDecimals() throws Exception {
+        Node root = YAML_MAPPER.readValue(
+                "array:\n" +
+                "  items:\n" +
+                "    - first", Node.class);
+
+        assertEquals("first", BlueViewPath.select(root, "/array/items/0").getValue());
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueViewPath.select(root, "/array/items/00"));
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueViewPath.select(root, "/array/items/\u0660"));
+    }
 }

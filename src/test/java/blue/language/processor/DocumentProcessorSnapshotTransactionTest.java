@@ -64,6 +64,28 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
+    void workingDocumentMutablePatchAttributionUsesFixedCallerSource() {
+        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        Node document = YAML_MAPPER.readValue("x: 1\nother: keep", Node.class);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, null, metrics);
+
+        try (WorkingDocument externalWorking = runtime.workingDocument("/")) {
+            externalWorking.applyPatch(JsonPatch.replace("/x", new Node().value(2)));
+        }
+        try (WorkingDocument processorWorking =
+                     runtime.workingDocument("/", PatchSource.CUSTOM_PROCESSOR)) {
+            processorWorking.applyPatch(JsonPatch.replace("/x", new Node().value(3)));
+        }
+
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        assertEquals(2L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
+        assertEquals(1L, snapshot.counter(
+                "mutablePatchValuesFrozenBySource.LEGACY_PUBLIC_API"), snapshot.toString());
+        assertEquals(1L, snapshot.counter(
+                "mutablePatchValuesFrozenBySource.CUSTOM_PROCESSOR"), snapshot.toString());
+    }
+
+    @Test
     void precomputedWorkingDocumentPreviewCommitsWithoutReplanning() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = YAML_MAPPER.readValue("x: 1\nother: keep", Node.class);

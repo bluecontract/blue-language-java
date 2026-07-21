@@ -149,7 +149,7 @@ class FrozenNodeStructuralInternerTest {
     }
 
     @Test
-    void directResolvedStructureComparisonPreservesPropertyOrder() {
+    void directResolvedStructureComparisonIgnoresNonSemanticPropertyOrder() {
         Map<String, Node> firstOrder = new LinkedHashMap<>();
         firstOrder.put("a", new Node().value(1));
         firstOrder.put("b", new Node().value(2));
@@ -160,8 +160,23 @@ class FrozenNodeStructuralInternerTest {
         FrozenNode second = FrozenNode.fromResolvedNode(new Node().properties(secondOrder));
 
         assertEquals(first.blueId(), second.blueId());
-        assertFalse(first.sameResolvedStructure(second));
-        assertLegacyNormalizationParity(first, second);
+        assertFalse(first.resolvedStructuralKey().equals(second.resolvedStructuralKey()),
+                "interner keys retain exact representation order");
+        assertTrue(first.sameResolvedStructure(second));
+        assertTrue(second.sameResolvedStructure(first));
+    }
+
+    @Test
+    void directResolvedStructureComparisonIgnoresInlineConstructionMode() {
+        FrozenNode inline = FrozenNode.fromResolvedNode(
+                new Node().value("same").inlineValue(true));
+        FrozenNode wrapped = FrozenNode.fromResolvedNode(
+                new Node().value("same").inlineValue(false));
+
+        assertFalse(inline.resolvedStructuralKey().equals(wrapped.resolvedStructuralKey()),
+                "interner keys retain exact construction representation");
+        assertTrue(inline.sameResolvedStructure(wrapped));
+        assertTrue(wrapped.sameResolvedStructure(inline));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -196,8 +211,7 @@ class FrozenNodeStructuralInternerTest {
                 Arguments.of("mergePolicy", (UnaryOperator<Node>) node -> node.mergePolicy("replace")),
                 Arguments.of("previousBlueId", (UnaryOperator<Node>) node -> node.previousBlueId("previous-id")),
                 Arguments.of("position", (UnaryOperator<Node>) node -> node.position(3)),
-                Arguments.of("blue", (UnaryOperator<Node>) node -> node.blue(new Node().value("directive"))),
-                Arguments.of("inlineValue", (UnaryOperator<Node>) node -> node.inlineValue(true))
+                Arguments.of("blue", (UnaryOperator<Node>) node -> node.blue(new Node().value("directive")))
         );
     }
 

@@ -12,7 +12,6 @@ import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -37,6 +36,8 @@ final class PatchPlanningEngine {
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics;
     private final ImmutableJsonPatch.PreparationContext patchPreparation;
+    private final ProcessingMetricsSink metrics;
+    private final PatchImpactAnalyzer impactAnalyzer;
 
     PatchPlanningEngine(String originScopePath,
                         DocumentProcessingRuntime.PlanningContext planning,
@@ -89,7 +90,12 @@ final class PatchPlanningEngine {
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.materializationMetrics = materializationMetrics;
-        this.patchPreparation = ImmutableJsonPatch.preparationContext(metrics);
+        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.patchPreparation = ImmutableJsonPatch.preparationContext(this.metrics);
+        this.impactAnalyzer = new PatchImpactAnalyzer(conformanceEngine,
+                conformancePlannerOverride,
+                authoritativeSnapshotManager,
+                this.metrics);
     }
 
     BatchPatchResult planAtomic(List<JsonPatch> patches, boolean buildUpdates) {
@@ -97,6 +103,16 @@ final class PatchPlanningEngine {
             throw new IllegalStateException("Atomic planning roots were not retained");
         }
         List<ImmutableJsonPatch> prepared = preparePatches(patches,
+                initialCanonicalRoot,
+                initialResolvedRoot);
+        return plan(prepared, initialCanonicalRoot, initialResolvedRoot, buildUpdates);
+    }
+
+    BatchPatchResult planAtomicInputs(List<PatchInput> patches, boolean buildUpdates) {
+        if (initialCanonicalRoot == null || initialResolvedRoot == null) {
+            throw new IllegalStateException("Atomic planning roots were not retained");
+        }
+        List<ImmutableJsonPatch> prepared = preparePatchInputs(patches,
                 initialCanonicalRoot,
                 initialResolvedRoot);
         return plan(prepared, initialCanonicalRoot, initialResolvedRoot, buildUpdates);
@@ -115,6 +131,14 @@ final class PatchPlanningEngine {
                                     FrozenNode canonicalRoot,
                                     FrozenNode resolvedRoot) {
         return patchPreparation.prepare(Objects.requireNonNull(patch, "patch"),
+                Objects.requireNonNull(canonicalRoot, "canonicalRoot"),
+                Objects.requireNonNull(resolvedRoot, "resolvedRoot"));
+    }
+
+    ImmutableJsonPatch preparePatch(PatchInput patch,
+                                    FrozenNode canonicalRoot,
+                                    FrozenNode resolvedRoot) {
+        return Objects.requireNonNull(patch, "patch").prepare(patchPreparation,
                 Objects.requireNonNull(canonicalRoot, "canonicalRoot"),
                 Objects.requireNonNull(resolvedRoot, "resolvedRoot"));
     }
@@ -139,6 +163,17 @@ final class PatchPlanningEngine {
         return Collections.unmodifiableList(prepared);
     }
 
+    List<ImmutableJsonPatch> preparePatchInputs(List<PatchInput> patches,
+                                                FrozenNode canonicalRoot,
+                                                FrozenNode resolvedRoot) {
+        Objects.requireNonNull(patches, "patches");
+        List<ImmutableJsonPatch> prepared = new ArrayList<>(patches.size());
+        for (PatchInput patch : patches) {
+            prepared.add(preparePatch(patch, canonicalRoot, resolvedRoot));
+        }
+        return Collections.unmodifiableList(prepared);
+    }
+
     private BatchPatchResult plan(List<ImmutableJsonPatch> patches,
                                   FrozenNode initialCanonical,
                                   FrozenNode initialResolved,
@@ -147,7 +182,7 @@ final class PatchPlanningEngine {
         long planningStart = System.nanoTime();
         FrozenNode workingCanonical = initialCanonical;
         FrozenNode workingResolved = initialResolved;
-        boolean authoritativeResolutionRequired = false;
+        PatchImpact.FallbackReason authoritativeFallbackReason = null;
         List<BatchPatchRecord> records = new ArrayList<>();
         List<ImmutableJsonPatch> preparedPatches = new ArrayList<>(patches.size());
         for (ImmutableJsonPatch prepared : patches) {
@@ -157,18 +192,31 @@ final class PatchPlanningEngine {
             ImmutablePatchPlanner.PatchPlan canonicalPlan = exactReplacement
                     ? canonicalPlanner.planWithExactReplacement(originScopePath, prepared)
                     : canonicalPlanner.plan(originScopePath, prepared);
+            ImmutableJsonPatch resolvedPatch = resolveProcessorManagedValue(
+                    prepared, canonicalPlan);
             ImmutablePatchPlanner resolvedPlanner = ImmutablePatchPlanner.forFrozen(workingResolved);
             ImmutablePatchPlanner.PatchPlan resolvedPlan = exactReplacement
-                    ? resolvedPlanner.planWithExactReplacement(originScopePath, prepared)
-                    : resolvedPlanner.plan(originScopePath, prepared);
-            if (exactReplacement
-                    && requiresAuthoritativeResolution(
-                    workingCanonical, workingResolved, canonicalPlan, resolvedPlan, prepared)) {
-                authoritativeResolutionRequired = true;
-            }
-            BatchPatchRecord record = new BatchPatchRecord(prepared,
+                    ? resolvedPlanner.planWithExactReplacement(originScopePath, resolvedPatch)
+                    : resolvedPlanner.plan(originScopePath, resolvedPatch);
+            PatchImpact impact = impactAnalyzer.analyze(exactReplacement,
+                    workingCanonical,
+                    workingResolved,
                     canonicalPlan,
                     resolvedPlan,
+                    resolvedPatch);
+            if (impact.resolvedScalarMetadataPreservationRequired()) {
+                resolvedPlan = resolvedPlanner.planWithPreservedResolvedScalarMetadata(
+                        originScopePath, prepared);
+            }
+            if (exactReplacement
+                    && !impact.localResolutionProvenSafe()
+                    && authoritativeFallbackReason == null) {
+                authoritativeFallbackReason = impact.fallbackReason();
+            }
+            BatchPatchRecord record = new BatchPatchRecord(resolvedPatch,
+                    canonicalPlan,
+                    resolvedPlan,
+                    impact,
                     isProcessorManagedConformanceBypass(canonicalPlan));
             records.add(record);
             workingCanonical = canonicalPlan.root();
@@ -184,15 +232,34 @@ final class PatchPlanningEngine {
                 ? conformancePlan.canonicalRoot()
                 : workingCanonical;
         FrozenNode finalResolved = conformancePlan.root();
-        if (exactReplacement
-                && (authoritativeResolutionRequired || !conformancePlan.fullSnapshotRebuildAvoidable())) {
+        boolean fullSnapshotResolution = exactReplacement
+                && (authoritativeFallbackReason != null || !conformancePlan.fullSnapshotRebuildAvoidable());
+        if (fullSnapshotResolution) {
             if (authoritativeSnapshotManager == null) {
                 throw new IllegalStateException("Authoritative snapshot resolution is unavailable");
             }
+            PatchImpact.FallbackReason reason = authoritativeFallbackReason != null
+                    ? authoritativeFallbackReason
+                    : PatchImpact.FallbackReason.DEPENDENCY_INDEX_MISSING_OR_STALE;
+            metrics.incrementFullSnapshotFallback(reason.name());
+            metrics.incrementFullCanonicalRootMaterializations();
+            metrics.incrementFullFrozenRootToNodeMaterializations();
             ResolvedSnapshot authoritative =
                     authoritativeSnapshotManager.fromDocumentTransient(finalCanonical.toNode());
+            metrics.incrementFullResolvedRootMaterializations();
             finalCanonical = authoritative.frozenCanonicalRoot();
             finalResolved = authoritative.frozenResolvedRoot();
+        } else if (exactReplacement) {
+            for (BatchPatchRecord record : records) {
+                if (record.impact().localResolutionProvenSafe()) {
+                    metrics.incrementIncrementalSnapshotResolutions();
+                    if (record.impact().kind() == PatchImpact.Kind.PROCESSOR_MANAGED_STATE) {
+                        metrics.incrementProcessorManagedMarkerIncrementalResolutions();
+                    }
+                    metrics.addIncrementalBoundaryPathDepth(record.impact().path().depth());
+                    metrics.addIncrementalBoundaryNodeCount(1L);
+                }
+            }
         }
         boolean includeGeneratedUpdates = conformancePlannerOverride != null && conformancePlannerOverride.applies();
 
@@ -219,96 +286,6 @@ final class PatchPlanningEngine {
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
-    }
-
-    private boolean requiresAuthoritativeResolution(FrozenNode canonicalRoot,
-                                                     FrozenNode resolvedRoot,
-                                                     ImmutablePatchPlanner.PatchPlan canonicalPlan,
-                                                     ImmutablePatchPlanner.PatchPlan resolvedPlan,
-                                                     ImmutableJsonPatch patch) {
-        if (hasResolutionContext(canonicalRoot, canonicalPlan.path())
-                || hasResolutionContext(resolvedRoot, resolvedPlan.path())) {
-            return true;
-        }
-        if (!sameResolvedStructure(canonicalPlan.before(), resolvedPlan.before())) {
-            return true;
-        }
-        return patch.op() != JsonPatch.Op.REMOVE
-                && !isPlainValue(patch.resolvedValue(), new IdentityHashMap<FrozenNode, Boolean>());
-    }
-
-    private boolean hasResolutionContext(FrozenNode root, String path) {
-        List<String> segments = JsonPointer.split(path);
-        ImmutablePatchPlanner planner = ImmutablePatchPlanner.forFrozen(root);
-        int ancestorCount = Math.max(1, segments.size());
-        for (int depth = 0; depth < ancestorCount; depth++) {
-            FrozenNode ancestor = planner.read(JsonPointer.toPointer(segments.subList(0, depth)));
-            if (ancestor != null && hasResolutionMetadata(ancestor)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasResolutionMetadata(FrozenNode node) {
-        return node.getType() != null
-                || node.getItemType() != null
-                || node.getKeyType() != null
-                || node.getValueType() != null
-                || node.getSchema() != null
-                || node.getMergePolicy() != null
-                || node.getReferenceBlueId() != null
-                || node.getPreviousBlueId() != null
-                || node.getPosition() != null
-                || node.getBlue() != null
-                || node.isInlineValue();
-    }
-
-    private boolean sameResolvedStructure(FrozenNode left, FrozenNode right) {
-        if (left == right) {
-            return true;
-        }
-        if (left == null || right == null) {
-            return false;
-        }
-        return left.sameResolvedStructure(right);
-    }
-
-    private boolean isPlainValue(FrozenNode node, IdentityHashMap<FrozenNode, Boolean> visited) {
-        if (node == null || visited.put(node, Boolean.TRUE) != null) {
-            return false;
-        }
-        if (node.getBlue() != null
-                || node.getReferenceBlueId() != null
-                || node.getType() != null
-                || node.getItemType() != null
-                || node.getKeyType() != null
-                || node.getValueType() != null
-                || node.getPreviousBlueId() != null
-                || node.getPosition() != null
-                || node.getName() != null
-                || node.getDescription() != null
-                || node.getSchema() != null
-                || node.getContracts() != null
-                || node.getMergePolicy() != null
-                || node.isInlineValue()) {
-            return false;
-        }
-        if (node.getItems() != null) {
-            for (FrozenNode item : node.getItems()) {
-                if (!isPlainValue(item, visited)) {
-                    return false;
-                }
-            }
-        }
-        if (node.getProperties() != null) {
-            for (FrozenNode property : node.getProperties().values()) {
-                if (!isPlainValue(property, visited)) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     private List<BatchPatchResult.GeneralizationMetadataWrite> generalizationMetadataWrites(
@@ -386,6 +363,9 @@ final class PatchPlanningEngine {
             if (record.processorManagedConformanceBypass()) {
                 continue;
             }
+            if (record.impact().localResolutionProvenSafe()) {
+                continue;
+            }
             if (hasTypedNodeBetweenOriginAndPath(resolvedRoot, record.originScope(), record.path())) {
                 changedPaths.add(record.path());
                 changedPathRecords.add(new ConformanceChangedPath(record.path(), record.originScope()));
@@ -394,6 +374,7 @@ final class PatchPlanningEngine {
         if (changedPaths.isEmpty()) {
             return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
         }
+        metrics.incrementConformancePlans();
         if (hasOverride) {
             ConformancePlan plan = conformancePlannerOverride.plan(canonicalRoot, resolvedRoot, changedPathRecords);
             String originScope = originScopeForGeneratedUpdate(records);
@@ -458,5 +439,19 @@ final class PatchPlanningEngine {
         String relativePath = PointerUtils.relativizePointer(result.originScope(), result.path());
         String initialized = ProcessorPointerConstants.RELATIVE_INITIALIZED;
         return PointerUtils.descendantOrEqual(relativePath, initialized);
+    }
+
+    private ImmutableJsonPatch resolveProcessorManagedValue(
+            ImmutableJsonPatch patch,
+            ImmutablePatchPlanner.PatchPlan canonicalPlan) {
+        if (!exactReplacement
+                || authoritativeSnapshotManager == null
+                || patch.op() == JsonPatch.Op.REMOVE
+                || !isProcessorManagedConformanceBypass(canonicalPlan)) {
+            return patch;
+        }
+        ResolvedSnapshot resolvedValue = authoritativeSnapshotManager.fromDocumentTransient(
+                patch.canonicalValue().toNode());
+        return patch.withResolvedValue(resolvedValue.frozenResolvedRoot());
     }
 }

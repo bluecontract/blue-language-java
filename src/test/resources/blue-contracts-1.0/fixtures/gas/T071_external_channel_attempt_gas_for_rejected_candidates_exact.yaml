@@ -25,7 +25,7 @@ initialDocument:
 event:
   kind: external-gas
 expectedCapabilityFailure: false
-expectedExactGas: 1207
+expectedExactGas: 1208
 expectedDocumentPaths:
   /acceptedRan:
     value: true

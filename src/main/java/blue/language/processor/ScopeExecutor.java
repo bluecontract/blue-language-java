@@ -5,10 +5,10 @@ import blue.language.processor.conformance.ScriptedContractsRuntime;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
-import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
@@ -58,7 +58,6 @@ final class ScopeExecutor {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         Set<String> processedEmbedded = new LinkedHashSet<>();
         ContractBundle bundle = null;
-        Node preInitSnapshot = null;
         ScopeRuntimeContext scopeContext = runtime.scope(normalizedScope);
         if ("/".equals(normalizedScope)) {
             runtime.setScopeEmbeddedDepth(normalizedScope, 0);
@@ -95,17 +94,20 @@ final class ScopeExecutor {
                 return;
             }
 
-            if (preInitSnapshot == null) {
-                FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
-                preInitSnapshot = (canonicalScopeNode != null ? canonicalScopeNode : scopeNode).toNode();
-            }
-
-            long loadStart = System.nanoTime();
             try {
-                bundle = owner.contractLoader().load(
-                        selectedScopeAt(normalizedScope), scopeNode, normalizedScope, metrics);
-            } finally {
-                metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
+                bundle = loadBundle(scopeNode, normalizedScope, metrics);
+            } catch (RuntimeException failure) {
+                ProcessorErrorCategory category = ScopeIdentityErrorMapper.from(failure);
+                if (category != ProcessorErrorCategory.ProviderUnavailable
+                        && category != ProcessorErrorCategory.ProviderBlueIdMismatch) {
+                    throw failure;
+                }
+                execution.enterFatalTermination(normalizedScope,
+                        null,
+                        category,
+                        execution.fatalReason(failure,
+                                "Contract Recognition Resolution failed"));
+                return;
             }
             bundles.put(normalizedScope, bundle);
 
@@ -126,13 +128,10 @@ final class ScopeExecutor {
             processedEmbedded.add(childScope);
             scopeContext.recordProcessedEmbeddedPath(childScope);
             runtime.setScopeEmbeddedDepth(childScope, runtime.scopeEmbeddedDepth(normalizedScope) + 1);
+            FrozenNode selectedChildNode = runtime.selectedFrozenAt(childScope);
             FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
-                if (!isObjectScope(childNode)) {
-                    if (!finalizeAfterInitialization) {
-                        continue;
-                    }
-                    initializeCurrentScopeIfNeeded(normalizedScope, bundle);
+                if (!isObjectScope(selectedChildNode) || !isObjectScope(childNode)) {
                     execution.enterFatalTermination(normalizedScope,
                             bundle,
                             ProcessorErrorCategory.BoundaryViolation,
@@ -157,11 +156,23 @@ final class ScopeExecutor {
         }
 
         runtime.chargeInitialization();
-        String documentId = BlueIdCalculator.calculateUncheckedBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
+        String documentId;
+        try {
+            documentId = runtime.calculatePreInitializationScopeContentBlueId(
+                    normalizedScope, owner.scopeIdentitySnapshotManager());
+        } catch (RuntimeException ex) {
+            execution.enterFatalTermination(normalizedScope,
+                    bundle,
+                    ScopeIdentityErrorMapper.from(ex),
+                    execution.fatalReason(ex, "Scope Content BlueId calculation failed"));
+            return;
+        }
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
         ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
-        addInitializationMarker(context, documentId);
+        if (!execution.shouldStopScopeWork(normalizedScope)) {
+            addInitializationMarker(context, documentId);
+        }
         if (finalizeAfterInitialization && !execution.shouldStopScopeWork(normalizedScope)) {
             ContractBundle refreshed = refreshBundle(normalizedScope);
             finalizeScope(normalizedScope, refreshed);
@@ -289,6 +300,18 @@ final class ScopeExecutor {
                        List<JsonPatch> patches,
                        boolean allowReservedMutation,
                        WorkingDocument.Preview preview) {
+        handlePatchInputs(scopePath,
+                bundle,
+                PatchInput.mutableList(patches),
+                allowReservedMutation,
+                preview);
+    }
+
+    void handlePatchInputs(String scopePath,
+                           ContractBundle bundle,
+                           List<PatchInput> patches,
+                           boolean allowReservedMutation,
+                           WorkingDocument.Preview preview) {
         if (execution.shouldStopScopeWork(scopePath)) {
             return;
         }
@@ -296,9 +319,9 @@ final class ScopeExecutor {
             return;
         }
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
-                     runtime.preparePatchSequence(scopePath, patches, preview)) {
+                     runtime.preparePatchInputSequence(scopePath, patches, preview)) {
             for (int patchIndex = 0; patchIndex < sequence.size(); patchIndex++) {
-                JsonPatch patch = sequence.patchForValidation(patchIndex);
+                PatchInput patch = sequence.patchInputForValidation(patchIndex);
                 if (execution.shouldStopScopeWork(scopePath)) {
                     return;
                 }
@@ -381,11 +404,16 @@ final class ScopeExecutor {
         }
     }
 
-    private void chargePatchGas(JsonPatch patch) {
-        switch (patch.getOp()) {
+    private void chargePatchGas(PatchInput patch) {
+        switch (patch.op()) {
             case ADD:
             case REPLACE:
-                runtime.chargePatchAddOrReplace(patch.getVal());
+                if (patch.isFrozen()) {
+                    runtime.chargeFrozenPatchAddOrReplace(
+                            patch.frozenAuthoredCanonicalSizeBytes());
+                } else {
+                    runtime.chargePatchAddOrReplace(patch.mutableValue());
+                }
                 break;
             case REMOVE:
                 runtime.chargePatchRemove();
@@ -506,14 +534,10 @@ final class ScopeExecutor {
                 bundle = refreshBundle(normalizedScope);
                 continue;
             }
+            FrozenNode selectedChildNode = runtime.selectedFrozenAt(childScope);
             FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
-                if (!isObjectScope(childNode)) {
-                    if ("initialize".equals(eventKind(event))) {
-                        bundle = refreshBundle(normalizedScope);
-                        continue;
-                    }
-                    initializeCurrentScopeIfNeeded(normalizedScope, bundle);
+                if (!isObjectScope(selectedChildNode) || !isObjectScope(childNode)) {
                     execution.enterFatalTermination(normalizedScope,
                             bundle,
                             ProcessorErrorCategory.BoundaryViolation,
@@ -559,8 +583,11 @@ final class ScopeExecutor {
     private ContractBundle loadBundle(FrozenNode scopeNode, String normalizedScope, ProcessingMetricsSink metrics) {
         long loadStart = System.nanoTime();
         try {
+            FrozenNode selectedScope = selectedScopeAt(normalizedScope);
+            FrozenNode recognitionScope = runtime.contractRecognitionScope(
+                    selectedScope, scopeNode);
             return owner.contractLoader().load(
-                    selectedScopeAt(normalizedScope), scopeNode, normalizedScope, metrics);
+                    selectedScope, recognitionScope, normalizedScope, metrics);
         } finally {
             metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
         }
@@ -595,43 +622,15 @@ final class ScopeExecutor {
         return node != null
                 && node.getValue() == null
                 && !node.hasItems()
-                && !node.isReferenceOnly()
+                && node.getReferenceBlueId() == null
                 && node.getPreviousBlueId() == null;
     }
 
-    private String eventKind(Node event) {
-        if (event == null || event.getProperties() == null) {
-            return null;
-        }
-        Node kind = event.getProperties().get("kind");
-        Object value = kind != null ? kind.getValue() : null;
-        return value != null ? String.valueOf(value) : null;
-    }
-
     private void addInitializationMarker(ProcessorExecutionContext context, String documentId) {
-        Node marker = new Node()
-                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
-                .properties("documentId", new Node().value(documentId));
+        FrozenNode marker = ProcessorMarkerFactory.initialized(documentId);
         String pointer = context.resolvePointer(ProcessorPointerConstants.RELATIVE_INITIALIZED);
-        context.applyPatch(JsonPatch.add(pointer, marker));
+        context.applyFrozenPatch(FrozenJsonPatch.add(pointer, marker));
         context.applyBufferedEffects();
-    }
-
-    private void initializeCurrentScopeIfNeeded(String scopePath, ContractBundle bundle) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        if (runtime.hasInitializationMarker(normalizedScope) || execution.shouldStopScopeWork(normalizedScope)) {
-            return;
-        }
-        FrozenNode canonicalScopeNode = runtime.canonicalFrozenAt(normalizedScope);
-        String documentId = BlueIdCalculator.calculateUncheckedBlueId(
-                canonicalScopeNode != null ? canonicalScopeNode.toNode() : new Node());
-        runtime.chargeInitialization();
-        Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
-        ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
-        deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
-        if (!execution.shouldStopScopeWork(normalizedScope)) {
-            addInitializationMarker(context, documentId);
-        }
     }
 
     private void finalizeScope(String scopePath, ContractBundle bundle) {
@@ -734,12 +733,12 @@ final class ScopeExecutor {
         }
     }
 
-    private void validatePatchBoundary(String scopePath, ContractBundle bundle, JsonPatch patch) {
+    private void validatePatchBoundary(String scopePath, ContractBundle bundle, PatchInput patch) {
         if (bundle == null) {
             return;
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = PointerUtils.assertValidRuntimePointer(patch.getPath());
+        String targetPath = PointerUtils.assertValidRuntimePointer(patch.authoredPath());
 
         if ("/".equals(targetPath)) {
             throw new ProcessorEngine.BoundaryViolationException("Patch path '/' is forbidden");
@@ -766,13 +765,13 @@ final class ScopeExecutor {
     }
 
     private void enforceReservedKeyWriteProtection(String scopePath,
-                                                   JsonPatch patch,
+                                                   PatchInput patch,
                                                    boolean allowReservedMutation) {
         if (allowReservedMutation) {
             return;
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = PointerUtils.assertValidRuntimePointer(patch.getPath());
+        String targetPath = PointerUtils.assertValidRuntimePointer(patch.authoredPath());
         String contractsPointer = ProcessorEngine.resolvePointer(normalizedScope, ProcessorPointerConstants.RELATIVE_CONTRACTS);
         if (targetPath.equals(contractsPointer)) {
             enforceContractsMapReservedSubtreePreservation(normalizedScope, patch);
@@ -794,8 +793,8 @@ final class ScopeExecutor {
         }
     }
 
-    private void enforceContractsMapReservedSubtreePreservation(String scopePath, JsonPatch patch) {
-        if (patch.getOp() == JsonPatch.Op.REMOVE) {
+    private void enforceContractsMapReservedSubtreePreservation(String scopePath, PatchInput patch) {
+        if (patch.op() == JsonPatch.Op.REMOVE) {
             for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
                 String reservedPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.relativeContractsEntry(key));
                 if (runtime.canonicalNodeAt(reservedPointer) != null) {
@@ -805,21 +804,46 @@ final class ScopeExecutor {
             }
             return;
         }
-        Node replacement = patch.getVal();
+        Node replacement = patch.mutableValue();
+        FrozenNode frozenReplacement = patch.frozenValue();
         for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
             String reservedPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.relativeContractsEntry(key));
-            Node existing = runtime.canonicalNodeAt(reservedPointer);
-            if (existing == null) {
-                continue;
+            boolean equal;
+            if (patch.isFrozen()) {
+                FrozenNode existing = runtime.canonicalFrozenAt(reservedPointer);
+                if (existing == null) {
+                    continue;
+                }
+                FrozenNode proposed = frozenReplacement != null
+                        ? frozenReplacement.property(key)
+                        : null;
+                equal = semanticallyEqual(existing, proposed);
+            } else {
+                Node existing = runtime.canonicalNodeAt(reservedPointer);
+                if (existing == null) {
+                    continue;
+                }
+                Node proposed = replacement != null && replacement.getProperties() != null
+                        ? replacement.getProperties().get(key)
+                        : null;
+                equal = semanticallyEqual(existing, proposed);
             }
-            Node proposed = replacement != null && replacement.getProperties() != null
-                    ? replacement.getProperties().get(key)
-                    : null;
-            if (!semanticallyEqual(existing, proposed)) {
+            if (!equal) {
                 throw new ProcessorFailureException(ProcessorErrorCategory.ReservedKeyWrite,
                         "Replacing /contracts must preserve reserved key '" + key + "'");
             }
         }
+    }
+
+    private boolean semanticallyEqual(FrozenNode left, FrozenNode right) {
+        if (left == null || right == null) {
+            return left == right;
+        }
+        // Reserved runtime subtrees can arrive through different construction
+        // modes; compare their authored form so preservation checks remain
+        // representation-insensitive.
+        return BlueIdCalculator.calculateUncheckedBlueId(left.toNode())
+                .equals(BlueIdCalculator.calculateUncheckedBlueId(right.toNode()));
     }
 
     private boolean semanticallyEqual(Node left, Node right) {

@@ -3,9 +3,11 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,6 +76,23 @@ class ImmutableJsonPatchTest {
         }
 
         assertEquals(256, context.cachedPointerCount());
+    }
+
+    @Test
+    void semanticIdentityDoesNotAliasDistinctAuthoredRepresentations() {
+        Node materialized = new Node().properties("payload", new Node().value("value"));
+        String blueId = BlueIdCalculator.calculateBlueId(materialized);
+        FrozenNode canonicalRoot = FrozenNode.fromNode(new Node());
+        FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(new Node());
+
+        ImmutableJsonPatch materializedPatch = ImmutableJsonPatch.from(
+                JsonPatch.add("/slot", materialized), canonicalRoot, resolvedRoot);
+        ImmutableJsonPatch referencePatch = ImmutableJsonPatch.from(
+                JsonPatch.add("/slot", new Node().blueId(blueId)), canonicalRoot, resolvedRoot);
+
+        assertEquals(materializedPatch.valueBlueId(), referencePatch.valueBlueId());
+        assertFalse(materializedPatch.matches(referencePatch));
+        assertFalse(referencePatch.matches(materializedPatch));
     }
 
     private static final class RecordingMetrics implements ProcessingMetricsSink {

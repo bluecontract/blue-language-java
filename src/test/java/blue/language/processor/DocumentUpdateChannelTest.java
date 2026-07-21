@@ -194,7 +194,8 @@ class DocumentUpdateChannelTest {
         Node processed = result.document();
 
         Node rootA = processed.getProperties().get("a");
-        assertNotNull(rootA);
+        assertNotNull(rootA, result.status() + ": " + result.failureReason()
+                + "\n" + blue.nodeToYaml(processed));
         assertEquals(new BigInteger("1"), rootA.getValue());
 
         Node x = processed.getProperties().get("x");

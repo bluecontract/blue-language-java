@@ -8,14 +8,72 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
+import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
 public class TypeClassResolver {
 
     private final Map<String, Class<?>> blueIdMap = new HashMap<>();
+    private final Map<String, Class<?>> blueIdView = Collections.unmodifiableMap(
+            new AbstractMap<String, Class<?>>() {
+                private final Set<Entry<String, Class<?>>> entries =
+                        new AbstractSet<Entry<String, Class<?>>>() {
+                            @Override
+                            public Iterator<Entry<String, Class<?>>> iterator() {
+                                synchronized (TypeClassResolver.this) {
+                                    return Collections.unmodifiableMap(
+                                            new HashMap<>(blueIdMap))
+                                            .entrySet()
+                                            .iterator();
+                                }
+                            }
+
+                            @Override
+                            public int size() {
+                                synchronized (TypeClassResolver.this) {
+                                    return blueIdMap.size();
+                                }
+                            }
+
+                            @Override
+                            public boolean contains(Object entry) {
+                                synchronized (TypeClassResolver.this) {
+                                    return blueIdMap.entrySet().contains(entry);
+                                }
+                            }
+                        };
+
+                @Override
+                public Class<?> get(Object key) {
+                    synchronized (TypeClassResolver.this) {
+                        return blueIdMap.get(key);
+                    }
+                }
+
+                @Override
+                public boolean containsKey(Object key) {
+                    synchronized (TypeClassResolver.this) {
+                        return blueIdMap.containsKey(key);
+                    }
+                }
+
+                @Override
+                public int size() {
+                    synchronized (TypeClassResolver.this) {
+                        return blueIdMap.size();
+                    }
+                }
+
+                @Override
+                public Set<Entry<String, Class<?>>> entrySet() {
+                    return entries;
+                }
+            });
 
     public TypeClassResolver() {
     }
@@ -26,7 +84,7 @@ public class TypeClassResolver {
         }
     }
 
-    public TypeClassResolver scanPackage(String packageName) {
+    public synchronized TypeClassResolver scanPackage(String packageName) {
         Reflections reflections = new Reflections(new ConfigurationBuilder()
                 .setUrls(ClasspathHelper.forPackage(packageName))
                 .filterInputsBy(new FilterBuilder().includePackage(packageName))
@@ -40,7 +98,7 @@ public class TypeClassResolver {
         return this;
     }
 
-    public TypeClassResolver registerAnnotatedClass(Class<?> clazz) {
+    public synchronized TypeClassResolver registerAnnotatedClass(Class<?> clazz) {
         TypeBlueId annotation = clazz.getAnnotation(TypeBlueId.class);
         if (annotation == null) {
             throw new IllegalArgumentException("Class lacks @TypeBlueId: " + clazz.getName());
@@ -65,7 +123,7 @@ public class TypeClassResolver {
         return this;
     }
 
-    public TypeClassResolver register(String blueId, Class<?> clazz) {
+    public synchronized TypeClassResolver register(String blueId, Class<?> clazz) {
         if (blueId == null || blueId.isEmpty()) {
             throw new IllegalArgumentException("blueId must not be empty");
         }
@@ -80,7 +138,7 @@ public class TypeClassResolver {
         return this;
     }
 
-    public Class<?> resolveClass(Node node) {
+    public synchronized Class<?> resolveClass(Node node) {
         String blueId = getEffectiveBlueId(node);
         if (blueId == null) {
             return null;
@@ -89,7 +147,7 @@ public class TypeClassResolver {
         return resolveClass(blueId);
     }
 
-    public Class<?> resolveClass(String blueId) {
+    public synchronized Class<?> resolveClass(String blueId) {
         return blueIdMap.get(blueId);
     }
 
@@ -102,7 +160,8 @@ public class TypeClassResolver {
         return null;
     }
 
-    public Map<String, Class<?>> getBlueIdMap() {
-        return Collections.unmodifiableMap(blueIdMap);
+    public synchronized Map<String, Class<?>> getBlueIdMap() {
+        return blueIdView;
     }
+
 }

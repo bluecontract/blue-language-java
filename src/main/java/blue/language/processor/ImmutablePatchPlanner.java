@@ -64,10 +64,55 @@ final class ImmutablePatchPlanner {
         return plan(originScopePath, patch, true);
     }
 
+    /**
+     * Replaces a proven scalar value while retaining its already-resolved basic
+     * type metadata. Only the scalar leaf is materialized; the surrounding
+     * frozen tree is spliced with structural sharing.
+     */
+    PatchPlan planWithPreservedResolvedScalarMetadata(String originScopePath,
+                                                      ImmutableJsonPatch patch) {
+        Objects.requireNonNull(originScopePath, "originScopePath");
+        Objects.requireNonNull(patch, "patch");
+        if (patch.op() != JsonPatch.Op.REPLACE || patch.path().isRoot()) {
+            throw new IllegalArgumentException(
+                    "Resolved scalar metadata preservation requires a non-root replace patch");
+        }
+        FrozenNode existing = read(patch.path());
+        FrozenNode replacement = patch.valueFor(root);
+        if (!PatchImpact.isValueOnlyScalar(existing)
+                || !PatchImpact.isValueOnlyScalar(replacement)) {
+            throw new IllegalArgumentException(
+                    "Resolved scalar metadata preservation requires basic scalar leaves");
+        }
+
+        Node preservedNode = existing.toNode().value(replacement.getValue());
+        FrozenNode preserved = root.isStrictCanonical()
+                ? root.isStrictBlueIdValidation()
+                ? FrozenNode.fromNode(preservedNode)
+                : FrozenNode.fromUncheckedCanonicalNode(preservedNode)
+                : FrozenNode.fromResolvedNode(preservedNode);
+        String normalizedScope = PointerUtils.normalizeScope(originScopePath);
+        CanonicalPatchResult replaced = new CanonicalOverlayPatchEngine(root)
+                .apply(JsonPatch.Op.REPLACE, patch.path(), preserved);
+        return new PatchPlan(replaced.root(),
+                replaced.before(),
+                replaced.after(),
+                patch.op(),
+                patch.normalizedPath(),
+                normalizedScope,
+                computeCascadeScopes(normalizedScope));
+    }
+
     private PatchPlan plan(String originScopePath, JsonPatch patch, boolean exactReplacement) {
         Objects.requireNonNull(originScopePath, "originScopePath");
         Objects.requireNonNull(patch, "patch");
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
+        String path = PointerUtils.canonicalizePointer(patch.getPath());
+        if ((patch.getOp() == JsonPatch.Op.ADD || patch.getOp() == JsonPatch.Op.REPLACE)
+                && JsonPointer.split(path).isEmpty()) {
+            return rootReplacement(normalizedScope,
+                    patch.getOp(), path, freezeValueForRoot(patch.getVal()));
+        }
         if (exactReplacement
                 && (patch.getOp() == JsonPatch.Op.ADD || patch.getOp() == JsonPatch.Op.REPLACE)) {
             return planExactValueWrite(normalizedScope, patch);
@@ -88,6 +133,11 @@ final class ImmutablePatchPlanner {
         Objects.requireNonNull(originScopePath, "originScopePath");
         Objects.requireNonNull(patch, "patch");
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
+        if ((patch.op() == JsonPatch.Op.ADD || patch.op() == JsonPatch.Op.REPLACE)
+                && patch.path().isRoot()) {
+            return rootReplacement(normalizedScope,
+                    patch.op(), patch.normalizedPath(), patch.valueFor(root));
+        }
         if (exactReplacement
                 && (patch.op() == JsonPatch.Op.ADD || patch.op() == JsonPatch.Op.REPLACE)) {
             return planExactValueWrite(normalizedScope, patch);
@@ -172,6 +222,28 @@ final class ImmutablePatchPlanner {
                 removed.before(),
                 added.after(),
                 patch.op(),
+                path,
+                normalizedScope,
+                computeCascadeScopes(normalizedScope));
+    }
+
+    private FrozenNode freezeValueForRoot(Node value) {
+        if (!root.isStrictCanonical()) {
+            return FrozenNode.fromResolvedNode(value);
+        }
+        return root.isStrictBlueIdValidation()
+                ? FrozenNode.fromNode(value)
+                : FrozenNode.fromUncheckedCanonicalNode(value);
+    }
+
+    private PatchPlan rootReplacement(String normalizedScope,
+                                      JsonPatch.Op op,
+                                      String path,
+                                      FrozenNode replacement) {
+        return new PatchPlan(Objects.requireNonNull(replacement, "replacement"),
+                root,
+                replacement,
+                op,
                 path,
                 normalizedScope,
                 computeCascadeScopes(normalizedScope));
