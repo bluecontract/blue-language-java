@@ -4,10 +4,19 @@ on:
   push:
     branches:
       - master
+      - next
+      - 'codex/*'
       - 'feature/*'
       - 'fix/*'
-      - 'hotix/*'
+      - 'hotfix/*'
       - 'release/*'
+  pull_request:
+    branches:
+      - master
+      - next
+
+permissions:
+  contents: read
 
 jobs:
   Build:
@@ -31,6 +40,14 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test release tooling
+        run: node --test .github/scripts/*.test.js
 
       - name: Execute Gradle build
         run: ./gradlew clean build
