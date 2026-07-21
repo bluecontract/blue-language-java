@@ -104,6 +104,19 @@ public final class FrozenNode {
         return fromNode(node, false, interner, false);
     }
 
+    /**
+     * Freezes a resolved graph using the legacy BlueId-keyed interning contract.
+     *
+     * <p>New code should prefer {@link ResolvedReferenceCache#freezeResolved(Node)},
+     * which interns by exact resolved structure and keeps provider verification
+     * separate from graph sharing. This overload remains for binary compatibility
+     * with clients compiled against the 3.0 API.</p>
+     */
+    @Deprecated
+    public static FrozenNode fromResolvedNode(Node node, ResolvedReferenceInterner interner) {
+        return fromLegacyResolvedNode(node, interner, false);
+    }
+
     public static FrozenNode fromUncheckedCanonicalNode(Node node) {
         return fromNode(node, true, null, false);
     }
@@ -234,6 +247,83 @@ public final class FrozenNode {
             return interner.intern(frozen.resolvedStructuralKey(), frozen);
         }
         return frozen;
+    }
+
+    private static FrozenNode fromLegacyResolvedNode(Node node,
+                                                     ResolvedReferenceInterner interner,
+                                                     boolean previousAnchorContext) {
+        Objects.requireNonNull(node, "node");
+        if (interner != null && node.getBlueId() != null) {
+            FrozenNode cached = interner.lookup(node.getBlueId());
+            if (cached != null) {
+                return cached;
+            }
+        }
+        FrozenNode frozen = builder()
+                .name(node.getName())
+                .description(node.getDescription())
+                .type(node.getType() != null
+                        ? fromLegacyResolvedNode(node.getType(), interner, false)
+                        : null)
+                .itemType(node.getItemType() != null
+                        ? fromLegacyResolvedNode(node.getItemType(), interner, false)
+                        : null)
+                .keyType(node.getKeyType() != null
+                        ? fromLegacyResolvedNode(node.getKeyType(), interner, false)
+                        : null)
+                .valueType(node.getValueType() != null
+                        ? fromLegacyResolvedNode(node.getValueType(), interner, false)
+                        : null)
+                .value(node.getValue())
+                .items(freezeLegacyResolvedItems(node.getItems(), interner))
+                .properties(freezeLegacyResolvedProperties(node.getProperties(), interner))
+                .contracts(node.getContracts() != null
+                        ? fromLegacyResolvedNode(node.getContracts(), interner, false)
+                        : null)
+                .referenceBlueId(node.getBlueId())
+                .schema(node.getSchema())
+                .mergePolicy(node.getMergePolicy())
+                .previousBlueId(node.getPreviousBlueId())
+                .position(node.getPosition())
+                .blue(node.getBlue() != null
+                        ? fromLegacyResolvedNode(node.getBlue(), interner, false)
+                        : null)
+                .inlineValue(node.isInlineValue())
+                .strictCanonical(false)
+                .strictBlueIdValidation(false)
+                .previousAnchorContext(previousAnchorContext)
+                .build();
+        if (interner != null && node.getBlueId() != null && !node.isReferenceOnly()) {
+            return interner.intern(node.getBlueId(), frozen);
+        }
+        return frozen;
+    }
+
+    private static List<FrozenNode> freezeLegacyResolvedItems(
+            List<Node> source,
+            ResolvedReferenceInterner interner) {
+        if (source == null) {
+            return null;
+        }
+        List<FrozenNode> result = new ArrayList<>(source.size());
+        for (Node item : source) {
+            result.add(fromLegacyResolvedNode(item, interner, true));
+        }
+        return result;
+    }
+
+    private static Map<String, FrozenNode> freezeLegacyResolvedProperties(
+            Map<String, Node> source,
+            ResolvedReferenceInterner interner) {
+        if (source == null || source.isEmpty()) {
+            return null;
+        }
+        Map<String, FrozenNode> result = new LinkedHashMap<>();
+        for (Map.Entry<String, Node> entry : source.entrySet()) {
+            result.put(entry.getKey(),
+                    fromLegacyResolvedNode(entry.getValue(), interner, false));
+        }
+        return result;
     }
 
     public ResolvedStructuralKey resolvedStructuralKey() {
@@ -1846,8 +1936,32 @@ public final class FrozenNode {
         }
     }
 
-    public interface ResolvedStructuralInterner {
+    /**
+     * Legacy BlueId-keyed resolved-reference interner.
+     *
+     * @deprecated BlueId-keyed graph interning cannot establish that a
+     * materialized resolved view is the verified standalone content for that
+     * BlueId. Use {@link ResolvedReferenceCache} and structural interning.
+     */
+    @Deprecated
+    public interface ResolvedReferenceInterner {
+        FrozenNode lookup(String blueId);
+
+        FrozenNode intern(String blueId, FrozenNode node);
+    }
+
+    public interface ResolvedStructuralInterner extends ResolvedReferenceInterner {
         FrozenNode intern(ResolvedStructuralKey structuralKey, FrozenNode node);
+
+        @Override
+        default FrozenNode lookup(String blueId) {
+            return null;
+        }
+
+        @Override
+        default FrozenNode intern(String blueId, FrozenNode node) {
+            return node;
+        }
     }
 
     /**

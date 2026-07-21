@@ -1,10 +1,14 @@
 package blue.language.merge;
 
 import blue.language.Blue;
+import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Modifier;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,6 +58,20 @@ public class MergerIntegrationTest {
 
         assertEquals(blue.nodeToJson(resolvedNode), blue.nodeToJson(resolvedNode2));
     }
-}
 
+    @Test
+    public void remainsExtensibleForBinaryCompatibility() {
+        assertFalse(Modifier.isFinal(Merger.class.getModifiers()));
+
+        Merger merger = new CompatibleMerger();
+        assertNotNull(merger);
+    }
+
+    private static final class CompatibleMerger extends Merger {
+
+        private CompatibleMerger() {
+            super(new SequentialMergingProcessor(Collections.emptyList()), blueId -> Collections.emptyList());
+        }
+    }
+}
 

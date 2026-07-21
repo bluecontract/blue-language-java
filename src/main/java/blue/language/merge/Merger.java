@@ -40,11 +40,11 @@ import static blue.language.utils.Properties.CORE_TYPES;
 /**
  * Concrete Blue Language merge engine.
  *
- * <p>This class is sealed because it issues verified reference-resolution
- * evidence. Custom merge behavior must use {@link MergingProcessor}, which is
- * the supported extension point.</p>
+ * <p>Custom merge behavior should use {@link MergingProcessor}, which is the
+ * supported extension point. The class remains extensible for compatibility
+ * with existing clients.</p>
  */
-public final class Merger implements NodeResolver {
+public class Merger implements NodeResolver {
 
     private final MergingProcessor mergingProcessor;
     private final NodeProvider nodeProvider;

@@ -75,9 +75,15 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void verifiedEvidenceProducerIsSealed() {
-        assertTrue(Modifier.isFinal(Merger.class.getModifiers()),
-                "Merger must be final because it issues verified resolution evidence");
+    void verifiedEvidenceValueRemainsOpaqueWhenMergerIsExtensible()
+            throws NoSuchMethodException {
+        assertFalse(Modifier.isFinal(Merger.class.getModifiers()),
+                "Merger remains extensible for the published 3.0 API");
+        assertTrue(Modifier.isFinal(VerifiedReferenceResolution.class.getModifiers()));
+        assertTrue(Modifier.isPrivate(VerifiedReferenceResolution.class
+                        .getDeclaredConstructor(String.class, FrozenNode.class, FrozenNode.class)
+                        .getModifiers()),
+                "subclasses must not be able to fabricate verification evidence");
     }
 
     @Test
