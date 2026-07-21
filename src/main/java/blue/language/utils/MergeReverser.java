@@ -30,6 +30,25 @@ public class MergeReverser {
     }
 
     /**
+     * Reconstructs the historical resolved-only canonical overlay.
+     *
+     * <p>A completed resolved node does not retain all Source provenance. New
+     * Content BlueId code must use {@link #reverseToCanonicalOverlay(Node, Node)}
+     * with the corresponding preprocessed Source-equivalent node.</p>
+     *
+     * @param mergedNode completed resolved view
+     * @return canonical overlay using the legacy resolved-only behavior
+     * @deprecated Use {@link #reverseToCanonicalOverlay(Node, Node)} whenever
+     * source provenance is available.
+     */
+    @Deprecated
+    public Node reverseToCanonicalOverlay(Node mergedNode) {
+        Node minimalNode = new Node();
+        reverseNode(minimalNode, mergedNode, mergedNode.getType(), true, null);
+        return minimalNode;
+    }
+
+    /**
      * Reconstructs a canonical overlay while retaining pure-reference provenance
      * from the preprocessed source document.
      *

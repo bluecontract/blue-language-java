@@ -405,6 +405,32 @@ public class MergeReverserTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
+    public void resolvedOnlyCanonicalOverlayCompatibilityOverloadRemainsAvailable() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Base\n" +
+                "list:\n" +
+                "  type: List\n" +
+                "  items:\n" +
+                "    - A\n" +
+                "    - B");
+        Blue blue = new Blue(nodeProvider);
+        Node resolved = blue.resolve(nodeProvider.getNodeByName("Base"));
+
+        Node canonical = new MergeReverser().reverseToCanonicalOverlay(resolved);
+        Node canonicalList = canonical.getAsNode("/list");
+
+        assertEquals(2, canonicalList.getItems().size());
+        assertEquals("A", canonicalList.getItems().get(0).getValue());
+        assertEquals("B", canonicalList.getItems().get(1).getValue());
+        canonicalList.getItems().forEach(item -> {
+            assertNull(item.getPreviousBlueId());
+            assertNull(item.getPosition());
+        });
+    }
+
+    @Test
     public void canonicalOverlayPreservesExplicitRootLabelsEqualToTypeLabels() {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Node canonicalType = new Node()
