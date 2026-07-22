@@ -1,5 +1,6 @@
 package blue.language.utils;
 
+import blue.language.snapshot.FrozenCanonicalWriter;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;
@@ -25,6 +26,17 @@ public class Base58Sha256Provider implements Function<Object, String> {
 
     @Override
     public String apply(Object object) {
+        return compatibilityHash(object);
+    }
+
+    String applyCanonicalValue(Object object) {
+        if (FrozenCanonicalWriter.supportsCanonicalValue(object)) {
+            return Base58.encode(sha256Bytes(FrozenCanonicalWriter.canonicalValueBytes(object)));
+        }
+        return compatibilityHash(object);
+    }
+
+    private String compatibilityHash(Object object) {
         try {
             byte[] json = JSON_MAPPER.writeValueAsBytes(object);
             byte[] canonical;

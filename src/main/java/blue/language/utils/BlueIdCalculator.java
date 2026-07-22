@@ -9,7 +9,9 @@ import static blue.language.utils.Properties.*;
 
 public class BlueIdCalculator {
 
-    public static final BlueIdCalculator INSTANCE = new BlueIdCalculator(new Base58Sha256Provider());
+    private static final Base58Sha256Provider CANONICAL_HASH_PROVIDER = new Base58Sha256Provider();
+    public static final BlueIdCalculator INSTANCE =
+            new BlueIdCalculator(CANONICAL_HASH_PROVIDER::applyCanonicalValue);
 
     private Function<Object, String> hashProvider;
 

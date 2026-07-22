@@ -6,14 +6,20 @@ import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.NumberToJSON;
 import org.erdtman.jcs.JsonCanonicalizer;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static blue.language.utils.Properties.*;
 
@@ -33,6 +39,16 @@ public final class FrozenCanonicalWriter {
     private static final byte[] NULL = ascii("null");
     private static final BigInteger MIN_SAFE_INTEGER = BigInteger.valueOf(-9007199254740991L);
     private static final BigInteger MAX_SAFE_INTEGER = BigInteger.valueOf(9007199254740991L);
+    private static final int MAX_PLAIN_VALUE_DEPTH = 100;
+    private static final int MAX_PLAIN_MAP_FIELDS = 256;
+    private static final Class<?> SINGLETON_MAP_CLASS =
+            Collections.singletonMap("key", "value").getClass();
+    private static final ThreadLocal<Set<String>> MAP_KEYS = new ThreadLocal<Set<String>>() {
+        @Override
+        protected Set<String> initialValue() {
+            return new HashSet<>();
+        }
+    };
 
     private FrozenCanonicalWriter() {
     }
@@ -71,6 +87,22 @@ public final class FrozenCanonicalWriter {
         CountingSink sink = new CountingSink();
         writeOfficial(node, sink);
         return sink.bytes;
+    }
+
+    /**
+     * Returns the exact RFC 8785 byte representation used by the frozen identity
+     * path for JSON-compatible scalar, map, and list values.
+     *
+     * <p>This is the allocation-friendly counterpart to serializing with
+     * Jackson and parsing the result again with a JCS canonicalizer. Callers
+     * that accept arbitrary Jackson-serializable objects should first use
+     * {@link #supportsCanonicalValue(Object)} and retain their compatibility
+     * fallback for unsupported values.</p>
+     */
+    public static byte[] canonicalValueBytes(Object value) {
+        ByteArraySink sink = new ByteArraySink();
+        writeCanonicalValue(value, sink);
+        return sink.toByteArray();
     }
 
     static void writeCanonicalValue(Object value, CanonicalByteSink sink) {
@@ -148,37 +180,65 @@ public final class FrozenCanonicalWriter {
         throw new UnsupportedCanonicalValueException(value.getClass());
     }
 
-    static boolean supportsCanonicalValue(Object value) {
-        if (value == null || value instanceof String || value instanceof Character
-                || value instanceof Boolean
-                || value instanceof BigInteger || value instanceof BigDecimal
-                || value instanceof Byte || value instanceof Short || value instanceof Integer
-                || value instanceof Long || value instanceof Float || value instanceof Double) {
-            return !(value instanceof Number)
-                    || Double.isFinite(((Number) value).doubleValue());
+    public static boolean supportsCanonicalValue(Object value) {
+        return supportsCanonicalValue(value, 0);
+    }
+
+    private static boolean supportsCanonicalValue(Object value, int depth) {
+        if (depth > MAX_PLAIN_VALUE_DEPTH) return false;
+        if (value == null) return true;
+
+        Class<?> type = value.getClass();
+        if (type == String.class || type == Boolean.class
+                || type == BigInteger.class
+                || type == Byte.class || type == Short.class || type == Integer.class
+                || type == Long.class) {
+            return true;
         }
-        if (value instanceof Enum) {
-            // Direct serialization is compatible, but the optimized digester must
-            // retain the full generic-Jackson oracle for annotation-driven wire names.
-            return false;
+        if (type == BigDecimal.class || type == Float.class || type == Double.class) {
+            return Double.isFinite(((Number) value).doubleValue());
         }
-        if (value instanceof List) {
+
+        // Only exact container implementations produced by the canonical helper-map
+        // builders are admitted. Subclasses may carry Jackson annotations or custom
+        // serializers that change their wire representation.
+        boolean plainList = type == ArrayList.class;
+        boolean plainMap = type == LinkedHashMap.class || type == TreeMap.class
+                || type == SINGLETON_MAP_CLASS;
+        if (!plainList && !plainMap) return false;
+        if (plainList) {
             for (Object element : (List<?>) value) {
-                if (!supportsCanonicalValue(element)) {
+                if (!supportsCanonicalValue(element, depth + 1)) {
                     return false;
                 }
             }
             return true;
         }
-        if (value instanceof Map) {
-            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
-                if (!(entry.getKey() instanceof String) || !supportsCanonicalValue(entry.getValue())) {
+        Map<?, ?> map = (Map<?, ?>) value;
+        if (map.size() > MAX_PLAIN_MAP_FIELDS) return false;
+        if (type == TreeMap.class && !hasUniqueStringKeys(map)) return false;
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (entry.getKey() == null || entry.getKey().getClass() != String.class
+                    || !supportsCanonicalValue(entry.getValue(), depth + 1)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasUniqueStringKeys(Map<?, ?> map) {
+        Set<String> keys = MAP_KEYS.get();
+        keys.clear();
+        try {
+            for (Object key : map.keySet()) {
+                if (!(key instanceof String) || !keys.add((String) key)) {
                     return false;
                 }
             }
             return true;
+        } finally {
+            keys.clear();
         }
-        return false;
     }
 
     private enum Context {
@@ -446,7 +506,7 @@ public final class FrozenCanonicalWriter {
     }
 
     private static void writeMap(Map<?, ?> map, CanonicalByteSink sink) {
-        List<String> retainedKeys = new ArrayList<>(map.size());
+        Map<String, Object> retainedFields = new TreeMap<>();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             if (entry.getValue() == null) {
                 // Match the legacy mapper's NON_NULL map-value inclusion.
@@ -456,19 +516,22 @@ public final class FrozenCanonicalWriter {
             if (!(key instanceof String)) {
                 throw new UnsupportedCanonicalValueException(key == null ? null : key.getClass());
             }
-            retainedKeys.add((String) key);
+            String stringKey = (String) key;
+            if (retainedFields.containsKey(stringKey)) {
+                throw new UnsupportedCanonicalValueException(String.class);
+            }
+            retainedFields.put(stringKey, entry.getValue());
         }
-        String[] keys = retainedKeys.toArray(new String[0]);
-        Arrays.sort(keys);
         sink.writeByte('{');
-        for (int index = 0; index < keys.length; index++) {
-            if (index > 0) {
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : retainedFields.entrySet()) {
+            if (!first) {
                 sink.writeByte(',');
             }
-            String key = keys[index];
-            writeString(key, sink);
+            first = false;
+            writeString(entry.getKey(), sink);
             sink.writeByte(':');
-            writeCanonicalValue(map.get(key), sink);
+            writeCanonicalValue(entry.getValue(), sink);
         }
         sink.writeByte('}');
     }
@@ -608,6 +671,24 @@ public final class FrozenCanonicalWriter {
         @Override
         public void write(byte[] values, int offset, int length) {
             bytes += length;
+        }
+    }
+
+    private static final class ByteArraySink implements CanonicalByteSink {
+        private final ByteArrayOutputStream output = new ByteArrayOutputStream(64);
+
+        @Override
+        public void writeByte(int value) {
+            output.write(value);
+        }
+
+        @Override
+        public void write(byte[] values, int offset, int length) {
+            output.write(values, offset, length);
+        }
+
+        private byte[] toByteArray() {
+            return output.toByteArray();
         }
     }
 
