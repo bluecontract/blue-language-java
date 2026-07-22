@@ -19,7 +19,7 @@ expectedInitializationContentBlueIdInput:
   scope: /
   timing: after-phase-1-before-initialized-marker
   excludesPath: /contracts/initialized
-  expectedContentBlueId: xivoDTohkrQjSffU6WVdsJAsEKhWvxDw2PQEjkV66KR
+  expectedContentBlueId: 52Az6y4GzwESWXoCKeDHQ8rBp28DKU9kD7xTejsFCRya
 expectedDocumentPathExists:
   - /contracts/initialized/documentId
 assertions:

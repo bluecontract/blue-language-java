@@ -170,7 +170,7 @@ public class Merger implements NodeResolver {
                         if (resolvedType.getBlueId() == null) {
                             resolvedType.blueId(typeBlueId);
                         }
-                        source.type(resolvedType);
+                        source.type(detachedResolvedTypeMetadata(resolvedType));
                         if (!typeContributionApplied) {
                             mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
                             recordAppliedDeclaredTypeContribution(target, typeBlueId);
@@ -182,7 +182,7 @@ public class Merger implements NodeResolver {
 
                         Node resolvedType = resolveWithContribution(typeNode, limits, Contribution.TYPE_ROOT);
                         cacheResolvedReference(typeBlueId, resolvedType, limits);
-                        source.type(resolvedType);
+                        source.type(detachedResolvedTypeMetadata(resolvedType));
                         if (!typeContributionApplied) {
                             // Align cold and warm resolution only when the completed type is safe to reuse.
                             if (cachedResolvedType(typeBlueId, limits) != null) {
@@ -233,6 +233,16 @@ public class Merger implements NodeResolver {
             resolutionState.appliedTypeContributions.put(target, applied);
         }
         applied.add(sourceTypeBlueId);
+    }
+
+    /**
+     * Keeps completed type metadata independent from the mutable contribution traversal.
+     * Merging processors may retain and further resolve nodes from the contribution graph;
+     * sharing that graph with {@code source.type} makes an exposed resolved view depend on
+     * traversal and cache history.
+     */
+    private Node detachedResolvedTypeMetadata(Node resolvedType) {
+        return resolvedType.clone();
     }
 
     private void extendTypeReference(Node typeNode, String blueId) {

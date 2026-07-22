@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SelectedProcessingStateCacheIsolationFailFirstTest {
 
-    private static final long MATERIALIZED_AUDIT_GAS = 1201L;
+    // Includes the exact initialization-marker payload derived from this fixture's Content BlueId.
+    private static final long MATERIALIZED_AUDIT_GAS = 1202L;
 
     @Test
     void compactAndMaterializedSelectionsHaveTheSameSemanticContentBlueId() {

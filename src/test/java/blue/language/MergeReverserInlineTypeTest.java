@@ -121,7 +121,10 @@ class MergeReverserInlineTypeTest {
         RoundTrip roundTrip = assertIndependentRoundTrip(writer, source);
 
         assertAnonymousListType(roundTrip.minimized.getAsNode("/nested/type"), 2);
-        assertEquals(3, roundTrip.minimized.getAsNode("/nested").getItems().size());
+        assertEquals(2, roundTrip.minimized.getAsNode("/nested").getItems().size());
+        assertEquals(inheritedAbBlueId(writer),
+                roundTrip.minimized.getAsNode("/nested").getItems().get(0).getPreviousBlueId());
+        assertEquals("C", roundTrip.minimized.getAsNode("/nested").getItems().get(1).getValue());
     }
 
     @Test

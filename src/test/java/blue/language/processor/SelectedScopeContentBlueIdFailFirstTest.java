@@ -34,8 +34,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Every expected identity in this class is calculated from an explicitly
  * constructed standalone Source-equivalent document before processing begins.
  * The tests deliberately do not hash a child fragment from the parent's
- * Canonical Identity Input and do not reconstruct pre-initialization state from
- * a returned, already-mutated document.</p>
+ * Canonical Identity Input, do not hash a handler-visible Resolved View as if it
+ * were Source, and do not reconstruct pre-initialization state from a returned,
+ * already-mutated document.</p>
  */
 class SelectedScopeContentBlueIdFailFirstTest {
 
@@ -174,17 +175,15 @@ class SelectedScopeContentBlueIdFailFirstTest {
         Node nodeRootAtCapture = nodeRecorder.onlyScopeSource("/");
         Node snapshotRootAtCapture = snapshotRecorder.onlyScopeSource("/");
         Blue parityOracle = fixture.identityBlue();
-        String nodeCapturedIdentity = parityOracle.calculateSemanticBlueId(nodeRootAtCapture);
-        String snapshotCapturedIdentity = parityOracle.calculateSemanticBlueId(snapshotRootAtCapture);
         Node snapshotResolvedChild = inputSnapshot.resolvedNodeAt("/child");
         Node snapshotMinimizedChild = new MergeReverser()
                 .reverseToMinimizedOverlay(snapshotResolvedChild.clone());
 
-        assertEquals(nodeCapturedIdentity, snapshotCapturedIdentity,
-                () -> "Node and snapshot selected roots must remain Source-equivalent at capture.\nnode="
+        assertEquals(FrozenNode.fromResolvedNode(nodeRootAtCapture).resolvedStructuralKey(),
+                FrozenNode.fromResolvedNode(snapshotRootAtCapture).resolvedStructuralKey(),
+                () -> "Node and snapshot handler-visible Resolved Views must match at capture.\nnode="
                         + parityOracle.nodeToJson(nodeRootAtCapture)
                         + "\nsnapshot=" + parityOracle.nodeToJson(snapshotRootAtCapture));
-        assertEquals(expected.rootAfterChildPhase1, nodeCapturedIdentity);
         assertScopeIdentity(nodeResult.document(), nodeRecorder, "/child", expected.child);
         assertScopeIdentity(snapshotResult.document(), snapshotRecorder, "/child", expected.child);
         assertScopeIdentity(nodeResult.document(), nodeRecorder, "/", expected.rootAfterChildPhase1);

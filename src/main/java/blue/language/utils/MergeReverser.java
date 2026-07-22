@@ -25,7 +25,8 @@ public class MergeReverser {
 
     public Node reverseToMinimizedOverlay(Node mergedNode) {
         Node minimalNode = new Node();
-        reverseNode(minimalNode, mergedNode, mergedNode.getType(), false);
+        reverseNode(minimalNode, mergedNode, mergedNode.getType(), false, null,
+                mergedNode.getType() != null);
         return minimalNode;
     }
 
@@ -58,7 +59,8 @@ public class MergeReverser {
      */
     public Node reverseToCanonicalOverlay(Node mergedNode, Node sourceNode) {
         Node minimalNode = new Node();
-        reverseNode(minimalNode, mergedNode, mergedNode.getType(), true, sourceNode);
+        reverseNode(minimalNode, mergedNode, mergedNode.getType(), true, sourceNode,
+                mergedNode.getType() != null);
         return minimalNode;
     }
 
@@ -71,6 +73,15 @@ public class MergeReverser {
                              Node fromType,
                              boolean canonicalOverlay,
                              Node source) {
+        reverseNode(minimal, merged, fromType, canonicalOverlay, source, false);
+    }
+
+    private void reverseNode(Node minimal,
+                             Node merged,
+                             Node fromType,
+                             boolean canonicalOverlay,
+                             Node source,
+                             boolean ownTypeBaseline) {
 
         if (merged.getBlueId() != null
                 && fromType != null
@@ -98,19 +109,24 @@ public class MergeReverser {
         // Canonicalization must retain explicit instance labels even when the
         // effective type happens to carry the same text. Root labels are never
         // inherited from a type, and source provenance is the only way to
-        // distinguish an explicit equal label from an absent one. The optional
-        // author-facing minimizer has no source provenance and keeps its
-        // historical value-diff behavior.
+        // distinguish an explicit equal label from an absent one. An own-type
+        // baseline supplies derivable child fields, but its root labels are never
+        // inherited onto the instance. The author-facing minimizer therefore
+        // preserves those labels conservatively so its output re-resolves exactly.
         if (canonicalOverlay && source != null && source.getName() != null) {
             minimal.name(source.getName());
         } else if (merged.getName() != null
-                && (fromType == null || !merged.getName().equals(fromType.getName()))) {
+                && (ownTypeBaseline
+                || fromType == null
+                || !merged.getName().equals(fromType.getName()))) {
             minimal.name(merged.getName());
         }
         if (canonicalOverlay && source != null && source.getDescription() != null) {
             minimal.description(source.getDescription());
         } else if (merged.getDescription() != null
-                && (fromType == null || !merged.getDescription().equals(fromType.getDescription()))) {
+                && (ownTypeBaseline
+                || fromType == null
+                || !merged.getDescription().equals(fromType.getDescription()))) {
             minimal.description(merged.getDescription());
         }
 
@@ -129,8 +145,11 @@ public class MergeReverser {
             if (!sameNodeBlueId(merged.getContracts(), fromTypeContracts)
                     || isCanonicalSourceReference(canonicalOverlay, sourceContracts)) {
                 Node minimalContracts = new Node();
-                reverseNode(minimalContracts, merged.getContracts(), fromTypeContracts,
-                        canonicalOverlay, sourceContracts);
+                Node contractsBaseline = derivationBaseline(
+                        fromTypeContracts, merged.getContracts());
+                reverseNode(minimalContracts, merged.getContracts(), contractsBaseline,
+                        canonicalOverlay, sourceContracts,
+                        usesOwnTypeBaseline(fromTypeContracts, merged.getContracts()));
                 if (!Nodes.isEmptyNode(minimalContracts)) {
                     minimal.contracts(minimalContracts);
                 }
@@ -143,8 +162,10 @@ public class MergeReverser {
                 for (int index = 0; index < merged.getItems().size(); index++) {
                     Node item = merged.getItems().get(index);
                     Node minimalItem = new Node();
-                    reverseNode(minimalItem, item, null, true,
-                            sourceItem(source, index, merged.getItems().size()));
+                    Node itemBaseline = derivationBaseline(null, item);
+                    reverseNode(minimalItem, item, itemBaseline, true,
+                            sourceItem(source, index, merged.getItems().size()),
+                            usesOwnTypeBaseline(null, item));
                     if (Nodes.isEmptyNode(minimalItem)) {
                         minimalItems.add(Nodes.emptyPlaceholder());
                     } else {
@@ -174,7 +195,10 @@ public class MergeReverser {
 
                 for (int i = inheritedSize; i < merged.getItems().size(); i++) {
                     Node minimalItem = new Node();
-                    reverseNode(minimalItem, merged.getItems().get(i), null, false, null);
+                    Node mergedItem = merged.getItems().get(i);
+                    Node itemBaseline = derivationBaseline(null, mergedItem);
+                    reverseNode(minimalItem, mergedItem, itemBaseline, false, null,
+                            usesOwnTypeBaseline(null, mergedItem));
                     minimalItems.add(minimalItem);
                 }
 
@@ -186,7 +210,9 @@ public class MergeReverser {
             } else {
                 for (Node item : merged.getItems()) {
                     Node minimalItem = new Node();
-                    reverseNode(minimalItem, item, null, false, null);
+                    Node itemBaseline = derivationBaseline(null, item);
+                    reverseNode(minimalItem, item, itemBaseline, false, null,
+                            usesOwnTypeBaseline(null, item));
                     minimalItems.add(minimalItem);
                 }
                 minimal.items(minimalItems);
@@ -215,8 +241,10 @@ public class MergeReverser {
                     continue;
                 }
                 Node minimalProperty = new Node();
-                reverseNode(minimalProperty, mergedProperty, fromTypeProperty,
-                        canonicalOverlay, sourceProperty);
+                Node propertyBaseline = derivationBaseline(fromTypeProperty, mergedProperty);
+                reverseNode(minimalProperty, mergedProperty, propertyBaseline,
+                        canonicalOverlay, sourceProperty,
+                        usesOwnTypeBaseline(fromTypeProperty, mergedProperty));
                 if (!Nodes.isEmptyNode(minimalProperty)) {
                     minimalProperties.put(key, minimalProperty);
                 }
@@ -300,6 +328,17 @@ public class MergeReverser {
 
     private String comparisonBlueId(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+    }
+
+    private Node derivationBaseline(Node inheritedAtPath, Node merged) {
+        if (inheritedAtPath != null) {
+            return inheritedAtPath;
+        }
+        return merged != null ? merged.getType() : null;
+    }
+
+    private boolean usesOwnTypeBaseline(Node inheritedAtPath, Node merged) {
+        return inheritedAtPath == null && merged != null && merged.getType() != null;
     }
 
     private void setTypeIfDifferent(Node merged, Node fromType, Node minimal, boolean canonicalOverlay,

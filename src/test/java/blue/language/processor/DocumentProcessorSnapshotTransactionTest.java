@@ -22,6 +22,7 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -623,7 +624,7 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
-    void processorPatchToInheritedValueKeepsCanonicalOverrideWhileBatchMinimizationIsDisabled() {
+    void processorPatchToInheritedValueOmitsDerivableCanonicalOverride() {
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
                 "name: Money\n" +
@@ -649,12 +650,13 @@ class DocumentProcessorSnapshotTransactionTest {
                 "    propertyKey: cents\n" +
                 "    propertyValue: 0\n", Node.class);
         DocumentProcessingResult initialized = blue.initializeDocument(document);
+        assertNull(initialized.snapshot().canonicalAt("/balance/cents"));
 
         DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
                 blue.objectToNode(new TestEvent().eventId("evt-inherited")));
 
         assertEquals(0, processed.resolvedDocument().getAsInteger("/balance/cents"));
-        assertEquals(0, processed.canonicalDocument().getAsInteger("/balance/cents"));
+        assertNull(processed.snapshot().canonicalAt("/balance/cents"));
         assertSnapshotConsistent(processed.snapshot());
     }
 
