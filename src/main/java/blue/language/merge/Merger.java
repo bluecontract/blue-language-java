@@ -18,7 +18,10 @@ import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -116,23 +119,44 @@ public class Merger implements NodeResolver {
     public void merge(Node target, Node source, Limits limits) {
         ResolutionState state = resolutionState;
         boolean outermost = state == null;
+        LabelProvenanceScope outermostLabelScope = null;
+        boolean enteredOutermostLimit = false;
         if (outermost) {
             state = new ResolutionState();
             state.rootInlineTypeDeclaration = isInlineTypeDeclaration(source);
             state.rootSource = source;
             resolutionState = state;
             lastResolutionUsedNonDirectTrustedContent = false;
-            limits.enterPathSegment("", source);
         }
         try {
+            if (outermost) {
+                limits.enterPathSegment("", source);
+                enteredOutermostLimit = true;
+                outermostLabelScope = pushLabelProvenanceScope(source, limits, true);
+                seedMaterializedTargetLabelProvenance(target, outermostLabelScope);
+            }
+            LabelMergeMode labelMergeMode = labelMergeMode(state.contribution);
+            boolean inheritedDeclarationOnly = labelMergeMode == LabelMergeMode.AUTHORED_OVERLAY
+                    && isDeclarationOnlyForLabels(target);
+            if (labelMergeMode == LabelMergeMode.AUTHORED_OVERLAY) {
+                validateExplicitInstanceLabels(target, source, inheritedDeclarationOnly);
+            }
             mergeInternal(target, source, limits);
+            if (labelMergeMode == LabelMergeMode.AUTHORED_OVERLAY) {
+                applyExplicitInstanceLabels(target, source, inheritedDeclarationOnly);
+            } else if (labelMergeMode == LabelMergeMode.REFERENCE_EXPANSION) {
+                copyMaterializedReferenceLabels(target, source);
+            }
             if (outermost) {
                 validateCompletedCandidates(state);
             }
         } finally {
             if (outermost) {
+                popLabelProvenanceScope(outermostLabelScope);
                 lastResolutionUsedNonDirectTrustedContent = state.usedNonDirectTrustedContent;
-                limits.exitPathSegment();
+                if (enteredOutermostLimit) {
+                    limits.exitPathSegment();
+                }
                 resolutionState = null;
             }
         }
@@ -147,6 +171,16 @@ public class Merger implements NodeResolver {
         if (source.getType() != null) {
             Node typeNode = source.getType();
             String typeBlueId = typeNode.getBlueId();
+            LabelProvenanceScope labelScope = currentLabelProvenanceScope();
+            LabelPath currentLabelPath = currentLabelPath(resolutionState);
+            if (labelScope != null
+                    && resolutionState.contribution != Contribution.TYPE_ROOT
+                    && resolutionState.contribution != Contribution.TYPE_METADATA
+                    && resolutionState.contribution != Contribution.TYPE_DECLARATION
+                    && hasLabelPathAtOrBelow(labelScope.labelPaths, currentLabelPath)) {
+                recordTypeDeclarationLabelPaths(
+                        typeNode, currentLabelPath, labelScope.labelPaths);
+            }
             boolean typeContributionApplied = hasAppliedDeclaredTypeContribution(target, typeBlueId);
             boolean materializedCyclicType = isMaterializedCyclicSetMemberType(typeNode);
             FrozenNode cachedResolvedType = cachedResolvedType(typeBlueId, limits);
@@ -454,7 +488,8 @@ public class Merger implements NodeResolver {
 
             List<Node> children = source.getItems();
             if (children != null) {
-                mergeChildren(target, children, limits);
+                mergeChildrenWithContribution(
+                        target, children, limits, childContribution(state.contribution));
             }
 
             if (source.getContracts() != null && limits.shouldMergePathSegment("contracts", source.getContracts())) {
@@ -535,13 +570,28 @@ public class Merger implements NodeResolver {
     }
 
     private Contribution childContribution(Contribution contribution) {
-        if (contribution == Contribution.TYPE_ROOT) {
+        if (contribution == Contribution.TYPE_ROOT
+                || contribution == Contribution.TYPE_METADATA) {
             return Contribution.TYPE_DECLARATION;
         }
         if (contribution == Contribution.CONTRACT_ROOT) {
             return Contribution.CONTRACT_CONTENT;
         }
         return contribution;
+    }
+
+    private void mergeChildrenWithContribution(Node target,
+                                               List<Node> sourceChildren,
+                                               Limits limits,
+                                               Contribution contribution) {
+        ResolutionState state = resolutionState;
+        Contribution previous = state.contribution;
+        state.contribution = contribution;
+        try {
+            mergeChildren(target, sourceChildren, limits);
+        } finally {
+            state.contribution = previous;
+        }
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
@@ -731,7 +781,7 @@ public class Merger implements NodeResolver {
                 limits.enterPathSegment(segment, resolvedOverlay);
                 enterValidationPath(segment, referenceExpansionAllowed);
                 try {
-                    mergeObject(targetChildren.get(position), resolvedOverlay, limits);
+                    mergeInstanceObject(targetChildren.get(position), resolvedOverlay, limits);
                 } finally {
                     exitValidationPath();
                     limits.exitPathSegment();
@@ -968,17 +1018,604 @@ public class Merger implements NodeResolver {
         if (targetValue == null) {
             Node node = resolve(sourceValue, limits);
             target.getProperties().put(sourceKey, node);
-        } else if (requiresCyclicTypeCompletion(targetValue, sourceValue)) {
-            Node typedSource = sourceValue.clone()
-                    .type(new Node().blueId(targetValue.getType().getBlueId()));
-            merge(targetValue, typedSource, limits);
-        } else if (hasListControls(sourceValue)) {
-            merge(targetValue, sourceValue, limits);
-        } else if (containsCyclicSetReference(sourceValue)) {
-            merge(targetValue, sourceValue, limits);
         } else {
-            Node node = resolve(sourceValue, limits);
-            mergeObject(targetValue, node, limits);
+            if (requiresCyclicTypeCompletion(targetValue, sourceValue)) {
+                Node typedSource = sourceValue.clone()
+                        .type(new Node().blueId(targetValue.getType().getBlueId()));
+                merge(targetValue, typedSource, limits);
+            } else if (hasListControls(sourceValue)) {
+                merge(targetValue, sourceValue, limits);
+            } else if (containsCyclicSetReference(sourceValue)) {
+                merge(targetValue, sourceValue, limits);
+            } else {
+                Node node = resolve(sourceValue, limits);
+                mergeInstanceObject(targetValue, node, limits);
+            }
+        }
+    }
+
+    private void mergeInstanceObject(Node target, Node source, Limits limits) {
+        LabelMergeMode labelMergeMode = labelMergeMode(resolutionState.contribution);
+        boolean inheritedDeclarationOnly = labelMergeMode == LabelMergeMode.AUTHORED_OVERLAY
+                && isDeclarationOnlyForLabels(target);
+        if (labelMergeMode == LabelMergeMode.AUTHORED_OVERLAY) {
+            validateExplicitInstanceLabels(target, source, inheritedDeclarationOnly);
+        }
+        mergeObject(target, source, limits);
+        if (labelMergeMode == LabelMergeMode.AUTHORED_OVERLAY) {
+            applyExplicitInstanceLabels(target, source, inheritedDeclarationOnly);
+        } else if (labelMergeMode == LabelMergeMode.REFERENCE_EXPANSION) {
+            copyMaterializedReferenceLabels(target, source);
+        }
+    }
+
+    private LabelMergeMode labelMergeMode(Contribution contribution) {
+        if (contribution == Contribution.MATERIALIZED_REFERENCE) {
+            return LabelMergeMode.REFERENCE_EXPANSION;
+        }
+        if (contribution == Contribution.TYPE_ROOT
+                || contribution == Contribution.TYPE_METADATA) {
+            return LabelMergeMode.NONE;
+        }
+        return LabelMergeMode.AUTHORED_OVERLAY;
+    }
+
+    /**
+     * A declaration-only child inherits labels until an instance explicitly
+     * overrides them. Fixed payload labels remain governed by fixed-value rules.
+     */
+    private boolean isDeclarationOnlyForLabels(Node node) {
+        ResolutionState state = resolutionState;
+        if (state != null) {
+            LabelPath path = currentLabelPath(state);
+            for (int index = state.labelProvenanceScopes.size() - 1; index >= 0; index--) {
+                LabelProvenanceScope scope = state.labelProvenanceScopes.get(index);
+                if (scope.fixedPaths.contains(path)) {
+                    return false;
+                }
+                if (scope.declarationOnlyPaths.contains(path)) {
+                    return true;
+                }
+            }
+        }
+        return !sourceContainsFixedContent(node);
+    }
+
+    private void recordTypeDeclarationLabelPaths(Node typeNode,
+                                                 LabelPath basePath,
+                                                 Set<LabelPath> relevantLabelPaths) {
+        LabelProvenanceScope scope = currentLabelProvenanceScope();
+        if (scope == null || !hasLabelPathAtOrBelow(relevantLabelPaths, basePath)) {
+            return;
+        }
+        LabelScanState scan = new LabelScanState(scope, relevantLabelPaths);
+        Deque<LabelScanTask> pending = new ArrayDeque<>();
+        pending.push(LabelScanTask.type(typeNode, basePath));
+        while (!pending.isEmpty()) {
+            LabelScanTask task = pending.pop();
+            switch (task.kind) {
+                case TYPE:
+                    scanTypeLabelTask(task, scan, pending);
+                    break;
+                case SOURCE:
+                    scanSourceLabelTask(task.node, task.path, scan, pending);
+                    break;
+                case CHILDREN:
+                    scanDirectChildLabelTasks(task.node, task.path, scan, pending);
+                    break;
+                case EXIT_TYPE:
+                    scan.exitType(task.typeBlueId, task.node);
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown label scan task: " + task.kind);
+            }
+        }
+    }
+
+    private void scanTypeLabelTask(LabelScanTask task,
+                                   LabelScanState scan,
+                                   Deque<LabelScanTask> pending) {
+        Node typeNode = task.node;
+        if (typeNode == null || isBareCoreTypeAlias(typeNode)
+                || !hasLabelPathAtOrBelow(scan.relevantLabelPaths, task.path)) {
+            return;
+        }
+        String typeBlueId = typeNode.getBlueId();
+        if (typeBlueId != null && CORE_TYPE_BLUE_IDS.contains(typeBlueId)) {
+            return;
+        }
+        if (!scan.enterType(typeBlueId, typeNode)) {
+            return;
+        }
+        Node canonicalType;
+        try {
+            canonicalType = canonicalTypeForLabelProvenance(typeNode);
+        } catch (RuntimeException failure) {
+            scan.exitType(typeBlueId, typeNode);
+            throw failure;
+        }
+        if (canonicalType == null) {
+            scan.exitType(typeBlueId, typeNode);
+            return;
+        }
+        pending.push(LabelScanTask.exitType(typeBlueId, typeNode));
+        pending.push(LabelScanTask.children(canonicalType, task.path));
+        pending.push(LabelScanTask.type(canonicalType.getType(), task.path));
+    }
+
+    private Node canonicalTypeForLabelProvenance(Node typeNode) {
+        String typeBlueId = typeNode.getBlueId();
+        if (typeBlueId == null) {
+            return typeNode;
+        }
+        if (CORE_TYPE_BLUE_IDS.contains(typeBlueId)) {
+            return null;
+        }
+        return typeCanonicalReference(typeBlueId, resolutionState).canonical.toNode();
+    }
+
+    private void scanSourceLabelTask(Node source,
+                                     LabelPath path,
+                                     LabelScanState scan,
+                                     Deque<LabelScanTask> pending) {
+        if (source == null || !hasLabelPathAtOrBelow(scan.relevantLabelPaths, path)) {
+            return;
+        }
+        if (scan.relevantLabelPaths.contains(path)) {
+            setDeclarationOnlyLabelPath(
+                    scan.scope, path,
+                    !sourceContainsFixedContent(source));
+        }
+        pending.push(LabelScanTask.children(source, path));
+        pending.push(LabelScanTask.type(source.getType(), path));
+    }
+
+    private void scanDirectChildLabelTasks(Node source,
+                                           LabelPath basePath,
+                                           LabelScanState scan,
+                                           Deque<LabelScanTask> pending) {
+        if (source == null || !hasLabelPathAtOrBelow(scan.relevantLabelPaths, basePath)) {
+            return;
+        }
+        List<Map.Entry<String, Node>> properties = source.getProperties() == null
+                ? Collections.<Map.Entry<String, Node>>emptyList()
+                : new ArrayList<>(source.getProperties().entrySet());
+        for (int index = properties.size() - 1; index >= 0; index--) {
+            Map.Entry<String, Node> property = properties.get(index);
+            LabelPath childPath = basePath.child(property.getKey());
+            if (hasLabelPathAtOrBelow(scan.relevantLabelPaths, childPath)) {
+                pending.push(LabelScanTask.source(property.getValue(), childPath));
+            }
+        }
+        scanDirectListChildLabelTasks(source, basePath, scan, pending);
+        LabelPath contractsPath = basePath.child("contracts");
+        if (source.getContracts() != null
+                && hasLabelPathAtOrBelow(scan.relevantLabelPaths, contractsPath)) {
+            pending.push(LabelScanTask.source(source.getContracts(), contractsPath));
+        }
+    }
+
+    private void scanDirectListChildLabelTasks(Node source,
+                                               LabelPath basePath,
+                                               LabelScanState scan,
+                                               Deque<LabelScanTask> pending) {
+        List<Node> children = source.getItems();
+        Node effectiveItemType = source.getItemType() != null
+                ? source.getItemType()
+                : scan.effectiveItemTypes.get(basePath);
+        if (source.getItemType() != null) {
+            scan.effectiveItemTypes.put(basePath, source.getItemType());
+        }
+        if (children == null || !hasLabelPathAtOrBelow(scan.relevantLabelPaths, basePath)) {
+            return;
+        }
+
+        int size = scan.listSizes.getOrDefault(basePath, 0);
+        Map<Integer, Node> effectiveItems = scan.effectiveListItems.computeIfAbsent(
+                basePath, ignored -> new HashMap<>());
+        int start = startsWithPrevious(children) ? 1 : 0;
+        List<PositionedLabelSource> effectiveChildren = new ArrayList<>();
+        if (start > 0 && size == 0) {
+            List<Node> previousChildren = previousLabelChildren(children.get(0));
+            for (int index = 0; index < previousChildren.size(); index++) {
+                Node effectiveChild = applyItemType(previousChildren.get(index), effectiveItemType);
+                effectiveChildren.add(new PositionedLabelSource(index, effectiveChild));
+                effectiveItems.put(index, effectiveChild);
+            }
+            size = previousChildren.size();
+        }
+
+        boolean hasPositionControls = children.stream()
+                .anyMatch(child -> child.getPosition() != null);
+        for (int index = start; index < children.size(); index++) {
+            Node child = children.get(index);
+            int position;
+            Node effectiveChild;
+            boolean replacement = false;
+            if (child.getPosition() != null) {
+                position = child.getPosition();
+                Node overlay = withoutPosition(child);
+                Node previousItem = effectiveItems.get(position);
+                Node positionItemType = previousItem != null && previousItem.getType() != null
+                        ? previousItem.getType()
+                        : effectiveItemType;
+                if (hasReplacement(overlay)) {
+                    replacement = true;
+                    overlay = overlay.getProperties().get(LIST_CONTROL_REPLACE);
+                }
+                replacement = replacement
+                        || (previousItem != null && isEmptyPlaceholder(previousItem))
+                        || overlay.getValue() != null
+                        || overlay.getItems() != null;
+                effectiveChild = applyItemType(overlay, positionItemType);
+                if (position == size) {
+                    size++;
+                }
+            } else if (hasPositionControls || start > 0) {
+                position = size++;
+                effectiveChild = applyItemType(child, effectiveItemType);
+            } else {
+                position = index - start;
+                Node previousItem = effectiveItems.get(position);
+                Node positionItemType = previousItem != null && previousItem.getType() != null
+                        ? previousItem.getType()
+                        : effectiveItemType;
+                effectiveChild = applyItemType(child, positionItemType);
+                size = Math.max(size, position + 1);
+            }
+            Node previousItem = effectiveItems.get(position);
+            effectiveItems.put(position, replacement || previousItem == null
+                    ? effectiveChild
+                    : effectiveListItemAfterOverlay(previousItem, effectiveChild));
+            effectiveChildren.add(new PositionedLabelSource(
+                    position, effectiveChild, replacement));
+        }
+        scan.listSizes.put(basePath, size);
+
+        for (int index = effectiveChildren.size() - 1; index >= 0; index--) {
+            PositionedLabelSource child = effectiveChildren.get(index);
+            LabelPath childPath = basePath.child(String.valueOf(child.position));
+            if (hasLabelPathAtOrBelow(scan.relevantLabelPaths, childPath)) {
+                if (child.replacement) {
+                    clearLabelClassificationAtOrBelow(scan.scope, childPath);
+                }
+                pending.push(LabelScanTask.source(child.node, childPath));
+            }
+        }
+    }
+
+    private List<Node> previousLabelChildren(Node previousAnchor) {
+        List<Node> fetched = nodeProvider.fetchByBlueId(previousAnchor.getPreviousBlueId());
+        if (fetched == null || fetched.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "No content found for $previous blueId: " + previousAnchor.getPreviousBlueId());
+        }
+        return fetched.size() == 1 && fetched.get(0).getItems() != null
+                ? fetched.get(0).getItems()
+                : fetched;
+    }
+
+    private Node effectiveListItemAfterOverlay(Node inherited, Node overlay) {
+        if (overlay.getType() != null || overlay.getBlueId() != null) {
+            return overlay;
+        }
+        if (inherited.getType() != null) {
+            return overlay.clone().type(itemTypeReference(inherited.getType()));
+        }
+        return overlay;
+    }
+
+    private boolean sourceContainsFixedContent(Node source) {
+        return sourceContainsFixedContent(source, false);
+    }
+
+    private boolean sourceContainsFixedContent(Node source, boolean typeRoot) {
+        Deque<FixedContentTask> pending = new ArrayDeque<>();
+        Set<Node> visitedNodes = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<Node> visitedTypeRoots = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<String> visitedTypeBlueIds = new HashSet<>();
+        Set<Node> visitedInlineTypes = Collections.newSetFromMap(
+                new IdentityHashMap<Node, Boolean>());
+        pending.push(new FixedContentTask(source, typeRoot));
+        while (!pending.isEmpty()) {
+            FixedContentTask task = pending.pop();
+            Node current = task.node;
+            Set<Node> visited = task.typeRoot ? visitedTypeRoots : visitedNodes;
+            if (current == null || !visited.add(current)) {
+                continue;
+            }
+            if (current.getRawValue() != null
+                    || current.isInlineValue()
+                    || current.getItems() != null
+                    || (!task.typeRoot && current.getBlueId() != null)
+                    || current.getPreviousBlueId() != null
+                    || current.getPosition() != null) {
+                return true;
+            }
+            enqueueTypeForFixedContent(
+                    current.getType(), pending, visitedTypeBlueIds, visitedInlineTypes);
+            if (current.getContracts() != null) {
+                pending.push(new FixedContentTask(current.getContracts(), false));
+            }
+            if (current.getProperties() != null) {
+                for (Node child : current.getProperties().values()) {
+                    if (child != null) {
+                        pending.push(new FixedContentTask(child, false));
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private void enqueueTypeForFixedContent(Node typeNode,
+                                            Deque<FixedContentTask> pending,
+                                            Set<String> visitedTypeBlueIds,
+                                            Set<Node> visitedInlineTypes) {
+        if (typeNode == null || isBareCoreTypeAlias(typeNode)) {
+            return;
+        }
+        String typeBlueId = typeNode.getBlueId();
+        if (typeBlueId != null) {
+            if (CORE_TYPE_BLUE_IDS.contains(typeBlueId)
+                    || !visitedTypeBlueIds.add(typeBlueId)) {
+                return;
+            }
+        } else if (!visitedInlineTypes.add(typeNode)) {
+            return;
+        }
+        Node canonicalType = canonicalTypeForLabelProvenance(typeNode);
+        if (canonicalType != null) {
+            pending.push(new FixedContentTask(canonicalType, true));
+        }
+    }
+
+    private void setDeclarationOnlyLabelPath(LabelProvenanceScope scope,
+                                             LabelPath path,
+                                             boolean declarationOnly) {
+        if (scope == null || !scope.labelPaths.contains(path)) {
+            return;
+        }
+        if (declarationOnly) {
+            if (!scope.fixedPaths.contains(path)) {
+                scope.declarationOnlyPaths.add(path);
+            }
+        } else {
+            scope.declarationOnlyPaths.remove(path);
+            scope.fixedPaths.add(path);
+        }
+    }
+
+    private void clearLabelClassificationAtOrBelow(LabelProvenanceScope scope,
+                                                    LabelPath path) {
+        scope.declarationOnlyPaths.removeIf(candidate -> candidate.isAtOrBelow(path));
+        scope.fixedPaths.removeIf(candidate -> candidate.isAtOrBelow(path));
+    }
+
+    private LabelProvenanceScope pushLabelProvenanceScope(Node source,
+                                                          Limits limits,
+                                                          boolean includeRootLabel) {
+        ResolutionState state = resolutionState;
+        if (state == null) {
+            return null;
+        }
+        Set<LabelPath> labelPaths = new HashSet<>();
+        collectAuthoredLabelPaths(
+                source, currentLabelPath(state), limits, includeRootLabel, labelPaths,
+                Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>()));
+        LabelProvenanceScope scope = new LabelProvenanceScope(labelPaths);
+        state.labelProvenanceScopes.add(scope);
+        return scope;
+    }
+
+    private void popLabelProvenanceScope(LabelProvenanceScope expected) {
+        if (expected == null || resolutionState == null) {
+            return;
+        }
+        List<LabelProvenanceScope> scopes = resolutionState.labelProvenanceScopes;
+        if (scopes.isEmpty() || scopes.remove(scopes.size() - 1) != expected) {
+            throw new IllegalStateException("Label provenance scope stack is unbalanced.");
+        }
+    }
+
+    private LabelProvenanceScope currentLabelProvenanceScope() {
+        ResolutionState state = resolutionState;
+        if (state == null || state.labelProvenanceScopes.isEmpty()) {
+            return null;
+        }
+        return state.labelProvenanceScopes.get(state.labelProvenanceScopes.size() - 1);
+    }
+
+    private void collectAuthoredLabelPaths(Node source,
+                                           LabelPath path,
+                                           Limits limits,
+                                           boolean includeRootLabel,
+                                           Set<LabelPath> labelPaths,
+                                           Set<Node> activeNodes) {
+        if (source == null || !activeNodes.add(source)) {
+            return;
+        }
+        try {
+            if ((includeRootLabel || !path.isRoot())
+                    && (source.getName() != null || source.getDescription() != null)) {
+                labelPaths.add(path);
+            }
+            collectAuthoredLabelPath(
+                    source.getContracts(), "contracts", path,
+                    limits, labelPaths, activeNodes);
+            if (source.getItems() != null) {
+                collectAuthoredListLabelPaths(
+                        source.getItems(), path, limits, labelPaths, activeNodes);
+            }
+            if (source.getProperties() != null) {
+                source.getProperties().forEach((key, child) -> collectAuthoredLabelPath(
+                        child, key, path, limits, labelPaths, activeNodes));
+            }
+        } finally {
+            activeNodes.remove(source);
+        }
+    }
+
+    private void collectAuthoredListLabelPaths(List<Node> children,
+                                               LabelPath parentPath,
+                                               Limits limits,
+                                               Set<LabelPath> labelPaths,
+                                               Set<Node> activeNodes) {
+        boolean hasPositionControls = children.stream()
+                .anyMatch(child -> child.getPosition() != null);
+        int start = startsWithPrevious(children) ? 1 : 0;
+        if (hasPositionControls) {
+            for (int index = start; index < children.size(); index++) {
+                Node child = children.get(index);
+                if (child.getPosition() == null) {
+                    // Unpositioned children in a controlled list are appended, so they
+                    // do not overlay an inherited label at a pre-existing path.
+                    continue;
+                }
+                collectAuthoredLabelPath(
+                        effectivePositionOverlay(child), String.valueOf(child.getPosition()), parentPath,
+                        limits, labelPaths, activeNodes);
+            }
+            return;
+        }
+        if (start > 0) {
+            // Children after a $previous anchor are appended. Their own nested
+            // resolution creates a scope at the effective appended position.
+            return;
+        }
+        for (int index = 0; index < children.size(); index++) {
+            collectAuthoredLabelPath(
+                    children.get(index), String.valueOf(index), parentPath,
+                    limits, labelPaths, activeNodes);
+        }
+    }
+
+    private void collectAuthoredLabelPath(Node child,
+                                          String segment,
+                                          LabelPath parentPath,
+                                          Limits limits,
+                                          Set<LabelPath> labelPaths,
+                                          Set<Node> activeNodes) {
+        if (child == null || !limits.shouldMergePathSegment(segment, child)) {
+            return;
+        }
+        limits.enterPathSegment(segment, child);
+        try {
+            collectAuthoredLabelPaths(
+                    child, parentPath.child(segment), limits, true,
+                    labelPaths, activeNodes);
+        } finally {
+            limits.exitPathSegment();
+        }
+    }
+
+    private Node effectivePositionOverlay(Node child) {
+        Node overlay = withoutPosition(child);
+        return hasReplacement(overlay)
+                ? overlay.getProperties().get(LIST_CONTROL_REPLACE)
+                : overlay;
+    }
+
+    private boolean hasLabelPathAtOrBelow(Set<LabelPath> labelPaths, LabelPath path) {
+        if (labelPaths.contains(path)) {
+            return true;
+        }
+        for (LabelPath labelPath : labelPaths) {
+            if (labelPath.isAtOrBelow(path)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void seedMaterializedTargetLabelProvenance(Node target,
+                                                       LabelProvenanceScope scope) {
+        if (target == null || scope == null
+                || !hasLabelPathAtOrBelow(scope.labelPaths, LabelPath.root())) {
+            return;
+        }
+        if (target.getType() != null) {
+            recordTypeDeclarationLabelPaths(
+                    target.getType(), LabelPath.root(), scope.labelPaths);
+        }
+        for (LabelPath labelPath : scope.labelPaths) {
+            Node materialized = nodeAtPath(target, labelPath);
+            if (materialized != null && sourceContainsFixedContent(materialized)) {
+                setDeclarationOnlyLabelPath(scope, labelPath, false);
+            }
+        }
+    }
+
+    private Node nodeAtPath(Node root, LabelPath path) {
+        Node current = root;
+        for (String segment : path.segments) {
+            if (current == null) {
+                return null;
+            }
+            if ("contracts".equals(segment) && current.getContracts() != null) {
+                current = current.getContracts();
+                continue;
+            }
+            if (current.getItems() != null && JsonPointer.isArrayIndexSegment(segment)) {
+                if ("-".equals(segment)) {
+                    return null;
+                }
+                int index;
+                try {
+                    index = Integer.parseInt(segment);
+                } catch (NumberFormatException ex) {
+                    return null;
+                }
+                if (index < 0 || index >= current.getItems().size()) {
+                    return null;
+                }
+                current = current.getItems().get(index);
+                continue;
+            }
+            current = current.getProperties() == null
+                    ? null
+                    : current.getProperties().get(segment);
+        }
+        return current;
+    }
+
+    private void validateExplicitInstanceLabels(Node inherited,
+                                                Node source,
+                                                boolean inheritedDeclarationOnly) {
+        if (source.getName() == null && source.getDescription() == null) {
+            return;
+        }
+        if (inherited.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "An inherited pure reference cannot carry name or description overlays. Path: "
+                            + currentPath(resolutionState));
+        }
+        if (inheritedDeclarationOnly) {
+            return;
+        }
+        validateFixedValueLabel("name", inherited.getName(), source.getName());
+        validateFixedValueLabel("description", inherited.getDescription(), source.getDescription());
+    }
+
+    private void validateFixedValueLabel(String label, String inherited, String source) {
+        if (source != null && inherited != null && !inherited.equals(source)) {
+            throw new IllegalArgumentException(
+                    "Inherited fixed value " + label + " conflicts at path "
+                            + currentPath(resolutionState) + ". Source label: " + source
+                            + ", inherited label: " + inherited);
+        }
+    }
+
+    private void applyExplicitInstanceLabels(Node target,
+                                             Node source,
+                                             boolean inheritedDeclarationOnly) {
+        if (source.getName() != null
+                && (inheritedDeclarationOnly || target.getName() == null)) {
+            target.name(source.getName());
+        }
+        if (source.getDescription() != null
+                && (inheritedDeclarationOnly || target.getDescription() == null)) {
+            target.description(source.getDescription());
         }
     }
 
@@ -1046,7 +1683,7 @@ public class Merger implements NodeResolver {
             return;
         }
         Node resolved = resolve(sourceContracts, limits);
-        mergeObject(target.getContracts(), resolved, limits);
+        mergeInstanceObject(target.getContracts(), resolved, limits);
     }
 
     private void mergeContractsWithContribution(Node target,
@@ -1054,7 +1691,9 @@ public class Merger implements NodeResolver {
                                                 Limits limits) {
         ResolutionState state = resolutionState;
         Contribution previous = state.contribution;
-        state.contribution = Contribution.CONTRACT_ROOT;
+        state.contribution = previous == Contribution.MATERIALIZED_REFERENCE
+                ? previous
+                : Contribution.CONTRACT_ROOT;
         try {
             mergeContracts(target, sourceContracts, limits);
         } finally {
@@ -1185,7 +1824,17 @@ public class Merger implements NodeResolver {
             mergeable.blueId(null);
         }
         mergeObjectWithContribution(target, mergeable, limits, Contribution.MATERIALIZED_REFERENCE);
+        copyMaterializedReferenceLabels(target, materialized);
         target.blueId(blueId);
+    }
+
+    private void copyMaterializedReferenceLabels(Node target, Node materialized) {
+        if (target.getName() == null && materialized.getName() != null) {
+            target.name(materialized.getName());
+        }
+        if (target.getDescription() == null && materialized.getDescription() != null) {
+            target.description(materialized.getDescription());
+        }
     }
 
     private void materializeCyclicSetReference(Node target,
@@ -1201,8 +1850,15 @@ public class Merger implements NodeResolver {
                     + currentPath(state) + " for blueId: " + blueId);
         }
         try {
-            mergeWithContribution(target, canonicalReference.canonical.toNode(), limits,
-                    Contribution.MATERIALIZED_REFERENCE);
+            Node materialized = resolveWithContribution(
+                    canonicalReference.canonical.toNode(), limits, Contribution.INSTANCE);
+            Node mergeable = materialized.clone();
+            if (mergeable.getBlueId() != null && !mergeable.isReferenceOnly()) {
+                mergeable.blueId(null);
+            }
+            mergeObjectWithContribution(
+                    target, mergeable, limits, Contribution.MATERIALIZED_REFERENCE);
+            copyMaterializedReferenceLabels(target, materialized);
             target.blueId(blueId);
         } finally {
             state.materializingReferences.remove(blueId);
@@ -1253,7 +1909,7 @@ public class Merger implements NodeResolver {
 
         try {
             Node resolved = resolveWithContribution(
-                    canonical.toNode(), limits, Contribution.MATERIALIZED_REFERENCE);
+                    canonical.toNode(), limits, Contribution.INSTANCE);
             resolved.blueId(blueId);
             if (canonicalReference.directlyVerified
                     && !state.usedNonDirectTrustedContent
@@ -1715,6 +2371,10 @@ public class Merger implements NodeResolver {
         return JsonPointer.toPointer(state.path);
     }
 
+    private LabelPath currentLabelPath(ResolutionState state) {
+        return new LabelPath(state.path);
+    }
+
     private void resolveTypeMetadata(Node source, Limits limits) {
         source.itemType(resolveTypeMetadataNode(source.getItemType(), limits));
         source.keyType(resolveTypeMetadataNode(source.getKeyType(), limits));
@@ -1753,6 +2413,7 @@ public class Merger implements NodeResolver {
     public Node resolve(Node node, Limits limits) {
         ResolutionState state = resolutionState;
         boolean outermost = state == null;
+        boolean enteredOutermostLimit = false;
         if (outermost) {
             BlueIdReferenceValidator.validate(node);
             state = new ResolutionState();
@@ -1760,9 +2421,12 @@ public class Merger implements NodeResolver {
             state.rootSource = node;
             resolutionState = state;
             lastResolutionUsedNonDirectTrustedContent = false;
-            limits.enterPathSegment("", node);
         }
         try {
+            if (outermost) {
+                limits.enterPathSegment("", node);
+                enteredOutermostLimit = true;
+            }
             Node result = resolveInternal(node, limits);
             if (outermost) {
                 validateCompletedCandidates(state);
@@ -1771,19 +2435,26 @@ public class Merger implements NodeResolver {
         } finally {
             if (outermost) {
                 lastResolutionUsedNonDirectTrustedContent = state.usedNonDirectTrustedContent;
-                limits.exitPathSegment();
+                if (enteredOutermostLimit) {
+                    limits.exitPathSegment();
+                }
                 resolutionState = null;
             }
         }
     }
 
     private Node resolveInternal(Node node, Limits limits) {
-        Node resultNode = new Node();
-        merge(resultNode, node, limits);
-        resultNode.name(node.getName());
-        resultNode.description(node.getDescription());
-        resultNode.blueId(node.getBlueId());
-        return resultNode;
+        LabelProvenanceScope labelScope = pushLabelProvenanceScope(node, limits, false);
+        try {
+            Node resultNode = new Node();
+            merge(resultNode, node, limits);
+            resultNode.name(node.getName());
+            resultNode.description(node.getDescription());
+            resultNode.blueId(node.getBlueId());
+            return resultNode;
+        } finally {
+            popLabelProvenanceScope(labelScope);
+        }
     }
 
     public static final class SnapshotResolution {
@@ -1852,10 +2523,169 @@ public class Merger implements NodeResolver {
         CONTRACT_CONTENT
     }
 
+    private enum LabelMergeMode {
+        AUTHORED_OVERLAY,
+        REFERENCE_EXPANSION,
+        NONE
+    }
+
+    private static final class LabelPath {
+        private final List<String> segments;
+
+        private LabelPath(List<String> segments) {
+            this.segments = Collections.unmodifiableList(new ArrayList<>(segments));
+        }
+
+        private static LabelPath root() {
+            return new LabelPath(Collections.<String>emptyList());
+        }
+
+        private LabelPath child(String segment) {
+            List<String> childSegments = new ArrayList<>(segments);
+            childSegments.add(segment);
+            return new LabelPath(childSegments);
+        }
+
+        private boolean isRoot() {
+            return segments.isEmpty();
+        }
+
+        private boolean isAtOrBelow(LabelPath ancestor) {
+            if (segments.size() < ancestor.segments.size()) {
+                return false;
+            }
+            for (int index = 0; index < ancestor.segments.size(); index++) {
+                if (!Objects.equals(segments.get(index), ancestor.segments.get(index))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return this == other
+                    || other instanceof LabelPath
+                    && segments.equals(((LabelPath) other).segments);
+        }
+
+        @Override
+        public int hashCode() {
+            return segments.hashCode();
+        }
+    }
+
+    private static final class LabelProvenanceScope {
+        private final Set<LabelPath> labelPaths;
+        private final Set<LabelPath> declarationOnlyPaths = new HashSet<>();
+        private final Set<LabelPath> fixedPaths = new HashSet<>();
+
+        private LabelProvenanceScope(Set<LabelPath> labelPaths) {
+            this.labelPaths = labelPaths;
+        }
+    }
+
+    private enum LabelScanTaskKind {
+        TYPE,
+        SOURCE,
+        CHILDREN,
+        EXIT_TYPE
+    }
+
+    private static final class LabelScanTask {
+        private final LabelScanTaskKind kind;
+        private final Node node;
+        private final LabelPath path;
+        private final String typeBlueId;
+
+        private LabelScanTask(LabelScanTaskKind kind,
+                              Node node,
+                              LabelPath path,
+                              String typeBlueId) {
+            this.kind = kind;
+            this.node = node;
+            this.path = path;
+            this.typeBlueId = typeBlueId;
+        }
+
+        private static LabelScanTask type(Node node, LabelPath path) {
+            return new LabelScanTask(LabelScanTaskKind.TYPE, node, path, null);
+        }
+
+        private static LabelScanTask source(Node node, LabelPath path) {
+            return new LabelScanTask(LabelScanTaskKind.SOURCE, node, path, null);
+        }
+
+        private static LabelScanTask children(Node node, LabelPath path) {
+            return new LabelScanTask(LabelScanTaskKind.CHILDREN, node, path, null);
+        }
+
+        private static LabelScanTask exitType(String typeBlueId, Node node) {
+            return new LabelScanTask(LabelScanTaskKind.EXIT_TYPE, node, null, typeBlueId);
+        }
+    }
+
+    private static final class LabelScanState {
+        private final LabelProvenanceScope scope;
+        private final Set<LabelPath> relevantLabelPaths;
+        private final Set<String> activeTypeBlueIds = new HashSet<>();
+        private final Set<Node> activeInlineTypes = Collections.newSetFromMap(new IdentityHashMap<>());
+        private final Map<LabelPath, Integer> listSizes = new HashMap<>();
+        private final Map<LabelPath, Node> effectiveItemTypes = new HashMap<>();
+        private final Map<LabelPath, Map<Integer, Node>> effectiveListItems = new HashMap<>();
+
+        private LabelScanState(LabelProvenanceScope scope,
+                               Set<LabelPath> relevantLabelPaths) {
+            this.scope = scope;
+            this.relevantLabelPaths = relevantLabelPaths;
+        }
+
+        private boolean enterType(String typeBlueId, Node typeNode) {
+            return typeBlueId != null
+                    ? activeTypeBlueIds.add(typeBlueId)
+                    : activeInlineTypes.add(typeNode);
+        }
+
+        private void exitType(String typeBlueId, Node typeNode) {
+            if (typeBlueId != null) {
+                activeTypeBlueIds.remove(typeBlueId);
+            } else {
+                activeInlineTypes.remove(typeNode);
+            }
+        }
+    }
+
+    private static final class PositionedLabelSource {
+        private final int position;
+        private final Node node;
+        private final boolean replacement;
+
+        private PositionedLabelSource(int position, Node node) {
+            this(position, node, false);
+        }
+
+        private PositionedLabelSource(int position, Node node, boolean replacement) {
+            this.position = position;
+            this.node = node;
+            this.replacement = replacement;
+        }
+    }
+
+    private static final class FixedContentTask {
+        private final Node node;
+        private final boolean typeRoot;
+
+        private FixedContentTask(Node node, boolean typeRoot) {
+            this.node = node;
+            this.typeRoot = typeRoot;
+        }
+    }
+
     private static final class ResolutionState {
         private final List<String> path = new ArrayList<>();
         private final List<Boolean> referenceExpansionStack = new ArrayList<>();
         private final List<ContributionFrame> contributionFrames = new ArrayList<>();
+        private final List<LabelProvenanceScope> labelProvenanceScopes = new ArrayList<>();
         private boolean referenceExpansionAllowed = true;
         private Contribution contribution = Contribution.INSTANCE;
         private Map<String, ValidationCandidate> candidates;
