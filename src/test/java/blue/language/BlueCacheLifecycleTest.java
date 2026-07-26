@@ -16,7 +16,6 @@ import blue.language.processor.model.MarkerContract;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
 
@@ -689,8 +688,15 @@ class BlueCacheLifecycleTest {
     void providerReplacementWaitsForRecursiveExpandAndCannotMixProviders() throws Exception {
         CountDownLatch rootFetchEntered = new CountDownLatch(1);
         CountDownLatch releaseRootFetch = new CountDownLatch(1);
+        Node originalLeaf = new Node().value("original");
+        String originalLeafBlueId = BlueIdCalculator.calculateBlueId(originalLeaf);
+        Node originalRoot = new Node().properties(
+                "child", new Node().blueId(originalLeafBlueId));
+        String originalRootBlueId = BlueIdCalculator.calculateBlueId(originalRoot);
+        Node replacementLeaf = new Node().value("replacement");
+        String replacementLeafBlueId = BlueIdCalculator.calculateBlueId(replacementLeaf);
         NodeProvider original = blueId -> {
-            if ("root".equals(blueId)) {
+            if (originalRootBlueId.equals(blueId)) {
                 rootFetchEntered.countDown();
                 try {
                     if (!releaseRootFetch.await(5L, TimeUnit.SECONDS)) {
@@ -700,17 +706,18 @@ class BlueCacheLifecycleTest {
                     Thread.currentThread().interrupt();
                     throw new AssertionError(exception);
                 }
-                return Collections.singletonList(new Node().properties(
-                        "child", new Node().blueId("nested")));
+                return Collections.singletonList(originalRoot.clone());
             }
-            return Collections.singletonList(new Node().value("original"));
+            return originalLeafBlueId.equals(blueId)
+                    ? Collections.singletonList(originalLeaf.clone())
+                    : null;
         };
-        Blue blue = new Blue(NodeProviderWrapper.unverified(original));
+        Blue blue = new Blue(original);
         AtomicReference<Throwable> failure = new AtomicReference<>();
         AtomicReference<Node> expanded = new AtomicReference<>();
         Thread expanding = new Thread(() -> {
             try {
-                expanded.set(blue.expand(new Node().blueId("root")));
+                expanded.set(blue.expand(new Node().blueId(originalRootBlueId)));
             } catch (Throwable throwable) {
                 failure.compareAndSet(null, throwable);
             }
@@ -721,8 +728,9 @@ class BlueCacheLifecycleTest {
         CountDownLatch replacementReturned = new CountDownLatch(1);
         Thread replacement = new Thread(() -> {
             try {
-                blue.nodeProvider(NodeProviderWrapper.unverified(blueId ->
-                        Collections.singletonList(new Node().value("replacement"))));
+                blue.nodeProvider(blueId -> replacementLeafBlueId.equals(blueId)
+                        ? Collections.singletonList(replacementLeaf.clone())
+                        : null);
             } catch (Throwable throwable) {
                 failure.compareAndSet(null, throwable);
             } finally {
@@ -740,7 +748,8 @@ class BlueCacheLifecycleTest {
         assertFalse(replacement.isAlive());
         assertNull(failure.get());
         assertEquals("original", expanded.get().getProperties().get("child").getValue());
-        assertEquals("replacement", blue.expand(new Node().blueId("nested")).getValue());
+        assertEquals("replacement",
+                blue.expand(new Node().blueId(replacementLeafBlueId)).getValue());
     }
 
     @Test

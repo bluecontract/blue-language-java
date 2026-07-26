@@ -2,6 +2,8 @@ package blue.language.utils;
 
 import blue.language.model.Node;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
 
@@ -63,7 +65,10 @@ public class BlueIdCalculator {
 
     private String calculateCleanedObject(Object cleanedObject) {
         if (cleanedObject instanceof String || cleanedObject instanceof Number || cleanedObject instanceof Boolean) {
-            return hashProvider.apply(cleanedObject);
+            // A bare scalar at any semantic child position is scalar-node
+            // sugar. It has the same identity as the explicit typed scalar
+            // node, never the identity of the raw JSON token.
+            return calculateMap(typedScalarNode(cleanedObject));
         } else if (cleanedObject instanceof Map) {
             return calculateMap((Map<String, Object>) cleanedObject);
         } else if (cleanedObject instanceof List) {
@@ -71,6 +76,42 @@ public class BlueIdCalculator {
         }
         throw new IllegalArgumentException(
                 "Object must be a String, Number, Boolean, List or Map - found " + cleanedObject.getClass());
+    }
+
+    private Map<String, Object> typedScalarNode(Object value) {
+        String typeBlueId;
+        Object canonicalValue = value;
+        if (value instanceof String) {
+            typeBlueId = TEXT_TYPE_BLUE_ID;
+        } else if (value instanceof Boolean) {
+            typeBlueId = BOOLEAN_TYPE_BLUE_ID;
+        } else if (value instanceof BigDecimal
+                || value instanceof Float
+                || value instanceof Double) {
+            typeBlueId = DOUBLE_TYPE_BLUE_ID;
+            canonicalValue = BlueNumbers.toCanonicalDoubleValue(value);
+        } else if (value instanceof Number) {
+            typeBlueId = INTEGER_TYPE_BLUE_ID;
+            BigInteger integer = value instanceof BigInteger
+                    ? (BigInteger) value
+                    : BigInteger.valueOf(((Number) value).longValue());
+            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
+            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
+            canonicalValue = integer.compareTo(lowerBound) < 0
+                    || integer.compareTo(upperBound) > 0
+                    ? integer.toString()
+                    : integer;
+        } else {
+            throw new IllegalArgumentException(
+                    "Blue scalar must be Text, Integer, Double, or Boolean.");
+        }
+
+        Map<String, Object> type = new LinkedHashMap<>();
+        type.put(OBJECT_BLUE_ID, typeBlueId);
+        Map<String, Object> scalar = new LinkedHashMap<>();
+        scalar.put(OBJECT_TYPE, type);
+        scalar.put(OBJECT_VALUE, canonicalValue);
+        return scalar;
     }
 
     private String calculateMap(Map<String, Object> map) {
@@ -100,13 +141,33 @@ public class BlueIdCalculator {
         }
         for (int i = start; i < list.size(); i++) {
             Object element = list.get(i);
-            String elementHash = calculateCleanedObject(element);
+            // $empty is a list-control marker, not a Boolean scalar payload.
+            // Its marker value therefore follows the raw map-value hash rule.
+            String elementHash = isEmptyPlaceholder(element)
+                    ? calculateEmptyPlaceholder()
+                    : calculateCleanedObject(element);
             Map<String, Object> cons = new TreeMap<>(String::compareTo);
             cons.put("elem", Collections.singletonMap("blueId", elementHash));
             cons.put("prev", Collections.singletonMap("blueId", accumulator));
             accumulator = hashProvider.apply(Collections.singletonMap("$listCons", cons));
         }
         return accumulator;
+    }
+
+    private boolean isEmptyPlaceholder(Object element) {
+        if (!(element instanceof Map)) {
+            return false;
+        }
+        Map<?, ?> map = (Map<?, ?>) element;
+        return map.size() == 1
+                && Boolean.TRUE.equals(map.get(LIST_CONTROL_EMPTY));
+    }
+
+    private String calculateEmptyPlaceholder() {
+        Map<String, Object> helper = new TreeMap<>(String::compareTo);
+        helper.put(LIST_CONTROL_EMPTY,
+                Collections.singletonMap("blueId", hashProvider.apply(Boolean.TRUE)));
+        return hashProvider.apply(helper);
     }
 
     private Object cleanRoot(Object obj) {

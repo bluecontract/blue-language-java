@@ -178,6 +178,65 @@ class CanonicalOverlayPatchEngineTest {
     }
 
     @Test
+    void processorMarkerCanBeWrittenBesideScalarRootPayload() {
+        FrozenNode root = FrozenNode.fromNode(
+                new Node().value(17));
+        Node marker = new Node().properties(
+                "documentId", new Node().value("scalar-root"));
+
+        CanonicalPatchResult result =
+                new CanonicalOverlayPatchEngine(root)
+                        .apply(JsonPatch.add(
+                                "/contracts/initialized",
+                                marker));
+        FrozenNode patched = result.root();
+
+        assertSame(root.getValue(), patched.getValue());
+        assertNull(root.getContracts());
+        assertEquals(
+                "scalar-root",
+                patched.property("contracts")
+                        .property("initialized")
+                        .property("documentId")
+                        .getValue());
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        patched.toNode()),
+                patched.blueId());
+    }
+
+    @Test
+    void processorMarkerCanBeWrittenBesideListRootPayload() {
+        FrozenNode root = FrozenNode.fromNode(
+                new Node().items(
+                        new Node().value("kept"),
+                        new Node().value("also-kept")));
+        Node marker = new Node().properties(
+                "documentId", new Node().value("list-root"));
+
+        FrozenNode patched =
+                new CanonicalOverlayPatchEngine(root)
+                        .apply(JsonPatch.add(
+                                "/contracts/initialized",
+                                marker))
+                        .root();
+
+        assertEquals(2, patched.getItems().size());
+        assertSame(root.item(0), patched.item(0));
+        assertSame(root.item(1), patched.item(1));
+        assertEquals(
+                "list-root",
+                patched.property("contracts")
+                        .property("initialized")
+                        .property("documentId")
+                        .getValue());
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        patched.toNode()),
+                patched.blueId());
+    }
+
+    @Test
     void mixedFreezeModeOverlayFallsBackToLegacyNormalization() {
         FrozenNode resolvedDescendant = FrozenNode.fromResolvedNode(
                 new Node().properties("resolved", new Node().value("kept")));

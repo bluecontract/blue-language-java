@@ -1,0 +1,20 @@
+id: F_inline_reference_partial_equivalence
+category: LimitedExpansion
+operation: compareGraphEquivalentInputs
+variants:
+  - name: inline
+    source:
+      left:
+        value: wanted
+      right:
+        deep:
+          value: not-wanted
+  - name: collapsed
+    source:
+      blueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+limits:
+  demandedPaths: [/left/value]
+expectedOutcome: Established
+expectedValue: wanted
+expectedSameSemanticResult: true
+expectedSameRootNodeBlueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk

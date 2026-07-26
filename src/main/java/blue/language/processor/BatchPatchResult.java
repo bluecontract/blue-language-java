@@ -18,6 +18,7 @@ final class BatchPatchResult {
     private final UpdatePlan updatePlan;
     private final List<ImmutableJsonPatch> requestedPatches;
     private final List<GeneralizationMetadataWrite> generalizationMetadataWrites;
+    private final boolean resolutionComplete;
     private final long patchPlanningNanos;
     private final long conformanceNanos;
     private final long buildUpdatesNanos;
@@ -40,6 +41,7 @@ final class BatchPatchResult {
                 null,
                 Collections.<ImmutableJsonPatch>emptyList(),
                 Collections.<GeneralizationMetadataWrite>emptyList(),
+                true,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
@@ -54,6 +56,28 @@ final class BatchPatchResult {
                      long patchPlanningNanos,
                      long conformanceNanos,
                      long buildUpdatesNanos) {
+        this(canonicalRoot,
+                resolvedRoot,
+                updates,
+                updatePlan,
+                requestedPatches,
+                generalizationMetadataWrites,
+                true,
+                patchPlanningNanos,
+                conformanceNanos,
+                buildUpdatesNanos);
+    }
+
+    BatchPatchResult(FrozenNode canonicalRoot,
+                     FrozenNode resolvedRoot,
+                     List<DocumentProcessingRuntime.DocumentUpdateData> updates,
+                     UpdatePlan updatePlan,
+                     List<ImmutableJsonPatch> requestedPatches,
+                     List<GeneralizationMetadataWrite> generalizationMetadataWrites,
+                     boolean resolutionComplete,
+                     long patchPlanningNanos,
+                     long conformanceNanos,
+                     long buildUpdatesNanos) {
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
         this.updates = updates == null
@@ -64,6 +88,7 @@ final class BatchPatchResult {
                 Objects.requireNonNull(requestedPatches, "requestedPatches")));
         this.generalizationMetadataWrites = Collections.unmodifiableList(new ArrayList<>(
                 Objects.requireNonNull(generalizationMetadataWrites, "generalizationMetadataWrites")));
+        this.resolutionComplete = resolutionComplete;
         this.patchPlanningNanos = patchPlanningNanos;
         this.conformanceNanos = conformanceNanos;
         this.buildUpdatesNanos = buildUpdatesNanos;
@@ -81,6 +106,7 @@ final class BatchPatchResult {
         this.updatePlan = Objects.requireNonNull(updatePlan, "updatePlan");
         this.requestedPatches = Collections.emptyList();
         this.generalizationMetadataWrites = Collections.emptyList();
+        this.resolutionComplete = true;
         this.patchPlanningNanos = patchPlanningNanos;
         this.conformanceNanos = conformanceNanos;
         this.buildUpdatesNanos = buildUpdatesNanos;
@@ -120,6 +146,10 @@ final class BatchPatchResult {
         return generalizationMetadataWrites;
     }
 
+    boolean isResolutionComplete() {
+        return resolutionComplete;
+    }
+
     long patchPlanningNanos() {
         return patchPlanningNanos;
     }
@@ -140,6 +170,7 @@ final class BatchPatchResult {
                     updatePlan,
                     requestedPatches,
                     generalizationMetadataWrites,
+                    resolutionComplete,
                     patchPlanningNanos,
                     conformanceNanos,
                     buildUpdatesNanos);
@@ -154,6 +185,7 @@ final class BatchPatchResult {
                 null,
                 requestedPatches,
                 generalizationMetadataWrites,
+                resolutionComplete,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);

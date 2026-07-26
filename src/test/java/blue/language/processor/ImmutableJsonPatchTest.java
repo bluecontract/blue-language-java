@@ -50,10 +50,10 @@ class ImmutableJsonPatchTest {
     @Test
     void preparedPlannerMatchesLegacyPlannerAndReusesUnchangedSubtree() {
         Node input = new Node().properties(
-                "left", new Node().properties("value", new Node().value(1)),
-                "right", new Node().properties("value", new Node().value(2)));
+                "left", new Node().properties("count", new Node().value(1)),
+                "right", new Node().properties("count", new Node().value(2)));
         FrozenNode root = FrozenNode.fromResolvedNode(input);
-        JsonPatch authored = JsonPatch.replace("/left/value", new Node().value(3));
+        JsonPatch authored = JsonPatch.replace("/left/count", new Node().value(3));
         ImmutableJsonPatch prepared = ImmutableJsonPatch.from(authored, root, root);
 
         ImmutablePatchPlanner.PatchPlan legacy = ImmutablePatchPlanner.forFrozen(root).plan("/", authored);

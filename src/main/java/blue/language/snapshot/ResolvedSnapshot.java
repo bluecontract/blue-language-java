@@ -16,14 +16,16 @@ public final class ResolvedSnapshot {
     private volatile Map<String, FrozenNode> canonicalIndex;
     private volatile Map<String, FrozenNode> resolvedIndex;
     private final VerifiedReferenceResolution verifiedReferenceResolution;
+    private final boolean resolutionComplete;
     private volatile String blueId;
 
     public ResolvedSnapshot(Node canonicalRoot, Node resolvedRoot, String blueId) {
-        this(FrozenNode.fromNode(canonicalRoot), FrozenNode.fromResolvedNode(resolvedRoot), blueId, null);
+        this(FrozenNode.fromNode(canonicalRoot), FrozenNode.fromResolvedNode(resolvedRoot),
+                blueId, null, true);
     }
 
     public ResolvedSnapshot(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String blueId) {
-        this(canonicalRoot, resolvedRoot, blueId, null);
+        this(canonicalRoot, resolvedRoot, blueId, null, true);
     }
 
     /**
@@ -32,19 +34,27 @@ public final class ResolvedSnapshot {
      * may never be published outside their active patch sequence.
      */
     public ResolvedSnapshot(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
+        this(canonicalRoot, resolvedRoot, true);
+    }
+
+    private ResolvedSnapshot(FrozenNode canonicalRoot,
+                             FrozenNode resolvedRoot,
+                             boolean resolutionComplete) {
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
         if (!this.canonicalRoot.isStrictCanonical()) {
             throw new IllegalArgumentException("Snapshot canonical root must be strict canonical FrozenNode.");
         }
         this.verifiedReferenceResolution = null;
+        this.resolutionComplete = resolutionComplete;
         this.blueId = null;
     }
 
     private ResolvedSnapshot(FrozenNode canonicalRoot,
                              FrozenNode resolvedRoot,
                              String blueId,
-                             VerifiedReferenceResolution verifiedReferenceResolution) {
+                             VerifiedReferenceResolution verifiedReferenceResolution,
+                             boolean resolutionComplete) {
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
         if (!this.canonicalRoot.isStrictCanonical()) {
@@ -55,6 +65,7 @@ public final class ResolvedSnapshot {
             throw new IllegalArgumentException("Snapshot blueId must match canonical root blueId.");
         }
         this.verifiedReferenceResolution = verifiedReferenceResolution;
+        this.resolutionComplete = resolutionComplete;
         this.blueId = expectedBlueId;
     }
 
@@ -64,7 +75,21 @@ public final class ResolvedSnapshot {
                 resolution.canonicalRoot(),
                 resolution.resolvedRoot(),
                 resolution.canonicalRoot().blueId(),
-                resolution.verifiedReferenceResolution());
+                resolution.verifiedReferenceResolution(),
+                true);
+    }
+
+    /**
+     * Creates an invocation-local snapshot whose resolved lane intentionally
+     * retains one or more deferred references. Its canonical identity remains
+     * exact, but it must never be published as the complete resolved value for
+     * that canonical key.
+     */
+    public static ResolvedSnapshot withDeferredResolution(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot) {
+        return new ResolvedSnapshot(
+                canonicalRoot, resolvedRoot, false);
     }
 
     public ResolvedSnapshot toStrictBlueIdValidatedCanonical() {
@@ -76,7 +101,8 @@ public final class ResolvedSnapshot {
         return new ResolvedSnapshot(strictCanonicalRoot,
                 resolvedRoot,
                 strictCanonicalRoot.blueId(),
-                verifiedReferenceResolution);
+                verifiedReferenceResolution,
+                resolutionComplete);
     }
 
     public Node canonicalRoot() {
@@ -162,6 +188,14 @@ public final class ResolvedSnapshot {
 
     public VerifiedReferenceResolution verifiedReferenceResolution() {
         return verifiedReferenceResolution;
+    }
+
+    /**
+     * Whether the resolved lane is a complete value suitable for publication
+     * in canonical-keyed snapshot caches.
+     */
+    public boolean isResolutionComplete() {
+        return resolutionComplete;
     }
 
     public CanonicalOverlayPatchEngine canonicalPatchEngine() {

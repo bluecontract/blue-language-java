@@ -1,0 +1,14 @@
+id: R_provider_unavailable_does_not_prove_absence
+category: LimitedResolution
+operation: resolveLimited
+source:
+  type:
+    blueId: 9Rjh8hCGJMp7DDDGS9AUNDXs4zNzZFmMjqAqwKJ3W7Xx
+limits:
+  demandedPaths: [/country]
+provider:
+  - requestedBlueId: 9Rjh8hCGJMp7DDDGS9AUNDXs4zNzZFmMjqAqwKJ3W7Xx
+    outcome: Unavailable
+expectedOutcome: Incomplete
+expectedAbsent: false
+expectedProviderOutcome: Unavailable

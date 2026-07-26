@@ -1,0 +1,75 @@
+schema: blue-contracts-fixture/1.0
+id: c-rep-06
+vectors:
+- C-REP-06
+category: rep
+description: A wide direct ancestor is charged and limited in every representation.
+operation: process
+input:
+  root:
+    counter: 0
+    contracts:
+      in:
+        type:
+          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /counter
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+    handlers:
+      /contracts/h:
+        result:
+          patches:
+          - op: replace
+            path: /wide/x
+            val: 1
+  builders:
+  - kind: generated-object
+    target: /wide
+    memberCount: 16385
+    keyPrefix: k
+    value: 0
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: portable-limit-exceeded
+  - actual: result.diagnostic.category
+    op: equals
+    expected: DirectNodeLimitExceeded

@@ -522,7 +522,7 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void explicitIntegerStringsRetainCanonicalAsciiGrammar() throws Exception {
+    public void explicitIntegerStringsEnforceCanonicalAsciiGrammar() throws Exception {
         Node negativeZero = YAML_MAPPER.readValue(
                 "schema:\n" +
                 "  minimum:\n" +
@@ -531,7 +531,8 @@ public class NodeDeserializerTest {
 
         assertEquals("-0", negativeZero.getSchema().getMinimum().getRawValue());
         Node preprocessedNegativeZero = new Blue().preprocess(negativeZero);
-        assertEquals(BigInteger.ZERO, preprocessedNegativeZero.getSchema().getMinimum().getValue());
+        assertThrows(IllegalArgumentException.class,
+                () -> preprocessedNegativeZero.getSchema().getMinimum().getValue());
         assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
                 "schema:\n  minimum:\n    type: Integer\n    value: \"01\"", Node.class));
         assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(

@@ -1,32 +1,18 @@
 name: Json Patch Entry
-description: >
-  Blue Contracts and Processor 1.0 runtime patch request produced by handlers.
-  A Json Patch Entry describes one deterministic mutation request against the
-  selected document. Only add, replace, and remove are supported. The path is
-  a Blue Runtime Pointer and must not target the document root. Despite its
-  historical name, Json Patch Entry is not full RFC 6902; it uses Blue-specific
-  upsert, auto-materialization, runtime insertion normalization, and post-patch
-  type-soundness rules. The val field is required for add and replace and must
-  be absent for remove. Patches are applied in result order; each successful
-  patch triggers its full Document Update cascade before the next patch is
-  applied. Field is named val, not value, because value is Blue's scalar
-  payload wrapper.
+description: One Blue Contracts 1.0 persistent mutation request. Only add, replace, and remove are supported. val is required for add/replace and absent for remove.
 op:
-  type: Text
-  description: >
-    Required patch operation. Allowed values are add, replace, and remove.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true
-    enum: [add, replace, remove]
+    enum:
+    - add
+    - replace
+    - remove
 path:
-  type: Text
-  description: >
-    Required absolute Blue Runtime Pointer identifying the mutation target.
-    The empty string is invalid. The root pointer / is not a valid runtime
-    patch target for handlers or channels.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true
 val:
-  description: >
-    Patch payload for add and replace. It may be any valid Blue node. It must
-    be absent for remove.
+  description: Patch value for add or replace.

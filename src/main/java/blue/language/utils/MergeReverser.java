@@ -176,6 +176,10 @@ public class MergeReverser {
             } else if (fromType != null && fromType.getItems() != null) {
                 List<Node> inheritedItems = fromType.getItems();
                 int inheritedSize = inheritedItems.size();
+                boolean appendOnly = Properties.LIST_MERGE_POLICY_APPEND_ONLY.equals(
+                        merged.getMergePolicy() != null
+                                ? merged.getMergePolicy()
+                                : fromType.getMergePolicy());
                 if (merged.getItems().size() < inheritedSize) {
                     throw new IllegalStateException("Cannot reverse-minimize a list shorter than its inherited list without an explicit list-deletion control.");
                 }
@@ -184,6 +188,10 @@ public class MergeReverser {
                 for (int i = 0; i < commonSize; i++) {
                     if (sameNodeBlueId(merged.getItems().get(i), inheritedItems.get(i))) {
                         continue;
+                    }
+                    if (appendOnly) {
+                        throw new IllegalStateException(
+                                "Cannot reverse-minimize a modified inherited item in an append-only list.");
                     }
                     Node minimalItem = new Node();
                     reverseNode(minimalItem, merged.getItems().get(i), inheritedItems.get(i), false, null);
@@ -203,8 +211,12 @@ public class MergeReverser {
                 }
 
                 if (!minimalItems.isEmpty()) {
-                    String itemsBlueId = BlueIdCalculator.calculateBlueId(inheritedItems);
-                    minimalItems.add(0, new Node().previousBlueId(itemsBlueId));
+                    boolean hasPositionalOverlay = minimalItems.stream()
+                            .anyMatch(item -> item.getPosition() != null);
+                    if (appendOnly || !hasPositionalOverlay) {
+                        String itemsBlueId = BlueIdCalculator.calculateBlueId(inheritedItems);
+                        minimalItems.add(0, new Node().previousBlueId(itemsBlueId));
+                    }
                     minimal.items(minimalItems);
                 }
             } else {

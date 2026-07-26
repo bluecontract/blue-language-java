@@ -5,6 +5,7 @@ import blue.language.model.Schema;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
+import blue.language.utils.Nodes;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.erdtman.jcs.JsonCanonicalizer;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FrozenCanonicalDigesterTest {
 
     @Test
+    void directIdentitySizingAcceptsTheCanonicalEmptyListPlaceholder() {
+        Node list = new Node().items(
+                Nodes.emptyPlaceholder());
+
+        assertTrue(NodeCanonicalizer
+                .directIdentityCanonicalSize(list) > 0L);
+    }
+
+    @Test
     void streamingWriterMatchesGenericJcsForRepresentativeFrozenInputs() throws Exception {
         List<Node> cases = representativeNodes();
         for (int index = 0; index < cases.size(); index++) {
@@ -57,6 +67,47 @@ class FrozenCanonicalDigesterTest {
                     FrozenCanonicalDigester.calculateBlueId(frozen),
                     "BlueId at case " + index);
         }
+    }
+
+    @Test
+    void typedSchemaScalarsAndMergePolicyMatchMutableIdentityWithoutFallback() {
+        BigInteger beyondSafeInteger = new BigInteger("900719925474099200000000000000000001");
+        Schema schema = new Schema()
+                .required(true)
+                .minLength(BigInteger.ZERO)
+                .maxLength(beyondSafeInteger)
+                .minimum(new BigDecimal("-10.5"))
+                .maximum(new BigDecimal("10.5"))
+                .exclusiveMinimum(new BigDecimal("-9.25"))
+                .exclusiveMaximum(new BigDecimal("9.25"))
+                .multipleOf(new BigDecimal("0.125"))
+                .minItems(BigInteger.ONE)
+                .maxItems(beyondSafeInteger)
+                .uniqueItems(true)
+                .minFields(BigInteger.valueOf(2L))
+                .maxFields(beyondSafeInteger)
+                .enumValues(Arrays.asList(
+                        new Node().value("text"),
+                        new Node().value(true),
+                        new Node().value(new BigDecimal("1.25")),
+                        new Node().value(beyondSafeInteger)));
+        Node mutable = new Node()
+                .mergePolicy("append-only")
+                .schema(schema)
+                .items(new Node().value("entry"));
+        FrozenNode frozen = FrozenNode.fromNode(mutable);
+        AtomicInteger fallbacks = new AtomicInteger();
+        FrozenCanonicalDigester.Observer observer = new FrozenCanonicalDigester.Observer() {
+            @Override
+            public void genericFallback() {
+                fallbacks.incrementAndGet();
+            }
+        };
+
+        String mutableIdentity = BlueIdCalculator.calculateBlueId(mutable);
+        assertEquals(mutableIdentity, FrozenCanonicalDigester.calculateGenericOracle(frozen));
+        assertEquals(mutableIdentity, FrozenCanonicalDigester.calculateBlueId(frozen, observer));
+        assertEquals(0, fallbacks.get());
     }
 
     @Test

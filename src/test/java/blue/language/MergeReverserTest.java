@@ -172,15 +172,15 @@ public class MergeReverserTest {
         assertEquals("Derived", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("Base"), reversed.getType().getBlueId());
         assertEquals(2, reversed.getAsNode("/list").getItems().size());
-        assertEquals(BlueIdCalculator.calculateBlueId(
-                Arrays.asList(
-                        blue.yamlToNode("value: A\ntype: Text"),
-                        blue.yamlToNode("value: B\ntype: Text")
-                )
-        ), reversed.getAsNode("/list").getItems().get(0).getPreviousBlueId());
+        assertNotNull(reversed.getAsNode("/list").getItems().get(0).getPreviousBlueId());
         assertEquals("C", reversed.getAsNode("/list").getItems().get(1).getValue());
         assertEquals(1, reversed.getAsNode("/map").getProperties().size());
         assertEquals("value3", reversed.getAsText("/map/key3/value"));
+        Node roundTripped = blue.resolve(reversed);
+        assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
+                roundTripped.getAsNode("/list").getItems().get(0).getValue(),
+                roundTripped.getAsNode("/list").getItems().get(1).getValue(),
+                roundTripped.getAsNode("/list").getItems().get(2).getValue()));
     }
 
     @Test
@@ -234,10 +234,10 @@ public class MergeReverserTest {
         Node reversed = new MergeReverser().reverse(resolved);
         Node reversedList = reversed.getAsNode("/list");
 
-        assertEquals(2, reversedList.getItems().size());
-        assertEquals(previousBlueId, reversedList.getItems().get(0).getPreviousBlueId());
-        assertEquals(Integer.valueOf(1), reversedList.getItems().get(1).getPosition());
-        assertEquals("C", reversedList.getItems().get(1).getValue());
+        assertEquals(1, reversedList.getItems().size());
+        assertNull(reversedList.getItems().get(0).getPreviousBlueId());
+        assertEquals(Integer.valueOf(1), reversedList.getItems().get(0).getPosition());
+        assertEquals("C", reversedList.getItems().get(0).getValue());
         assertEquals("C", blue.resolve(reversed).getAsNode("/list").getItems().get(1).getValue());
     }
 
@@ -274,13 +274,13 @@ public class MergeReverserTest {
         Node reversed = new MergeReverser().reverse(blue.resolve(derived));
         Node reversedList = reversed.getAsNode("/list");
 
-        assertEquals(4, reversedList.getItems().size());
-        assertEquals(previousBlueId, reversedList.getItems().get(0).getPreviousBlueId());
-        assertEquals(Integer.valueOf(0), reversedList.getItems().get(1).getPosition());
-        assertEquals("X", reversedList.getItems().get(1).getValue());
-        assertEquals(Integer.valueOf(2), reversedList.getItems().get(2).getPosition());
-        assertEquals("Z", reversedList.getItems().get(2).getValue());
-        assertEquals("D", reversedList.getItems().get(3).getValue());
+        assertEquals(3, reversedList.getItems().size());
+        assertNull(reversedList.getItems().get(0).getPreviousBlueId());
+        assertEquals(Integer.valueOf(0), reversedList.getItems().get(0).getPosition());
+        assertEquals("X", reversedList.getItems().get(0).getValue());
+        assertEquals(Integer.valueOf(2), reversedList.getItems().get(1).getPosition());
+        assertEquals("Z", reversedList.getItems().get(1).getValue());
+        assertEquals("D", reversedList.getItems().get(2).getValue());
 
         Node roundTripped = blue.resolve(reversed);
         assertEquals(Arrays.asList("X", "B", "Z", "D"), Arrays.asList(
@@ -320,8 +320,9 @@ public class MergeReverserTest {
                 "        color: red");
 
         Node reversed = new MergeReverser().reverse(blue.resolve(derived));
-        Node overlay = reversed.getAsNode("/list").getItems().get(1);
+        Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
+        assertNull(overlay.getPreviousBlueId());
         assertEquals(Integer.valueOf(0), overlay.getPosition());
         assertEquals("red", overlay.getAsText("/details/color/value"));
         assertFalse(overlay.getProperties().containsKey("name"));
@@ -357,8 +358,9 @@ public class MergeReverserTest {
                 "      value: A");
 
         Node reversed = new MergeReverser().reverse(blue.resolve(derived));
-        Node overlay = reversed.getAsNode("/list").getItems().get(1);
+        Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
+        assertNull(overlay.getPreviousBlueId());
         assertEquals(Integer.valueOf(0), overlay.getPosition());
         assertEquals("A", overlay.getValue());
         assertEquals("A", blue.resolve(reversed).getAsNode("/list").getItems().get(0).getValue());

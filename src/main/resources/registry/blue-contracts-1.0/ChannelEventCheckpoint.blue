@@ -1,24 +1,11 @@
 name: Channel Event Checkpoint
-type: Marker
-description: >
-  Required processor-managed marker at contracts/checkpoint. It stores
-  idempotency state for external channel deliveries. Checkpoints are never used
-  for processor-managed Document Update, Triggered Event, Lifecycle Event, or
-  Embedded Node channels. The processor creates this marker lazily when an
-  external channel accepts an event and no checkpoint exists. It updates
-  lastEvents by Direct Write after successful external channel processing.
-  Checkpoint Direct Writes do not emit Document Update cascades. By default,
-  lastEvents stores the normalized checkpoint subject for each external
-  channel's raw contract-map key, and newness is determined by the channel's
-  effective checkpointIdentityMode. Pointer escaping is used only when writing
-  the member by Direct Write; it is not part of the stored key.
-lastEvents:
-  type: Dictionary
+type:
+  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+description: Direct processor state at contracts/checkpoint. Entries are created only after a complete successful external delivery and are keyed by raw Channel contract key. Writes produce no Document Update.
+entries:
+  type:
+    blueId: Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG
   keyType:
-    type: Text
-  description: >
-    Required dictionary keyed by raw external-channel contract-map key. Each
-    value is the previous normalized checkpoint subject for that external
-    channel. The default subject is the preprocessed incoming event node.
-  schema:
-    required: true
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  valueType:
+    blueId: 2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY

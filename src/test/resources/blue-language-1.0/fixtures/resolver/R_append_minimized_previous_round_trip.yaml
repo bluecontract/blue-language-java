@@ -1,0 +1,11 @@
+id: R_append_minimized_previous_round_trip
+category: Minimization
+operation: minimizeAndResolve
+parent:
+  type: List
+  mergePolicy: append-only
+  items: [A]
+resolvedItems: [A, B]
+expectedMinimizedMayContain:
+  - $previous
+expectedRoundTripItems: [A, B]

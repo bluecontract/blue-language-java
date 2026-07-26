@@ -28,8 +28,16 @@ public class AssertDocumentUpdateContractProcessor implements HandlerProcessor<A
             throw new IllegalStateException("Expected op " + contract.getExpectedOp() + " but was " + opNode.getValue());
         }
 
-        validateValue(getRequiredProperty(event, "before"), contract.isExpectBeforeNull(), contract.getExpectedBeforeValue(), "before");
-        validateValue(getRequiredProperty(event, "after"), contract.isExpectAfterNull(), contract.getExpectedAfterValue(), "after");
+        validateSnapshot(
+                event,
+                "before",
+                contract.isExpectBeforeNull(),
+                contract.getExpectedBeforeValue());
+        validateSnapshot(
+                event,
+                "after",
+                contract.isExpectAfterNull(),
+                contract.getExpectedAfterValue());
     }
 
     private Node getRequiredProperty(Node event, String key) {
@@ -40,19 +48,41 @@ public class AssertDocumentUpdateContractProcessor implements HandlerProcessor<A
         return value;
     }
 
-    private void validateValue(Node node, boolean expectNull, Integer expectedValue, String label) {
-        Object value = node.getValue();
-        if (expectNull) {
-            if (value != null) {
-                throw new IllegalStateException("Expected " + label + " to be null, but was " + value);
+    private void validateSnapshot(Node event,
+                                  String label,
+                                  boolean expectAbsent,
+                                  Integer expectedValue) {
+        Node presentNode = getRequiredProperty(
+                event, label + "Present");
+        Object presentValue = presentNode.getValue();
+        if (!(presentValue instanceof Boolean)) {
+            throw new IllegalStateException(
+                    "Document Update event property '"
+                            + label + "Present' must be Boolean");
+        }
+        boolean present = (Boolean) presentValue;
+        Node snapshot = event.getProperties() != null
+                ? event.getProperties().get(label)
+                : null;
+        if (expectAbsent) {
+            if (present || snapshot != null) {
+                throw new IllegalStateException(
+                        "Expected " + label
+                                + " to be absent with "
+                                + label + "Present=false");
             }
             return;
         }
-
+        if (!present || snapshot == null) {
+            throw new IllegalStateException(
+                    "Expected " + label
+                            + " to be present with "
+                            + label + "Present=true");
+        }
         if (expectedValue == null) {
             return;
         }
-
+        Object value = snapshot.getValue();
         if (!(value instanceof BigInteger)) {
             throw new IllegalStateException("Expected " + label + " to be numeric but was " + value);
         }

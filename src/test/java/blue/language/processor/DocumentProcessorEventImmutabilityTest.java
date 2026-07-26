@@ -5,11 +5,12 @@ import blue.language.model.Node;
 import java.math.BigInteger;
 import blue.language.processor.contracts.MutateEventContractProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
-import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.TestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessorEventImmutabilityTest {
 
@@ -18,9 +19,12 @@ class DocumentProcessorEventImmutabilityTest {
     @BeforeEach
     void setUp() {
         blue = ProcessorTestSupport.blue();
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport
+                        .testEventChannelProcessor());
         blue.registerContractProcessor(new MutateEventContractProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
     }
 
     @Test
@@ -45,14 +49,16 @@ class DocumentProcessorEventImmutabilityTest {
 
         Node initialized = blue.initializeDocument(blue.yamlToNode(documentYaml)).document().clone();
 
-        String eventYaml = "type:\n" +
-                "  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
-                "eventId: evt-immutable\n" +
-                "kind: original\n";
-        Node event = blue.yamlToNode(eventYaml);
+        Node event = new TestEvent()
+                .eventId("evt-immutable")
+                .kind("original")
+                .toNode();
 
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
+        assertTrue(result.events().isEmpty(),
+                "the exact input event is never echoed to the public outbox");
         Node resultNode = result.document().getProperties().get("result");
         assertEquals(BigInteger.valueOf(42), resultNode.getValue());
     }

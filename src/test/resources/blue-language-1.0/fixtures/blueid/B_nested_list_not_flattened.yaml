@@ -1,0 +1,6 @@
+id: B_nested_list_not_flattened
+category: BlueId
+operation: calculateBlueIdPair
+left: [[A, B], C]
+right: [A, B, C]
+expectedEqual: false

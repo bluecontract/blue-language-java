@@ -1,0 +1,13 @@
+id: F_source_provider_requires_declared_mode
+category: Provider
+operation: expandVariants
+requestedBlueId: 5nWrS5wTB22MN7HHhyRUy7zQ83Qbf6QEcUY4soFir2Sq
+providerNode:
+  blue:
+    imports: {}
+  value: wanted
+variants:
+  - providerMode: BlueIdInput
+    expectedErrorCategory: ProviderBlueIdMismatch
+  - providerMode: SourceDocument
+    expectedRequiresDeclaredLanguageAndPreprocessingEnvironment: true

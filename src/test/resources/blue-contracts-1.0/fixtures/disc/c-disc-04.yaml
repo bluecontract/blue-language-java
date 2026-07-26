@@ -1,0 +1,71 @@
+schema: blue-contracts-fixture/1.0
+id: c-disc-04
+vectors:
+- C-DISC-04
+category: disc
+description: Effective contracts use ordered contribution identities rather than a synthetic merged BlueId.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+    type:
+      blueId: 7f1ZXEZsUdZrciGtAQkR1Pav7s3Ngfbv8q9Ct2C9iNYE
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      7f1ZXEZsUdZrciGtAQkR1Pav7s3Ngfbv8q9Ct2C9iNYE:
+        contracts:
+          h:
+            type:
+              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+            channel: in
+            order: 0
+            result: {}
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: trace.contractSnapshots./h.sourceContributionNodeBlueIds
+    op: present
+  - actual: trace.contractSnapshots./h.syntheticBlueId
+    op: absent

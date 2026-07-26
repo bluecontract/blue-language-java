@@ -1,0 +1,7 @@
+id: F_direct_list_verification_without_elements
+category: Provider
+operation: verifyDirectList
+fullList: [A, B, C]
+directElementIdentitiesOnly: true
+expectedVerified: true
+expectedElementBodyRequests: []

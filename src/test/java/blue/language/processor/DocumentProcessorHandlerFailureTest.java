@@ -2,25 +2,21 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigInteger;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessorHandlerFailureTest {
 
     @Test
-    void handlerRuntimeExceptionCausesScopedFatalTermination() {
+    void handlerRuntimeExceptionRollsBackWithoutTerminationMarker() {
         Blue blue = blueWithThrowingProcessor();
         Node document = blue.yamlToNode("name: Handler Failure\n" +
                 "contracts:\n" +
@@ -38,14 +34,22 @@ class DocumentProcessorHandlerFailureTest {
                 "    propertyKey: /throwWithoutPatch\n" +
                 "    propertyValue: 1\n");
 
-        DocumentProcessingResult result = blue.processDocument(document, event("evt-handler-fail"));
+        String input = document.toString();
+        DocumentProcessingResult result =
+                blue.processDocument(
+                        document, event("evt-handler-fail"));
 
         assertFalse(result.capabilityFailure());
-        Node terminated = result.document().getAsNode("/contracts/terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertEquals(input, result.document().toString());
+        assertFalse(result.document().getContracts()
+                .getProperties().containsKey("terminated"));
         assertNull(nodeAt(result.document(), "/throwWithoutPatch"));
-        assertTrue(result.totalGas() > 0L, "handler overhead and fatal termination gas should remain charged");
+        assertTrue(result.events().isEmpty());
+        assertTrue(result.totalGas() > 0L,
+                "admitted work remains charged on deterministic failure");
     }
 
     @Test
@@ -67,18 +71,25 @@ class DocumentProcessorHandlerFailureTest {
                 "    propertyKey: /shouldNotApply\n" +
                 "    propertyValue: 2\n");
 
-        DocumentProcessingResult result = blue.processDocument(document, event("evt-buffer-fail"));
+        String input = document.toString();
+        DocumentProcessingResult result =
+                blue.processDocument(
+                        document, event("evt-buffer-fail"));
 
         assertFalse(result.capabilityFailure());
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertEquals(input, result.document().toString());
         assertNull(nodeAt(result.document(), "/shouldNotApply"),
                 "buffered effects from the failing handler must be discarded");
-        Node terminated = result.document().getAsNode("/contracts/terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
+        assertFalse(result.document().getContracts()
+                .getProperties().containsKey("terminated"));
+        assertTrue(result.events().isEmpty());
     }
 
     @Test
-    void handlerFailurePreservesPriorHandlerEffects() {
+    void handlerFailureRollsBackPriorHandlerEffects() {
         Blue blue = blueWithThrowingProcessor();
         Node document = blue.yamlToNode("name: Handler Prior Effects\n" +
                 "contracts:\n" +
@@ -104,19 +115,30 @@ class DocumentProcessorHandlerFailureTest {
                 "    propertyKey: /shouldNotApply\n" +
                 "    propertyValue: 9\n");
 
-        DocumentProcessingResult result = blue.processDocument(document, event("evt-prior-preserved"));
+        String input = document.toString();
+        DocumentProcessingResult result =
+                blue.processDocument(
+                        document,
+                        event("evt-prior-preserved"));
 
-        assertEquals(new BigInteger("7"), result.document().get("/prior"));
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertEquals(input, result.document().toString());
+        assertNull(nodeAt(result.document(), "/prior"));
         assertNull(nodeAt(result.document(), "/shouldNotApply"));
-        Node terminated = result.document().getAsNode("/contracts/terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
+        assertFalse(result.document().getContracts()
+                .getProperties().containsKey("terminated"));
+        assertTrue(result.events().isEmpty());
     }
 
     private Blue blueWithThrowingProcessor() {
         Blue blue = ProcessorTestSupport.blue();
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport
+                        .testEventChannelProcessor());
         blue.registerContractProcessor(new ConditionalThrowingSetPropertyProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
         return blue;
     }
 

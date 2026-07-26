@@ -5,6 +5,7 @@ import blue.language.BlueLanguageErrorClassifier;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.CircularBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -12,7 +13,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -47,13 +50,13 @@ class VerifyingNodeProviderResultSemanticsTest {
     }
 
     @Test
-    void nonCyclicAwareCyclicEmptyResultRemainsEmpty() {
+    void nonCyclicAwareCyclicEmptyResultIsCanonicalNotFound() {
         CyclicFixture fixture = new CyclicFixture();
         List<Node> empty = Collections.emptyList();
         RecordingProvider delegate = new RecordingProvider(empty);
         VerifyingNodeProvider provider = new VerifyingNodeProvider(delegate);
 
-        assertSame(empty, provider.fetchByBlueId(fixture.memberBlueId));
+        assertNull(provider.fetchByBlueId(fixture.memberBlueId));
         assertEquals(1, delegate.fetches.get());
     }
 
@@ -64,9 +67,11 @@ class VerifyingNodeProviderResultSemanticsTest {
         RecordingProvider delegate = new RecordingProvider(content);
         VerifyingNodeProvider provider = new VerifyingNodeProvider(delegate);
 
-        assertThrows(UnsupportedOperationException.class,
+        assertEquals(NodeProviderOutcome.INVALID_EVIDENCE,
+                provider.fetchResultByBlueId(fixture.memberBlueId).outcome());
+        assertThrows(IllegalArgumentException.class,
                 () -> provider.fetchByBlueId(fixture.memberBlueId));
-        assertEquals(1, delegate.fetches.get());
+        assertEquals(2, delegate.fetches.get());
     }
 
     @Test
@@ -81,13 +86,13 @@ class VerifyingNodeProviderResultSemanticsTest {
     }
 
     @Test
-    void cyclicAwareEmptyDoesNotRequireProof() {
+    void cyclicAwareEmptyIsCanonicalNotFoundAndDoesNotRequireProof() {
         CyclicFixture fixture = new CyclicFixture();
         List<Node> empty = Collections.emptyList();
         RecordingCyclicProvider delegate = new RecordingCyclicProvider(empty, true);
         VerifyingNodeProvider provider = new VerifyingNodeProvider(delegate);
 
-        assertSame(empty, provider.fetchByBlueId(fixture.memberBlueId));
+        assertNull(provider.fetchByBlueId(fixture.memberBlueId));
         assertEquals(1, delegate.fetches.get());
         assertEquals(0, delegate.proofQueries.get());
     }
@@ -99,7 +104,12 @@ class VerifyingNodeProviderResultSemanticsTest {
         RecordingCyclicProvider delegate = new RecordingCyclicProvider(content, true);
         VerifyingNodeProvider provider = new VerifyingNodeProvider(delegate);
 
-        assertSame(content, provider.fetchByBlueId(fixture.memberBlueId));
+        List<Node> actual = provider.fetchByBlueId(fixture.memberBlueId);
+        assertNotSame(content, actual);
+        assertEquals(content.size(), actual.size());
+        assertEquals(fixture.expectedMemberBlueId, fixture.memberBlueId);
+        assertEquals(JSON_MAPPER.valueToTree(content),
+                JSON_MAPPER.valueToTree(actual));
         assertEquals(1, delegate.fetches.get());
         assertEquals(1, delegate.proofQueries.get());
     }
@@ -111,10 +121,12 @@ class VerifyingNodeProviderResultSemanticsTest {
         RecordingCyclicProvider delegate = new RecordingCyclicProvider(content, false);
         VerifyingNodeProvider provider = new VerifyingNodeProvider(delegate);
 
-        assertThrows(UnsupportedOperationException.class,
+        assertEquals(NodeProviderOutcome.INVALID_EVIDENCE,
+                provider.fetchResultByBlueId(fixture.memberBlueId).outcome());
+        assertThrows(IllegalArgumentException.class,
                 () -> provider.fetchByBlueId(fixture.memberBlueId));
-        assertEquals(1, delegate.fetches.get());
-        assertEquals(1, delegate.proofQueries.get());
+        assertEquals(2, delegate.fetches.get());
+        assertEquals(2, delegate.proofQueries.get());
     }
 
     @Test
@@ -127,12 +139,16 @@ class VerifyingNodeProviderResultSemanticsTest {
 
         List<Node> empty = Collections.emptyList();
         RecordingProvider terminalEmpty = new RecordingProvider(empty);
-        assertSame(empty, new VerifyingNodeProvider(terminalEmpty).fetchByBlueId(requestedBlueId));
+        assertNull(new VerifyingNodeProvider(terminalEmpty).fetchByBlueId(requestedBlueId));
         assertEquals(1, terminalEmpty.fetches.get());
 
         List<Node> exact = Collections.singletonList(new Node().value("expected"));
         RecordingProvider matching = new RecordingProvider(exact);
-        assertSame(exact, new VerifyingNodeProvider(matching).fetchByBlueId(requestedBlueId));
+        List<Node> actual = new VerifyingNodeProvider(matching)
+                .fetchByBlueId(requestedBlueId);
+        assertNotSame(exact, actual);
+        assertEquals(BlueIdCalculator.calculateBlueId(exact),
+                BlueIdCalculator.calculateBlueId(actual));
         assertEquals(1, matching.fetches.get());
 
         RecordingProvider mismatch = new RecordingProvider(
@@ -200,7 +216,7 @@ class VerifyingNodeProviderResultSemanticsTest {
     }
 
     private static final class CyclicFixture {
-        private final BasicNodeProvider provider = new BasicNodeProvider(YAML_MAPPER.readValue(
+        private final Node documents = YAML_MAPPER.readValue(
                 "- name: Cyclic A\n"
                         + "  next:\n"
                         + "    type:\n"
@@ -209,7 +225,12 @@ class VerifyingNodeProviderResultSemanticsTest {
                         + "  next:\n"
                         + "    type:\n"
                         + "      blueId: this#0\n",
-                Node.class));
+                Node.class);
+        private final String expectedMemberBlueId =
+                CircularBlueIdCalculator.calculateCircularSetBlueIds(
+                        documents.getItems()).get(0);
+        private final BasicNodeProvider provider =
+                new BasicNodeProvider(documents);
         private final String memberBlueId = provider.getBlueIdByName("Cyclic A");
         private final String baseBlueId = memberBlueId.substring(0, memberBlueId.indexOf('#'));
     }

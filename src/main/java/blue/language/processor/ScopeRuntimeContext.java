@@ -4,9 +4,12 @@ import blue.language.model.Node;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Per-scope runtime state tracked during processing.
@@ -17,8 +20,8 @@ public final class ScopeRuntimeContext {
     private final Deque<Node> triggeredQueue = new ArrayDeque<>();
     private final List<Node> bridgeableEvents = new ArrayList<>();
     private final List<String> processedEmbeddedPaths = new ArrayList<>();
+    private ScopeRuntimeContext parentOccurrence;
     private TerminationState terminationState = TerminationState.ACTIVE;
-    private TerminationKind terminationKind;
     private String terminationReason;
     private boolean cutOff;
     private int triggeredLimit = -1;
@@ -75,6 +78,42 @@ public final class ScopeRuntimeContext {
         return new ArrayList<>(processedEmbeddedPaths);
     }
 
+    void attachToParentOccurrence(ScopeRuntimeContext parent) {
+        Objects.requireNonNull(parent, "parent");
+        if (parent == this) {
+            throw new IllegalArgumentException(
+                    "A scope occurrence cannot be its own parent");
+        }
+        if (parentOccurrence == null) {
+            parentOccurrence = parent;
+            return;
+        }
+        if (parentOccurrence != parent) {
+            throw new IllegalStateException(
+                    "Scope occurrence " + scopePath
+                            + " already belongs to "
+                            + parentOccurrence.scopePath());
+        }
+    }
+
+    List<ScopeRuntimeContext> freezeAncestorChain() {
+        List<ScopeRuntimeContext> ancestors = new ArrayList<>();
+        Set<ScopeRuntimeContext> visited =
+                Collections.newSetFromMap(
+                        new IdentityHashMap<ScopeRuntimeContext, Boolean>());
+        ScopeRuntimeContext current = parentOccurrence;
+        while (current != null) {
+            if (!visited.add(current)) {
+                throw new IllegalStateException(
+                        "Cyclic scope occurrence ancestry at "
+                                + current.scopePath());
+            }
+            ancestors.add(current);
+            current = current.parentOccurrence;
+        }
+        return Collections.unmodifiableList(ancestors);
+    }
+
     public int embeddedDepth() {
         return embeddedDepth;
     }
@@ -109,20 +148,15 @@ public final class ScopeRuntimeContext {
         return true;
     }
 
-    public TerminationKind terminationKind() {
-        return terminationKind;
-    }
-
     public String terminationReason() {
         return terminationReason;
     }
 
-    public void finalizeTermination(TerminationKind kind, String reason) {
+    public void finalizeTermination(String reason) {
         if (isTerminated()) {
             return;
         }
         terminationState = TerminationState.TERMINATED;
-        terminationKind = Objects.requireNonNull(kind, "kind");
         terminationReason = reason;
         triggeredQueue.clear();
     }
@@ -144,10 +178,5 @@ public final class ScopeRuntimeContext {
         ACTIVE,
         TERMINATING,
         TERMINATED
-    }
-
-    public enum TerminationKind {
-        GRACEFUL,
-        FATAL
     }
 }

@@ -13,6 +13,8 @@ import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -157,6 +159,23 @@ public final class ConformanceEngine implements AutoCloseable {
     public ConformancePlan planGeneralization(FrozenNode canonicalRoot,
                                               FrozenNode resolvedRoot,
                                               List<String> changedPaths) {
+        return planGeneralizationPreservingPaths(
+                canonicalRoot,
+                resolvedRoot,
+                changedPaths,
+                Collections.emptySet());
+    }
+
+    /**
+     * Plans generalization while leaving selected pure-reference subtrees
+     * collapsed. Callers remain responsible for materializing any selected
+     * executable subtree before it is used.
+     */
+    public ConformancePlan planGeneralizationPreservingPaths(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            List<String> changedPaths,
+            Collection<String> preservedReferencePaths) {
         if (changedPaths == null || changedPaths.isEmpty()) {
             return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
         }
@@ -167,7 +186,8 @@ public final class ConformanceEngine implements AutoCloseable {
         List<String> allChangedPaths = new ArrayList<>();
         FrozenConformancePlanner planner = new FrozenConformancePlanner(nodeProvider,
                 mergingProcessor,
-                resolvedReferenceCache);
+                resolvedReferenceCache,
+                preservedReferencePaths);
         for (String changedPath : changedPaths) {
             ConformancePlan plan = planner.plan(nextCanonical, nextResolved, changedPath);
             nextCanonical = plan.canonicalRoot() != null ? plan.canonicalRoot() : nextCanonical;

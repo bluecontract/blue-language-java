@@ -282,6 +282,16 @@ public final class NodeToBlueIdInput {
         if (schema == null) {
             return;
         }
+        if (schema.getBlueId() != null) {
+            BlueIds.requireBlueIdOrCyclicMember(
+                    schema.getBlueId(), appendPath(path, OBJECT_BLUE_ID));
+            if (!schema.isReferenceOnly()) {
+                throw new IllegalArgumentException(
+                        "Direct BlueId input requires schema BlueId references to be pure references. Path: "
+                                + path);
+            }
+            return;
+        }
         validateSchemaNode(schema.getRequired(), appendPath(path, "required"));
         validateSchemaNode(schema.getMinLength(), appendPath(path, "minLength"));
         validateSchemaNode(schema.getMaxLength(), appendPath(path, "maxLength"));

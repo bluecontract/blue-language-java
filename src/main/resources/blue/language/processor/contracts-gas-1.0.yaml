@@ -1,0 +1,157 @@
+manifestType: blue-contracts-gas-manifest
+schedule: blue-contracts/gas/1.0
+specification: Blue Contracts and Processor
+specificationVersion: '1.0'
+status: implementation-baseline-pending-calibration
+unit: gas
+maxProcessGas: 100000
+traceEntryFields:
+- sequence
+- namespace
+- counter
+- quantity
+- weight
+- subtotal
+- scopePath
+- contractKey
+- logicalPath
+- reason
+admissionRule: Admit quantity * weight before the corresponding logical work. If the next charge exceeds maxProcessGas, omit that charge and stop before the work.
+compositionRule: totalGas is the sum of processor, semantic, and registered runtime counter subtotals; one logical unit is charged in exactly one owning namespace.
+namespaces:
+  processor:
+    counterCount: 26
+    counters:
+      processInvocation: 50
+      deliverySnapshotEntry: 5
+      scopeOpened: 10
+      contractHeaderRecognized: 2
+      channelCandidateTested: 5
+      channelAccepted: 5
+      handlerCandidateTested: 5
+      handlerCall: 50
+      scopeInitialization: 1000
+      embeddedPathEntryRead: 1
+      embeddedPathSegmentValidated: 1
+      pointerSegmentTraversed: 1
+      patchBoundaryChecked: 2
+      patchAddOrReplace: 20
+      patchRemove: 10
+      documentUpdateDelivered: 10
+      internalEventEnqueued: 20
+      internalEventDequeued: 10
+      triggeredEventDelivered: 10
+      embeddedEventDelivered: 10
+      rootEventRecorded: 5
+      lifecycleDelivered: 30
+      checkpointCompared: 5
+      checkpointWritten: 20
+      processorMarkerWritten: 20
+      terminationRequested: 10
+  semantic:
+    counterCount: 17
+    counters:
+      nodeManifestOpened: 1
+      objectMemberRead: 1
+      listItemRead: 1
+      textBlockExamined: 1
+      textBlockConstructed: 1
+      scalarComparison: 1
+      integerLimbOperation: 1
+      sortComparison: 1
+      typeEdgeFollowed: 1
+      schemaPredicateEvaluated: 1
+      validationMemberExamined: 1
+      validationProofReused: 1
+      subtypeCandidateTested: 5
+      nodeIdentityEstablished: 1
+      objectMemberRebuilt: 1
+      listFoldStepRecomputed: 1
+      directIdentityHashBlock: 1
+formulas:
+  textBlocks:
+    blockCodePoints: 64
+    fullScan: ceil(codePointLength / 64)
+    lexicographicComparison: scalarComparison += 1; each operand textBlockExamined += ceil(codePointsRead / 64)
+  integerLimbs:
+    radix: 2^32
+    minimumLimbs: 1
+    equalityOrOrdering: L(a) + L(b)
+    additionOrSubtraction: max(L(a), L(b)) + 1
+    multiplication: L(a) * L(b)
+    divisionOrRemainder: L(a) * L(b)
+    gcdOrMultipleOf: L(a) * L(b)
+    lcm: gcd quantity + multiplication quantity
+  sorting:
+    algorithm: stable bottom-up merge sort
+    initialRunWidth: 1
+    mergeOrder: left-to-right
+    equalSelection: left
+    widthProgression: double after each pass
+    comparisonCharges:
+    - sortComparison
+    - content work required by comparator
+  identity:
+    everyNewExactNode: nodeIdentityEstablished += 1
+    nonListDirectMembers: objectMemberRebuilt += direct helper-map members processed
+    directHashBlocks: directIdentityHashBlock += ceil((canonicalDirectIdentityInputUtf8Bytes + 9) / 64)
+    transitiveChildren: represented by bounded canonical child BlueId strings before byte counting
+  listIdentity:
+    fullConstruction: one listFoldStepRecomputed per result element
+    verifiedAppend: appended result elements only
+    replaceAtIndex: result suffix from changed index
+    insertOrRemoveAtIndex: affected result suffix
+    directIdentityHashBlock: not additionally charged for fixed list-cons inputs
+  validationProofReuse:
+    key:
+    - nodeBlueId
+    - effectiveTypeBlueId
+    - effectiveConstraintIdentity
+    firstUse: full validation counters
+    laterUseInSameInvocation: validationProofReused += 1
+    crossInvocationCaches: do not change canonical trace
+portableLimits:
+  effectiveContractsPerParticipatingScope: 8192
+  externalChannelsPerScope: 2048
+  handlersBoundToOneDelivery: 4096
+  subscriptionKeysPerChannel: 256
+  preselectedExternalOccurrencesPerEvent: 1024
+  participatingScopesPerEvent: 4096
+  processEmbeddedPathsPerScope: 4096
+  embeddedDepth: 256
+  runtimePointerSegments: 256
+  normalizedRuntimePointerUtf8Bytes: 4096
+  contractKeyCodePoints: 256
+  contractKeyUtf8Bytes: 1024
+  directObjectEntriesMaterializedOrRebuilt: 16384
+  directListItemsMaterializedOrRebuilt: 16384
+  directCanonicalIdentityInputBytes: 1048576
+  typeChainEdges: 256
+  patchesPerContractExecutionResult: 1024
+  eventsPerContractExecutionResult: 1024
+  internalEventOccurrencesPerInvocation: 8192
+  rootEventsReturned: 4096
+  nestedDocumentUpdateCascadeDepth: 256
+  runtimeChildLedgerCounterKinds: 256
+  directObjectKeyCodePoints: 4096
+  directInlineIdentityTextCodePoints: 262144
+zeroPortableGas:
+- provider lookup and transfer
+- provider BlueId verification
+- cache operations
+- storage page or chunk access
+- physical prefetch
+- allocation and host copying
+- hash-cache lookup
+- transport serialization
+- subscription-index maintenance and query
+- Timeline completeness queries
+- database commit and compare-and-swap retry
+fixtureRequirements:
+- one exact microfixture per named counter
+- composite formula fixtures
+- gas-exhaustion prefix fixture
+- inline/reference trace equivalence
+identityAlgorithm: sha256 of UTF-8 canonical JSON with packageIdentity set to null
+packageIdentity: sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
+numericWeightsStatus: provisional pending calibration; counter names, ownership, formulas, and trace order are frozen for implementation

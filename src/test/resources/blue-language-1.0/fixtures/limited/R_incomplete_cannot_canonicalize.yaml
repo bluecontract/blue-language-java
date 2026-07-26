@@ -1,0 +1,10 @@
+id: R_incomplete_cannot_canonicalize
+category: LimitedResolution
+operation: canonicalizeLimitedResult
+source:
+  type:
+    blueId: 9Rjh8hCGJMp7DDDGS9AUNDXs4zNzZFmMjqAqwKJ3W7Xx
+limits:
+  maxReferenceExpansions: 0
+expectedResolutionOutcome: Incomplete
+expectedCanonicalizationErrorCategory: CanonicalizationError

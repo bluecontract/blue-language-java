@@ -5,6 +5,7 @@ import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,17 +38,26 @@ final class CheckpointManagerTest {
         ContractBundle bundle = ContractBundle.builder().build();
         manager.ensureCheckpointMarker("/", bundle);
 
-        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(bundle, "testChannel");
         Node eventNode = new Node().value("payload");
+        String subjectBlueId = BlueIdCalculator.calculateBlueId(eventNode);
+        String domainBlueId = BlueIdCalculator.calculateBlueId(
+                new Node().name("test checkpoint domain"));
+        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(
+                bundle, "testChannel", domainBlueId);
 
-        manager.persist("/", bundle, record, "nextSig", eventNode);
+        manager.persist("/", bundle, record, subjectBlueId, eventNode);
 
         Node stored = ProcessorEngine.nodeAt(runtime.document(),
-                ProcessorPointerConstants.relativeCheckpointLastEvent(record.markerKey, record.channelKey));
+                ProcessorPointerConstants.relativeCheckpointEntry(
+                        record.markerKey, record.channelKey));
         assertNotNull(stored);
-        assertEquals("payload", stored.getValue());
-        assertEquals(20L, runtime.totalGas(), "Checkpoint update should charge gas");
-        assertEquals("nextSig", record.lastEventSignature);
+        assertEquals(domainBlueId,
+                stored.getAsText("/domain/blueId"));
+        assertEquals(subjectBlueId,
+                stored.getAsText("/subject/blueId"));
+        assertEquals(67L, runtime.totalGas(),
+                "checkpoint marker and domain-bound entry writes use the exact manifest schedule");
+        assertEquals(subjectBlueId, record.lastEventSignature);
     }
 
     private static final class DummyMarker extends MarkerContract {

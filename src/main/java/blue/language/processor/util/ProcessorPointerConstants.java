@@ -17,7 +17,7 @@ public final class ProcessorPointerConstants {
     public static final String RELATIVE_EMBEDDED = RELATIVE_CONTRACTS + "/" + ProcessorContractConstants.KEY_EMBEDDED;
     public static final String RELATIVE_CHECKPOINT = RELATIVE_CONTRACTS + "/" + ProcessorContractConstants.KEY_CHECKPOINT;
 
-    private static final String LAST_EVENTS_SUFFIX = "/lastEvents";
+    private static final String ENTRIES_SUFFIX = "/entries";
 
     private ProcessorPointerConstants() {
     }
@@ -26,7 +26,12 @@ public final class ProcessorPointerConstants {
         return JsonPointer.append(RELATIVE_CONTRACTS, key);
     }
 
+    public static String relativeCheckpointEntry(String markerKey, String rawChannelKey) {
+        return JsonPointer.append(relativeContractsEntry(markerKey) + ENTRIES_SUFFIX, rawChannelKey);
+    }
+
+    @Deprecated
     public static String relativeCheckpointLastEvent(String markerKey, String channelKey) {
-        return JsonPointer.append(relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX, channelKey);
+        return relativeCheckpointEntry(markerKey, channelKey);
     }
 }

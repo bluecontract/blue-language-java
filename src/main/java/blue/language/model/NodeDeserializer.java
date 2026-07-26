@@ -20,6 +20,7 @@ import static blue.language.utils.Properties.*;
 public class NodeDeserializer extends StdDeserializer<Node> {
 
     private static final Set<String> ALLOWED_SCHEMA_KEYS = new HashSet<>(Arrays.asList(
+            "blueId",
             "required",
             "minLength",
             "maxLength",
@@ -259,6 +260,17 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         if (!schemaNode.isObject()) {
             throw new IllegalArgumentException("\"schema\" must be an object. Path: " + path);
         }
+        if (schemaNode.has(OBJECT_BLUE_ID)) {
+            if (schemaNode.size() != 1) {
+                throw new IllegalArgumentException("\"schema.blueId\" must be a pure reference without sibling keywords. Path: " + path);
+            }
+            JsonNode blueId = schemaNode.get(OBJECT_BLUE_ID);
+            if (!blueId.isTextual()) {
+                throw new IllegalArgumentException("\"schema.blueId\" must be a string. Path: "
+                        + appendPath(path, OBJECT_BLUE_ID));
+            }
+            return new Schema().blueId(blueId.asText());
+        }
         for (Iterator<String> it = schemaNode.fieldNames(); it.hasNext(); ) {
             String key = it.next();
             if (!ALLOWED_SCHEMA_KEYS.contains(key)) {
@@ -267,6 +279,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         }
         validateSchemaValueShapes(schemaNode, path);
         return UncheckedObjectMapper.YAML_MAPPER.convertValue(schemaNode, Schema.class);
+    }
+
+    public static Schema parseSchema(JsonNode schemaNode, String path) {
+        return new NodeDeserializer().handleSchema(schemaNode, path);
     }
 
     private void validateSchemaValueShapes(JsonNode schemaNode, String path) {
@@ -326,14 +342,24 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         if (value == null) {
             return;
         }
+        BigInteger integer = null;
         if (value.isIntegralNumber()) {
-            BigInteger integer = value.bigIntegerValue();
-            if (integer.signum() < 0 || integer.compareTo(BigInteger.valueOf(9007199254740991L)) > 0) {
-                throw new IllegalArgumentException("\"schema." + keyword + "\" must be a non-negative integer in the interoperable range. Path: " + appendPath(path, keyword));
+            integer = value.bigIntegerValue();
+        } else if (value.isObject()) {
+            Node integerNode = handleNode(value, appendPath(path, keyword), false);
+            if (isExplicitSchemaScalar(integerNode, true)
+                    && integerNode.getValue() instanceof BigInteger
+                    && (integerNode.getType() == null
+                    || isIntegerType(integerNode.getType()))) {
+                integer = (BigInteger) integerNode.getValue();
             }
-            return;
-        } else {
+        }
+        if (integer == null) {
             throw new IllegalArgumentException("\"schema." + keyword + "\" must be a non-negative integer. Path: " + appendPath(path, keyword));
+        }
+        if (integer.signum() < 0
+                || integer.compareTo(BigInteger.valueOf(9007199254740991L)) > 0) {
+            throw new IllegalArgumentException("\"schema." + keyword + "\" must be a non-negative integer in the interoperable range. Path: " + appendPath(path, keyword));
         }
     }
 

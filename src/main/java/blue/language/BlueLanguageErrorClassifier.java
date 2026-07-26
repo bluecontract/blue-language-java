@@ -31,6 +31,15 @@ public final class BlueLanguageErrorClassifier {
         if (lower.contains("duplicate key")) {
             return BlueLanguageErrorCategory.DuplicateKey;
         }
+        if (lower.contains("provider returned reference-only content")
+                || lower.contains("provider returned no content")
+                || lower.contains("provider unavailable")
+                || lower.contains("missing provider content")
+                || lower.contains("no content found")
+                || lower.contains("missing blue language fixture resource")
+                || lower.contains("missing fixture resource")) {
+            return BlueLanguageErrorCategory.ProviderUnavailable;
+        }
         if (lower.contains("provider returned content for")
                 || lower.contains("wrong blueid")
                 || lower.contains("computed blueid")
@@ -38,14 +47,6 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("requested blueid")
                 || (lower.contains("requested") && lower.contains("blueid"))) {
             return BlueLanguageErrorCategory.ProviderBlueIdMismatch;
-        }
-        if (lower.contains("provider returned reference-only content")
-                || lower.contains("provider returned no content")
-                || lower.contains("missing provider content")
-                || lower.contains("no content found")
-                || lower.contains("missing blue language fixture resource")
-                || lower.contains("missing fixture resource")) {
-            return BlueLanguageErrorCategory.ProviderUnavailable;
         }
         if (lower.contains("type cycle")
                 || lower.contains("cyclic type")) {
@@ -88,6 +89,7 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("minimum")
                 || lower.contains("maximum")
                 || lower.contains("multiple of")
+                || lower.contains("dictionary key")
                 || lower.contains("minimum length")
                 || lower.contains("maximum length")
                 || lower.contains("required node")
@@ -97,7 +99,8 @@ public final class BlueLanguageErrorClassifier {
         }
         if (lower.contains("fixed value")
                 || lower.contains("values must not conflict")
-                || lower.contains("value conflict")) {
+                || lower.contains("value conflict")
+                || lower.contains("node values conflict")) {
             return BlueLanguageErrorCategory.FixedValueConflict;
         }
         if (lower.contains("not a subtype")

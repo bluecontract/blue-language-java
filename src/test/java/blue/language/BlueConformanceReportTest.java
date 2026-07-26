@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,27 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueConformanceReportTest {
-    private static final Set<String> KNOWN_FIXTURE_OPERATIONS = new HashSet<>(Arrays.asList(
-            "parseSource",
-            "parseBlueIdInput",
-            "calculateBlueId",
-            "calculateCircularSetBlueIds",
-            "preprocess",
-            "resolve",
-            "scenario",
-            "canonicalize",
-            "assertMinimizedOverlayRoundTrip",
-            "calculateContentBlueId",
-            "calculateSemanticBlueId",
-            "expand",
-            "collapse",
-            "assertSameNodeBlueId",
-            "assertViewPath",
-            "registryNodeHashesToPublishedBlueId",
-            "changingRegistryDescriptionChangesBlueId",
-            "lintPublishableDocumentation"
-    ));
-
     @Test
     void languageVersionIsBlueLanguage10() {
         assertEquals("1.0", new Blue().languageVersion());
@@ -68,10 +46,10 @@ class BlueConformanceReportTest {
         BlueConformanceReport report = blue.conformanceReport();
 
         assertEquals(BlueConformanceReport.computeFixturePackageIdentity(), report.getFixturePackageIdentity());
-        assertEquals(BlueConformanceReport.CANDIDATE_FIXTURE_PACKAGE_IDENTITY,
+        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 report.getFixturePackageIdentity());
-        assertEquals("feat/conformance-fixture-expansion@07814f5",
-                BlueConformanceReport.CANDIDATE_BLUE_SPEC_SOURCE);
+        assertEquals("blue-language-1.0-final-implementation-baseline",
+                BlueConformanceReport.BLUE_SPEC_SOURCE);
         assertTrue(report.isReleaseGradeFixtureIdentity());
         assertTrue(BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles());
     }
@@ -243,46 +221,73 @@ class BlueConformanceReportTest {
         Path fixtureRoot = Paths.get(resource.toURI());
         com.fasterxml.jackson.databind.JsonNode manifest = YAML_MAPPER.readTree(
                 new String(Files.readAllBytes(fixtureRoot.resolve("manifest.yaml"))));
+        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
+                manifest.get("packageIdentity").asText());
+        assertEquals(125, manifest.get("behaviorFixtureCount").asInt());
         Set<String> manifestIds = new LinkedHashSet<>();
         Set<Path> manifestPaths = new LinkedHashSet<>();
-        for (com.fasterxml.jackson.databind.JsonNode fixture : manifest.get("fixtures")) {
-            assertFalse(fixture.has("profile"));
-            assertTrue(fixture.hasNonNull("id"));
-            assertTrue(fixture.hasNonNull("category"));
-            assertTrue(fixture.hasNonNull("path"));
-            BlueFixtureCategory.fromLabel(fixture.get("category").asText());
-            assertTrue(manifestIds.add(fixture.get("id").asText()), "Duplicate fixture id: " + fixture.get("id").asText());
-            Path fixturePath = fixtureRoot.resolve(fixture.get("path").asText()).normalize();
+        for (com.fasterxml.jackson.databind.JsonNode file : manifest.get("files")) {
+            assertTrue(file.hasNonNull("path"));
+            assertTrue(file.hasNonNull("role"));
+            assertTrue(file.hasNonNull("sha256"));
+            assertTrue(file.hasNonNull("bytes"));
+            Path fixturePath = fixtureRoot.resolve(file.get("path").asText()).normalize();
             assertTrue(Files.isRegularFile(fixturePath), "Missing fixture file: " + fixturePath);
             manifestPaths.add(fixturePath.toAbsolutePath().normalize());
+            if (!"behavior-fixture".equals(file.get("role").asText())) {
+                assertEquals("support", file.get("role").asText());
+                continue;
+            }
 
             com.fasterxml.jackson.databind.JsonNode fixtureContent = YAML_MAPPER.readTree(
                     new String(Files.readAllBytes(fixturePath)));
             assertFalse(fixtureContent.has("profile"), "Fixture metadata must use category, not profile: " + fixturePath);
             assertTrue(fixtureContent.hasNonNull("id"), "Fixture missing id: " + fixturePath);
             assertTrue(fixtureContent.hasNonNull("category"), "Fixture missing category: " + fixturePath);
-            assertEquals(fixture.get("id").asText(), fixtureContent.get("id").asText(), "Fixture id mismatch: " + fixturePath);
-            assertEquals(
-                    BlueFixtureCategory.fromLabel(fixture.get("category").asText()),
-                    BlueFixtureCategory.fromLabel(fixtureContent.get("category").asText()),
-                    "Fixture category mismatch: " + fixturePath);
+            assertTrue(manifestIds.add(fixtureContent.get("id").asText()),
+                    "Duplicate fixture id: " + fixtureContent.get("id").asText());
+            BlueFixtureCategory.fromLabel(fixtureContent.get("category").asText());
             assertTrue(fixtureContent.hasNonNull("operation"), "Fixture missing operation: " + fixturePath);
-            assertTrue(KNOWN_FIXTURE_OPERATIONS.contains(fixtureContent.get("operation").asText()),
+            assertTrue(BlueConformanceSuiteRunner.knownOperations()
+                            .contains(fixtureContent.get("operation").asText()),
                     "Unknown fixture operation in " + fixturePath + ": " + fixtureContent.get("operation").asText());
+            BlueConformanceSuiteRunner.validateFixtureMetadataForTest(fixtureContent);
         }
 
         assertEquals(BlueConformanceReport.requiredFixtureIdsForBlueLanguage10(), manifestIds);
+        assertTrue(BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles());
 
         List<Path> fixtureFiles;
         try (Stream<Path> paths = Files.walk(fixtureRoot)) {
             fixtureFiles = paths
                     .filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().endsWith(".yaml"))
                     .filter(path -> !"manifest.yaml".equals(path.getFileName().toString()))
                     .map(path -> path.toAbsolutePath().normalize())
                     .collect(Collectors.toList());
         }
-        assertEquals(new HashSet<>(manifestPaths), new HashSet<>(fixtureFiles));
+        assertEquals(manifestPaths, new LinkedHashSet<>(fixtureFiles));
+    }
+
+    @Test
+    void machineReadableReportHasOneExactResultPerLanguageFixture() {
+        BlueConformanceReport report = new Blue().runConformanceSuite();
+        Map<String, Object> encoded = report.toMachineReadableMap();
+
+        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
+                encoded.get("fixturePackageIdentity"));
+        assertEquals("sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
+                encoded.get("registryPackageIdentity"));
+        assertEquals(125, encoded.get("fixtureCount"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> results =
+                (List<Map<String, Object>>) encoded.get("results");
+        assertEquals(125, results.size());
+        assertEquals(125, results.stream()
+                .map(result -> result.get("id"))
+                .collect(Collectors.toSet()).size());
+        assertTrue(results.stream().allMatch(result ->
+                "PASS".equals(result.get("status"))
+                        || "FAIL".equals(result.get("status"))));
     }
 
     @Test

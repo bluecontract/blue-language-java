@@ -5,9 +5,11 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.AssertDocumentUpdateContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
+import blue.language.processor.model.JsonPatch;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -16,19 +18,58 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class DocumentUpdateChannelTest {
 
     @Test
+    void documentUpdatePathsAreRelativeToEveryReceivingScope() {
+        DocumentProcessingRuntime.DocumentUpdateData update =
+                new DocumentProcessingRuntime.DocumentUpdateData(
+                        "/a/b/x",
+                        null,
+                        new Node().value(BigInteger.ONE),
+                        JsonPatch.Op.ADD,
+                        "/a/b",
+                        Collections.<String>emptyList());
+
+        Node sourceEvent =
+                ProcessorEngine.createDocumentUpdateEvent(
+                        update, "/a/b");
+        assertEquals("/x",
+                sourceEvent.getAsText("/path"));
+        assertEquals("/",
+                sourceEvent.getAsText(
+                        "/sourceScopePath"));
+
+        Node ancestorEvent =
+                ProcessorEngine.createDocumentUpdateEvent(
+                        update, "/a");
+        assertEquals("/b/x",
+                ancestorEvent.getAsText("/path"));
+        assertEquals("/b",
+                ancestorEvent.getAsText(
+                        "/sourceScopePath"));
+
+        Node rootEvent =
+                ProcessorEngine.createDocumentUpdateEvent(
+                        update, "/");
+        assertEquals("/a/b/x",
+                rootEvent.getAsText("/path"));
+        assertEquals("/a/b",
+                rootEvent.getAsText(
+                        "/sourceScopePath"));
+    }
+
+    @Test
     void initializationTriggersDocumentUpdateHandlers() {
         String yaml = "name: Sample Doc\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  documentUpdateChannelX:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /x\n" +
                 "  documentUpdateChannelY:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /y\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
@@ -36,7 +77,7 @@ class DocumentUpdateChannelTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n" +
                 "  setY:\n" +
@@ -78,10 +119,10 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  documentUpdateA:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /a\n" +
                 "  setAX:\n" +
                 "    channel: lifecycleChannel\n" +
@@ -89,7 +130,7 @@ class DocumentUpdateChannelTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /a/x\n" +
                 "    propertyValue: 1\n" +
                 "  setABX:\n" +
@@ -99,7 +140,7 @@ class DocumentUpdateChannelTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /a/b/x\n" +
                 "    propertyValue: 1\n" +
                 "  incrementYOnA:\n" +
@@ -143,12 +184,12 @@ class DocumentUpdateChannelTest {
                 "    contracts:\n" +
                 "      life:\n" +
                 "        type:\n" +
-                "          blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "      setInner:\n" +
                 "        channel: life\n" +
                 "        event:\n" +
                 "          type:\n" +
-                "            blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "            blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "        type:\n" +
                 "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "        propertyKey: /a\n" +
@@ -156,12 +197,12 @@ class DocumentUpdateChannelTest {
                 "  contracts:\n" +
                 "    embedded:\n" +
                 "      type:\n" +
-                "        blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "      paths:\n" +
                 "        - /y\n" +
                 "    documentUpdateFromY:\n" +
                 "      type:\n" +
-                "        blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "        blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "      path: /y/a\n" +
                 "    setFromY:\n" +
                 "      channel: documentUpdateFromY\n" +
@@ -172,12 +213,12 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /x\n" +
                 "  documentUpdateFromChild:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /x/y/a\n" +
                 "  setFromChild:\n" +
                 "    channel: documentUpdateFromChild\n" +
@@ -226,19 +267,19 @@ class DocumentUpdateChannelTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "    setX:\n" +
                 "      channel: life\n" +
                 "      type:\n" +
                 "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "    watchX:\n" +
                 "      type:\n" +
-                "        blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "        blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "      path: /x\n" +
                 "    assertA:\n" +
                 "      channel: watchX\n" +
@@ -251,12 +292,12 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "  watchRoot:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /a/x\n" +
                 "  assertRoot:\n" +
                 "    channel: watchRoot\n" +
@@ -273,6 +314,8 @@ class DocumentUpdateChannelTest {
 
         Node original = blue.yamlToNode(yaml);
         DocumentProcessingResult result = blue.initializeDocument(original);
+        assertEquals(ProcessorStatus.SUCCESS,
+                result.status(), result.failureReason());
         Node processed = result.document();
 
         Node a = processed.getProperties().get("a");

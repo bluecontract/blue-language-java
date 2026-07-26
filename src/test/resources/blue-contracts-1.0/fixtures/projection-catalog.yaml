@@ -1,0 +1,305 @@
+schema: blue-contracts-projection-catalog/2.0
+entries:
+- path: attempt.kind
+  type: scalar-or-node
+  definition: Either complete or needs-resources.
+- path: attempt.portableGas
+  type: integer
+  definition: Absent for needs-resources; otherwise the completed ProcessResult total gas.
+- path: attempt.processResult
+  type: value
+  definition: Present only when attempt.kind is complete.
+- path: commit.casWorkPortableGas
+  type: integer
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.intermediateVisible
+  type: boolean
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.newIntervals.0.startAfterExternalOrderKey
+  type: value
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.outboxCommitted
+  type: boolean
+  definition: Whether the Root-only outbox committed in the same transaction as Root/progress.
+- path: commit.progressCommitted
+  type: boolean
+  definition: Whether terminal delivery progress committed against the evaluated revision.
+- path: commit.progressWritten
+  type: boolean
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.reason
+  type: scalar-or-node
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.rootCasCount
+  type: integer
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.rootCommitted
+  type: boolean
+  definition: Whether the revision-bound Root CAS committed.
+- path: commit.subscriptionDelta.mode
+  type: scalar-or-node
+  definition: Canonical incremental subscription-delta classification.
+- path: demands.semantic
+  type: sequence-or-value
+  definition: Canonical ordered logical demand sequence; excludes physical provider operations.
+- path: feeder.acceptanceResult
+  type: scalar-or-node
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.callOrder
+  type: sequence-or-value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.canonicalSnapshot
+  type: sequence-or-value
+  definition: Full normative ExternalDelivery snapshot derived from Root, event, intervals, and runtime registry.
+- path: feeder.channelLaws
+  type: sequence-or-value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.currentSnapshot
+  type: sequence-or-value
+  definition: Snapshot derived from the current managed Root revision.
+- path: feeder.intervalCount
+  type: integer
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.intervalIds.0
+  type: sequence-or-value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.newInterval.startAfterExternalOrderKey
+  type: value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: input.root
+  type: value
+  definition: Exact fixture Root after deterministic builders and before processing.
+- path: manifest.counterCoverage.complete
+  type: boolean
+  definition: Bound package-manifest conformance projection.
+- path: platform.deliveryState
+  type: scalar-or-node
+  definition: Managing-platform terminal projection.
+- path: platform.eventSelected
+  type: scalar-or-node
+  definition: Managing-platform terminal projection.
+- path: platform.reason
+  type: scalar-or-node
+  definition: Managing-platform terminal projection.
+- path: platform.retryScheduled
+  type: value
+  definition: Managing-platform terminal projection.
+- path: platform.status
+  type: scalar-or-node
+  definition: Terminal managing-feeder operation status.
+- path: result
+  type: value
+  definition: Complete public ProcessResult object.
+- path: result.diagnostic.category
+  type: scalar-or-node
+  definition: Exact portable diagnostic category.
+- path: result.document
+  type: value
+  definition: Exact resulting authoritative Root; input Root for every noncommitting status.
+- path: result.document.child.b
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.child.x
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.in.domain
+  type: scalar-or-node
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.in.subject
+  type: scalar-or-node
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.old
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.h2
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.initialized
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.old
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.terminated.reason
+  type: scalar-or-node
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.h2Ran
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.postInitRan
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.events
+  type: sequence-or-value
+  definition: Out-of-band ordered sequence of exact events emitted by Root only.
+- path: result.status
+  type: scalar-or-node
+  definition: One status from Contracts §12.1.
+- path: result.totalGas
+  type: integer
+  definition: Weighted sum of admitted canonical named trace entries.
+- path: result.{status,document,events,totalGas}
+  type: value
+  definition: Ordered object projection of the four public result fields.
+- path: retry.trace
+  type: sequence-or-value
+  definition: Canonical trace of the fixture retry attempt.
+- path: runtime.recursiveSizeCounterPresent
+  type: boolean
+  definition: False when no recursive payload-size counter exists in the generic runtime ledger.
+- path: runtime.referenceStateObservable
+  type: boolean
+  definition: False when the registered portable runtime cannot observe reference/materialization state.
+- path: trace.acceptedChannelSnapshot.usedAfterInitialization
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.checkpointCleanupKeys
+  type: sequence-or-value
+  definition: Raw checkpoint keys removed by deterministic processor cleanup.
+- path: trace.checkpointNewness
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.checkpointWrites
+  type: sequence-or-value
+  definition: Ordered processor checkpoint Direct Writes after successful channel completion.
+- path: trace.contractSnapshots./h.sourceContributionNodeBlueIds
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.contractSnapshots./h.syntheticBlueId
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.counters.contractHeaderRecognized
+  type: integer
+  definition: Final quantity of the named canonical counter in the invocation trace.
+- path: trace.counters.directIdentityHashBlock
+  type: integer
+  definition: Final quantity of the named canonical counter in the invocation trace.
+- path: trace.counters.textBlockExamined
+  type: integer
+  definition: Final quantity of the named canonical counter in the invocation trace.
+- path: trace.directIdentityHashBlock.changedDirectOnly
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.discardedEffects
+  type: sequence-or-value
+  definition: Buffered effects discarded by scope cut-off or whole-invocation rollback.
+- path: trace.documentUpdateScopes
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.documentUpdates
+  type: sequence-or-value
+  definition: Ordered ordinary Document Update payloads produced by application-visible writes.
+- path: trace.documentUpdates.0.beforePresent
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.documentUpdates.1.afterPresent
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.eventDeliveryOrder
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.eventOccurrenceOrder
+  type: sequence-or-value
+  definition: Internal EventOccurrence dequeue order with source occurrence identity.
+- path: trace.eventOccurrencesDequeued
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.externalDeliveryOrder
+  type: sequence-or-value
+  definition: Retained ExternalDelivery occurrences encoded as scopePath:channelKey in canonical execution order.
+- path: trace.failedChargePresent
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.firstMutation
+  type: scalar-or-node
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.gas
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.generalizationSelected
+  type: scalar-or-node
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.generalizationTestOrder
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.integerLimbOperation
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.lifecycleOrder
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.markerWrites
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.namedEntries
+  type: sequence-or-value
+  definition: Canonical ordered gas trace entries defined by TRACE-SCHEMA.md.
+- path: trace.nodeManifestOpened.sameId
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.order
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.protectedState.nonPathsUnchanged
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.providerTransportCounters
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.providerVerificationCounters
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.queueDrainOwners
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.reRecognitionAfterGeneralization
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.runtime.textBlockConstructed
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.runtimeChildChargesLiveBounded
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.runtimeChildMergedCount
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.scopeExecutions./child
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.semantic.nodeIdentityEstablished
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.sortComparison
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.terminationEvents
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.textBlockExamined
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.total
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.validatedPaths
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.validationProofReused
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: variants.append.trace.semantic.listFoldStepRecomputed
+  type: value
+  definition: Projection from the explicitly named deterministic fixture variant.
+- path: variants.replace-head.trace.semantic.listFoldStepRecomputed
+  type: value
+  definition: Projection from the explicitly named deterministic fixture variant.
+- path: variants.retry-after-commit.result.events
+  type: sequence-or-value
+  definition: Projection from the explicitly named deterministic fixture variant.
+- path: variants.retry-after-commit.result.status
+  type: scalar-or-node
+  definition: Projection from the explicitly named deterministic fixture variant.

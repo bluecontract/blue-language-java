@@ -17,19 +17,40 @@ public class VerifyingNodeProvider implements NodeProvider {
 
     @Override
     public List<Node> fetchByBlueId(String blueId) {
+        NodeProviderResult result = fetchResultByBlueId(blueId);
+        if (result.outcome() == NodeProviderOutcome.FOUND) {
+            return result.nodes();
+        }
+        if (result.outcome() == NodeProviderOutcome.INVALID_EVIDENCE) {
+            throw new IllegalArgumentException(result.diagnostic().orElse(
+                    "Provider returned invalid evidence for requested BlueId " + blueId + "."));
+        }
+        if (result.outcome() == NodeProviderOutcome.UNAVAILABLE) {
+            throw new IllegalStateException(result.diagnostic().orElse(
+                    "Provider unavailable for requested BlueId " + blueId + "."));
+        }
+        return null;
+    }
+
+    @Override
+    public NodeProviderResult fetchResultByBlueId(String blueId) {
         String requestedBlueId = BlueIds.requireBlueIdOrCyclicMember(blueId, "provider.fetchByBlueId");
-        List<Node> nodes = delegate.fetchByBlueId(blueId);
-        if (nodes == null || nodes.isEmpty()) {
-            return nodes;
+        NodeProviderResult result = delegate.fetchResultByBlueId(blueId);
+        if (result.outcome() != NodeProviderOutcome.FOUND) {
+            return result;
         }
+        List<Node> nodes = result.nodes();
 
-        if (requestedBlueId.contains("#")) {
-            requireCyclicVerification(requestedBlueId);
-            return nodes;
+        try {
+            if (requestedBlueId.contains("#")) {
+                requireCyclicVerification(requestedBlueId);
+            } else {
+                verifyPlainContent(requestedBlueId, nodes);
+            }
+            return NodeProviderResult.found(nodes);
+        } catch (RuntimeException invalidEvidence) {
+            return NodeProviderResult.invalidEvidence(invalidEvidence.getMessage());
         }
-
-        verifyPlainContent(requestedBlueId, nodes);
-        return nodes;
     }
 
     private void requireCyclicVerification(String requestedBlueId) {

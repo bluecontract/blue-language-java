@@ -1,0 +1,24 @@
+id: R_label_override_rules
+category: Resolution
+operation: resolveVariants
+variants:
+  - name: declaration-only
+    source:
+      type:
+        city:
+          name: City
+          type: Text
+      city:
+        name: Location
+        value: Warsaw
+    expectedValid: true
+  - name: fixed-value
+    source:
+      type:
+        city:
+          name: City
+          value: Warsaw
+      city:
+        name: Location
+        value: Warsaw
+    expectedErrorCategory: FixedValueConflict

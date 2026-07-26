@@ -1,0 +1,18 @@
+id: R_type_chain_merge
+category: Resolution
+operation: resolve
+source:
+  type:
+    inherited: fixed
+    declared:
+      type: Text
+  declared: supplied
+expectedResolved:
+  type:
+    inherited: fixed
+    declared:
+      type: Text
+  inherited: fixed
+  declared:
+    type: Text
+    value: supplied

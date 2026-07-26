@@ -112,6 +112,16 @@ public final class CanonicalOverlayPatchEngine {
 
         String segment = segments.get(0);
         List<String> tail = segments.subList(1, segments.size());
+        if (isContractsMetadata(segment)) {
+            FrozenNode child = node.property(segment);
+            if (child == null) {
+                child = emptyNodeForRootMode();
+            }
+            FrozenNode nextChild =
+                    write(child, tail, value, path, mode);
+            return node.withPropertyForPatch(
+                    segment, nextChild);
+        }
         if (node.hasItems()) {
             int index = parseArrayIndex(segment, path);
             FrozenNode child = node.item(index);
@@ -144,6 +154,16 @@ public final class CanonicalOverlayPatchEngine {
                                  FrozenNode value,
                                  String path,
                                  WriteMode mode) {
+        if ("value".equals(leaf)) {
+            Object nextValue = mode == WriteMode.REMOVE
+                    ? null
+                    : scalarPatchValue(value, path);
+            return node.withValueForPatch(nextValue);
+        }
+        if (isContractsMetadata(leaf)) {
+            return writePropertyLeaf(
+                    node, leaf, value, path, mode);
+        }
         if (node.hasItems()) {
             List<FrozenNode> nextItems = new ArrayList<>(node.getItems());
             if ("-".equals(leaf)) {
@@ -187,6 +207,16 @@ public final class CanonicalOverlayPatchEngine {
             throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
         }
 
+        return writePropertyLeaf(
+                node, leaf, value, path, mode);
+    }
+
+    private FrozenNode writePropertyLeaf(
+            FrozenNode node,
+            String leaf,
+            FrozenNode value,
+            String path,
+            WriteMode mode) {
         FrozenNode existing = node.property(leaf);
         if (mode == WriteMode.REMOVE && existing == null) {
             throw new IllegalStateException("Path does not exist for remove: " + path);
@@ -256,7 +286,15 @@ public final class CanonicalOverlayPatchEngine {
             }
             String segment = segments.get(i);
             boolean last = i == segments.size() - 1;
-            if (current.hasItems()) {
+            if ("value".equals(segment)) {
+                if (!last || current.getValue() == null) {
+                    return null;
+                }
+                current = freezePatchValue(
+                        new Node().value(current.getValue()));
+            } else if (isContractsMetadata(segment)) {
+                current = current.property(segment);
+            } else if (current.hasItems()) {
                 if ("-".equals(segment)) {
                     return beforeAdd && last ? null : current.item(current.getItems().size() - 1);
                 }
@@ -266,6 +304,23 @@ public final class CanonicalOverlayPatchEngine {
             }
         }
         return current;
+    }
+
+    private Object scalarPatchValue(FrozenNode value, String path) {
+        if (value == null
+                || value.getValue() == null
+                || value.hasItems()
+                || value.hasProperties()
+                || value.getContracts() != null) {
+            throw new IllegalStateException(
+                    "Node intrinsic 'value' requires a scalar patch value at path: "
+                            + path);
+        }
+        return value.getValue();
+    }
+
+    private boolean isContractsMetadata(String segment) {
+        return "contracts".equals(segment);
     }
 
     private int parseArrayIndex(String segment, String path) {

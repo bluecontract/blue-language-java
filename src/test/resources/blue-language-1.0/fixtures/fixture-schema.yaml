@@ -1,0 +1,163 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: blue-language-fixture/1.0
+title: Blue Language 1.0 conformance fixture
+type: object
+additionalProperties: false
+required:
+- id
+- category
+- operation
+properties:
+  alsoDifferentFrom: {}
+  alsoEquivalentTo: {}
+  assertions: {}
+  base: {}
+  candidate: {}
+  category:
+    type: string
+  description:
+    type: string
+  directElementIdentitiesOnly: {}
+  directNode: {}
+  document: {}
+  documents: {}
+  expectBlueIdChanged:
+    type: boolean
+  expectError:
+    type: boolean
+  expected: {}
+  expectedAbsent:
+    type: boolean
+  expectedBlueIds: {}
+  expectedCanonicalContainsControls: {}
+  expectedCanonicalItems: {}
+  expectedCanonicalOverlay: {}
+  expectedCanonicalizationErrorCategory: {}
+  expectedCollapsed: {}
+  expectedCollapsedRoot: {}
+  expectedContentBlueIdEqualsCanonicalIdentityInput: {}
+  expectedDescendantRequests: {}
+  expectedDirectResolvedBlueIdMayDiffer: {}
+  expectedDirectResultStillContainsAllOrderedElementIdentities: {}
+  expectedEffectiveType: {}
+  expectedEffectiveTypes: {}
+  expectedElementBodyRequests: {}
+  expectedEqual:
+    type: boolean
+  expectedErrorCategory: {}
+  expectedExpanded: {}
+  expectedExpandedDescendantRequests: {}
+  expectedFieldCount: {}
+  expectedIdentityEqual:
+    type: boolean
+  expectedMatch:
+    type: boolean
+  expectedMergePolicy: {}
+  expectedMinimizedMayContain: {}
+  expectedNodeBlueId: {}
+  expectedNotRequestedBlueIds: {}
+  expectedOutcome: {}
+  expectedOutstandingBlueIds: {}
+  expectedParsed: {}
+  expectedPreprocessed: {}
+  expectedProviderOutcome: {}
+  expectedPublishedBlueId: {}
+  expectedReason: {}
+  expectedRequestedBlueIds: {}
+  expectedResolutionOutcome: {}
+  expectedResolved: {}
+  expectedResolvedItems: {}
+  expectedRoundTripEqual: {}
+  expectedRoundTripItems: {}
+  expectedSameAsCompleteResolution: {}
+  expectedSameNodeBlueId: {}
+  expectedSameRootNodeBlueId: {}
+  expectedSameSemanticCoverage: {}
+  expectedSameSemanticResult: {}
+  expectedSourceReferencePreservedByCanonicalization: {}
+  expectedValid:
+    type: boolean
+  expectedValue: {}
+  expectedVerified:
+    type: boolean
+  expectedWithVerifiedSetContext: {}
+  expectedWithoutSetContextErrorCategory: {}
+  fieldDeclaration: {}
+  forbiddenJoinedTerms: {}
+  fullList: {}
+  id:
+    type: string
+    pattern: ^[A-Za-z0-9][A-Za-z0-9_+-]*$
+  input: {}
+  left: {}
+  limits: {}
+  matchRule: {}
+  mutation: {}
+  note: {}
+  operation:
+    enum:
+    - assertViewPath
+    - calculateBlueId
+    - calculateBlueIdPair
+    - calculateCircularSetBlueIds
+    - canonicalize
+    - canonicalizeLimitedResult
+    - changingRegistryDescriptionChangesBlueId
+    - collapse
+    - compareContentAndDirectResolvedBlueId
+    - compareExpansionStrategies
+    - compareGraphEquivalentInputs
+    - compareLimitedAndCompleteResolution
+    - expand
+    - expandCyclicMember
+    - expandLimited
+    - expandThenCollapse
+    - expandVariants
+    - lintPublishableDocumentation
+    - match
+    - minimizeAndResolve
+    - parseBlueIdInput
+    - parseSource
+    - preprocess
+    - registryNodeHashesToPublishedBlueId
+    - resolve
+    - resolveLimited
+    - resolveVariants
+    - retrieveDirectList
+    - semanticExists
+    - suiteAssertion
+    - validate
+    - validateVariants
+    - verifyDirectList
+    - verifyDirectNode
+  parent: {}
+  path: {}
+  pattern: {}
+  provider: {}
+  providerNode: {}
+  providerResult: {}
+  publishableFiles: {}
+  registryKey: {}
+  registryKind: {}
+  requestedBlueId: {}
+  requiredHeadings: {}
+  requiresVectorPrefixes: {}
+  resolvedItems: {}
+  right: {}
+  semanticDescriptionIdentityBearing: {}
+  source: {}
+  storedOptimization: {}
+  variants: {}
+$defs:
+  limitedOutcome:
+    enum:
+    - Established
+    - Absent
+    - Incomplete
+    - Invalid
+  providerOutcome:
+    enum:
+    - Found
+    - NotFound
+    - Unavailable
+    - InvalidEvidence

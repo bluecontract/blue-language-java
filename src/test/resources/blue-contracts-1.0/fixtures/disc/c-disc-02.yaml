@@ -1,0 +1,80 @@
+schema: blue-contracts-fixture/1.0
+id: c-disc-02
+vectors:
+- C-DISC-02
+category: disc
+description: Every effective contract type in the initial participating closure is recognized before first mutation.
+operation: process
+input:
+  root:
+    counter: 0
+    contracts:
+      in:
+        type:
+          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /counter
+            val: 1
+      embedded:
+        type:
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
+    child:
+      contracts:
+        unknown:
+          type:
+            blueId: 6dUnbVwUFYbg4oBjfbANb3MeDzXvuahShSUppq3YLpNh
+        in:
+          type:
+            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /child
+      channelKey: in
+    - scopePath: /
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: capability-failure
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: trace.firstMutation
+    op: absent

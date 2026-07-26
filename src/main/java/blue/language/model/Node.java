@@ -64,7 +64,12 @@ public class Node implements Cloneable {
         if (this.type != null && this.type.getBlueId() != null && this.value != null) {
             String typeBlueId = this.type.getBlueId();
             if (INTEGER_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {
-                return new BigInteger((String) this.value);
+                String decimal = (String) this.value;
+                if (!decimal.matches("0|-?[1-9][0-9]*")) {
+                    throw new IllegalArgumentException(
+                            "Integer type is incompatible with noncanonical decimal text: " + decimal);
+                }
+                return new BigInteger(decimal);
             } else if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId)) {
                 return BlueNumbers.toCanonicalDoubleValue(this.value);
             } else if (BOOLEAN_TYPE_BLUE_ID.equals(typeBlueId) && this.value instanceof String) {

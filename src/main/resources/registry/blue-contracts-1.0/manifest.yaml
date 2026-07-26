@@ -1,89 +1,173 @@
-specVersion: "1.0"
-registryKind: Blue Contracts runtime type registry
-publishedBy: Blue Contracts and Processor 1.0
-canonicalizationRule: Standard Blue Language 1.0 baseline preprocessing resolves symbolic core type aliases and runtime registry aliases before BlueId calculation.
-conformanceFixturePackageIdentity: "sha256:013ad328449a15ae2ff969f4bcb308db7413ffe8138b5309e7a9fe342723fcf3"
-preprocessingEnvironment:
-  coreRegistry: blue-language-1.0
-  runtimeRegistry: blue-contracts-1.0
+registry: blue-contracts-runtime
+registryKind: runtime-type
+specificationVersion: '1.0'
+languageVersion: '1.0'
+fixturePackageIdentity: sha256:58a3d8446e0e7c63063204c7bfaa312ace1242a182bc2f9c4875479a81149904
 entries:
-  - key: Contract
-    path: Contract.blue
-    blueId: "6WrVQoSpKHUUg5HPrwjkVV6pxe4sdkyGnakMs8ayEGeF"
-    semanticDescriptionIdentityBearing: true
-  - key: JsonPatchEntry
-    path: JsonPatchEntry.blue
-    blueId: "61W96XosAp3DrEC7PuqLYtmF2A6ETpqH6qF2DgYwDq4c"
-    semanticDescriptionIdentityBearing: true
-  - key: ContractExecutionResult
-    path: ContractExecutionResult.blue
-    blueId: "AMtAXPmvumgz1GxKUU9uv3ncXiKMENvqq8AaLvD5LXhv"
-    semanticDescriptionIdentityBearing: true
-  - key: Channel
-    path: Channel.blue
-    blueId: "4FAZ94JPExNM4pn2ZhtdHa4CVP7uASmLNVrBy7aCG1p5"
-    semanticDescriptionIdentityBearing: true
-  - key: Handler
-    path: Handler.blue
-    blueId: "7X46P3Q6FJrogqKrBXTALpqzkieyyiQeatnqLvWzAPXE"
-    semanticDescriptionIdentityBearing: true
-  - key: Marker
-    path: Marker.blue
-    blueId: "6zqbYGDGrMv5ReuEsjyzyyjjuqVnqDZxtY7RsPXdBTNy"
-    semanticDescriptionIdentityBearing: true
-  - key: ProcessEmbedded
-    path: ProcessEmbedded.blue
-    blueId: "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"
-    semanticDescriptionIdentityBearing: true
-  - key: ProcessingInitializedMarker
-    path: ProcessingInitializedMarker.blue
-    blueId: "6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"
-    semanticDescriptionIdentityBearing: true
-  - key: ProcessingTerminatedMarker
-    path: ProcessingTerminatedMarker.blue
-    blueId: "GBDBthfshBFr4GQKUU1fmy4GnPL7q2y3as4deUWpuBtu"
-    semanticDescriptionIdentityBearing: true
-  - key: ChannelEventCheckpoint
-    path: ChannelEventCheckpoint.blue
-    blueId: "9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1"
-    semanticDescriptionIdentityBearing: true
-  - key: TypeGeneralizationPolicy
-    path: TypeGeneralizationPolicy.blue
-    blueId: "Fbenow6tanFHkWzKiDD8fGxminQswQ1FecMRakaCx2WX"
-    semanticDescriptionIdentityBearing: true
-  - key: TypeGeneralizationRule
-    path: TypeGeneralizationRule.blue
-    blueId: "7Vnmk8StjwY7e9mBNpACrn8oh3KZ7yQBjnXe5bLDWn4D"
-    semanticDescriptionIdentityBearing: true
-  - key: DocumentUpdateChannel
-    path: DocumentUpdateChannel.blue
-    blueId: "Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o"
-    semanticDescriptionIdentityBearing: true
-  - key: TriggeredEventChannel
-    path: TriggeredEventChannel.blue
-    blueId: "5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ"
-    semanticDescriptionIdentityBearing: true
-  - key: LifecycleEventChannel
-    path: LifecycleEventChannel.blue
-    blueId: "2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ"
-    semanticDescriptionIdentityBearing: true
-  - key: EmbeddedNodeChannel
-    path: EmbeddedNodeChannel.blue
-    blueId: "H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i"
-    semanticDescriptionIdentityBearing: true
-  - key: DocumentUpdate
-    path: DocumentUpdate.blue
-    blueId: "7HEaG1SpBdsbVHsrwRTZSZGmpJUWHfFoEzecYWpjo1vm"
-    semanticDescriptionIdentityBearing: true
-  - key: DocumentProcessingInitiated
-    path: DocumentProcessingInitiated.blue
-    blueId: "Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL"
-    semanticDescriptionIdentityBearing: true
-  - key: DocumentProcessingTerminated
-    path: DocumentProcessingTerminated.blue
-    blueId: "4HWncQEQsdpk8zcXxYxgdtoXo5nKHxFPWeJfTscCbmeK"
-    semanticDescriptionIdentityBearing: true
-  - key: DocumentProcessingFatalError
-    path: DocumentProcessingFatalError.blue
-    blueId: "AMZbj5tNGxjPrvaNyw56sfqcLSW2j1XmkncEYUVtgmVC"
-    semanticDescriptionIdentityBearing: true
+- key: Channel
+  path: Channel.blue
+  blueId: CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR
+  sha256: 5e720f3a90abf95de65effce8c749e3b6beff576d1000495206795335565f80d
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: ChannelEventCheckpoint
+  path: ChannelEventCheckpoint.blue
+  blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+  sha256: 3f4805232f6e22d2a32079ad1df67d5262863d7cc1e287f3b9cd64688dbdf4e0
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: CheckpointEntry
+  path: CheckpointEntry.blue
+  blueId: 2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY
+  sha256: aace592e4597ac5d1a33109d456e9a876c7667fefceda72d8ba04b154b170c85
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: Contract
+  path: Contract.blue
+  blueId: 4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4
+  sha256: 9cf640fb810ce6ca9d194e3358aa11423733edbde0acbd1e46d0daac8e134395
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: ContractExecutionResult
+  path: ContractExecutionResult.blue
+  blueId: 6i9NrtN7uqtSYx136MwLyZSiLjJ98aCUCJNHuQvZah6n
+  sha256: eeb5a4727132af8801f453de5b6becdba595cfc30ac6076b0dd9377387350480
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: DocumentProcessingInitiated
+  path: DocumentProcessingInitiated.blue
+  blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt
+  sha256: ada59c183cafbdfeb5430d4e89865fb3db945fa989aaf3aa347ed9b0910a4aa0
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: DocumentProcessingTerminated
+  path: DocumentProcessingTerminated.blue
+  blueId: xaVhnN73YeTiJ1vaLGwndpYQE2RsbckfvzihLQsp2Yi
+  sha256: e42553e89eefa6848784c3c4c9a1548ce69fa6015440c8b119f8ee0c6fcbb30f
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: DocumentUpdate
+  path: DocumentUpdate.blue
+  blueId: 5qmRyRFrX38eVmgtRxUb79R27sG8VJRJcgsafyANxKgG
+  sha256: 57c55965d04db66ee88bf03cdad411529654beb94c6bc8d3fb03b2e9bed8ddcd
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: DocumentUpdateChannel
+  path: DocumentUpdateChannel.blue
+  blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An
+  sha256: 85e9be8104ea101b9e226572e85c2c83f05be5fb50f03816ab7eefbc0b2bb7b6
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: EmbeddedEventDelivery
+  path: EmbeddedEventDelivery.blue
+  blueId: 58trfDqLwD1F8JiPg86korUKEjgH1NXxgHSMjeLFRSFC
+  sha256: 66e52077baf7f7a473f4049446cf646c79fae5fa02d0f6c0d45f41434af8459f
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: EmbeddedNodeChannel
+  path: EmbeddedNodeChannel.blue
+  blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
+  sha256: a41af8670a1fdcf4613fc4eb784061b6145094c1bdd3c3ae5b9b2c75a8435591
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: ExternalChannel
+  path: ExternalChannel.blue
+  blueId: 4wXKQivSASbs6PLnR562Q2XcT52x1bBViGk7cxhQ3swq
+  sha256: e4c3c888aa58b8a224e0faf2fff3bdc59e51f4d134f25845ef1835595b44ff2a
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: FixtureEvent
+  path: FixtureEvent.blue
+  blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+  sha256: dd3a17773d284cb544f56e615af861b1f555920cd9b9123a3b9824656d66220b
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: true
+- key: Handler
+  path: Handler.blue
+  blueId: 2Ag2NfcWpCfPqBAR7bFAEL9L3roX3UWGUkDq7nN3D4gV
+  sha256: 3efb8209f06f9caadbe41015704a2f787f94dc5c452a5d088e89bb1f3fe3920c
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: JsonPatchEntry
+  path: JsonPatchEntry.blue
+  blueId: 6ibiR9xVJNErraawKrsDzrGS3H5HyUUNwdZbDTDbU2U6
+  sha256: 63f69547dab9adf1175aa9bdeeb24ceacd6734ddb1c584683c28464dacd7af6e
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: LifecycleEventChannel
+  path: LifecycleEventChannel.blue
+  blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
+  sha256: eb52de19cccda56ffe6d525151ff64af497f0e16b4f3f67ae1293a7fdfbf0121
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: Marker
+  path: Marker.blue
+  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+  sha256: 8ba7b1da79cb1201b1cd63193ec9c733588cc8cd2f574664a3ef37ec2bf90bf5
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: ProcessEmbedded
+  path: ProcessEmbedded.blue
+  blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+  sha256: 4419c0b82d391459801941d61feb23d6378f18868c3ddcbc45913ae006d2bf5e
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: ProcessingInitializedMarker
+  path: ProcessingInitializedMarker.blue
+  blueId: 5qrHeD39ytiuWtKXStznJHTjDfgAtiPAr3jwHibvQKvR
+  sha256: 9fa075fffecd52497422f5b5d86da0aa7bcf86a30f0a2ed3a082d34f7c3dd11c
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: ProcessingTerminatedMarker
+  path: ProcessingTerminatedMarker.blue
+  blueId: 4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v
+  sha256: 65de4d07b88cbfe9979e9a4e05f3bf8ff9b8086e74b4074a3d3061fb1e88ef81
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: RuntimeCounterEntry
+  path: RuntimeCounterEntry.blue
+  blueId: 2fQHvWpJRfkPW9rqcqZKdcEKx4586LDkYR2bWTPRDZEo
+  sha256: 9d7e7e5b75cbbad36556a4a48b7d17db5f62a19a537cfc2fdd624702a2da14b5
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: RuntimeLedger
+  path: RuntimeLedger.blue
+  blueId: EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2
+  sha256: 788518f6f6bc8570ffef719822c3359b41c140e795e3b4ff74a7fd2c24f4f314
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: ScriptedExternalChannel
+  path: ScriptedExternalChannel.blue
+  blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+  sha256: b8ba0d9c3208db453755e1863fda47f1c26d28bbeaa03c0d1fe3f39db0f9409c
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: true
+- key: ScriptedHandler
+  path: ScriptedHandler.blue
+  blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+  sha256: 4dfa00390dbf89d1211e7d2a1c44eaa95d811af0f1a99bd6e51c6ac666f88a65
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: true
+- key: TriggeredEventChannel
+  path: TriggeredEventChannel.blue
+  blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+  sha256: e38233a8bc8799b66cab18e7532bee185577f76b99c14c169d2540d298172fa7
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: TypeGeneralizationPolicy
+  path: TypeGeneralizationPolicy.blue
+  blueId: 8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz
+  sha256: 65eb522ae7ee74074148a2aa06452f8df26fa2364eff9205d46c94bf82b1f023
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: TypeGeneralizationRule
+  path: TypeGeneralizationRule.blue
+  blueId: 5BwjjfvodMVCfD2cKChbUMmjEBd83vv5kbEQwAFHcSnv
+  sha256: 31d532f363bb33e347edde6f42fb85dd65e1e34893771499facfb05729dd12e2
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+packageIdentityAlgorithm:
+  digest: sha256
+  encoding: UTF-8 canonical JSON with sorted keys
+  normalization: packageIdentity and fixturePackageIdentity are null before hashing
+packageIdentity: sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366

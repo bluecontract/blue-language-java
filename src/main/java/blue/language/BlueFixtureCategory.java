@@ -8,7 +8,12 @@ public enum BlueFixtureCategory {
     SCHEMA("Schema"),
     RESOLUTION("Resolution"),
     CANONICALIZATION("Canonicalization"),
+    MINIMIZATION("Minimization"),
+    MATCHING("Matching"),
     PROVIDER("Provider"),
+    LIMITED_EXPANSION("LimitedExpansion"),
+    LIMITED_RESOLUTION("LimitedResolution"),
+    META_CONFORMANCE("MetaConformance"),
     CIRCULAR("Circular"),
     REGISTRY("Registry"),
     DOCUMENTATION_LINT("DocumentationLint");

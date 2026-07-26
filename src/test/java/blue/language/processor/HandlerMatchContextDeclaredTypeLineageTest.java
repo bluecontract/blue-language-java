@@ -7,8 +7,8 @@ import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.model.MarkerContract;
+import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeProviderWrapper;
 
 import org.junit.jupiter.api.Test;
 
@@ -164,17 +164,17 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     void identityFreeParentIsADistinctCachedTerminalFact() {
         TypeFixture types = TypeFixture.create();
         Node incomplete = new Node().type(new Node().name("Anonymous Parent"));
+        String incompleteId = BlueIdCalculator.calculateBlueId(incomplete);
         MutableCountingProvider provider = new MutableCountingProvider();
-        provider.put(types.childId, incomplete);
-        ContractMatchingService matching = new ContractMatchingService(
-                new Blue(NodeProviderWrapper.unverified(provider)));
+        provider.put(incompleteId, incomplete);
+        ContractMatchingService matching = new ContractMatchingService(new Blue(provider));
 
-        assertFalse(context(types.event(types.childId), matching)
+        assertFalse(context(types.event(incompleteId), matching)
                 .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
         assertEquals(1, provider.lookupCount());
         assertEquals(1, matching.declaredTypeLineageCacheSize());
 
-        assertFalse(context(types.event(types.childId), matching)
+        assertFalse(context(types.event(incompleteId), matching)
                 .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
         assertEquals(1, provider.lookupCount());
     }
@@ -185,7 +185,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         MutableCountingProvider provider = new MutableCountingProvider();
         provider.put(types.childId, reference(types.childId));
         ContractMatchingService matching = new ContractMatchingService(
-                new Blue(NodeProviderWrapper.unverified(provider)));
+                new Blue(provider));
 
         assertFalse(context(types.event(types.childId), matching)
                 .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
@@ -196,12 +196,17 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     @Test
     void ambiguousProviderResultPreservesDeterministicFailureAndIsNotCached() {
         TypeFixture types = TypeFixture.create();
-        NodeProvider ambiguous = blueId -> Arrays.asList(new Node(), new Node());
-        ContractMatchingService matching = new ContractMatchingService(
-                new Blue(NodeProviderWrapper.unverified(ambiguous)));
+        List<Node> ambiguousDefinitions = Arrays.asList(
+                new Node().name("Ambiguous declaration A"),
+                new Node().name("Ambiguous declaration B"));
+        String ambiguousId = BlueIdCalculator.calculateBlueId(ambiguousDefinitions);
+        NodeProvider ambiguous = blueId -> ambiguousId.equals(blueId)
+                ? ambiguousDefinitions
+                : null;
+        ContractMatchingService matching = new ContractMatchingService(new Blue(ambiguous));
 
         IllegalStateException failure = assertThrows(IllegalStateException.class, () ->
-                context(types.event(types.childId), matching)
+                context(types.event(ambiguousId), matching)
                         .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
 
         assertTrue(failure.getMessage().contains("Expected a single node"));
@@ -245,25 +250,28 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     }
 
     @Test
-    void malformedParentIdFailsAndDoesNotCreateACacheEntry() {
+    void providerBlueIdMismatchPrecedesDeclaredParentTraversal() {
         TypeFixture types = TypeFixture.create();
         Map<String, Node> definitions = new LinkedHashMap<String, Node>();
-        definitions.put(types.childId, new Node().type(reference("not-a-blue-id")));
-        ContractMatchingService matching = unverifiedMatching(definitions);
+        definitions.put(types.childId,
+                new Node().type(reference(types.expectedId)));
+        ContractMatchingService matching =
+                new ContractMatchingService(new Blue(new MapProvider(definitions)));
 
         IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () ->
                 context(types.event(types.childId), matching)
                         .eventDeclaredTypeIsSameOrDescendantOf(reference(types.expectedId)));
 
-        assertEquals(BlueLanguageErrorCategory.InvalidBlueId,
+        assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
                 BlueLanguageErrorClassifier.classify(failure));
         assertEquals(0, matching.declaredTypeLineageCacheSize());
     }
 
     @Test
     void selfCycleAndTwoNodeCycleFailAsTypeCycle() {
-        String a = syntheticId("Cycle A");
-        String b = syntheticId("Cycle B");
+        String cycleBase = syntheticId("Cycle set");
+        String a = cycleBase + "#0";
+        String b = cycleBase + "#1";
         Map<String, Node> cyclic = new LinkedHashMap<String, Node>();
         cyclic.put(a, new Node().type(reference(a)));
         assertTypeCycle(cyclic, a, syntheticId("Expected"));
@@ -276,8 +284,9 @@ class HandlerMatchContextDeclaredTypeLineageTest {
 
     @Test
     void ancestryMatchDoesNotHideALaterCycle() {
-        String a = syntheticId("Cycle after expected A");
-        String expected = syntheticId("Cycle after expected Expected");
+        String cycleBase = syntheticId("Cycle after expected set");
+        String a = cycleBase + "#0";
+        String expected = cycleBase + "#1";
         Map<String, Node> cyclic = new LinkedHashMap<String, Node>();
         cyclic.put(a, new Node().type(reference(expected)));
         cyclic.put(expected, new Node().type(reference(a)));
@@ -289,19 +298,16 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     void twentyThousandLevelLineageAndDeepCycleAreIterative() {
         assertTimeoutPreemptively(Duration.ofSeconds(15), () -> {
             int depth = 20_000;
-            String expected = syntheticId("Deep root");
-            Map<String, Node> valid = deepChain(depth, expected, null);
-            String candidate = syntheticId("Deep type 0");
-            ContractMatchingService validMatching = unverifiedMatching(valid);
+            DeepChain valid = exactDeepChain(depth);
+            ContractMatchingService validMatching = matching(valid.definitions);
 
-            assertTrue(context(new Node().type(reference(candidate)), validMatching)
-                    .eventDeclaredTypeIsSameOrDescendantOf(reference(expected)));
+            assertTrue(context(new Node().type(reference(valid.candidate)), validMatching)
+                    .eventDeclaredTypeIsSameOrDescendantOf(reference(valid.expected)));
             assertEquals(DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT,
                     validMatching.declaredTypeLineageCacheSize());
 
-            String cycleTarget = syntheticId("Deep type " + (depth - 1));
-            Map<String, Node> cyclic = deepChain(depth, expected, cycleTarget);
-            assertTypeCycle(cyclic, candidate, expected);
+            DeepChain cyclic = verifiedCyclicDeepChain(depth);
+            assertTypeCycle(cyclic.definitions, cyclic.candidate, cyclic.expected);
         });
     }
 
@@ -357,7 +363,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         TypeFixture types = TypeFixture.create();
         BlockingProvider provider = new BlockingProvider(types.definitions, types.childId);
         ContractMatchingService matching = new ContractMatchingService(
-                new Blue(NodeProviderWrapper.unverified(provider)));
+                new Blue(provider));
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             assertTrue(context(types.event(types.siblingId), matching)
@@ -480,7 +486,8 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     private static void assertTypeCycle(Map<String, Node> definitions,
                                         String candidate,
                                         String expected) {
-        ContractMatchingService matching = unverifiedMatching(definitions);
+        ContractMatchingService matching = new ContractMatchingService(
+                new Blue(new VerifiedCyclicMapProvider(definitions)));
         IllegalStateException failure = assertThrows(IllegalStateException.class, () ->
                 context(new Node().type(reference(candidate)), matching)
                         .eventDeclaredTypeIsSameOrDescendantOf(reference(expected)));
@@ -494,22 +501,43 @@ class HandlerMatchContextDeclaredTypeLineageTest {
                 <= DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT);
     }
 
-    private static Map<String, Node> deepChain(int depth, String root, String finalParent) {
+    private static DeepChain exactDeepChain(int depth) {
         Map<String, Node> definitions = new LinkedHashMap<String, Node>();
-        for (int index = 0; index < depth; index++) {
-            String current = syntheticId("Deep type " + index);
-            String parent = index + 1 < depth
-                    ? syntheticId("Deep type " + (index + 1))
-                    : (finalParent != null ? finalParent : root);
-            definitions.put(current, new Node().type(reference(parent)));
+        Node rootDefinition = new Node().name("Deep root");
+        String root = BlueIdCalculator.calculateBlueId(rootDefinition);
+        definitions.put(root, rootDefinition);
+        String parent = root;
+        for (int index = depth - 1; index >= 0; index--) {
+            Node definition = new Node()
+                    .name("Deep type " + index)
+                    .type(reference(parent));
+            String current = BlueIdCalculator.calculateBlueId(definition);
+            definitions.put(current, definition);
+            parent = current;
         }
-        definitions.put(root, new Node().name("Deep root"));
-        return definitions;
+        return new DeepChain(definitions, parent, root);
     }
 
-    private static ContractMatchingService unverifiedMatching(Map<String, Node> definitions) {
-        return new ContractMatchingService(new Blue(
-                NodeProviderWrapper.unverified(new MapProvider(definitions))));
+    private static DeepChain verifiedCyclicDeepChain(int depth) {
+        Map<String, Node> definitions = new LinkedHashMap<String, Node>();
+        String base = syntheticId("Deep cyclic type set");
+        for (int index = 0; index < depth; index++) {
+            String current = base + "#" + index;
+            String parent = index + 1 < depth
+                    ? base + "#" + (index + 1)
+                    : current;
+            definitions.put(current, new Node()
+                    .name("Deep cyclic type " + index)
+                    .type(reference(parent)));
+        }
+        return new DeepChain(
+                definitions,
+                base + "#0",
+                syntheticId("Deep cyclic expected"));
+    }
+
+    private static ContractMatchingService matching(Map<String, Node> definitions) {
+        return new ContractMatchingService(new Blue(new MapProvider(definitions)));
     }
 
     private static HandlerMatchContext context(Node event, ContractMatchingService matching) {
@@ -528,6 +556,20 @@ class HandlerMatchContextDeclaredTypeLineageTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private static final class DeepChain {
+        private final Map<String, Node> definitions;
+        private final String candidate;
+        private final String expected;
+
+        private DeepChain(Map<String, Node> definitions,
+                          String candidate,
+                          String expected) {
+            this.definitions = definitions;
+            this.candidate = candidate;
+            this.expected = expected;
+        }
     }
 
     private static final class TypeFixture {
@@ -649,7 +691,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     }
 
     private static class MapProvider implements NodeProvider {
-        private final Map<String, Node> definitions;
+        protected final Map<String, Node> definitions;
 
         private MapProvider(Map<String, Node> definitions) {
             this.definitions = definitions;
@@ -661,6 +703,19 @@ class HandlerMatchContextDeclaredTypeLineageTest {
             return definition != null
                     ? Collections.singletonList(definition.clone())
                     : null;
+        }
+    }
+
+    private static final class VerifiedCyclicMapProvider
+            extends MapProvider implements CyclicAwareNodeProvider {
+
+        private VerifiedCyclicMapProvider(Map<String, Node> definitions) {
+            super(definitions);
+        }
+
+        @Override
+        public boolean hasVerifiedContentForBlueId(String blueId) {
+            return definitions.containsKey(blueId);
         }
     }
 

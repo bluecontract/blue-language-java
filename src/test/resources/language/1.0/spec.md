@@ -1,12 +1,14 @@
 # Blue Language Specification 1.0
 
-> **Scope.** This document defines Blue's content language: the node model, Blue Graph, Blue Documents, typing, overlays, schema constraints, preprocessing, resolution, expansion, collapse, canonicalization, minimization, and BlueId. It does **not** define runtime execution, handlers, events, channels, gas, or contract processing. Those belong to the separate **Blue Contracts and Processor Specification**.
+> **Status.** Final Implementation Baseline. Blue Language 1.0 is the first public-version Language specification and the normative implementation target for this package. Final public publication MUST bind this prose, the canonical core-type registry, published BlueIds, the machine-readable conformance fixtures, and implementation-conformance evidence in one content-addressed release manifest.
+
+> **Scope.** This document defines Blue's content language: the node model, Blue Graph, Blue Documents, typing, overlays, schema constraints, preprocessing, complete and demand-limited resolution, expansion, collapse, canonicalization, minimization, and BlueId. It defines the semantic equivalence of verified pure references and their materializations. It does **not** define runtime execution, handlers, events, channels, gas prices, provider transport, storage layout, or contract processing. Those belong to runtime specifications and implementations.
 
 Where this document references core types such as **Text**, **Integer**, **Double**, **Boolean**, **Dictionary**, and **List**, their canonical type definitions and canonical BlueIds are supplied by the canonical Blue type registry. Appendix A defines their normative semantics and shows the intended canonical registry nodes. The registry is the authority for the exact node content and BlueIds.
 
 Canonical core type nodes are identity-bearing Blue content. Their `description` fields define type semantics and affect BlueId. Editing a canonical description changes the type identity and therefore MUST be treated as a registry/versioning change, not as ordinary documentation editing.
 
-The Blue Language 1.0 release is defined by this prose specification, the canonical Blue type registry, and the Blue Language 1.0 conformance fixture package together. If these artifacts conflict, the release process MUST be corrected; implementations MUST NOT guess.
+The complete Blue Language 1.0 conformance release is defined by this prose specification, the canonical Blue type registry, the Blue Language 1.0 conformance fixture package, and the content-addressed release manifest together. If these artifacts conflict, the release process MUST be corrected; implementations MUST NOT guess.
 
 ## Conventions
 
@@ -18,38 +20,71 @@ Sections marked **normative** define required behavior for conforming Blue Langu
 
 ## 0. Overview
 
-Blue is a deterministic content language for describing a **content-addressed graph of typed nodes**.
+Blue Language describes reality as a **content-addressed graph of typed nodes**. Text, integers, doubles, booleans, lists, and dictionaries are the basic building blocks. Larger nodes are formed by connecting those smaller nodes.
 
-A **Blue Graph** is the conceptual network of Blue nodes. Nodes are connected by ordinary object fields, list elements, type links, and `blueId` references. A **Blue Document** is a serialized rooted slice of that graph. It is **not required to contain the whole graph**: any pure `{ blueId: ... }` reference may point to content outside the selected document.
+An informative mental model is to treat a Blue node as a perfectly defined word. A human-readable `name` helps people discuss the word, while its **BlueId** identifies one exact immutable meaning. The same exact node has the same BlueId wherever it appears, and a BlueId may stand in place of the node's complete verified explanation.
 
-The **BlueId** of a document is the BlueId of its root node. BlueId is a content address. Equivalent source, expanded, collapsed, resolved, and canonical forms of the same content produce the same semantic identity when processed through the appropriate identity pipeline.
+This analogy does not replace the formal rules below. In particular, a BlueId is a content address, not merely a chosen label: changing identity-bearing content changes the BlueId.
 
-Blue supports several **views** of the same content. Implementations and authors MUST distinguish them.
+A **Blue Graph** is the conceptual network of Blue nodes. Nodes are connected by ordinary object fields, list elements, type links, and `blueId` references. A **Blue Document** is one serialized root and whatever part of that graph is currently materialized with it. It is **not required to contain the whole graph**.
 
-| View / state | Purpose | Identity status |
+A node may therefore appear in either of these equivalent forms:
+
+```yaml
+x:
+  a: 1
+  b: 1
+```
+
+```yaml
+x:
+  blueId: <blue-id-of-the-same-x-node>
+```
+
+When the materialized node verifies to the referenced BlueId, these forms identify the same graph edge and the same Blue node. Inline versus referenced representation is not a semantic distinction.
+
+This equivalence is a load-bearing invariant. A semantic Blue operation MUST be a function of node identity and logical content demanded by that operation. It MUST NOT be a function of whether a node was inline, collapsed, already expanded, cached, fetched from one blob, fetched from many chunks, or represented internally by one host object or many.
+
+The Blue Language defines four ordinary graph operations:
+
+| Operation | Meaning |
+|---|---|
+| **Expand** | Replace selected pure references with verified materialized content. |
+| **Collapse** | Replace selected verified materialized nodes with pure references to their Node BlueIds. |
+| **Resolve** | Apply type inheritance, overlays, merge rules, fixed values, and schema rules. |
+| **Minimize** | Produce a smaller Source overlay that resolves to the same semantic result. |
+
+Expansion and collapse change representation only. Resolution and minimization change how explicit or type-derived content is expressed. These operations act on ordinary Blue nodes; they do not create a second graph model.
+
+Expansion and resolution are independent dimensions. A processor may expand and resolve only the paths needed for its next decision while leaving unrelated branches collapsed. Limits are supplied out-of-band to the Language operation and do not become Blue content, affect BlueId, or change semantic meaning.
+
+Blue also permits **extension through typing and overlays**. Extension is not a fifth graph operation. To extend a node is to create a new, more specific node that uses another node as its `type` and adds compatible overlay content. The extended node normally has a new BlueId. By contrast, expanding a node only reveals more of the same node and preserves its BlueId.
+
+Blue content commonly appears in the following forms:
+
+| Form | Purpose | Identity status |
 |---|---|---|
 | **Source Document** | Authored input. May use authoring sugar and the root `blue` directive. | Not necessarily direct BlueId Input. |
 | **Preprocessed Document** | Source after preprocessing has applied authoring transforms and removed `blue`. | Eligible for resolution and, if otherwise valid, direct hashing. |
-| **Expanded View** | Pure `{ blueId: X }` references materialized from a provider. | Preserves Node BlueId when provider content verifies. |
-| **Collapsed View** | Materialized subtrees replaced by pure `{ blueId: X }` references. | Preserves Node BlueId. |
-| **Resolved View** | Fully type-merged and schema-validated semantic view. | Carries semantic identity; not necessarily direct BlueId Input. |
-| **Canonical Identity Input** | Deterministic identity form derived from a Resolved View. It may contain final canonical payloads that are not ordinary Source overlays. | Direct input to Node BlueId; produces Content BlueId. |
-| **Minimized Overlay** | Author-facing reduced overlay that re-resolves to the same Resolved View. | Same Content BlueId when processed through the identity pipeline. |
+| **Expanded or collapsed form** | The same node with more or fewer referenced descendants materialized. | Expansion and collapse preserve Node BlueId. |
+| **Resolved Form** | Type-merged and schema-validated semantic content. It may be complete or explicitly limited to demanded paths. | Carries semantic meaning; not necessarily direct BlueId Input. |
+| **Minimized Overlay** | A reduced author-facing overlay that resolves to the same complete Resolved Form. | Produces the same Content BlueId through the full identity pipeline. |
+| **Canonical Identity Input** | The one deterministic identity form derived from a complete Resolved Form. | Direct input to Node BlueId; produces Content BlueId. |
 
-The term **Canonical Overlay** is retained as a historical shorthand in some examples, but its normative role is **Canonical Identity Input**: the deterministic BlueId Input used to compute Content BlueId. It is not necessarily valid Source Document authoring form and is not required to re-resolve through ordinary Source overlay semantics.
-
-A **Minimized Overlay** is the author-facing reduced form that re-resolves to the same Resolved View.
+Canonicalization is separate from minimization. Canonicalization produces the deterministic BlueId input. Minimization produces a convenient smaller Source overlay and is not necessarily unique.
 
 The identity pipeline for a Source Document is:
 
 ```text
 Source Document
-   -- preprocess   --> Preprocessed Document
-   -- resolve      --> Resolved View
-   -- canonicalize --> Canonical Identity Input
+   -- preprocess    --> Preprocessed Document
+   -- fully resolve --> complete Resolved Form
+   -- canonicalize  --> Canonical Identity Input
    -- BlueId algorithm --> Node BlueId
                          = Content BlueId of the Source Document
 ```
+
+Ordinary processors do not need to run this entire pipeline merely to inspect or update a document. They may expand and resolve only demanded fields, preserve unchanged children by BlueId, and collapse the result again.
 
 A Blue Document is a rooted slice of a larger graph:
 
@@ -77,7 +112,12 @@ Blue is a universal, deterministic **content language** with:
 - a strict, mergeable type system with overlay and subtyping rules;
 - a content address called **BlueId** that is stable across equivalent content forms;
 - a precise pipeline that maps an authored document to deterministic content identity;
-- graph-slice semantics, so documents can contain local content and external `blueId` references.
+- graph-slice semantics, so documents can contain local content and external `blueId` references;
+- identity-preserving expansion and collapse;
+- complete or demand-limited resolution;
+- semantics-preserving minimization;
+- explicit operation outcomes in which unavailable or unexpanded content is never confused with semantic absence;
+- local verification of a directly materialized node whose complete children remain represented by their exact BlueIds.
 
 ### 1.2 Out of scope
 
@@ -92,17 +132,23 @@ The following are not defined by this specification:
 - processor lifecycle markers;
 - contract execution.
 
-The field `contracts` is reserved by the language because it is a possible field in Blue content and therefore can affect BlueId. Its runtime meaning is defined only by the separate Blue Contracts and Processor Specification.
+The field `contracts` is reserved by the language because it is a possible field in Blue content and therefore can affect BlueId. Its runtime meaning is defined only by the separate Blue Contracts and Processor Specification 1.0.
 
-### 1.3 Versioning
+### 1.3 Versioning and specification selection
 
-This document defines **Blue Language 1.0**.
+This document defines **Blue Language 1.0**, the first public-version Language specification.
 
-A Blue node does not carry a required language-version field. A node's meaning is determined by this specification, its content, and the BlueIds of any referenced types.
+A Blue node does **not** carry a required `languageVersion`, `specification`, or similar field. Adding such a field would make version selection part of content identity and would create a bootstrapping problem: an implementation would need to interpret identity-bearing content before knowing which identity rules apply. The processing environment therefore selects Blue Language 1.0 out-of-band and MUST declare that selection before parsing identity-bearing content.
 
-Implementations MUST declare which Blue Language version they implement.
+The exact BlueIds of referenced types remain the normal way in which content selects type semantics. Runtime execution languages are selected by their exact runtime-type BlueIds under the applicable runtime specification; ordinary documents do not require a Language-version field.
 
-Blue Language 1.x revisions MUST preserve the meaning and BlueId of valid Blue Language 1.0 documents. Any incompatible change to the BlueId algorithm, node model, or resolution semantics requires a new major language version and an out-of-band version-selection mechanism. Such a mechanism MUST NOT require interpreting a node under the wrong BlueId algorithm before the version is known.
+Blue Language 1.0 publishes the canonical nodes and BlueIds for `Text`, `Integer`, `Double`, `Boolean`, `Dictionary`, and `List` exactly as contained in the release registry. Those nodes have already been reproduced by multiple implementations and their identity-bearing descriptions intentionally name Blue Language 1.0. Implementations MUST load and verify the registry nodes rather than reconstructing them from prose or source-code constants.
+
+After publication, an existing core-type BlueId MUST never acquire different semantics. A semantic change requires a new type node and BlueId. Editorial clarification that is not intended to alter identity-bearing meaning belongs outside the canonical node.
+
+Blue Language 1.0 is intended to remain stable. Editorial changes that do not alter normative meaning may be published as errata outside canonical registry nodes. Any change that alters the node model, BlueId algorithm, preprocessing, resolution, canonicalization, minimization, or the meaning of valid 1.0 content requires a new Language version and an out-of-band version-selection rule known before the node is interpreted.
+
+A valid unprefixed plain BlueId always denotes the BlueId v1 algorithm defined by this specification. A future incompatible BlueId version MUST use syntax that is not valid as a plain BlueId v1; it MUST NOT reinterpret an existing valid v1 string.
 
 ### 1.4 Conformance
 
@@ -116,55 +162,55 @@ A conforming implementation MUST support:
 - schema validation;
 - list merge semantics and list control forms;
 - provider-backed resolution when referenced content is required;
+- complete and demand-limited resolution with explicit complete, absent, incomplete, and invalid outcomes;
+- representation-transparent graph access through verified pure references;
 - expansion semantics, including provider-backed materialization when referenced content is required;
-- collapse semantics if the implementation exposes a collapse API;
+- the semantics of expansion, collapse, resolution, and minimization; an implementation need not expose each as one public method, but all corresponding behavior it exposes MUST follow this specification;
 - canonicalization for Content BlueId calculation;
-- author-facing minimization if the implementation exposes a minimization API;
+- author-facing minimization behavior sufficient to pass the conformance fixtures;
 - Node BlueId and Content BlueId calculation;
 - circular reference set BlueIds;
 - rejection of invalid Blue Language 1.0 documents and invalid BlueId Input;
 - the Blue Language 1.0 conformance suite.
 
-Implementations MAY expose smaller internal APIs, such as direct Node BlueId calculation, but such APIs do not define separate conformance levels.
+An implementation MAY expose detailed demand enums, node handles, provider batches, storage indexes, work diagnostics, or caches. Those are implementation surfaces. They MUST preserve the semantic results required here and MUST NOT become observable Blue content.
 
 A library or tool that implements only a subset of this specification may be useful, but it MUST NOT describe itself as a conforming Blue Language 1.0 implementation.
 
-### 1.5 Core registry dependency
+### 1.5 Core registry and release artifacts
 
 The canonical Blue type registry is part of the Blue Language 1.0 release surface. Its entries for `Text`, `Integer`, `Double`, `Boolean`, `Dictionary`, and `List` are content-addressed and versioned with this specification.
 
-A conforming implementation MUST use the registry BlueIds for core type aliases. A different registry binding does not produce portable Blue Language 1.0 Content BlueIds.
+A conforming implementation MUST use the published registry BlueIds for core type aliases. A different registry binding does not produce portable Blue Language 1.0 Content BlueIds.
 
-Canonical registry nodes are self-describing Blue content.
+Canonical registry nodes are self-describing Blue content. A registry node's `name` and `description` fields are identity-bearing. A concise normative `description` SHOULD define the type's semantics. Changing that semantic description changes the type BlueId and defines a different type.
 
-A registry node's `name` and `description` fields are identity-bearing content under the Blue Language. A canonical registry entry SHOULD include a concise normative `description` that defines the semantics of the type. Changing that semantic description changes the node's BlueId and therefore defines a different type.
+Non-normative examples, rationale, translations, tutorial material, implementation notes, and editorial commentary MUST NOT be included in canonical registry nodes unless intentionally made identity-bearing. Such material belongs in this prose specification or in separate documentation.
 
-Non-normative examples, rationale, translations, tutorial material, implementation notes, and editorial commentary MUST NOT be included in canonical registry nodes unless intentionally made identity-bearing. Such material belongs in the prose specification, registry documentation, or examples outside the canonical node.
+The registry file is the authority for the exact parsed string content of canonical nodes. Code blocks in this specification that claim to show canonical nodes SHOULD be generated from, or kept Blue-equivalent to, the registry entries used to calculate the published BlueIds.
 
-The registry file is the authority for the exact byte/string content of canonical nodes. Code blocks in this specification that claim to show canonical nodes SHOULD be generated from, or kept byte-equivalent to, the registry entries used to calculate the published BlueIds.
+The core-registry manifest MUST publish, for every entry:
 
-Practical editorial rule: if changing the text should change what the type means, put it in the canonical node. If changing the text only improves explanation, examples, formatting, translation, or teaching, keep it outside the canonical node.
+- registry kind and specification version;
+- stable entry key;
+- path of the canonical node file;
+- the calculated Node BlueId;
+- the SHA-256 digest of the exact node file;
+- `semanticDescriptionIdentityBearing: true`;
+- the Language fixture-package identity that verifies it.
 
-The canonical registry entry for each core type MUST include:
+The manifest itself MUST publish one content-addressed package identity calculated by the release rule declared in that manifest. The top-level release manifest MUST bind that core-registry package identity.
 
-- the exact canonical Blue node;
-- the node's calculated BlueId;
-- the Blue Language version that publishes it;
-- the conformance fixture package identity that verifies it.
-
-A conforming implementation MUST verify, at release or test time, that every bundled core type node hashes to the published registry BlueId.
-
-The Blue Language 1.0 release is defined by three artifacts together:
+A complete Blue Language 1.0 conformance release consists of:
 
 1. this prose specification;
-2. the canonical Blue type registry for Blue Language 1.0;
-3. the Blue Language 1.0 conformance fixture package.
+2. the canonical Blue 1.0 core-type registry and published BlueIds;
+3. the machine-readable Blue Language 1.0 fixture package and its identity;
+4. a content-addressed release manifest that binds the preceding artifacts.
 
-If these artifacts conflict, the release is inconsistent and MUST be corrected. Implementations MUST NOT guess which artifact wins.
+The release manifest MUST identify at least the specification revision, core-registry identity, fixture-package identity, and artifact digests. If the prose, registry, fixtures, or manifest conflict, the release is inconsistent and MUST be corrected. Implementations MUST NOT guess which artifact wins.
 
-The prose explains the rules, the registry supplies the exact identity-bearing type nodes and BlueIds, and the fixtures provide behavior-defining examples. These artifacts MUST be versioned and published together.
-
-The fixture package is behavior-defining. It MUST publish exact expected BlueIds, canonical registry BlueIds, and fixture package identity.
+Until all four artifacts exist and independent fixture execution has succeeded, this package remains an implementation baseline rather than a final public conformance release.
 
 ---
 
@@ -193,7 +239,7 @@ When YAML is used for Blue serialization:
 - non-JSON implicit types, including timestamps, binary blobs, sets, and ordered maps, MUST be disabled;
 - timestamp-like values SHOULD be quoted by authors. Blue Language 1.0 defines no timestamp scalar.
 
-Blue YAML 1.0 uses the YAML 1.2 JSON schema data model. Portable Blue YAML MUST reject custom tags, non-string object keys, binary tags, sets, ordered maps, and non-JSON implicit scalar types.
+Blue Language 1.0 YAML uses the YAML 1.2 JSON schema data model. Portable Blue YAML MUST reject custom tags, non-string object keys, binary tags, sets, ordered maps, and non-JSON implicit scalar types.
 
 The parsed value of a YAML block scalar is the exact Text value. Blue performs no block-scalar normalization. Different YAML scalar styles, indentation, folding, chomping indicators, trailing newlines, or line endings that produce different parsed strings produce different BlueIds.
 
@@ -236,7 +282,7 @@ If no effective type resolves to `Integer`, quoted decimal text is Text.
 
 If an effective type resolves to `Integer` and the quoted value is not a valid canonical decimal integer string, resolution MUST fail.
 
-Primitive scalar inference for quoted strings is provisional for Source Documents. Resolution MAY refine a quoted scalar's effective scalar type when an inherited or explicit type requires `Integer` and the quoted value is a valid canonical decimal integer string.
+Primitive scalar inference for quoted strings is provisional for Source Documents. Resolution MUST refine a quoted scalar's effective scalar type to `Integer` when the inherited or explicit effective type resolves to `Integer` and the quoted value is a valid canonical decimal integer string. It MUST fail when that effective type requires `Integer` and the quoted value is not canonical Integer text.
 
 Examples:
 
@@ -336,7 +382,9 @@ A **Blue Document** is a serialized rooted slice of the Blue Graph. It may conta
 - pure references to external nodes using `{ blueId: ... }`;
 - a mixture of local content and external references.
 
-A Blue Document is not required to be closed. A `{ blueId: X }` reference may point to content outside the selected document. Implementations may require a provider to expand references, resolve types, or canonicalize a view.
+A Blue Document is not required to be closed. A `{ blueId: X }` reference may point to content outside the selected document. Implementations use a provider only when an operation demands referenced content.
+
+A materialized child whose Node BlueId is `X` and a pure `{ blueId: X }` reference are representation-equivalent. Language operations, validators, and higher-level processors MUST NOT assign different semantic meaning merely because one form is expanded and the other is collapsed.
 
 ### 3.3 Pure references (normative)
 
@@ -389,6 +437,38 @@ The BlueId of a Blue Document is the BlueId of its root node. There is no separa
 A Blue Document root MAY be a scalar, list, object, or pure reference. Scalar and list roots follow the same wrapper-equivalence rules as field values. A Blue Document root MUST NOT be `null`.
 
 ---
+
+### 3.5 Exact-node equivalence and materialization state (normative)
+
+Let `X` be a valid Node BlueId. A pure reference:
+
+```yaml
+blueId: X
+```
+
+and any verified materialization whose Node BlueId is `X` denote the same exact Blue node.
+
+For semantic Blue operations, materialization state is out-of-band. It MUST NOT change:
+
+- node kind;
+- field or list membership;
+- equality or matching;
+- effective type or schema;
+- presence or absence;
+- any semantic conclusion once the same logically required evidence is available;
+- Node BlueId or Content BlueId.
+
+A serialization-inspection API MAY expose that a supplied syntax object contains the key `blueId`. A semantic graph API MUST NOT expose the pure-reference wrapper as an ordinary child field of the referenced node. For example, if `/x` denotes node `X`, a semantic lookup of `/x/blueId` does not succeed merely because `/x` was supplied in collapsed form. Exact identity is obtained through an explicit node-identity operation.
+
+Expansion state, provider location, cache state, and storage segmentation are not Blue content and MUST NOT be inserted into a Blue node.
+
+### 3.6 Identity-preserving implementation values (normative behavior)
+
+An implementation MAY represent an exact node internally by a handle containing its Node BlueId, optional verified materialization, and out-of-band provider or coverage information. No particular handle class or public API is required.
+
+Whenever an implementation passes, snapshots, emits, stores, or returns an already verified node, it MUST preserve the exact Node BlueId and MUST NOT require recursive cloning or transitive materialization merely to carry that value.
+
+Portable application semantics MUST NOT depend on whether such an implementation value currently carries materialized content. When an operation demands unavailable content, the operation returns an incomplete or provider outcome under §§10 and 12 rather than inventing semantic absence.
 
 ## 4. Node Model and Reserved Fields
 
@@ -454,7 +534,7 @@ Reserved fields are grouped as follows:
 | Reference and preprocessing controls | `blueId`, `blue` |
 | Reserved extension field | `contracts` |
 
-`contracts` is reserved by the language but semantically defined only by the Blue Contracts and Processor Specification.
+`contracts` is reserved by the language but semantically defined only by the Blue Contracts and Processor Specification 1.0.
 
 The key `blue` is valid only as a preprocessing directive on the root of a Source Document. A conforming implementation MUST reject `blue` anywhere else. Direct Node BlueId calculation MUST reject any node containing `blue` as direct BlueId Input.
 
@@ -479,11 +559,11 @@ Implementations MUST validate reserved field value types.
 | `items` | list, or absent |
 | `blueId` | string BlueId, only in pure references |
 | `blue` | string or object directive; root Source Document only |
-| `schema` | object using only schema keywords from §9 |
+| `schema` | object using only schema keywords from §9, pure reference to such an object, or absent |
 | `mergePolicy` | `append-only`, `positional`, or absent |
-| `contracts` | object; runtime semantics out of scope |
+| `contracts` | object, pure reference to such an object, or absent; runtime semantics out of scope |
 
-Wrong reserved-field types MUST be rejected. Implementations MUST NOT silently coerce reserved field values such as `blueId: 123` or `name: true` into strings.
+Wrong reserved-field types MUST be rejected. Implementations MUST NOT silently coerce reserved field values such as `blueId: 123` or `name: true` into strings. A pure reference accepted for `schema` or `contracts` MUST be expanded when the operation needs to validate or interpret the referenced object's contents; its collapsed form is not an exemption from the field's semantic shape rules.
 
 ### 4.4 `contracts` boundary (normative)
 
@@ -491,12 +571,12 @@ In Blue Language 1.0, `contracts` is a reserved identity-bearing content field. 
 
 Unless a separate processor specification is explicitly being applied, `contracts` participates in language-level merge and canonicalization according to ordinary object-field rules. Runtime interpretation, reserved processor keys under `contracts`, processor lifecycle behavior, and contract capability handling are outside this specification.
 
-Language-level merge of `contracts` is field-wise:
+When a `contracts` value is a pure reference and an operation needs to merge or inspect that map, the reference MUST be expanded and verified first. Language-level merge of the resulting `contracts` maps is field-wise:
 
-- If only the ancestor contributes a contract entry at key `k`, the entry is materialized in the Resolved View as type-derived content.
+- If only the ancestor contributes a contract entry at key `k`, the entry is materialized in the Resolved Form as type-derived content.
 - If only the instance contributes a contract entry at key `k`, the entry is preserved as instance-supplied content.
 - If both ancestor and instance contribute `contracts[k]`, the two contract nodes are merged recursively under the same fixed-value, type-compatibility, schema, and object-field rules used for ordinary child fields.
-- A descendant MUST NOT remove an inherited contract entry during language resolution. Runtime removal or mutation of contracts, if allowed, belongs to the Blue Contracts and Processor Specification.
+- A descendant MUST NOT remove an inherited contract entry during language resolution. Runtime removal or mutation of contracts, if allowed, belongs to the Blue Contracts and Processor Specification 1.0.
 - The language resolver MUST NOT interpret, execute, sort, dispatch, or validate processor-specific contract behavior.
 
 Processor-reserved keys inside `contracts` have no runtime effect in this specification. They are still parsed, resolved, canonicalized, and hashed as content.
@@ -679,7 +759,7 @@ A preprocessing import that is not identified by BlueId MUST be supplied by a de
 
 Every Blue node has a content identity called its **BlueId**. The BlueId of a Blue Document is the BlueId of its root node.
 
-BlueId is a content address: equivalent representations of the same content produce the same identity after the relevant view transformations have been applied.
+BlueId is a content address: equivalent representations of the same content produce the same identity after the relevant language operations have been applied.
 
 This section defines BlueId conceptually. The algorithmic details are in §14.
 
@@ -692,21 +772,21 @@ Blue defines two related identities.
 **Content BlueId** is the semantic identity of a Source Document. It is calculated as:
 
 1. preprocess the Source Document (§6);
-2. resolve type chains and validate constraints (§10), producing a Resolved View;
-3. canonicalize the Resolved View into a Canonical Identity Input (§13);
+2. resolve type chains and validate constraints (§10), producing a Resolved Form;
+3. canonicalize the Resolved Form into a Canonical Identity Input (§13);
 4. compute the Node BlueId of the Canonical Identity Input (§14).
 
-All conforming implementations MUST produce the same Content BlueId for equivalent Source Documents, given the same provider state required for resolution.
+All conforming implementations MUST produce the same Content BlueId for equivalent Source Documents under the same declared Language release and canonical registry bindings when every demanded reference resolves to the same verified node. Provider location, cache contents, lookup order, and other ambient provider state are not identity inputs.
 
-### 7.3 Identity preservation across views (normative)
+### 7.3 Identity preservation across forms (normative)
 
 Expansion preserves Node BlueId when the provider returns verified content. Pure references hash to their target BlueId; materializing a reference into content does not change the surrounding node's Node BlueId if the materialized content has that BlueId.
 
 Collapse preserves Node BlueId. Replacing materialized content with a pure reference to its known BlueId yields the same Node BlueId.
 
-Resolution preserves semantic identity. A Source Document and its Resolved View have the same Content BlueId when the Resolved View is canonicalized.
+Resolution preserves semantic identity. A Source Document and its Resolved Form have the same Content BlueId when the Resolved Form is canonicalized.
 
-A Resolved View is not generally direct BlueId Input. It may contain inherited or materialized fields that are derivable from the type chain. Directly hashing a Resolved View is not guaranteed to produce the Content BlueId.
+A Resolved Form is not generally direct BlueId Input. It may contain inherited or materialized fields that are derivable from the type chain. Directly hashing a Resolved Form is not guaranteed to produce the Content BlueId.
 
 ### 7.4 BlueId Input (normative)
 
@@ -739,6 +819,8 @@ Blue Language 1.0 does not define alternative BlueId alphabets. A registry MAY d
 A plain BlueId MUST be the canonical Base58 encoding of exactly 32 bytes, the output length of SHA-256. Implementations MUST reject non-canonical Base58 encodings, strings containing characters outside the BlueId alphabet, and strings that decode to any length other than 32 bytes.
 
 A plain BlueId MUST NOT contain `#`. The `#` suffix syntax is reserved for cyclic-set member BlueIds.
+
+A valid unprefixed plain BlueId always denotes the BlueId v1 form defined here. A future incompatible BlueId version MUST use syntax that is not valid as a plain BlueId v1 and MUST NOT reinterpret an existing valid v1 string.
 
 The ZERO_BLUEID sentinel defined in §15.2 is not a plain BlueId because the character `0` is not in the BlueId alphabet.
 
@@ -882,7 +964,7 @@ For each path contributed by parent type `P`, subtype `T` MUST satisfy all of th
 5. **Payload kind compatible.** Scalar, list, and object payload kinds MUST remain compatible with inherited guarantees. A subtype MUST NOT turn an inherited scalar requirement into a list/object requirement, or vice versa, unless resolution can prove the inherited requirement is not applicable.
 6. **List policies preserved.** An inherited `mergePolicy: append-only` MUST remain append-only. A descendant MUST NOT weaken append-only to positional. If no merge policy is inherited and none is authored, the effective default is positional.
 
-Equivalently, `T <: P` when the Resolved View produced by resolving `T` over `P` is valid and does not violate any invariant or guarantee of `P`.
+Equivalently, `T <: P` when the Resolved Form produced by resolving `T` over `P` is valid and does not violate any invariant or guarantee of `P`.
 
 If checking `T <: P` requires resolving a type chain that revisits a type already on the active resolution stack, resolution MUST fail with a type-cycle error (§10.2.1).
 
@@ -939,19 +1021,46 @@ This is valid only if the merged result still satisfies all overlay obligations,
 
 If the overlay forces `x = 1` but `Some` forces `x = 2`, resolution MUST fail.
 
+### 8.7 Extension versus expansion (normative distinction)
+
+**Expansion** materializes a verified reference to an existing node. It reveals more of the same exact node and MUST preserve Node BlueId.
+
+**Extension** is the authoring act of creating a new node whose `type` points to another node and whose overlay adds compatible meaning. Extension is governed by the fixed-value, subtype, merge, and schema rules in this section. An extended node is not the node it extends and normally has a different BlueId.
+
+Example:
+
+```yaml
+# Existing type
+name: Price
+amount:
+  type: Integer
+currency:
+  type: Text
+```
+
+```yaml
+# New, more specific node
+name: PLN Price
+type:
+  blueId: <Price>
+currency: PLN
+```
+
+Expanding `<Price>` reveals the existing `Price` node. Creating `PLN Price` extends it. Implementations and documentation MUST NOT use these terms interchangeably.
+
 ---
 
 ## 9. Schema Constraints
 
 ### 9.1 Attaching schema (normative)
 
-A `schema` object MAY be attached to any node.
+A materialized `schema` object or a pure reference to such an object MAY be attached to any node. An operation that needs the constraints behind a pure reference MUST expand and verify that reference before interpreting the schema.
 
 All schema constraints accumulate along the type chain. Compatible constraints are intersected according to §9.9. Irreconcilable constraints MUST fail resolution.
 
 ### 9.2 Schema vocabulary (normative)
 
-Only the keywords listed in §9.3-§9.8 are valid inside a `schema` object. Implementations MUST reject any other key inside `schema`.
+Only the keywords listed in §§9.3-9.8 are valid inside a materialized `schema` object. Implementations MUST reject any other key after a referenced schema object has been expanded and verified. The `blueId` key of the pure-reference wrapper is not a schema keyword and is never interpreted as one.
 
 The valid schema keywords are:
 
@@ -1013,7 +1122,7 @@ If a field is required but has no semantic payload or fixed inherited content af
 
 Reserved language fields such as `name`, `description`, `type`, `schema`, `contracts`, `value`, and `items` do not count as ordinary fields.
 
-Fields removed by object-field cleaning do not count. Inherited ordinary child fields that are materialized in the Resolved View do count.
+Fields removed by object-field cleaning do not count. Inherited ordinary child fields that are materialized in the Resolved Form do count.
 
 ### 9.3 Presence
 
@@ -1096,7 +1205,7 @@ Rules:
 - `exclusiveMaximum: m` means the numeric value must be strictly less than `m`.
 - `multipleOf` must be greater than zero.
 
-If multiple numeric constraints appear in the type chain, the value must satisfy all of them. For integer `multipleOf` constraints, implementations MUST combine compatible constraints using least common multiple (LCM). The effective merged schema MUST contain one `multipleOf` value equal to that LCM, and the Resolved View and Canonical Identity Input MUST NOT preserve an implementation-specific list of equivalent integer `multipleOf` constraints.
+If multiple numeric constraints appear in the type chain, the value must satisfy all of them. For integer `multipleOf` constraints, implementations MUST combine compatible constraints using least common multiple (LCM). The effective merged schema MUST contain one `multipleOf` value equal to that LCM, and the Resolved Form and Canonical Identity Input MUST NOT preserve an implementation-specific list of equivalent integer `multipleOf` constraints.
 
 For `Double` `multipleOf`, both the tested value and the `multipleOf` constraint are interpreted as their exact IEEE 754 binary64 rational values after parsing. A Double value `v` satisfies `multipleOf: m` iff `m > 0` and the exact rational quotient `v / m` is an integer. Implementations MUST NOT use epsilon comparisons, decimal string rounding, host-language modulo on binary floating point, or implementation-specific approximation.
 
@@ -1189,22 +1298,26 @@ For lower/upper-bound interactions, an exclusive bound at the same numeric value
 
 ---
 
-## 10. Resolution and Resolved Views
+## 10. Resolution
 
-### 10.1 Goal (normative)
+### 10.1 Resolution (normative)
 
-Resolution produces a **Resolved View**: a fully materialized, type-merged, schema-validated semantic view of a Source Node.
+**Resolution** applies Blue type and overlay semantics to a Source Node. It follows effective type links, merges inherited and instance contributions, enforces fixed values, applies list merge rules, accumulates schema constraints, and validates the resolved result.
 
-A Resolved View is the correct input for type checks and semantic validation. It is not necessarily direct BlueId Input because it may contain inherited or materialized fields that are derivable from the type chain.
+A **complete Resolved Form** contains the complete semantic result for the root being resolved.
 
-To compute Content BlueId, the Resolved View MUST be canonicalized into a Canonical Identity Input (§13) and then hashed (§14).
+A **limited resolution result** contains only explicitly demanded paths and the supporting content needed to establish them. It is an operation result, not a different Blue node. Coverage and completeness information are out-of-band and do not affect BlueId.
 
-### 10.2 Resolution algorithm (normative)
+For every path covered by limited resolution, the resulting value, effective type, and applicable constraints MUST be exactly the same as in complete resolution of the same source with the same provider content.
 
-Given a Source Node `S`, a conforming implementation performs:
+A complete Resolved Form is the input to minimization and canonicalization. An incomplete result MUST NOT be used to calculate Content BlueId, claim complete schema validity, or produce a whole-node Minimized Overlay.
+
+### 10.2 Complete resolution algorithm (normative)
+
+Given a Source Node `S`, complete resolution performs:
 
 1. **Preprocess** `S` (§6), producing a Preprocessed Document.
-2. **Resolve type chain.** If `S.type` exists, recursively resolve it. If the type is a pure reference, follow it through a provider and verify the fetched content (§12.4). The result is the ancestor Resolved View `A`.
+2. **Resolve the type chain.** If `S.type` exists, recursively resolve it. If the type is a pure reference, expand it through a provider and verify the fetched content (§12.4). The result is the ancestor Resolved Form `A`.
 3. **Merge ancestor and source.** Merge `A` into target `T`, then merge `S` into `T`:
     - **Root labels:** when merging a type into an instance root, do not copy the type root's `name` or `description` onto the instance root (§4.6).
     - **Values:** copy if absent; if both are present, they must be equal under fixed-value equality (§8.3).
@@ -1214,9 +1327,9 @@ Given a Source Node `S`, a conforming implementation performs:
     - **Lists:** merge under §11.
     - **Contracts:** preserve and merge as identity-bearing content under §4.4; do not execute.
 4. **Validate schema** after merging.
-5. **Produce the Resolved View.** Implementations MAY freeze it into a **Resolved Snapshot** when immutability matters.
+5. **Produce the complete Resolved Form.** Implementations MAY freeze it into an immutable snapshot when needed.
 
-Schema validation is performed after inherited and instance values are merged at a node. Therefore an inherited schema applies to inherited fixed values, type-derived fields, and instance-supplied values in the final Resolved View.
+Schema validation is performed after inherited and instance values are merged at a node. Therefore an inherited schema applies to inherited fixed values, type-derived fields, and instance-supplied values in the final Resolved Form.
 
 Type-chain resolution is depth-first: the effective ancestor type is resolved before it is merged into the descendant target. A resolver MUST track the active type-resolution stack for cycle detection.
 
@@ -1242,22 +1355,20 @@ type:
 
 Circular-set BlueIds (§15) identify cyclic document sets. They do not make cyclic inheritance or cyclic type chains resolvable. Blue Language 1.0 does not define fixed-point type semantics.
 
-### 10.2.2 Reference resolution pseudocode (informative)
-
-The following pseudocode is informative, but illustrates the required order of operations.
+### 10.2.2 Complete resolution pseudocode (informative)
 
 ```text
-resolve(source, provider):
+resolve_complete(source, provider):
     S = preprocess(source)
     if S.type exists:
         T_ref = normalize_type_reference(S.type)
-        T_node = materialize_if_reference(T_ref, provider)
-        A = resolve(T_node, provider)
+        T_node = expand_reference(T_ref, provider)
+        A = resolve_complete(T_node, provider)
     else:
         A = empty node
     R = merge_as_instance(ancestor=A, instance=S, path="/")
     validate_schema_recursively(R)
-    return ResolvedView(R, provenance)
+    return ResolvedForm(R, provenance, complete=true)
 
 merge_as_instance(ancestor, instance, path):
     T = copy_type_derived_content(ancestor, path)
@@ -1272,11 +1383,34 @@ merge_as_instance(ancestor, instance, path):
     return T
 ```
 
-Precise implementation structure is not normative. The observable Resolved View, provenance sufficient for canonicalization, validation behavior, and resulting Content BlueId are normative.
+Precise implementation structure is not normative. The observable complete Resolved Form, validation behavior, canonicalization provenance, and resulting Content BlueId are normative.
 
-### 10.3 Resolution provenance (normative)
+### 10.3 Limited resolution (normative)
 
-A conforming implementation MUST track enough provenance to canonicalize deterministically. For each resolved path, the implementation MUST be able to determine whether the content was:
+A resolver MAY accept out-of-band **Limits** that identify demanded paths or bound work. Typical limits include selected operation paths, maximum reference expansions, maximum graph depth, and maximum nodes visited.
+
+For a requested path, limited resolution MUST resolve the complete semantic dependency closure required to establish that path. This may include:
+
+- the source node and ancestors along the path;
+- effective type nodes and inherited fields contributing at the path;
+- applicable schema and collection constraints;
+- object keys or list positions required by the requested operation;
+- provider content needed to verify and interpret those contributions.
+
+A limited resolver MUST NOT:
+
+- treat an unexpanded reference as an empty object or missing field;
+- report a field as semantically absent unless absence has been established from the required source and type contributions;
+- return a guessed value when a limit prevents completion;
+- expose provider, cache, or storage layout as semantic content.
+
+When limits prevent a demanded result from being established, the operation MUST fail with a deterministic limit/incomplete result or explicitly report that the requested path is incomplete. It MUST NOT return a normal successful absence result.
+
+Implementations may return demanded values directly or may return a partially materialized result with out-of-band coverage metadata. In either case, all covered values MUST equal complete resolution.
+
+### 10.4 Resolution provenance (normative)
+
+A conforming implementation performing complete resolution for canonicalization MUST track enough provenance to canonicalize deterministically. For each resolved path, it MUST be able to determine whether content was:
 
 - **instance-supplied** by the Source Document after preprocessing;
 - **type-derived** from an ancestor type;
@@ -1284,23 +1418,62 @@ A conforming implementation MUST track enough provenance to canonicalize determi
 - **preprocessing-derived** from mandatory or declared preprocessing;
 - **merge-derived** from compatible instance and type contributions.
 
-The exact internal representation is implementation-defined, but the canonicalization result MUST be deterministic and conform to §13.
+Limited resolution need track only the provenance required for its covered paths, unless the result will later be completed for canonicalization or minimization.
 
-### 10.4 Identity guarantee (normative)
+The exact internal representation is implementation-defined.
 
-Resolution preserves semantic identity. A Source Document and its Resolved View have the same Content BlueId when the Resolved View is canonicalized.
+### 10.5 Identity guarantee (normative)
 
-Implementations MUST NOT assume that directly hashing a Resolved View produces the Content BlueId.
+Resolution preserves semantic identity. A Source Document and its complete Resolved Form have the same Content BlueId when the complete Resolved Form is canonicalized.
 
-### 10.5 Provider failures (normative)
+Implementations MUST NOT assume that directly hashing a Resolved Form produces the Content BlueId.
 
-A conforming implementation MUST materialize referenced content when that content is required for resolution, canonicalization, expansion, collapse, or validation. If required content is unavailable, the operation MUST fail deterministically. Implementations MUST NOT silently substitute empty content for missing references.
+Limited resolution does not create a new identity. It exposes only part of the semantics of the same source node.
 
-### 10.6 Limits (normative)
+### 10.6 Provider failures (normative)
 
-Implementations SHOULD support path and depth limits to bound materialization of large graphs. Limits affect materialization, not semantic meaning. If a limit prevents content required for resolution, resolution MUST fail or return an explicitly incomplete view, depending on the declared API. An incomplete view MUST NOT be used for Content BlueId.
+A conforming implementation MUST expand referenced content when that content is required for the requested resolution, canonicalization, minimization, collapse verification, or validation. If required content is unavailable or fails verification, the operation MUST fail deterministically. Implementations MUST NOT silently substitute empty content for missing references.
 
----
+Unrelated references outside the demanded dependency closure need not be fetched.
+
+### 10.7 Limits (normative)
+
+Limits are out-of-band operation controls. They MUST NOT be serialized into the Blue node, included in BlueId calculation, or alter the result that complete processing would produce.
+
+An implementation SHOULD support path, depth, node-count, and reference-count limits for expansion and resolution of large graphs.
+
+A result is complete only when every path and constraint required by the requested operation has been established. An incomplete result MUST NOT be used for whole-node Content BlueId, whole-node minimization, or a claim of complete validation.
+
+
+### 10.8 Demand-limited operation outcomes (normative)
+
+A demand-limited Language operation asks a semantic question about one or more selected paths without requiring complete graph expansion or complete document resolution.
+
+Common demands include exact node identity, node kind, semantic existence, one object child, complete object keys, list length, one list item, effective type, applicable constraints, or the resolved value at a path.
+
+The exact host-language API is not normative. A conforming operation MUST deterministically establish exactly one of these semantic conclusions:
+
+- the requested result is established for the declared coverage;
+- semantic absence is established from sufficient direct and inherited information;
+- the request could not be completed because a limit, unavailable reference, unsupported provider operation, or another explicitly reported condition prevented proof;
+- the demanded content or its required semantic closure is invalid.
+
+Implementations MAY expose named result variants such as `Established`, `Absent`, `Incomplete`, and `Invalid`, but this specification does not require those class names or one particular public API.
+
+Rules:
+
+- a pure reference, cache miss, provider timeout, direct-node limit, or resolution limit MUST NOT be treated as semantic absence;
+- a result established from graph-equivalent inline, collapsed, expanded, cached, or segmented forms MUST be the same once the same logical identities are available;
+- a result that did not establish complete required coverage MUST NOT be used for whole-node canonicalization, Content BlueId calculation, complete minimization, or a claim of complete validation;
+- diagnostic information about outstanding identities or covered paths is out-of-band and does not affect Blue content or identity.
+
+### 10.9 Cache neutrality and diagnostic information (normative)
+
+A Language implementation MAY expose diagnostic information such as demanded identities, covered paths, provider outcomes, semantic steps, or implementation timings.
+
+Such diagnostics are not Blue content and do not affect identity. Cache state, prefetching, batching, storage pages, or previous operations MUST NOT change a successful semantic result or turn incomplete evidence into complete evidence.
+
+Layered runtime specifications MAY define their own deterministic work ledger over Language operations. Such a ledger is not part of Blue content-language identity and MUST NOT redefine the semantic outcomes in §10.8.
 
 ## 11. Lists, Merge Policies, and List Control Forms
 
@@ -1622,49 +1795,39 @@ entries:
 
 ### 12.1 Providers (informative)
 
-A **provider** is any mechanism that resolves a BlueId to node content. Examples include an in-memory map, a local registry, a database, or a content-addressed network store.
+A **BlueId provider** retrieves Blue content by BlueId.
 
-This specification defines only the semantic role of providers. It does not define transport, trust, availability, or persistence protocols.
+Providers may be local maps, databases, object stores, package registries, network services, or composed provider chains.
 
 ### 12.2 Provider trust model (normative/informative)
 
-A provider MAY be untrusted. A conforming implementation MUST verify provider-returned content against the requested BlueId before using it for expansion, resolution, or canonicalization.
+A provider is not trusted merely because it returned content. Returned content MUST verify against the requested BlueId before it is used as that node.
 
-BlueId verification provides content integrity: the returned content matches the requested content address. It does not provide authenticity, authorization, availability, freshness, confidentiality, or provenance of the provider itself.
-
-If a provider returns missing content, malformed content, content that does not verify under the declared provider mode, or content that requires unsupported resolution, the operation MUST fail deterministically.
+Provider location, cache state, transfer size, paging, and physical storage layout are not Blue Language semantics.
 
 ### 12.3 Provider content form (normative)
 
-A provider used to dereference a plain `blueId: X` in expansion, resolution, or canonicalization MUST return content whose direct Node BlueId is `X`, unless the provider is explicitly declared as a Source Document provider.
+The default portable provider model returns BlueId Input or cyclic-set-aware member content appropriate to the requested identity.
 
-The portable provider model for Blue Language 1.0 is a verified BlueId provider: provider content is already valid BlueId Input or canonical content. Implementations MUST verify the returned content by direct Node BlueId before using it.
-
-A Source Document provider MAY be supported as an implementation extension or registry mode. Such a provider verifies returned content by Content BlueId, not direct Node BlueId. This requires declaring the Blue Language version, preprocessing environment, provider state, and registry bindings used for Content BlueId calculation. A Source Document provider is not the default portable provider model.
-
-A conforming implementation MUST NOT silently accept Source Document provider content under the ordinary BlueId provider model.
+A Source Document provider MAY be supported as an implementation extension or registry mode. Such a provider verifies returned content by Content BlueId, not direct Node BlueId. The provider mode MUST bind the exact Blue Language release, preprocessing environment, canonical registry bindings, and the exact Source Document snapshot or other identity-bearing evidence being resolved. Ambient provider state is never part of Content BlueId. A Source Document provider is not the default portable provider model.
 
 ### 12.4 Plain BlueId provider verification (normative)
 
-When a provider returns materialized content for `blueId: X`, the implementation MUST verify that the returned content has Node BlueId `X`. If verification fails, expansion or resolution MUST fail deterministically.
+For an ordinary BlueId `X`, provider content is valid only if direct Node BlueId calculation over the returned BlueId Input produces `X`.
+
+If verification fails, the demanding operation MUST fail deterministically.
 
 Implementations MUST NOT silently use provider content whose computed BlueId differs from the requested BlueId.
 
 ### 12.5 Cyclic-set member provider verification (normative)
 
-A cyclic-set member BlueId of the form `<MASTER>#<index>` cannot be verified by ordinary single-node Node BlueId calculation.
-
-A provider that returns content for a cyclic-set member BlueId MUST either:
-
-1. return a verified cyclic-set envelope containing the full ordered set needed to recompute `MASTER` and select member `index`;
-2. be a trusted registry binding whose cyclic-set membership and `MASTER` were verified as part of the release artifact; or
-3. fail deterministically.
+A cyclic member BlueId `<MASTER>#<index>` is verified in the context of its complete declared cyclic set under §15. The provider or caller must supply enough context to reconstruct and verify the set.
 
 An implementation MUST NOT verify `<MASTER>#<index>` by hashing the returned member alone.
 
 ### 12.6 Expansion (normative)
 
-**Expansion** materializes content referenced by `blueId` from a provider without changing identity.
+**Expansion** replaces selected pure references with verified materialized content.
 
 Given:
 
@@ -1673,76 +1836,115 @@ field:
   blueId: X
 ```
 
-expansion fetches the content for `X`, verifies it (§12.4), and materializes it in place or side-by-side, enabling nested references to expand recursively.
+expansion fetches content for `X`, verifies it (§12.4), and makes that content available at `field`. Nested references remain collapsed unless they are also demanded by the operation and permitted by its Limits.
 
-Expansion is a view operation. It changes representation, not meaning.
+Expansion may begin at a document root that is itself a pure reference.
 
-Expansion MUST NOT change Node BlueId. A pure reference hashes to its target BlueId. Materialized content contributes the same identity when the materialized content verifies to that BlueId.
+Expansion changes representation, not meaning. It MUST preserve Node BlueId. A pure reference contributes its target BlueId, and verified materialized content contributes that same identity.
 
-Implementations SHOULD support path and depth limits to avoid runaway traversal of large graphs. Limits affect only materialization, not identity.
+A conforming expansion API SHOULD accept operation paths and limits. Its **semantic demand closure** MUST contain only references needed for the requested result. References left outside that closure, or left collapsed because of a limit, MUST NOT be treated as absent content.
+
+An implementation MAY physically prefetch additional verified nodes. Prefetched content outside the semantic demand closure MUST NOT enter the operation result, change completeness, affect identity, or alter a layered portable work ledger. Provider caching, internal paging, and physical storage chunks are implementation details and MUST NOT change the expanded result.
 
 ### 12.7 Collapse (normative)
 
-**Collapse** is the inverse of expansion. It replaces a materialized subtree with a pure reference `{ blueId: X }` when the subtree's Node BlueId is known to be `X`.
+**Collapse** replaces selected materialized content with a pure reference `{ blueId: X }` to the same node.
 
-Collapse is optional as an exposed view operation. If an implementation exposes collapse, the operation MUST satisfy this section and MUST preserve Node BlueId. A collapsed result MUST be a pure reference and MUST NOT produce mixed `blueId` forms.
+Collapse is permitted when the node's Node BlueId is known or has been calculated and, for provider-originated content, verification established that identity. The collapsed result MUST be a pure reference with no sibling fields.
 
-Minimized Overlays MAY use collapse when the minimization rules permit it (§13). Canonical Identity Input MUST follow the deterministic canonicalization rules.
+Collapse changes representation, not meaning, and MUST preserve the enclosing node's Node BlueId.
 
-### 12.8 Graph boundary (normative)
+An implementation MAY collapse the document root, an object field, a list element, a type node, a workflow body, or any other complete Blue node. It MAY leave other parts materialized.
 
-A Blue Document need not be a closed tree. A `{ blueId: ... }` reference may point outside the selected document. Implementations materialize referenced content only as needed and within configured limits.
+### 12.8 Expansion, resolution, and limits (normative)
 
-### 12.9 Blue Language view paths (normative when exposed)
+Expansion and resolution are composable but distinct:
 
-Blue Language view paths are implementation-facing selectors used for expansion limits, collapse limits, diagnostics, and provenance. They are not Blue content and do not affect BlueId.
+- expansion obtains referenced node content;
+- resolution interprets type and overlay semantics;
+- a resolver expands only references needed for the demanded semantic result;
+- unrelated branches may remain collapsed in a successful operation result when their identity is sufficient and their internal content is not needed by that operation;
+- a limited result MUST explicitly report incompleteness when demanded semantics cannot be established.
 
-A conforming implementation that exposes path-limited expansion, collapse, or diagnostics MUST support RFC 6901 JSON Pointer paths over the abstract Blue node model:
+Limits affect work, not meaning. The same demanded path resolved from an inline node and from a verified pure reference MUST produce the same value and effective type.
+
+### 12.9 Graph boundary (normative)
+
+A Blue Document need not be a closed tree. A `{ blueId: ... }` reference may point outside the serialized document. Implementations materialize referenced content only as needed and within configured limits.
+
+The fact that a referenced node is stored in another file, database row, object-store chunk, or network location has no Blue Language meaning.
+
+### 12.10 Blue Language operation paths (normative when exposed)
+
+Blue Language operation paths are out-of-band selectors used for expansion limits, collapse selection, limited resolution, diagnostics, and provenance. They are not Blue content and do not affect BlueId.
+
+A conforming implementation that exposes path-limited operations MUST support RFC 6901 JSON Pointer paths over the abstract Blue node model:
 
 - the empty string `""` selects the root node;
 - `/field` selects an object field named `field`;
 - `/items/0` selects list payload item index `0` in the abstract node model;
 - `~0` represents `~`, and `~1` represents `/`, following RFC 6901.
 
-The path `/` selects an object field whose key is the empty string. Since empty object-field names are valid JSON member names but are not recommended in portable Blue documents, implementations MUST still treat `/` according to RFC 6901 if exposed.
-
 The wildcard `*`, such as `/spent/*`, is not part of the required Blue Language 1.0 path grammar. Implementations MAY support wildcards as an extension, but portable conformance fixtures MUST use RFC 6901 paths unless a future path-selector specification defines more.
 
----
+### 12.11 Direct-node materialization pattern (informative)
+
+An implementation may keep one selected node materialized while collapsing any or all complete direct children to pure references. This is ordinary expansion and collapse with a depth or path limit; it is not a fifth Language operation or a new node form.
+
+For an object, such a representation normally retains the complete direct key set, inline identity-bearing metadata such as `name`, `description`, and scalar `value`, and the exact Node BlueId of every other direct child. For a list, it normally retains list metadata and the ordered exact Node BlueId of every direct element. Metadata-only nodes, including nodes carrying `type`, `schema`, `mergePolicy`, or `contracts`, follow the same rule: direct identity-bearing content remains available and complete child nodes may be collapsed.
+
+This representation has the same Node BlueId as the fully materialized node. Under the map and list hashing rules in §14, the selected direct node can be verified without fetching transitive descendant bodies. This is the language-level reason path-by-path graph navigation is possible.
+
+### 12.12 Provider and storage guidance (informative)
+
+A content-addressed provider can support practical lazy expansion by storing every admitted node in direct-node materialization pattern, keyed by exact Node BlueId, and fetching one direct node at a time along a demanded path.
+
+A useful provider distinguishes:
+
+```text
+Found            verified exact node content is available
+NotFound         definitive absence in the provider's declared domain
+Unavailable      transient infrastructure failure
+InvalidEvidence  returned content failed verification
+```
+
+These outcomes are provider or host concerns. `NotFound` and `Unavailable` do not mean that a graph path is semantically absent. Provider transport, batching, authorization, storage layout, and retry rules are outside this Language specification.
+
+The current BlueId algorithm requires a complete direct manifest to verify an ordinary object or list node. It does not provide logarithmic proofs for one member of a very wide direct container. Applications requiring large mutable maps, vectors, text, or blobs SHOULD use bounded-fanout content-addressed structures.
 
 ## 13. Canonicalization and Minimization
 
 ### 13.1 Distinction (normative)
 
-Blue defines two related but different operations on a Resolved View.
+Blue defines two operations that may both reduce explicit content but serve different purposes.
 
-**Minimization** is any semantics-preserving reduction of a Resolved View into a smaller overlay. Different minimizers MAY produce different serialized forms.
+**Minimization** takes a complete Resolved Form and produces a smaller Source overlay that resolves back to the same complete Resolved Form. Resolution and minimization are semantic counterparts, but minimization is not necessarily unique.
 
-**Canonicalization** is the deterministic identity-input derivation used to compute Content BlueId. For a given Resolved View and the same provider state required by resolution, there is exactly one Canonical Identity Input.
+**Canonicalization** derives the one deterministic BlueId Input used to compute Content BlueId. Canonicalization is an identity operation, not an authoring preference.
+
+A runtime processor does not need to minimize a whole document after every read or patch. It may preserve unchanged nodes by BlueId and use ordinary collapse. Whole-node minimization is needed only when a reduced Source overlay is requested.
 
 ### 13.2 Canonical Identity Input (normative)
 
-A **Canonical Identity Input** is the deterministic identity form derived from a Resolved View. It contains the deterministic identity-bearing content needed for BlueId calculation. It may contain final canonical payloads, including final list payloads, that are not ordinary Source overlays. A Canonical Identity Input MUST be valid BlueId Input. It is not required to be accepted as a Source Document or to re-resolve under ordinary Source overlay semantics.
+A **Canonical Identity Input** is the deterministic identity form derived from a complete Resolved Form. It contains the deterministic identity-bearing content needed for BlueId calculation. It may contain final canonical payloads, including final list payloads, that are not ordinary Source overlays. A Canonical Identity Input MUST be valid BlueId Input. It is not required to be accepted as a Source Document or to re-resolve under ordinary Source overlay semantics.
 
 The Content BlueId of a Source Document is the Node BlueId of its Canonical Identity Input.
 
-A Canonical Identity Input MUST NOT contain `blue`, unresolved aliases, `$previous`, `$pos`, `null` list elements, or empty-object list elements.
-
-The re-resolution guarantee belongs to Minimized Overlay (§13.3). A Canonical Identity Input and a Minimized Overlay MAY have different serialized forms and different direct Node BlueIds when hashed outside the full Source identity pipeline.
+A Canonical Identity Input is unique for a given complete Resolved Form under the selected Blue Language release and canonical registry bindings. The provider may be needed to obtain verified referenced nodes, but its cache, location, response order, availability history, and other ambient state do not participate in canonical identity.
 
 ### 13.3 Minimized Overlay (normative)
 
-A **Minimized Overlay** is an author-facing reduced overlay that re-resolves to the same Resolved View.
+A **Minimized Overlay** is an author-facing reduced Source overlay that re-resolves to the same complete Resolved Form.
 
-A conforming implementation MUST implement canonicalization. A conforming implementation MAY expose author-facing minimization. If it does, every Minimized Overlay it produces MUST re-resolve to the same Resolved View and MUST produce the same Content BlueId through the full identity pipeline.
+A conforming implementation MUST implement canonicalization. A conforming implementation MAY expose minimization. If it does, every whole-node Minimized Overlay it produces MUST be based on a complete Resolved Form, MUST re-resolve to that same form, and MUST produce the same Content BlueId through the full identity pipeline.
 
-Optional author-facing minimizers MAY produce different Minimized Overlays. Such overlays MAY have different direct Node BlueIds, but when processed through the full identity pipeline they MUST produce the same Content BlueId.
+Different minimizers MAY produce different valid Minimized Overlays. Such overlays MAY have different direct Node BlueIds, but when processed through the full identity pipeline they MUST produce the same Content BlueId.
 
-Unlike Canonical Identity Input, a Minimized Overlay MAY contain authoring conveniences such as `$previous`, `$pos`, and `$replace` when those controls are valid Source overlay controls.
+A Minimized Overlay MAY use authoring controls such as `$previous`, `$pos`, and `$replace` when valid, and MAY collapse complete subtrees to verified pure references under §13.7.
 
 ### 13.4 Canonicalization requirements (normative)
 
-Given a Resolved View `R`, canonicalization MUST:
+Given a Resolved Form `R`, canonicalization MUST:
 
 - preserve all instance contributions that are not derivable from the type chain;
 - remove fields fully derivable from the type chain;
@@ -1761,13 +1963,13 @@ Schema objects included in Canonical Identity Input MUST use normalized effectiv
 
 ### 13.5 Canonicalization as deterministic diff (normative)
 
-Canonicalization can be understood as a deterministic diff between the Resolved View and the resolved ancestor view contributed by the effective type chain.
+Canonicalization can be understood as a deterministic diff between the Resolved Form and the resolved ancestor form contributed by the effective type chain.
 
 For each node:
 
 1. If the node has an effective type, include the canonical type reference unless the type reference itself is fully derivable at that path and not required by the canonical identity form.
-2. For each reserved metadata field other than `type`, include it only when it is an instance contribution that is not derivable from the ancestor view, except where this specification requires preservation.
-3. For each ordinary child field, omit it when the child is fully derivable from the ancestor view. Otherwise include the canonical identity input of the child.
+2. For each reserved metadata field other than `type`, include it only when it is an instance contribution that is not derivable from the ancestor form, except where this specification requires preservation.
+3. For each ordinary child field, omit it when the child is fully derivable from the ancestor form. Otherwise include the canonical identity input of the child.
 4. For scalar values, omit an inherited fixed value and include an instance value not derivable from the ancestor.
 5. For lists, use the canonical list rules in §13.6.
 6. After the identity input is constructed, apply BlueId input normalization and object-field cleaning. Empty object fields are omitted. Empty lists are preserved.
@@ -1776,7 +1978,7 @@ Implementations MUST make all tie-breakers deterministic and covered by conforma
 
 ### 13.5.1 Canonicalization tie-breakers (normative)
 
-When multiple candidate identity inputs would represent the same Resolved View, the Canonical Identity Input MUST be selected by the following tie-breakers, in order:
+When multiple candidate identity inputs would represent the same Resolved Form, the Canonical Identity Input MUST be selected by the following tie-breakers, in order:
 
 1. **Omit derivable non-list content.** A field, metadata entry, or non-list subtree that is fully derivable from the effective type chain MUST be omitted from the Canonical Identity Input, unless another rule in this section explicitly requires it. **List payloads are special:** for list nodes, §13.6 overrides this general omission rule. Canonicalization of a list produces the final canonical list payload for identity calculation, including inherited prefix elements, positional refinements, append-only appends, and `$empty` placeholders after normalization.
 2. **Preserve non-derivable instance content.** Content supplied by the instance or Source Document and not derivable from the type chain MUST be preserved.
@@ -1810,7 +2012,7 @@ A Minimized Overlay MAY collapse a subtree to `{ blueId: X }` only when:
 1. the subtree's Node BlueId is known to be `X`;
 2. provider verification has established that `X` identifies that content if the subtree came from a provider;
 3. collapse at that path is deterministic under the implementation's declared minimization rules;
-4. the collapsed overlay re-resolves to the same Resolved View.
+4. the collapsed overlay re-resolves to the same Resolved Form.
 
 A Canonical Identity Input MUST follow the deterministic canonicalization rules. Unless this specification explicitly requires collapse at a path, Canonical Identity Input MUST prefer the materialized canonical identity form. Optional collapse is an author-facing minimization feature, not a source of variation in Content BlueId.
 
@@ -2126,6 +2328,22 @@ BlueId Input MUST NOT contain `blue`. A direct hasher MUST reject such input.
 
 ---
 
+### 14.11 Identity locality and direct-container cost (normative)
+
+BlueId is transitive through direct child identities rather than transitive child bytes. Therefore establishing or verifying an object's identity requires its complete direct helper map and the Node BlueIds of its direct children, but not the bodies of those children.
+
+Consequences:
+
+- a large descendant behind one direct child BlueId does not need to be expanded to verify or rebuild its parent;
+- changing one member of a direct object requires rebuilding that object's complete direct helper map;
+- appending to a list may continue from a verified prior fold identity;
+- replacing, inserting, or removing an early list element requires recomputing the affected suffix fold;
+- one extremely wide flat object or positional list remains expensive under Language 1.0 even when represented by a pure reference.
+
+These costs are properties of the current identity algorithm, not of inline versus referenced representation. The inline and referenced forms of the same exact node require the same direct identity information for the same structural update.
+
+Language 1.0 does not define Merkle maps or random-access Merkle vectors. Applications needing logarithmic point updates or proofs SHOULD use bounded-fanout application structures. A future major Language version may standardize such collection identities.
+
 ## 15. Circular Reference Sets
 
 ### 15.1 Purpose
@@ -2303,6 +2521,8 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **B27.** Enum order and duplicate entries do not affect effective canonical schema identity.
 - **B28.** `Double` `multipleOf` is evaluated by exact rational arithmetic over IEEE 754 binary64 values.
 - **B29.** A cyclic-set input with duplicate preliminary member inputs fails unless the members contain identity-bearing disambiguators before preliminary hashing.
+- **B30.** A fully materialized node and its direct-node materialization pattern have the same Node BlueId.
+- **B31.** Replacing a direct child by a pure reference to that child preserves the parent Node BlueId.
 
 ### 16.2 Resolution and canonicalization vectors
 
@@ -2315,22 +2535,22 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **R7.** Schema objects containing keys outside §9.2 are rejected.
 - **R8.** `name` and `description` are ignored by matchers and subtype checks.
 - **R9.** Type root `name` and `description` are not inherited onto the instance root.
-- **R10.** A Source Document and its Resolved View, after canonicalization, produce the same Content BlueId.
+- **R10.** A Source Document and its Resolved Form, after canonicalization, produce the same Content BlueId.
 - **R11.** Requirement overlays bind valid type completions and reject conflicting completions.
 - **R12.** `$previous` is validated against the resolved inherited prefix; mismatch fails resolution.
 - **R13.** `mergePolicy` defaults to `positional` only when there is no inherited effective `mergePolicy`.
 - **R14.** Append-only lists reject `$pos`.
 - **R15.** Positional lists reject inherited-prefix reordering and removal.
-- **R16.** A Minimized Overlay re-resolves to the same Resolved View.
+- **R16.** A Minimized Overlay re-resolves to the same Resolved Form.
 - **R17.** Canonical Identity Input does not contain `$previous`, `$pos`, `blue`, unresolved aliases, `null` list elements, or empty-object list elements.
-- **R18.** Direct hashing of a Resolved View is not used as Content BlueId unless the Resolved View is already identical to its Canonical Identity Input.
+- **R18.** Direct hashing of a Resolved Form is not used as Content BlueId unless the Resolved Form is already identical to its Canonical Identity Input.
 - **R19.** Canonical Identity Input for append-only lists does not serialize `$previous`; `$previous` may appear only in Minimized Overlay or direct anchored BlueId Input.
 - **R20.** Canonical Identity Input contains no type aliases; all type references are canonical BlueId references.
 - **R21.** A source pure reference that is materialized only for resolution canonicalizes back to the pure reference unless the source overlays additional instance content onto it.
 - **R22.** A child overlay of an inherited `append-only` list that omits `mergePolicy` remains `append-only`; `$pos` is still rejected.
 - **R23.** A descendant collection that omits inherited `itemType`, `keyType`, or `valueType` retains the inherited constraint.
 - **R24.** Canonical positional list refinements produce final canonical list payloads, not Source overlay instructions.
-- **R25.** Minimized positional list overlays may use `$pos` and re-resolve to the same Resolved View.
+- **R25.** Minimized positional list overlays may use `$pos` and re-resolve to the same Resolved Form.
 - **R26.** Canonical append-only list overlays do not contain `$previous`; minimized append-only overlays may use `$previous`.
 - **R27.** Inherited effective Integer type accepts quoted canonical large decimal text.
 - **R28.** Quoted decimal text without effective Integer type remains Text.
@@ -2344,7 +2564,15 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **R36.** Direct Dictionary integer keys use canonical textual form and reject duplicate key conflicts after canonicalization.
 - **R37.** Source list `[A, { x: null }, B]` preprocesses to `[A, { $empty: true }, B]`.
 - **R38.** Canonical core type compatibility is nominal by registry BlueId.
-- **R39.** Blue Language view path root is the empty string under RFC 6901; `/` selects the empty-key member.
+- **R39.** Blue Language operation path root is the empty string under RFC 6901; `/` selects the empty-key member.
+- **R40.** Limited resolution of a demanded path yields the same value, effective type, and applicable constraints as complete resolution.
+- **R41.** A limited resolver never reports an unexpanded or unresolved field as absent merely because a limit prevented access.
+- **R42.** An incomplete limited result is rejected as input to whole-node canonicalization, Content BlueId calculation, and minimization.
+- **R43.** A limit, unexpanded reference, or unavailable provider resource never produces a successful `Absent` result.
+- **R44.** Semantic lookup through a pure reference is transparent: a collapsed wrapper does not create a semantic child named `blueId`.
+- **R45.** A demand-limited exact-node-identity request returns the same Node BlueId for inline, collapsed, and partially expanded forms.
+- **R46.** A pure reference used as `schema` or `contracts` is semantically equivalent to its verified materialization; operations expand it only when its contents are demanded.
+- **R47.** A source pure reference used for `schema` or `contracts`, when materialized only for resolution or validation, is preserved as the source pure reference by canonicalization unless a non-derivable instance overlay must be represented.
 
 ### 16.3 Provider, expansion, and collapse vectors
 
@@ -2352,27 +2580,40 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **F2.** Expansion preserves Node BlueId.
 - **F3.** If the implementation exposes collapse, collapse preserves Node BlueId and produces only valid pure references.
 - **F4.** Expansion supports configurable depth or path limits that do not affect identity.
+- **F4a.** A document root supplied as `{ blueId: X }` can be expanded only at demanded paths without recursively materializing all descendants.
+- **F4b.** Inline and verified referenced forms produce identical demanded expansion and resolution results.
 - **F5.** Cross-document references resolve through a provider without changing identity.
 - **F6.** Missing provider content required for resolution fails deterministically.
 - **F7.** Ordinary BlueId provider content whose computed Node BlueId does not equal the requested BlueId is rejected.
 - **F8.** Source Document provider content requires a declared Source Document provider mode and Content BlueId verification.
 - **F9.** Cyclic-set member provider content requires cyclic-set-aware verification context.
+- **F10.** One materialized object node can be verified from its complete direct keys, inline identity scalars, and child BlueIds without fetching child bodies.
+- **F11.** One materialized list node can be verified from its ordered element BlueIds without fetching element bodies.
+- **F11a.** Provider-internal append anchors or prefix folds do not replace the complete ordered direct element identities needed to reconstruct a requested direct list node.
+- **F12.** Expanding one node while leaving complete direct children collapsed, and then collapsing the selected node again, preserves the exact root Node BlueId and does not demand descendant bodies that were never selected.
+- **F13.** Demanding `/a/b/c` from a direct-node provider requires only the root and the direct nodes on that path, unless type or schema semantics demand additional nodes.
+- **F14.** Provider batching, prefetching, and cache state do not change semantic results.
+- **F15.** A provider that omits a demanded direct key cannot report absence unless the complete direct manifest has been verified.
 
 ### 16.4 Machine-readable fixtures (normative)
 
 The Blue Language 1.0 conformance suite MUST publish machine-readable fixtures with exact expected BlueIds.
 
-The canonical fixture package is part of the Blue Language 1.0 release artifact and is versioned with this specification.
+The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. The fixture package included with this freeze candidate contains 125 machine-readable fixtures and a complete vector-to-fixture coverage map.
 
-The Blue Language 1.0 release authority MUST publish the fixture package identity, either as a BlueId or as a content-addressed release artifact digest.
-
-The fixture package identity for this Blue Language 1.0 publication is:
+Its fixture-package identity is:
 
 ```text
-sha256:3387cb4b6626fc56cec91d584b2df7f37c229e396dee990750ac50e762a1bc1d
+sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb
 ```
 
-No inline reference BlueIds are included in this prose specification. Exact hashes live in the canonical fixture package.
+The canonical core-registry package identity bound by this fixture package is:
+
+```text
+sha256:59bc6f39abc439234e36941262d2d3ed1c7ec2e187ed62a5e41125718c62b9f2
+```
+
+The release manifest MUST bind this exact fixture package and the canonical registry manifest. Any fixture or registry change requires a newly calculated package identity.
 
 Each fixture SHOULD use this shape:
 
@@ -2452,8 +2693,14 @@ The fixture suite MUST cover:
 - direct Dictionary key canonicalization and duplicate conflict rejection;
 - reserved-invalid `properties` rejection;
 - materialized subtree vs pure reference;
+- direct-node object and list verification;
+- transparent semantic access through pure references;
+- reference-backed `schema` and `contracts` values;
+- explicit `Established`, `Absent`, `Incomplete`, and `Invalid` demand outcomes;
+- semantic result invariance across warm/cold, inline/reference, and batched/unbatched variants;
+- demanded-path navigation through a direct-node provider;
 - provider Node BlueId verification, declared Source provider verification, and cyclic-set member verification;
-- RFC 6901 Blue Language view paths, including empty-string root and `/` empty-key member behavior;
+- RFC 6901 Blue Language operation paths, including empty-string root and `/` empty-key member behavior;
 - type alias preprocessing;
 - type-chain cycle detection;
 - nominal core type compatibility by registry BlueId;
@@ -2479,7 +2726,10 @@ Release checks MUST verify that:
 - core type alias constants equal the calculated registry BlueIds;
 - no canonical registry node is edited without updating its BlueId and fixture package identity;
 - generated documentation is derived from registry nodes, or explicitly marked non-canonical;
-- publishable Blue Language files pass the documentation lint before release.
+- publishable Blue Language files pass the documentation lint before release;
+- the six preserved core registry files hash to the published mature core BlueIds;
+- the core-registry manifest publishes file paths, file hashes, identity-bearing-description flags, fixture binding, and its own package identity;
+- the content-addressed release manifest binds the exact prose, registry, and fixture artifacts.
 
 ---
 
@@ -2519,7 +2769,7 @@ spent:
 # => Content BlueId: 3JTd8s...
 ```
 
-Expanding the type chain produces an Expanded View. Resolving produces a Resolved View. Canonicalizing the Resolved View produces a Canonical Identity Input whose Node BlueId is the Content BlueId of the instance.
+Expanding the demanded type links makes the required nodes available. Resolving them produces the same semantic values as complete resolution. Complete resolution followed by canonicalization produces a Canonical Identity Input whose Node BlueId is the Content BlueId of the instance.
 
 ### 17.2 `blue` directive (informative)
 
@@ -2667,7 +2917,7 @@ Node BlueId is unchanged if the hydrated content verifies to the referenced Blue
 
 ### 17.9 Canonicalization (informative)
 
-From a Resolved View with fully materialized type subtrees, canonicalization:
+From a complete Resolved Form with the type content required for canonicalization, canonicalization:
 
 - collapses type objects to `{ blueId: ... }` when available;
 - removes structure derivable from the type chain;
@@ -2676,7 +2926,7 @@ From a Resolved View with fully materialized type subtrees, canonicalization:
 - keeps instance contributions;
 - produces valid BlueId Input.
 
-The Canonical Identity Input yields the Content BlueId. A Minimized Overlay, when produced, re-resolves to the same Resolved View through ordinary Source overlay semantics.
+The Canonical Identity Input yields the Content BlueId. A Minimized Overlay, when produced, re-resolves to the same Resolved Form through ordinary Source overlay semantics.
 
 ### 17.10 Contracts merge as content (informative)
 
@@ -2742,6 +2992,10 @@ Use `$replace` for non-scalar positional replacement:
 Appendix A defines the canonical primitive and collection types referenced throughout this specification.
 
 The nodes in §A.1 are canonical type definitions, not illustrative sketches. Their `description` fields are normative, identity-bearing Blue content. The exact registry files used to calculate published BlueIds MUST be byte/string equivalent after Blue parsing to the intended canonical nodes.
+
+The core registry nodes in this appendix are the canonical Blue Language 1.0 primitive and collection definitions. Their `1.0` wording is identity-bearing content and agrees with this first public-version specification. The exact registry files—not retyped copies in implementation code—are authoritative for their published BlueIds.
+
+The execution environment selects Blue Language 1.0; the exact core-type BlueIds select the primitive meanings. After publication, an existing core-type BlueId may receive only errata outside the node. Changing identity-bearing semantics requires a new type identity.
 
 Changing a canonical node's `description` is a type-identity change. Implementations MUST NOT silently update canonical descriptions while keeping the old BlueId.
 
@@ -2819,7 +3073,8 @@ description: >
   keyType, valueType, value, items, blueId, blue, schema, mergePolicy,
   contracts, properties, or constraints. Direct object encoding cannot
   represent reserved language keys as data keys. Applications needing
-  arbitrary keys use an application-defined escaped representation. keyType is optional; if
+  arbitrary keys use an escaped entry representation such as a list of { key,
+  val } entries. keyType is optional; if
   omitted and no effective keyType is inherited, keys default to Text for
   direct object encoding. For direct object encoding, keyType must resolve to
   a scalar key type with a canonical textual form, such as Text, Integer,
@@ -2849,7 +3104,7 @@ description: >
 
 ### A.2 Editorial and registry rules
 
-The canonical registry nodes above are part of the Blue Language 1.0 type identity. Non-normative examples, tutorials, rationale, translations, and implementation notes are not part of the canonical type nodes unless intentionally included in the registry entries.
+The canonical registry nodes above are the Blue Language 1.0 core type nodes, retaining their established exact content and BlueIds. Their registry manifest is published under the Language 1.0 release and MUST be fixture-verified together with this specification. Non-normative examples, tutorials, rationale, translations, and implementation notes are not part of the canonical type nodes unless intentionally included in the registry entries.
 
 Additional explanatory documentation MAY follow this appendix or appear in separate registry documentation, but it MUST be clearly marked non-canonical unless it is included in the registry node itself.
 
@@ -2857,7 +3112,7 @@ Additional explanatory documentation MAY follow this appendix or appear in separ
 
 ## Appendix B — Reserved Extension Boundary
 
-`contracts` is reserved for the Blue Contracts and Processor Specification. Blue Language 1.0 treats it as identity-bearing content only. See §4.4.
+`contracts` is reserved for the Blue Contracts and Processor Specification 1.0. Blue Language 1.0 treats it as identity-bearing content only. See §4.4.
 
 ---
 
@@ -2899,6 +3154,18 @@ Reserved keys such as `type`, `value`, `items`, and `schema` have language meani
 
 ---
 
+### C.9 Do not expose the pure-reference wrapper as semantic content
+
+A semantic graph lookup must treat `{ blueId: X }` as node `X`, not as an application object containing a data field named `blueId`.
+
+### C.10 Do not let physical representation change semantic results
+
+Cache hits, provider pages, network bytes, batching, and host allocations are not Blue content. They must not change a Language operation's established, absent, incomplete, or invalid outcome.
+
+### C.11 Do not require transitive expansion to verify a direct node
+
+The existing map and list BlueId algorithms verify one direct node from direct child identities. Fetching all descendants is unnecessary.
+
 ## Appendix D — Error Categories
 
 This appendix is normative for conformance diagnostics but does not require a particular exception class, wire format, or exact error message.
@@ -2915,6 +3182,8 @@ When an operation fails deterministically, implementations MUST be able to class
 | `InvalidBlueIdInput` | Direct Node BlueId received a node that is not valid BlueId Input. |
 | `ProviderUnavailable` | Required provider content is unavailable. |
 | `ProviderBlueIdMismatch` | Provider content does not verify against the requested BlueId. |
+| `OperationIncomplete` | A demanded semantic result could not be established because required content or coverage was not available. |
+| `OperationLimitExceeded` | An out-of-band operation limit prevented completion of a demanded result. |
 | `TypeCycle` | Resolution detected a type-cycle in the active type stack. |
 | `FixedValueConflict` | A descendant attempted to override or contradict an inherited fixed value. |
 | `TypeCompatibilityViolation` | A descendant type, itemType, keyType, or valueType is incompatible with an inherited constraint. |
@@ -2928,5 +3197,29 @@ When an operation fails deterministically, implementations MUST be able to class
 An invalid document may contain multiple independent errors. Blue Language 1.0 does not require a universal precedence order for all possible simultaneous failures. Conformance fixtures that assert an exact error category MUST isolate one primary error so that a conforming implementation can deterministically report that category without ambiguity. If a fixture intentionally contains multiple independent errors, it MUST assert only that the operation fails, or it MUST explicitly declare acceptable error categories.
 
 ---
+
+## Appendix E — Informative Direct-Node Storage Guidance
+
+This appendix is informative. It does not add a separate Language conformance mode.
+
+### E.1 Admission
+
+A provider optimized for lazy graph access may normalize and verify a node, establish every direct child Node BlueId, and store one direct-node representation whose complete children are collapsed, keyed by the node's own Node BlueId.
+
+### E.2 Retrieval
+
+Retrieval of one Node BlueId should return enough direct content to verify that exact node without requiring descendant bodies. A provider may batch additional verified nodes, but batching is prefetch rather than semantics.
+
+### E.3 Path navigation
+
+A caller can verify the current direct node, select the direct child identity for the next path segment, fetch that child, and repeat. Type resolution or schema validation may demand additional nodes beyond the structural path.
+
+### E.4 Direct-node limitation
+
+A directly materialized node still contains its complete direct manifest and inline identity-bearing text. Very wide containers and very large direct scalars therefore remain unsuitable as fine-grained mutable structures. Chunking is the recommended Language 1.0 authoring pattern.
+
+### E.5 Provider chains
+
+Provider implementations should distinguish definitive `NotFound`, transient `Unavailable`, and deterministic `InvalidEvidence`. None of these outcomes is semantic path absence without the Language operation proving absence from sufficient graph content.
 
 *End of Blue Language Specification 1.0.*

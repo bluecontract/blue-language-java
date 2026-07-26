@@ -49,7 +49,8 @@ class DocumentProcessorBoundaryTest {
 
     @Test
     void sharedConfigurationReadWaitsForCompositeRegistrationAcrossProcessors() throws Exception {
-        String blueId = "shared-composite-registration";
+        String blueId = exactTypeId(
+                "shared-composite-registration");
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         BlockingTypeClassResolver resolver = new BlockingTypeClassResolver(blueId);
         DocumentProcessor registeringProcessor = new DocumentProcessor(registry, resolver, null, null);
@@ -88,14 +89,17 @@ class DocumentProcessorBoundaryTest {
 
     @Test
     void crossProcessorRegistrationFromSharedReadCallbackFailsInsteadOfDeadlocking() throws Exception {
-        String existingBlueId = "shared-read-callback";
-        String reentrantBlueId = "shared-read-callback-reentrant";
+        Node existingType = new Node().name("shared-read-callback");
+        String existingBlueId = BlueIdCalculator.calculateBlueId(existingType);
+        String reentrantBlueId = exactTypeId(
+                "shared-read-callback-reentrant");
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         CallbackTypeClassResolver resolver = new CallbackTypeClassResolver(existingBlueId);
         DocumentProcessor readingProcessor = new DocumentProcessor(registry, resolver, null, null);
         DocumentProcessor registeringProcessor = new DocumentProcessor(registry, resolver, null, null);
         SetPropertyContractProcessor contractProcessor = new SetPropertyContractProcessor();
-        readingProcessor.registerContractProcessor(existingBlueId, contractProcessor);
+        readingProcessor.registerContractProcessor(
+                existingBlueId, existingType, contractProcessor);
         resolver.onResolve(() -> registeringProcessor.registerContractProcessor(
                 reentrantBlueId, new SetPropertyContractProcessor()));
 
@@ -118,13 +122,16 @@ class DocumentProcessorBoundaryTest {
 
     @Test
     void registrationWaitingForSharedWriteDoesNotBlockCrossProcessorClose() throws Exception {
-        String existingBlueId = "shared-close-callback";
+        Node existingType = new Node().name("shared-close-callback");
+        String existingBlueId = BlueIdCalculator.calculateBlueId(existingType);
         SignallingRegistry registry = new SignallingRegistry();
         CallbackTypeClassResolver resolver = new CallbackTypeClassResolver(existingBlueId);
         DocumentProcessor readingProcessor = new DocumentProcessor(registry, resolver, null, null);
         DocumentProcessor closingProcessor = new DocumentProcessor(registry, resolver, null, null);
         readingProcessor.registerContractProcessor(
-                existingBlueId, new SetPropertyContractProcessor());
+                existingBlueId,
+                existingType,
+                new SetPropertyContractProcessor());
         CountDownLatch callbackEntered = new CountDownLatch(1);
         CountDownLatch allowClose = new CountDownLatch(1);
         resolver.onResolve(() -> {
@@ -170,13 +177,17 @@ class DocumentProcessorBoundaryTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        execution.handlePatch("/foo", bundle, JsonPatch.add("/foo//bar", new Node().value("ok")), false);
+        expectRunTermination(() -> execution.handlePatch(
+                "/foo",
+                bundle,
+                JsonPatch.add(
+                        "/foo//bar",
+                        new Node().value("ok")),
+                false));
 
-        Node resultDoc = execution.result().document();
-        Node terminated = resultDoc.getAsNode("/foo/contracts/terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/foo"));
     }
 
     @Test
@@ -186,19 +197,17 @@ class DocumentProcessorBoundaryTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        execution.handlePatch("/foo", bundle, JsonPatch.add("/bar", new Node().value("oops")), false);
+        expectRunTermination(() -> execution.handlePatch(
+                "/foo",
+                bundle,
+                JsonPatch.add(
+                        "/bar",
+                        new Node().value("oops")),
+                false));
 
-        Node resultDoc = execution.result().document();
-        Node contracts = resultDoc.getAsNode("/foo/contracts");
-        Map<String, Node> contractProps = contracts.getProperties();
-        assertNotNull(contractProps);
-        Node terminated = contractProps.get("terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
-        Node foo = resultDoc.getAsNode("/foo");
-        Map<String, Node> fooProps = foo.getProperties();
-        assertFalse(fooProps != null && fooProps.containsKey("bar"));
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/foo"));
     }
 
     @Test
@@ -211,19 +220,17 @@ class DocumentProcessorBoundaryTest {
                 .setEmbedded(embedded)
                 .build();
 
-        execution.handlePatch("/foo", bundle, JsonPatch.add("/foo/child/value", new Node().value("nope")), false);
+        expectRunTermination(() -> execution.handlePatch(
+                "/foo",
+                bundle,
+                JsonPatch.add(
+                        "/foo/child/value",
+                        new Node().value("nope")),
+                false));
 
-        Node resultDoc = execution.result().document();
-        Node contracts = resultDoc.getAsNode("/foo/contracts");
-        Map<String, Node> contractProps = contracts.getProperties();
-        assertNotNull(contractProps);
-        Node terminated = contractProps.get("terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
-        Node foo = resultDoc.getAsNode("/foo");
-        Map<String, Node> fooProps = foo.getProperties();
-        assertFalse(fooProps != null && fooProps.containsKey("child"));
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/foo"));
     }
 
     @Test
@@ -274,17 +281,19 @@ class DocumentProcessorBoundaryTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        execution.handlePatch("/foo", bundle, JsonPatch.replace("/foo", new Node().value("new")), false);
+        expectRunTermination(() -> execution.handlePatch(
+                "/foo",
+                bundle,
+                JsonPatch.replace(
+                        "/foo",
+                        new Node().value("new")),
+                false));
 
-        Node resultDoc = execution.result().document();
-        Node contracts = resultDoc.getAsNode("/foo/contracts");
-        Map<String, Node> contractProps = contracts.getProperties();
-        assertNotNull(contractProps);
-        Node terminated = contractProps.get("terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
-        Node foo = resultDoc.getAsNode("/foo");
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/foo"));
+        Node foo = execution.result()
+                .document().getAsNode("/foo");
         Node value = foo.getProperties().get("value");
         assertEquals("existing", value.getValue());
     }
@@ -298,15 +307,11 @@ class DocumentProcessorBoundaryTest {
 
         expectRunTermination(() -> execution.handlePatch("/", bundle, JsonPatch.remove("/"), false));
 
-        Node resultDoc = execution.result().document();
-        Node contracts = resultDoc.getAsNode("/contracts");
-        Map<String, Node> contractProps = contracts.getProperties();
-        assertNotNull(contractProps);
-        Node terminated = contractProps.get("terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
-        assertTrue(execution.runtime().isScopeTerminated("/"));
-        Node foo = resultDoc.getProperties().get("foo");
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/"));
+        Node foo = execution.result().document()
+                .getProperties().get("foo");
         assertEquals("ok", foo.getValue());
     }
 
@@ -320,14 +325,9 @@ class DocumentProcessorBoundaryTest {
         expectRunTermination(() -> execution.handlePatch("/", bundle,
                 JsonPatch.add("/contracts/checkpoint", new Node().value("forbidden")), false));
 
-        Node resultDoc = execution.result().document();
-        Node contracts = resultDoc.getAsNode("/contracts");
-        Map<String, Node> contractProps = contracts.getProperties();
-        assertNotNull(contractProps);
-        Node terminated = contractProps.get("terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
-        assertTrue(execution.runtime().isScopeTerminated("/"));
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/"));
     }
 
     @Test
@@ -337,27 +337,28 @@ class DocumentProcessorBoundaryTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        execution.handlePatch("/foo", bundle,
-                JsonPatch.add("/foo/contracts/initialized", new Node().value("bad")), false);
+        expectRunTermination(() -> execution.handlePatch(
+                "/foo",
+                bundle,
+                JsonPatch.add(
+                        "/foo/contracts/initialized",
+                        new Node().value("bad")),
+                false));
 
-        Node resultDoc = execution.result().document();
-        Node contracts = resultDoc.getAsNode("/foo/contracts");
-        Map<String, Node> contractProps = contracts.getProperties();
-        assertNotNull(contractProps);
-        Node terminated = contractProps.get("terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
-        Node fooNode = resultDoc.getProperties().get("foo");
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/foo"));
+        Node fooNode = execution.result().document()
+                .getProperties().get("foo");
         assertNotNull(fooNode);
-        assertTrue(fooNode.getContracts() != null);
+        assertNull(fooNode.getContracts());
     }
 
     @Test
     void frozenAndMutableIdenticalContractsReplacementPreserveReservedEmbeddedMarker() {
         Node embedded = new Node()
                 .type(new Node().blueId(
-                        "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q"))
+                        "D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr"))
                 .properties("paths", new Node().items(new Node().value("/child")));
         Node contracts = new Node().properties("embedded", embedded);
         Node source = new Node().properties("scope", new Node().contracts(contracts));
@@ -391,6 +392,25 @@ class DocumentProcessorBoundaryTest {
         Node child = properties.get(key);
         assertNotNull(child, "Missing property '" + key + "'");
         return child;
+    }
+
+    private static String exactTypeId(String name) {
+        return BlueIdCalculator.calculateBlueId(
+                new Node().name(name));
+    }
+
+    private void assertAtomicFailure(
+            ProcessorEngine.Execution execution,
+            Node exactInput) {
+        DocumentProcessingResult result =
+                execution.result();
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(exactInput.toString(),
+                result.document().toString());
+        assertTrue(execution.runtime().isRunTerminated());
     }
 
     private void expectRunTermination(Runnable action) {

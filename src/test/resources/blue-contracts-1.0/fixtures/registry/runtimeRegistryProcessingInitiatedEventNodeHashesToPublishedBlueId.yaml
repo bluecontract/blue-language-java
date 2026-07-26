@@ -1,8 +1,0 @@
-id: runtimeRegistryProcessingInitiatedEventNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: DocumentProcessingInitiated
-registryPath: registry/blue-contracts-1.0/DocumentProcessingInitiated.blue
-expectedBlueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL
-semanticDescriptionIdentityBearing: true

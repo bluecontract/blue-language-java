@@ -1,22 +1,12 @@
 name: Process Embedded
-type: Marker
-description: >
-  Required processor-managed marker at contracts/embedded. It declares
-  embedded child scopes beneath the current scope. The processor reads paths
-  dynamically during embedded traversal, re-reads after each processed child,
-  processes each normalized child path at most once per parent invocation, and
-  rejects malformed, duplicate, self-root, or non-object embedded scope paths
-  according to the processor rules. Missing child paths are skipped and marked
-  processed for the current invocation.
+type:
+  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+description: Declares immediate owned embedded scope roots within the one authoritative Root. The feeder derives subscriptions transitively; the processor uses an immutable entry snapshot and never recursively scans unrelated branches.
 paths:
-  type: List
+  type:
+    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
   itemType:
-    type: Text
-  description: >
-    Required list of scope-relative Blue Runtime Pointers identifying embedded
-    child roots. Each path must begin with /, must not be /, and must resolve
-    inside the current scope's pointer domain. Duplicate resolved child paths
-    are invalid.
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true
     uniqueItems: true

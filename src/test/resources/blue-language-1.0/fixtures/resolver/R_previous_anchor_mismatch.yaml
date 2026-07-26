@@ -1,0 +1,13 @@
+id: R_previous_anchor_mismatch
+category: Resolution
+operation: resolve
+parent:
+  type: List
+  mergePolicy: append-only
+  items: [A]
+source:
+  items:
+    - $previous:
+        blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+    - B
+expectedErrorCategory: ListControlViolation

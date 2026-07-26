@@ -1,516 +1,275 @@
 package blue.language.processor.conformance;
 
-import blue.language.Blue;
-import blue.language.BlueContractsConformanceFailure;
-import blue.language.BlueContractsConformanceReport;
 import blue.language.BlueContractsConformanceSuiteRunner;
+import blue.language.model.Node;
+import blue.language.processor.CheckpointDomain;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.UncheckedObjectMapper;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueContractsConformanceFixtureTest {
 
-    @Test
-    void blueContractsConformanceSuitePassesFixtures() {
-        BlueContractsConformanceReport report = new Blue().runContractsConformanceSuite();
-        Map<String, BlueContractsConformanceFailure> failuresById = report.getFailures().stream()
-                .collect(Collectors.toMap(BlueContractsConformanceFailure::getFixtureId, Function.identity()));
-
-        assertTrue(report.getFailures().isEmpty(), () -> failuresById.values().stream()
-                .map(this::failureMessage)
-                .collect(Collectors.joining("\n")));
-        assertEquals(report.getFixtureIds(), report.getPassedFixtureIds());
-    }
+    private static final ObjectMapper YAML = new ObjectMapper(
+            YAMLFactory.builder()
+                    .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+                    .build());
 
     @Test
-    void contractsConformanceManifestIdentityMatchesFixtureFiles() {
-        assertEquals(BlueContractsConformanceReport.computeFixturePackageIdentity(),
-                new Blue().contractsConformanceReport().getFixturePackageIdentity());
-        assertTrue(BlueContractsConformanceReport.fixturePackageIdentityMatchesFixtureFiles());
-    }
-
-    @Test
-    void contractsRequiredFixtureCoverageIsReported() {
-        assertTrue(BlueContractsConformanceReport.requiredFixtureIdsForContracts10()
-                .contains("T078_direct_write_termination_costs_configured_amount"));
-        assertTrue(new Blue().contractsConformanceReport().hasRequiredFixtureCoverage());
-    }
-
-    @Test
-    void contractsRequiredFixtureCoverageAllowsSuperset() {
-        List<String> ids = new ArrayList<>(BlueContractsConformanceReport.requiredFixtureIdsForContracts10());
-        ids.add("T999_extra_contract_fixture");
-        BlueContractsConformanceReport report = reportWithFixtureIds(ids);
-
-        assertTrue(report.hasRequiredFixtureCoverage());
-    }
-
-    @Test
-    void contractsExactRequiredFixtureSetRejectsExtraOrMissing() {
-        List<String> ids = new ArrayList<>(BlueContractsConformanceReport.requiredFixtureIdsForContracts10());
-        BlueContractsConformanceReport exact = reportWithFixtureIds(ids);
-        assertTrue(exact.hasRequiredFixtureCoverage());
-        assertTrue(exact.hasExactRequiredFixtureSet());
-
-        List<String> withExtra = new ArrayList<>(ids);
-        withExtra.add("T999_extra_contract_fixture");
-        BlueContractsConformanceReport extra = reportWithFixtureIds(withExtra);
-        assertTrue(extra.hasRequiredFixtureCoverage());
-        assertFalse(extra.hasExactRequiredFixtureSet());
-
-        List<String> missing = Collections.singletonList(ids.get(0));
-        BlueContractsConformanceReport incomplete = reportWithFixtureIds(missing);
-        assertFalse(incomplete.hasRequiredFixtureCoverage());
-        assertFalse(incomplete.hasExactRequiredFixtureSet());
-    }
-
-    @Test
-    void contractsExactRequiredFixtureSetAcceptsCurrentManifest() {
-        assertTrue(new Blue().contractsConformanceReport().hasExactRequiredFixtureSet());
-    }
-
-    @Test
-    void contractsManifestAndRequiredFixtureSetAligned() throws Exception {
-        JsonNode manifest = readFixture("manifest.yaml");
-        Set<String> required = new HashSet<>(BlueContractsConformanceReport.requiredFixtureIdsForContracts10());
-        Set<String> manifestIds = new HashSet<>();
-        Set<String> manifestPaths = new HashSet<>();
-        Path fixtureRoot = Paths.get("src/test/resources/blue-contracts-1.0/fixtures");
-        for (JsonNode fixture : manifest.get("fixtures")) {
-            String id = fixture.get("id").asText();
-            String path = fixture.get("path").asText();
-            manifestIds.add(id);
-            manifestPaths.add(path);
-            assertTrue(Files.exists(fixtureRoot.resolve(path)),
-                    "Missing fixture file " + path);
-            assertEquals(id, readFixture(path).get("id").asText());
-        }
-        assertEquals(required, manifestIds);
-
-        Set<String> yamlFiles = Files.walk(fixtureRoot)
-                .filter(Files::isRegularFile)
-                .filter(path -> path.toString().endsWith(".yaml"))
-                .map(path -> fixtureRoot.relativize(path).toString())
-                .filter(path -> !"manifest.yaml".equals(path))
-                .collect(Collectors.toSet());
-        assertEquals(manifestPaths, yamlFiles);
-    }
-
-    @Test
-    void contractsFixtureMetadataIsValid() throws Exception {
-        JsonNode manifest = readFixture("manifest.yaml");
-        for (JsonNode fixture : manifest.get("fixtures")) {
-            String path = fixture.get("path").asText();
-            BlueContractsConformanceSuiteRunner.validateFixtureMetadataForTest(readFixture(path));
-        }
-    }
-
-    @Test
-    void contractsFixtureWithoutMeaningfulAssertionFails() {
-        JsonNode spec = fixtureSpec(
-                "id: local_no_assertion\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> BlueContractsConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedCapabilityFailureFalseAloneIsNotMeaningful() {
-        JsonNode spec = fixtureSpec(
-                "id: local_capability_false_only\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "expectedCapabilityFailure: false\n");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> BlueContractsConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedCapabilityFailureTrueRequiresNoMutationOrReason() {
-        JsonNode spec = fixtureSpec(
-                "id: local_capability_true_only\n" +
-                "category: MustUnderstand\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "expectedCapabilityFailure: true\n");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> BlueContractsConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedCapabilityFailureWithNoMutationIsMeaningful() {
-        JsonNode spec = fixtureSpec(
-                "id: local_capability_true_with_no_mutation\n" +
-                "category: MustUnderstand\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "expectedCapabilityFailure: true\n" +
-                "expectedNoDocumentMutation: true\n");
-
-        BlueContractsConformanceSuiteRunner.validateFixtureMetadataForTest(spec);
-    }
-
-    @Test
-    void contractsFixtureUnknownExpectedFieldFailsMetadataValidation() {
-        JsonNode spec = fixtureSpec(
-                "id: local_unknown_expected\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "expectedDocument: {}\n" +
-                "expectedNotARealField: true\n");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> BlueContractsConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureUnknownProcessorCapabilityFails() {
-        JsonNode spec = fixtureSpec(
-                "id: local_unknown_capability\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "processorCapabilities:\n" +
-                "  - blue-contracts-fixture-missing-v1\n" +
-                "initialDocument: {}\n" +
-                "expectedDocument: {}\n");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> BlueContractsConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedStatusIsChecked() {
-        JsonNode spec = fixtureSpec(
-                "id: local_expected_status\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedStatus: runtime-fatal\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedErrorCategoryIsChecked() {
-        JsonNode spec = fixtureSpec(
-                "id: local_expected_error_category\n" +
-                "category: ContractKey\n" +
-                "operation: processDocument\n" +
-                "initialDocument:\n" +
-                "  contracts:\n" +
-                "    \"\": {}\n" +
-                "expectedStatus: runtime-fatal\n" +
-                "expectedErrorCategory: UnsupportedContract\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedErrorCategoriesAcceptsAnyListedCategory() {
-        JsonNode spec = fixtureSpec(
-                "id: local_expected_error_categories\n" +
-                "category: ContractKey\n" +
-                "operation: processDocument\n" +
-                "initialDocument:\n" +
-                "  contracts:\n" +
-                "    \"\": {}\n" +
-                "expectedStatus: runtime-fatal\n" +
-                "expectedErrorCategories: [UnsupportedContract, InvalidRuntimePointer]\n");
-
-        BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec);
-    }
-
-    @Test
-    void contractsFixtureExpectedDocumentIsCompared() {
-        JsonNode spec = fixtureSpec(
-                "id: local_expected_document\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedDocument: {}\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedAbsentPathIsChecked() {
-        JsonNode spec = fixtureSpec(
-                "id: local_absent_path\n" +
-                "category: Patching\n" +
-                "operation: processDocument\n" +
-                "initialDocument:\n" +
-                "  present: true\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedAbsentDocumentPaths:\n" +
-                "  - /present\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedRootEventsCompared() {
-        JsonNode spec = fixtureSpec(
-                "id: local_root_events\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedRootEvents: []\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void expectedRootEventsFailsWhenExtraRootEventExists() {
-        JsonNode spec = fixtureSpec(
-                emitScalarFixture("local_exact_root_events") +
-                "expectedRootEvents:\n" +
-                "  - value: emitted-scalar\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void expectedRootEventSuffixWorksOnlyWhenExplicitlyRequested() {
-        JsonNode spec = fixtureSpec(
-                emitScalarFixture("local_root_event_suffix") +
-                "expectedRootEventSuffix:\n" +
-                "  - value: emitted-scalar\n");
-
-        BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec);
-    }
-
-    @Test
-    void runtimeInsertionEventIndexIsZeroBasedFromBeginning() {
-        JsonNode spec = fixtureSpec(
-                emitScalarFixture("local_event_index") +
-                "expectedRuntimeInsertionNormalizedValues:\n" +
-                "  - eventIndex: 0\n" +
-                "    selectedDocumentForm:\n" +
-                "      value: emitted-scalar\n" +
-                "      type:\n" +
-                "        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void runtimeInsertionEventIndexFromEndRequiresExplicitField() {
-        JsonNode spec = fixtureSpec(
-                emitScalarFixture("local_event_index_from_end") +
-                "expectedRuntimeInsertionNormalizedValues:\n" +
-                "  - eventIndexFromEnd: 0\n" +
-                "    selectedDocumentForm:\n" +
-                "      value: emitted-scalar\n" +
-                "      type:\n" +
-                "        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\n");
-
-        BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec);
-    }
-
-    @Test
-    void dispatchSnapshotDoesNotSkipReplacedLaterHandler() throws Exception {
-        BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(readFixture(
-                "dispatch-snapshot/T065_replacing_later_handler_does_not_affect_current_delivery_content.yaml"));
-    }
-
-    @Test
-    void contractsFixtureExpectedDocumentPathValuesCompared() {
-        JsonNode spec = fixtureSpec(
-                "id: local_path_values\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument:\n" +
-                "  present:\n" +
-                "    value: true\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedDocumentPathValues:\n" +
-                "  - path: /present\n" +
-                "    value:\n" +
-                "      value: false\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedRootEventPathValuesCompared() {
-        JsonNode spec = fixtureSpec(
-                "id: local_root_event_path_values\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedRootEventPathValues:\n" +
-                "  - index: 0\n" +
-                "    path: /documentId\n" +
-                "    value:\n" +
-                "      value: not-the-document-id\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureExpectedExactGasCompared() {
-        JsonNode spec = fixtureSpec(
-                "id: local_exact_gas\n" +
-                "category: Initialization\n" +
-                "operation: processDocument\n" +
-                "initialDocument: {}\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedExactGas: 999999\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureCheckpointLastEventsCompared() {
-        JsonNode spec = fixtureSpec(
-                "id: local_checkpoint_last_events\n" +
-                "category: Checkpoint\n" +
-                "operation: processDocument\n" +
-                "initialDocument:\n" +
-                "  contracts:\n" +
-                "    channel:\n" +
-                "      type:\n" +
-                "        blueId: 9XJaukZBmGUkFJ5TD3mrEnj98A6UfXXhzXGtwTJapmZi\n" +
-                "event:\n" +
-                "  kind: checkpoint\n" +
-                "expectedCheckpointLastEvents:\n" +
-                "  channel:\n" +
-                "    kind: different\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    @Test
-    void contractsFixtureFailureReasonChecked() {
-        JsonNode spec = fixtureSpec(
-                "id: local_failure_reason\n" +
-                "category: ProcessingDocument\n" +
-                "operation: processDocument\n" +
-                "initialDocument:\n" +
-                "  value: scalar-root\n" +
-                "event:\n" +
-                "  value: event\n" +
-                "expectedCapabilityFailure: true\n" +
-                "expectedFailureReasonContains: not-the-reason\n");
-
-        assertThrows(AssertionError.class,
-                () -> BlueContractsConformanceSuiteRunner.runFixtureSpecForTest(spec));
-    }
-
-    private JsonNode readFixture(String path) throws Exception {
-        String resource = "blue-contracts-1.0/fixtures/" + path;
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream(resource)) {
-            if (input == null) {
-                throw new IllegalStateException("Missing fixture resource: " + resource);
+    void everyInventoriedExecutableFixturePassesClosedMetadataValidation()
+            throws IOException {
+        JsonNode manifest = resource("manifest.yaml");
+        for (JsonNode file : manifest.path("files")) {
+            String role = file.path("role").asText();
+            if (!"behavior-fixture".equals(role)
+                    && !"gas-fixture".equals(role)) {
+                continue;
             }
-            return UncheckedObjectMapper.YAML_MAPPER.readTree(input);
+            JsonNode fixture = resource(file.path("path").asText());
+            assertDoesNotThrow(() ->
+                    BlueContractsConformanceSuiteRunner
+                            .validateFixtureMetadataForTest(fixture),
+                    file.path("path").asText());
         }
     }
 
-    private JsonNode fixtureSpec(String yaml) {
-        return UncheckedObjectMapper.YAML_MAPPER.readTree(yaml);
+    @Test
+    void unselectedMissingExecutableBodyRemainsCollapsed()
+            throws IOException {
+        JsonNode fixture =
+                resource("disc/c-disc-03.yaml");
+
+        assertDoesNotThrow(
+                () -> new ContractsFixtureHarness()
+                        .execute(fixture, null, false));
     }
 
-    private String emitScalarFixture(String id) {
-        return "id: " + id + "\n" +
-                "category: Normalization\n" +
-                "operation: processDocument\n" +
-                "processorCapabilities:\n" +
-                "  - blue-contracts-fixture-scripted-runtime-v1\n" +
-                "initialDocument:\n" +
-                "  contracts:\n" +
-                "    incoming:\n" +
-                "      type:\n" +
-                "        blueId: C37UoAfTNUnoxkB2CdEE7BfHJwYqTNiWzQb5xuRMkBzm\n" +
-                "    emitter:\n" +
-                "      type:\n" +
-                "        blueId: 3rHWt14WhTvmBBQ6Cr1Mb263KuxSdwqvb2jD7oPbkNL3\n" +
-                "      channel: incoming\n" +
-                "event:\n" +
-                "  kind: emit-bare-scalar\n" +
-                "mockRuntime:\n" +
-                "  channels:\n" +
-                "    - contract: /contracts/incoming\n" +
-                "      calls:\n" +
-                "        - when:\n" +
-                "            event:\n" +
-                "              kind: emit-bare-scalar\n" +
-                "          accepted: true\n" +
-                "          payload:\n" +
-                "            kind: emit-bare-scalar\n" +
-                "  handlers:\n" +
-                "    - contract: /contracts/emitter\n" +
-                "      calls:\n" +
-                "        - when:\n" +
-                "            channelKey: incoming\n" +
-                "          result:\n" +
-                "            triggeredEvents:\n" +
-                "              - emitted-scalar\n" +
-                "expectedStatus: success\n";
+    @Test
+    void selectedReferencedExecutableBodyIsVerifiedAndExecuted()
+            throws IOException {
+        ObjectNode fixture = (ObjectNode) resource(
+                "disc/c-disc-03.yaml").deepCopy();
+        ObjectNode input =
+                (ObjectNode) fixture.path("input");
+        ObjectNode root =
+                (ObjectNode) input.path("root");
+        ObjectNode handler =
+                (ObjectNode) root.path("contracts")
+                        .path("h");
+        JsonNode body =
+                handler.path("result").deepCopy();
+        Node bodyNode =
+                UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                        body, Node.class);
+        String bodyBlueId =
+                BlueIdCalculator.calculateBlueId(bodyNode);
+        ObjectNode provider =
+                (ObjectNode) input.path("provider");
+        provider.putObject("nodes")
+                .set(bodyBlueId, body);
+        handler.putObject("result")
+                .put("blueId", bodyBlueId);
+
+        ContractsConformanceProjection projection =
+                new ContractsFixtureHarness()
+                        .execute(fixture, null, false);
+
+        assertEquals(
+                1L,
+                ((Number) projection.project(
+                        "result.document.value")
+                        .getValue()).longValue(),
+                projection.values()::toString);
+        @SuppressWarnings("unchecked")
+        List<Object> demands = (List<Object>) projection
+                .project("demands.semantic")
+                .getValue();
+        assertTrue(demands.contains(bodyBlueId));
     }
 
-    private BlueContractsConformanceReport reportWithFixtureIds(List<String> ids) {
-        return new BlueContractsConformanceReport(
-                "1.0",
-                "sha256:test",
-                ids,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                Collections.emptyMap(),
-                Collections.emptyList());
+    @Test
+    void unknownFixtureFieldFailsClosed() throws IOException {
+        ObjectNode fixture = gasFixture();
+        fixture.put("undocumented", true);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueContractsConformanceSuiteRunner
+                        .validateFixtureMetadataForTest(fixture));
     }
 
-    private String failureMessage(BlueContractsConformanceFailure failure) {
-        return failure.getFixtureId()
-                + " [" + failure.getCategory() + "/" + failure.getOperation() + "] "
-                + failure.getExceptionClass()
-                + ": " + failure.getMessage();
+    @Test
+    void unknownOperationFailsClosed() throws IOException {
+        ObjectNode fixture = gasFixture();
+        fixture.put("operation", "invented-operation");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueContractsConformanceSuiteRunner
+                        .validateFixtureMetadataForTest(fixture));
+    }
+
+    @Test
+    void unknownAssertionOperatorFailsClosed() throws IOException {
+        ObjectNode fixture = gasFixture();
+        firstAssertion(fixture).put("op", "silently-ignore");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueContractsConformanceSuiteRunner
+                        .validateFixtureMetadataForTest(fixture));
+    }
+
+    @Test
+    void unknownProjectionFailsClosed() throws IOException {
+        ObjectNode fixture = gasFixture();
+        firstAssertion(fixture).put(
+                "actual", "trace.undocumentedProjection");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueContractsConformanceSuiteRunner
+                        .validateFixtureMetadataForTest(fixture));
+    }
+
+    @Test
+    void unknownRuntimeControlFailsClosed() throws IOException {
+        ObjectNode fixture =
+                (ObjectNode) resource("init/c-init-02.yaml").deepCopy();
+        ((ObjectNode) fixture.path("input").path("runtime"))
+                .put("hostMutation", true);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueContractsConformanceSuiteRunner
+                        .validateFixtureMetadataForTest(fixture));
+    }
+
+    @Test
+    void gasExpectedOutputIsEvaluatedAfterIndependentExecution()
+            throws IOException {
+        ObjectNode fixture = gasFixture();
+        ((ObjectNode) fixture.path("expected")).put("totalGas", 999L);
+
+        assertThrows(AssertionError.class,
+                () -> new ContractsFixtureHarness()
+                        .execute(fixture, null, false));
+    }
+
+    @Test
+    void checkpointSubjectVariantIsStaleAndDoesNotInitialize()
+            throws IOException {
+        ObjectNode fixture =
+                (ObjectNode) resource("init/c-init-01.yaml").deepCopy();
+        ObjectNode root = (ObjectNode) fixture.path("input").path("root");
+        JsonNode channel = root.path("contracts").path("in");
+        Node channelNode = UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                channel, Node.class);
+        String contributionBlueId =
+                BlueIdCalculator.calculateBlueId(channelNode);
+        String domainBlueId = CheckpointDomain.derive(
+                channel.path("type").path("blueId").asText(),
+                Collections.singletonList(contributionBlueId),
+                channel.path("checkpointDomain").asText());
+        String subjectBlueId = BlueIdCalculator.calculateBlueId(
+                new Node().value("E1"));
+        ObjectNode checkpoint = ((ObjectNode) root.path("contracts"))
+                .putObject("checkpoint");
+        checkpoint.putObject("type")
+                .put("blueId", RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT);
+        ObjectNode stored = checkpoint.putObject("entries")
+                .putObject("in");
+        stored.putObject("domain").put("blueId", domainBlueId);
+        stored.putObject("subject").put("blueId", subjectBlueId);
+
+        ArrayNode assertions = (ArrayNode) fixture.path("expected")
+                .path("assertions");
+        ObjectNode status = assertions.addObject();
+        status.put("actual", "result.status");
+        status.put("op", "equals");
+        status.put("expected", "stale");
+        status.put("variant", "stale");
+
+        new ContractsFixtureHarness().execute(fixture, null, false);
+    }
+
+    @Test
+    void checkpointSubjectVariantAcceptsExactObjectAndListSubjects()
+            throws IOException {
+        ObjectNode objectSubject = YAML.createObjectNode();
+        objectSubject.put("value", "E1");
+        ArrayNode listSubject = YAML.createArrayNode();
+        listSubject.add("E1");
+
+        for (JsonNode subject :
+                new JsonNode[]{objectSubject, listSubject}) {
+            ObjectNode fixture =
+                    (ObjectNode) resource(
+                            "init/c-init-01.yaml").deepCopy();
+            ObjectNode stale = (ObjectNode) fixture.path("input")
+                    .path("variants").get(1);
+            stale.set("checkpointSubject", subject);
+            ObjectNode status = ((ArrayNode) fixture.path("expected")
+                    .path("assertions")).addObject();
+            status.put("actual", "result.status");
+            status.put("op", "equals");
+            status.put("expected", "stale");
+            status.put("variant", "stale");
+
+            assertDoesNotThrow(
+                    () -> new ContractsFixtureHarness()
+                            .execute(fixture, null, false),
+                    subject.toString());
+        }
+    }
+
+    private static ObjectNode gasFixture() throws IOException {
+        return (ObjectNode) YAML.readTree(
+                "schema: blue-contracts-fixture/1.0\n"
+                        + "id: local-gas-01\n"
+                        + "vectors: [C-GAS-99]\n"
+                        + "category: gas\n"
+                        + "operation: gas-micro\n"
+                        + "input:\n"
+                        + "  namespace: processor\n"
+                        + "  counter: processInvocation\n"
+                        + "  quantity: 1\n"
+                        + "  weightManifest: blue-contracts/gas/1.0\n"
+                        + "expected:\n"
+                        + "  totalGas: 50\n"
+                        + "  assertions:\n"
+                        + "  - actual: manifest.counterCoverage.complete\n"
+                        + "    op: equals\n"
+                        + "    expected: false\n");
+    }
+
+    private static ObjectNode firstAssertion(ObjectNode fixture) {
+        return (ObjectNode) fixture.path("expected")
+                .path("assertions").get(0);
+    }
+
+    private static JsonNode resource(String path) throws IOException {
+        String resource = "blue-contracts-1.0/fixtures/" + path;
+        try (InputStream input =
+                     BlueContractsConformanceFixtureTest.class
+                             .getClassLoader()
+                             .getResourceAsStream(resource)) {
+            if (input == null) {
+                throw new IllegalStateException(
+                        "Missing test resource " + resource);
+            }
+            return YAML.readTree(input);
+        }
     }
 }

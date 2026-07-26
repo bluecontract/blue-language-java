@@ -1,0 +1,20 @@
+schema: blue-contracts-fixture/1.0
+id: gas-semantic-textBlockExamined
+vectors:
+- C-GAS-01
+category: gas
+operation: gas-micro
+input:
+  namespace: semantic
+  counter: textBlockExamined
+  quantity: 3
+  weightManifest: blue-contracts/gas/1.0
+expected:
+  trace:
+  - sequence: 0
+    namespace: semantic
+    counter: textBlockExamined
+    quantity: 3
+    weight: 1
+    subtotal: 3
+  totalGas: 3

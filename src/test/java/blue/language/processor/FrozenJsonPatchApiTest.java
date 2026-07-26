@@ -236,9 +236,9 @@ class FrozenJsonPatchApiTest {
 
     @Test
     void frozenPatchWorksWithStrictAndUncheckedCanonicalSnapshotRoots() {
-        Node document = new Node().properties("value", new Node().value("before"));
+        Node document = new Node().properties("state", new Node().value("before"));
         FrozenJsonPatch patch = FrozenJsonPatch.replace(
-                "/value", FrozenNode.fromNode(new Node().value("after")));
+                "/state", FrozenNode.fromNode(new Node().value("after")));
 
         ResolvedSnapshot strict = new ResolvedSnapshot(
                 FrozenNode.fromNode(document), FrozenNode.fromResolvedNode(document));
@@ -250,11 +250,11 @@ class FrozenJsonPatchApiTest {
         strictWorking.applyFrozenPatch(patch);
         uncheckedWorking.applyFrozenPatch(patch);
 
-        assertEquals("after", strictWorking.resolvedAt("/value").getValue());
-        assertEquals("after", uncheckedWorking.resolvedAt("/value").getValue());
-        assertTrue(strictWorking.canonicalAt("/value").isStrictCanonical());
-        assertTrue(uncheckedWorking.canonicalAt("/value").isStrictCanonical());
-        assertFalse(uncheckedWorking.canonicalAt("/value").isStrictBlueIdValidation());
+        assertEquals("after", strictWorking.resolvedAt("/state").getValue());
+        assertEquals("after", uncheckedWorking.resolvedAt("/state").getValue());
+        assertTrue(strictWorking.canonicalAt("/state").isStrictCanonical());
+        assertTrue(uncheckedWorking.canonicalAt("/state").isStrictCanonical());
+        assertFalse(uncheckedWorking.canonicalAt("/state").isStrictBlueIdValidation());
     }
 
     @Test
@@ -351,7 +351,7 @@ class FrozenJsonPatchApiTest {
     }
 
     @Test
-    void conversionRetainsLegacyGasSizeWhenCanonicalFreezeDropsEmptyFields() {
+    void conversionRetainsAuthoredSizeWhilePortablePatchGasIsFixed() {
         Node authored = new Node().properties(
                 "pad", new Node().value("12345"),
                 "empty", new Node());
@@ -367,7 +367,7 @@ class FrozenJsonPatchApiTest {
         frozen.chargeFrozenPatchAddOrReplace(
                 converted.getAuthoredCanonicalSizeBytes());
 
-        assertEquals(22L, mutable.totalGas());
+        assertEquals(20L, mutable.totalGas());
         assertEquals(mutable.totalGas(), frozen.totalGas());
     }
 

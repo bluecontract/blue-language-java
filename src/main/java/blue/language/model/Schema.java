@@ -11,6 +11,7 @@ import static blue.language.utils.TypeUtils.*;
 
 public class Schema implements Cloneable {
 
+    private String blueId;
     private Node required;
     private Node minLength;
     private Node maxLength;
@@ -26,6 +27,33 @@ public class Schema implements Cloneable {
     private Node maxFields;
     @JsonProperty("enum")
     private List<Node> enumValues;
+
+    public String getBlueId() {
+        return blueId;
+    }
+
+    public Schema blueId(String blueId) {
+        this.blueId = blueId;
+        return this;
+    }
+
+    public boolean isReferenceOnly() {
+        return blueId != null
+                && required == null
+                && minLength == null
+                && maxLength == null
+                && minimum == null
+                && maximum == null
+                && exclusiveMinimum == null
+                && exclusiveMaximum == null
+                && multipleOf == null
+                && minItems == null
+                && maxItems == null
+                && uniqueItems == null
+                && minFields == null
+                && maxFields == null
+                && enumValues == null;
+    }
 
     public Node getRequired() {
         return required;
@@ -389,7 +417,8 @@ public class Schema implements Cloneable {
     @Override
     public String toString() {
         return "Schema{" +
-                "required=" + getRequiredValue() +
+                "blueId=" + blueId +
+                ", required=" + getRequiredValue() +
                 ", minLength=" + getMinLengthExact() +
                 ", maxLength=" + getMaxLengthExact() +
                 ", minimum=" + getMinimumValue() +

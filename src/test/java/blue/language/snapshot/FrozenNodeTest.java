@@ -62,9 +62,9 @@ class FrozenNodeTest {
     @Test
     void frozenNodeBlueIdMatchesBlueIdCalculatorForEveryBlueIdFixture() throws Exception {
         JsonNode manifest = readFixtureResource("manifest.yaml");
-        for (JsonNode entry : manifest.get("fixtures")) {
+        for (JsonNode entry : behaviorFixtureEntries(manifest)) {
             JsonNode fixture = readFixtureResource(entry.get("path").asText());
-            if (fixture.path("expectError").asBoolean(false)
+            if (expectsError(fixture)
                     || !"calculateBlueId".equals(fixture.path("operation").asText())) {
                 continue;
             }
@@ -102,12 +102,10 @@ class FrozenNodeTest {
     @Test
     void frozenNodeToBlueIdInputHashesLikeNodeToBlueIdInputForEveryValidBlueIdFixture() throws Exception {
         JsonNode manifest = readFixtureResource("manifest.yaml");
-        for (JsonNode entry : manifest.get("fixtures")) {
-            if (!"BlueId".equals(entry.get("category").asText())) {
-                continue;
-            }
+        for (JsonNode entry : behaviorFixtureEntries(manifest)) {
             JsonNode fixture = readFixtureResource(entry.get("path").asText());
-            if (fixture.path("expectError").asBoolean(false)
+            if (!"BlueId".equals(fixture.path("category").asText())
+                    || expectsError(fixture)
                     || !"calculateBlueId".equals(fixture.path("operation").asText())) {
                 continue;
             }
@@ -123,12 +121,10 @@ class FrozenNodeTest {
     @Test
     void frozenNodeRejectsEveryInvalidBlueIdFixtureThatParsesAsNode() throws Exception {
         JsonNode manifest = readFixtureResource("manifest.yaml");
-        for (JsonNode entry : manifest.get("fixtures")) {
-            if (!"BlueId".equals(entry.get("category").asText())) {
-                continue;
-            }
+        for (JsonNode entry : behaviorFixtureEntries(manifest)) {
             JsonNode fixture = readFixtureResource(entry.get("path").asText());
-            if (!fixture.path("expectError").asBoolean(false)
+            if (!"BlueId".equals(fixture.path("category").asText())
+                    || !expectsError(fixture)
                     || !"calculateBlueId".equals(fixture.path("operation").asText())
                     || !fixture.has("input")) {
                 continue;
@@ -833,6 +829,28 @@ class FrozenNodeTest {
             }
             return YAML_MAPPER.readTree(stream);
         }
+    }
+
+    private List<JsonNode> behaviorFixtureEntries(JsonNode manifest) {
+        JsonNode files = manifest.get("files");
+        if (files == null || !files.isArray()) {
+            throw new IllegalArgumentException("Blue Language 1.0 fixture manifest must contain a files list.");
+        }
+        List<JsonNode> entries = new ArrayList<>();
+        for (JsonNode entry : files) {
+            if ("behavior-fixture".equals(entry.path("role").asText())) {
+                entries.add(entry);
+            }
+        }
+        if (entries.isEmpty()) {
+            throw new IllegalArgumentException("Blue Language 1.0 fixture manifest contains no behavior fixtures.");
+        }
+        return entries;
+    }
+
+    private boolean expectsError(JsonNode fixture) {
+        return fixture.path("expectError").asBoolean(false)
+                || fixture.has("expectedErrorCategory");
     }
 
     private static final class CountingSchema extends Schema {

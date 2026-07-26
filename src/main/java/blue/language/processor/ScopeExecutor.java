@@ -1,7 +1,6 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.processor.conformance.ScriptedContractsRuntime;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
@@ -9,11 +8,13 @@ import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +38,9 @@ final class ScopeExecutor {
     private final DocumentProcessingRuntime runtime;
     private final Map<String, ContractBundle> bundles;
     private final ChannelRunner channelRunner;
+    private boolean drainingInternalEvents;
+    private boolean internalEventDrainRequested;
+    private int internalEventDrainDeferralDepth;
 
     ScopeExecutor(DocumentProcessor owner,
                   ProcessorEngine.Execution execution,
@@ -74,7 +78,7 @@ final class ScopeExecutor {
                 return;
             }
         } catch (IllegalStateException ex) {
-            execution.enterFatalTermination(normalizedScope,
+            execution.abortRuntimeFailure(normalizedScope,
                     null,
                     ProcessorErrorCategory.InvalidReservedMarker,
                     execution.fatalReason(ex, "Invalid terminated marker"));
@@ -94,28 +98,17 @@ final class ScopeExecutor {
                 return;
             }
 
-            try {
-                bundle = loadBundle(scopeNode, normalizedScope, metrics);
-            } catch (RuntimeException failure) {
-                ProcessorErrorCategory category = ScopeIdentityErrorMapper.from(failure);
-                if (category != ProcessorErrorCategory.ProviderUnavailable
-                        && category != ProcessorErrorCategory.ProviderBlueIdMismatch) {
-                    throw failure;
-                }
-                execution.enterFatalTermination(normalizedScope,
-                        null,
-                        category,
-                        execution.fatalReason(failure,
-                                "Contract Recognition Resolution failed"));
-                return;
-            }
+            bundle = loadBundle(
+                    scopeNode,
+                    normalizedScope,
+                    metrics);
             bundles.put(normalizedScope, bundle);
 
             String childScope;
             try {
                 childScope = nextEmbeddedChildScope(normalizedScope, bundle, processedEmbedded);
             } catch (ProcessorEngine.BoundaryViolationException | IllegalArgumentException ex) {
-                execution.enterFatalTermination(normalizedScope,
+                execution.abortRuntimeFailure(normalizedScope,
                         bundle,
                         ProcessorErrorCategory.BoundaryViolation,
                         execution.fatalReason(ex, "Invalid embedded path"));
@@ -127,12 +120,15 @@ final class ScopeExecutor {
 
             processedEmbedded.add(childScope);
             scopeContext.recordProcessedEmbeddedPath(childScope);
+            runtime.attachScopeOccurrence(
+                    normalizedScope,
+                    childScope);
             runtime.setScopeEmbeddedDepth(childScope, runtime.scopeEmbeddedDepth(normalizedScope) + 1);
             FrozenNode selectedChildNode = runtime.selectedFrozenAt(childScope);
             FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
                 if (!isObjectScope(selectedChildNode) || !isObjectScope(childNode)) {
-                    execution.enterFatalTermination(normalizedScope,
+                    execution.abortRuntimeFailure(normalizedScope,
                             bundle,
                             ProcessorErrorCategory.BoundaryViolation,
                             "Embedded path " + childScope + " does not select an object scope");
@@ -155,124 +151,278 @@ final class ScopeExecutor {
             return;
         }
 
-        runtime.chargeInitialization();
+        runtime.chargeInitialization(normalizedScope);
         String documentId;
         try {
             documentId = runtime.calculatePreInitializationScopeContentBlueId(
                     normalizedScope, owner.scopeIdentitySnapshotManager());
         } catch (RuntimeException ex) {
-            execution.enterFatalTermination(normalizedScope,
+            execution.abortRuntimeFailure(normalizedScope,
                     bundle,
                     ScopeIdentityErrorMapper.from(ex),
-                    execution.fatalReason(ex, "Scope Content BlueId calculation failed"));
+                    execution.fatalReason(
+                            ex,
+                            "Exact scope identity calculation failed"));
             return;
         }
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
-        ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
-        if (!execution.shouldStopScopeWork(normalizedScope)) {
-            addInitializationMarker(context, documentId);
-        }
         if (finalizeAfterInitialization && !execution.shouldStopScopeWork(normalizedScope)) {
-            ContractBundle refreshed = refreshBundle(normalizedScope);
-            finalizeScope(normalizedScope, refreshed);
+            drainInternalEvents();
+        }
+        if (!execution.shouldStopScopeWork(normalizedScope)) {
+            addInitializationMarker(normalizedScope, documentId);
         }
     }
 
-    void loadBundles(String scopePath) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        ProcessingMetricsSink metrics = owner.metricsSink();
-        metrics.incrementBundleScopeLoadAttempts();
-        if (bundles.containsKey(normalizedScope)) {
-            metrics.incrementBundleScopeExecutionCacheHits();
-            return;
-        }
-        try {
-            long terminationStart = System.nanoTime();
-            if (runtime.hasTerminationMarker(normalizedScope)) {
-                bundles.put(normalizedScope, ContractBundle.empty());
-                return;
-            }
-            metrics.addBundleScopeTerminationCheckNanos(System.nanoTime() - terminationStart);
-        } catch (IllegalStateException ex) {
-            throw new MustUnderstandFailureException(ex.getMessage());
-        }
-        long resolvedStart = System.nanoTime();
-        FrozenNode scopeNode;
-        try {
-            scopeNode = runtime.resolvedFrozenAt(normalizedScope);
-        } finally {
-            metrics.addBundleScopeResolvedLookupNanos(System.nanoTime() - resolvedStart);
-        }
-        ContractBundle bundle = scopeNode != null
-                ? loadBundle(scopeNode, normalizedScope, metrics)
-                : ContractBundle.empty();
-        bundles.put(normalizedScope, bundle);
-        for (String embeddedPointer : bundle.embeddedPaths()) {
-            String childScope = ProcessorEngine.resolvePointer(normalizedScope, embeddedPointer);
-            loadBundles(childScope);
-        }
-    }
-
-    void processExternalEvent(String scopePath, Node event) {
+    /**
+     * Executes one externally preselected occurrence without recursively
+     * discovering unrelated channels or implicitly initializing the scope.
+     */
+    void processEvidenceDelivery(String scopePath,
+                                 String channelKey,
+                                 Node event) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         if (execution.shouldStopScopeWork(normalizedScope)) {
             return;
         }
-        if ("/".equals(normalizedScope)) {
-            runtime.setScopeEmbeddedDepth(normalizedScope, 0);
-        }
-        runtime.chargeScopeEntry(normalizedScope);
         try {
             if (runtime.hasTerminationMarker(normalizedScope)) {
                 runtime.markScopeTerminatedFromMarker(normalizedScope);
                 return;
             }
         } catch (IllegalStateException ex) {
-            ContractBundle bundle = bundles.get(normalizedScope);
-            execution.enterFatalTermination(normalizedScope,
-                    bundle,
+            execution.abortRuntimeFailure(
+                    normalizedScope,
+                    bundles.get(normalizedScope),
                     ProcessorErrorCategory.InvalidReservedMarker,
                     execution.fatalReason(ex, "Invalid terminated marker"));
             return;
         }
-        ContractBundle bundle = processEmbeddedChildren(normalizedScope, event);
+        ContractBundle bundle = bundles.get(normalizedScope);
         if (bundle == null) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery scope was not preflighted: "
+                            + normalizedScope);
+        }
+        if (bundle == null) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery scope disappeared: " + normalizedScope);
+        }
+        ContractBundle.ChannelBinding channel =
+                bundle.channelBinding(channelKey);
+        if (channel == null
+                || ProcessorContractConstants.isProcessorManagedChannel(
+                channel.contract())) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery occurrence is not executable at "
+                            + normalizedScope + "/" + channelKey);
+        }
+        channelRunner.runExternalChannel(
+                normalizedScope, bundle, channel, event);
+        drainInternalEvents();
+        channelRunner.persistPendingCheckpoints(normalizedScope);
+    }
+
+    ContractBundle externalClassificationBundle(
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded) {
+        String normalizedScope =
+                ProcessorEngine.normalizeScope(scopePath);
+        FrozenNode selected =
+                execution.classificationSelectedAt(normalizedScope);
+        FrozenNode resolved =
+                execution.classificationResolvedAt(normalizedScope);
+        if (!isValidParticipatingScope(
+                normalizedScope, selected)
+                || !isValidParticipatingScope(
+                normalizedScope, resolved)) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery scope is absent or not an object: "
+                            + normalizedScope);
+        }
+        return owner.contractLoader().loadExternalClassification(
+                selected,
+                resolved,
+                normalizedScope,
+                channelKey,
+                includeProcessEmbedded,
+                owner.metricsSink(),
+                execution.contractRecognitionMeter(),
+                includeProcessEmbedded
+                        ? "structural-route-header"
+                        : "external-channel-header");
+    }
+
+    ChannelRunner.ExternalClassification classifyEvidenceDelivery(
+            String scopePath,
+            String channelKey,
+            Node event,
+            ContractBundle classificationBundle) {
+        String normalizedScope =
+                ProcessorEngine.normalizeScope(scopePath);
+        ContractBundle.ChannelBinding channel =
+                classificationBundle != null
+                        ? classificationBundle.channelBinding(
+                        channelKey)
+                        : null;
+        if (channel == null
+                || ProcessorContractConstants
+                .isProcessorManagedChannel(
+                        channel.contract())) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery occurrence is not executable at "
+                            + normalizedScope + "/" + channelKey);
+        }
+        return channelRunner.classifyExternalChannel(
+                normalizedScope,
+                classificationBundle,
+                channel,
+                event);
+    }
+
+    void processClassifiedEvidenceDelivery(
+            ChannelRunner.ExternalClassification classification) {
+        if (classification == null
+                || !classification.acceptedNew()) {
             return;
         }
-        if (!runtime.hasInitializationMarker(normalizedScope)) {
-            initializeScope(normalizedScope, false, false);
-            if (execution.shouldStopScopeWork(normalizedScope)) {
-                return;
-            }
-            bundle = refreshBundle(normalizedScope);
-            if (bundle == null) {
-                return;
-            }
-        }
-        long channelDiscoveryStart = System.nanoTime();
-        List<ContractBundle.ChannelBinding> channels = bundle.channelsOfType(ChannelContract.class);
-        owner.metricsSink().addChannelDiscoveryNanos(System.nanoTime() - channelDiscoveryStart);
-        if (channels.isEmpty()) {
-            finalizeScope(normalizedScope, bundle);
+        String normalizedScope =
+                ProcessorEngine.normalizeScope(
+                        classification.scopePath());
+        if (execution.shouldStopScopeWork(normalizedScope)) {
             return;
         }
-        long externalCandidateCount = channels.stream()
-                .filter(channel -> !ProcessorContractConstants.isProcessorManagedChannel(channel.contract()))
-                .count();
-        if (externalCandidateCount > 1) {
-            runtime.addGas(1L);
+        ContractBundle bundle = bundles.get(normalizedScope);
+        if (bundle == null) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery scope was not preflighted: "
+                            + normalizedScope);
         }
-        for (ContractBundle.ChannelBinding channel : channels) {
-            if (execution.shouldStopScopeWork(normalizedScope)) {
-                break;
-            }
-            if (ProcessorContractConstants.isProcessorManagedChannel(channel.contract())) {
-                continue;
-            }
-            channelRunner.runExternalChannel(normalizedScope, bundle, channel, event);
+        ContractBundle.ChannelBinding channel =
+                bundle.channelBinding(
+                        classification.channelKey());
+        if (channel == null
+                || ProcessorContractConstants
+                .isProcessorManagedChannel(
+                        channel.contract())) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery occurrence changed before execution at "
+                            + normalizedScope + "/"
+                            + classification.channelKey());
         }
-        finalizeScope(normalizedScope, bundle);
+        channelRunner.runClassifiedExternalChannel(
+                classification);
+        drainInternalEvents();
+        channelRunner.persistPendingCheckpoints(
+                normalizedScope);
+    }
+
+    ContractBundle preflightEvidenceScope(String scopePath) {
+        return preflightEvidenceScope(scopePath, true);
+    }
+
+    ContractBundle preflightEvidenceScopeAfterSelectedHeaders(
+            String scopePath) {
+        return preflightEvidenceScope(scopePath, false);
+    }
+
+    private ContractBundle preflightEvidenceScope(
+            String scopePath,
+            boolean preflightSelectedHeaders) {
+        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        FrozenNode selected = runtime.selectedFrozenAt(normalizedScope);
+        try {
+            /*
+             * Classify directly present headers before effective resolution.
+             * Otherwise an unknown direct type with no provider body is
+             * misreported as malformed evidence rather than must-understand.
+             */
+            if (preflightSelectedHeaders) {
+                owner.contractLoader().preflightSelectedContractHeaders(
+                        selected);
+            }
+            FrozenNode resolved =
+                    runtime.resolvedFrozenAt(normalizedScope);
+            if (!isValidParticipatingScope(
+                    normalizedScope, selected)
+                    || !isValidParticipatingScope(
+                    normalizedScope, resolved)) {
+                throw new InvalidExecutionEvidenceException(
+                        "Participating scope is absent or not an object: "
+                                + normalizedScope);
+            }
+            if (runtime.hasTerminationMarker(normalizedScope)) {
+                throw new InvalidExecutionEvidenceException(
+                        "Participating scope is directly terminated: "
+                                + normalizedScope);
+            }
+            return refreshBundle(normalizedScope, false);
+        } catch (InvalidExecutionEvidenceException exception) {
+            throw exception;
+        } catch (MustUnderstandFailureException exception) {
+            /*
+             * The feeder identifies the participating closure; support for
+             * every effective contract in that closure is a processor
+             * capability question, not malformed feeder evidence.
+             */
+            throw exception;
+        } catch (RuntimeException exception) {
+            ProcessorErrorCategory providerCategory =
+                    ScopeIdentityErrorMapper.from(exception);
+            if (providerCategory
+                    == ProcessorErrorCategory.ProviderUnavailable
+                    || providerCategory
+                    == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+                throw exception;
+            }
+            throw new InvalidExecutionEvidenceException(
+                    "Participating scope preflight failed at "
+                            + normalizedScope + ": "
+                            + ProcessorEngine.deterministicMessage(
+                            exception, "unsupported contract"));
+        }
+    }
+
+    void preflightSelectedHeaders(String scopePath) {
+        String normalizedScope =
+                ProcessorEngine.normalizeScope(scopePath);
+        owner.contractLoader().preflightSelectedContractHeaders(
+                runtime.selectedFrozenAt(normalizedScope));
+    }
+
+    ContractBundle initializeEvidenceScope(String scopePath) {
+        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        if (execution.shouldStopScopeWork(normalizedScope)) {
+            return null;
+        }
+        if (runtime.hasTerminationMarker(normalizedScope)) {
+            runtime.markScopeTerminatedFromMarker(normalizedScope);
+            return null;
+        }
+        ContractBundle bundle = bundles.get(normalizedScope);
+        if (bundle == null) {
+            bundle = preflightEvidenceScope(normalizedScope);
+        }
+        if (runtime.hasInitializationMarker(normalizedScope)) {
+            return bundle;
+        }
+        runtime.chargeInitialization(normalizedScope);
+        String documentId = runtime.calculatePreInitializationScopeContentBlueId(
+                normalizedScope, owner.scopeIdentitySnapshotManager());
+        Node lifecycleEvent =
+                ProcessorEngine.createLifecycleInitiatedEvent(documentId);
+        deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
+        if (execution.shouldStopScopeWork(normalizedScope)) {
+            return null;
+        }
+        drainInternalEvents();
+        if (execution.shouldStopScopeWork(normalizedScope)) {
+            return null;
+        }
+        addInitializationMarker(normalizedScope, documentId);
+        return refreshBundle(normalizedScope);
     }
 
     void handlePatch(String scopePath,
@@ -332,21 +482,22 @@ final class ScopeExecutor {
                     long boundaryStart = System.nanoTime();
                     validatePatchBoundary(scopePath, bundle, patch);
                     enforceReservedKeyWriteProtection(scopePath, patch, allowReservedMutation);
+                    preflightDirectContractMutation(scopePath, patch);
                     owner.metricsSink().addPatchBoundaryNanos(System.nanoTime() - boundaryStart);
                 } catch (ProcessorEngine.BoundaryViolationException ex) {
-                    execution.enterFatalTermination(scopePath,
+                    execution.abortRuntimeFailure(scopePath,
                             bundle,
                             ProcessorErrorCategory.BoundaryViolation,
                             execution.fatalReason(ex, "Boundary violation"));
                     return;
                 } catch (ProcessorFailureException ex) {
-                    execution.enterFatalTermination(scopePath,
+                    execution.abortRuntimeFailure(scopePath,
                             bundle,
                             ex.errorCategory(),
                             execution.fatalReason(ex, "Runtime fatal"));
                     return;
                 } catch (IllegalArgumentException ex) {
-                    execution.enterFatalTermination(scopePath,
+                    execution.abortRuntimeFailure(scopePath,
                             bundle,
                             ProcessorErrorCategory.InvalidPatch,
                             execution.fatalReason(ex, "Boundary violation"));
@@ -354,6 +505,8 @@ final class ScopeExecutor {
                 }
                 try {
                     long gasStart = System.nanoTime();
+                    runtime.recordPatchSemanticDemands(
+                            patch.authoredPath());
                     chargePatchGas(patch);
                     owner.metricsSink().addPatchGasNanos(System.nanoTime() - gasStart);
                     List<DocumentProcessingRuntime.DocumentUpdateData> updates =
@@ -367,37 +520,41 @@ final class ScopeExecutor {
                     }
                     owner.metricsSink().addDocumentUpdateRoutingNanos(System.nanoTime() - routingStart);
                 } catch (ProcessorEngine.BoundaryViolationException ex) {
-                    execution.enterFatalTermination(scopePath,
+                    execution.abortRuntimeFailure(scopePath,
                             bundle,
                             ProcessorErrorCategory.BoundaryViolation,
                             execution.fatalReason(ex, "Boundary violation"));
                     return;
                 } catch (MustUnderstandFailureException ex) {
-                    execution.enterFatalTermination(scopePath,
+                    execution.abortRuntimeFailure(scopePath,
                             bundle,
                             ex.errorCategory(),
                             execution.fatalReason(ex, "Unsupported runtime contract"));
                     return;
                 } catch (ProcessorFailureException ex) {
-                    execution.enterFatalTermination(scopePath,
+                    execution.abortRuntimeFailure(scopePath,
                             bundle,
                             ex.errorCategory(),
                             execution.fatalReason(ex, "Runtime fatal"));
                     return;
                 } catch (IllegalArgumentException | IllegalStateException ex) {
-                    execution.enterFatalTermination(scopePath,
+                    execution.abortRuntimeFailure(scopePath,
                             bundle,
                             execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
                             execution.fatalReason(ex, "Runtime fatal"));
                     return;
                 }
             }
+        } catch (GasLimitExceededException
+                 | PortableLimitExceededException
+                 | SubscriptionSurfaceInvalidException ex) {
+            throw ex;
         } catch (RunTerminationException ex) {
             // Root-scope fatal termination is the processor's control-flow signal.
             // Do not reinterpret it as a snapshot-publication failure.
             throw ex;
         } catch (RuntimeException ex) {
-            execution.enterFatalTermination(scopePath,
+            execution.abortRuntimeFailure(scopePath,
                     bundle,
                     execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
                     execution.fatalReason(ex, "Snapshot publication failed"));
@@ -429,13 +586,29 @@ final class ScopeExecutor {
         if (data == null) {
             return;
         }
-        ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
-        if (scriptedRuntime != null) {
-            scriptedRuntime.recordDocumentUpdate(runtime, data.path(), data.before(), data.after());
+        /*
+         * Freeze the participating scope chain before any cascade handler can
+         * replace or cut off its source. Object-path ancestors that were never
+         * activated through Process Embedded are not receiving scopes.
+         */
+        List<String> receivingChain =
+                freezeDocumentUpdateReceivingChain(data);
+        for (String cascadeScope : receivingChain) {
+            java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
+            details.put("op", data.op().name().toLowerCase());
+            details.put("beforePresent", data.beforePresent());
+            details.put("afterPresent", data.afterPresent());
+            details.put("sourceScopePath", data.originScope());
+            runtime.recordTrace(ProcessingTraceRecord.Kind.DOCUMENT_UPDATE,
+                    cascadeScope,
+                    null,
+                    data.path(),
+                    details,
+                    null);
         }
         markCutOffChildrenIfNeeded(scopePath, bundle, data);
         List<DocumentUpdateParticipant> participants = new ArrayList<>();
-        for (String cascadeScope : data.cascadeScopes()) {
+        for (String cascadeScope : receivingChain) {
             if (execution.shouldStopScopeWork(cascadeScope)) {
                 continue;
             }
@@ -443,7 +616,16 @@ final class ScopeExecutor {
             try {
                 targetBundle = refreshBundle(cascadeScope);
             } catch (MustUnderstandFailureException ex) {
-                execution.enterFatalTermination(cascadeScope,
+                if (affectsEmbeddedSubscriptionSurface(
+                        cascadeScope, data.path())) {
+                    throw new SubscriptionSurfaceInvalidException(
+                            execution.fatalReason(
+                                    ex,
+                                    "Invalid changed Process Embedded surface"),
+                            cascadeScope,
+                            ProcessorContractConstants.KEY_EMBEDDED);
+                }
+                execution.abortRuntimeFailure(cascadeScope,
                         bundles.get(cascadeScope),
                         ex.errorCategory(),
                         execution.fatalReason(ex, "Unsupported runtime contract"));
@@ -473,7 +655,12 @@ final class ScopeExecutor {
             Node updateEvent = ProcessorEngine.createDocumentUpdateEvent(data, participant.scopePath);
             owner.metricsSink().incrementDocumentUpdateEventsBuilt();
             for (ContractBundle.ChannelBinding channel : participant.channels) {
-                channelRunner.runHandlers(participant.scopePath, participant.bundle, channel.key(), updateEvent);
+                channelRunner.runHandlers(
+                        participant.scopePath,
+                        participant.bundle,
+                        channel.key(),
+                        updateEvent,
+                        true);
                 if (execution.shouldStopScopeWork(participant.scopePath)) {
                     continue;
                 }
@@ -481,23 +668,79 @@ final class ScopeExecutor {
         }
     }
 
+    private boolean affectsEmbeddedSubscriptionSurface(
+            String scopePath,
+            String changedPath) {
+        String embeddedPaths = ProcessorEngine.resolvePointer(
+                scopePath,
+                ProcessorPointerConstants.RELATIVE_EMBEDDED
+                        + "/paths");
+        String normalizedChange =
+                PointerUtils.normalizePointer(changedPath);
+        return PointerUtils.descendantOrEqual(
+                normalizedChange, embeddedPaths)
+                || PointerUtils.descendantOrEqual(
+                embeddedPaths, normalizedChange);
+    }
+
+    private List<String> freezeDocumentUpdateReceivingChain(
+            DocumentProcessingRuntime.DocumentUpdateData data) {
+        List<String> result = new ArrayList<>();
+        String origin =
+                ProcessorEngine.normalizeScope(data.originScope());
+        for (String candidate : data.cascadeScopes()) {
+            String normalized =
+                    ProcessorEngine.normalizeScope(candidate);
+            boolean isEndpoint = normalized.equals(origin)
+                    || "/".equals(normalized);
+            if (!isEndpoint && !bundles.containsKey(normalized)) {
+                continue;
+            }
+            /*
+             * A lifecycle Handler result is applied while its scope is
+             * terminating. Its patches still own their complete synchronous
+             * Document Update cascade; only new ordinary Triggered/Embedded
+             * deliveries are excluded during termination.
+             */
+            if (!execution.shouldStopScopeWork(normalized)) {
+                result.add(normalized);
+            }
+        }
+        return Collections.unmodifiableList(result);
+    }
+
     void deliverLifecycle(String scopePath,
                           ContractBundle bundle,
                           Node event,
                           boolean finalizeAfter) {
-        runtime.chargeLifecycleDelivery();
-        execution.recordLifecycleForBridging(scopePath, event);
-        if (bundle == null) {
-            return;
-        }
-        for (ContractBundle.ChannelBinding channel : bundle.channelsOfType(LifecycleChannel.class)) {
-            channelRunner.runHandlers(scopePath, bundle, channel.key(), event);
-            if (execution.shouldStopScopeWork(scopePath)) {
-                break;
+        beginInternalEventDrainDeferral();
+        try {
+            runtime.chargeLifecycleDelivery();
+            runtime.recordTrace(ProcessingTraceRecord.Kind.LIFECYCLE,
+                    scopePath,
+                    null,
+                    null,
+                    Collections.emptyMap(),
+                    event);
+            if (bundle == null) {
+                return;
             }
-        }
-        if (finalizeAfter && !execution.shouldStopScopeWork(scopePath)) {
-            finalizeScope(scopePath, bundle);
+            for (ContractBundle.ChannelBinding channel
+                    : bundle.channelsOfType(
+                    LifecycleChannel.class)) {
+                channelRunner.runHandlers(
+                        scopePath,
+                        bundle,
+                        channel.key(),
+                        event,
+                        true);
+                if (execution.shouldStopScopeWork(
+                        scopePath)) {
+                    break;
+                }
+            }
+        } finally {
+            endInternalEventDrainDeferral();
         }
     }
 
@@ -507,64 +750,22 @@ final class ScopeExecutor {
         deliverLifecycle(scopePath, bundle, event, false);
     }
 
-    private ContractBundle processEmbeddedChildren(String scopePath, Node event) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        Set<String> processed = new LinkedHashSet<>();
-        ScopeRuntimeContext scopeContext = runtime.scope(normalizedScope);
-        scopeContext.clearProcessedEmbeddedPaths();
-        ContractBundle bundle = refreshBundle(normalizedScope);
-        while (bundle != null) {
-            String childScope;
-            try {
-                childScope = nextEmbeddedChildScope(normalizedScope, bundle, processed);
-            } catch (ProcessorEngine.BoundaryViolationException | IllegalArgumentException ex) {
-                execution.enterFatalTermination(normalizedScope,
-                        bundle,
-                        ProcessorErrorCategory.BoundaryViolation,
-                        execution.fatalReason(ex, "Invalid embedded path"));
-                return null;
-            }
-            if (childScope == null) {
-                return bundle;
-            }
-            processed.add(childScope);
-            scopeContext.recordProcessedEmbeddedPath(childScope);
-            runtime.setScopeEmbeddedDepth(childScope, runtime.scopeEmbeddedDepth(normalizedScope) + 1);
-            if (execution.shouldStopScopeWork(childScope)) {
-                bundle = refreshBundle(normalizedScope);
-                continue;
-            }
-            FrozenNode selectedChildNode = runtime.selectedFrozenAt(childScope);
-            FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
-            if (childNode != null) {
-                if (!isObjectScope(selectedChildNode) || !isObjectScope(childNode)) {
-                    execution.enterFatalTermination(normalizedScope,
-                            bundle,
-                            ProcessorErrorCategory.BoundaryViolation,
-                            "Embedded path " + childScope + " does not select an object scope");
-                    return null;
-                }
-                ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
-                if (scriptedRuntime != null) {
-                    scriptedRuntime.recordEmbeddedScopeDelivery(childScope);
-                }
-                processExternalEvent(childScope, event);
-                if (scriptedRuntime != null) {
-                    for (Node emission : scriptedRuntime.childEmissions(childScope)) {
-                        runtime.scope(childScope).recordBridgeable(emission);
-                    }
-                }
-            }
-            bundle = refreshBundle(normalizedScope);
-        }
-        return null;
+    private ContractBundle refreshBundle(String scopePath) {
+        return refreshBundle(scopePath, true);
     }
 
-    private ContractBundle refreshBundle(String scopePath) {
+    private ContractBundle refreshBundle(
+            String scopePath,
+            boolean preflightSelectedHeaders) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         ProcessingMetricsSink metrics = owner.metricsSink();
         metrics.incrementBundleScopeRefreshes();
         long resolvedStart = System.nanoTime();
+        FrozenNode selectedScope = selectedScopeAt(normalizedScope);
+        if (preflightSelectedHeaders) {
+            owner.contractLoader().preflightSelectedContractHeaders(
+                    selectedScope);
+        }
         FrozenNode scopeNode;
         try {
             scopeNode = runtime.resolvedFrozenAt(normalizedScope);
@@ -583,11 +784,22 @@ final class ScopeExecutor {
     private ContractBundle loadBundle(FrozenNode scopeNode, String normalizedScope, ProcessingMetricsSink metrics) {
         long loadStart = System.nanoTime();
         try {
-            FrozenNode selectedScope = selectedScopeAt(normalizedScope);
+            FrozenNode selectedScope =
+                    selectedScopeAt(normalizedScope);
             FrozenNode recognitionScope = runtime.contractRecognitionScope(
                     selectedScope, scopeNode);
-            return owner.contractLoader().load(
-                    selectedScope, recognitionScope, normalizedScope, metrics);
+            ContractBundle loaded = owner.contractLoader().load(
+                    selectedScope,
+                    recognitionScope,
+                    normalizedScope,
+                    metrics,
+                    execution.contractRecognitionMeter(),
+                    "participating-contract-header");
+            for (EffectiveContractSnapshot snapshot
+                    : loaded.effectiveContractSnapshots()) {
+                runtime.recordContractSnapshot(snapshot);
+            }
+            return loaded;
         } finally {
             metrics.addBundleScopeContractLoadNanos(System.nanoTime() - loadStart);
         }
@@ -622,115 +834,296 @@ final class ScopeExecutor {
         return node != null
                 && node.getValue() == null
                 && !node.hasItems()
-                && node.getReferenceBlueId() == null
-                && node.getPreviousBlueId() == null;
+                && !node.isReferenceOnly();
     }
 
-    private void addInitializationMarker(ProcessorExecutionContext context, String documentId) {
+    private boolean isValidParticipatingScope(
+            String scopePath,
+            FrozenNode node) {
+        if (node == null || node.isReferenceOnly()) {
+            return false;
+        }
+        return "/".equals(
+                ProcessorEngine.normalizeScope(scopePath))
+                || isObjectScope(node);
+    }
+
+    private void addInitializationMarker(String scopePath, String documentId) {
         FrozenNode marker = ProcessorMarkerFactory.initialized(documentId);
-        String pointer = context.resolvePointer(ProcessorPointerConstants.RELATIVE_INITIALIZED);
-        context.applyFrozenPatch(FrozenJsonPatch.add(pointer, marker));
-        context.applyBufferedEffects();
+        String pointer = ProcessorEngine.resolvePointer(
+                scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        /*
+         * Processor-owned initialization state is a Direct Write. Contracts
+         * 1.0 §9.3/C-INIT-05 requires no Document Update for this marker.
+         */
+        runtime.chargeProcessorMarkerWritten("initialization-marker");
+        runtime.directWrite(pointer, marker.toNode());
+        runtime.recordTrace(ProcessingTraceRecord.Kind.MARKER_WRITE,
+                scopePath,
+                ProcessorContractConstants.KEY_INITIALIZED,
+                pointer);
     }
 
-    private void finalizeScope(String scopePath, ContractBundle bundle) {
-        if (bundle == null) {
-            return;
-        }
-        if (execution.shouldStopScopeWork(scopePath)) {
-            return;
-        }
-        bridgeEmbeddedEmissions(scopePath, bundle);
-        drainTriggeredQueue(scopePath, bundle);
-    }
-
-    private void bridgeEmbeddedEmissions(String scopePath, ContractBundle bundle) {
-        if (execution.shouldStopScopeWork(scopePath)) {
-            return;
-        }
-        ScopeRuntimeContext parentContext = runtime.scope(scopePath);
-        List<String> processedChildScopes = parentContext.processedEmbeddedPaths();
-        if (processedChildScopes.isEmpty()) {
-            return;
-        }
-        for (String childScope : processedChildScopes) {
-            ScopeRuntimeContext childContext = runtime.scope(childScope);
-            List<Node> emissions = childContext.drainBridgeableEvents();
-            if (emissions.isEmpty()) {
+    void cleanupCheckpointState() {
+        List<String> scopes = new ArrayList<>(bundles.keySet());
+        Collections.sort(scopes,
+                (left, right) -> {
+                    int depth = Integer.compare(
+                            JsonPointer.split(right).size(),
+                            JsonPointer.split(left).size());
+                    return depth != 0
+                            ? depth
+                            : ExternalOrderKey.compareTextCodePoints(left, right);
+                });
+        for (String scopePath : scopes) {
+            if (execution.shouldStopScopeWork(scopePath)) {
                 continue;
             }
-            for (Node emission : emissions) {
-                ContractBundle currentBundle = refreshBundle(scopePath);
-                List<ContractBundle.ChannelBinding> embeddedChannels = currentBundle != null
-                        ? currentBundle.channelsOfType(EmbeddedNodeChannel.class)
-                        : Collections.emptyList();
-                boolean charged = false;
-                List<String> deliveredChannels = new ArrayList<>();
-                for (ContractBundle.ChannelBinding channel : embeddedChannels) {
-                    EmbeddedNodeChannel enc = (EmbeddedNodeChannel) channel.contract();
-                    String configuredChild = enc.getChildPath() != null ? enc.getChildPath() : "/";
-                    String resolvedChild = ProcessorEngine.resolvePointer(scopePath, configuredChild);
-                    if (!resolvedChild.equals(childScope)) {
-                        continue;
-                    }
-                    if (!charged) {
-                        runtime.chargeBridge(emission);
-                        charged = true;
-                    }
-                    deliveredChannels.add(channel.key());
-                    channelRunner.runHandlers(scopePath, currentBundle, channel.key(), emission.clone());
-                }
-                ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
-                if (scriptedRuntime != null) {
-                    scriptedRuntime.recordEmbeddedBridgeDelivery(emission, deliveredChannels);
-                    scriptedRuntime.afterBridgeEmission(scopePath, runtime, emission);
-                }
+            ContractBundle bundle = refreshBundle(scopePath);
+            if (bundle != null) {
+                channelRunner.cleanupInactiveCheckpoints(scopePath, bundle);
             }
         }
     }
 
-    private void drainTriggeredQueue(String scopePath, ContractBundle bundle) {
-        long routingStart = System.nanoTime();
+    void requestInternalEventDrain() {
+        if (drainingInternalEvents) {
+            return;
+        }
+        internalEventDrainRequested = true;
+        if (internalEventDrainDeferralDepth == 0) {
+            drainInternalEvents();
+        }
+    }
+
+    void drainInternalEvents() {
+        if (drainingInternalEvents) {
+            return;
+        }
+        if (internalEventDrainDeferralDepth > 0) {
+            internalEventDrainRequested = true;
+            return;
+        }
+        internalEventDrainRequested = false;
+        boolean quiescent = false;
+        drainingInternalEvents = true;
         try {
-            if (execution.shouldStopScopeWork(scopePath)) {
-                return;
-            }
-            ScopeRuntimeContext context = runtime.scope(scopePath);
-            if (context.triggeredQueue().isEmpty()) {
-                return;
-            }
-            while (!context.triggeredQueue().isEmpty()) {
-                Node next = context.triggeredQueue().pollFirst();
-                ContractBundle currentBundle = refreshBundle(scopePath);
-                List<ContractBundle.ChannelBinding> triggeredChannels = currentBundle != null
-                        ? currentBundle.channelsOfType(TriggeredEventChannel.class)
-                        : Collections.emptyList();
-                owner.metricsSink().incrementTriggeredEventsRouted();
-                if (triggeredChannels.isEmpty()) {
-                    continue;
+            while (runtime.hasPendingEventOccurrences()
+                    && !execution.hasFailure()
+                    && !rootIsCutOff()) {
+                EventOccurrence occurrence =
+                        runtime.pollEventOccurrence();
+                if (occurrence == null) {
+                    break;
                 }
                 runtime.chargeDrainEvent();
-                List<String> deliveredChannels = new ArrayList<>();
-                for (ContractBundle.ChannelBinding channel : triggeredChannels) {
-                    if (execution.shouldStopScopeWork(scopePath)) {
-                        context.triggeredQueue().clear();
-                        return;
-                    }
-                    deliveredChannels.add(channel.key());
-                    channelRunner.runHandlers(scopePath, currentBundle, channel.key(), next.clone());
-                    if (execution.shouldStopScopeWork(scopePath)) {
-                        context.triggeredQueue().clear();
-                        return;
-                    }
+                Map<String, Object> details =
+                        new java.util.LinkedHashMap<>();
+                details.put("drainOwner",
+                        "invocation-event-fifo");
+                details.put("sourceScopePath",
+                        occurrence.source().scopePath());
+                runtime.recordTrace(
+                        ProcessingTraceRecord.Kind.EVENT_DEQUEUED,
+                        occurrence.source().scopePath(),
+                        occurrence.emittingContractKey(),
+                        null,
+                        details,
+                        occurrence.event());
+
+                if (occurrence.sourceMode()
+                        == EventOccurrence.SourceMode.TRIGGERED
+                        && execution.canDeliverOccurrenceLocally(
+                        occurrence.source())) {
+                    deliverTriggeredOccurrence(occurrence);
                 }
-                ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
-                if (scriptedRuntime != null) {
-                    scriptedRuntime.recordTriggeredDelivery(next, deliveredChannels);
+                for (ScopeRuntimeContext ancestor
+                        : occurrence.frozenAncestors()) {
+                    if (execution.canDeliverOccurrenceLocally(
+                            ancestor)) {
+                        deliverEmbeddedOccurrence(
+                                ancestor, occurrence);
+                    }
+                    if (execution.rootIsTerminated()) {
+                        break;
+                    }
                 }
             }
+            quiescent = !runtime.hasPendingEventOccurrences()
+                    && !execution.hasFailure();
         } finally {
-            owner.metricsSink().addTriggeredEventRoutingNanos(System.nanoTime() - routingStart);
+            drainingInternalEvents = false;
         }
+        if (quiescent) {
+            execution.completePendingTerminations();
+        }
+    }
+
+    private void beginInternalEventDrainDeferral() {
+        internalEventDrainDeferralDepth++;
+    }
+
+    private void endInternalEventDrainDeferral() {
+        if (internalEventDrainDeferralDepth <= 0) {
+            throw new IllegalStateException(
+                    "Internal event drain deferral underflow");
+        }
+        internalEventDrainDeferralDepth--;
+        if (internalEventDrainDeferralDepth == 0
+                && internalEventDrainRequested
+                && !drainingInternalEvents) {
+            drainInternalEvents();
+        }
+    }
+
+    private boolean rootIsCutOff() {
+        ScopeRuntimeContext root =
+                runtime.existingScope("/");
+        return root != null && root.isCutOff();
+    }
+
+    private void deliverTriggeredOccurrence(
+            EventOccurrence occurrence) {
+        long routingStart = System.nanoTime();
+        try {
+            String sourcePath =
+                    occurrence.source().scopePath();
+            ContractBundle currentBundle =
+                    refreshBundle(sourcePath);
+            List<ContractBundle.ChannelBinding> channels =
+                    currentBundle != null
+                            ? currentBundle.channelsOfType(
+                            TriggeredEventChannel.class)
+                            : Collections.emptyList();
+            owner.metricsSink()
+                    .incrementTriggeredEventsRouted();
+            for (ContractBundle.ChannelBinding channel
+                    : channels) {
+                if (!execution.canDeliverOccurrenceLocally(
+                        occurrence.source())) {
+                    return;
+                }
+                TriggeredEventChannel triggered =
+                        (TriggeredEventChannel)
+                                channel.contract();
+                if (!matchesEventPattern(
+                        occurrence, triggered.getEvent())) {
+                    continue;
+                }
+                runtime.chargeTriggeredDelivery();
+                Map<String, Object> details =
+                        new java.util.LinkedHashMap<>();
+                details.put("mode", "triggered");
+                details.put("sourceScopePath",
+                        sourcePath);
+                runtime.recordTrace(
+                        ProcessingTraceRecord.Kind.EVENT_DELIVERED,
+                        sourcePath,
+                        channel.key(),
+                        null,
+                        details,
+                        occurrence.event());
+                channelRunner.runHandlers(
+                        sourcePath,
+                        currentBundle,
+                        channel.key(),
+                        occurrence.event());
+            }
+        } finally {
+            owner.metricsSink()
+                    .addTriggeredEventRoutingNanos(
+                            System.nanoTime()
+                                    - routingStart);
+        }
+    }
+
+    private void deliverEmbeddedOccurrence(
+            ScopeRuntimeContext receivingAncestor,
+            EventOccurrence occurrence) {
+        String receivingPath =
+                receivingAncestor.scopePath();
+        String sourcePath =
+                ProcessorEngine.relativizePointer(
+                        receivingPath,
+                        occurrence.source().scopePath());
+        Node wrapper = new Node()
+                .type(new Node().blueId(
+                        RuntimeBlueIds
+                                .EMBEDDED_EVENT_DELIVERY))
+                .properties(
+                        "sourcePath",
+                        new Node().value(sourcePath))
+                .properties(
+                        "event",
+                        new Node().blueId(
+                                occurrence.eventBlueId()));
+        ContractBundle currentBundle =
+                refreshBundle(receivingPath);
+        List<ContractBundle.ChannelBinding> channels =
+                currentBundle != null
+                        ? currentBundle.channelsOfType(
+                        EmbeddedNodeChannel.class)
+                        : Collections.emptyList();
+        for (ContractBundle.ChannelBinding channel
+                : channels) {
+            if (!execution.canDeliverOccurrenceLocally(
+                    receivingAncestor)) {
+                return;
+            }
+            EmbeddedNodeChannel embedded =
+                    (EmbeddedNodeChannel)
+                            channel.contract();
+            if (!matchesSourcePath(
+                    receivingPath,
+                    occurrence.source().scopePath(),
+                    embedded)
+                    || !matchesEventPattern(
+                    occurrence, embedded.getEvent())) {
+                continue;
+            }
+            runtime.chargeBridge(wrapper);
+            Map<String, Object> details =
+                    new java.util.LinkedHashMap<>();
+            details.put("mode", "embedded");
+            details.put("sourceScopePath",
+                    occurrence.source().scopePath());
+            details.put("sourcePath", sourcePath);
+            runtime.recordTrace(
+                    ProcessingTraceRecord.Kind.EVENT_DELIVERED,
+                    receivingPath,
+                    channel.key(),
+                    null,
+                    details,
+                    wrapper);
+            channelRunner.runHandlers(
+                    receivingPath,
+                    currentBundle,
+                    channel.key(),
+                    wrapper.clone());
+        }
+    }
+
+    private boolean matchesSourcePath(
+            String receivingPath,
+            String absoluteSourcePath,
+            EmbeddedNodeChannel channel) {
+        String configured = channel.getSourcePath();
+        if (configured == null) {
+            configured = channel.getChildPath();
+        }
+        return configured == null
+                || ProcessorEngine.resolvePointer(
+                receivingPath, configured)
+                .equals(absoluteSourcePath);
+    }
+
+    private boolean matchesEventPattern(
+            EventOccurrence occurrence,
+            Node pattern) {
+        return pattern == null
+                || owner.matchingService().matches(
+                occurrence.frozenEvent(),
+                FrozenNode.fromResolvedNode(pattern));
     }
 
     private void validatePatchBoundary(String scopePath, ContractBundle bundle, PatchInput patch) {
@@ -761,6 +1154,81 @@ final class ScopeExecutor {
                 throw new ProcessorEngine.BoundaryViolationException(
                         "Boundary violation: patch " + targetPath + " enters embedded scope " + embeddedScope);
             }
+            if (PointerUtils.strictlyInside(embeddedScope, targetPath)) {
+                throw new ProcessorEngine.BoundaryViolationException(
+                        "Boundary violation: patch " + targetPath
+                                + " is a strict ancestor of embedded scope "
+                                + embeddedScope);
+            }
+        }
+    }
+
+    private void preflightDirectContractMutation(
+            String scopePath,
+            PatchInput patch) {
+        if (patch.op() != JsonPatch.Op.ADD
+                && patch.op() != JsonPatch.Op.REPLACE) {
+            return;
+        }
+        String contractsPointer = ProcessorEngine.resolvePointer(
+                scopePath,
+                ProcessorPointerConstants.RELATIVE_CONTRACTS);
+        List<String> contractsSegments =
+                JsonPointer.split(contractsPointer);
+        List<String> targetSegments =
+                JsonPointer.split(patch.authoredPath());
+        FrozenNode value = patch.frozenValue();
+        if (value == null && patch.mutableValue() != null) {
+            value = FrozenNode.fromResolvedNode(
+                    patch.mutableValue());
+        }
+        if (value == null) {
+            return;
+        }
+        if (targetSegments.equals(contractsSegments)) {
+            if (value.getProperties() == null) {
+                return;
+            }
+            for (Map.Entry<String, FrozenNode> entry
+                    : value.getProperties().entrySet()) {
+                if (!ProcessorContractConstants
+                        .RESERVED_CONTRACT_KEYS.contains(
+                        entry.getKey())) {
+                    owner.contractLoader()
+                            .preflightDirectContractHeader(
+                            entry.getKey(), entry.getValue());
+                }
+            }
+            return;
+        }
+        if (targetSegments.size() == contractsSegments.size() + 1
+                && targetSegments.subList(
+                0, contractsSegments.size()).equals(
+                contractsSegments)) {
+            String key =
+                    targetSegments.get(contractsSegments.size());
+            if (!ProcessorContractConstants.RESERVED_CONTRACT_KEYS
+                    .contains(key)) {
+                owner.contractLoader().preflightDirectContractHeader(
+                        key, value);
+            }
+            return;
+        }
+        if (targetSegments.size() == contractsSegments.size() + 2
+                && targetSegments.subList(
+                0, contractsSegments.size()).equals(
+                contractsSegments)
+                && "type".equals(targetSegments.get(
+                targetSegments.size() - 1))) {
+            String key =
+                    targetSegments.get(contractsSegments.size());
+            if (!ProcessorContractConstants.RESERVED_CONTRACT_KEYS
+                    .contains(key)) {
+                owner.contractLoader().preflightDirectContractHeader(
+                        key,
+                        FrozenNode.fromResolvedNode(
+                                new Node().type(value.toNode())));
+            }
         }
     }
 
@@ -772,6 +1240,8 @@ final class ScopeExecutor {
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         String targetPath = PointerUtils.assertValidRuntimePointer(patch.authoredPath());
+        enforceInlineTypeProtectedStateMutation(
+                normalizedScope, targetPath, patch);
         String contractsPointer = ProcessorEngine.resolvePointer(normalizedScope, ProcessorPointerConstants.RELATIVE_CONTRACTS);
         if (targetPath.equals(contractsPointer)) {
             enforceContractsMapReservedSubtreePreservation(normalizedScope, patch);
@@ -793,11 +1263,55 @@ final class ScopeExecutor {
         }
     }
 
+    private void enforceInlineTypeProtectedStateMutation(
+            String scopePath,
+            String targetPath,
+            PatchInput patch) {
+        if ((patch.op() != JsonPatch.Op.ADD
+                && patch.op() != JsonPatch.Op.REPLACE)
+                || !targetPath.equals(ProcessorEngine.resolvePointer(
+                scopePath, "/type"))) {
+            return;
+        }
+        Node authoredContracts = patch.mutableValue() != null
+                ? patch.mutableValue().getContracts()
+                : null;
+        FrozenNode frozenContracts = patch.frozenValue() != null
+                ? patch.frozenValue().getContracts()
+                : null;
+        for (String protectedKey : java.util.Arrays.asList(
+                ProcessorContractConstants.KEY_INITIALIZED,
+                ProcessorContractConstants.KEY_TERMINATED,
+                ProcessorContractConstants.KEY_CHECKPOINT,
+                ProcessorContractConstants.KEY_EMBEDDED,
+                "generalization")) {
+            boolean present = authoredContracts != null
+                    && authoredContracts.getProperties() != null
+                    && authoredContracts.getProperties().containsKey(
+                    protectedKey);
+            if (!present) {
+                present = frozenContracts != null
+                        && frozenContracts.getProperties() != null
+                        && frozenContracts.getProperties().containsKey(
+                        protectedKey);
+            }
+            if (present) {
+                throw new ProcessorFailureException(
+                        ProcessorErrorCategory
+                                .ProtectedProcessorStateMutation,
+                        "Application type patch contributes protected "
+                                + "processor state at "
+                                + targetPath + "/contracts/"
+                                + JsonPointer.escape(protectedKey));
+            }
+        }
+    }
+
     private void enforceContractsMapReservedSubtreePreservation(String scopePath, PatchInput patch) {
         if (patch.op() == JsonPatch.Op.REMOVE) {
             for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
                 String reservedPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.relativeContractsEntry(key));
-                if (runtime.canonicalNodeAt(reservedPointer) != null) {
+                if (runtime.selectedFrozenAt(reservedPointer) != null) {
                     throw new ProcessorFailureException(ProcessorErrorCategory.ReservedKeyWrite,
                             "Replacing /contracts must preserve reserved key '" + key + "'");
                 }
@@ -810,7 +1324,8 @@ final class ScopeExecutor {
             String reservedPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.relativeContractsEntry(key));
             boolean equal;
             if (patch.isFrozen()) {
-                FrozenNode existing = runtime.canonicalFrozenAt(reservedPointer);
+                FrozenNode existing = runtime.selectedFrozenAt(
+                        reservedPointer);
                 if (existing == null) {
                     continue;
                 }
@@ -819,7 +1334,11 @@ final class ScopeExecutor {
                         : null;
                 equal = semanticallyEqual(existing, proposed);
             } else {
-                Node existing = runtime.canonicalNodeAt(reservedPointer);
+                FrozenNode selected = runtime.selectedFrozenAt(
+                        reservedPointer);
+                Node existing = selected != null
+                        ? selected.toNode()
+                        : null;
                 if (existing == null) {
                     continue;
                 }
@@ -868,6 +1387,12 @@ final class ScopeExecutor {
             }
             JsonPatch.Op op = data.op();
             if (op == JsonPatch.Op.REMOVE || op == JsonPatch.Op.REPLACE) {
+                if (op == JsonPatch.Op.REPLACE
+                        && data.beforePresent()
+                        && data.afterPresent()
+                        && semanticallyEqual(data.before(), data.after())) {
+                    continue;
+                }
                 execution.markCutOff(childScope);
             }
         }

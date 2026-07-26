@@ -11,14 +11,17 @@ import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.UncheckedObjectMapper;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
 
 public class SchemaPropagator implements MergingProcessor {
     
@@ -53,91 +56,161 @@ public class SchemaPropagator implements MergingProcessor {
 
 
     private void propagateMinLength(Schema source, Schema target) {
-        propagateMinValue(source.getMinLengthExact(), target::getMinLengthExact, target::minLength);
+        propagateMinValue(source.getMinLength(), source.getMinLengthExact(),
+                target.getMinLengthExact(),
+                node -> target.minLength(node));
     }
 
     private void propagateMaxLength(Schema source, Schema target) {
-        propagateMaxValue(source.getMaxLengthExact(), target::getMaxLengthExact, target::maxLength);
+        propagateMaxValue(source.getMaxLength(), source.getMaxLengthExact(),
+                target.getMaxLengthExact(),
+                node -> target.maxLength(node));
     }
 
     private void propagateMinimum(Schema source, Schema target) {
-        propagateMinValue(source.getMinimumValue(), target::getMinimumValue, target::minimum);
+        propagateMinValue(source.getMinimum(), source.getMinimumValue(),
+                target.getMinimumValue(),
+                node -> target.minimum(node));
     }
 
     private void propagateMaximum(Schema source, Schema target) {
-        propagateMaxValue(source.getMaximumValue(), target::getMaximumValue, target::maximum);
+        propagateMaxValue(source.getMaximum(), source.getMaximumValue(),
+                target.getMaximumValue(),
+                node -> target.maximum(node));
     }
 
     private void propagateExclusiveMinimum(Schema source, Schema target) {
-        propagateMinValue(source.getExclusiveMinimumValue(), target::getExclusiveMinimumValue, target::exclusiveMinimum);
+        propagateMinValue(source.getExclusiveMinimum(),
+                source.getExclusiveMinimumValue(),
+                target.getExclusiveMinimumValue(),
+                node -> target.exclusiveMinimum(node));
     }
 
     private void propagateExclusiveMaximum(Schema source, Schema target) {
-        propagateMaxValue(source.getExclusiveMaximumValue(), target::getExclusiveMaximumValue, target::exclusiveMaximum);
+        propagateMaxValue(source.getExclusiveMaximum(),
+                source.getExclusiveMaximumValue(),
+                target.getExclusiveMaximumValue(),
+                node -> target.exclusiveMaximum(node));
     }
 
     private void propagateRequired(Schema source, Schema target) {
-        propagateBoolean(source.getRequiredValue(), target::getRequiredValue, target::required, true);
+        propagateBoolean(source.getRequired(), source.getRequiredValue(),
+                target.getRequiredValue(),
+                node -> target.required(node), true);
     }
 
-    private <T extends Comparable<T>> void propagateMinValue(T sourceValue,
-                                                             Supplier<T> targetValueGetter, Consumer<T> targetValueSetter) {
+    private <T extends Comparable<T>> void propagateMinValue(
+            Node sourceNode, T sourceValue,
+            T targetValue,
+            Consumer<Node> targetNodeSetter) {
         if (sourceValue != null) {
-            T targetValue = targetValueGetter.get();
             if (targetValue == null || sourceValue.compareTo(targetValue) > 0) {
-                targetValueSetter.accept(sourceValue);
+                targetNodeSetter.accept(sourceNode.clone());
             }
         }
     }
 
-    private <T extends Comparable<T>> void propagateMaxValue(T sourceValue,
-                                                             Supplier<T> targetValueGetter, Consumer<T> targetValueSetter) {
+    private <T extends Comparable<T>> void propagateMaxValue(
+            Node sourceNode, T sourceValue,
+            T targetValue,
+            Consumer<Node> targetNodeSetter) {
         if (sourceValue != null) {
-            T targetValue = targetValueGetter.get();
             if (targetValue == null || sourceValue.compareTo(targetValue) < 0) {
-                targetValueSetter.accept(sourceValue);
+                targetNodeSetter.accept(sourceNode.clone());
             }
         }
     }
 
-    private void propagateBoolean(Boolean sourceValue, Supplier<Boolean> targetValueGetter,
-                                  Consumer<Boolean> targetValueSetter, boolean defaultValue) {
+    private void propagateBoolean(Node sourceNode, Boolean sourceValue,
+                                  Boolean targetValue,
+                                  Consumer<Node> targetNodeSetter,
+                                  boolean defaultValue) {
         if (sourceValue != null && sourceValue.equals(defaultValue)) {
-            Boolean targetValue = targetValueGetter.get();
             if (targetValue == null || !targetValue.equals(defaultValue)) {
-                targetValueSetter.accept(sourceValue);
+                targetNodeSetter.accept(sourceNode.clone());
             }
         }
     }
 
     private void propagateMultipleOf(Schema source, Schema target) {
+        Node sourceNode = source.getMultipleOf();
+        Node targetNode = target.getMultipleOf();
         BigDecimal sourceMultipleOf = source.getMultipleOfValue();
         BigDecimal targetMultipleOf = target.getMultipleOfValue();
         if (sourceMultipleOf != null && targetMultipleOf != null) {
-            target.multipleOf(LeastCommonMultiple.lcm(targetMultipleOf, sourceMultipleOf));
+            if (sourceNode.getValue() instanceof BigInteger
+                    && targetNode.getValue() instanceof BigInteger) {
+                BigInteger left = ((BigInteger) targetNode.getValue()).abs();
+                BigInteger right = ((BigInteger) sourceNode.getValue()).abs();
+                BigInteger lcm = left.signum() == 0 || right.signum() == 0
+                        ? BigInteger.ZERO
+                        : left.divide(left.gcd(right)).multiply(right);
+                target.multipleOf(typedMergedNumber(
+                        lcm, INTEGER_TYPE_BLUE_ID, targetNode, sourceNode));
+            } else {
+                target.multipleOf(typedMergedNumber(
+                        LeastCommonMultiple.lcm(
+                                targetMultipleOf, sourceMultipleOf),
+                        DOUBLE_TYPE_BLUE_ID, targetNode, sourceNode));
+            }
         } else if (sourceMultipleOf != null) {
-            target.multipleOf(sourceMultipleOf);
+            target.multipleOf(sourceNode.clone());
         }
     }
 
+    private Node typedMergedNumber(Object value,
+                                   String fallbackTypeBlueId,
+                                   Node targetNode,
+                                   Node sourceNode) {
+        Node type = typeWithBlueId(targetNode, fallbackTypeBlueId);
+        if (type == null) {
+            type = typeWithBlueId(sourceNode, fallbackTypeBlueId);
+        }
+        if (type == null) {
+            type = new Node().blueId(fallbackTypeBlueId);
+        }
+        return new Node().type(type).value(value);
+    }
+
+    private Node typeWithBlueId(Node node, String blueId) {
+        Node type = node != null ? node.getType() : null;
+        if (type == null) {
+            return null;
+        }
+        if (blueId.equals(type.getBlueId())) {
+            return type.clone();
+        }
+        return null;
+    }
+
     private void propagateMinItems(Schema source, Schema target) {
-        propagateMinValue(source.getMinItemsExact(), target::getMinItemsExact, target::minItems);
+        propagateMinValue(source.getMinItems(), source.getMinItemsExact(),
+                target.getMinItemsExact(),
+                node -> target.minItems(node));
     }
 
     private void propagateMaxItems(Schema source, Schema target) {
-        propagateMaxValue(source.getMaxItemsExact(), target::getMaxItemsExact, target::maxItems);
+        propagateMaxValue(source.getMaxItems(), source.getMaxItemsExact(),
+                target.getMaxItemsExact(),
+                node -> target.maxItems(node));
     }
 
     private void propagateUniqueItems(Schema source, Schema target) {
-        propagateBoolean(source.getUniqueItemsValue(), target::getUniqueItemsValue, target::uniqueItems, true);
+        propagateBoolean(source.getUniqueItems(), source.getUniqueItemsValue(),
+                target.getUniqueItemsValue(),
+                node -> target.uniqueItems(node), true);
     }
 
     private void propagateMinFields(Schema source, Schema target) {
-        propagateMinValue(source.getMinFieldsExact(), target::getMinFieldsExact, target::minFields);
+        propagateMinValue(source.getMinFields(), source.getMinFieldsExact(),
+                target.getMinFieldsExact(),
+                node -> target.minFields(node));
     }
 
     private void propagateMaxFields(Schema source, Schema target) {
-        propagateMaxValue(source.getMaxFieldsExact(), target::getMaxFieldsExact, target::maxFields);
+        propagateMaxValue(source.getMaxFields(), source.getMaxFieldsExact(),
+                target.getMaxFieldsExact(),
+                node -> target.maxFields(node));
     }
 
     private void propagateEnum(Schema source, Schema target) {
@@ -162,12 +235,6 @@ public class SchemaPropagator implements MergingProcessor {
             }
         }
         target.enumValues(canonicalizeEnum(intersection));
-    }
-
-    private List<Node> cloneNodes(List<Node> nodes) {
-        return nodes.stream()
-                .map(Node::clone)
-                .collect(Collectors.toList());
     }
 
     private String enumComparableBlueId(Node node) {

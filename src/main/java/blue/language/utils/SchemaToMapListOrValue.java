@@ -16,6 +16,14 @@ public final class SchemaToMapListOrValue {
 
     public static Map<String, Object> get(Schema schema, Function<Node, Object> nodeConverter) {
         Map<String, Object> result = new LinkedHashMap<>();
+        if (schema.getBlueId() != null) {
+            if (!schema.isReferenceOnly()) {
+                throw new IllegalArgumentException(
+                        "schema.blueId must be a pure reference without sibling keywords.");
+            }
+            result.put("blueId", schema.getBlueId());
+            return result;
+        }
         put(result, "required", schema.getRequired() == null ? null : schema.getRequiredValue());
         put(result, "minLength", countValue(schema.getMinLength()));
         put(result, "maxLength", countValue(schema.getMaxLength()));

@@ -1,0 +1,63 @@
+schema: blue-contracts-fixture/1.0
+id: c-feed-09
+vectors:
+- C-FEED-09
+category: feed
+description: Nonmutating terminal progress is compare-and-swap bound to the exact Root revision.
+operation: platform
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 8
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+    evaluatedRevision: 7
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: commit.progressCommitted
+    op: equals
+    expected: false
+  - actual: commit.reason
+    op: equals
+    expected: revision-conflict

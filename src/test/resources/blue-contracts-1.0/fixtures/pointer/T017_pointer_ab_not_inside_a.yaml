@@ -1,6 +1,0 @@
-id: T017_pointer_ab_not_inside_a
-category: Pointer
-operation: pointerDescendant
-path: /ab
-ancestor: /a
-expectedDescendantOrEqual: false

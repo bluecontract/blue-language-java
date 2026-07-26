@@ -1,15 +1,7 @@
 name: Document Processing Initiated
-description: >
-  Processor-emitted lifecycle event published at a scope before the Processing
-  Initialized Marker is written. It represents first-run initialization of
-  that scope for the current selected document state. At root, this event is
-  also recorded in the root outbox. At non-root scopes, it is bridgeable to a
-  parent Embedded Node Channel. The documentId field is the pre-initialization
-  Content BlueId of the scope subtree.
+description: Processor lifecycle event delivered before the direct initialized marker. documentId is the exact pre-initialization scope Node BlueId.
 documentId:
-  type: Text
-  description: >
-    Required BlueId string for the pre-initialization Content BlueId of the
-    scope subtree.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true

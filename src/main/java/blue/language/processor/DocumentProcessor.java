@@ -7,6 +7,7 @@ import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.TypeClassResolver;
@@ -29,6 +30,12 @@ public class DocumentProcessor implements AutoCloseable {
     private ProcessingSnapshotManager snapshotManager;
     private ContractMatchingService matchingService;
     private volatile ProcessingMetricsSink metricsSink;
+    private GasSchedule gasSchedule;
+    private long gasLimit;
+    private String runtimeRegistryIdentity;
+    private ExternalDeliveryPlanDeriver externalDeliveryPlanDeriver;
+    private ExternalDeliveryEvidenceVerifier deliveryEvidenceVerifier;
+    private SubscriptionSurfaceValidator subscriptionSurfaceValidator;
     private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
     private final Lock lifecycleRead = lifecycleLock.readLock();
     private final Lock lifecycleWrite = lifecycleLock.writeLock();
@@ -108,11 +115,32 @@ public class DocumentProcessor implements AutoCloseable {
                 contractRegistry,
                 contractConverter,
                 this.contractTypeResolver,
-                this.matchingService.cachePolicy());
+                this.matchingService.cachePolicy(),
+                this.matchingService.blue() != null
+                        ? this.matchingService.blue().getNodeProvider()
+                        : null);
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
         this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+        this.gasSchedule = GasSchedule.contracts10();
+        this.gasLimit = this.gasSchedule.maxProcessGas();
+        this.runtimeRegistryIdentity = RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
+        this.externalDeliveryPlanDeriver =
+                ExternalDeliveryPlanDeriver.unavailable();
+        this.deliveryEvidenceVerifier =
+                RootExternalDeliveryEvidenceVerifier.configured(
+                        contractLoader,
+                        snapshotManager,
+                        contractRegistry,
+                        contractConverter,
+                        externalDeliveryPlanDeriver);
+        this.subscriptionSurfaceValidator =
+                DirectSubscriptionSurfaceValidator.configured(
+                        contractLoader,
+                        snapshotManager,
+                        contractRegistry,
+                        contractConverter);
     }
 
     private DocumentProcessor(Builder builder) {
@@ -123,6 +151,27 @@ public class DocumentProcessor implements AutoCloseable {
                 builder.snapshotManager,
                 builder.matchingService,
                 builder.metricsSink);
+        this.gasSchedule = builder.gasSchedule;
+        this.contractLoader.gasSchedule(builder.gasSchedule);
+        this.gasLimit = builder.gasLimit != null
+                ? builder.gasLimit
+                : builder.gasSchedule.maxProcessGas();
+        this.runtimeRegistryIdentity = builder.runtimeRegistryIdentity;
+        this.externalDeliveryPlanDeriver =
+                builder.externalDeliveryPlanDeriver;
+        this.deliveryEvidenceVerifier =
+                builder.deliveryEvidenceVerifier != null
+                        ? builder.deliveryEvidenceVerifier
+                        : RootExternalDeliveryEvidenceVerifier.configured(
+                        contractLoader,
+                        snapshotManager,
+                        contractRegistry,
+                        contractConverter,
+                        externalDeliveryPlanDeriver);
+        if (builder.subscriptionSurfaceValidator != null) {
+            this.subscriptionSurfaceValidator =
+                    builder.subscriptionSurfaceValidator;
+        }
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
@@ -163,7 +212,251 @@ public class DocumentProcessor implements AutoCloseable {
         lifecycleRead.lock();
         try {
             ensureOpen();
-            return ProcessorEngine.processDocument(this, document, event);
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    document)) {
+                return ProcessorEngine.processDocument(
+                        this, document, event, null);
+            }
+            VerifiedExecutionEvidence evidence =
+                    deriveExternalDeliveryEvidence(document, event);
+            return ProcessorEngine.processDocument(
+                    this, document, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return invalidExternalDeliveryResult(
+                    document, exception);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    /**
+     * Processes with revision-bound verified feeder evidence. The evidence is
+     * revalidated against the exact Root, event, and runtime registry before
+     * semantic execution and is never inserted into either semantic input.
+     */
+    public DocumentProcessingResult processDocument(Node document,
+                                                    Node event,
+                                                    VerifiedExecutionEvidence evidence) {
+        Objects.requireNonNull(evidence, "evidence");
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    document)) {
+                return ProcessorEngine.processDocument(
+                        this, document, event, null);
+            }
+            evidence.revalidate(
+                    document, event, runtimeRegistryIdentity, deliveryEvidenceVerifier);
+            return ProcessorEngine.processDocument(this, document, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return DocumentProcessingResult.nonCommitting(document,
+                    0L,
+                    ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                    ProcessorDiagnostic.of(
+                            ProcessorErrorCategory.InvalidExternalChannelSnapshot,
+                            exception.getMessage()));
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    /**
+     * Executes PROCESS and returns the separate revision-bound host companion
+     * required to commit Root/outbox, the exact validated subscription delta,
+     * and delivery progress atomically.
+     *
+     * <p>Unlike {@link #processDocument(Node, Node,
+     * VerifiedExecutionEvidence)}, invalid feeder evidence is rejected at this
+     * platform boundary instead of being converted to a semantic result: no
+     * trustworthy compare-and-swap companion can be constructed for it.</p>
+     */
+    public PlatformProcessingResult processDocumentForPlatformCommit(
+            Node document,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        Objects.requireNonNull(evidence, "evidence");
+        Lock configurationRead =
+                contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    document)) {
+                evidence.revalidateBinding(
+                        document,
+                        event,
+                        runtimeRegistryIdentity);
+            } else {
+                evidence.revalidate(
+                        document,
+                        event,
+                        runtimeRegistryIdentity,
+                        deliveryEvidenceVerifier);
+            }
+            ProcessingDebugResult debug =
+                    ProcessorEngine.processDocumentWithTrace(
+                            this, document, event, evidence);
+            PlatformCommitCompanion companion =
+                    debug.platformCommitCompanion();
+            if (companion == null) {
+                throw new IllegalStateException(
+                        "Revision-bound execution produced no platform "
+                                + "commit companion");
+            }
+            return new PlatformProcessingResult(
+                    debug.processResult(), companion);
+        } finally {
+            releaseLifecycleReadAndConfiguration(
+                    configurationRead);
+        }
+    }
+
+    /**
+     * Explicit debug/conformance API. The returned trace is out-of-band and is
+     * not part of the five-field ProcessResult.
+     */
+    public ProcessingDebugResult processDocumentWithTrace(Node document, Node event) {
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    document)) {
+                return ProcessorEngine.processDocumentWithTrace(
+                        this, document, event, null);
+            }
+            VerifiedExecutionEvidence evidence =
+                    deriveExternalDeliveryEvidence(document, event);
+            return ProcessorEngine.processDocumentWithTrace(
+                    this, document, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return new ProcessingDebugResult(
+                    invalidExternalDeliveryResult(document, exception),
+                    ProcessingConformanceTrace.empty());
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    public ProcessingDebugResult processDocumentWithTrace(Node document,
+                                                          Node event,
+                                                          VerifiedExecutionEvidence evidence) {
+        Objects.requireNonNull(evidence, "evidence");
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    document)) {
+                return ProcessorEngine.processDocumentWithTrace(
+                        this, document, event, null);
+            }
+            evidence.revalidate(
+                    document, event, runtimeRegistryIdentity, deliveryEvidenceVerifier);
+            return ProcessorEngine.processDocumentWithTrace(this, document, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            DocumentProcessingResult result = DocumentProcessingResult.nonCommitting(
+                    document,
+                    0L,
+                    ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                    ProcessorDiagnostic.of(
+                            ProcessorErrorCategory.InvalidExternalChannelSnapshot,
+                            exception.getMessage()));
+            return new ProcessingDebugResult(result, ProcessingConformanceTrace.empty());
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    /**
+     * Resource-acquisition boundary for Contracts 1.0.
+     */
+    public ProcessAttemptResult processAttempt(
+            Node document,
+            Node event) {
+        Lock configurationRead =
+                contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    document)) {
+                return ProcessAttemptResult.complete(
+                        ProcessorEngine.processDocument(
+                                this, document, event, null));
+            }
+            ExternalDeliveryPlan plan =
+                    deriveExternalDeliveryPlan(document, event);
+            VerifiedExecutionEvidence evidence =
+                    plan.bind(document, event, runtimeRegistryIdentity);
+            return completeAttempt(
+                    document, event, evidence, plan);
+        } catch (ExecutionEvidenceUnavailableException exception) {
+            return needsResources(exception);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return invalidAttempt(document, exception);
+        } finally {
+            releaseLifecycleReadAndConfiguration(
+                    configurationRead);
+        }
+    }
+
+    /**
+     * Resource-acquisition boundary for Contracts 1.0 with an already
+     * captured feeder evidence envelope.
+     */
+    public ProcessAttemptResult processAttempt(Node document,
+                                               Node event,
+                                               VerifiedExecutionEvidence evidence) {
+        Objects.requireNonNull(evidence, "evidence");
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    document)) {
+                return ProcessAttemptResult.complete(
+                        ProcessorEngine.processDocument(
+                                this, document, event, null));
+            }
+            /*
+             * Validate only immutable input/revision/registry bindings before
+             * acquisition. Full subscription/provider verification must not
+             * run until every explicitly required exact node is available.
+             */
+            try {
+                evidence.revalidateBinding(
+                        document, event, runtimeRegistryIdentity);
+            } catch (InvalidExecutionEvidenceException exception) {
+                return invalidAttempt(document, exception);
+            }
+            java.util.List<String> missing =
+                    evidence.missingRequiredExactNodeBlueIds();
+            if (!missing.isEmpty()) {
+                return ProcessAttemptResult.needsResources(missing);
+            }
+            try {
+                evidence.revalidate(
+                        document,
+                        event,
+                        runtimeRegistryIdentity,
+                        deliveryEvidenceVerifier);
+                return ProcessAttemptResult.complete(
+                        ProcessorEngine.processDocument(
+                                this, document, event, evidence));
+            } catch (ExecutionEvidenceUnavailableException exception) {
+                return needsResources(exception);
+            } catch (InvalidExecutionEvidenceException exception) {
+                return invalidAttempt(document, exception);
+            }
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
         }
@@ -184,10 +477,307 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
-            return ProcessorEngine.processDocument(this, snapshot, event);
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    snapshot.canonicalRoot())) {
+                return ProcessorEngine.processDocument(
+                        this, snapshot, event, null);
+            }
+            VerifiedExecutionEvidence evidence =
+                    deriveExternalDeliveryEvidence(
+                            snapshot.canonicalRoot(), event);
+            return ProcessorEngine.processDocument(
+                    this, snapshot, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return invalidExternalDeliveryResult(
+                    snapshot.canonicalRoot(), exception)
+                    .withSnapshot(snapshot);
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
         }
+    }
+
+    /**
+     * Processes a snapshot with revision-bound feeder evidence. Evidence is
+     * bound to the snapshot's exact canonical Root, while execution reads the
+     * verified resolved companion.
+     */
+    public DocumentProcessingResult processDocument(
+            ResolvedSnapshot snapshot,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(evidence, "evidence");
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            requireSnapshotManager();
+            Node canonicalRoot = snapshot.canonicalRoot();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    canonicalRoot)) {
+                return ProcessorEngine.processDocument(
+                        this, snapshot, event, null);
+            }
+            evidence.revalidate(
+                    canonicalRoot,
+                    event,
+                    runtimeRegistryIdentity,
+                    deliveryEvidenceVerifier);
+            return ProcessorEngine.processDocument(
+                    this, snapshot, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return invalidExternalDeliveryResult(
+                    snapshot.canonicalRoot(), exception)
+                    .withSnapshot(snapshot);
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    /**
+     * Snapshot-native atomic platform hand-off. The compare-and-swap binding
+     * remains the exact canonical Root carried by the supplied snapshot.
+     */
+    public PlatformProcessingResult processDocumentForPlatformCommit(
+            ResolvedSnapshot snapshot,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(evidence, "evidence");
+        Lock configurationRead =
+                contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            requireSnapshotManager();
+            Node canonicalRoot = snapshot.canonicalRoot();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    canonicalRoot)) {
+                evidence.revalidateBinding(
+                        canonicalRoot,
+                        event,
+                        runtimeRegistryIdentity);
+            } else {
+                evidence.revalidate(
+                        canonicalRoot,
+                        event,
+                        runtimeRegistryIdentity,
+                        deliveryEvidenceVerifier);
+            }
+            ProcessingDebugResult debug =
+                    ProcessorEngine.processDocumentWithTrace(
+                            this, snapshot, event, evidence);
+            PlatformCommitCompanion companion =
+                    debug.platformCommitCompanion();
+            if (companion == null) {
+                throw new IllegalStateException(
+                        "Revision-bound execution produced no platform "
+                                + "commit companion");
+            }
+            return new PlatformProcessingResult(
+                    debug.processResult(), companion);
+        } finally {
+            releaseLifecycleReadAndConfiguration(
+                    configurationRead);
+        }
+    }
+
+    /**
+     * Snapshot-native debug/conformance entry point. The trace remains
+     * out-of-band and the semantic result retains the authoritative snapshot.
+     */
+    public ProcessingDebugResult processDocumentWithTrace(
+            ResolvedSnapshot snapshot,
+            Node event) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            requireSnapshotManager();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    snapshot.canonicalRoot())) {
+                return ProcessorEngine.processDocumentWithTrace(
+                        this, snapshot, event, null);
+            }
+            VerifiedExecutionEvidence evidence =
+                    deriveExternalDeliveryEvidence(
+                            snapshot.canonicalRoot(), event);
+            return ProcessorEngine.processDocumentWithTrace(
+                    this, snapshot, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return new ProcessingDebugResult(
+                    invalidExternalDeliveryResult(
+                            snapshot.canonicalRoot(), exception)
+                            .withSnapshot(snapshot),
+                    ProcessingConformanceTrace.empty());
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    /**
+     * Snapshot-native debug/conformance entry point with explicit verified
+     * feeder evidence.
+     */
+    public ProcessingDebugResult processDocumentWithTrace(
+            ResolvedSnapshot snapshot,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(evidence, "evidence");
+        Lock configurationRead = contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            requireSnapshotManager();
+            Node canonicalRoot = snapshot.canonicalRoot();
+            if (ProcessorEngine.hasDirectRootTerminationEntry(
+                    canonicalRoot)) {
+                return ProcessorEngine.processDocumentWithTrace(
+                        this, snapshot, event, null);
+            }
+            evidence.revalidate(
+                    canonicalRoot,
+                    event,
+                    runtimeRegistryIdentity,
+                    deliveryEvidenceVerifier);
+            return ProcessorEngine.processDocumentWithTrace(
+                    this, snapshot, event, evidence);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return new ProcessingDebugResult(
+                    invalidExternalDeliveryResult(
+                            snapshot.canonicalRoot(), exception)
+                            .withSnapshot(snapshot),
+                    ProcessingConformanceTrace.empty());
+        } finally {
+            releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    private VerifiedExecutionEvidence deriveExternalDeliveryEvidence(
+            Node document,
+            Node event) {
+        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(event, "event");
+        if (deliveryEvidenceVerifier
+                instanceof RootExternalDeliveryEvidenceVerifier) {
+            return ((RootExternalDeliveryEvidenceVerifier)
+                    deliveryEvidenceVerifier).deriveAndVerify(
+                    document, event, runtimeRegistryIdentity);
+        }
+        ExternalDeliveryPlan plan =
+                externalDeliveryPlanDeriver.derive(
+                        document.clone(), event.clone());
+        if (plan == null || !plan.exactRuntimeState()) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery plan is not certified complete");
+        }
+        VerifiedExecutionEvidence evidence =
+                plan.bind(document, event, runtimeRegistryIdentity);
+        evidence.revalidateDerived(
+                document,
+                event,
+                runtimeRegistryIdentity,
+                deliveryEvidenceVerifier,
+                plan);
+        return evidence;
+    }
+
+    private ExternalDeliveryPlan deriveExternalDeliveryPlan(
+            Node document,
+            Node event) {
+        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(event, "event");
+        ExternalDeliveryPlan plan =
+                deliveryEvidenceVerifier
+                        instanceof RootExternalDeliveryEvidenceVerifier
+                        ? ((RootExternalDeliveryEvidenceVerifier)
+                        deliveryEvidenceVerifier).derivePlan(
+                        document, event)
+                        : externalDeliveryPlanDeriver.derive(
+                        document.clone(), event.clone());
+        if (plan == null || !plan.exactRuntimeState()) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery plan is not certified complete");
+        }
+        return plan;
+    }
+
+    private ProcessAttemptResult completeAttempt(
+            Node document,
+            Node event,
+            VerifiedExecutionEvidence evidence,
+            ExternalDeliveryPlan derivedPlan) {
+        try {
+            evidence.revalidateBinding(
+                    document, event, runtimeRegistryIdentity);
+            java.util.List<String> missing =
+                    evidence.missingRequiredExactNodeBlueIds();
+            if (!missing.isEmpty()) {
+                return ProcessAttemptResult.needsResources(missing);
+            }
+            evidence.revalidateDerived(
+                    document,
+                    event,
+                    runtimeRegistryIdentity,
+                    deliveryEvidenceVerifier,
+                    derivedPlan);
+            return ProcessAttemptResult.complete(
+                    ProcessorEngine.processDocument(
+                            this, document, event, evidence));
+        } catch (ExecutionEvidenceUnavailableException exception) {
+            return needsResources(exception);
+        } catch (InvalidExecutionEvidenceException exception) {
+            return invalidAttempt(document, exception);
+        }
+    }
+
+    private ProcessAttemptResult needsResources(
+            ExecutionEvidenceUnavailableException exception) {
+        if (exception.requiredExactBlueIds().isEmpty()) {
+            /*
+             * Feeder/activation state without a content-addressed demand
+             * cannot be represented by NeedsResources(sortedExactBlueIds).
+             * Keep it as a host suspension rather than fabricating an ID.
+             */
+            throw exception;
+        }
+        return ProcessAttemptResult.needsResources(
+                exception.requiredExactBlueIds());
+    }
+
+    private ProcessAttemptResult invalidAttempt(
+            Node document,
+            InvalidExecutionEvidenceException exception) {
+        return ProcessAttemptResult.complete(
+                DocumentProcessingResult.nonCommitting(
+                        document,
+                        0L,
+                        ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                        ProcessorDiagnostic.of(
+                                ProcessorErrorCategory
+                                        .InvalidExternalChannelSnapshot,
+                                exception.getMessage())));
+    }
+
+    private DocumentProcessingResult invalidExternalDeliveryResult(
+            Node document,
+            InvalidExecutionEvidenceException exception) {
+        return DocumentProcessingResult.nonCommitting(
+                Objects.requireNonNull(document, "document"),
+                0L,
+                ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                ProcessorDiagnostic.of(
+                        ProcessorErrorCategory
+                                .InvalidExternalChannelSnapshot,
+                        ProcessorEngine.deterministicMessage(
+                                exception,
+                                "Invalid external delivery evidence")));
     }
 
     public boolean isInitialized(Node document) {
@@ -345,6 +935,22 @@ public class DocumentProcessor implements AutoCloseable {
 
     ProcessingMetricsSink metricsSink() {
         return metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+    }
+
+    GasMeter newGasMeter() {
+        return new GasMeter(gasSchedule, gasLimit);
+    }
+
+    String runtimeRegistryIdentity() {
+        return runtimeRegistryIdentity;
+    }
+
+    SubscriptionSurfaceValidator subscriptionSurfaceValidator() {
+        return subscriptionSurfaceValidator;
+    }
+
+    GasSchedule gasSchedule() {
+        return gasSchedule;
     }
 
     public ProcessingMetricsSink processingMetricsSink() {
@@ -582,6 +1188,13 @@ public class DocumentProcessor implements AutoCloseable {
         private ProcessingSnapshotManager snapshotManager;
         private ContractMatchingService matchingService = new ContractMatchingService();
         private ProcessingMetricsSink metricsSink = ProcessingMetricsSink.NOOP;
+        private GasSchedule gasSchedule = GasSchedule.contracts10();
+        private Long gasLimit;
+        private String runtimeRegistryIdentity = RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
+        private ExternalDeliveryPlanDeriver externalDeliveryPlanDeriver =
+                ExternalDeliveryPlanDeriver.unavailable();
+        private ExternalDeliveryEvidenceVerifier deliveryEvidenceVerifier;
+        private SubscriptionSurfaceValidator subscriptionSurfaceValidator;
 
         public Builder withRegistry(ContractProcessorRegistry registry) {
             this.contractRegistry = Objects.requireNonNull(registry, "registry");
@@ -662,6 +1275,60 @@ public class DocumentProcessor implements AutoCloseable {
 
         public Builder withProcessingMetricsSink(ProcessingMetricsSink metricsSink) {
             this.metricsSink = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+            return this;
+        }
+
+        public Builder withGasSchedule(GasSchedule gasSchedule) {
+            this.gasSchedule = Objects.requireNonNull(gasSchedule, "gasSchedule");
+            if (gasLimit != null && gasLimit > gasSchedule.maxProcessGas()) {
+                throw new IllegalArgumentException(
+                        "Configured gas limit exceeds manifest maxProcessGas");
+            }
+            return this;
+        }
+
+        public Builder withGasLimit(long gasLimit) {
+            if (gasLimit < 0L || gasLimit > gasSchedule.maxProcessGas()) {
+                throw new IllegalArgumentException(
+                        "Gas limit must be between 0 and manifest maxProcessGas "
+                                + gasSchedule.maxProcessGas());
+            }
+            this.gasLimit = gasLimit;
+            return this;
+        }
+
+        public Builder withRuntimeRegistryIdentity(String identity) {
+            if (identity == null || identity.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Runtime registry identity must not be empty");
+            }
+            this.runtimeRegistryIdentity = identity;
+            return this;
+        }
+
+        public Builder withExternalDeliveryEvidenceVerifier(
+                ExternalDeliveryEvidenceVerifier verifier) {
+            this.deliveryEvidenceVerifier =
+                    Objects.requireNonNull(verifier, "verifier");
+            return this;
+        }
+
+        /**
+         * Supplies the revision-complete environmental occurrence-plan
+         * derivation used by both the two-input PROCESS API and explicit
+         * evidence verification.
+         */
+        public Builder withExternalDeliveryPlanDeriver(
+                ExternalDeliveryPlanDeriver deriver) {
+            this.externalDeliveryPlanDeriver =
+                    Objects.requireNonNull(deriver, "deriver");
+            return this;
+        }
+
+        public Builder withSubscriptionSurfaceValidator(
+                SubscriptionSurfaceValidator validator) {
+            this.subscriptionSurfaceValidator =
+                    Objects.requireNonNull(validator, "validator");
             return this;
         }
 

@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CyclicProviderFallbackTest {
 
@@ -38,7 +39,7 @@ class CyclicProviderFallbackTest {
     }
 
     @Test
-    void plainCyclicEmptyResultStopsBeforeFallback() {
+    void emptyResultIsNotFoundAndFallsThroughToVerifiedCyclicProvider() {
         CyclicFixture fixture = new CyclicFixture();
         AtomicInteger emptyFetches = new AtomicInteger();
         CountingCyclicProvider fallback = new CountingCyclicProvider(fixture.provider);
@@ -49,14 +50,12 @@ class CyclicProviderFallbackTest {
                 }),
                 new VerifyingNodeProvider(fallback)));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
-                () -> blue.resolve(typedNode(fixture.memberBlueId)));
+        Node resolved = blue.resolve(typedNode(fixture.memberBlueId));
 
-        assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
-                BlueLanguageErrorClassifier.classify(failure));
+        assertEquals("cyclic", resolved.getAsText("/fixed"));
         assertEquals(1, emptyFetches.get());
-        assertEquals(0, fallback.fetches.get());
-        assertEquals(0, fallback.proofQueries.get());
+        assertEquals(1, fallback.fetches.get());
+        assertEquals(1, fallback.proofQueries.get());
     }
 
     @Test
@@ -72,16 +71,17 @@ class CyclicProviderFallbackTest {
                 }),
                 new VerifyingNodeProvider(fallback)));
 
-        assertThrows(UnsupportedOperationException.class,
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
                 () -> blue.resolve(typedNode(fixture.memberBlueId)));
 
+        assertTrue(messageChain(failure).contains("cyclic-set-aware verifier"));
         assertEquals(1, plainFetches.get());
         assertEquals(0, fallback.fetches.get());
         assertEquals(0, fallback.proofQueries.get());
     }
 
     @Test
-    void cyclicAwareMissDoesNotTransferTrustToPlainFallback() {
+    void cyclicAwareMissDoesNotBypassFallbackProofRequirement() {
         CyclicFixture fixture = new CyclicFixture();
         CountingCyclicMiss first = new CountingCyclicMiss();
         AtomicInteger plainFetches = new AtomicInteger();
@@ -93,12 +93,25 @@ class CyclicProviderFallbackTest {
                     return memberContent;
                 })));
 
-        assertThrows(UnsupportedOperationException.class,
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
                 () -> blue.resolve(typedNode(fixture.memberBlueId)));
 
+        assertTrue(messageChain(failure).contains("cyclic-set-aware verifier"));
         assertEquals(1, first.fetches.get());
         assertEquals(0, first.proofQueries.get());
         assertEquals(1, plainFetches.get());
+    }
+
+    private static String messageChain(Throwable failure) {
+        StringBuilder messages = new StringBuilder();
+        Throwable current = failure;
+        while (current != null) {
+            if (current.getMessage() != null) {
+                messages.append(current.getMessage()).append('\n');
+            }
+            current = current.getCause();
+        }
+        return messages.toString();
     }
 
     private static Node typedNode(String blueId) {

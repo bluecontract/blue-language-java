@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
@@ -55,6 +56,9 @@ public class UncheckedObjectMapper extends ObjectMapper {
         setSerializationInclusion(Include.NON_NULL);
         enable(USE_BIG_DECIMAL_FOR_FLOATS);
         enable(USE_BIG_INTEGER_FOR_INTS);
+        // Numeric token kind and decimal scale are Language identity inputs.
+        // In particular, a tree round trip must not collapse 1.0 into 1.
+        setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
 
         SimpleModule module = new SimpleModule();
         module.setSerializerModifier(new BlueAnnotationsBeanSerializerModifier());

@@ -1,0 +1,16 @@
+id: R_reference_backed_contracts
+category: LimitedResolution
+operation: resolve
+source:
+  contracts:
+    blueId: 9YgcRVaLhBBFurd6gwLnSsv5XZPibL7AYnuqt3VhTegY
+provider:
+  - requestedBlueId: 9YgcRVaLhBBFurd6gwLnSsv5XZPibL7AYnuqt3VhTegY
+    node:
+      audit:
+        enabled: true
+expectedResolved:
+  contracts:
+    audit:
+      enabled: true
+expectedSourceReferencePreservedByCanonicalization: true

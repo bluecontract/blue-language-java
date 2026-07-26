@@ -2,8 +2,12 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.processor.DocumentProcessingResult;
+import blue.language.processor.ProcessorErrorCategory;
+import blue.language.processor.ProcessorStatus;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.CyclicAwareNodeProvider;
+import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.BlueIds;
@@ -50,7 +54,7 @@ class ReferenceBlueIdResolutionValidationTest {
     @Test
     void unmaterializedMalformedReferenceFailsBeforeTrustedProviderLookup() {
         AtomicInteger fetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(countingMiss(fetches)));
+        Blue blue = new Blue(new VerifyingNodeProvider(countingMiss(fetches)));
 
         RuntimeException failure = assertThrows(RuntimeException.class,
                 () -> blue.resolve(nestedMalformedReference()));
@@ -64,7 +68,8 @@ class ReferenceBlueIdResolutionValidationTest {
         AtomicInteger ordinaryFetches = new AtomicInteger();
         AtomicInteger trustedFetches = new AtomicInteger();
         Blue ordinary = new Blue(countingMiss(ordinaryFetches));
-        Blue trusted = new Blue(NodeProviderWrapper.unverified(countingMiss(trustedFetches)));
+        Blue trusted = new Blue(
+                new VerifyingNodeProvider(countingMiss(trustedFetches)));
 
         RuntimeException ordinaryFailure = assertThrows(RuntimeException.class,
                 () -> ordinary.resolve(malformedTypeDocument(false)));
@@ -82,15 +87,26 @@ class ReferenceBlueIdResolutionValidationTest {
         AtomicInteger ordinaryFetches = new AtomicInteger();
         AtomicInteger trustedFetches = new AtomicInteger();
         Blue ordinary = new Blue(countingMiss(ordinaryFetches));
-        Blue trusted = new Blue(NodeProviderWrapper.unverified(countingMiss(trustedFetches)));
+        Blue trusted = new Blue(
+                new VerifyingNodeProvider(countingMiss(trustedFetches)));
 
-        RuntimeException ordinaryFailure = assertThrows(RuntimeException.class,
-                () -> ordinary.initializeDocument(malformedTypeDocument(true)));
-        RuntimeException trustedFailure = assertThrows(RuntimeException.class,
-                () -> trusted.initializeDocument(malformedTypeDocument(true)));
+        DocumentProcessingResult ordinaryResult =
+                ordinary.initializeDocument(malformedTypeDocument(true));
+        DocumentProcessingResult trustedResult =
+                trusted.initializeDocument(malformedTypeDocument(true));
 
-        assertFailure(ordinaryFailure, BlueLanguageErrorCategory.InvalidBlueId, "/type/blueId");
-        assertFailure(trustedFailure, BlueLanguageErrorCategory.InvalidBlueId, "/type/blueId");
+        assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                ordinaryResult.status(), ordinaryResult.failureReason());
+        assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
+                ordinaryResult.errorCategory(), ordinaryResult.failureReason());
+        assertTrue(ordinaryResult.failureReason().contains("/type/blueId"),
+                ordinaryResult.failureReason());
+        assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                trustedResult.status(), trustedResult.failureReason());
+        assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
+                trustedResult.errorCategory(), trustedResult.failureReason());
+        assertTrue(trustedResult.failureReason().contains("/type/blueId"),
+                trustedResult.failureReason());
         assertEquals(0, ordinaryFetches.get());
         assertEquals(0, trustedFetches.get());
     }
@@ -225,7 +241,7 @@ class ReferenceBlueIdResolutionValidationTest {
     }
 
     @Test
-    void validTrustedNonDirectContentStillResolves() {
+    void deprecatedUnverifiedWrapperCannotBypassDirectBlueIdVerification() {
         Node requested = new Node().name("Requested Trusted Type")
                 .properties("fixed", new Node().value("requested"));
         Node trusted = new Node().name("Trusted Non-Direct Type")
@@ -239,9 +255,11 @@ class ReferenceBlueIdResolutionValidationTest {
                     : null;
         }));
 
-        Node resolved = blue.resolve(new Node().type(reference(requestedBlueId)));
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> blue.resolve(new Node().type(reference(requestedBlueId))));
 
-        assertEquals("trusted", resolved.getAsText("/fixed"));
+        assertFailure(failure, BlueLanguageErrorCategory.ProviderBlueIdMismatch,
+                requestedBlueId);
         assertEquals(1, fetches.get());
         assertEquals(0, blue.resolvedReferenceCacheSize());
     }

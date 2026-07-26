@@ -10,9 +10,12 @@ import blue.language.utils.BlueIdCalculator;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,10 +30,14 @@ public class ContractProcessorRegistry {
 
     private final Map<String, ContractProcessor<? extends Contract>> processorsByBlueId = new LinkedHashMap<>();
     private final Map<String, Node> canonicalTypeNodesByBlueId = new LinkedHashMap<>();
+    private final Set<String> providerEvidenceRequiredBlueIds =
+            new LinkedHashSet<>();
     private final Map<Class<? extends HandlerContract>, HandlerProcessor<? extends HandlerContract>> handlerProcessors = new LinkedHashMap<>();
     private final Map<Class<? extends ChannelContract>, ChannelProcessor<? extends ChannelContract>> channelProcessors = new LinkedHashMap<>();
     private final Map<Class<? extends MarkerContract>, ContractProcessor<? extends MarkerContract>> markerProcessors = new LinkedHashMap<>();
     private final Map<String, HandlerProcessor<? extends HandlerContract>> handlerProcessorsByBlueId = new LinkedHashMap<>();
+    private final Map<String, List<String>> handlerExecutableBodyFieldsByBlueId =
+            new LinkedHashMap<>();
     private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ContractProcessor<? extends MarkerContract>> markerProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ContractProcessor<? extends Contract>> processorsView =
@@ -124,10 +131,11 @@ public class ContractProcessorRegistry {
      * Registers a processor mapping for an explicit BlueId without supplying
      * provider content for that BlueId.
      *
-     * <p>A standalone processor cannot calculate initialization Content BlueIds
-     * from this registration alone. It must also have a verified provider-backed
-     * snapshot manager/Blue runtime or exact canonical registration evidence;
-     * otherwise initialization fails explicitly with {@code ProviderUnavailable}.</p>
+     * <p>A standalone processor cannot establish the registered type or the
+     * exact selected-scope identity from this registration alone. It must also
+     * have a verified provider-backed snapshot manager/Blue runtime or exact
+     * canonical registration evidence; otherwise recognition fails explicitly
+     * with {@code ProviderUnavailable}.</p>
      */
     public void register(String blueId, ContractProcessor<? extends Contract> processor) {
         mutateConfiguration(() -> {
@@ -137,6 +145,10 @@ public class ContractProcessorRegistry {
             }
             registerBlueId(blueId, processor);
             registerClassLookup(processor);
+            if (!declaresBlueId(processor.contractType(), blueId)
+                    && !canonicalTypeNodesByBlueId.containsKey(blueId)) {
+                providerEvidenceRequiredBlueIds.add(blueId);
+            }
         });
     }
 
@@ -158,6 +170,7 @@ public class ContractProcessorRegistry {
             registerBlueId(blueId, processor);
             registerClassLookup(processor);
             canonicalTypeNodesByBlueId.put(blueId, canonical);
+            providerEvidenceRequiredBlueIds.remove(blueId);
         });
     }
 
@@ -223,6 +236,24 @@ public class ContractProcessorRegistry {
         return Optional.ofNullable(handlerProcessorsByBlueId.get(blueId));
     }
 
+    /**
+     * Returns the immutable ordered executable-body fields captured when the
+     * exact Handler runtime type was registered.
+     */
+    public synchronized List<String> executableBodyFields(String blueId) {
+        List<String> fields = handlerExecutableBodyFieldsByBlueId.get(blueId);
+        return fields != null ? fields : Collections.emptyList();
+    }
+
+    synchronized Map<String, List<String>> executableBodyFieldsByType() {
+        Map<String, List<String>> snapshot = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry
+                : handlerExecutableBodyFieldsByBlueId.entrySet()) {
+            snapshot.put(entry.getKey(), entry.getValue());
+        }
+        return Collections.unmodifiableMap(snapshot);
+    }
+
     public synchronized Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(HandlerContract contract) {
         if (contract == null) {
             return Optional.empty();
@@ -278,6 +309,10 @@ public class ContractProcessorRegistry {
         return canonical != null ? canonical.clone() : null;
     }
 
+    synchronized boolean requiresProviderEvidence(String blueId) {
+        return providerEvidenceRequiredBlueIds.contains(blueId);
+    }
+
     synchronized Map<String, Class<? extends Contract>> registeredContractTypes() {
         Map<String, Class<? extends Contract>> registered = new LinkedHashMap<>();
         for (Map.Entry<String, ContractProcessor<? extends Contract>> entry
@@ -315,6 +350,26 @@ public class ContractProcessorRegistry {
         }
     }
 
+    private boolean declaresBlueId(
+            Class<? extends Contract> contractType,
+            String blueId) {
+        if (contractType == null) {
+            return false;
+        }
+        TypeBlueId typeBlueId =
+                contractType.getAnnotation(TypeBlueId.class);
+        if (typeBlueId == null) {
+            return false;
+        }
+        for (String declared : typeBlueId.value()) {
+            if (blueId.equals(declared)) {
+                return true;
+            }
+        }
+        return typeBlueId.value().length == 0
+                && blueId.equals(typeBlueId.defaultValue());
+    }
+
     private Node validatedCanonicalTypeNode(String blueId, Node canonicalTypeNode) {
         if (blueId == null || blueId.isEmpty()) {
             throw new IllegalArgumentException("blueId must not be empty");
@@ -350,6 +405,11 @@ public class ContractProcessorRegistry {
             throw new IllegalArgumentException("blueId must not be empty");
         }
         ProcessorKind kind = requireSupportedProcessor(processor);
+        List<String> executableBodyFields =
+                kind == ProcessorKind.HANDLER
+                        ? validatedExecutableBodyFields(
+                        (HandlerProcessor<?>) processor)
+                        : Collections.emptyList();
         ContractProcessor<? extends Contract> existing = processorsByBlueId.get(blueId);
         if (existing != null
                 && !Objects.equals(existing.contractType(), processor.contractType())) {
@@ -361,6 +421,8 @@ public class ContractProcessorRegistry {
             @SuppressWarnings("unchecked")
             HandlerProcessor<? extends HandlerContract> handler = (HandlerProcessor<? extends HandlerContract>) processor;
             handlerProcessorsByBlueId.put(blueId, handler);
+            handlerExecutableBodyFieldsByBlueId.put(
+                    blueId, executableBodyFields);
         } else if (kind == ProcessorKind.CHANNEL) {
             @SuppressWarnings("unchecked")
             ChannelProcessor<? extends ChannelContract> channel = (ChannelProcessor<? extends ChannelContract>) processor;
@@ -370,6 +432,31 @@ public class ContractProcessorRegistry {
             ContractProcessor<? extends MarkerContract> marker = (ContractProcessor<? extends MarkerContract>) processor;
             markerProcessorsByBlueId.put(blueId, marker);
         }
+    }
+
+    private List<String> validatedExecutableBodyFields(
+            HandlerProcessor<?> processor) {
+        List<String> declared = processor.executableBodyFields();
+        if (declared == null) {
+            throw new IllegalArgumentException(
+                    "Handler executableBodyFields must not be null: "
+                            + processor.getClass().getName());
+        }
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for (String field : declared) {
+            if (field == null || field.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Handler executable-body field names must not be empty: "
+                                + processor.getClass().getName());
+            }
+            if (!unique.add(field)) {
+                throw new IllegalArgumentException(
+                        "Duplicate Handler executable-body field '" + field
+                                + "': " + processor.getClass().getName());
+            }
+        }
+        return Collections.unmodifiableList(
+                new ArrayList<>(unique));
     }
 
     private ProcessorKind requireSupportedProcessor(

@@ -27,6 +27,7 @@ public final class ContractBundle {
     private final Map<String, List<HandlerBinding>> handlersByChannel;
     private final Map<String, MarkerContract> markers;
     private final Map<String, FrozenNode> contractNodes;
+    private final List<EffectiveContractSnapshot> effectiveContractSnapshots;
     private final List<String> embeddedPaths;
     private boolean checkpointDeclared;
 
@@ -40,6 +41,7 @@ public final class ContractBundle {
                            Map<String, List<HandlerBinding>> handlersByChannel,
                            Map<String, MarkerContract> markers,
                            Map<String, FrozenNode> contractNodes,
+                           List<EffectiveContractSnapshot> effectiveContractSnapshots,
                            List<String> embeddedPaths,
                            boolean checkpointDeclared) {
         this.channels = channels;
@@ -47,6 +49,7 @@ public final class ContractBundle {
         this.handlersByChannel = handlersByChannel;
         this.markers = markers;
         this.contractNodes = contractNodes;
+        this.effectiveContractSnapshots = effectiveContractSnapshots;
         this.embeddedPaths = embeddedPaths;
         this.checkpointDeclared = checkpointDeclared;
 
@@ -91,6 +94,19 @@ public final class ContractBundle {
 
     public Map<String, FrozenNode> contractNodes() {
         return contractNodesView;
+    }
+
+    public List<EffectiveContractSnapshot> effectiveContractSnapshots() {
+        return Collections.unmodifiableList(effectiveContractSnapshots);
+    }
+
+    public EffectiveContractSnapshot effectiveContractSnapshot(String key) {
+        for (EffectiveContractSnapshot snapshot : effectiveContractSnapshots) {
+            if (snapshot.key().equals(key)) {
+                return snapshot;
+            }
+        }
+        return null;
     }
 
     public Set<Map.Entry<String, MarkerContract>> markerEntries() {
@@ -158,6 +174,7 @@ public final class ContractBundle {
                 handlersCopy,
                 runtimeMarkers != null ? new LinkedHashMap<>(runtimeMarkers) : new LinkedHashMap<>(),
                 nodesCopy,
+                new ArrayList<>(effectiveContractSnapshots),
                 new ArrayList<>(embeddedPaths),
                 runtimeCheckpointDeclared);
     }
@@ -199,11 +216,23 @@ public final class ContractBundle {
         private final String key;
         private final HandlerContract contract;
         private final FrozenNode node;
+        private final List<String> executableBodyFields;
 
         HandlerBinding(String key, HandlerContract contract, FrozenNode node) {
+            this(key, contract, node, Collections.emptyList());
+        }
+
+        HandlerBinding(String key,
+                       HandlerContract contract,
+                       FrozenNode node,
+                       List<String> executableBodyFields) {
             this.key = key;
             this.contract = contract;
             this.node = node;
+            this.executableBodyFields = Collections.unmodifiableList(
+                    new ArrayList<>(executableBodyFields != null
+                            ? executableBodyFields
+                            : Collections.emptyList()));
         }
 
         public String key() {
@@ -218,6 +247,10 @@ public final class ContractBundle {
             return node;
         }
 
+        public List<String> executableBodyFields() {
+            return executableBodyFields;
+        }
+
         public int order() {
             Integer order = contract.getOrder();
             return order != null ? order : 0;
@@ -230,6 +263,8 @@ public final class ContractBundle {
         private final Map<String, List<HandlerBinding>> handlersByChannel = new LinkedHashMap<>();
         private final Map<String, MarkerContract> markers = new LinkedHashMap<>();
         private final Map<String, FrozenNode> contractNodes = new LinkedHashMap<>();
+        private final List<EffectiveContractSnapshot> effectiveContractSnapshots =
+                new ArrayList<>();
         private final List<String> embeddedPaths = new ArrayList<>();
         private boolean embeddedDeclared;
         private boolean checkpointDeclared;
@@ -250,14 +285,28 @@ public final class ContractBundle {
             return this;
         }
 
+        public Builder addEffectiveContractSnapshot(EffectiveContractSnapshot snapshot) {
+            effectiveContractSnapshots.add(snapshot);
+            return this;
+        }
+
         public Builder addHandler(String key, HandlerContract contract) {
             return addHandler(key, contract, null);
         }
 
         public Builder addHandler(String key, HandlerContract contract, FrozenNode node) {
+            return addHandler(
+                    key, contract, node, Collections.emptyList());
+        }
+
+        public Builder addHandler(String key,
+                                  HandlerContract contract,
+                                  FrozenNode node,
+                                  List<String> executableBodyFields) {
             handlersByChannel
                     .computeIfAbsent(contract.getChannelKey(), k -> new ArrayList<>())
-                    .add(new HandlerBinding(key, contract, node));
+                    .add(new HandlerBinding(
+                            key, contract, node, executableBodyFields));
             if (node != null) {
                 contractNodes.put(key, node);
             }
@@ -270,7 +319,9 @@ public final class ContractBundle {
 
         public Builder setEmbedded(ProcessEmbedded embedded, FrozenNode node) {
             if (embeddedDeclared) {
-                throw new IllegalStateException("Multiple Process Embedded markers detected in same contracts map");
+                throw new MustUnderstandFailureException(
+                        "Multiple Process Embedded markers detected in same contracts map",
+                        ProcessorErrorCategory.BoundaryViolation);
             }
             embeddedDeclared = true;
             if (node != null && embedded.getKey() != null) {
@@ -315,6 +366,7 @@ public final class ContractBundle {
                     handlersByChannel,
                     markers,
                     contractNodes,
+                    effectiveContractSnapshots,
                     embeddedPaths,
                     checkpointDeclared);
         }

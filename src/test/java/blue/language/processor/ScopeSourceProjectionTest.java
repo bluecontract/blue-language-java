@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.BlueLanguageErrorCategory;
+import blue.language.BlueLanguageErrorClassifier;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
@@ -19,14 +21,14 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ScopeSourceProjectionTest {
 
     @Test
-    void snapshotCaptureDoesNotAdoptASuccessfulButDifferentCanonicalReresolution() {
+    void exactSnapshotIdentityDoesNotInvokeStandaloneProjectionOrReresolution() {
         Blue blue = ProcessorTestSupport.blue();
         ResolvedSnapshot authoritative = blue.resolveToSnapshot(new Node()
                 .name("Authoritative Snapshot Scope")
@@ -39,8 +41,8 @@ class ScopeSourceProjectionTest {
         String actual = runtime.calculatePreInitializationScopeContentBlueId("/");
 
         assertEquals(authoritative.blueId(), actual);
-        assertSame(authoritative, manager.capturedSnapshot,
-                "snapshot-backed identity must use the current immutable Phase 1 snapshot");
+        assertNull(manager.capturedSnapshot,
+                "exact Node identity must not invoke the Content-BlueId projection hook");
         assertEquals(0, manager.fromDocumentTransientCalls,
                 "canonical identity input must not be re-resolved merely to capture snapshot state");
 
@@ -155,8 +157,12 @@ class ScopeSourceProjectionTest {
         assertEquals(expected, snapshotProjection.contentBlueId());
         assertTrue(snapshotProjection.standaloneSnapshot().frozenResolvedRoot()
                 .sameResolvedStructure(captured.frozenResolvedRoot()));
-        assertInitializationIdentity(blue.initializeDocument(source.clone()), expected);
-        assertInitializationIdentity(blue.initializeDocument(captured), expected);
+        assertInitializationIdentity(
+                blue.initializeDocument(source.clone()),
+                captured.blueId());
+        assertInitializationIdentity(
+                blue.initializeDocument(captured),
+                captured.blueId());
     }
 
     @Test
@@ -210,8 +216,12 @@ class ScopeSourceProjectionTest {
         assertTrue(replacement.isReferenceOnly());
         assertEquals(referencedBlueId, replacement.getReferenceBlueId());
 
-        assertInitializationIdentity(blue.initializeDocument(source.clone()), expected);
-        assertInitializationIdentity(blue.initializeDocument(captured), expected);
+        assertInitializationIdentity(
+                blue.initializeDocument(source.clone()),
+                captured.blueId());
+        assertInitializationIdentity(
+                blue.initializeDocument(captured),
+                captured.blueId());
     }
 
     @Test
@@ -288,8 +298,12 @@ class ScopeSourceProjectionTest {
         assertEquals(expected, snapshotProjection.contentBlueId());
         assertTrue(snapshotProjection.standaloneSnapshot().frozenResolvedRoot()
                 .sameResolvedStructure(captured.resolvedAt("/child")));
-        assertScopeInitializationIdentity(nodeResult, "/child", expected);
-        assertScopeInitializationIdentity(snapshotResult, "/child", expected);
+        String exactChildIdentity =
+                captured.canonicalAt("/child").blueId();
+        assertScopeInitializationIdentity(
+                nodeResult, "/child", exactChildIdentity);
+        assertScopeInitializationIdentity(
+                snapshotResult, "/child", exactChildIdentity);
     }
 
     @Test
@@ -363,20 +377,28 @@ class ScopeSourceProjectionTest {
 
         Blue nodeExecution = ProcessorTestSupport.blue(referenceProvider(
                 referencedPayload, referencedLifecycleChannel));
-        assertInitializationIdentity(nodeExecution.initializeDocument(source.clone()), expected);
-        assertInitializationIdentity(nodeExecution.initializeDocument(source.clone()), expected);
+        assertInitializationIdentity(
+                nodeExecution.initializeDocument(source.clone()),
+                captured.blueId());
+        assertInitializationIdentity(
+                nodeExecution.initializeDocument(source.clone()),
+                captured.blueId());
 
         Blue snapshotProducer = ProcessorTestSupport.blue(referenceProvider(
                 referencedPayload, referencedLifecycleChannel));
         ResolvedSnapshot snapshotInput = snapshotProducer.resolveToSnapshot(source.clone());
         Blue snapshotExecution = ProcessorTestSupport.blue(referenceProvider(
                 referencedPayload, referencedLifecycleChannel));
-        assertInitializationIdentity(snapshotExecution.initializeDocument(snapshotInput), expected);
-        assertInitializationIdentity(snapshotExecution.initializeDocument(snapshotInput), expected);
+        assertInitializationIdentity(
+                snapshotExecution.initializeDocument(snapshotInput),
+                snapshotInput.blueId());
+        assertInitializationIdentity(
+                snapshotExecution.initializeDocument(snapshotInput),
+                snapshotInput.blueId());
     }
 
     @Test
-    void providerFailureForPureReferenceContractTerminatesBeforeInitiation() {
+    void providerFailureForPureReferenceContractIsPropagatedBeforeInitiation() {
         Node referencedLifecycleChannel = new Node()
                 .name("Unavailable Protocol Reference Lifecycle Channel")
                 .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
@@ -384,22 +406,32 @@ class ScopeSourceProjectionTest {
         Node source = new Node().contracts(new Node().properties(
                 "referencedLifecycle", reference(channelBlueId)));
 
-        DocumentProcessingResult missing = ProcessorTestSupport.blue(
-                blueId -> null).initializeDocument(source.clone());
-        assertProviderFailureBeforeInitiation(
-                missing, ProcessorErrorCategory.ProviderUnavailable, channelBlueId);
+        IllegalArgumentException missing = assertThrows(
+                IllegalArgumentException.class,
+                () -> ProcessorTestSupport.blue(
+                        blueId -> null).initializeDocument(source.clone()));
+        assertEquals(
+                BlueLanguageErrorCategory.ProviderUnavailable,
+                BlueLanguageErrorClassifier.classify(missing));
+        assertTrue(missing.getMessage().contains(channelBlueId), missing.getMessage());
 
         NodeProvider mismatchProvider = blueId -> channelBlueId.equals(blueId)
                 ? Collections.singletonList(new Node().name("Wrong Contract Content"))
                 : null;
-        DocumentProcessingResult mismatch = ProcessorTestSupport.blue(
-                mismatchProvider).initializeDocument(source.clone());
-        assertProviderFailureBeforeInitiation(
-                mismatch, ProcessorErrorCategory.ProviderBlueIdMismatch, channelBlueId);
+        IllegalArgumentException mismatch = assertThrows(
+                IllegalArgumentException.class,
+                () -> ProcessorTestSupport.blue(
+                        mismatchProvider).initializeDocument(source.clone()));
+        assertEquals(
+                BlueLanguageErrorCategory.ProviderBlueIdMismatch,
+                BlueLanguageErrorClassifier.classify(mismatch));
+        assertTrue(mismatch.getMessage().contains(channelBlueId), mismatch.getMessage());
+        assertFalse(hasNode(source, "/contracts/initialized"));
+        assertFalse(hasNode(source, "/contracts/terminated"));
     }
 
     @Test
-    void structuralProofMismatchTerminatesBeforeInitiation() {
+    void exactNodeInitializationIdentityDoesNotInvokeStandaloneProjectionProof() {
         Blue configured = ProcessorTestSupport.blue();
         DocumentProcessor configuredProcessor = configured.getDocumentProcessor();
         String proofChildBlueId = BlueIdCalculator.calculateBlueId(
@@ -416,20 +448,15 @@ class ScopeSourceProjectionTest {
 
         DocumentProcessingResult result = processor.initializeDocument(source);
 
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
-        assertEquals(ProcessorErrorCategory.InternalProcessorError,
-                result.errorCategory(), result.failureReason());
-        assertTrue(result.failureReason().contains(
-                "Standalone selected-scope projection changed the resolved view"),
-                result.failureReason());
-        assertTrue(result.failureReason().contains("/proofChild"), result.failureReason());
-        assertFalse(hasNode(result.document(), "/contracts/initialized"));
-        assertTrue(hasNode(result.document(), "/contracts/terminated"));
-        for (Node event : result.triggeredEvents()) {
-            String eventType = event.getType() != null ? event.getType().getBlueId() : null;
-            assertNotEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, eventType,
-                    "structural proof failure must precede lifecycle initiation");
-        }
+        assertEquals(ProcessorStatus.SUCCESS,
+                result.status(), result.failureReason());
+        assertEquals(configured.resolveToSnapshot(source).blueId(),
+                result.document().getAsText(
+                        "/contracts/initialized/documentId"));
+        assertTrue(hasNode(result.document(), "/contracts/initialized"));
+        assertFalse(hasNode(result.document(), "/contracts/terminated"));
+        assertTrue(result.triggeredEvents().isEmpty(),
+                "processor-generated lifecycle delivery is not a Root emission");
     }
 
     @Test
@@ -498,10 +525,8 @@ class ScopeSourceProjectionTest {
         assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
         assertEquals(expected,
                 result.document().getAsText("/contracts/initialized/documentId"));
-        assertTrue(result.triggeredEvents().stream().anyMatch(event -> event.getType() != null
-                && blue.language.processor.registry.RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED
-                .equals(event.getType().getBlueId())
-                && expected.equals(event.getAsText("/documentId"))));
+        assertTrue(result.triggeredEvents().isEmpty(),
+                "processor-generated lifecycle delivery is not a Root emission");
     }
 
     private static void assertScopeInitializationIdentity(DocumentProcessingResult result,
@@ -520,22 +545,6 @@ class ScopeSourceProjectionTest {
         assertEquals(0L, result.totalGas());
         assertTrue(result.triggeredEvents().isEmpty());
         assertTrue(result.document().isReferenceOnly());
-    }
-
-    private static void assertProviderFailureBeforeInitiation(
-            DocumentProcessingResult result,
-            ProcessorErrorCategory expectedCategory,
-            String requestedBlueId) {
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
-        assertEquals(expectedCategory, result.errorCategory(), result.failureReason());
-        assertTrue(result.failureReason().contains(requestedBlueId), result.failureReason());
-        assertFalse(hasNode(result.document(), "/contracts/initialized"));
-        assertTrue(hasNode(result.document(), "/contracts/terminated"));
-        for (Node event : result.triggeredEvents()) {
-            String eventType = event.getType() != null ? event.getType().getBlueId() : null;
-            assertNotEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, eventType,
-                    "provider failure must precede lifecycle initiation");
-        }
     }
 
     private static Node text(String value) {

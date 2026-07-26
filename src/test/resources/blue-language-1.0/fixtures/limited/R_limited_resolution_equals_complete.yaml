@@ -1,0 +1,19 @@
+id: R_limited_resolution_equals_complete
+category: LimitedResolution
+operation: compareLimitedAndCompleteResolution
+description: a demanded path has the same value, effective type, and constraints as complete resolution
+source:
+  type:
+    blueId: 9Rjh8hCGJMp7DDDGS9AUNDXs4zNzZFmMjqAqwKJ3W7Xx
+  amount: 10
+provider:
+  - requestedBlueId: 9Rjh8hCGJMp7DDDGS9AUNDXs4zNzZFmMjqAqwKJ3W7Xx
+    node:
+      country: PL
+      schema:
+        minFields: 1
+limits:
+  demandedPaths: [/country]
+expectedOutcome: Established
+expectedValue: PL
+expectedSameAsCompleteResolution: true

@@ -95,7 +95,8 @@ class ProviderCanonicalIngestionTest {
             return null;
         });
 
-        assertThrows(UnsupportedOperationException.class, () -> provider.fetchByBlueId(baseBlueId + "#0"));
+        assertThrows(IllegalArgumentException.class,
+                () -> provider.fetchByBlueId(baseBlueId + "#0"));
     }
 
     @Test
@@ -123,7 +124,8 @@ class ProviderCanonicalIngestionTest {
             return null;
         });
 
-        assertThrows(UnsupportedOperationException.class, () -> provider.fetchByBlueId(baseBlueId + "#0"));
+        assertThrows(IllegalArgumentException.class,
+                () -> provider.fetchByBlueId(baseBlueId + "#0"));
     }
 
     private static final class CyclicAwareWrongContentProvider implements blue.language.NodeProvider, CyclicAwareNodeProvider {

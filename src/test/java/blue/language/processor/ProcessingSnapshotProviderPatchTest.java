@@ -7,7 +7,6 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeProviderWrapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -16,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -160,21 +160,19 @@ class ProcessingSnapshotProviderPatchTest {
     }
 
     @Test
-    void workingDocumentCommitDoesNotRefetchHostTrustedOneShotContent() {
+    void workingDocumentCommitDoesNotRefetchVerifiedOneShotContent() {
         Node requestedType = new Node().name("Requested One Shot Type")
                 .properties("inherited", new Node().value("requested"));
-        Node trustedType = new Node().name("Trusted One Shot Type")
-                .properties("inherited", new Node().value("trusted"));
         String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger providerFetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId -> {
+        Blue blue = new Blue(blueId -> {
             if (!requestedBlueId.equals(blueId)) {
                 return null;
             }
             return providerFetches.incrementAndGet() == 1
-                    ? Collections.singletonList(trustedType.clone())
+                    ? Collections.singletonList(requestedType.clone())
                     : null;
-        }));
+        });
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 new Node(), processor.conformanceEngine(), processor.snapshotManager());
@@ -184,29 +182,27 @@ class ProcessingSnapshotProviderPatchTest {
                 new Node().type(new Node().blueId(requestedBlueId))));
         ResolvedSnapshot committed = working.commitSnapshot();
 
-        assertEquals("trusted", committed.resolvedRoot().getAsText("/typed/inherited"));
+        assertEquals("requested", committed.resolvedRoot().getAsText("/typed/inherited"));
         assertEquals(1, providerFetches.get(),
-                "commit must publish the already planned host-trusted resolution");
-        assertEquals(0, blue.resolvedReferenceCacheSize(),
-                "host-trusted content must not become verified provider evidence");
+                "commit must publish the already verified resolution");
+        assertTrue(blue.resolvedReferenceCacheSize() > 0,
+                "final reachable exact evidence must be promoted");
     }
 
     @Test
-    void previewHandoffReusesHostTrustedOneShotContentWithoutCertifyingIt() {
+    void previewHandoffReusesVerifiedOneShotContentAndPromotesIt() {
         Node requestedType = new Node().name("Requested Preview One Shot Type")
                 .properties("inherited", new Node().value("requested"));
-        Node trustedType = new Node().name("Trusted Preview One Shot Type")
-                .properties("inherited", new Node().value("trusted"));
         String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger providerFetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId -> {
+        Blue blue = new Blue(blueId -> {
             if (!requestedBlueId.equals(blueId)) {
                 return null;
             }
             return providerFetches.incrementAndGet() == 1
-                    ? Collections.singletonList(trustedType.clone())
+                    ? Collections.singletonList(requestedType.clone())
                     : null;
-        }));
+        });
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 new Node(), processor.conformanceEngine(), processor.snapshotManager());
@@ -220,11 +216,11 @@ class ProcessingSnapshotProviderPatchTest {
             sequence.applyNext(0);
         }
 
-        assertEquals("trusted", runtime.snapshot().resolvedRoot().getAsText("/typed/inherited"));
+        assertEquals("requested", runtime.snapshot().resolvedRoot().getAsText("/typed/inherited"));
         assertEquals(1, providerFetches.get(),
-                "runtime commit must consume the preview's transient host-trusted lookup");
-        assertEquals(0, blue.resolvedReferenceCacheSize(),
-                "host-trusted content must remain non-certifying after handoff");
+                "runtime commit must consume the preview's transient verified lookup");
+        assertTrue(blue.resolvedReferenceCacheSize() > 0,
+                "reachable exact evidence must be promoted after handoff");
     }
 
     @Test
@@ -361,32 +357,29 @@ class ProcessingSnapshotProviderPatchTest {
 
     @Test
     void liveRuntimeUsesCurrentProviderForConformanceAfterReplacement() {
-        Node requestedType = new Node().name("Live Runtime Requested Type");
+        Node requestedType = new Node().name("Live Runtime Requested Type")
+                .properties("inherited", new Node().value("stable"));
         String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger oldFetches = new AtomicInteger();
         AtomicInteger newFetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId -> {
+        Blue blue = new Blue(blueId -> {
             if (!requestedBlueId.equals(blueId)) {
                 return null;
             }
             oldFetches.incrementAndGet();
-            return Collections.singletonList(new Node()
-                    .name("Old Host Type")
-                    .properties("inherited", new Node().value("old")));
-        }));
+            return Collections.singletonList(requestedType.clone());
+        });
         DocumentProcessor originalProcessor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 new Node(), originalProcessor.conformanceEngine(), originalProcessor.snapshotManager());
 
-        blue.nodeProvider(NodeProviderWrapper.unverified(blueId -> {
+        blue.nodeProvider(blueId -> {
             if (!requestedBlueId.equals(blueId)) {
                 return null;
             }
             newFetches.incrementAndGet();
-            return Collections.singletonList(new Node()
-                    .name("New Host Type")
-                    .properties("inherited", new Node().value("new")));
-        }));
+            return Collections.singletonList(requestedType.clone());
+        });
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", Collections.singletonList(
                              JsonPatch.add("/typed",
@@ -394,7 +387,7 @@ class ProcessingSnapshotProviderPatchTest {
             sequence.applyNext(0);
         }
 
-        assertEquals("new", runtime.snapshot().resolvedRoot().getAsText("/typed/inherited"));
+        assertEquals("stable", runtime.snapshot().resolvedRoot().getAsText("/typed/inherited"));
         assertEquals(0, oldFetches.get(),
                 "an existing runtime must not plan with a provider superseded before its sequence");
         assertEquals(1, newFetches.get());
@@ -441,14 +434,13 @@ class ProcessingSnapshotProviderPatchTest {
 
     @Test
     void staleEarlyCloseDoesNotRepublishAPrefixAfterProviderReplacement() {
-        Node requestedType = new Node().name("Stale Close Requested Type");
+        Node requestedType = new Node().name("Stale Close Requested Type")
+                .properties("inherited", new Node().value("stable"));
         String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId ->
+        Blue blue = new Blue(blueId ->
                 requestedBlueId.equals(blueId)
-                        ? Collections.singletonList(new Node()
-                        .name("Old Close Type")
-                        .properties("inherited", new Node().value("old")))
-                        : null));
+                        ? Collections.singletonList(requestedType.clone())
+                        : null);
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 new Node(), processor.conformanceEngine(), processor.snapshotManager());
@@ -459,42 +451,39 @@ class ProcessingSnapshotProviderPatchTest {
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
-            assertEquals("old", runtime.snapshot().resolvedRoot().getAsText("/typed/inherited"));
-            blue.nodeProvider(NodeProviderWrapper.unverified(blueId ->
+            assertEquals("stable", runtime.snapshot().resolvedRoot().getAsText("/typed/inherited"));
+            blue.nodeProvider(blueId ->
                     requestedBlueId.equals(blueId)
-                            ? Collections.singletonList(new Node()
-                            .name("New Close Type")
-                            .properties("inherited", new Node().value("new")))
-                            : null));
+                            ? Collections.singletonList(requestedType.clone())
+                            : null);
         }
 
         assertEquals(0, blue.resolvedSnapshotCacheSize(),
                 "closing a stale partial sequence must respect explicit cache invalidation");
         assertEquals(0, blue.resolvedReferenceCacheSize());
-        assertEquals("new", blue.resolve(new Node().type(new Node().blueId(requestedBlueId)))
+        assertEquals("stable", blue.resolve(new Node().type(new Node().blueId(requestedBlueId)))
                 .getAsText("/inherited"));
     }
 
     @Test
-    void verifiedOuterReferenceDoesNotCertifyHostTrustedNestedResolution() {
-        Node requestedNested = new Node().name("Requested Nested Type");
+    void verifiedOuterReferencePromotesItsVerifiedNestedDependency() {
+        Node requestedNested = new Node().name("Requested Nested Type")
+                .properties("inherited", new Node().value("exact"));
         String nestedBlueId = BlueIdCalculator.calculateBlueId(requestedNested);
         Node outerType = new Node().name("Verified Outer Type")
                 .properties("nested", new Node().type(new Node().blueId(nestedBlueId)));
         String outerBlueId = BlueIdCalculator.calculateBlueId(outerType);
         AtomicInteger nestedFetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId -> {
+        Blue blue = new Blue(blueId -> {
             if (outerBlueId.equals(blueId)) {
                 return Collections.singletonList(outerType.clone());
             }
             if (!nestedBlueId.equals(blueId)) {
                 return null;
             }
-            String value = nestedFetches.incrementAndGet() == 1 ? "first" : "second";
-            return Collections.singletonList(new Node()
-                    .name("Host Nested Type")
-                    .properties("inherited", new Node().value(value)));
-        }));
+            nestedFetches.incrementAndGet();
+            return Collections.singletonList(requestedNested.clone());
+        });
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -507,14 +496,14 @@ class ProcessingSnapshotProviderPatchTest {
             sequence.applyNext(0);
         }
 
-        assertEquals("first",
+        assertEquals("exact",
                 runtime.snapshot().resolvedRoot().getAsText("/retained/nested/inherited"));
         assertEquals(1, nestedFetches.get());
         Node independentlyResolved = blue.resolve(
                 new Node().type(new Node().blueId(outerBlueId)));
-        assertEquals("second", independentlyResolved.getAsText("/nested/inherited"));
-        assertEquals(2, nestedFetches.get(),
-                "a resolved outer memo must not smuggle non-certifying nested content globally");
+        assertEquals("exact", independentlyResolved.getAsText("/nested/inherited"));
+        assertEquals(1, nestedFetches.get(),
+                "the retained verified dependency closure must be reusable");
     }
 
     @Test
@@ -648,19 +637,17 @@ class ProcessingSnapshotProviderPatchTest {
     }
 
     @Test
-    void directWriteCanonicalPatchPreservesTrustedProviderProvenance() {
+    void directWriteCanonicalPatchPreservesVerifiedProviderProvenance() {
         Node requestedType = new Node().name("Requested Patch Type")
                 .properties("inherited", new Node().value("requested"));
-        Node trustedType = new Node().name("Trusted Patch Source Type")
-                .properties("inherited", new Node().value("trusted"));
         String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger providerFetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId -> {
+        Blue blue = new Blue(blueId -> {
             providerFetches.incrementAndGet();
             return requestedBlueId.equals(blueId)
-                    ? Collections.singletonList(trustedType.clone())
+                    ? Collections.singletonList(requestedType.clone())
                     : null;
-        }));
+        });
         CountingSnapshotManager manager = new CountingSnapshotManager(
                 blue.getDocumentProcessor().snapshotManager());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -675,13 +662,12 @@ class ProcessingSnapshotProviderPatchTest {
         assertEquals(1, providerFetches.get());
         assertEquals("written", snapshot.canonicalRoot().getAsText("/state"));
         assertEquals("written", snapshot.resolvedRoot().getAsText("/state"));
-        assertEquals("trusted", snapshot.resolvedRoot().getAsText("/inherited"));
+        assertEquals("requested", snapshot.resolvedRoot().getAsText("/inherited"));
         assertEquals(requestedBlueId, snapshot.canonicalRoot().getType().getBlueId());
         assertEquals(requestedBlueId, snapshot.resolvedRoot().getType().getBlueId());
         assertEquals(snapshot.blueId(), snapshot.frozenCanonicalRoot().blueId());
         assertEquals(snapshot.canonicalAt("/state").blueId(), snapshot.resolvedAt("/state").blueId());
-        assertNull(snapshot.verifiedReferenceResolution());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
+        assertTrue(blue.resolvedReferenceCacheSize() > 0);
     }
 
     private static final class CountingSnapshotManager implements ProcessingSnapshotManager {

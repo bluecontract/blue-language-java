@@ -2,6 +2,8 @@ package blue.language.merge;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.NodeDeserializer;
+import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
@@ -12,6 +14,7 @@ import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.MergeReverser;
+import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.Types;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.BlueIdCalculator;
@@ -28,6 +31,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static blue.language.utils.limits.Limits.NO_LIMITS;
+import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
@@ -436,6 +440,8 @@ public class Merger implements NodeResolver {
     }
 
     private void mergeObject(Node target, Node source, Limits limits) {
+        materializeReferenceBackedSchema(source);
+        materializeReferenceBackedContracts(source);
         ResolutionState state = resolutionState;
         String path = currentPath(state);
         boolean tracksSemanticPresence = tracksSemanticPresence(state, target, source, path);
@@ -449,6 +455,7 @@ public class Merger implements NodeResolver {
         }
         try {
 
+            validateAndApplyLabels(target, source, state.contribution);
             resolveTypeMetadata(source, limits);
             mergingProcessor.process(target, source, nodeProvider, this);
 
@@ -520,6 +527,78 @@ public class Merger implements NodeResolver {
                 }
             }
         }
+    }
+
+    private void validateAndApplyLabels(Node target,
+                                        Node source,
+                                        Contribution contribution) {
+        boolean inheritedFixedContent = target.isReferenceOnly()
+                || hasConcretePayload(target);
+        if (inheritedFixedContent) {
+            rejectFixedLabelOverride("name", target.getName(), source.getName());
+            rejectFixedLabelOverride(
+                    "description", target.getDescription(), source.getDescription());
+        }
+
+        // A type root's labels describe the type itself and are not inherited
+        // by an instance root. All other materialized or instance nodes retain
+        // their own labels, including valid declaration-only overrides.
+        if (contribution == Contribution.TYPE_ROOT
+                || contribution == Contribution.TYPE_METADATA) {
+            return;
+        }
+        if (source.getName() != null) {
+            target.name(source.getName());
+        }
+        if (source.getDescription() != null) {
+            target.description(source.getDescription());
+        }
+    }
+
+    private void rejectFixedLabelOverride(String field,
+                                          String inherited,
+                                          String descendant) {
+        if (inherited != null
+                && descendant != null
+                && !inherited.equals(descendant)) {
+            throw new IllegalArgumentException(
+                    "Fixed value label conflict for " + field
+                            + ": inherited '" + inherited
+                            + "' but descendant supplied '" + descendant + "'.");
+        }
+    }
+
+    private void materializeReferenceBackedSchema(Node source) {
+        Schema schema = source.getSchema();
+        if (schema == null || !schema.isReferenceOnly()) {
+            return;
+        }
+        String blueId = schema.getBlueId();
+        Node content = requiredProviderContent(blueId, resolutionState);
+        Object schemaValue = NodeToMapListOrValue.get(content);
+        Schema materialized = NodeDeserializer.parseSchema(
+                JSON_MAPPER.valueToTree(schemaValue),
+                currentPath(resolutionState) + "/schema");
+        if (materialized.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "Provider returned reference-only schema content for required blueId: " + blueId);
+        }
+        source.schema(materialized);
+    }
+
+    private void materializeReferenceBackedContracts(Node source) {
+        Node contracts = source.getContracts();
+        if (contracts == null || !contracts.isReferenceOnly()) {
+            return;
+        }
+        String blueId = contracts.getBlueId();
+        Node materialized = requiredProviderContent(blueId, resolutionState);
+        if (materialized.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "Provider returned reference-only contracts content for required blueId: "
+                            + blueId);
+        }
+        source.contracts(materialized);
     }
 
     private boolean tracksSemanticPresence(ResolutionState state,
@@ -671,9 +750,14 @@ public class Merger implements NodeResolver {
         int sourceLength = sourceChildren.size() - start;
         if (sourceLength < targetChildren.size()) {
             throw new IllegalArgumentException(String.format(
-                    "Subtype of element must not have more items (%d) than the element itself (%d).",
+                    "Positional list overlays cannot remove inherited items: inherited %d items but source supplied %d.",
                     targetChildren.size(), sourceLength
             ));
+        }
+
+        List<String> inheritedIdentities = new ArrayList<>(targetChildren.size());
+        for (Node inherited : targetChildren) {
+            inheritedIdentities.add(BlueIdCalculator.calculateBlueId(inherited));
         }
 
         for (int i = 0; i < sourceLength; i++) {
@@ -684,6 +768,13 @@ public class Merger implements NodeResolver {
                     targetChildren.add(resolvedChild);
                 }
             } else {
+                String sourceIdentity = BlueIdCalculator.calculateBlueId(sourceChild);
+                if (!sourceIdentity.equals(inheritedIdentities.get(i))
+                        && inheritedIdentities.contains(sourceIdentity)) {
+                    throw new IllegalArgumentException(
+                            "Positional list overlays cannot reorder inherited items; "
+                                    + "use a valid $pos replacement at index " + i + ".");
+                }
                 String segment = String.valueOf(i);
                 if (!limits.shouldMergePathSegment(segment, sourceChild)) {
                     markIncomplete(segment);
@@ -709,6 +800,11 @@ public class Merger implements NodeResolver {
                 : itemType;
         if (hasReplacement(overlay)) {
             Node replacement = overlay.getProperties().get(LIST_CONTROL_REPLACE);
+            if (isEmptyPlaceholder(replacement)
+                    && !isEmptyPlaceholder(targetChildren.get(position))) {
+                throw new IllegalArgumentException(
+                        "Fixed value conflict: replacement cannot remove inherited content.");
+            }
             Node resolvedChild = resolveListChild(replacement, limits, String.valueOf(position), effectiveItemType);
             if (resolvedChild != null) {
                 targetChildren.set(position, resolvedChild);
@@ -895,6 +991,9 @@ public class Merger implements NodeResolver {
     }
 
     private boolean isListTyped(Node node) {
+        if (node.getItems() != null) {
+            return true;
+        }
         Node type = node.getType();
         if (type == null) {
             return false;

@@ -1,0 +1,13 @@
+id: B_primitive_inference_all_four
+category: BlueId
+operation: preprocess
+source:
+  text: hello
+  integer: 1
+  double: 1.5
+  boolean: true
+expectedEffectiveTypes:
+  /text: Text
+  /integer: Integer
+  /double: Double
+  /boolean: Boolean

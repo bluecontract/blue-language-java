@@ -10,8 +10,12 @@ import blue.language.snapshot.ResolvedSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Frozen preview state for processor-side read-your-writes workflows.
@@ -52,8 +56,12 @@ public final class WorkingDocument implements AutoCloseable {
     private final boolean exactReplacement;
     private final PatchSource mutablePatchSource;
     private final ProcessingMetricsSink metrics;
+    private final Set<String> openedScopePaths;
+    private final Map<String, List<String>>
+            executableBodyFieldsByType;
     private ProcessingSnapshotManager workingSequenceManager;
     private ResolvedSnapshot snapshot;
+    private boolean resolutionComplete;
     private boolean closed;
 
     WorkingDocument(String originScope,
@@ -67,6 +75,38 @@ public final class WorkingDocument implements AutoCloseable {
                     boolean exactReplacement,
                     PatchSource mutablePatchSource,
                     ProcessingMetricsSink metrics) {
+        this(originScope,
+                canonicalRoot,
+                resolvedRoot,
+                conformanceEngine,
+                conformancePlannerOverride,
+                snapshotManager,
+                snapshot,
+                materializedFallback,
+                exactReplacement,
+                mutablePatchSource,
+                metrics,
+                Collections.emptySet(),
+                Collections.emptyMap(),
+                snapshot == null
+                        || snapshot.isResolutionComplete());
+    }
+
+    WorkingDocument(String originScope,
+                    FrozenNode canonicalRoot,
+                    FrozenNode resolvedRoot,
+                    ConformanceEngine conformanceEngine,
+                    ConformancePlannerOverride conformancePlannerOverride,
+                    ProcessingSnapshotManager snapshotManager,
+                    ResolvedSnapshot snapshot,
+                    boolean materializedFallback,
+                    boolean exactReplacement,
+                    PatchSource mutablePatchSource,
+                    ProcessingMetricsSink metrics,
+                    Iterable<String> openedScopePaths,
+                    Map<String, List<String>>
+                            executableBodyFieldsByType,
+                    boolean resolutionComplete) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
@@ -80,6 +120,12 @@ public final class WorkingDocument implements AutoCloseable {
                 ? mutablePatchSource
                 : PatchSource.UNKNOWN_INTERNAL;
         this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.openedScopePaths =
+                immutableScopePaths(openedScopePaths);
+        this.executableBodyFieldsByType =
+                immutableExecutableBodyFields(
+                        executableBodyFieldsByType);
+        this.resolutionComplete = resolutionComplete;
         this.workingSequenceManager = snapshotManager != null
                 ? snapshotManager.transientSequence()
                 : null;
@@ -147,7 +193,13 @@ public final class WorkingDocument implements AutoCloseable {
                 : conformanceEngine != null ? conformanceEngine.transientView() : null;
         DocumentProcessingRuntime.PlanningContext planning =
                 DocumentProcessingRuntime.workingPlanningContext(
-                        canonicalRoot, resolvedRoot, exactReplacement, sequenceManager);
+                        canonicalRoot,
+                        resolvedRoot,
+                        exactReplacement,
+                        sequenceManager,
+                        openedScopePaths,
+                        executableBodyFieldsByType,
+                        resolutionComplete);
         SequentialPatchPlanningSession planningSession = new SequentialPatchPlanningSession(
                 this.originScope,
                 planning,
@@ -171,6 +223,8 @@ public final class WorkingDocument implements AutoCloseable {
         }
         canonicalRoot = planningSession.canonicalRoot();
         resolvedRoot = planningSession.resolvedRoot();
+        resolutionComplete =
+                planningSession.isResolutionComplete();
         snapshot = null;
         ProcessingSnapshotManager handoff = null;
         try {
@@ -215,7 +269,15 @@ public final class WorkingDocument implements AutoCloseable {
 
     public ResolvedSnapshot snapshot() {
         if (snapshot == null) {
-            snapshot = new ResolvedSnapshot(canonicalRoot, resolvedRoot, canonicalRoot.blueId());
+            snapshot = resolutionComplete
+                    ? new ResolvedSnapshot(
+                    canonicalRoot,
+                    resolvedRoot,
+                    canonicalRoot.blueId())
+                    : ResolvedSnapshot
+                    .withDeferredResolution(
+                            canonicalRoot,
+                            resolvedRoot);
         }
         return snapshot;
     }
@@ -244,13 +306,53 @@ public final class WorkingDocument implements AutoCloseable {
         ProcessingSnapshotManager publicationManager = workingSequenceManager();
         ResolvedSnapshot authoritative = exactReplacement && currentResolutionScope
                 ? current
-                : publicationManager.fromDocumentTransient(
-                        current.frozenCanonicalRoot().toNode());
-        snapshot = publicationManager.cacheSnapshot(authoritative);
+                : DocumentProcessingRuntime
+                .resolveCanonicalTransient(
+                        publicationManager,
+                        current.frozenCanonicalRoot(),
+                        openedScopePaths,
+                        executableBodyFieldsByType);
+        snapshot = authoritative.isResolutionComplete()
+                ? Objects.requireNonNull(
+                publicationManager.cacheSnapshot(
+                        authoritative),
+                "cachedSnapshot")
+                : authoritative;
+        resolutionComplete =
+                snapshot.isResolutionComplete();
         canonicalRoot = snapshot.frozenCanonicalRoot();
         resolvedRoot = snapshot.frozenResolvedRoot();
         publicationManager.retainTransientState(canonicalRoot, resolvedRoot);
         return snapshot;
+    }
+
+    private static Set<String> immutableScopePaths(
+            Iterable<String> paths) {
+        Set<String> copy = new LinkedHashSet<>();
+        if (paths != null) {
+            for (String path : paths) {
+                copy.add(PointerUtils.normalizeScope(path));
+            }
+        }
+        return Collections.unmodifiableSet(copy);
+    }
+
+    private static Map<String, List<String>>
+    immutableExecutableBodyFields(
+            Map<String, List<String>> fieldsByType) {
+        if (fieldsByType == null || fieldsByType.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, List<String>> copy =
+                new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry
+                : fieldsByType.entrySet()) {
+            copy.put(entry.getKey(),
+                    Collections.unmodifiableList(
+                            new ArrayList<>(
+                                    entry.getValue())));
+        }
+        return Collections.unmodifiableMap(copy);
     }
 
     @Override
@@ -358,17 +460,20 @@ public final class WorkingDocument implements AutoCloseable {
         private final ImmutableJsonPatch patch;
         private final FrozenNode baseCanonical;
         private final FrozenNode baseResolved;
+        private final boolean baseResolutionComplete;
         private final BatchPatchResult result;
 
         private PatchPreview(String originScope,
                              ImmutableJsonPatch patch,
                              FrozenNode baseCanonical,
                              FrozenNode baseResolved,
+                             boolean baseResolutionComplete,
                              BatchPatchResult result) {
             this.originScope = PointerUtils.normalizeScope(originScope);
             this.patch = patch;
             this.baseCanonical = baseCanonical;
             this.baseResolved = baseResolved;
+            this.baseResolutionComplete = baseResolutionComplete;
             this.result = result;
         }
 
@@ -378,6 +483,7 @@ public final class WorkingDocument implements AutoCloseable {
                     step.patch(),
                     step.baseCanonical(),
                     step.baseResolved(),
+                    step.isBaseResolutionComplete(),
                     step.result());
         }
 
@@ -406,6 +512,13 @@ public final class WorkingDocument implements AutoCloseable {
                     baseResolved,
                     actualCanonical,
                     actualResolved);
+        }
+
+        boolean isBasedOn(FrozenNode actualCanonical,
+                          FrozenNode actualResolved,
+                          boolean actualResolutionComplete) {
+            return baseResolutionComplete == actualResolutionComplete
+                    && isBasedOn(actualCanonical, actualResolved);
         }
 
         boolean matches(JsonPatch candidate) {

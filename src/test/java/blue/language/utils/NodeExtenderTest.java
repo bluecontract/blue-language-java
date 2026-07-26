@@ -1,7 +1,6 @@
 package blue.language.utils;
 
 import blue.language.NodeProvider;
-import blue.language.TestUtils;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.limits.Limits;
@@ -13,9 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,52 +27,60 @@ public class NodeExtenderTest {
 
     @BeforeEach
     public void setup() throws Exception {
-        String a = "name: A\n" +
-                   "x: 1\n" +
-                   "y:\n" +
-                   "  z: 1";
+        BasicNodeProvider exactProvider = new BasicNodeProvider();
+        nodes = new LinkedHashMap<>();
 
-        String b = "name: B\n" +
-                   "type:\n" +
-                   "  blueId: blueId-A\n" +
-                   "x: 2";
+        Node a = YAML_MAPPER.readValue(
+                "name: A\n" +
+                "x: 1\n" +
+                "y:\n" +
+                "  z: 1", Node.class);
+        exactProvider.addSingleNodes(a);
+        nodes.put("A", a);
 
-        String c = "name: C\n" +
-                   "type:\n" +
-                   "  blueId: blueId-B\n" +
-                   "x: 3";
+        Node b = YAML_MAPPER.readValue(
+                "name: B\n" +
+                "type:\n" +
+                "  blueId: " + exactProvider.getBlueIdByName("A") + "\n" +
+                "x: 2", Node.class);
+        exactProvider.addSingleNodes(b);
+        nodes.put("B", b);
 
-        String x = "name: X\n" +
-                   "a:\n" +
-                   "  type:\n" +
-                   "    blueId: blueId-A\n" +
-                   "b:\n" +
-                   "  type:\n" +
-                   "    blueId: blueId-B\n" +
-                   "c:\n" +
-                   "  type:\n" +
-                   "    blueId: blueId-C\n" +
-                   "d:\n" +
-                   "  - blueId: blueId-C\n" +
-                   "  - blueId: blueId-A";
+        Node c = YAML_MAPPER.readValue(
+                "name: C\n" +
+                "type:\n" +
+                "  blueId: " + exactProvider.getBlueIdByName("B") + "\n" +
+                "x: 3", Node.class);
+        exactProvider.addSingleNodes(c);
+        nodes.put("C", c);
 
-        String y = "name: Y\n" +
-                   "forA:\n" +
-                   "  blueId: blueId-A\n" +
-                   "forX:\n" +
-                   "  blueId: blueId-X";
+        Node x = YAML_MAPPER.readValue(
+                "name: X\n" +
+                "a:\n" +
+                "  type:\n" +
+                "    blueId: " + exactProvider.getBlueIdByName("A") + "\n" +
+                "b:\n" +
+                "  type:\n" +
+                "    blueId: " + exactProvider.getBlueIdByName("B") + "\n" +
+                "c:\n" +
+                "  type:\n" +
+                "    blueId: " + exactProvider.getBlueIdByName("C") + "\n" +
+                "d:\n" +
+                "  - blueId: " + exactProvider.getBlueIdByName("C") + "\n" +
+                "  - blueId: " + exactProvider.getBlueIdByName("A"), Node.class);
+        exactProvider.addSingleNodes(x);
+        nodes.put("X", x);
 
-        nodes = Stream.of(a, b, c, x, y)
-                .map(doc -> {
-                    try {
-                        return YAML_MAPPER.readValue(doc, Node.class);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .collect(Collectors.toMap(Node::getName, node -> node));
+        Node y = YAML_MAPPER.readValue(
+                "name: Y\n" +
+                "forA:\n" +
+                "  blueId: " + exactProvider.getBlueIdByName("A") + "\n" +
+                "forX:\n" +
+                "  blueId: " + exactProvider.getBlueIdByName("X"), Node.class);
+        exactProvider.addSingleNodes(y);
+        nodes.put("Y", y);
 
-        nodeProvider = TestUtils.fakeNameBasedNodeProvider(nodes.values());
+        nodeProvider = exactProvider;
         nodeExtender = new NodeExtender(nodeProvider);
     }
 

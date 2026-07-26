@@ -1,0 +1,11 @@
+id: R_minfields_counts_ordinary_fields
+category: Schema
+operation: validate
+source:
+  name: Metadata
+  type: Dictionary
+  schema:
+    minFields: 1
+  ordinary: x
+expectedFieldCount: 1
+expectedValid: true

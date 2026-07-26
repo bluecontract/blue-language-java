@@ -1,8 +1,0 @@
-id: runtimeRegistryProcessingTerminatedEventNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: DocumentProcessingTerminated
-registryPath: registry/blue-contracts-1.0/DocumentProcessingTerminated.blue
-expectedBlueId: 4HWncQEQsdpk8zcXxYxgdtoXo5nKHxFPWeJfTscCbmeK
-semanticDescriptionIdentityBearing: true

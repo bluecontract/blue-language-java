@@ -1,0 +1,13 @@
+id: R_limit_does_not_prove_absence
+category: LimitedResolution
+operation: resolveLimited
+source:
+  type:
+    blueId: 9Rjh8hCGJMp7DDDGS9AUNDXs4zNzZFmMjqAqwKJ3W7Xx
+limits:
+  demandedPaths: [/country]
+  maxReferenceExpansions: 0
+expectedOutcome: Incomplete
+expectedAbsent: false
+expectedOutstandingBlueIds:
+  - 9Rjh8hCGJMp7DDDGS9AUNDXs4zNzZFmMjqAqwKJ3W7Xx

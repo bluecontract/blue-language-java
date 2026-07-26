@@ -2,8 +2,8 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.BlueIdReferenceValidator;
-import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +39,8 @@ class BlueIdReferenceValidatorDepthTest {
         AtomicInteger ordinaryFetches = new AtomicInteger();
         AtomicInteger trustedFetches = new AtomicInteger();
         Blue ordinary = new Blue(countingMiss(ordinaryFetches));
-        Blue trusted = new Blue(NodeProviderWrapper.unverified(countingMiss(trustedFetches)));
+        Blue trusted = new Blue(
+                new VerifyingNodeProvider(countingMiss(trustedFetches)));
 
         RuntimeException ordinaryFailure = assertThrows(RuntimeException.class,
                 () -> ordinary.resolve(graph.root, PathLimits.withMaxDepth(2)));

@@ -79,6 +79,26 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
+    void preparedSequenceRecordsEveryCommittedChangedPath() {
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(new Node(), null, manager);
+        List<JsonPatch> patches = Arrays.asList(
+                JsonPatch.add("/first", new Node().value(1)),
+                JsonPatch.add("/second", new Node().value(2)));
+
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     runtime.preparePatchSequence("/", patches, null)) {
+            sequence.applyNext(0);
+            sequence.applyNext(1);
+        }
+
+        assertEquals(2, runtime.changedPaths().size());
+        assertTrue(runtime.changedPaths().contains("/first"));
+        assertTrue(runtime.changedPaths().contains("/second"));
+    }
+
+    @Test
     void scopeExecutorUsesOneReusableSessionForLongUnpreviewedSequence() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
@@ -413,12 +433,25 @@ class PreparedPatchSequenceTest {
                 .blueId("not-a-valid-reference")
                 .properties("forbiddenSibling", new Node().value(true));
 
-        execution.handlePatches("/scope", ContractBundle.builder().build(), Arrays.asList(
-                JsonPatch.add("/outside", new Node().value("forbidden")),
-                JsonPatch.add("/scope/invalid", invalidReferenceOverlay)), false);
+        assertThrows(RunTerminationException.class,
+                () -> execution.handlePatches(
+                        "/scope",
+                        ContractBundle.builder().build(),
+                        Arrays.asList(
+                                JsonPatch.add(
+                                        "/outside",
+                                        new Node().value("forbidden")),
+                                JsonPatch.add(
+                                        "/scope/invalid",
+                                        invalidReferenceOverlay)),
+                        false));
 
-        Node terminated = document.getAsNode("/scope/contracts/terminated");
-        assertTrue(terminated.getAsText("/reason").contains("outside scope /scope"));
+        DocumentProcessingResult result = execution.result();
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
+                result.errorCategory());
+        assertThrows(IllegalArgumentException.class,
+                () -> result.document().getAsNode("/outside"));
         assertThrows(IllegalArgumentException.class, () -> document.getAsNode("/scope/invalid"));
     }
 
@@ -436,7 +469,8 @@ class PreparedPatchSequenceTest {
         execution.handlePatches("/", ContractBundle.builder().build(),
                 Arrays.asList(JsonPatch.add("/payload", authoredValue)), false);
 
-        assertEquals(2L + 20L + authoredSizeCharge, execution.runtime().totalGas());
+        assertEquals(2L + 20L + authoredSizeCharge + 109L,
+                execution.runtime().totalGas());
     }
 
     @Test

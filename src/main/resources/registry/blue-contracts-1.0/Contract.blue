@@ -1,17 +1,6 @@
 name: Contract
-description: >
-  Base Blue Contracts and Processor 1.0 runtime type for executable or
-  processor-interpreted declarations under an active scope's contracts map.
-  A Contract is scope-local, identity-bearing Blue content. The processor
-  discovers materialized contract entries in the selected document, resolves
-  each entry far enough to identify its effective runtime type BlueId, and
-  either executes supported behavior or applies must-understand and fatal
-  rules. Contract entries are sorted by effective order and contract-map key
-  when ordering is required. A Contract by itself has no executable behavior;
-  concrete subtypes define Channel, Handler, Marker, or extension semantics.
+description: Base Blue Contracts and Processor 1.0 declaration under an effective contracts map. A Contract is identity-bearing Blue content. The processor recognizes every effective Contract type in the selected participating closure before mutation, but expands executable bodies only after selection.
 order:
-  type: Integer
-  description: >
-    Optional deterministic sort key within a scope. Missing order is treated
-    as 0. Ordering compares order first, ascending, then contract-map key in
-    lexicographic Unicode code-point order.
+  type:
+    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  description: Optional deterministic order. Missing is zero.

@@ -1,16 +1,9 @@
 name: Processing Initialized Marker
-type: Marker
-description: >
-  Required processor-managed marker at contracts/initialized. It records that
-  a scope has completed first-run initialization. The processor publishes the
-  Document Processing Initiated lifecycle event before writing this marker.
-  The marker is written by a processor-managed patch that triggers the normal
-  Document Update cascade. The marker stores the pre-initialization Content
-  BlueId of the scope subtree as documentId.
+type:
+  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+description: Direct processor state at contracts/initialized. It records the exact pre-initialization scope Node BlueId. Its write produces no Document Update.
 documentId:
-  type: Text
-  description: >
-    Required BlueId string for the pre-initialization Content BlueId of the
-    scope subtree. The value must be a valid Blue Language BlueId string.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true

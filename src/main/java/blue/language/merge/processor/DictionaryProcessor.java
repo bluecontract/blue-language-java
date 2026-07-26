@@ -7,6 +7,8 @@ import blue.language.model.Node;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.Types;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Map;
 
 import static blue.language.utils.Types.isSubtype;
@@ -87,19 +89,29 @@ public class DictionaryProcessor implements MergingProcessor {
 
         if (Types.isIntegerType(keyType, nodeProvider)) {
             try {
-                Integer.parseInt(key);
+                BigInteger value = new BigInteger(key);
+                if (!value.toString().equals(key)) {
+                    throw new NumberFormatException("non-canonical Integer key");
+                }
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Key '" + key + "' is not a valid Integer.");
+                throw new IllegalArgumentException("Dictionary key '" + key
+                        + "' is not a canonical Integer textual form.");
             }
         } else if (Types.isNumberType(keyType, nodeProvider)) {
             try {
-                Double.parseDouble(key);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Key '" + key + "' is not a valid Number.");
+                double value = Double.parseDouble(key);
+                if (!Double.isFinite(value)
+                        || !BigDecimal.valueOf(value).toString().equals(key)) {
+                    throw new NumberFormatException("non-canonical Double key");
+                }
+            } catch (NumberFormatException invalidDouble) {
+                throw new IllegalArgumentException("Dictionary key '" + key
+                        + "' is not a canonical Double textual form.");
             }
         } else if (Types.isBooleanType(keyType, nodeProvider)) {
-            if (!key.equalsIgnoreCase("true") && !key.equalsIgnoreCase("false")) {
-                throw new IllegalArgumentException("Key '" + key + "' is not a valid Boolean.");
+            if (!"true".equals(key) && !"false".equals(key)) {
+                throw new IllegalArgumentException("Dictionary key '" + key
+                        + "' is not a canonical Boolean textual form.");
             }
         } else {
             throw new IllegalArgumentException("Unsupported key type: " + keyType.getName());

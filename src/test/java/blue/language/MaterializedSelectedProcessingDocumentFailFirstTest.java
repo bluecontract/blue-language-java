@@ -1,25 +1,37 @@
 package blue.language;
 
+import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.ChannelEvaluationContext;
 import blue.language.processor.ChannelProcessor;
-import blue.language.processor.DocumentProcessingResult;
+import blue.language.processor.CheckpointDomain;
+import blue.language.processor.ContractMatchingService;
+import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ExternalChannelSubscriptionFunctions;
+import blue.language.processor.ExternalDeliveryPlan;
+import blue.language.processor.ExternalDeliverySnapshot;
+import blue.language.processor.ExternalOrderKey;
 import blue.language.processor.HandlerProcessor;
+import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.SubscriptionDelta;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
@@ -27,170 +39,73 @@ import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 class MaterializedSelectedProcessingDocumentFailFirstTest {
 
     @Test
-    void compactSelectedDocumentDoesNotExecuteTypeDerivedAudit() {
+    void compactSourceResolvesInheritedFieldsWithoutMutatingSourceShape() {
         AuditFixture fixture = new AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
+        Blue blue = fixture.newBlue(new AtomicInteger());
+        Node source = fixture.compact();
+        String sourceJson = blue.nodeToJson(source);
 
-        DocumentProcessingResult result = blue.processDocument(fixture.compact(), fixture.auditEvent());
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(source);
 
-        assertEquals(0, executions.get(), "a type-derived-only contract must not execute");
-        assertFalse(hasContract(result.document(), "audit"));
-        assertEquals("compact", result.document().getAsText("/selectedOnly"));
+        assertEquals(sourceJson, blue.nodeToJson(source));
+        assertFalse(hasContract(source, "audit"));
+        assertNull(source.getProperties().get("materializedField"));
+        assertTrue(hasContract(snapshot.resolvedRoot(), "audit"));
+        assertEquals("materialized",
+                snapshot.resolvedRoot().getAsText("/materializedField"));
+        assertEquals(snapshot.blueId(), blue.calculateSemanticBlueId(source));
     }
 
     @Test
-    void materializedSelectedContractExecutesExactlyOnce() {
+    void redundantAuthoredMaterializationHasNoDistinctSemanticIdentity() {
         AuditFixture fixture = new AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
-        Node selected = fixture.materializedSource();
+        Blue blue = fixture.newBlue(new AtomicInteger());
 
-        DocumentProcessingResult result = blue.processDocument(selected, fixture.auditEvent());
+        ResolvedSnapshot compact = blue.resolveToSnapshot(fixture.compact());
+        ResolvedSnapshot materialized =
+                blue.resolveToSnapshot(fixture.materializedSource());
 
-        assertEquals(1, executions.get());
-        assertEquals(Boolean.TRUE, result.document().get("/auditRan"));
-        assertTrue(hasContract(result.document(), "audit"));
-        assertEquals("materialized", result.document().getAsText("/materializedField"));
+        assertEquals(compact.blueId(), materialized.blueId());
+        assertEquals(blue.nodeToJson(compact.canonicalRoot()),
+                blue.nodeToJson(materialized.canonicalRoot()));
+        assertEquals(blue.nodeToJson(compact.resolvedRoot()),
+                blue.nodeToJson(materialized.resolvedRoot()));
     }
 
     @Test
-    void selectedTypeOnlyAuditUsesInheritedEffectiveChannel() {
+    void cloneJsonAndYamlTransportsResolveToTheSameMeaning() {
         AuditFixture fixture = new AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
-        Node selected = fixture.materializedSource();
-        selected.getContracts().properties("audit", new Node().type(reference(fixture.auditHandlerBlueId)));
+        Blue blue = fixture.newBlue(new AtomicInteger());
+        Node source = fixture.compact();
+        List<Node> forms = Arrays.asList(
+                source,
+                source.clone(),
+                blue.jsonToNode(blue.nodeToJson(source)),
+                blue.yamlToNode(blue.nodeToYaml(source)));
+        ResolvedSnapshot expected = blue.resolveToSnapshot(source);
 
-        DocumentProcessingResult result = blue.processDocument(selected, fixture.auditEvent());
-
-        assertEquals(1, executions.get(), "selected contract recognition must use its resolved effective content");
-        assertEquals(Boolean.TRUE, result.document().get("/auditRan"));
-        assertTrue(hasContract(result.document(), "audit"));
+        for (Node form : forms) {
+            ResolvedSnapshot actual = blue.resolveToSnapshot(form);
+            assertEquals(expected.blueId(), actual.blueId());
+            assertEquals(blue.nodeToJson(expected.resolvedRoot()),
+                    blue.nodeToJson(actual.resolvedRoot()));
+        }
     }
 
     @Test
-    void selectedTypeOnlyWorkflowUsesInheritedEffectiveStepsWithoutReversingSubtype() {
-        SyntheticWorkflowProcessingFixture fixture = new SyntheticWorkflowProcessingFixture();
-        Node selected = fixture.source.clone()
-                .properties("materializedField", new Node().value("materialized"))
-                .contracts(new Node()
-                        .properties("lifecycle", new Node()
-                                .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL)))
-                        .properties("workflow", new Node()
-                                .type(reference(fixture.workflowBlueId))));
-
-        assertTrue(selected.getAsNode("/contracts/workflow/type").isReferenceOnly());
-        assertTrue(selected.getAsNode("/contracts/workflow").getProperties() == null
-                || selected.getAsNode("/contracts/workflow").getProperties().isEmpty());
-
-        DocumentProcessingResult result = assertDoesNotThrow(() -> fixture.blue.initializeDocument(selected));
-
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertEquals(1, fixture.handlerExecutions.get());
-        assertEquals("after", result.document().getAsText("/probe"));
-        assertTrue(hasContract(result.document(), "workflow"));
-        assertEquals("materialized", result.document().getAsText("/materializedField"));
-        Node concreteStep = result.resolvedDocument().getAsNode("/contracts/workflow/steps/0/type");
-        assertEquals("Synthetic Compute Step", concreteStep.getName());
-        assertTrue(fixture.blue.isNodeSubtypeOf(concreteStep, concreteStep.getType()));
-    }
-
-    @Test
-    void resolvedSnapshotCanBeInitializedWithoutResolvingItsTypedListAgain() {
-        SyntheticWorkflowProcessingFixture fixture = new SyntheticWorkflowProcessingFixture();
-        ResolvedSnapshot snapshot = fixture.blue.resolveToSnapshot(fixture.source.clone());
-
-        DocumentProcessingResult result = assertDoesNotThrow(
-                () -> fixture.blue.initializeDocument(snapshot));
-
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertEquals(1, fixture.handlerExecutions.get());
-        assertEquals("after", result.document().getAsText("/probe"));
-        Node concreteStep = result.document().getAsNode("/contracts/workflow/steps/0/type");
-        assertEquals("Synthetic Compute Step", concreteStep.getName());
-        assertTrue(fixture.blue.isNodeSubtypeOf(concreteStep, concreteStep.getType()));
-    }
-
-    @Test
-    void initializationAndPatchPreserveSelectedContractsAndMaterializedFields() {
+    void resolvedSnapshotAccessorsDoNotExposeMutableSelectionState() {
         AuditFixture fixture = new AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
-        Node selected = fixture.materializedSource();
+        Blue blue = fixture.newBlue(new AtomicInteger());
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(fixture.compact());
+        String identity = snapshot.blueId();
 
-        DocumentProcessingResult initialized = blue.initializeDocument(selected);
-        DocumentProcessingResult processed = blue.processDocument(initialized.document(), fixture.auditEvent());
+        Node returned = snapshot.resolvedRoot();
+        returned.properties("materializedField", text("changed"));
 
-        assertEquals(1, executions.get());
-        assertSelectedMaterialization(initialized.document());
-        assertSelectedMaterialization(processed.document());
-        assertEquals(Boolean.TRUE, processed.document().get("/auditRan"));
-    }
-
-    @Test
-    void clonedReturnedSelectedDocumentPreservesDiscoveryBehavior() {
-        AuditFixture fixture = new AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
-        DocumentProcessingResult initialized = blue.initializeDocument(fixture.materializedSource());
-
-        DocumentProcessingResult processed = blue.processDocument(
-                initialized.document().clone(), fixture.auditEvent());
-
-        assertEquals(1, executions.get());
-        assertSelectedMaterialization(processed.document());
-    }
-
-    @Test
-    void freshBlueProcessesClonedMaterializedSelectionWithoutProducerIdentity() {
-        AuditFixture fixture = new AuditFixture();
-        Blue producer = fixture.newBlue(new AtomicInteger());
-        Node selected = fixture.materializedSource().clone();
-        AtomicInteger executions = new AtomicInteger();
-        Blue consumer = fixture.newBlue(executions);
-
-        DocumentProcessingResult result = consumer.processDocument(selected, fixture.auditEvent());
-
-        assertEquals(1, executions.get());
-        assertSelectedMaterialization(result.document());
-    }
-
-    @Test
-    void compactSnapshotSelectsItsResolvedAuditContract() {
-        AuditFixture fixture = new AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
-        ResolvedSnapshot compactSnapshot = blue.resolveToSnapshot(fixture.compact());
-
-        DocumentProcessingResult initialized = blue.initializeDocument(compactSnapshot);
-        DocumentProcessingResult processed = blue.processDocument(
-                initialized.snapshot(), fixture.auditEvent());
-
-        assertEquals(1, executions.get());
-        assertTrue(hasContract(initialized.document(), "audit"));
-        assertTrue(hasContract(processed.document(), "audit"));
-        assertEquals(Boolean.TRUE, processed.document().get("/auditRan"));
-        assertNotNull(processed.snapshot().resolvedNodeAt("/contracts/audit"));
-    }
-
-    @Test
-    void snapshotFromMaterializedInputRetainsResolvedSelection() {
-        AuditFixture fixture = new AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
-        ResolvedSnapshot snapshot = blue.resolveToSnapshot(fixture.materializedSource());
-
-        DocumentProcessingResult result = blue.initializeDocument(snapshot);
-
-        assertEquals(0, executions.get());
-        assertSelectedMaterialization(result.document());
-        assertNotNull(result.snapshot().resolvedNodeAt("/contracts/audit"));
-    }
-
-    private static void assertSelectedMaterialization(Node document) {
-        assertTrue(hasContract(document, "audit"));
-        assertEquals("materialized", document.getAsText("/materializedField"));
+        assertEquals(identity, snapshot.blueId());
+        assertEquals("materialized",
+                snapshot.resolvedRoot().getAsText("/materializedField"));
+        assertTrue(hasContract(snapshot.resolvedRoot(), "audit"));
     }
 
     private static boolean hasContract(Node document, String key) {
@@ -251,7 +166,119 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
             blue.registerExternalContractType(auditHandlerBlueId,
                     auditHandlerType,
                     new AuditHandlerProcessor(executions, patchValue));
+            installExactAuditFeeder(blue);
             return blue;
+        }
+
+        private void installExactAuditFeeder(Blue blue) {
+            DocumentProcessor current = blue.getDocumentProcessor();
+            ProcessingSnapshotManager snapshotManager =
+                    new ProcessingSnapshotManager() {
+                        @Override
+                        public ResolvedSnapshot fromDocument(Node document) {
+                            return blue.resolveToSnapshot(document);
+                        }
+
+                        @Override
+                        public ResolvedSnapshot applyPatch(
+                                ResolvedSnapshot snapshot,
+                                JsonPatch patch) {
+                            return blue.applyCanonicalPatch(snapshot, patch);
+                        }
+                    };
+            DocumentProcessor exact = DocumentProcessor.builder()
+                    .withRegistry(current.getContractRegistry())
+                    .withContractTypeResolver(
+                            current.getContractTypeResolver())
+                    .withConformanceEngine(new ConformanceEngine(
+                            blue.getNodeProvider(),
+                            blue.getMergingProcessor()))
+                    .withSnapshotManager(snapshotManager)
+                    .withMatchingService(
+                            new ContractMatchingService(blue))
+                    .withProcessingMetricsSink(
+                            current.processingMetricsSink())
+                    .withExternalDeliveryPlanDeriver(
+                            this::deriveExactAuditPlan)
+                    .build();
+            blue.documentProcessor(exact);
+        }
+
+        private ExternalDeliveryPlan deriveExactAuditPlan(
+                Node root,
+                Node event) {
+            String eventBlueId =
+                    BlueIdCalculator.calculateBlueId(event);
+            ExternalOrderKey eventOrder =
+                    ExternalOrderKey.of(
+                            Collections.singletonList(eventBlueId));
+            ExternalDeliveryPlan.Builder plan =
+                    ExternalDeliveryPlan.builder()
+                            .revisions(1L, 1L)
+                            .eventOrderKey(eventOrder)
+                            .activeSubscriptionIntervals(
+                                    Collections
+                                            .<SubscriptionDelta.Entry>
+                                                    emptyList())
+                            .exactRuntimeState();
+            Node contracts = root.getContracts();
+            if (contracts == null
+                    || contracts.getProperties() == null
+                    || contracts.getProperties().containsKey(
+                            "terminated")) {
+                return plan.build();
+            }
+            Node channel = contracts.getProperties().get(
+                    "incoming");
+            if (channel == null) {
+                return plan.build();
+            }
+
+            List<String> contributions =
+                    Collections.singletonList(
+                            BlueIdCalculator.calculateBlueId(
+                                    channel));
+            List<String> keys =
+                    Collections.singletonList("audit");
+            String checkpointDomain =
+                    CheckpointDomain.derive(
+                            channelBlueId,
+                            contributions,
+                            AuditChannelProcessor
+                                    .CHECKPOINT_DISCRIMINATOR);
+            SubscriptionDelta.Entry active =
+                    new SubscriptionDelta.Entry(
+                            "/",
+                            "incoming",
+                            channelBlueId,
+                            contributions,
+                            0,
+                            keys,
+                            checkpointDomain,
+                            1L,
+                            null,
+                            null);
+            plan.activeSubscriptionInterval(active);
+
+            if (!"audit".equals(
+                    event.getAsText("/kind"))) {
+                return plan.build();
+            }
+            ExternalDeliverySnapshot.Builder delivery =
+                    ExternalDeliverySnapshot.builder(
+                                    "/", "incoming")
+                            .order(0)
+                            .effectiveTypeBlueId(
+                                    channelBlueId)
+                            .subscriptionKey("audit")
+                            .checkpointDomainBlueId(
+                                    checkpointDomain)
+                            .checkpointSubjectBlueId(
+                                    eventBlueId);
+            for (String contribution : contributions) {
+                delivery.sourceContribution(contribution);
+            }
+            return plan.delivery(delivery.build()).build();
         }
 
         Node compact() {
@@ -287,9 +314,47 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
     }
 
     private static final class AuditChannelProcessor implements ChannelProcessor<AuditChannel> {
+        private static final String CHECKPOINT_DISCRIMINATOR =
+                "audit-kind-v1";
+        private final ExternalChannelSubscriptionFunctions<
+                AuditChannel> subscriptionFunctions =
+                new ExternalChannelSubscriptionFunctions<
+                        AuditChannel>() {
+                    @Override
+                    public List<String> channelKeys(
+                            AuditChannel immutableContractSnapshot) {
+                        return Collections.singletonList(
+                                "audit");
+                    }
+
+                    @Override
+                    public List<String> eventKeys(
+                            Node exactEvent) {
+                        String kind = exactEvent != null
+                                ? exactEvent.getAsText("/kind")
+                                : null;
+                        return kind != null
+                                ? Collections.singletonList(kind)
+                                : Collections
+                                        .<String>emptyList();
+                    }
+
+                    @Override
+                    public String checkpointDomainDiscriminator(
+                            AuditChannel immutableContractSnapshot) {
+                        return CHECKPOINT_DISCRIMINATOR;
+                    }
+                };
+
         @Override
         public Class<AuditChannel> contractType() {
             return AuditChannel.class;
+        }
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<AuditChannel>
+        externalSubscriptionFunctions() {
+            return subscriptionFunctions;
         }
 
         @Override

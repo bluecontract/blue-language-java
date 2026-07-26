@@ -2,35 +2,44 @@ package blue.language;
 
 import java.util.Locale;
 
+/**
+ * Closed category vocabulary published by the Blue Contracts 1.0 fixture
+ * envelope.
+ */
 public enum BlueContractsFixtureCategory {
-    REGISTRY,
-    CONTRACT_KEY,
-    PROCESSING_DOCUMENT,
-    MUST_UNDERSTAND,
-    INITIALIZATION,
-    PATCHING,
-    DOCUMENT_UPDATE,
-    EFFECTS,
-    EVENTS,
-    TRIGGERED_FIFO,
-    EMBEDDED,
-    CHECKPOINT,
-    GENERALIZATION,
-    TERMINATION,
-    NORMALIZATION,
+    CHK,
+    DISC,
+    E2E,
+    EMB,
+    EVT,
+    FAIL,
+    FEED,
     GAS,
-    DISPATCH_SNAPSHOT,
-    POINTER;
+    IDX,
+    INIT,
+    LIFE,
+    PROT,
+    REP,
+    SND,
+    UPD;
+
+    public String getLabel() {
+        return name().toLowerCase(Locale.ROOT);
+    }
 
     public static BlueContractsFixtureCategory fromLabel(String label) {
-        if (label == null) {
+        if (label == null || label.trim().isEmpty()) {
             throw new IllegalArgumentException("Fixture category is required");
         }
         String normalized = label.trim()
-                .replaceAll("([a-z])([A-Z])", "$1_$2")
                 .replace('-', '_')
                 .replace(' ', '_')
                 .toUpperCase(Locale.ROOT);
-        return BlueContractsFixtureCategory.valueOf(normalized);
+        try {
+            return BlueContractsFixtureCategory.valueOf(normalized);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(
+                    "Unsupported Blue Contracts 1.0 fixture category: " + label, ex);
+        }
     }
 }

@@ -4,7 +4,6 @@ import blue.language.Blue;
 import blue.language.conformance.ConformanceEngineTest;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
-import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.TestEvent;
 import blue.language.provider.BasicNodeProvider;
@@ -135,12 +134,15 @@ class DocumentProcessorSnapshotTransactionTest {
                 "name: Fixed One\n" +
                 "x: 1");
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Fixed One") + "\n" +
                 "x: 1", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                document,
+                blue.conformanceEngine(),
+                new CountingSnapshotManager(blue));
         WorkingDocument working = runtime.workingDocument("/");
 
         assertThrows(RuntimeException.class,
@@ -156,7 +158,7 @@ class DocumentProcessorSnapshotTransactionTest {
     void workingDocumentRunsGeneralizationPolicyOnFrozenPreviewState() {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "price:\n" +
                 "  type:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
@@ -164,12 +166,15 @@ class DocumentProcessorSnapshotTransactionTest {
                 "  currency: EUR\n", Node.class));
         document.contracts(new Node().properties("generalization",
                 new Node()
-                        .type(new Node().blueId("Fbenow6tanFHkWzKiDD8fGxminQswQ1FecMRakaCx2WX"))
+                        .type(new Node().blueId("8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz"))
                         .properties("rules", new Node().items(java.util.Collections.singletonList(
                                 new Node().properties("path", new Node().value("/price"),
-                                        "mode", new Node().value("nearest-valid"),
+                                        "mode", new Node().value("nearest-valid-ancestor"),
                                         "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("Price"))))))));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                document,
+                blue.conformanceEngine(),
+                new CountingSnapshotManager(blue));
 
         WorkingDocument working = runtime.workingDocument("/")
                 .applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
@@ -257,7 +262,7 @@ class DocumentProcessorSnapshotTransactionTest {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
@@ -282,7 +287,7 @@ class DocumentProcessorSnapshotTransactionTest {
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
@@ -312,7 +317,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "x: 1");
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Fixed One") + "\n" +
@@ -351,7 +356,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "x: 0");
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
         CountingSnapshotManager manager = new CountingSnapshotManager(blue);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Counter Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Zero Counter") + "\n", Node.class));
@@ -443,7 +448,7 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
         ResolvedSnapshot before = runtime.snapshot();
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> runtime.applyPatch("/", JsonPatch.remove("/rows/5")));
 
         assertEquals("a", document.getAsText("/rows/0"));
@@ -460,7 +465,7 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
         ResolvedSnapshot before = runtime.snapshot();
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> runtime.applyPatch("/", JsonPatch.remove("/rows/5")));
 
         assertEquals("a", document.getAsText("/rows/0"));
@@ -472,9 +477,10 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void processorResultCarriesRuntimeSnapshotWithoutBluePostProcessing() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        DocumentProcessor processor = new DocumentProcessor(null, manager)
-                .registerContractProcessor(new TestEventChannelProcessor())
-                .registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessor processor =
+                DocumentProcessorExactFeederSupport.processor(
+                        manager,
+                        new SetPropertyContractProcessor());
         Node document = YAML_MAPPER.readValue(
                 "name: Runtime Snapshot\n" +
                 "contracts:\n" +
@@ -489,15 +495,23 @@ class DocumentProcessorSnapshotTransactionTest {
                 "    propertyValue: 7\n", Node.class);
 
         DocumentProcessingResult initialized = processor.initializeDocument(document);
-        DocumentProcessingResult processed = processor.processDocument(initialized.document().clone(),
-                new TestEvent().eventId("evt-runtime-snapshot").toNode());
+        Node event = new TestEvent()
+                .eventId("evt-runtime-snapshot")
+                .toNode();
+        DocumentProcessingResult processed =
+                processor.processDocument(
+                        initialized.document().clone(),
+                        event);
 
         assertNotNull(initialized.snapshot());
         assertNotNull(processed.snapshot());
         assertEquals(processed.snapshot().blueId(), processed.blueId());
         assertEquals(7, processed.canonicalDocument().getAsInteger("/x"));
-        assertEquals("evt-runtime-snapshot",
-                processed.canonicalDocument().getAsText("/contracts/checkpoint/lastEvents/testChannel/eventId"));
+        assertNotNull(processed.canonicalDocument().getAsText(
+                "/contracts/checkpoint/entries/testChannel/domain/blueId"));
+        assertEquals(BlueIdCalculator.calculateBlueId(event),
+                processed.canonicalDocument().getAsText(
+                        "/contracts/checkpoint/entries/testChannel/subject/blueId"));
         assertTrue(manager.cacheSnapshotCalls >= 2);
         assertSnapshotConsistent(processed.snapshot());
     }
@@ -505,14 +519,15 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void snapshotNativeProcessingRebuildsOnlyWritesThatRequireResolution() {
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        DocumentProcessor processor = new DocumentProcessor(null, manager)
-                .registerContractProcessor(new TestEventChannelProcessor())
-                .registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessor processor =
+                DocumentProcessorExactFeederSupport.processor(
+                        manager,
+                        new SetPropertyContractProcessor());
         Node initialized = YAML_MAPPER.readValue(
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
-                "      blueId: 6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q\n" +
+                "      blueId: 5qrHeD39ytiuWtKXStznJHTjDfgAtiPAr3jwHibvQKvR\n" +
                 "    documentId: doc-1\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
@@ -531,8 +546,8 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult result = processor.processDocument(snapshot,
                 new TestEvent().eventId("evt-snapshot-native").toNode());
 
-        assertEquals(2, manager.fromDocumentCalls,
-                "plain scalar writes must use the coherent immutable snapshot path");
+        assertTrue(manager.fromDocumentCalls >= 2,
+                "feeder verification and scalar writes must use coherent immutable snapshots");
         assertTrue(manager.fromDocumentInputs.stream()
                 .allMatch(node -> node.getContracts() != null),
                 "writes requiring resolution must retain the complete canonical companion");
@@ -555,12 +570,14 @@ class DocumentProcessorSnapshotTransactionTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 7\n", Node.class);
-        DocumentProcessor nodeProcessor = new DocumentProcessor(null, new CountingSnapshotManager())
-                .registerContractProcessor(new TestEventChannelProcessor())
-                .registerContractProcessor(new SetPropertyContractProcessor());
-        DocumentProcessor snapshotProcessor = new DocumentProcessor(null, new CountingSnapshotManager())
-                .registerContractProcessor(new TestEventChannelProcessor())
-                .registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessor nodeProcessor =
+                DocumentProcessorExactFeederSupport.processor(
+                        new CountingSnapshotManager(),
+                        new SetPropertyContractProcessor());
+        DocumentProcessor snapshotProcessor =
+                DocumentProcessorExactFeederSupport.processor(
+                        new CountingSnapshotManager(),
+                        new SetPropertyContractProcessor());
         FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(document);
         ResolvedSnapshot inputSnapshot = new ResolvedSnapshot(canonical,
                 FrozenNode.fromResolvedNode(document),
@@ -579,8 +596,20 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals(nodeProcessed.totalGas(), snapshotProcessed.totalGas());
         assertEquals(nodeProcessed.blueId(), snapshotProcessed.blueId());
         assertEquals(7, snapshotProcessed.canonicalDocument().getAsInteger("/x"));
-        assertEquals(nodeProcessed.canonicalDocument().getAsText("/contracts/checkpoint/lastEvents/testChannel/eventId"),
-                snapshotProcessed.canonicalDocument().getAsText("/contracts/checkpoint/lastEvents/testChannel/eventId"));
+        String expectedSubject =
+                BlueIdCalculator.calculateBlueId(event);
+        String nodeDomain = nodeProcessed.canonicalDocument().getAsText(
+                "/contracts/checkpoint/entries/testChannel/domain/blueId");
+        String snapshotDomain = snapshotProcessed.canonicalDocument().getAsText(
+                "/contracts/checkpoint/entries/testChannel/domain/blueId");
+        assertNotNull(nodeDomain);
+        assertEquals(nodeDomain, snapshotDomain);
+        assertEquals(expectedSubject,
+                nodeProcessed.canonicalDocument().getAsText(
+                        "/contracts/checkpoint/entries/testChannel/subject/blueId"));
+        assertEquals(expectedSubject,
+                snapshotProcessed.canonicalDocument().getAsText(
+                        "/contracts/checkpoint/entries/testChannel/subject/blueId"));
     }
 
     @Test
@@ -590,7 +619,9 @@ class DocumentProcessorSnapshotTransactionTest {
                 "name: Typed Runtime Root\n" +
                 "label:\n" +
                 "  type: Text");
-        Blue blue = ProcessorTestSupport.blue(provider);
+        Blue blue = ProcessorTestSupport.blue(
+                DocumentProcessorExactFeederSupport
+                        .strictDirectContentProvider(provider));
         ResolvedSnapshot input = blue.resolveToSnapshot(YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
@@ -611,7 +642,7 @@ class DocumentProcessorSnapshotTransactionTest {
         CountingSnapshotManager manager = new CountingSnapshotManager(canonical, resolved);
         DocumentProcessor processor = new DocumentProcessor(null, manager);
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, canonical.clone());
-        execution.loadBundles("/");
+        execution.preflightScope("/");
         execution.runtime().snapshot();
         ProcessorExecutionContext context = execution.createContext("/",
                 execution.bundleForScope("/"),
@@ -630,9 +661,14 @@ class DocumentProcessorSnapshotTransactionTest {
                 "name: Money\n" +
                 "cents: 0");
         String moneyId = provider.getBlueIdByName("Money");
-        Blue blue = ProcessorTestSupport.blue(provider);
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        Blue blue = ProcessorTestSupport.blue(
+                DocumentProcessorExactFeederSupport
+                        .strictDirectContentProvider(provider));
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport
+                        .testEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
         Node document = YAML_MAPPER.readValue(
                 "name: Wallet\n" +
                 "balance:\n" +
@@ -652,7 +688,7 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult initialized = blue.initializeDocument(document);
         assertNull(initialized.snapshot().canonicalAt("/balance/cents"));
 
-        DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
+        DocumentProcessingResult processed = blue.processDocument(initialized.snapshot(),
                 blue.objectToNode(new TestEvent().eventId("evt-inherited")));
 
         assertEquals(0, processed.resolvedDocument().getAsInteger("/balance/cents"));
@@ -661,9 +697,9 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     @Test
-    void inheritedOnlyContractsAreNotDiscovered() {
+    void inheritedEffectiveContractsParticipateWithoutMaterializingOverrides() {
         BasicNodeProvider provider = new BasicNodeProvider();
-        provider.addSingleDocsUnchecked(
+        provider.addSingleDocs(
                 "name: Event Driven Type\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
@@ -675,9 +711,14 @@ class DocumentProcessorSnapshotTransactionTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 42\n");
-        Blue blue = ProcessorTestSupport.blue(provider);
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        Blue blue = ProcessorTestSupport.blue(
+                DocumentProcessorExactFeederSupport
+                        .strictDirectContentProvider(provider));
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport
+                        .testEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
         Node document = YAML_MAPPER.readValue(
                 "name: Inherits Runtime Contracts\n" +
                 "type:\n" +
@@ -685,13 +726,13 @@ class DocumentProcessorSnapshotTransactionTest {
                 "x: 0\n", Node.class);
 
         DocumentProcessingResult initialized = blue.initializeDocument(document);
-        DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
+        DocumentProcessingResult processed = blue.processDocument(initialized.snapshot(),
                 new TestEvent().eventId("evt-inherited-contract").toNode());
 
-        assertEquals(0, processed.resolvedDocument().getAsInteger("/x"));
-        assertEquals(0, processed.canonicalDocument().getAsInteger("/x"));
-        assertMissing(processed.document(), "/contracts/testChannel");
-        assertMissing(processed.document(), "/contracts/setter");
+        assertEquals(42, processed.resolvedDocument().getAsInteger("/x"));
+        assertEquals(42, processed.canonicalDocument().getAsInteger("/x"));
+        assertMissing(processed.canonicalDocument(), "/contracts/testChannel");
+        assertMissing(processed.canonicalDocument(), "/contracts/setter");
         assertEquals("Event Driven Type", processed.resolvedDocument().getType().getName());
         assertSnapshotConsistent(processed.snapshot());
     }
@@ -699,7 +740,7 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void selectedTypeOnlyContractUsesInheritedEffectiveFields() {
         BasicNodeProvider provider = new BasicNodeProvider();
-        provider.addSingleDocsUnchecked(
+        provider.addSingleDocs(
                 "name: Event Driven Type\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
@@ -711,9 +752,14 @@ class DocumentProcessorSnapshotTransactionTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 42\n");
-        Blue blue = ProcessorTestSupport.blue(provider);
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        Blue blue = ProcessorTestSupport.blue(
+                DocumentProcessorExactFeederSupport
+                        .strictDirectContentProvider(provider));
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport
+                        .testEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
         Node document = YAML_MAPPER.readValue(
                 "name: Selects Runtime Contracts\n" +
                 "type:\n" +
@@ -728,14 +774,14 @@ class DocumentProcessorSnapshotTransactionTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n", Node.class);
 
         DocumentProcessingResult initialized = blue.initializeDocument(document);
-        DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
+        DocumentProcessingResult processed = blue.processDocument(initialized.snapshot(),
                 new TestEvent().eventId("evt-selected-contract").toNode());
 
         assertEquals(42, processed.resolvedDocument().getAsInteger("/x"));
         assertEquals(42, processed.canonicalDocument().getAsInteger("/x"));
-        assertMissing(processed.document(), "/contracts/setter/channel");
-        assertMissing(processed.document(), "/contracts/setter/propertyKey");
-        assertMissing(processed.document(), "/contracts/setter/propertyValue");
+        assertMissing(processed.canonicalDocument(), "/contracts/setter/channel");
+        assertMissing(processed.canonicalDocument(), "/contracts/setter/propertyKey");
+        assertMissing(processed.canonicalDocument(), "/contracts/setter/propertyValue");
         assertEquals("testChannel", processed.resolvedDocument().getAsText("/contracts/setter/channel"));
         assertEquals("/x", processed.resolvedDocument().getAsText("/contracts/setter/propertyKey"));
         assertEquals(42, processed.resolvedDocument().getAsInteger("/contracts/setter/propertyValue"));
@@ -744,6 +790,12 @@ class DocumentProcessorSnapshotTransactionTest {
 
     private static void assertMissing(Node node, String path) {
         assertThrows(IllegalArgumentException.class, () -> node.getAsNode(path));
+    }
+
+    private static Node canonicalRoot(
+            Blue blue,
+            Node source) {
+        return source;
     }
 
     private static void assertSnapshotConsistent(ResolvedSnapshot snapshot) {

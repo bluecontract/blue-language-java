@@ -1,0 +1,18 @@
+id: R_required_semantic_presence
+category: Schema
+operation: resolveVariants
+fieldDeclaration:
+  field:
+    type: Text
+    schema:
+      required: true
+variants:
+  - source: {}
+    expectedErrorCategory: SchemaViolation
+  - source:
+      field: present
+    expectedValid: true
+  - source:
+      type:
+        field: fixed
+    expectedValid: true

@@ -1,0 +1,6 @@
+id: B_placeholder_changes_list_identity
+category: BlueId
+operation: calculateBlueIdPair
+left: [A, {$empty: true}, B]
+right: [A, B]
+expectedEqual: false

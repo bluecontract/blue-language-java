@@ -50,6 +50,7 @@ public final class BlueIdReferenceValidator {
                 if (!isReferenceFreeLeaf(node)
                         && visited.put(node, Boolean.TRUE) == null) {
                     validateReferences(node, BLUE_ID_PATH, PREVIOUS_BLUE_ID_PATH);
+                    validateSchemaReference(node.getSchema(), "/schema/blueId");
                     if (hasChildren(node)) {
                         pending.push(new FastTraversalFrame(node));
                     }
@@ -136,6 +137,22 @@ public final class BlueIdReferenceValidator {
                         pointer(frame.path, "$previous", "blueId"));
                 throw malformedReference;
             }
+        }
+        Schema schema = frame.node.getSchema();
+        if (schema != null && schema.getBlueId() != null) {
+            try {
+                validateBlueId(schema.getBlueId(), "/schema/blueId");
+            } catch (IllegalArgumentException malformedReference) {
+                validateBlueId(schema.getBlueId(),
+                        pointer(frame.path, "schema", "blueId"));
+                throw malformedReference;
+            }
+        }
+    }
+
+    private static void validateSchemaReference(Schema schema, String path) {
+        if (schema != null && schema.getBlueId() != null) {
+            validateBlueId(schema.getBlueId(), path);
         }
     }
 

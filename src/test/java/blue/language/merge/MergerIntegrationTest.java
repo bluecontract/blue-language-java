@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
+import java.math.BigInteger;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -67,6 +68,31 @@ public class MergerIntegrationTest {
         assertNotNull(merger);
     }
 
+    @Test
+    public void quotedCanonicalIntegerRefinesThroughANominalIntegerSubtype() {
+        nodeProvider.addSingleDocs(
+                "name: Order Number\n" +
+                "type: Integer");
+        String orderNumberBlueId =
+                nodeProvider.getBlueIdByName("Order Number");
+        Blue blue = new Blue(nodeProvider);
+        Node source = blue.yamlToNode(
+                "type:\n" +
+                "  orderNumber:\n" +
+                "    type:\n" +
+                "      blueId: " + orderNumberBlueId + "\n" +
+                "orderNumber: \"9007199254740992\"");
+
+        Node resolved = blue.resolve(source);
+        Node orderNumber =
+                resolved.getProperties().get("orderNumber");
+
+        assertEquals(new BigInteger("9007199254740992"),
+                orderNumber.getValue());
+        assertEquals(orderNumberBlueId,
+                orderNumber.getType().getBlueId());
+    }
+
     private static final class CompatibleMerger extends Merger {
 
         private CompatibleMerger() {
@@ -74,4 +100,3 @@ public class MergerIntegrationTest {
         }
     }
 }
-

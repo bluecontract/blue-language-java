@@ -20,11 +20,30 @@ public class SequentialNodeProvider implements NodeProvider {
 
     @Override
     public List<Node> fetchByBlueId(String blueId) {
-        return nodeProviders.stream()
-                .map(provider -> provider.fetchByBlueId(blueId))
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+        NodeProviderResult result = fetchResultByBlueId(blueId);
+        if (result.outcome() == NodeProviderOutcome.FOUND) {
+            return result.nodes();
+        }
+        if (result.outcome() == NodeProviderOutcome.INVALID_EVIDENCE) {
+            throw new IllegalArgumentException(result.diagnostic().orElse(
+                    "Provider returned invalid evidence for " + blueId));
+        }
+        if (result.outcome() == NodeProviderOutcome.UNAVAILABLE) {
+            throw new IllegalStateException(result.diagnostic().orElse(
+                    "Provider unavailable for " + blueId));
+        }
+        return null;
+    }
+
+    @Override
+    public NodeProviderResult fetchResultByBlueId(String blueId) {
+        for (NodeProvider provider : nodeProviders) {
+            NodeProviderResult result = provider.fetchResultByBlueId(blueId);
+            if (result.outcome() != NodeProviderOutcome.NOT_FOUND) {
+                return result;
+            }
+        }
+        return NodeProviderResult.notFound();
     }
 
     public List<NodeProvider> getNodeProviders() {

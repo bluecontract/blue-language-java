@@ -10,7 +10,6 @@ import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.InitializationMarker;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.ProcessEmbedded;
-import blue.language.processor.model.ProcessingFailureMarker;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
@@ -69,21 +68,15 @@ class ContractMappingIntegrationTest {
         Contract checkpointContract = converter.convertWithType(contractEntries.get("checkpoint"), Contract.class, false);
         assertTrue(checkpointContract instanceof ChannelEventCheckpoint);
         ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) checkpointContract;
-        Node storedEvent = checkpoint.lastEvent("external");
-        assertNotNull(storedEvent);
-        Node eventIdNode = storedEvent.getProperties().get("eventId");
-        assertNotNull(eventIdNode);
-        assertEquals("evt-001", eventIdNode.getValue());
+        assertNotNull(checkpoint.entry("external"));
+        assertEquals("BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L",
+                checkpoint.entry("external").domainBlueId());
+        assertEquals("Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf",
+                checkpoint.entry("external").subjectBlueId());
 
         Contract initializedContract = converter.convertWithType(contractEntries.get("initialized"), Contract.class, false);
         assertTrue(initializedContract instanceof InitializationMarker);
         assertEquals("doc-123", ((InitializationMarker) initializedContract).getDocumentId());
-
-        Contract failureContract = converter.convertWithType(contractEntries.get("failure"), Contract.class, false);
-        assertTrue(failureContract instanceof ProcessingFailureMarker);
-        ProcessingFailureMarker failure = (ProcessingFailureMarker) failureContract;
-        assertEquals("RuntimeFatal", failure.getCode());
-        assertEquals("boundary violation", failure.getReason());
 
         Contract setPropertyContract = converter.convertWithType(contractEntries.get("setProperty"), Contract.class, false);
         assertNotNull(setPropertyContract);
@@ -140,7 +133,7 @@ class ContractMappingIntegrationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  setProperty:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +

@@ -1,115 +1,111 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.model.Schema;
-import blue.language.merge.Merger;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.snapshot.ResolvedReferenceCache;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+
 import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
-import static blue.language.utils.limits.Limits.NO_LIMITS;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VerifiedReferenceMaterializationTest {
 
     @Test
-    void coldTypedFieldMaterializesConcreteReferenceWithoutReapplyingItsDeclaredType() {
+    void expandingExactRootReferencePreservesNodeBlueId() {
         Fixture fixture = new Fixture();
+        Node reference = reference(fixture.concreteDocumentId);
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(fixture.holderInstance()));
+        Node expanded = fixture.blue.expand(reference);
 
-        assertNotEquals(fixture.documentTypeId, fixture.concreteDocumentId,
-                "the referenced document must not be its own type definition");
-        assertEquals(fixture.concreteDocumentId, resolved.getAsNode("/subject").getBlueId());
-        assertEquals("present", resolved.getAsText("/subject/instanceValue"));
-        assertEquals(fixture.computeTypeId,
-                resolved.getAsNode("/subject/steps/0/type").getBlueId());
+        assertEquals(fixture.concreteDocumentId,
+                fixture.blue.calculateBlueId(reference));
+        assertEquals(fixture.concreteDocumentId,
+                fixture.blue.calculateBlueId(expanded));
+        assertEquals("present", expanded.getAsText("/instanceValue"));
     }
 
     @Test
-    void warmTypedFieldResolutionMatchesColdResolution() {
+    void recursivelyExpandedDocumentPreservesParentIdentity() {
         Fixture fixture = new Fixture();
-        Node cold = fixture.blue.resolve(fixture.holderInstance());
+        Node collapsed = fixture.holderInstance();
 
-        Node warm = assertDoesNotThrow(() -> fixture.blue.resolve(fixture.holderInstance()));
+        Node expanded = fixture.blue.expand(collapsed);
 
-        assertEquals(fixture.blue.nodeToJson(cold), fixture.blue.nodeToJson(warm));
+        assertEquals(fixture.blue.calculateBlueId(collapsed),
+                fixture.blue.calculateBlueId(expanded));
+        assertEquals("present", expanded.getAsText("/subject/instanceValue"));
+        assertEquals("Materialization Compute",
+                expanded.getAsNode("/subject/type/steps/0/type").getName());
     }
 
     @Test
-    void pureReferenceAndEquivalentInlineDocumentHaveTheSameSemanticIdentity() {
+    void pureReferenceAndEquivalentInlineNodeHaveTheSameIdentity() {
         Fixture fixture = new Fixture();
-
-        Node referenced = fixture.blue.resolve(fixture.holderInstance());
-        Node inline = assertDoesNotThrow(() -> fixture.blue.resolve(fixture.holderWithInlineSubject()));
+        Node referenced = fixture.holderInstance();
+        Node inline = fixture.holderWithInlineSubject();
 
         assertEquals(fixture.concreteDocumentId,
                 fixture.blue.calculateBlueId(fixture.inlineSubject()));
-        assertEquals(fixture.blue.calculateSemanticBlueId(referenced),
-                fixture.blue.calculateSemanticBlueId(inline));
-        assertEquals(fixture.computeTypeId,
-                inline.getAsNode("/subject/steps/0/type").getBlueId());
+        assertEquals(fixture.blue.calculateBlueId(referenced),
+                fixture.blue.calculateBlueId(inline));
     }
 
     @Test
-    void unresolvedTargetWithTheSameDeclaredTypeStillReceivesItsTypeContribution() {
+    void repeatedExpansionDoesNotMakeCacheStateObservable() {
         Fixture fixture = new Fixture();
-        Node target = new Node().type(reference(fixture.documentTypeId));
-        Node source = new Node().type(reference(fixture.documentTypeId));
-        Merger merger = new Merger(fixture.blue.getMergingProcessor(), fixture.provider,
-                new ResolvedReferenceCache());
 
-        merger.merge(target, source, NO_LIMITS);
+        Node first = fixture.blue.expand(fixture.holderInstance());
+        Node second = fixture.blue.expand(fixture.holderInstance());
+        Node fresh = new Blue(fixture.provider)
+                .expand(fixture.holderInstance());
 
-        assertNotNull(target.getAsNode("/steps/0"));
-        assertEquals(fixture.computeTypeId, target.getAsNode("/steps/0/type").getBlueId());
+        assertEquals(fixture.blue.nodeToJson(first),
+                fixture.blue.nodeToJson(second));
+        assertEquals(fixture.blue.nodeToJson(first),
+                fixture.blue.nodeToJson(fresh));
+        assertEquals(fixture.blue.calculateBlueId(first),
+                fixture.blue.calculateBlueId(fresh));
     }
 
     @Test
-    void expandedTypeMetadataAloneDoesNotProveItsContributionWasApplied() {
+    void mixedBlueIdMaterializationIsNeverAcceptedAsBlueContent() {
         Fixture fixture = new Fixture();
-        Node expandedType = fixture.provider.fetchFirstByBlueId(fixture.documentTypeId)
-                .clone()
-                .blueId(fixture.documentTypeId);
-        Node target = new Node().type(expandedType);
-        Node source = new Node().type(reference(fixture.documentTypeId));
-        Merger merger = new Merger(fixture.blue.getMergingProcessor(), fixture.provider,
-                new ResolvedReferenceCache());
+        Node mixed = fixture.inlineSubject()
+                .blueId(fixture.concreteDocumentId);
 
-        merger.merge(target, source, NO_LIMITS);
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                () -> fixture.blue.calculateBlueId(mixed));
 
-        assertNotNull(target.getAsNode("/steps/0"));
-        assertEquals(fixture.computeTypeId, target.getAsNode("/steps/0/type").getBlueId());
+        assertTrue(messageChain(failure).contains("reference-only"));
     }
 
     @Test
-    void resolvingCompletedTypedListsAgainRemainsStable() {
+    void expansionRejectsProviderContentThatDoesNotVerifyRequestedIdentity() {
         Fixture fixture = new Fixture();
-        Node resolved = fixture.blue.resolve(fixture.holderInstance());
+        Blue mismatched = new Blue(blueId -> Collections.singletonList(
+                new Node().name("Different provider content")));
 
-        Node resolvedAgain = assertDoesNotThrow(() -> fixture.blue.resolve(resolved));
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> mismatched.expand(reference(fixture.concreteDocumentId)));
 
-        assertEquals(fixture.blue.nodeToJson(resolved), fixture.blue.nodeToJson(resolvedAgain));
+        assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
+                BlueLanguageErrorClassifier.classify(failure));
     }
 
-    @Test
-    void materializedTargetWithADifferentDeclaredTypeStillChecksCompatibility() {
-        Fixture fixture = new Fixture();
-        Node materializedTargetType = fixture.provider.fetchFirstByBlueId(fixture.documentTypeId)
-                .clone()
-                .blueId(fixture.documentTypeId);
-        Node target = new Node().type(materializedTargetType);
-        Node source = new Node().type(reference(fixture.otherDocumentTypeId));
-        Merger merger = new Merger(fixture.blue.getMergingProcessor(), fixture.provider,
-                new ResolvedReferenceCache());
-
-        assertThrows(IllegalArgumentException.class,
-                () -> merger.merge(target, source, NO_LIMITS));
+    private static String messageChain(Throwable failure) {
+        StringBuilder messages = new StringBuilder();
+        Throwable current = failure;
+        while (current != null) {
+            if (current.getMessage() != null) {
+                messages.append(current.getMessage()).append('\n');
+            }
+            current = current.getCause();
+        }
+        return messages.toString();
     }
 
     private static Node reference(String blueId) {
@@ -118,10 +114,7 @@ class VerifiedReferenceMaterializationTest {
 
     private static final class Fixture {
         private final BasicNodeProvider provider = new BasicNodeProvider();
-        private final String computeTypeId;
-        private final String documentTypeId;
         private final String concreteDocumentId;
-        private final String otherDocumentTypeId;
         private final String holderTypeId;
         private final Blue blue;
 
@@ -134,7 +127,8 @@ class VerifiedReferenceMaterializationTest {
                     .name("Materialization Compute")
                     .type(reference(stepTypeId));
             provider.addSingleNodes(computeType);
-            computeTypeId = provider.getBlueIdByName("Materialization Compute");
+            String computeTypeId =
+                    provider.getBlueIdByName("Materialization Compute");
 
             Node documentType = new Node()
                     .name("Materialization Document Type")
@@ -143,25 +137,20 @@ class VerifiedReferenceMaterializationTest {
                             .itemType(reference(stepTypeId))
                             .items(new Node().type(reference(computeTypeId))));
             provider.addSingleNodes(documentType);
-            documentTypeId = provider.getBlueIdByName("Materialization Document Type");
+            String documentTypeId =
+                    provider.getBlueIdByName("Materialization Document Type");
 
             Node concreteDocument = new Node()
                     .name("Concrete Materialization Document")
                     .type(reference(documentTypeId))
                     .properties("instanceValue", new Node().value("present"));
             provider.addSingleNodes(concreteDocument);
-            concreteDocumentId = provider.getBlueIdByName("Concrete Materialization Document");
-
-            provider.addSingleNodes(new Node()
-                    .name("Other Materialization Document Type")
-                    .properties("otherValue", new Node().value("other")));
-            otherDocumentTypeId = provider.getBlueIdByName("Other Materialization Document Type");
+            concreteDocumentId =
+                    provider.getBlueIdByName("Concrete Materialization Document");
 
             Node holderType = new Node()
                     .name("Materialization Holder")
-                    .properties("subject", new Node()
-                            .type(reference(documentTypeId))
-                            .schema(new Schema().required(true)));
+                    .properties("subject", new Node());
             provider.addSingleNodes(holderType);
             holderTypeId = provider.getBlueIdByName("Materialization Holder");
             blue = new Blue(provider);
@@ -180,7 +169,11 @@ class VerifiedReferenceMaterializationTest {
         }
 
         private Node inlineSubject() {
-            return provider.fetchFirstByBlueId(concreteDocumentId).clone().blueId(null);
+            Node subject = provider.fetchFirstByBlueId(concreteDocumentId).clone();
+            if (subject.getBlueId() != null) {
+                subject.blueId(null);
+            }
+            return subject;
         }
     }
 }

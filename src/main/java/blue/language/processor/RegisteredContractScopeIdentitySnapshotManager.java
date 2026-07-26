@@ -3,8 +3,10 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 
+import java.util.Collection;
 import java.util.Collections;
 
 /**
@@ -43,6 +45,29 @@ final class RegisteredContractScopeIdentitySnapshotManager implements Processing
     @Override
     public ResolvedSnapshot fromDocumentTransient(Node document) {
         return delegate.fromDocumentTransient(document);
+    }
+
+    @Override
+    public ResolvedSnapshot fromDocumentPreservingPaths(
+            Node document,
+            Collection<String> preservedPaths) {
+        return delegate.fromDocumentPreservingPaths(
+                document, preservedPaths);
+    }
+
+    @Override
+    public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+            Node document,
+            Collection<String> preservedPaths) {
+        return delegate.fromDocumentTransientPreservingPaths(
+                document, preservedPaths);
+    }
+
+    @Override
+    public FrozenNode materializeVerifiedExactReference(
+            FrozenNode reference) {
+        return delegate.materializeVerifiedExactReference(
+                reference);
     }
 
     @Override

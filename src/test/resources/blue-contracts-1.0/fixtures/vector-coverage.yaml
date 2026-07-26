@@ -1,0 +1,229 @@
+specification: blue-contracts/1.0
+vectors:
+  C-CHK-01:
+  - chk/c-chk-01.yaml
+  C-CHK-02:
+  - chk/c-chk-02.yaml
+  C-CHK-03:
+  - chk/c-chk-03.yaml
+  C-CHK-04:
+  - chk/c-chk-04.yaml
+  C-CHK-05:
+  - chk/c-chk-05.yaml
+  C-CHK-06:
+  - chk/c-chk-06.yaml
+  C-CHK-07:
+  - chk/c-chk-07.yaml
+  C-DISC-01:
+  - disc/c-disc-01.yaml
+  C-DISC-02:
+  - disc/c-disc-02.yaml
+  C-DISC-03:
+  - disc/c-disc-03.yaml
+  C-DISC-04:
+  - disc/c-disc-04.yaml
+  C-DISC-05:
+  - disc/c-disc-05.yaml
+  C-DISC-06:
+  - disc/c-disc-06.yaml
+  C-E2E-01:
+  - e2e/c-e2e-01.yaml
+  C-E2E-02:
+  - e2e/c-e2e-02.yaml
+  C-E2E-03:
+  - e2e/c-e2e-03.yaml
+  C-EMB-01:
+  - emb/c-emb-01.yaml
+  C-EMB-02:
+  - emb/c-emb-02.yaml
+  C-EMB-03:
+  - emb/c-emb-03.yaml
+  C-EMB-04:
+  - emb/c-emb-04.yaml
+  C-EMB-05:
+  - emb/c-emb-05.yaml
+  C-EMB-06:
+  - emb/c-emb-06.yaml
+  C-EMB-07:
+  - emb/c-emb-07.yaml
+  C-EVT-01:
+  - evt/c-evt-01.yaml
+  C-EVT-02:
+  - evt/c-evt-02.yaml
+  C-EVT-03:
+  - evt/c-evt-03.yaml
+  C-EVT-04:
+  - evt/c-evt-04.yaml
+  C-EVT-05:
+  - evt/c-evt-05.yaml
+  C-FAIL-01:
+  - fail/c-fail-01.yaml
+  C-FAIL-02:
+  - fail/c-fail-02.yaml
+  C-FAIL-03:
+  - fail/c-fail-03.yaml
+  C-FAIL-04:
+  - fail/c-fail-04.yaml
+  C-FAIL-05:
+  - fail/c-fail-02.yaml
+  C-FEED-01:
+  - feed/c-feed-01.yaml
+  C-FEED-02:
+  - feed/c-feed-02.yaml
+  C-FEED-03:
+  - feed/c-feed-03.yaml
+  C-FEED-04:
+  - feed/c-feed-04.yaml
+  C-FEED-05:
+  - feed/c-feed-05.yaml
+  C-FEED-06:
+  - feed/c-feed-06.yaml
+  C-FEED-07:
+  - feed/c-feed-07.yaml
+  C-FEED-08:
+  - feed/c-feed-08.yaml
+  C-FEED-09:
+  - feed/c-feed-09.yaml
+  C-FEED-10:
+  - feed/c-feed-10.yaml
+  C-GAS-01:
+  - gas-micro/processor-channelAccepted.yaml
+  - gas-micro/processor-channelCandidateTested.yaml
+  - gas-micro/processor-checkpointCompared.yaml
+  - gas-micro/processor-checkpointWritten.yaml
+  - gas-micro/processor-contractHeaderRecognized.yaml
+  - gas-micro/processor-deliverySnapshotEntry.yaml
+  - gas-micro/processor-documentUpdateDelivered.yaml
+  - gas-micro/processor-embeddedEventDelivered.yaml
+  - gas-micro/processor-embeddedPathEntryRead.yaml
+  - gas-micro/processor-embeddedPathSegmentValidated.yaml
+  - gas-micro/processor-handlerCall.yaml
+  - gas-micro/processor-handlerCandidateTested.yaml
+  - gas-micro/processor-internalEventDequeued.yaml
+  - gas-micro/processor-internalEventEnqueued.yaml
+  - gas-micro/processor-lifecycleDelivered.yaml
+  - gas-micro/processor-patchAddOrReplace.yaml
+  - gas-micro/processor-patchBoundaryChecked.yaml
+  - gas-micro/processor-patchRemove.yaml
+  - gas-micro/processor-pointerSegmentTraversed.yaml
+  - gas-micro/processor-processInvocation.yaml
+  - gas-micro/processor-processorMarkerWritten.yaml
+  - gas-micro/processor-rootEventRecorded.yaml
+  - gas-micro/processor-scopeInitialization.yaml
+  - gas-micro/processor-scopeOpened.yaml
+  - gas-micro/processor-terminationRequested.yaml
+  - gas-micro/processor-triggeredEventDelivered.yaml
+  - gas-micro/semantic-directIdentityHashBlock.yaml
+  - gas-micro/semantic-integerLimbOperation.yaml
+  - gas-micro/semantic-listFoldStepRecomputed.yaml
+  - gas-micro/semantic-listItemRead.yaml
+  - gas-micro/semantic-nodeIdentityEstablished.yaml
+  - gas-micro/semantic-nodeManifestOpened.yaml
+  - gas-micro/semantic-objectMemberRead.yaml
+  - gas-micro/semantic-objectMemberRebuilt.yaml
+  - gas-micro/semantic-scalarComparison.yaml
+  - gas-micro/semantic-schemaPredicateEvaluated.yaml
+  - gas-micro/semantic-sortComparison.yaml
+  - gas-micro/semantic-subtypeCandidateTested.yaml
+  - gas-micro/semantic-textBlockConstructed.yaml
+  - gas-micro/semantic-textBlockExamined.yaml
+  - gas-micro/semantic-typeEdgeFollowed.yaml
+  - gas-micro/semantic-validationMemberExamined.yaml
+  - gas-micro/semantic-validationProofReused.yaml
+  - gas/c-gas-01.yaml
+  C-GAS-02:
+  - gas-micro/composite-gas-exhaustion-prefix.yaml
+  - gas-micro/composite-identity-blocks.yaml
+  - gas-micro/composite-integer-multiply-3x2-limbs.yaml
+  - gas-micro/composite-list-append-delta.yaml
+  - gas-micro/composite-list-replace-head.yaml
+  - gas-micro/composite-text-65-code-points.yaml
+  - gas-micro/composite-validation-proof-reuse.yaml
+  - gas/c-gas-02.yaml
+  C-GAS-03:
+  - gas-micro/composite-gas-exhaustion-prefix.yaml
+  - gas-micro/composite-identity-blocks.yaml
+  - gas-micro/composite-integer-multiply-3x2-limbs.yaml
+  - gas-micro/composite-list-append-delta.yaml
+  - gas-micro/composite-list-replace-head.yaml
+  - gas-micro/composite-text-65-code-points.yaml
+  - gas-micro/composite-validation-proof-reuse.yaml
+  - gas/c-gas-03.yaml
+  C-GAS-04:
+  - gas-micro/composite-gas-exhaustion-prefix.yaml
+  - gas-micro/composite-identity-blocks.yaml
+  - gas-micro/composite-integer-multiply-3x2-limbs.yaml
+  - gas-micro/composite-list-append-delta.yaml
+  - gas-micro/composite-list-replace-head.yaml
+  - gas-micro/composite-text-65-code-points.yaml
+  - gas-micro/composite-validation-proof-reuse.yaml
+  - gas/c-gas-04.yaml
+  C-GAS-05:
+  - gas-micro/composite-gas-exhaustion-prefix.yaml
+  - gas-micro/composite-identity-blocks.yaml
+  - gas-micro/composite-integer-multiply-3x2-limbs.yaml
+  - gas-micro/composite-list-append-delta.yaml
+  - gas-micro/composite-list-replace-head.yaml
+  - gas-micro/composite-text-65-code-points.yaml
+  - gas-micro/composite-validation-proof-reuse.yaml
+  - gas/c-gas-05.yaml
+  C-GAS-06:
+  - gas/c-gas-06.yaml
+  C-GAS-07:
+  - gas/c-gas-07.yaml
+  C-GAS-08:
+  - gas/c-gas-08.yaml
+  C-IDX-01:
+  - idx/c-idx-01.yaml
+  C-IDX-02:
+  - idx/c-idx-02.yaml
+  C-INIT-01:
+  - init/c-init-01.yaml
+  C-INIT-02:
+  - init/c-init-02.yaml
+  C-INIT-03:
+  - init/c-init-03.yaml
+  C-INIT-04:
+  - init/c-init-04.yaml
+  C-INIT-05:
+  - init/c-init-05.yaml
+  C-LIFE-01:
+  - life/c-life-01.yaml
+  C-LIFE-02:
+  - life/c-life-02.yaml
+  C-LIFE-03:
+  - life/c-life-03.yaml
+  C-LIFE-04:
+  - life/c-life-04.yaml
+  C-PROT-01:
+  - prot/c-prot-01.yaml
+  C-PROT-02:
+  - prot/c-prot-02.yaml
+  C-REP-01:
+  - rep/c-rep-01.yaml
+  C-REP-02:
+  - rep/c-rep-02.yaml
+  C-REP-03:
+  - rep/c-rep-03.yaml
+  C-REP-04:
+  - rep/c-rep-04.yaml
+  C-REP-05:
+  - rep/c-rep-05.yaml
+  C-REP-06:
+  - rep/c-rep-06.yaml
+  C-REP-07:
+  - rep/c-rep-07.yaml
+  C-SND-01:
+  - snd/c-snd-01.yaml
+  C-SND-02:
+  - snd/c-snd-02.yaml
+  C-SND-03:
+  - snd/c-snd-03.yaml
+  C-SND-04:
+  - snd/c-snd-04.yaml
+  C-UPD-01:
+  - upd/c-upd-01.yaml
+  C-UPD-02:
+  - upd/c-upd-02.yaml
+  C-UPD-03:
+  - upd/c-upd-03.yaml

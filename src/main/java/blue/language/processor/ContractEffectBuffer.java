@@ -10,30 +10,12 @@ import java.util.List;
 
 final class ContractEffectBuffer implements AutoCloseable {
 
-    private long gas;
-    private String invalidGasReason;
     private final List<PatchInput> patches = new ArrayList<>();
     private final List<PatchBatch> patchBatches = new ArrayList<>();
     private final List<Node> emittedEvents = new ArrayList<>();
+    private GasMeter.ChildGasLedger runtimeLedger;
     private TerminationRequest terminationRequest;
     private boolean closed;
-
-    void addGas(long units) {
-        ensureOpen();
-        if (units < 0) {
-            invalidGasReason = "Gas amount must be non-negative";
-            return;
-        }
-        gas += units;
-    }
-
-    long gas() {
-        return gas;
-    }
-
-    String invalidGasReason() {
-        return invalidGasReason;
-    }
 
     void addPatch(JsonPatch patch) {
         if (patch != null) {
@@ -84,10 +66,24 @@ final class ContractEffectBuffer implements AutoCloseable {
         return Collections.unmodifiableList(emittedEvents);
     }
 
-    void terminate(ScopeRuntimeContext.TerminationKind kind, String reason) {
+    void runtimeLedger(GasMeter.ChildGasLedger ledger) {
+        ensureOpen();
+        if (runtimeLedger != null) {
+            throw new IllegalStateException(
+                    "A ContractExecutionResult may contain at most one runtime ledger");
+        }
+        runtimeLedger = ledger;
+    }
+
+    GasMeter.ChildGasLedger runtimeLedger() {
+        return runtimeLedger;
+    }
+
+    void terminate(String cause,
+                   String reason) {
         ensureOpen();
         if (terminationRequest == null) {
-            terminationRequest = new TerminationRequest(kind, reason);
+            terminationRequest = new TerminationRequest(cause, reason);
         }
     }
 
@@ -117,9 +113,8 @@ final class ContractEffectBuffer implements AutoCloseable {
         patches.clear();
         patchBatches.clear();
         emittedEvents.clear();
+        runtimeLedger = null;
         terminationRequest = null;
-        gas = 0L;
-        invalidGasReason = null;
         if (failure instanceof RuntimeException) {
             throw (RuntimeException) failure;
         }
@@ -135,16 +130,17 @@ final class ContractEffectBuffer implements AutoCloseable {
     }
 
     static final class TerminationRequest {
-        private final ScopeRuntimeContext.TerminationKind kind;
+        private final String cause;
         private final String reason;
 
-        private TerminationRequest(ScopeRuntimeContext.TerminationKind kind, String reason) {
-            this.kind = kind;
+        private TerminationRequest(String cause,
+                                   String reason) {
+            this.cause = cause;
             this.reason = reason;
         }
 
-        ScopeRuntimeContext.TerminationKind kind() {
-            return kind;
+        String cause() {
+            return cause;
         }
 
         String reason() {

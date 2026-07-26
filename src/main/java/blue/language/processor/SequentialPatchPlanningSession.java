@@ -24,6 +24,7 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
     private final ConformanceEngine conformanceEngine;
     private FrozenNode canonicalRoot;
     private FrozenNode resolvedRoot;
+    private boolean resolutionComplete;
     private boolean metricsStarted;
 
     SequentialPatchPlanningSession(String originScope,
@@ -55,6 +56,8 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         this.resolvedRoot = planning.baseSnapshot() != null
                 ? planning.baseSnapshot().frozenResolvedRoot()
                 : planning.resolvedPlanner().root();
+        this.resolutionComplete =
+                planning.isResolutionComplete();
         this.planningEngine = new PatchPlanningEngine(originScope,
                 planning,
                 conformanceEngine,
@@ -107,24 +110,36 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         }
         FrozenNode baseCanonical = canonicalRoot;
         FrozenNode baseResolved = resolvedRoot;
+        boolean baseResolutionComplete = resolutionComplete;
         BatchPatchResult result = planningEngine.planSequentialStep(baseCanonical,
                 baseResolved,
+                baseResolutionComplete,
                 Objects.requireNonNull(patch, "patch"));
         metrics.addPatchesPrepared(1L);
         metrics.addSequencePlanningNanos(result.patchPlanningNanos());
         metrics.addSequenceConformanceNanos(result.conformanceNanos());
         canonicalRoot = result.canonicalRoot();
         resolvedRoot = result.resolvedRoot();
+        resolutionComplete =
+                result.isResolutionComplete();
         return new PlannedStep(originScope,
                 result.requestedPatches().get(0),
                 baseCanonical,
                 baseResolved,
+                baseResolutionComplete,
                 result);
     }
 
     void rebase(FrozenNode actualCanonicalRoot, FrozenNode actualResolvedRoot) {
+        rebase(actualCanonicalRoot, actualResolvedRoot, resolutionComplete);
+    }
+
+    void rebase(FrozenNode actualCanonicalRoot,
+                FrozenNode actualResolvedRoot,
+                boolean actualResolutionComplete) {
         canonicalRoot = Objects.requireNonNull(actualCanonicalRoot, "actualCanonicalRoot");
         resolvedRoot = Objects.requireNonNull(actualResolvedRoot, "actualResolvedRoot");
+        resolutionComplete = actualResolutionComplete;
     }
 
     FrozenNode canonicalRoot() {
@@ -135,8 +150,19 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         return resolvedRoot;
     }
 
+    boolean isResolutionComplete() {
+        return resolutionComplete;
+    }
+
     boolean isBasedOn(FrozenNode actualCanonicalRoot, FrozenNode actualResolvedRoot) {
         return sameRoots(canonicalRoot, resolvedRoot, actualCanonicalRoot, actualResolvedRoot);
+    }
+
+    boolean isBasedOn(FrozenNode actualCanonicalRoot,
+                      FrozenNode actualResolvedRoot,
+                      boolean actualResolutionComplete) {
+        return resolutionComplete == actualResolutionComplete
+                && isBasedOn(actualCanonicalRoot, actualResolvedRoot);
     }
 
     static boolean sameRoots(FrozenNode expectedCanonicalRoot,
@@ -171,17 +197,20 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         private final ImmutableJsonPatch patch;
         private final FrozenNode baseCanonical;
         private final FrozenNode baseResolved;
+        private final boolean baseResolutionComplete;
         private final BatchPatchResult result;
 
         private PlannedStep(String originScope,
                             ImmutableJsonPatch patch,
                             FrozenNode baseCanonical,
                             FrozenNode baseResolved,
+                            boolean baseResolutionComplete,
                             BatchPatchResult result) {
             this.originScope = originScope;
             this.patch = patch;
             this.baseCanonical = baseCanonical;
             this.baseResolved = baseResolved;
+            this.baseResolutionComplete = baseResolutionComplete;
             this.result = result;
         }
 
@@ -199,6 +228,10 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
 
         FrozenNode baseResolved() {
             return baseResolved;
+        }
+
+        boolean isBaseResolutionComplete() {
+            return baseResolutionComplete;
         }
 
         BatchPatchResult result() {

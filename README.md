@@ -663,7 +663,8 @@ contract types they understand.
 
 Processor roles:
 
-- `ChannelProcessor<T>` decides whether an external event belongs to a channel;
+- `ChannelProcessor<T>` performs complete acceptance for one feeder-preselected
+  external occurrence and exposes immutable subscription functions;
 - `HandlerProcessor<T>` decides whether a handler should run and executes it;
 - `ContractProcessor<T>` is the base interface for marker-style contracts.
 
@@ -691,6 +692,10 @@ Minimal channel processor:
 import blue.language.model.Node;
 import blue.language.processor.ChannelEvaluationContext;
 import blue.language.processor.ChannelProcessor;
+import blue.language.processor.ExternalChannelSubscriptionFunctions;
+
+import java.util.Collections;
+import java.util.List;
 
 public final class ExampleChannelProcessor implements ChannelProcessor<ExampleChannel> {
     @Override
@@ -708,6 +713,23 @@ public final class ExampleChannelProcessor implements ChannelProcessor<ExampleCh
     public String eventId(ExampleChannel contract, ChannelEvaluationContext context) {
         Node id = context.event().getProperties().get("eventId");
         return id == null ? null : String.valueOf(id.getValue());
+    }
+
+    @Override
+    public ExternalChannelSubscriptionFunctions<ExampleChannel>
+    externalSubscriptionFunctions() {
+        return new ExternalChannelSubscriptionFunctions<ExampleChannel>() {
+            @Override
+            public List<String> channelKeys(ExampleChannel channel) {
+                return Collections.singletonList(channel.getEventType());
+            }
+
+            @Override
+            public String checkpointDomainDiscriminator(
+                    ExampleChannel channel) {
+                return "example-channel-v1";
+            }
+        };
     }
 }
 ```
@@ -759,8 +781,19 @@ Register processors and run a document:
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
+import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ExternalDeliveryPlanDeriver;
+import blue.language.processor.ProcessingSnapshotManager;
 
-Blue blue = new Blue();
+ProcessingSnapshotManager hostSnapshotManager = /* exact-node store */ ...;
+ExternalDeliveryPlanDeriver hostDeliveryPlanDeriver =
+        /* revision-complete feeder snapshot */ ...;
+
+Blue blue = new Blue().documentProcessor(
+        DocumentProcessor.builder()
+                .withSnapshotManager(hostSnapshotManager)
+                .withExternalDeliveryPlanDeriver(hostDeliveryPlanDeriver)
+                .build());
 
 Node exampleChannelType = new Node().name("ExampleChannel");
 String exampleChannelBlueId = blue.calculateBlueId(exampleChannelType);
@@ -798,8 +831,12 @@ System.out.println(blue.nodeToYaml(result.document()));
 External contract processors must register the canonical type node for the
 BlueId they handle. The runtime checks that every active contract in the
 initial processing closure is understood; if not, processing fails before state
-is mutated. `processDocument(document, event)` is the normative one-call
-PROCESS API and initializes scopes as part of the run when needed.
+is mutated. `processDocument(document, event)` is the normative two-input
+PROCESS API and initializes scopes as part of the run when needed. A configured
+`ExternalDeliveryPlanDeriver` supplies revision-bound environmental evidence;
+it is not a third semantic input. Without complete evidence, use
+`DocumentProcessor.processAttempt(...)`, acquire the reported exact resources,
+and retry from the original Root and event.
 
 ## Serialization Helpers
 
@@ -887,6 +924,7 @@ Implemented and covered by tests:
 - strict canonical language core;
 - RFC 8785-style canonical BlueId hashing for supported scalar/list/object
   cases;
+- exact Blue Language 1.0 registry and closed 125-fixture conformance package;
 - deterministic integer and typed-Double handling;
 - reference-only `blueId` semantics;
 - payload-kind exclusivity;
@@ -898,14 +936,13 @@ Implemented and covered by tests:
 - dynamic type generalization with rollback;
 - fast frozen type/pattern matching;
 - snapshot-backed document processing runtime;
-- Blue Contracts and Processor 1.0 runtime registry and conformance fixtures;
+- exact generic Blue Contracts and Processor 1.0 registry, manifest-driven gas
+  schedule, and closed 127-fixture conformance package;
 - external channel/handler/marker processor SPI with explicit canonical type
   registration.
 
 Known boundaries:
 
-- cross-language golden fixtures are still needed for independent
-  implementation certification;
 - provider ingestion stores strict canonical/preprocessed content and does not
   default to semantic resolve/minimize storage;
 - conformance/generalization is snapshot-safe at the boundary but still bridges
@@ -920,6 +957,7 @@ For deeper design notes, see:
 - [Frozen Type Matching](docs/frozen-type-matching.md)
 - [Processor Contract Matching](docs/processor-contract-matching.md)
 - [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md)
+- [Language 1.0 and Contracts Kernel 1.0 migration](docs/language-1.0-contracts-kernel-1.0-migration.md)
 
 ## Build And Test
 
@@ -956,12 +994,13 @@ metadata: language version, core registry BlueIds, fixture package identity,
 fixture IDs, and fixture categories. `new Blue().runConformanceSuite()` executes
 the manifest-driven fixture suite and returns passed fixture IDs plus detailed
 failures with fixture ID, category, operation, exception class, and message.
-The fixture package under `src/test/resources/blue-language-1.0/fixtures` is a
-vendored copy of the canonical Blue Language 1.0 fixture package; its manifest
-identity must match the fixture package identity published by the Blue Language
-1.0 specification release. The current Java fixture package identity is a
-SHA-256 content digest over `manifest.yaml` with the identity field blanked plus
-each manifest-listed fixture file in manifest order; verify it with
+The fixture package under `src/test/resources/blue-language-1.0/fixtures` is an
+exact vendored copy of the canonical Blue Language 1.0 package. It contains 125
+fixtures and has identity
+`sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb`.
+The registry package identity is
+`sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e`.
+Verify the fixture contents with
 `BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`.
 
 At runtime, `new Blue().contractsConformanceReport()` returns static Blue
@@ -969,17 +1008,26 @@ Contracts and Processor 1.0 metadata: fixture package identity, required fixture
 IDs, fixture IDs, categories, and coverage checks.
 `new Blue().runContractsConformanceSuite()` executes the separate contracts
 fixture suite. The contracts fixture package under
-`src/test/resources/blue-contracts-1.0/fixtures` is vendored from the official
-Blue Contracts 1.0 spec repository. Its release identity is
-`sha256:2f197ca3bbdc41b75e772777cc48e51019754347e1bee26b5f3209b71d9bd9ca`.
-The runtime registry resources are vendored from
-`contract/1.0/registry/blue-contracts-1.0`. The fixture package uses the same
-SHA-256 content digest scheme; verify it with
+`src/test/resources/blue-contracts-1.0/fixtures` is an exact vendored copy of
+the release package. It contains 69 behavior and 58 gas fixtures and has
+identity
+`sha256:58a3d8446e0e7c63063204c7bfaa312ace1242a182bc2f9c4875479a81149904`.
+The runtime registry package identity is
+`sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366`,
+and the gas manifest package identity is
+`sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5`.
+Verify fixture content with
 `BlueContractsConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`
 and `contractsConformanceReport().isOfficialContracts10FixturePackage()`.
-For release checks, both language and contracts reports should have no failures,
-all fixture IDs passed, required fixture coverage, exact required fixture sets,
-and matching fixture package identities.
+`new Blue().runReleaseConformanceSuites()` emits one machine-readable record
+for each of the 252 manifest-listed fixtures and has no skip outcome. With the
+exact bound baseline it currently records 125/125 Language passes and 113/127
+Contracts passes (238 pass, 14 fail, zero skipped overall). The combined report
+is intentionally non-conformant because the 14 identity-bound Contracts
+fixtures listed in the
+[migration notes](docs/language-1.0-contracts-kernel-1.0-migration.md)
+contain inputs or expectations that cannot be executed without inventing
+undeclared state or modifying the package.
 
 Build jars:
 

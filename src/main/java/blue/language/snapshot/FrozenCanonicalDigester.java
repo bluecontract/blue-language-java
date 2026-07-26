@@ -129,7 +129,9 @@ final class FrozenCanonicalDigester {
             throw new FrozenCanonicalWriter.UnsupportedCanonicalValueException(FrozenNode.class);
         }
         if (context == Context.LIST_ELEMENT && isEmptyPlaceholder(node)) {
-            String marker = hashScalar(Boolean.TRUE, observer);
+            // $empty's Boolean is a control marker rather than a scalar-node
+            // payload, so the helper map refers to the raw Boolean digest.
+            String marker = hashRawScalar(Boolean.TRUE, observer);
             return hashFields(Collections.singletonList(HashField.reference(LIST_CONTROL_EMPTY, marker)), observer);
         }
         if (node.isReferenceOnly()) {
@@ -290,13 +292,56 @@ final class FrozenCanonicalDigester {
         }
     }
 
-    private static String hashScalar(final Object value, Observer observer) {
+    /**
+     * Hashes scalar-node sugar, not the bare JSON token.
+     *
+     * <p>Every scalar in a semantic child position is equivalent to an
+     * explicitly typed scalar node. The only raw scalar map positions are
+     * {@code name}, {@code description}, and {@code value}; callers add those
+     * directly with {@link #addRaw(List, String, Object)}.</p>
+     */
+    private static String hashScalar(Object value, Observer observer) {
+        String typeBlueId = inferScalarNodeTypeBlueId(value);
+        List<HashField> fields = new ArrayList<>(2);
+        addReference(fields, OBJECT_TYPE, typeBlueId);
+        addRaw(fields, OBJECT_VALUE, canonicalScalarNodeValue(value, typeBlueId));
+        return hashFields(fields, observer);
+    }
+
+    private static String hashRawScalar(final Object value, Observer observer) {
         return hash(new WriteAction() {
             @Override
             public void write(FrozenCanonicalWriter.CanonicalByteSink sink) {
                 FrozenCanonicalWriter.writeCanonicalValue(value, sink);
             }
         }, observer);
+    }
+
+    private static String inferScalarNodeTypeBlueId(Object value) {
+        if (value instanceof String) return TEXT_TYPE_BLUE_ID;
+        if (value instanceof Boolean) return BOOLEAN_TYPE_BLUE_ID;
+        if (value instanceof BigDecimal || value instanceof Float || value instanceof Double) {
+            return DOUBLE_TYPE_BLUE_ID;
+        }
+        if (value instanceof Number) return INTEGER_TYPE_BLUE_ID;
+        throw new IllegalArgumentException(
+                "Blue scalar must be Text, Integer, Double, or Boolean.");
+    }
+
+    private static Object canonicalScalarNodeValue(Object value, String typeBlueId) {
+        if (DOUBLE_TYPE_BLUE_ID.equals(typeBlueId)) {
+            return BlueNumbers.toCanonicalDoubleValue(value);
+        }
+        if (!INTEGER_TYPE_BLUE_ID.equals(typeBlueId)) {
+            return value;
+        }
+        BigInteger integer = value instanceof BigInteger
+                ? (BigInteger) value
+                : BigInteger.valueOf(((Number) value).longValue());
+        return integer.compareTo(BigInteger.valueOf(-9007199254740991L)) < 0
+                || integer.compareTo(BigInteger.valueOf(9007199254740991L)) > 0
+                ? integer.toString()
+                : integer;
     }
 
     private static String hashFields(List<HashField> source, Observer observer) {

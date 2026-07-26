@@ -1,13 +1,14 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.processor.conformance.ScriptedContractsRuntime;
 import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -195,48 +196,121 @@ public final class ProcessorExecutionContext implements AutoCloseable {
 
     private void applyBufferedEffectsNow() {
         if (execution.shouldStopScopeWork(scopePath)) {
+            recordCutOffDiscardedEffects(0, 0);
             return;
         }
-        if (effects.invalidGasReason() != null) {
-            execution.enterFatalTermination(scopePath,
-                    bundle,
-                    ProcessorErrorCategory.GasError,
-                    effects.invalidGasReason());
-            return;
+        if (effects.runtimeLedger() != null) {
+            runtime().mergeRuntimeGasLedger(effects.runtimeLedger());
         }
-        if (effects.gas() > 0L) {
-            runtime().addGas(effects.gas());
-        }
-        for (ContractEffectBuffer.PatchBatch patchBatch : effects.patchBatches()) {
+        for (int batchIndex = 0;
+             batchIndex < effects.patchBatches().size();
+             batchIndex++) {
+            ContractEffectBuffer.PatchBatch patchBatch =
+                    effects.patchBatches().get(batchIndex);
             execution.handlePatchInputs(scopePath,
                     bundle,
                     patchBatch.patches(),
                     allowReservedMutation,
                     patchBatch.preview());
             if (execution.shouldStopScopeWork(scopePath)) {
+                recordCutOffDiscardedEffects(batchIndex + 1, 0);
                 return;
             }
         }
-        for (Node emission : effects.emittedEvents()) {
+        for (int eventIndex = 0;
+             eventIndex < effects.emittedEvents().size();
+             eventIndex++) {
+            Node emission = effects.emittedEvents().get(eventIndex);
             if (!emitEventNow(emission)) {
+                recordCutOffDiscardedEffects(
+                        effects.patchBatches().size(), eventIndex);
                 return;
             }
             if (execution.shouldStopScopeWork(scopePath)) {
+                recordCutOffDiscardedEffects(
+                        effects.patchBatches().size(), eventIndex + 1);
                 return;
             }
         }
         ContractEffectBuffer.TerminationRequest termination = effects.terminationRequest();
         if (termination != null) {
-            ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
-            if (scriptedRuntime != null) {
-                scriptedRuntime.recordTermination(runtime(), termination.kind());
-            }
-            if (termination.kind() == ScopeRuntimeContext.TerminationKind.FATAL) {
-                execution.enterRequestedFatalTermination(scopePath, bundle, termination.reason());
-            } else {
-                execution.enterGracefulTermination(scopePath, bundle, termination.reason());
+            execution.enterGracefulTermination(
+                    scopePath, bundle, termination.cause(), termination.reason());
+        }
+    }
+
+    private void recordCutOffDiscardedEffects(int firstPatchBatchIndex,
+                                              int firstEventIndex) {
+        ScopeRuntimeContext scope = runtime().existingScope(
+                execution.normalizeScope(scopePath));
+        if (scope == null || !scope.isCutOff()) {
+            return;
+        }
+        List<ContractEffectBuffer.PatchBatch> patchBatches =
+                effects.patchBatches();
+        for (int batchIndex = Math.max(0, firstPatchBatchIndex);
+             batchIndex < patchBatches.size();
+             batchIndex++) {
+            for (PatchInput patch :
+                    patchBatches.get(batchIndex).patches()) {
+                Map<String, Object> details = new LinkedHashMap<>();
+                details.put("effect", "patch");
+                details.put("reason", "scope-cut-off");
+                details.put("label", patch.authoredPath());
+                runtime().recordTrace(
+                        ProcessingTraceRecord.Kind.DISCARDED_EFFECT,
+                        scopePath,
+                        contractKey,
+                        patch.authoredPath(),
+                        details,
+                        null);
             }
         }
+        List<Node> emissions = effects.emittedEvents();
+        for (int index = Math.max(0, firstEventIndex);
+             index < emissions.size();
+             index++) {
+            Node emission = emissions.get(index);
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("effect", "event");
+            details.put("reason", "scope-cut-off");
+            details.put("label", discardedEventLabel(emission));
+            runtime().recordTrace(
+                    ProcessingTraceRecord.Kind.DISCARDED_EFFECT,
+                    scopePath,
+                    contractKey,
+                    null,
+                    details,
+                    emission);
+        }
+        ContractEffectBuffer.TerminationRequest termination =
+                effects.terminationRequest();
+        if (termination != null) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("effect", "termination");
+            details.put("reason", "scope-cut-off");
+            details.put("label", "termination:" + termination.cause());
+            runtime().recordTrace(
+                    ProcessingTraceRecord.Kind.DISCARDED_EFFECT,
+                    scopePath,
+                    contractKey,
+                    null,
+                    details,
+                    null);
+        }
+    }
+
+    private String discardedEventLabel(Node event) {
+        Node id = event != null && event.getProperties() != null
+                ? event.getProperties().get("id")
+                : null;
+        if (id != null && id.getValue() != null) {
+            return String.valueOf(id.getValue());
+        }
+        if (event != null && event.getValue() != null) {
+            return String.valueOf(event.getValue());
+        }
+        return "event";
     }
 
     /** Discards buffered work and releases every transferred preview. */
@@ -264,17 +338,48 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         }
     }
 
+    /**
+     * @deprecated Contracts 1.0 requires named, weighted runtime counters.
+     * Create a child ledger with {@link #newRuntimeGasLedger(String, Map)}
+     * and submit it with {@link #submitRuntimeGasLedger(GasMeter.ChildGasLedger)}.
+     */
+    @Deprecated
     public void consumeGas(long units) {
         ensureOpen();
-        if (execution.shouldStopScopeWork(scopePath)) {
-            return;
-        }
-        effects.addGas(units);
+        throw new UnsupportedOperationException(
+                "Anonymous runtime gas is not supported by Contracts 1.0; "
+                        + "use a named runtime child ledger");
+    }
+
+    /**
+     * Creates a live-bounded, named runtime child ledger using the exact
+     * currently remaining shared budget.
+     */
+    public GasMeter.ChildGasLedger newRuntimeGasLedger(
+            String namespace,
+            Map<String, Long> counterWeights) {
+        ensureOpen();
+        return runtime().newRuntimeGasLedger(namespace, counterWeights);
+    }
+
+    /**
+     * Attaches the completed named runtime ledger to this result.  It is
+     * validated and merged exactly once before any patch, event, or
+     * termination effect.
+     */
+    public void submitRuntimeGasLedger(GasMeter.ChildGasLedger ledger) {
+        ensureOpen();
+        effects.runtimeLedger(Objects.requireNonNull(ledger, "ledger"));
     }
 
     public void throwFatal(String reason) {
         ensureOpen();
-        applyBufferedEffects();
+        /*
+         * A deterministic runtime failure aborts the entire invocation.  In
+         * particular, effects buffered by this call must not become visible
+         * before the abort is observed.
+         */
+        close();
         throw new ProcessorFatalException(reason,
                 execution.partialResult(),
                 ProcessorErrorCategory.HandlerExecutionError);
@@ -324,12 +429,28 @@ public final class ProcessorExecutionContext implements AutoCloseable {
 
     public void terminateGracefully(String reason) {
         ensureOpen();
-        effects.terminate(ScopeRuntimeContext.TerminationKind.GRACEFUL, reason);
+        terminate("graceful", reason);
     }
 
-    public void terminateFatally(String reason) {
+    /**
+     * Requests successful application termination with an application-defined
+     * cause and optional explanatory reason.
+     */
+    public void terminate(String cause, String reason) {
         ensureOpen();
-        effects.terminate(ScopeRuntimeContext.TerminationKind.FATAL, reason);
+        if (cause == null || cause.isEmpty()) {
+            throw new IllegalArgumentException("Termination cause must not be empty");
+        }
+        effects.terminate(cause, reason);
+    }
+
+    /**
+     * @deprecated Contracts 1.0 has no committing fatal termination mode.
+     * Calling this method aborts atomically as a deterministic runtime failure.
+     */
+    @Deprecated
+    public void terminateFatally(String reason) {
+        throwFatal(reason != null ? reason : "Runtime requested fatal termination");
     }
 
     private void ensureOpen() {
@@ -339,10 +460,12 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     }
 
     private boolean emitEventNow(Node emission) {
+        String eventBlueId;
         try {
-            CheckpointIdentityCalculator.identity(emission, execution.blue());
+            eventBlueId = CheckpointIdentityCalculator.identity(
+                    emission, execution.blue());
         } catch (RuntimeException ex) {
-            execution.enterFatalTermination(scopePath,
+            execution.abortRuntimeFailure(scopePath,
                     bundle,
                     ProcessorErrorCategory.InvalidPatchValue,
                     "Invalid emitted event: " + ex.getMessage());
@@ -351,19 +474,11 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         if (execution.shouldStopScopeWork(scopePath)) {
             return false;
         }
-        DocumentProcessingRuntime runtime = runtime();
-        ScopeRuntimeContext scopeContext = runtime.scope(scopePath);
-        runtime.chargeEmitEvent(emission);
-        Node queued = emission.clone();
-        scopeContext.enqueueTriggered(queued);
-        scopeContext.recordBridgeable(queued.clone());
-        ScriptedContractsRuntime scriptedRuntime = ScriptedContractsRuntime.active();
-        if (scriptedRuntime != null) {
-            scriptedRuntime.recordTriggeredEvent(runtime, queued);
-        }
-        if ("/".equals(scopeContext.scopePath())) {
-            runtime.recordRootEmission(queued.clone());
-        }
+        execution.enqueueApplicationEvent(
+                scopePath,
+                contractKey,
+                emission,
+                eventBlueId);
         return true;
     }
 

@@ -1,0 +1,74 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-06
+vectors:
+- C-EMB-06
+category: emb
+description: Active-scope replacement cuts off remaining buffered effects and marker/checkpoint writes.
+operation: process
+input:
+  root:
+    counter: 0
+    contracts:
+      embedded:
+        type:
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
+    child:
+      contracts:
+        in:
+          type:
+            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        h:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: in
+          order: 0
+          result:
+            patches:
+            - op: replace
+              path: /child/a
+              val: 1
+            - op: replace
+              path: /child/b
+              val: 2
+            events:
+            - id: late
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /child
+      channelKey: in
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+    cascadeMutation:
+      afterPatchIndex: 0
+      replaceScope: /child
+expected:
+  assertions:
+  - actual: result.document.child.b
+    op: absent
+  - actual: trace.checkpointWrites
+    op: notContains
+    expected: /child
+  - actual: trace.discardedEffects
+    op: contains
+    expected: late

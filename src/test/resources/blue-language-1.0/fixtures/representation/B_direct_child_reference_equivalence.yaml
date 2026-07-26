@@ -1,0 +1,16 @@
+id: B_direct_child_reference_equivalence
+category: BlueId
+operation: calculateBlueId
+description: replacing a materialized direct child by a pure reference to the same child preserves the parent Node BlueId
+input:
+  x:
+    a: 1
+    b: 2
+  other:
+    archive: unchanged
+alsoEquivalentTo:
+  x:
+    blueId: mbUrx6bh3PFWVPUZ81Q6yCjbnEBWQAEN2fLxJU2TJ4g
+  other:
+    archive: unchanged
+expectedNodeBlueId: 8qgqtZt4SYQWWEugetjXxLpzCvbAKktjpN61QQURAmVe

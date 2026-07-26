@@ -1,24 +1,14 @@
 name: Processing Terminated Marker
-type: Marker
-description: >
-  Required processor-managed marker at contracts/terminated. It records final
-  runtime state for a scope. A scope with a valid pre-existing terminated
-  marker is inactive for processing: it incurs scope-entry gas when entered,
-  but it is not initialized, matched, bridged, drained, checkpointed, or run.
-  Termination markers are written by processor Direct Write and do not emit
-  Document Update cascades. An ancestor may replace or remove an embedded child
-  root containing this marker as a whole.
+type:
+  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+description: 'Direct processor state at contracts/terminated after one successful graceful termination. A valid pre-existing marker short-circuits the scope before application-contract recognition. Its write produces no Document Update.
+
+  '
 cause:
-  type: Text
-  description: >
-    Required termination cause. fatal means deterministic runtime fatal
-    termination. graceful means contract-requested non-error termination.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true
-    enum: [fatal, graceful]
 reason:
-  type: Text
-  description: >
-    Optional human-readable deterministic reason supplied by the processor or
-    contract. It is content in the selected document and in emitted lifecycle
-    events when present.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC

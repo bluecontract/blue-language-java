@@ -35,7 +35,7 @@ class ProcessorPreviewOwnershipTest {
     }
 
     @Test
-    void invalidGasReleasesBufferedPreviewBeforeFatalExit() {
+    void anonymousGasRejectionThenFatalExitReleasesBufferedPreview() {
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         Fixture fixture = fixture(manager);
         List<JsonPatch> patches = Collections.singletonList(
@@ -43,30 +43,32 @@ class ProcessorPreviewOwnershipTest {
         WorkingDocument.Preview preview = preview(fixture.context, patches);
 
         fixture.context.applyPreviewedPatches(patches, preview);
-        fixture.context.consumeGas(-1L);
-
-        assertThrows(RunTerminationException.class, fixture.context::applyBufferedEffects);
+        assertThrows(UnsupportedOperationException.class,
+                () -> fixture.context.consumeGas(-1L));
+        assertThrows(ProcessorFatalException.class,
+                () -> fixture.context.throwFatal(
+                        "fatal after rejected anonymous gas"));
         assertNull(preview.patch(0));
         assertEquals(manager.openCalls, manager.releaseCalls);
         assertNull(nodeAt(fixture.execution.runtime().document(), "/notApplied"));
     }
 
     @Test
-    void earlyBatchTerminationReleasesEveryLaterBufferedPreview() {
+    void protectedStatePreviewFailureDoesNotLeakItselfOrEarlierBufferedPreview() {
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         Fixture fixture = fixture(manager);
         List<JsonPatch> reserved = Collections.singletonList(
                 JsonPatch.add("/contracts/checkpoint", new Node().value("forbidden")));
         List<JsonPatch> later = Collections.singletonList(
                 JsonPatch.add("/notApplied", new Node().value(2)));
-        WorkingDocument.Preview reservedPreview = preview(fixture.context, reserved);
         WorkingDocument.Preview laterPreview = preview(fixture.context, later);
 
-        fixture.context.applyPreviewedPatches(reserved, reservedPreview);
         fixture.context.applyPreviewedPatches(later, laterPreview);
-
-        assertThrows(RunTerminationException.class, fixture.context::applyBufferedEffects);
-        assertNull(reservedPreview.patch(0));
+        assertThrows(ProcessorFailureException.class,
+                () -> preview(fixture.context, reserved));
+        assertThrows(ProcessorFatalException.class,
+                () -> fixture.context.throwFatal(
+                        "abort after protected-state rejection"));
         assertNull(laterPreview.patch(0));
         assertEquals(manager.openCalls, manager.releaseCalls);
         assertNull(nodeAt(fixture.execution.runtime().document(), "/notApplied"));

@@ -1,0 +1,71 @@
+schema: blue-contracts-fixture/1.0
+id: c-fail-02
+vectors:
+- C-FAIL-02
+- C-FAIL-05
+category: fail
+description: Transient resource suspension commits no state, progress, events, or portable gas.
+operation: process-attempt
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    transientUnavailableAt: SelectedBody
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: attempt.kind
+    op: equals
+    expected: needs-resources
+  - actual: attempt.processResult
+    op: absent
+  - actual: commit.progressCommitted
+    op: equals
+    expected: false
+  - actual: attempt.portableGas
+    op: absent
+  - actual: commit.progressWritten
+    op: equals
+    expected: false

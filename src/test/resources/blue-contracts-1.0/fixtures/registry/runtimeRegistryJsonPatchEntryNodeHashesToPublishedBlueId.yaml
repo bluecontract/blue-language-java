@@ -1,8 +1,0 @@
-id: runtimeRegistryJsonPatchEntryNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: JsonPatchEntry
-registryPath: registry/blue-contracts-1.0/JsonPatchEntry.blue
-expectedBlueId: 61W96XosAp3DrEC7PuqLYtmF2A6ETpqH6qF2DgYwDq4c
-semanticDescriptionIdentityBearing: true

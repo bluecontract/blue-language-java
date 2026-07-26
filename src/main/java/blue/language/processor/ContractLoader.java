@@ -6,22 +6,29 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.Contract;
+import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
+import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
@@ -44,6 +51,7 @@ final class ContractLoader {
     private final NodeToObjectConverter converter;
     private final TypeClassResolver typeResolver;
     private final BundleCache bundleCache;
+    private final ContractContributionResolver contributionResolver;
 
     ContractLoader(ContractProcessorRegistry registry,
                    NodeToObjectConverter converter,
@@ -55,10 +63,24 @@ final class ContractLoader {
                    NodeToObjectConverter converter,
                    TypeClassResolver typeResolver,
                    BlueCachePolicy cachePolicy) {
+        this(registry, converter, typeResolver, cachePolicy, null);
+    }
+
+    ContractLoader(ContractProcessorRegistry registry,
+                   NodeToObjectConverter converter,
+                   TypeClassResolver typeResolver,
+                   BlueCachePolicy cachePolicy,
+                   blue.language.NodeProvider contributionProvider) {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.converter = Objects.requireNonNull(converter, "converter");
         this.typeResolver = Objects.requireNonNull(typeResolver, "typeResolver");
         this.bundleCache = new BundleCache(Objects.requireNonNull(cachePolicy, "cachePolicy"));
+        this.contributionResolver =
+                new ContractContributionResolver(contributionProvider);
+    }
+
+    void gasSchedule(GasSchedule gasSchedule) {
+        contributionResolver.gasSchedule(gasSchedule);
     }
 
     ContractBundle load(ResolvedSnapshot snapshot, String scopePath) {
@@ -84,12 +106,98 @@ final class ContractLoader {
                         FrozenNode effectiveScopeNode,
                         String scopePath,
                         ProcessingMetricsSink metricsSink) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                metricsSink,
+                null,
+                null);
+    }
+
+    ContractBundle load(FrozenNode selectedScopeNode,
+                        FrozenNode effectiveScopeNode,
+                        String scopePath,
+                        ProcessingMetricsSink metricsSink,
+                        ContractRecognitionMeter recognitionMeter,
+                        String recognitionReason) {
         Node selectedScope = selectedScopeNode != null ? selectedContractContainer(selectedScopeNode) : null;
-        return load(selectedScope, effectiveScopeNode, scopePath, metricsSink);
+        return load(
+                selectedScope,
+                effectiveScopeNode,
+                scopePath,
+                metricsSink,
+                recognitionMeter,
+                recognitionReason);
+    }
+
+    /**
+     * Loads only the immutable headers needed to classify one feeder
+     * candidate.  Phase-B classification must not recognize unrelated
+     * application contracts: rejected and stale-only candidates never create
+     * a participating closure.
+     */
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ProcessingMetricsSink metricsSink) {
+        return loadExternalClassification(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                channelKey,
+                includeProcessEmbedded,
+                metricsSink,
+                null,
+                null);
+    }
+
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ProcessingMetricsSink metricsSink,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason) {
+        Set<String> retainedKeys = new LinkedHashSet<>();
+        if (channelKey != null) {
+            retainedKeys.add(channelKey);
+        }
+        if (includeProcessEmbedded) {
+            /*
+             * Contracts 1.0 fixes Process Embedded at the reserved raw key.
+             * Looking up that key avoids an unmetered speculative scan of
+             * unrelated Phase-B headers.
+             */
+            retainedKeys.add(
+                    ProcessorContractConstants.KEY_EMBEDDED);
+        }
+        Node selectedScope = filterScopeContracts(
+                selectedScopeNode, retainedKeys);
+        Node effectiveScope = filterScopeContracts(
+                effectiveScopeNode, retainedKeys);
+        FrozenNode frozenEffective = effectiveScope != null
+                ? FrozenNode.fromResolvedNode(effectiveScope)
+                : null;
+        return load(
+                selectedScope,
+                frozenEffective,
+                scopePath,
+                metricsSink,
+                recognitionMeter,
+                recognitionReason);
     }
 
     private Node selectedContractContainer(FrozenNode selectedScopeNode) {
         Node selectedScope = new Node();
+        if (selectedScopeNode.getType() != null) {
+            selectedScope.type(selectedScopeNode.getType().toNode());
+        }
         FrozenNode selectedContracts = property(selectedScopeNode, "contracts");
         if (selectedContracts != null) {
             selectedScope.contracts(selectedContracts.toNode());
@@ -97,11 +205,108 @@ final class ContractLoader {
         return selectedScope;
     }
 
+    private void collectProcessEmbeddedKeys(
+            FrozenNode scopeNode,
+            Set<String> retainedKeys) {
+        FrozenNode contracts = property(scopeNode, "contracts");
+        if (contracts == null
+                || contracts.getProperties() == null) {
+            return;
+        }
+        for (Map.Entry<String, FrozenNode> entry
+                : contracts.getProperties().entrySet()) {
+            FrozenNode contract = entry.getValue();
+            if (contract != null
+                    && isProcessEmbeddedContract(
+                    contract)) {
+                retainedKeys.add(entry.getKey());
+            }
+        }
+    }
+
+    private Node filterScopeContracts(
+            FrozenNode scopeNode,
+            Set<String> retainedKeys) {
+        if (scopeNode == null) {
+            return null;
+        }
+        Node filtered = new Node();
+        if (scopeNode.getType() != null) {
+            filtered.type(scopeNode.getType().toNode());
+        }
+        FrozenNode contracts = property(scopeNode, "contracts");
+        if (contracts == null) {
+            return filtered;
+        }
+        if (contracts.getProperties() == null) {
+            filtered.contracts(contracts.toNode());
+            return filtered;
+        }
+        Node retained = new Node();
+        for (Map.Entry<String, FrozenNode> entry
+                : contracts.getProperties().entrySet()) {
+            if (isDirectProcessorStateKey(entry.getKey())
+                    || retainedKeys.contains(entry.getKey())) {
+                retained.properties(
+                        entry.getKey(),
+                        entry.getValue().toNode());
+            }
+        }
+        if (retained.getProperties() != null
+                && !retained.getProperties().isEmpty()) {
+            filtered.contracts(retained);
+        }
+        return filtered;
+    }
+
     ContractBundle load(Node selectedScopeNode,
                         FrozenNode effectiveScopeNode,
                         String scopePath,
                         ProcessingMetricsSink metricsSink) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                metricsSink,
+                null,
+                null);
+    }
+
+    ContractBundle load(Node selectedScopeNode,
+                        FrozenNode effectiveScopeNode,
+                        String scopePath,
+                        ProcessingMetricsSink metricsSink,
+                        ContractRecognitionMeter recognitionMeter,
+                        String recognitionReason) {
         ProcessingMetricsSink metrics = metricsSink != null ? metricsSink : ProcessingMetricsSink.NOOP;
+        requireRegisteredProviderEvidence(effectiveScopeNode);
+        /*
+         * A bundle cache is a physical optimization. Metered PROCESS
+         * recognition must execute the same logical reads and charges on warm
+         * and cold invocations, so it deliberately bypasses this shared cache.
+         */
+        if (recognitionMeter != null) {
+            long buildStart = System.nanoTime();
+            ContractBundle built;
+            try {
+                built = build(
+                        selectedScopeNode,
+                        effectiveScopeNode,
+                        scopePath,
+                        recognitionMeter,
+                        recognitionReason);
+            } finally {
+                metrics.addBundleLoadActualBuildNanos(
+                        System.nanoTime() - buildStart);
+            }
+            metrics.incrementBundlesBuilt();
+            RuntimeMarkers runtimeMarkers =
+                    runtimeMarkers(selectedScopeNode, effectiveScopeNode);
+            return built.copyWithRuntimeMarkers(
+                    runtimeMarkers.markers,
+                    runtimeMarkers.nodes,
+                    runtimeMarkers.checkpointDeclared);
+        }
         long keyStart = System.nanoTime();
         BundleCacheKey key;
         try {
@@ -128,7 +333,12 @@ final class ContractLoader {
         long buildStart = System.nanoTime();
         ContractBundle built;
         try {
-            built = build(selectedScopeNode, effectiveScopeNode, scopePath);
+            built = build(
+                    selectedScopeNode,
+                    effectiveScopeNode,
+                    scopePath,
+                    null,
+                    null);
         } finally {
             metrics.addBundleLoadActualBuildNanos(System.nanoTime() - buildStart);
         }
@@ -140,8 +350,100 @@ final class ContractLoader {
                 runtimeMarkers.checkpointDeclared);
     }
 
+    private void requireRegisteredProviderEvidence(
+            FrozenNode effectiveScopeNode) {
+        /*
+         * An explicit Java dispatch mapping is not provider evidence. A
+         * provider-backed resolved view expands the type node; an exact
+         * canonical registration clears the registry demand.
+         */
+        FrozenNode contracts =
+                property(effectiveScopeNode, "contracts");
+        Map<String, FrozenNode> entries =
+                contracts != null ? contracts.getProperties() : null;
+        if (entries == null) {
+            return;
+        }
+        for (Map.Entry<String, FrozenNode> entry
+                : entries.entrySet()) {
+            if (isDirectProcessorStateKey(entry.getKey())) {
+                continue;
+            }
+            FrozenNode contract = entry.getValue();
+            String blueId = typeBlueId(contract);
+            if (blueId == null
+                    || !registry.requiresProviderEvidence(blueId)) {
+                continue;
+            }
+            FrozenNode resolvedType =
+                    contract != null ? contract.getType() : null;
+            if (resolvedType == null
+                    || resolvedType.isReferenceOnly()) {
+                throw new IllegalArgumentException(
+                        "Missing provider content for registered contract BlueId "
+                                + blueId);
+            }
+        }
+    }
+
     void clearCaches() {
         bundleCache.clear();
+    }
+
+    /**
+     * Opens only the executable body of a Handler whose matcher has already
+     * succeeded. Preflight and nonmatching candidates retain exact body
+     * references and therefore make no provider demand for them.
+     */
+    ContractBundle.HandlerBinding materializeSelectedExecutableBodies(
+            ContractBundle.HandlerBinding binding,
+            Function<FrozenNode, FrozenNode> materializer) {
+        Objects.requireNonNull(binding, "binding");
+        Objects.requireNonNull(materializer, "materializer");
+        FrozenNode frozen = binding.node();
+        if (frozen == null) {
+            return binding;
+        }
+        Node executable = frozen.toNode();
+        for (String field : binding.executableBodyFields()) {
+            materializeExecutableField(
+                    executable, frozen, field, materializer);
+        }
+        if (binding.executableBodyFields().isEmpty()) {
+            return binding;
+        }
+        Contract converted = converter.convertWithType(
+                executable, Contract.class, false);
+        if (!(converted instanceof HandlerContract)) {
+            throw new MustUnderstandFailureException(
+                    "Selected executable body no longer belongs to a Handler",
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+        HandlerContract handler = (HandlerContract) converted;
+        handler.setKey(binding.key());
+        handler.setTypeBlueId(
+                binding.contract().getTypeBlueId());
+        handler.setChannelKey(
+                binding.contract().getChannelKey());
+        return new ContractBundle.HandlerBinding(
+                binding.key(),
+                handler,
+                FrozenNode.fromResolvedNode(executable),
+                binding.executableBodyFields());
+    }
+
+    private void materializeExecutableField(
+            Node executable,
+            FrozenNode frozen,
+            String field,
+            Function<FrozenNode, FrozenNode> materializer) {
+        FrozenNode body = property(frozen, field);
+        if (body == null || !body.isReferenceOnly()) {
+            return;
+        }
+        FrozenNode materialized = materializer.apply(body);
+        executable.properties(
+                field, materialized.toNode());
     }
 
     int cacheSize() {
@@ -152,34 +454,129 @@ final class ContractLoader {
         return bundleCache.currentWeightBytes();
     }
 
-    private ContractBundle build(Node selectedScopeNode,
-                                 FrozenNode effectiveScopeNode,
-                                 String scopePath) {
-        ContractBundle.Builder builder = ContractBundle.builder();
-        if (selectedScopeNode == null) {
-            return builder.build();
+    boolean isProcessEmbeddedContract(Node contractNode) {
+        if (contractNode == null || contractNode.getType() == null) {
+            return false;
         }
-        Node selectedContractsNode = selectedScopeNode.getContracts();
-        if (selectedContractsNode == null) {
-            return builder.build();
+        return isProcessEmbeddedContract(
+                FrozenNode.fromResolvedNode(contractNode));
+    }
+
+    private boolean isProcessEmbeddedContract(
+            FrozenNode contractNode) {
+        String typeBlueId = typeBlueId(contractNode);
+        Class<?> contractClass = typeBlueId != null
+                ? typeResolver.resolveClass(typeBlueId)
+                : null;
+        return contractClass != null
+                && ProcessEmbedded.class.isAssignableFrom(contractClass);
+    }
+
+    /**
+     * Rejects an unsupported direct contract header before resolving the
+     * surrounding scope. This preserves must-understand precedence when the
+     * unknown type's provider content is intentionally unavailable.
+     *
+     * <p>Reference-only contract entries are deferred to ordinary effective
+     * resolution because their header is not directly present.</p>
+     */
+    void preflightSelectedContractHeaders(FrozenNode selectedScopeNode) {
+        FrozenNode contracts = property(selectedScopeNode, "contracts");
+        if (contracts == null) {
+            return;
         }
-        if (selectedContractsNode.getProperties() == null) {
-            if (Nodes.isEmptyNode(selectedContractsNode)) {
-                return builder.build();
+        if (contracts.isReferenceOnly()) {
+            contracts =
+                    contributionResolver
+                            .materializeVerifiedReference(
+                                    contracts);
+        }
+        if (contracts.getProperties() == null) {
+            if (contracts.isEmptyNode()) {
+                return;
             }
-            throw new MustUnderstandFailureException("Contracts must be an object map",
+            throw new MustUnderstandFailureException(
+                    "Contracts must be an object map",
                     ProcessorErrorCategory.InvalidProcessingDocument);
         }
+        for (Map.Entry<String, FrozenNode> entry
+                : contracts.getProperties().entrySet()) {
+            if (!isDirectProcessorStateKey(entry.getKey())) {
+                preflightDirectContractHeader(
+                        entry.getKey(), entry.getValue());
+            }
+        }
+    }
 
-        FrozenNode effectiveContractsNode = property(effectiveScopeNode, "contracts");
+    void preflightDirectContractHeader(String key,
+                                       FrozenNode contractNode) {
+        validateContractKey(key);
+        if (contractNode == null || contractNode.isReferenceOnly()) {
+            return;
+        }
+        String typeBlueId = typeBlueId(contractNode);
+        if (typeBlueId == null) {
+            throw new MustUnderstandFailureException(
+                    "Contract '" + key + "' must declare a type",
+                    ProcessorErrorCategory.UnsupportedContract);
+        }
+        Class<?> contractClass = typeResolver.resolveClass(typeBlueId);
+        if (contractClass == null
+                || !Contract.class.isAssignableFrom(contractClass)) {
+            throw new MustUnderstandFailureException(
+                    "Unsupported contract type: " + typeBlueId,
+                    ProcessorErrorCategory.UnsupportedContract);
+        }
+    }
+
+    private ContractBundle build(Node selectedScopeNode,
+                                 FrozenNode effectiveScopeNode,
+                                 String scopePath,
+                                 ContractRecognitionMeter recognitionMeter,
+                                 String recognitionReason) {
+        ContractBundle.Builder builder = ContractBundle.builder();
+        Node exactSelectedScope =
+                materializeSelectedContractsMap(
+                        selectedScopeNode);
+        Node selectedContractsNode =
+                exactSelectedScope != null
+                        ? exactSelectedScope.getContracts()
+                        : null;
+        if (selectedContractsNode != null
+                && selectedContractsNode.getProperties() == null) {
+            if (Nodes.isEmptyNode(selectedContractsNode)) {
+                selectedContractsNode = null;
+            } else {
+                throw new MustUnderstandFailureException("Contracts must be an object map",
+                        ProcessorErrorCategory.InvalidProcessingDocument);
+            }
+        }
+
+        FrozenNode effectiveContractsNode =
+                property(effectiveScopeNode, "contracts");
         Map<String, FrozenNode> effectiveContractNodes = effectiveContractsNode != null
                 && effectiveContractsNode.getProperties() != null
                 ? effectiveContractsNode.getProperties()
                 : java.util.Collections.emptyMap();
         Map<String, FrozenNode> contractNodes = new LinkedHashMap<>();
-        for (String key : selectedContractsNode.getProperties().keySet()) {
+        /*
+         * Application contracts are enumerated from the full effective map.
+         * Only processor-owned history is selected/direct (runtimeMarkers()).
+         */
+        for (Map.Entry<String, FrozenNode> effective
+                : effectiveContractNodes.entrySet()) {
+            String key = effective.getKey();
             validateContractKey(key);
-            contractNodes.put(key, effectiveContractNodes.get(key));
+            if (!isDirectProcessorStateKey(key)) {
+                FrozenNode contribution = effective.getValue();
+                contractNodes.put(
+                        key,
+                        contribution != null
+                                && contribution.isReferenceOnly()
+                                ? contributionResolver
+                                .materializeVerifiedReference(contribution)
+                                : contribution);
+            }
         }
         Map<String, String> contractTypeBlueIds = new LinkedHashMap<>();
         for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
@@ -202,12 +599,88 @@ final class ContractLoader {
                 throw new MustUnderstandFailureException("Unsupported contract type: " + typeBlueId,
                         ProcessorErrorCategory.UnsupportedContract);
             }
-            Contract contract = converter.convertWithType(entry.getValue().toNode(), Contract.class, false);
+            List<String> executableBodyFields =
+                    HandlerContract.class.isAssignableFrom(
+                            contractClass)
+                            ? registry.executableBodyFields(
+                            typeBlueId)
+                            : Collections.emptyList();
+            ContractContributionResolver.BindingResolution
+                    bindingResolution =
+                    contributionResolver.resolveBinding(
+                            exactSelectedScope,
+                            effectiveScopeNode,
+                            key,
+                            true,
+                            executableBodyFields);
+            List<String> sourceContributions =
+                    bindingResolution
+                            .sourceContributions();
+            if (recognitionMeter != null) {
+                recognitionMeter.recognizeHeader(
+                        scopePath,
+                        key,
+                        sourceContributions,
+                        recognitionReason != null
+                                ? recognitionReason
+                                : "effective-contract-header");
+            }
+            List<String> meteredEmbeddedPaths = null;
+            if (recognitionMeter != null
+                    && ProcessEmbedded.class.isAssignableFrom(
+                    contractClass)) {
+                /*
+                 * The exact effective header is now established and charged.
+                 * Path fields are dispatch/structural content and are inspected
+                 * only after that header charge.
+                 */
+                meteredEmbeddedPaths =
+                        validateMeteredEmbeddedPaths(
+                                scopePath,
+                                key,
+                                entry.getValue(),
+                                recognitionMeter);
+            }
+            /*
+             * Executable bodies are contribution content, not instances of
+             * the result/body type definitions inherited while resolving the
+             * contract header.  Converting the fully resolved body would turn
+             * descriptive schema members (for example the optional
+             * ContractExecutionResult.termination field) into requested
+             * effects.  Preserve effective dispatch fields, but bind an
+             * explicitly selected executable body to its exact authored
+             * subtree.
+             */
+            Node executableContractNode = executableContractNode(
+                    entry.getValue(),
+                    executableBodyFields,
+                    bindingResolution
+                            .exactExecutableBodies());
+            FrozenNode exactExecutableContract =
+                    FrozenNode.fromResolvedNode(
+                            executableContractNode);
+            Node conversionNode =
+                    executableBodyFields.isEmpty()
+                            ? executableContractNode
+                            : matcherHeaderNode(
+                            executableContractNode,
+                            executableBodyFields);
+            Contract contract = converter.convertWithType(
+                    conversionNode,
+                    Contract.class,
+                    false);
             if (contract == null) {
                 continue;
             }
             contract.setKey(key);
             contract.setTypeBlueId(typeBlueId);
+            EffectiveContractSnapshot.Builder snapshot =
+                    EffectiveContractSnapshot.builder(scopePath, key)
+                            .effectiveTypeBlueId(typeBlueId)
+                            .order(contractOrder(contract));
+            for (String contribution : sourceContributions) {
+                snapshot.sourceContribution(contribution);
+            }
             if (contract instanceof ChannelContract) {
                 ChannelContract channel = (ChannelContract) contract;
                 if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
@@ -217,6 +690,28 @@ final class ContractLoader {
                             ProcessorErrorCategory.UnsupportedContract);
                 }
                 builder.addChannel(key, channel, entry.getValue());
+                snapshot.role(ProcessorContractConstants.isProcessorManagedChannel(channel)
+                                ? "processor-channel"
+                                : "external-channel")
+                        .dispatchField("order", channel.getOrder());
+                if (channel instanceof EmbeddedNodeChannel) {
+                    EmbeddedNodeChannel embedded =
+                            (EmbeddedNodeChannel) channel;
+                    String sourcePath =
+                            embedded.getSourcePath() != null
+                                    ? embedded.getSourcePath()
+                                    : embedded.getChildPath();
+                    snapshot.dispatchField(
+                            "sourcePath", sourcePath);
+                    addEventDispatchSnapshot(
+                            snapshot, embedded.getEvent());
+                } else if (channel
+                        instanceof TriggeredEventChannel) {
+                    addEventDispatchSnapshot(
+                            snapshot,
+                            ((TriggeredEventChannel) channel)
+                                    .getEvent());
+                }
             } else if (contract instanceof HandlerContract) {
                 HandlerContract handler = (HandlerContract) contract;
                 Optional<HandlerProcessor<? extends HandlerContract>> processor = registry.lookupHandler(handler);
@@ -233,17 +728,149 @@ final class ContractLoader {
                         contractTypeBlueIds);
                 handler.setChannelKey(channelKey);
                 if (hasRegisteredSameScopeChannel(channelKey, contractNodes, contractTypeBlueIds)) {
-                    builder.addHandler(key, handler, entry.getValue());
+                    builder.addHandler(key, handler,
+                            exactExecutableContract,
+                            executableBodyFields);
+                }
+                snapshot.role("handler")
+                        .dispatchField("order", handler.getOrder())
+                        .dispatchField("channel", channelKey);
+                for (String field : executableBodyFields) {
+                    addExecutableBody(
+                            snapshot,
+                            exactExecutableContract,
+                            field);
                 }
             } else if (contract instanceof ProcessEmbedded) {
-                validateEmbeddedPaths((ProcessEmbedded) contract);
+                if (meteredEmbeddedPaths != null) {
+                    ((ProcessEmbedded) contract).setPaths(
+                            meteredEmbeddedPaths);
+                } else {
+                    validateEmbeddedPaths(
+                            (ProcessEmbedded) contract);
+                }
                 builder.setEmbedded((ProcessEmbedded) contract, entry.getValue());
+                snapshot.role("process-embedded");
+                FrozenNode paths = property(entry.getValue(), "paths");
+                if (paths != null) {
+                    snapshot.deterministicDependency(paths.blueId());
+                }
             } else if (contract instanceof MarkerContract) {
                 builder.addMarker(key, (MarkerContract) contract, entry.getValue());
+                snapshot.role("marker");
+            } else {
+                snapshot.role("executable-extension");
             }
+            builder.addEffectiveContractSnapshot(snapshot.build());
         }
 
         return builder.build();
+    }
+
+    private Node materializeSelectedContractsMap(
+            Node selectedScope) {
+        if (selectedScope == null
+                || selectedScope.getContracts() == null
+                || !selectedScope.getContracts()
+                .isReferenceOnly()) {
+            return selectedScope;
+        }
+        Node exactScope = selectedScope.clone();
+        exactScope.contracts(
+                contributionResolver
+                        .materializeVerifiedReference(
+                                FrozenNode.fromNode(
+                                        selectedScope
+                                                .getContracts()))
+                        .toNode());
+        return exactScope;
+    }
+
+    private Node matcherHeaderNode(
+            Node executableContract,
+            List<String> executableBodyFields) {
+        Node header = executableContract.clone();
+        if (header.getProperties() == null) {
+            return header;
+        }
+        Map<String, Node> fields =
+                new LinkedHashMap<>(
+                        header.getProperties());
+        for (String field : executableBodyFields) {
+            fields.remove(field);
+        }
+        return header.properties(fields);
+    }
+
+    private Node executableContractNode(
+            FrozenNode effectiveContract,
+            List<String> executableBodyFields,
+            Map<String, Node> exactExecutableBodies) {
+        Node executable = effectiveContract.toNode();
+        if (executableBodyFields.isEmpty()) {
+            return executable;
+        }
+        Map<String, Node> properties =
+                executable.getProperties() != null
+                        ? new LinkedHashMap<>(
+                                executable.getProperties())
+                        : new LinkedHashMap<String, Node>();
+        for (String field : executableBodyFields) {
+            Node exactBody =
+                    exactExecutableBodies.get(field);
+            if (exactBody != null) {
+                properties.put(
+                        field, exactBody.clone());
+            } else {
+                /*
+                 * A completed/eager view may contain schema defaults or
+                 * merged body structure that no exact Source contribution
+                 * declared. Such content is not executable.
+                 */
+                properties.remove(field);
+            }
+        }
+        return executable.properties(properties);
+    }
+
+    private int contractOrder(Contract contract) {
+        if (contract instanceof ChannelContract) {
+            Integer order = ((ChannelContract) contract).getOrder();
+            return order != null ? order : 0;
+        }
+        if (contract instanceof HandlerContract) {
+            Integer order = ((HandlerContract) contract).getOrder();
+            return order != null ? order : 0;
+        }
+        return 0;
+    }
+
+    private boolean isDirectProcessorStateKey(String key) {
+        return ProcessorContractConstants.KEY_INITIALIZED.equals(key)
+                || ProcessorContractConstants.KEY_TERMINATED.equals(key)
+                || ProcessorContractConstants.KEY_CHECKPOINT.equals(key);
+    }
+
+    private void addExecutableBody(EffectiveContractSnapshot.Builder snapshot,
+                                   FrozenNode contract,
+                                   String field) {
+        FrozenNode body = property(contract, field);
+        if (body != null) {
+            snapshot.executableBody(body.blueId());
+        }
+    }
+
+    private void addEventDispatchSnapshot(
+            EffectiveContractSnapshot.Builder snapshot,
+            Node eventPattern) {
+        if (eventPattern == null) {
+            return;
+        }
+        String identity =
+                FrozenNode.fromResolvedNode(
+                        eventPattern).blueId();
+        snapshot.dispatchField("event", identity)
+                .deterministicDependency(identity);
     }
 
     private void validateContractKey(String key) {
@@ -265,6 +892,84 @@ final class ContractLoader {
                         ProcessorErrorCategory.BoundaryViolation);
             }
         }
+    }
+
+    private List<String> validateMeteredEmbeddedPaths(
+            String scopePath,
+            String contractKey,
+            FrozenNode contractNode,
+            ContractRecognitionMeter meter) {
+        FrozenNode pathsNode = property(contractNode, "paths");
+        if (pathsNode == null) {
+            return Collections.emptyList();
+        }
+        List<FrozenNode> items = pathsNode.getItems();
+        if (items == null) {
+            throw new MustUnderstandFailureException(
+                    "Process Embedded paths must be a List",
+                    ProcessorErrorCategory.BoundaryViolation);
+        }
+
+        List<String> paths = new ArrayList<>(items.size());
+        Set<String> seen = new LinkedHashSet<>();
+        for (int index = 0; index < items.size(); index++) {
+            /*
+             * The list position is known without opening the entry. Charge the
+             * entry before obtaining its value, then charge all pointer
+             * segments before validating any of them.
+             */
+            meter.embeddedPathEntryRead(
+                    scopePath, contractKey, index);
+            FrozenNode item = items.get(index);
+            Object value = item != null ? item.getValue() : null;
+            if (!(value instanceof String)) {
+                throw new MustUnderstandFailureException(
+                        "Process Embedded path must be Text",
+                        ProcessorErrorCategory.BoundaryViolation);
+            }
+            String path = (String) value;
+            long segmentCount =
+                    uncheckedPointerSegmentCount(path);
+            meter.embeddedPathSegmentsValidated(
+                    scopePath,
+                    contractKey,
+                    index,
+                    segmentCount);
+            final String normalized;
+            try {
+                normalized =
+                        PointerUtils.assertValidRuntimePointer(path);
+            } catch (IllegalArgumentException invalidPointer) {
+                throw new MustUnderstandFailureException(
+                        invalidPointer.getMessage(),
+                        ProcessorErrorCategory.BoundaryViolation);
+            }
+            if ("/".equals(normalized)) {
+                throw new MustUnderstandFailureException(
+                        "Process Embedded path '/' cannot embed its declaring scope",
+                        ProcessorErrorCategory.BoundaryViolation);
+            }
+            if (!seen.add(normalized)) {
+                throw new MustUnderstandFailureException(
+                        "Unique items are required for Process Embedded paths",
+                        ProcessorErrorCategory.BoundaryViolation);
+            }
+            paths.add(normalized);
+        }
+        return Collections.unmodifiableList(paths);
+    }
+
+    private long uncheckedPointerSegmentCount(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return 1L;
+        }
+        long count = 0L;
+        for (int index = 0; index < pointer.length(); index++) {
+            if (pointer.charAt(index) == '/') {
+                count++;
+            }
+        }
+        return Math.max(1L, count);
     }
 
     private BundleCacheKey cacheKey(Node selectedScopeNode,
@@ -368,7 +1073,13 @@ final class ContractLoader {
         Map<String, MarkerContract> markers = new LinkedHashMap<>();
         Map<String, FrozenNode> markerNodes = new LinkedHashMap<>();
         boolean checkpointDeclared = false;
-        Node selectedContractsNode = selectedScopeNode != null ? selectedScopeNode.getContracts() : null;
+        Node exactSelectedScope =
+                materializeSelectedContractsMap(
+                        selectedScopeNode);
+        Node selectedContractsNode =
+                exactSelectedScope != null
+                        ? exactSelectedScope.getContracts()
+                        : null;
         FrozenNode effectiveContractsNode = property(effectiveScopeNode, "contracts");
         if (selectedContractsNode == null
                 || selectedContractsNode.getProperties() == null
@@ -376,7 +1087,28 @@ final class ContractLoader {
                 || effectiveContractsNode.getProperties() == null) {
             return new RuntimeMarkers(markers, markerNodes, false);
         }
-        for (String key : selectedContractsNode.getProperties().keySet()) {
+        for (Map.Entry<String, Node> selectedEntry
+                : selectedContractsNode.getProperties().entrySet()) {
+            String key = selectedEntry.getKey();
+            if (!isDirectProcessorStateKey(key)) {
+                continue;
+            }
+            Node selectedNode = selectedEntry.getValue();
+            FrozenNode directNode;
+            try {
+                directNode = selectedNode != null
+                        ? FrozenNode.fromResolvedNode(selectedNode)
+                        : null;
+            } catch (RuntimeException invalidDirectState) {
+                throw new IllegalStateException(
+                        "Invalid direct processor state at reserved key '" + key + "'",
+                        invalidDirectState);
+            }
+            String directTypeBlueId = typeBlueId(directNode);
+            if (directTypeBlueId == null) {
+                // An inherited/type-derived marker has no runtime effect.
+                continue;
+            }
             FrozenNode node = effectiveContractsNode.getProperties().get(key);
             String typeBlueId = typeBlueId(node);
             if (typeBlueId == null) {

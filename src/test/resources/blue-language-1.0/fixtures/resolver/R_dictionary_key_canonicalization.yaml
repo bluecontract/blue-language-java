@@ -1,0 +1,13 @@
+id: R_dictionary_key_canonicalization
+category: Schema
+operation: validateVariants
+base:
+  type: Dictionary
+  keyType: Integer
+variants:
+  - source:
+      "1": A
+    expectedValid: true
+  - source:
+      "01": A
+    expectedErrorCategory: SchemaViolation

@@ -1,0 +1,7 @@
+id: B_mixed_reference_rejected
+category: BlueId
+operation: calculateBlueId
+input:
+  blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+  name: invalid
+expectedErrorCategory: InvalidReferenceShape

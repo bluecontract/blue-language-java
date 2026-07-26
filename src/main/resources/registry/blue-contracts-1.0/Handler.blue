@@ -1,22 +1,12 @@
 name: Handler
-type: Contract
-description: >
-  Runtime contract role for deterministic logic bound to exactly one channel
-  in the same scope. A Handler is eligible only for deliveries produced by the
-  same-scope channel named by its channel field. A Handler may request patches,
-  emit Blue event nodes, consume non-negative gas, or request termination. It
-  has no other permitted observable side effects. For a given document
-  snapshot, channelized payload, handler contract content, and allowed context,
-  a Handler must produce deterministic results.
+type:
+  blueId: 4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4
+description: Deterministic same-scope logic bound to one Channel key. A Handler may return patches, Root/internal events, runtime counters, and one termination request. It has no other side effects.
 channel:
-  type: Text
-  description: >
-    Required same-scope contract-map key of the channel this handler binds to.
-    Handlers do not bind to channels in parent, child, embedded, or referenced
-    nodes.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true
+  description: Raw same-scope Channel contract key.
 event:
-  description: >
-    Optional handler-specific matcher for the channelized payload. The meaning
-    is defined by the concrete handler type or extension runtime.
+  description: Optional immutable payload matcher defined by the concrete Handler runtime.

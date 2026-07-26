@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.snapshot.ResolvedSnapshot;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,206 +10,223 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Immutable value object representing the outcome of a single PROCESS run.
+ * Immutable host value for one completed Contracts 1.0 PROCESS invocation.
  */
 public final class DocumentProcessingResult {
 
     private final Node document;
-    private final List<Node> triggeredEvents;
+    private final List<Node> events;
     private final long totalGas;
-    private final boolean capabilityFailure;
-    private final String failureReason;
     private final ProcessorStatus status;
-    private final ProcessorErrorCategory errorCategory;
+    private final ProcessorDiagnostic diagnostic;
+    /**
+     * Legacy host companion.  It is deliberately excluded from the serialized
+     * ProcessResult, whose public semantic projection has exactly five fields.
+     */
+    @JsonIgnore
     private final ResolvedSnapshot snapshot;
 
     private DocumentProcessingResult(Node document,
-            List<Node> triggeredEvents,
-            long totalGas,
-            boolean capabilityFailure,
-            String failureReason,
-            ProcessorStatus status,
-            ProcessorErrorCategory errorCategory,
-            ResolvedSnapshot snapshot) {
-        this.document = document;
-        this.triggeredEvents = Collections.unmodifiableList(new ArrayList<>(triggeredEvents));
+                                     List<Node> events,
+                                     long totalGas,
+                                     ProcessorStatus status,
+                                     ProcessorDiagnostic diagnostic,
+                                     ResolvedSnapshot snapshot) {
+        this.document = Objects.requireNonNull(document, "document").clone();
+        Objects.requireNonNull(events, "events");
+        if (totalGas < 0L) {
+            throw new IllegalArgumentException("totalGas must be non-negative");
+        }
+        this.events = immutableNodes(events);
         this.totalGas = totalGas;
-        this.capabilityFailure = capabilityFailure;
-        this.failureReason = failureReason;
-        this.status = status != null
-                ? status
-                : (capabilityFailure ? ProcessorStatus.CAPABILITY_FAILURE : ProcessorStatus.SUCCESS);
-        this.errorCategory = errorCategory;
+        this.status = Objects.requireNonNull(status, "status");
+        this.diagnostic = diagnostic;
         this.snapshot = snapshot;
-    }
-
-    public static DocumentProcessingResult of(Node document, List<Node> triggeredEvents, long totalGas) {
-        Objects.requireNonNull(document, "document");
-        Objects.requireNonNull(triggeredEvents, "triggeredEvents");
-        return new DocumentProcessingResult(document,
-                new ArrayList<>(triggeredEvents),
-                totalGas,
-                false,
-                null,
-                ProcessorStatus.SUCCESS,
-                null,
-                null);
-    }
-
-    public static DocumentProcessingResult of(ResolvedSnapshot snapshot, List<Node> triggeredEvents, long totalGas) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(triggeredEvents, "triggeredEvents");
-        return new DocumentProcessingResult(snapshot.canonicalRoot(),
-                new ArrayList<>(triggeredEvents),
-                totalGas,
-                false,
-                null,
-                ProcessorStatus.SUCCESS,
-                null,
-                snapshot);
-    }
-
-    public static DocumentProcessingResult of(ResolvedSnapshot snapshot,
-                                              List<Node> triggeredEvents,
-                                              long totalGas,
-                                              ProcessorStatus status,
-                                              ProcessorErrorCategory errorCategory,
-                                              String failureReason) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(triggeredEvents, "triggeredEvents");
-        return new DocumentProcessingResult(snapshot.canonicalRoot(),
-                new ArrayList<>(triggeredEvents),
-                totalGas,
-                status == ProcessorStatus.CAPABILITY_FAILURE
-                        || status == ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                failureReason,
-                status,
-                errorCategory,
-                snapshot);
+        if (!status.commits() && !this.events.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Noncommitting PROCESS status must return an empty Root event sequence");
+        }
     }
 
     public static DocumentProcessingResult of(Node document,
-                                              List<Node> triggeredEvents,
+                                              List<Node> events,
+                                              long totalGas) {
+        return completed(document, events, totalGas, ProcessorStatus.SUCCESS,
+                null, null);
+    }
+
+    public static DocumentProcessingResult of(ResolvedSnapshot snapshot,
+                                              List<Node> events,
+                                              long totalGas) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        return completed(snapshot.canonicalRoot(), events, totalGas,
+                ProcessorStatus.SUCCESS, null, snapshot);
+    }
+
+    public static DocumentProcessingResult of(ResolvedSnapshot snapshot,
+                                              List<Node> events,
                                               long totalGas,
                                               ProcessorStatus status,
                                               ProcessorErrorCategory errorCategory,
                                               String failureReason) {
-        Objects.requireNonNull(document, "document");
-        Objects.requireNonNull(triggeredEvents, "triggeredEvents");
-        return new DocumentProcessingResult(document,
-                new ArrayList<>(triggeredEvents),
-                totalGas,
-                status == ProcessorStatus.CAPABILITY_FAILURE
-                        || status == ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                failureReason,
-                status,
-                errorCategory,
-                null);
+        Objects.requireNonNull(snapshot, "snapshot");
+        return completed(snapshot.canonicalRoot(), events, totalGas, status,
+                diagnostic(errorCategory, failureReason), snapshot);
+    }
+
+    public static DocumentProcessingResult of(Node document,
+                                              List<Node> events,
+                                              long totalGas,
+                                              ProcessorStatus status,
+                                              ProcessorErrorCategory errorCategory,
+                                              String failureReason) {
+        return completed(document, events, totalGas, status,
+                diagnostic(errorCategory, failureReason), null);
     }
 
     static DocumentProcessingResult ofSelected(Node document,
                                                ResolvedSnapshot snapshot,
-                                               List<Node> triggeredEvents,
+                                               List<Node> events,
                                                long totalGas,
                                                ProcessorStatus status,
                                                ProcessorErrorCategory errorCategory,
                                                String failureReason) {
-        Objects.requireNonNull(document, "document");
-        Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(triggeredEvents, "triggeredEvents");
+        return completed(document, events, totalGas, status,
+                diagnostic(errorCategory, failureReason),
+                Objects.requireNonNull(snapshot, "snapshot"));
+    }
+
+    static DocumentProcessingResult completed(Node document,
+                                              List<Node> events,
+                                              long totalGas,
+                                              ProcessorStatus status,
+                                              ProcessorDiagnostic diagnostic,
+                                              ResolvedSnapshot snapshot) {
         return new DocumentProcessingResult(document,
-                new ArrayList<>(triggeredEvents),
+                events,
                 totalGas,
-                status == ProcessorStatus.CAPABILITY_FAILURE
-                        || status == ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                failureReason,
                 status,
-                errorCategory,
+                diagnostic,
                 snapshot);
     }
 
-    public static DocumentProcessingResult capabilityFailure(Node document, String reason) {
-        return capabilityFailure(document, reason, ProcessorErrorCategory.UnsupportedContract);
+    public static DocumentProcessingResult capabilityFailure(Node inputDocument,
+                                                             String reason) {
+        return capabilityFailure(inputDocument, reason,
+                ProcessorErrorCategory.UnsupportedRuntimeType);
     }
 
-    public static DocumentProcessingResult capabilityFailure(Node document,
-                                                            String reason,
-                                                            ProcessorErrorCategory errorCategory) {
-        Objects.requireNonNull(document, "document");
-        return new DocumentProcessingResult(document,
-                Collections.emptyList(),
+    public static DocumentProcessingResult capabilityFailure(Node inputDocument,
+                                                             String reason,
+                                                             ProcessorErrorCategory category) {
+        return nonCommitting(inputDocument,
                 0L,
-                true,
-                reason,
                 ProcessorStatus.CAPABILITY_FAILURE,
-                errorCategory,
-                null);
+                ProcessorDiagnostic.of(category != null
+                        ? category
+                        : ProcessorErrorCategory.UnsupportedRuntimeType, reason));
     }
 
-    public static DocumentProcessingResult invalidProcessingDocument(Node document, String reason) {
-        Objects.requireNonNull(document, "document");
-        return new DocumentProcessingResult(document,
-                Collections.emptyList(),
+    public static DocumentProcessingResult invalidProcessingDocument(Node inputDocument,
+                                                                     String reason) {
+        return nonCommitting(inputDocument,
                 0L,
-                true,
-                reason,
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                ProcessorErrorCategory.InvalidProcessingDocument,
-                null);
+                ProcessorDiagnostic.of(ProcessorErrorCategory.InvalidProcessingDocument, reason));
     }
 
-    public static DocumentProcessingResult runtimeFatal(Node document,
-                                                       String reason,
-                                                       ProcessorErrorCategory errorCategory) {
-        Objects.requireNonNull(document, "document");
-        return new DocumentProcessingResult(document,
-                Collections.emptyList(),
+    public static DocumentProcessingResult invalidProcessingEvent(Node inputDocument,
+                                                                  String reason) {
+        return nonCommitting(inputDocument,
                 0L,
-                false,
-                reason,
+                ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                ProcessorDiagnostic.of(ProcessorErrorCategory.InvalidProcessingEvent, reason));
+    }
+
+    public static DocumentProcessingResult runtimeFatal(Node inputDocument,
+                                                        String reason,
+                                                        ProcessorErrorCategory category) {
+        return nonCommitting(inputDocument,
+                0L,
                 ProcessorStatus.RUNTIME_FATAL,
-                errorCategory,
+                ProcessorDiagnostic.of(category != null
+                        ? category
+                        : ProcessorErrorCategory.RuntimeExecutionFailure, reason));
+    }
+
+    public static DocumentProcessingResult nonCommitting(Node inputDocument,
+                                                         long admittedGas,
+                                                         ProcessorStatus status,
+                                                         ProcessorDiagnostic diagnostic) {
+        Objects.requireNonNull(status, "status");
+        if (status.commits()) {
+            throw new IllegalArgumentException("Use a committing result factory for success");
+        }
+        return completed(inputDocument,
+                Collections.emptyList(),
+                admittedGas,
+                status,
+                diagnostic,
                 null);
     }
 
     public DocumentProcessingResult withSnapshot(ResolvedSnapshot snapshot) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        return new DocumentProcessingResult(document,
-                triggeredEvents,
+        return completed(document,
+                events,
                 totalGas,
-                capabilityFailure,
-                failureReason,
                 status,
-                errorCategory,
-                snapshot);
+                diagnostic,
+                Objects.requireNonNull(snapshot, "snapshot"));
     }
 
     public Node document() {
-        return document;
+        return document.clone();
     }
 
+    /**
+     * Ordered out-of-band events emitted by Root only.
+     */
+    public List<Node> events() {
+        return immutableNodes(events);
+    }
+
+    /**
+     * Compatibility alias for the preview API.
+     */
     public List<Node> triggeredEvents() {
-        return triggeredEvents;
+        return events();
     }
 
     public long totalGas() {
         return totalGas;
     }
 
-    public boolean capabilityFailure() {
-        return capabilityFailure;
-    }
-
-    public String failureReason() {
-        return failureReason;
-    }
-
     public ProcessorStatus status() {
         return status;
     }
 
+    public boolean commits() {
+        return status.commits();
+    }
+
+    public ProcessorDiagnostic diagnostic() {
+        return diagnostic;
+    }
+
+    /**
+     * Compatibility flag retained for existing hosts.
+     */
+    public boolean capabilityFailure() {
+        return status == ProcessorStatus.CAPABILITY_FAILURE
+                || status == ProcessorStatus.INVALID_PROCESSING_DOCUMENT;
+    }
+
+    public String failureReason() {
+        return diagnostic != null ? diagnostic.message() : null;
+    }
+
     public ProcessorErrorCategory errorCategory() {
-        return errorCategory;
+        return diagnostic != null ? diagnostic.category() : null;
     }
 
     public ResolvedSnapshot snapshot() {
@@ -225,5 +243,20 @@ public final class DocumentProcessingResult {
 
     public Node resolvedDocument() {
         return snapshot != null ? snapshot.resolvedRoot() : null;
+    }
+
+    private static ProcessorDiagnostic diagnostic(ProcessorErrorCategory category,
+                                                  String reason) {
+        return category != null
+                ? ProcessorDiagnostic.of(category, reason)
+                : null;
+    }
+
+    private static List<Node> immutableNodes(List<Node> nodes) {
+        List<Node> copy = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            copy.add(Objects.requireNonNull(node, "event").clone());
+        }
+        return Collections.unmodifiableList(copy);
     }
 }

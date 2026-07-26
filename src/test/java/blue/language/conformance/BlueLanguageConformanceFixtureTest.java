@@ -170,6 +170,41 @@ public class BlueLanguageConformanceFixtureTest {
     }
 
     @Test
+    void mutatedExpectedIdentityValueAndOutcomeFailClosed() {
+        JsonNode wrongIdentity = YAML_MAPPER.readTree(
+                "id: B_mutated_identity\n"
+                        + "category: BlueId\n"
+                        + "operation: calculateBlueId\n"
+                        + "input: value\n"
+                        + "expectedNodeBlueId: \""
+                        + "11111111111111111111111111111111111111111111\"\n");
+        JsonNode wrongValue = YAML_MAPPER.readTree(
+                "id: F_mutated_value\n"
+                        + "category: LimitedExpansion\n"
+                        + "operation: expandLimited\n"
+                        + "source:\n"
+                        + "  left: wanted\n"
+                        + "limits:\n"
+                        + "  demandedPaths: [/left]\n"
+                        + "expectedOutcome: Established\n"
+                        + "expectedValue: wrong\n");
+        JsonNode wrongOutcome = YAML_MAPPER.readTree(
+                "id: R_mutated_outcome\n"
+                        + "category: LimitedResolution\n"
+                        + "operation: semanticExists\n"
+                        + "source: {}\n"
+                        + "path: /missing\n"
+                        + "expectedOutcome: Established\n");
+
+        assertThrows(AssertionError.class,
+                () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongIdentity));
+        assertThrows(AssertionError.class,
+                () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongValue));
+        assertThrows(AssertionError.class,
+                () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongOutcome));
+    }
+
+    @Test
     void languageErrorClassifierRecognizesRepresentativeCategories() {
         assertEquals(BlueLanguageErrorCategory.InvalidBlueId,
                 BlueLanguageErrorClassifier.classify(new IllegalArgumentException("not a valid BlueId")));
@@ -202,28 +237,32 @@ public class BlueLanguageConformanceFixtureTest {
         assertTrue(resource != null);
         Path fixtureRoot = Paths.get(resource.toURI());
         JsonNode manifest = YAML_MAPPER.readTree(new String(Files.readAllBytes(fixtureRoot.resolve("manifest.yaml"))));
-        JsonNode manifestFixtures = manifest.get("fixtures");
-        assertTrue(manifestFixtures != null && manifestFixtures.isArray());
+        JsonNode manifestFiles = manifest.get("files");
+        assertTrue(manifestFiles != null && manifestFiles.isArray());
+        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
+                requireNonNull(manifest, "packageIdentity").asText());
+        assertEquals(125, requireNonNull(manifest, "behaviorFixtureCount").asInt());
 
         Set<String> fixtureIds = new LinkedHashSet<>();
         Set<Path> listedPaths = new HashSet<>();
-        for (JsonNode entry : manifestFixtures) {
-            assertTrue(entry.hasNonNull("id"));
-            assertTrue(entry.hasNonNull("category"));
+        for (JsonNode entry : manifestFiles) {
             assertTrue(entry.hasNonNull("path"));
-            String id = entry.get("id").asText();
-            assertTrue(fixtureIds.add(id), "Duplicate fixture id in manifest: " + id);
-            BlueFixtureCategory manifestCategory = BlueFixtureCategory.fromLabel(entry.get("category").asText());
+            assertTrue(entry.hasNonNull("role"));
+            assertTrue(entry.hasNonNull("sha256"));
+            assertTrue(entry.hasNonNull("bytes"));
             Path fixturePath = fixtureRoot.resolve(entry.get("path").asText()).normalize();
             assertTrue(Files.isRegularFile(fixturePath), "Missing fixture file: " + fixturePath);
             listedPaths.add(fixturePath.toAbsolutePath().normalize());
+            if (!"behavior-fixture".equals(entry.get("role").asText())) {
+                assertEquals("support", entry.get("role").asText());
+                continue;
+            }
 
             JsonNode fixture = YAML_MAPPER.readTree(new String(Files.readAllBytes(fixturePath)));
             assertFalse(fixture.has("profile"), "Fixture metadata must use category, not profile: " + fixturePath);
-            assertEquals(id, requireNonNull(fixture, "id").asText(), "Fixture id mismatch: " + fixturePath);
-            assertEquals(manifestCategory,
-                    BlueFixtureCategory.fromLabel(requireNonNull(fixture, "category").asText()),
-                    "Fixture category mismatch: " + fixturePath);
+            String id = requireNonNull(fixture, "id").asText();
+            assertTrue(fixtureIds.add(id), "Duplicate fixture id: " + id);
+            BlueFixtureCategory.fromLabel(requireNonNull(fixture, "category").asText());
             assertTrue(BlueConformanceSuiteRunner.knownOperations().contains(requireNonNull(fixture, "operation").asText()),
                     "Unknown fixture operation in " + fixturePath);
             BlueConformanceSuiteRunner.validateFixtureMetadataForTest(fixture);
@@ -239,8 +278,7 @@ public class BlueLanguageConformanceFixtureTest {
                     .filter(Files::isRegularFile)
                     .filter(path -> {
                         String name = path.getFileName().toString();
-                        return (name.endsWith(".yaml") || name.endsWith(".yml"))
-                                && !"manifest.yaml".equals(name)
+                        return !"manifest.yaml".equals(name)
                                 && !"manifest.yml".equals(name);
                     })
                     .sorted(Comparator.comparing(Path::toString))

@@ -5,16 +5,20 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.EmitEventsContractProcessor;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
-import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
-import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.SetPropertyOnEvent;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestEventChannelTest {
 
@@ -22,7 +26,9 @@ class TestEventChannelTest {
     void testEventChannelMatchesOnlyTestEvents() {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport.testEventChannelProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
 
         String documentYaml = "name: Sample Doc\n" +
                 "contracts:\n" +
@@ -42,7 +48,8 @@ class TestEventChannelTest {
 
         assertNull(initialized.getProperties() != null ? initialized.getProperties().get("x") : null);
 
-        Node randomEvent = blue.yamlToNode("type:\n  blueId: RandomEvent\n");
+        Node randomEvent = blue.yamlToNode(
+                "type:\n  blueId: " + RuntimeBlueIds.FIXTURE_EVENT + "\n");
         DocumentProcessingResult randomResult = blue.processDocument(initialized, randomEvent);
         Node afterRandom = randomResult.document();
         assertNull(afterRandom.getProperties() != null ? afterRandom.getProperties().get("x") : null);
@@ -61,7 +68,9 @@ class TestEventChannelTest {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new EmitEventsContractProcessor());
-        blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
+        EmbeddedAwareSetPropertyOnEventProcessor eventProcessor =
+                new EmbeddedAwareSetPropertyOnEventProcessor();
+        blue.registerContractProcessor(eventProcessor);
 
         String yaml = "name: Cascade Doc\n" +
                 "a:\n" +
@@ -69,15 +78,15 @@ class TestEventChannelTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "    triggered:\n" +
                 "      type:\n" +
-                "        blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ\n" +
+                "        blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf\n" +
                 "    emitOnInit:\n" +
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "      type:\n" +
                 "        blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
                 "      events:\n" +
@@ -112,12 +121,12 @@ class TestEventChannelTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "  embeddedEvents:\n" +
                 "    type:\n" +
-                "      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i\n" +
+                "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
                 "    childPath: /a\n" +
                 "  setRootFromChild:\n" +
                 "    channel: embeddedEvents\n" +
@@ -139,6 +148,13 @@ class TestEventChannelTest {
 
         Node rootFlag = processed.getProperties().get("fromChild");
         assertEquals(new BigInteger("1"), rootFlag.getValue());
+        assertEmbeddedEventDelivery(
+                eventProcessor.capturedSecondDelivery,
+                "/a",
+                CheckpointIdentityCalculator.identity(
+                        new TestEvent().kind("second").toNode()));
+        assertTrue(result.events().isEmpty(),
+                "processor lifecycle and child emissions remain internal");
     }
 
     @Test
@@ -146,7 +162,9 @@ class TestEventChannelTest {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport.testEventChannelProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
 
         String yaml = "name: Checkpoint Doc\n" +
                 "contracts:\n" +
@@ -167,17 +185,20 @@ class TestEventChannelTest {
         Node event1 = blue.objectToNode(new TestEvent().eventId("evt-1"));
         Node afterFirst = blue.processDocument(initialized, event1).document();
         assertEquals(new BigInteger("1"), afterFirst.getProperties().get("x").getValue());
-        assertEquals("evt-1", checkpointValue(afterFirst));
+        assertEquals(BlueIdCalculator.calculateBlueId(event1),
+                checkpointValue(afterFirst));
 
         Node stale = blue.objectToNode(new TestEvent().eventId("evt-1"));
         Node afterStale = blue.processDocument(afterFirst, stale).document();
         assertEquals(new BigInteger("1"), afterStale.getProperties().get("x").getValue());
-        assertEquals("evt-1", checkpointValue(afterStale));
+        assertEquals(BlueIdCalculator.calculateBlueId(stale),
+                checkpointValue(afterStale));
 
         Node fresh = blue.objectToNode(new TestEvent().eventId("evt-2"));
         Node afterFresh = blue.processDocument(afterStale, fresh).document();
         assertEquals(new BigInteger("2"), afterFresh.getProperties().get("x").getValue());
-        assertEquals("evt-2", checkpointValue(afterFresh));
+        assertEquals(BlueIdCalculator.calculateBlueId(fresh),
+                checkpointValue(afterFresh));
     }
 
     private String checkpointValue(Node document) {
@@ -186,25 +207,26 @@ class TestEventChannelTest {
         if (checkpoint == null) {
             return null;
         }
-        Node lastEvents = checkpoint.getProperties().get("lastEvents");
-        if (lastEvents == null || lastEvents.getProperties() == null) {
+        Node entries = checkpoint.getProperties().get("entries");
+        if (entries == null || entries.getProperties() == null) {
             return null;
         }
-        Node entry = lastEvents.getProperties().get("testEventsChannel");
+        Node entry = entries.getProperties().get("testEventsChannel");
         if (entry == null || entry.getProperties() == null) {
             return null;
         }
-        Node eventIdNode = entry.getProperties().get("eventId");
-        Object value = eventIdNode != null ? eventIdNode.getValue() : null;
-        return value != null ? value.toString() : null;
+        Node subject = entry.getProperties().get("subject");
+        return subject != null ? subject.getBlueId() : null;
     }
 
     @Test
-    void checkpointStoresFullEventAndComparesPayload() {
+    void checkpointStoresExactSubjectReferenceAndComparesPayload() {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport.testEventChannelProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
 
         String yaml = "name: Payload Checkpoint Doc\n" +
                 "contracts:\n" +
@@ -222,9 +244,10 @@ class TestEventChannelTest {
         Node firstEvent = blue.yamlToNode("type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: alpha\n");
         Node afterFirst = blue.processDocument(initialized, firstEvent).document();
         assertEquals(new BigInteger("1"), afterFirst.getProperties().get("x").getValue());
-        Node storedEvent = checkpointStoredEvent(afterFirst);
-        assertNotNull(storedEvent);
-        assertEquals("alpha", storedEvent.getProperties().get("kind").getValue());
+        Node storedSubject = checkpointStoredSubject(afterFirst);
+        assertNotNull(storedSubject);
+        assertEquals(BlueIdCalculator.calculateBlueId(firstEvent),
+                storedSubject.getBlueId());
 
         Node identicalEvent = blue.yamlToNode("type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: alpha\n");
         Node afterSecond = blue.processDocument(afterFirst, identicalEvent).document();
@@ -235,21 +258,115 @@ class TestEventChannelTest {
         Node afterThird = blue.processDocument(afterSecond, changedEvent).document();
         assertEquals(new BigInteger("2"), afterThird.getProperties().get("x").getValue(),
                 "Changed payload should be processed");
-        Node updatedEvent = checkpointStoredEvent(afterThird);
-        assertNotNull(updatedEvent);
-        assertEquals("beta", updatedEvent.getProperties().get("kind").getValue());
+        Node updatedSubject = checkpointStoredSubject(afterThird);
+        assertNotNull(updatedSubject);
+        assertEquals(BlueIdCalculator.calculateBlueId(changedEvent),
+                updatedSubject.getBlueId());
     }
 
-    private Node checkpointStoredEvent(Node document) {
+    private Node checkpointStoredSubject(Node document) {
         Node contracts = document.getContracts();
         Node checkpoint = contracts.getProperties().get("checkpoint");
         if (checkpoint == null) {
             return null;
         }
-        Node lastEvents = checkpoint.getProperties().get("lastEvents");
-        if (lastEvents == null || lastEvents.getProperties() == null) {
+        Node entries = checkpoint.getProperties().get("entries");
+        if (entries == null || entries.getProperties() == null) {
             return null;
         }
-        return lastEvents.getProperties().get("testEventsChannel");
+        Node entry = entries.getProperties().get("testEventsChannel");
+        return entry != null && entry.getProperties() != null
+                ? entry.getProperties().get("subject") : null;
+    }
+
+    private static void assertEmbeddedEventDelivery(
+            Node delivery,
+            String expectedSourcePath,
+            String expectedEventBlueId) {
+        assertNotNull(delivery);
+        assertNotNull(delivery.getType());
+        assertEquals(RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY,
+                delivery.getType().getBlueId());
+        assertNotNull(delivery.getProperties());
+        assertEquals(2, delivery.getProperties().size());
+        assertEquals(expectedSourcePath,
+                delivery.getAsText("/sourcePath"));
+        assertFalse(delivery.getProperties()
+                .containsKey("childPath"));
+        Node eventReference =
+                delivery.getProperties().get("event");
+        assertNotNull(eventReference);
+        assertTrue(eventReference.isReferenceOnly());
+        assertEquals(expectedEventBlueId,
+                eventReference.getBlueId());
+    }
+
+    private static final class
+    EmbeddedAwareSetPropertyOnEventProcessor
+            implements HandlerProcessor<SetPropertyOnEvent> {
+
+        private Node capturedSecondDelivery;
+
+        @Override
+        public Class<SetPropertyOnEvent> contractType() {
+            return SetPropertyOnEvent.class;
+        }
+
+        @Override
+        public void execute(
+                SetPropertyOnEvent contract,
+                ProcessorExecutionContext context) {
+            Node event = context.event();
+            if (!matches(contract, event)) {
+                return;
+            }
+            if (event.getType() != null
+                    && RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY
+                    .equals(event.getType().getBlueId())
+                    && "/fromChild".equals(
+                    contract.getPropertyKey())) {
+                capturedSecondDelivery = event.clone();
+            }
+            context.applyPatch(JsonPatch.add(
+                    context.resolvePointer(
+                            contract.getPropertyKey()),
+                    new Node().value(
+                            contract.getPropertyValue())));
+        }
+
+        private boolean matches(
+                SetPropertyOnEvent contract,
+                Node event) {
+            if (event == null) {
+                return false;
+            }
+            if (event.getType() != null
+                    && RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY
+                    .equals(event.getType().getBlueId())) {
+                Node eventReference =
+                        event.getProperties() != null
+                                ? event.getProperties().get("event")
+                                : null;
+                if (eventReference == null
+                        || !eventReference.isReferenceOnly()) {
+                    return false;
+                }
+                Node expected = new TestEvent()
+                        .kind(contract.getExpectedKind())
+                        .toNode();
+                return CheckpointIdentityCalculator.identity(
+                        expected).equals(
+                        eventReference.getBlueId());
+            }
+            if (event.getProperties() == null) {
+                return false;
+            }
+            Node kind =
+                    event.getProperties().get("kind");
+            return kind != null
+                    && kind.getValue() != null
+                    && contract.getExpectedKind().equals(
+                    String.valueOf(kind.getValue()));
+        }
     }
 }

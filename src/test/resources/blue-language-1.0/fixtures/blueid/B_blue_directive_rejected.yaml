@@ -1,0 +1,7 @@
+id: B_blue_directive_rejected
+category: BlueId
+operation: calculateBlueId
+input:
+  blue: default
+  x: 1
+expectedErrorCategory: InvalidBlueIdInput

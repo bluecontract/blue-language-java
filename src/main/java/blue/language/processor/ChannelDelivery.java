@@ -5,8 +5,13 @@ import blue.language.model.Node;
 import java.util.Objects;
 
 /**
- * One handler delivery produced by a channel evaluation.
+ * Legacy pre-1.0 routed-delivery value.
+ *
+ * @deprecated Contracts 1.0 derives the one external occurrence from verified
+ * feeder evidence. Values of this type are retained only for source
+ * compatibility and cannot be submitted to PROCESS.
  */
+@Deprecated
 public final class ChannelDelivery {
 
     private final Node event;
@@ -39,11 +44,8 @@ public final class ChannelDelivery {
     }
 
     /**
-     * Creates a delivery with optional same-scope handler routing and logical-delivery identity.
-     *
-     * <p>When {@code handlerChannelKey} is absent, handlers are selected from the accepting
-     * channel. When {@code logicalDeliveryKey} is absent, the delivery is not deduplicated
-     * across accepting channels.</p>
+     * Creates a legacy value for source compatibility. The returned value is
+     * not executable by the Contracts 1.0 processor.
      */
     public static ChannelDelivery of(Node event,
                                      String eventId,

@@ -1,0 +1,17 @@
+id: F_prefetch_does_not_change_semantic_result
+category: LimitedExpansion
+operation: compareExpansionStrategies
+source:
+  blueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+limits:
+  demandedPaths: [/left/value]
+variants:
+  - name: demand-only
+    physicallyPrefetchedBlueIds: []
+  - name: sibling-prefetched
+    physicallyPrefetchedBlueIds:
+      - FVynRTHup63DBwrc8M741Uhnyp4oonzMdbuuKpAnEeSf
+expectedOutcome: Established
+expectedValue: wanted
+expectedSameSemanticCoverage: true
+expectedSameNodeBlueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk

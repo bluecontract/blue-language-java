@@ -24,6 +24,13 @@ public final class PotentialBlueIdNodeProvider implements NodeProvider {
         return acceptsBlueId(blueId) ? delegate.fetchByBlueId(blueId) : null;
     }
 
+    @Override
+    public NodeProviderResult fetchResultByBlueId(String blueId) {
+        return acceptsBlueId(blueId)
+                ? delegate.fetchResultByBlueId(blueId)
+                : NodeProviderResult.notFound();
+    }
+
     public boolean acceptsBlueId(String blueId) {
         return BlueIds.isPotentialBlueId(blueId);
     }

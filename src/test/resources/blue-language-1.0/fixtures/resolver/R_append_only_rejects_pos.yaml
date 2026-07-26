@@ -1,0 +1,12 @@
+id: R_append_only_rejects_pos
+category: Resolution
+operation: resolve
+parent:
+  type: List
+  mergePolicy: append-only
+  items: [A]
+source:
+  items:
+    - $pos: 0
+      value: B
+expectedErrorCategory: ListControlViolation

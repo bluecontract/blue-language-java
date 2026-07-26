@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.BlueLanguageErrorCategory;
+import blue.language.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.model.ChannelContract;
@@ -47,10 +49,6 @@ class RegisteredContractProviderEvidenceTest {
                 fullRuntimeResult.failureReason());
         assertEquals(initializationDocumentId(fullRuntimeResult),
                 initializationDocumentId(standaloneResult));
-        assertEquals(lifecycleDocumentId(fullRuntimeResult),
-                lifecycleDocumentId(standaloneResult));
-        assertEquals(initializationDocumentId(standaloneResult),
-                lifecycleDocumentId(standaloneResult));
         assertNotEquals(EvidenceChannel.class.getSimpleName(),
                 fixture.canonicalType.getName());
         assertNotNull(fixture.canonicalType.getDescription());
@@ -72,7 +70,7 @@ class RegisteredContractProviderEvidenceTest {
                 fixture.document());
 
         assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
-        assertEquals(initializationDocumentId(result), lifecycleDocumentId(result));
+        assertNotNull(initializationDocumentId(result));
     }
 
     @Test
@@ -99,13 +97,39 @@ class RegisteredContractProviderEvidenceTest {
         DocumentProcessor standalone = DocumentProcessor.builder()
                 .registerContractProcessor(fixture.blueId, new EvidenceChannelProcessor())
                 .build();
+        Node document = fixture.document();
 
-        DocumentProcessingResult result = standalone.initializeDocument(fixture.document());
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                () -> standalone.initializeDocument(document));
 
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
-        assertEquals(ProcessorErrorCategory.ProviderUnavailable, result.errorCategory());
-        assertNull(result.document().getContracts().getProperties().get("initialized"));
-        assertFalse(hasLifecycleInitiatedEvent(result));
+        assertEquals(
+                BlueLanguageErrorCategory.ProviderUnavailable,
+                BlueLanguageErrorClassifier.classify(failure));
+        assertNull(document.getContracts().getProperties().get("initialized"));
+        assertNull(document.getContracts().getProperties().get("terminated"));
+    }
+
+    @Test
+    void activeScopePreflightDemandsLegacyExplicitProviderEvidence() {
+        TypeFixture fixture = new TypeFixture();
+        DocumentProcessor standalone = DocumentProcessor.builder()
+                .registerContractProcessor(
+                        fixture.blueId,
+                        new EvidenceChannelProcessor())
+                .build();
+        ProcessorEngine.Execution execution =
+                new ProcessorEngine.Execution(
+                        standalone,
+                        fixture.document());
+
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                () -> execution.preflightScope("/"));
+
+        assertEquals(
+                BlueLanguageErrorCategory.ProviderUnavailable,
+                BlueLanguageErrorClassifier.classify(failure));
     }
 
     @Test
@@ -118,8 +142,8 @@ class RegisteredContractProviderEvidenceTest {
                 () -> registry.register(
                         fixture.blueId, wrongContent, new EvidenceChannelProcessor()));
 
-        assertEquals(ProcessorErrorCategory.ProviderBlueIdMismatch,
-                ScopeIdentityErrorMapper.from(failure));
+        assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
+                BlueLanguageErrorClassifier.classify(failure));
         assertFalse(registry.processors().containsKey(fixture.blueId));
         assertNull(registry.canonicalTypeNode(fixture.blueId));
     }
@@ -189,21 +213,6 @@ class RegisteredContractProviderEvidenceTest {
 
     private static String initializationDocumentId(DocumentProcessingResult result) {
         return result.document().getAsText("/contracts/initialized/documentId");
-    }
-
-    private static String lifecycleDocumentId(DocumentProcessingResult result) {
-        for (Node event : result.triggeredEvents()) {
-            if (event.getType() != null
-                    && RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED.equals(
-                    event.getType().getBlueId())) {
-                return event.getAsText("/documentId");
-            }
-        }
-        return null;
-    }
-
-    private static boolean hasLifecycleInitiatedEvent(DocumentProcessingResult result) {
-        return lifecycleDocumentId(result) != null;
     }
 
     private static final class TypeFixture {

@@ -1,0 +1,43 @@
+schema: blue-contracts-fixture/1.0
+id: c-disc-01
+vectors:
+- C-DISC-01
+category: disc
+description: Direct terminated state is checked before application contract recognition.
+operation: process
+input:
+  root:
+    contracts:
+      terminated:
+        type:
+          blueId: 4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v
+        cause: graceful
+      unsupported:
+        type:
+          blueId: 6dUnbVwUFYbg4oBjfbANb3MeDzXvuahShSUppq3YLpNh
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: terminated
+  - actual: trace.counters.contractHeaderRecognized
+    op: equals
+    expected: 0

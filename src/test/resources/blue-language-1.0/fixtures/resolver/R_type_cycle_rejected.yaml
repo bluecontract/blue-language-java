@@ -1,0 +1,16 @@
+id: R_type_cycle_rejected
+category: Resolution
+operation: resolve
+source:
+  blueId: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+provider:
+  - requestedBlueId: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    node:
+      type:
+        blueId: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  - requestedBlueId: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+    node:
+      type:
+        blueId: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+expectedErrorCategory: TypeCycle
+note: fixture harness substitutes valid calculated BlueIds for the symbolic cycle before execution

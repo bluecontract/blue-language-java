@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.utils.UncheckedObjectMapper;
 
 import java.io.ByteArrayOutputStream;
@@ -16,14 +17,21 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public final class BlueConformanceReport {
 
     public static final String FIXTURE_MANIFEST_RESOURCE = "blue-language-1.0/fixtures/manifest.yaml";
-    public static final String CANDIDATE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:274f62aa1e9a1b189f0dd9c832900160edf7e1fd837adb0da5aa717dc9e3c42d";
-    public static final String CANDIDATE_BLUE_SPEC_SOURCE =
-            "feat/conformance-fixture-expansion@07814f5";
+    public static final String FIXTURE_PACKAGE_IDENTITY =
+            "sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb";
+    public static final String BLUE_SPEC_SOURCE =
+            "blue-language-1.0-final-implementation-baseline";
+    /** @deprecated use {@link #FIXTURE_PACKAGE_IDENTITY}. */
+    @Deprecated
+    public static final String CANDIDATE_FIXTURE_PACKAGE_IDENTITY = FIXTURE_PACKAGE_IDENTITY;
+    /** @deprecated use {@link #BLUE_SPEC_SOURCE}. */
+    @Deprecated
+    public static final String CANDIDATE_BLUE_SPEC_SOURCE = BLUE_SPEC_SOURCE;
     private static final Set<String> REQUIRED_FIXTURE_IDS = requiredFixtureIds();
 
     private final String specVersion;
@@ -109,8 +117,62 @@ public final class BlueConformanceReport {
         return fixtureCategories;
     }
 
+    public String getCoreRegistryPackageIdentity() {
+        return BlueCoreTypeRegistry.INSTANCE.packageIdentity();
+    }
+
+    /**
+     * Complete one-result-per-fixture report for CI and release tooling.
+     */
+    public Map<String, Object> toMachineReadableMap() {
+        Map<String, BlueConformanceFailure> failuresById = new LinkedHashMap<>();
+        for (BlueConformanceFailure failure : failures) {
+            failuresById.put(failure.getFixtureId(), failure);
+        }
+        Set<String> passed = new HashSet<>(passedFixtureIds);
+        Map<String, String> operations = loadFixtureOperations();
+        List<Map<String, Object>> results = new ArrayList<>(fixtureIds.size());
+        for (String id : fixtureIds) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("id", id);
+            BlueFixtureCategory category = fixtureCategories.get(id);
+            result.put("category", category == null ? null : category.getLabel());
+            result.put("operation", operations.get(id));
+            BlueConformanceFailure failure = failuresById.get(id);
+            if (failure != null) {
+                result.put("status", "FAIL");
+                result.put("errorCategory", failure.getErrorCategory() == null
+                        ? null : failure.getErrorCategory().name());
+                result.put("exceptionClass", failure.getExceptionClass());
+                result.put("message", failure.getMessage());
+            } else if (passed.contains(id)) {
+                result.put("status", "PASS");
+            } else {
+                result.put("status", "FAIL");
+                result.put("errorCategory", "HarnessDidNotRunFixture");
+                result.put("message", "Fixture has no execution result.");
+            }
+            results.add(result);
+        }
+
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("specificationVersion", specVersion);
+        report.put("registryPackageIdentity", getCoreRegistryPackageIdentity());
+        report.put("fixturePackageIdentity", fixturePackageIdentity);
+        report.put("coreRegistryBlueIds", coreRegistryBlueIds);
+        report.put("fixtureCount", fixtureIds.size());
+        report.put("passedCount", passedFixtureIds.size());
+        report.put("failedCount", fixtureIds.size() - passedFixtureIds.size());
+        report.put("results", results);
+        return Collections.unmodifiableMap(report);
+    }
+
+    public String toMachineReadableJson() {
+        return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(toMachineReadableMap());
+    }
+
     public boolean isReleaseGradeFixtureIdentity() {
-        return CANDIDATE_FIXTURE_PACKAGE_IDENTITY.equals(fixturePackageIdentity)
+        return FIXTURE_PACKAGE_IDENTITY.equals(fixturePackageIdentity)
                 && isReleaseGradeFixtureIdentity(fixturePackageIdentity);
     }
 
@@ -131,7 +193,7 @@ public final class BlueConformanceReport {
         if (manifest == null) {
             return fallback;
         }
-        Object identity = manifest.get("fixturePackageIdentity");
+        Object identity = manifest.get("packageIdentity");
         return identity == null || identity.toString().trim().isEmpty()
                 ? fallback
                 : identity.toString();
@@ -142,19 +204,14 @@ public final class BlueConformanceReport {
         if (manifest == null) {
             return Collections.emptyList();
         }
-        Object fixtures = manifest.get("fixtures");
-        if (!(fixtures instanceof List)) {
-            return Collections.emptyList();
-        }
-        List<?> fixtureList = (List<?>) fixtures;
         List<String> ids = new ArrayList<>();
-        for (Object fixture : fixtureList) {
-            if (fixture instanceof Map) {
-                Object id = ((Map<?, ?>) fixture).get("id");
-                if (id != null) {
-                    ids.add(id.toString());
-                }
+        for (Map<?, ?> file : behaviorFixtureFiles(manifest)) {
+            Map<?, ?> fixture = loadFixture(file);
+            Object id = fixture.get("id");
+            if (id == null || id.toString().trim().isEmpty()) {
+                throw new IllegalStateException("Blue Language fixture is missing id: " + file.get("path"));
             }
+            ids.add(id.toString());
         }
         return ids;
     }
@@ -164,58 +221,65 @@ public final class BlueConformanceReport {
         if (manifest == null) {
             return Collections.emptyMap();
         }
-        Object fixtures = manifest.get("fixtures");
-        if (!(fixtures instanceof List)) {
-            return Collections.emptyMap();
-        }
         Map<String, BlueFixtureCategory> categories = new LinkedHashMap<>();
-        for (Object fixture : (List<?>) fixtures) {
-            if (fixture instanceof Map) {
-                Map<?, ?> fixtureMap = (Map<?, ?>) fixture;
-                Object id = fixtureMap.get("id");
-                Object category = fixtureMap.get("category");
-                if (id != null && category != null) {
-                    categories.put(id.toString(), BlueFixtureCategory.fromLabel(category.toString()));
-                }
+        for (Map<?, ?> file : behaviorFixtureFiles(manifest)) {
+            Map<?, ?> fixture = loadFixture(file);
+            Object id = fixture.get("id");
+            Object category = fixture.get("category");
+            if (id == null || category == null) {
+                throw new IllegalStateException(
+                        "Blue Language fixture is missing id/category: " + file.get("path"));
             }
+            categories.put(id.toString(), BlueFixtureCategory.fromLabel(category.toString()));
         }
         return categories;
     }
 
+    public static Map<String, String> loadFixtureOperations() {
+        Map<?, ?> manifest = loadFixtureManifest();
+        Map<String, String> operations = new LinkedHashMap<>();
+        for (Map<?, ?> file : behaviorFixtureFiles(manifest)) {
+            Map<?, ?> fixture = loadFixture(file);
+            Object id = fixture.get("id");
+            Object operation = fixture.get("operation");
+            if (id == null || operation == null) {
+                throw new IllegalStateException(
+                        "Blue Language fixture is missing id/operation: " + file.get("path"));
+            }
+            operations.put(id.toString(), operation.toString());
+        }
+        return Collections.unmodifiableMap(operations);
+    }
+
     public static String computeFixturePackageIdentity() {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update("manifest.yaml\n".getBytes(StandardCharsets.UTF_8));
-            digest.update(normalizeManifestForIdentity(readFixtureResource(FIXTURE_MANIFEST_RESOURCE)));
-            Map<?, ?> manifest = loadFixtureManifest();
-            if (manifest == null) {
+            Map<?, ?> loaded = loadFixtureManifest();
+            if (loaded == null) {
                 throw new IllegalStateException("Blue Language fixture manifest not found");
             }
-            Object fixtures = manifest.get("fixtures");
-            if (!(fixtures instanceof List)) {
-                throw new IllegalStateException("Blue Language fixture manifest has no fixture list");
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : loaded.entrySet()) {
+                normalized.put(entry.getKey().toString(), entry.getValue());
             }
-            for (Object fixture : (List<?>) fixtures) {
-                if (!(fixture instanceof Map)) {
-                    throw new IllegalStateException("Blue Language fixture manifest contains a non-map fixture entry");
-                }
-                Object path = ((Map<?, ?>) fixture).get("path");
-                if (path == null || path.toString().trim().isEmpty()) {
-                    throw new IllegalStateException("Blue Language fixture manifest entry is missing path");
-                }
-                String fixturePath = path.toString();
-                digest.update(("\n--- " + fixturePath + "\n").getBytes(StandardCharsets.UTF_8));
-                digest.update(normalizeLineEndings(readFixtureResource("blue-language-1.0/fixtures/" + fixturePath)));
-            }
-            return "sha256:" + toHex(digest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 digest is unavailable", e);
+            normalized.put("packageIdentity", null);
+            Object canonical = canonicalizeJsonValue(normalized);
+            // The shared mapper is intentionally pretty-printing and omits
+            // nulls for public Blue serialization. Package identity requires
+            // compact canonical JSON and an explicit packageIdentity:null.
+            byte[] canonicalJson = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .writeValueAsBytes(canonical);
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return "sha256:" + toHex(digest.digest(canonicalJson));
+        } catch (NoSuchAlgorithmException | IOException e) {
+            throw new IllegalStateException("Unable to calculate Blue Language fixture package identity", e);
         }
     }
 
     public static boolean fixturePackageIdentityMatchesFixtureFiles() {
         String identity = loadFixturePackageIdentity(null);
-        return identity != null && identity.equals(computeFixturePackageIdentity());
+        return identity != null
+                && identity.equals(computeFixturePackageIdentity())
+                && manifestFileDigestsMatch();
     }
 
     public static boolean isReleaseGradeFixtureIdentity(String identity) {
@@ -238,12 +302,100 @@ public final class BlueConformanceReport {
         try (InputStream inputStream = BlueConformanceReport.class.getClassLoader()
                 .getResourceAsStream(FIXTURE_MANIFEST_RESOURCE)) {
             if (inputStream == null) {
-                return null;
+                throw new IllegalStateException(
+                        "Missing Blue Language 1.0 fixture manifest: " + FIXTURE_MANIFEST_RESOURCE);
             }
             return UncheckedObjectMapper.YAML_MAPPER.readValue(inputStream, Map.class);
-        } catch (Exception ignored) {
-            return null;
+        } catch (IOException invalidManifest) {
+            throw new IllegalStateException(
+                    "Unable to load Blue Language 1.0 fixture manifest", invalidManifest);
         }
+    }
+
+    private static List<Map<?, ?>> behaviorFixtureFiles(Map<?, ?> manifest) {
+        Object files = manifest.get("files");
+        if (!(files instanceof List)) {
+            throw new IllegalStateException("Blue Language fixture manifest has no files list");
+        }
+        List<Map<?, ?>> result = new ArrayList<>();
+        for (Object file : (List<?>) files) {
+            if (!(file instanceof Map)) {
+                throw new IllegalStateException("Blue Language fixture manifest contains a non-map file entry");
+            }
+            Map<?, ?> entry = (Map<?, ?>) file;
+            if ("behavior-fixture".equals(String.valueOf(entry.get("role")))) {
+                result.add(entry);
+            }
+        }
+        return result;
+    }
+
+    private static Map<?, ?> loadFixture(Map<?, ?> file) {
+        Object path = file.get("path");
+        if (path == null || path.toString().trim().isEmpty()) {
+            throw new IllegalStateException("Blue Language fixture manifest entry is missing path");
+        }
+        try {
+            return UncheckedObjectMapper.YAML_MAPPER.readValue(
+                    readFixtureResource("blue-language-1.0/fixtures/" + path), Map.class);
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to read Blue Language fixture " + path, e);
+        }
+    }
+
+    private static boolean manifestFileDigestsMatch() {
+        Map<?, ?> manifest = loadFixtureManifest();
+        if (manifest == null) {
+            return false;
+        }
+        Object files = manifest.get("files");
+        if (!(files instanceof List)) {
+            return false;
+        }
+        try {
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            for (Object file : (List<?>) files) {
+                if (!(file instanceof Map)) {
+                    return false;
+                }
+                Map<?, ?> entry = (Map<?, ?>) file;
+                Object path = entry.get("path");
+                Object expectedBytes = entry.get("bytes");
+                Object expectedDigest = entry.get("sha256");
+                if (path == null || expectedBytes == null || expectedDigest == null) {
+                    return false;
+                }
+                byte[] bytes = normalizeLineEndings(readFixtureResource(
+                        "blue-language-1.0/fixtures/" + path));
+                if (((Number) expectedBytes).longValue() != bytes.length) {
+                    return false;
+                }
+                if (!expectedDigest.toString().equals(toHex(sha256.digest(bytes)))) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (NoSuchAlgorithmException | RuntimeException invalidManifest) {
+            return false;
+        }
+    }
+
+    private static Object canonicalizeJsonValue(Object value) {
+        if (value instanceof Map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                sorted.put(entry.getKey().toString(), canonicalizeJsonValue(entry.getValue()));
+            }
+            return sorted;
+        }
+        if (value instanceof List) {
+            List<Object> values = new ArrayList<>();
+            for (Object element : (List<?>) value) {
+                values.add(canonicalizeJsonValue(element));
+            }
+            return values;
+        }
+        return value;
     }
 
     private static byte[] readFixtureResource(String resource) {
@@ -268,12 +420,6 @@ public final class BlueConformanceReport {
         return out.toByteArray();
     }
 
-    private static byte[] normalizeManifestForIdentity(byte[] bytes) {
-        String normalized = new String(normalizeLineEndings(bytes), StandardCharsets.UTF_8)
-                .replaceFirst("(?m)^fixturePackageIdentity:.*$", "fixturePackageIdentity: \"\"");
-        return normalized.getBytes(StandardCharsets.UTF_8);
-    }
-
     private static byte[] normalizeLineEndings(byte[] bytes) {
         return new String(bytes, StandardCharsets.UTF_8)
                 .replace("\r\n", "\n")
@@ -290,6 +436,22 @@ public final class BlueConformanceReport {
     }
 
     private static Set<String> requiredFixtureIds() {
-        return new LinkedHashSet<>(loadFixtureIds());
+        List<String> ids = loadFixtureIds();
+        if (ids.size() != 125 || new LinkedHashSet<>(ids).size() != 125) {
+            throw new IllegalStateException(
+                    "Blue Language 1.0 requires exactly 125 unique behavior fixtures; found "
+                            + ids.size());
+        }
+        String calculatedIdentity = computeFixturePackageIdentity();
+        boolean fileDigestsMatch = manifestFileDigestsMatch();
+        if (!FIXTURE_PACKAGE_IDENTITY.equals(calculatedIdentity)
+                || !fileDigestsMatch) {
+            throw new IllegalStateException(
+                    "Blue Language 1.0 fixture package does not match the release"
+                            + " (expectedIdentity=" + FIXTURE_PACKAGE_IDENTITY
+                            + ", calculatedIdentity=" + calculatedIdentity
+                            + ", fileDigestsMatch=" + fileDigestsMatch + ").");
+        }
+        return new LinkedHashSet<>(ids);
     }
 }

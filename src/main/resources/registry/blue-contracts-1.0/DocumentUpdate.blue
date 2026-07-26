@@ -1,29 +1,35 @@
 name: Document Update
-description: >
-  Processor-emitted event delivered through Document Update Channels after each
-  successful runtime patch. One Document Update payload is created per
-  participating receiving scope for that patch. The path is relative to the
-  receiving scope. before and after are immutable snapshots of the changed
-  path before and after the patch, using null when the changed path was absent
-  or removed. All handlers at the same receiving scope for the same patch see
-  the same immutable payload object.
+description: Immutable processor payload describing one successful application or generated type write relative to one receiving scope.
 op:
-  type: Text
-  description: >
-    Required operation that caused the update: add, replace, or remove.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true
-    enum: [add, replace, remove]
+    enum:
+    - add
+    - replace
+    - remove
 path:
-  type: Text
-  description: >
-    Required path of the changed node, relative to the receiving scope. / means
-    the receiving scope root itself.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+beforePresent:
+  type:
+    blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
   schema:
     required: true
 before:
-  description: >
-    Snapshot at the changed path before the patch, or null when absent.
+  description: Present only when beforePresent is true.
+afterPresent:
+  type:
+    blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
+  schema:
+    required: true
 after:
-  description: >
-    Snapshot at the changed path after the patch, or null when removed.
+  description: Present only when afterPresent is true.
+sourceScopePath:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true

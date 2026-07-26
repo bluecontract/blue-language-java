@@ -1,18 +1,10 @@
 name: Embedded Node Channel
-type: Channel
-description: >
-  Processor-managed channel in a parent scope that bridges recorded emissions
-  from a processed embedded child scope. Bridging occurs after the parent has
-  handled the external event and before the parent drains its Triggered FIFO.
-  Child emissions are delivered in the order recorded by the child, and child
-  scopes are bridged in the parent invocation's processed-path insertion order.
-  Bridge gas is charged only when an emission is actually delivered to at
-  least one matching Embedded Node Channel.
-childPath:
-  type: Text
-  description: >
-    Required scope-relative Blue Runtime Pointer identifying the embedded child
-    root whose emissions this channel receives. The resolved child path is
-    compared with the processed child scope path.
-  schema:
-    required: true
+type:
+  blueId: CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR
+description: Processor-managed Channel receiving descendant event occurrences after source-local Triggered delivery, nearest ancestor first.
+sourcePath:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  description: Optional scope-relative source-path matcher.
+event:
+  description: Optional event matcher.

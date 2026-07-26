@@ -29,35 +29,34 @@ class DocumentProcessorInitializationTest {
             "n1dTwJjYLh4mvRbrBiQ56fLj8skq8pGo8eyPhmTtBJH";
 
     @Test
-    void initializeDocumentEmitsRootLifecycleEvent() {
+    void initializeDocumentKeepsProcessorLifecycleLocalAndWritesMarker() {
         Blue blue = ProcessorTestSupport.blue();
         Node original = blue.yamlToNode("name: Minimal Doc\n" +
                 "contracts: {}\n");
+        String expectedDocumentId =
+                blue.resolveToSnapshot(original.clone())
+                        .blueId();
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
         assertNull(result.errorCategory(), result.failureReason());
         assertTrue(blue.isInitialized(result.document()));
-        assertEquals(1, result.triggeredEvents().size());
+        assertProcessorLifecycleIsLocal(result);
 
-        Node lifecycleEvent = result.triggeredEvents().get(0);
-        assertNotNull(lifecycleEvent.getType());
-        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, lifecycleEvent.getType().getBlueId());
-
-        Node lifecycleDocId = lifecycleEvent.getProperties().get("documentId");
         Node markerDocId = result.document()
                 .getContracts()
                 .getProperties()
                 .get("initialized")
                 .getProperties()
                 .get("documentId");
-        assertNotNull(lifecycleDocId);
-        assertEquals(markerDocId.getValue(), lifecycleDocId.getValue());
+        assertNotNull(markerDocId);
+        assertEquals(expectedDocumentId,
+                markerDocId.getValue());
     }
 
     @Test
-    void initializationMarkerUsesFrozenPatchAndLocalProcessorStateResolution() {
+    void initializationMarkerUsesDirectWriteWithoutApplicationPatchMetrics() {
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -77,24 +76,23 @@ class DocumentProcessorInitializationTest {
                 initialized.getType().getBlueId());
         assertEquals(expectedDocumentId,
                 initialized.getProperties().get("documentId").getValue());
-        assertEquals(lifecycleDocumentId(result.triggeredEvents().get(0)),
-                initialized.getProperties().get("documentId").getValue());
+        assertProcessorLifecycleIsLocal(result);
 
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(0L, snapshot.counter(
                 "mutablePatchValuesFrozenBySource.PROCESSOR_INITIALIZATION_MARKER"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
         assertEquals(1L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
-    void snapshotBackedInitializationMarkerUsesIncrementalProcessorStateResolution() {
+    void snapshotBackedInitializationMarkerUsesDirectWriteWithoutPatchResolution() {
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -105,16 +103,17 @@ class DocumentProcessorInitializationTest {
         DocumentProcessingResult result = blue.initializeDocument(preInitialization);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
+        assertProcessorLifecycleIsLocal(result);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("incrementalSnapshotResolutions"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("incrementalSnapshotResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
         assertEquals(1L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
@@ -141,13 +140,13 @@ class DocumentProcessorInitializationTest {
         String markerDocumentId = markerDocumentId(result.document(), "/");
         assertEquals(canonical, markerDocumentId,
                 "canonical=" + canonical + ", unchecked=" + unchecked);
-        assertEquals(canonical, lifecycleDocumentId(result.triggeredEvents().get(0)));
+        assertProcessorLifecycleIsLocal(result);
         assertNotEquals(unchecked, markerDocumentId);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
     }
 
@@ -218,7 +217,7 @@ class DocumentProcessorInitializationTest {
                         "contracts:\n" +
                         "  lifecycleWithList:\n" +
                         "    type:\n" +
-                        "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                        "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                         "    values:\n" +
                         "      - [a, b]\n" +
                         "      - {kind: c}\n",
@@ -231,7 +230,7 @@ class DocumentProcessorInitializationTest {
                         "contracts:\n" +
                         "  embedded:\n" +
                         "    type:\n" +
-                        "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                        "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                         "    paths:\n" +
                         "      - /child\n"));
 
@@ -333,7 +332,7 @@ class DocumentProcessorInitializationTest {
                         "  contracts:\n" +
                         "    lifecycle:\n" +
                         "      type:\n" +
-                        "        blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                        "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                         "    captureChildId:\n" +
                         "      channel: lifecycle\n" +
                         "      type:\n" +
@@ -342,12 +341,12 @@ class DocumentProcessorInitializationTest {
                         "contracts:\n" +
                         "  embedded:\n" +
                         "    type:\n" +
-                        "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                        "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                         "    paths:\n" +
                         "      - /child\n" +
                         "  lifecycle:\n" +
                         "    type:\n" +
-                        "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                        "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                         "  captureRootId:\n" +
                         "    channel: lifecycle\n" +
                         "    type:\n" +
@@ -377,11 +376,12 @@ class DocumentProcessorInitializationTest {
         assertEquals(childContentBlueId, initialized.getAsText("/child/childLifecycleDocumentId"));
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
-        assertEquals(2L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
-        assertEquals(2L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
+        assertEquals(2L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
         assertEquals(2L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
-        assertEquals(2L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
@@ -398,17 +398,21 @@ class DocumentProcessorInitializationTest {
                         "contracts:\n" +
                         "  embedded:\n" +
                         "    type:\n" +
-                        "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                        "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                         "    paths:\n" +
                         "      - /child\n");
+        String exactInput = original.toString();
         DocumentProcessingResult result = blue.initializeDocument(original);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals(ProcessorErrorCategory.BoundaryViolation, result.errorCategory());
+        assertFalse(result.commits());
+        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
+                result.errorCategory().normative());
+        assertEquals(exactInput,
+                result.document().toString());
         assertNull(result.document().getContracts().getProperties().get("initialized"));
-        assertTrue(result.triggeredEvents().stream().noneMatch(event -> event.getType() != null
-                && RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED.equals(event.getType().getBlueId())));
+        assertTrue(result.events().isEmpty());
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
@@ -421,14 +425,14 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 5\n" +
                 "  setXLater:\n" +
@@ -438,7 +442,7 @@ class DocumentProcessorInitializationTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 10\n";
 
@@ -447,26 +451,31 @@ class DocumentProcessorInitializationTest {
         Node original = blue.yamlToNode(yaml);
         assertFalse(blue.isInitialized(original));
 
-        DocumentProcessingResult uninitializedProcessResult = blue.processDocument(original.clone(), new Node().value("external"));
-        assertTrue(blue.isInitialized(uninitializedProcessResult.document()));
+        DocumentProcessingResult uninitializedProcessResult =
+                blue.processDocument(
+                        original.clone(),
+                        new Node().value("external"));
+        assertEquals(ProcessorStatus.NO_MATCH,
+                uninitializedProcessResult.status());
+        assertFalse(uninitializedProcessResult.commits());
+        assertFalse(blue.isInitialized(
+                uninitializedProcessResult.document()));
+        assertTrue(uninitializedProcessResult.events().isEmpty());
+        assertEquals(original.toString(),
+                uninitializedProcessResult.document().toString());
 
         DocumentProcessingResult initResult = blue.initializeDocument(original);
         Node initialized = initResult.document();
 
         assertTrue(blue.isInitialized(initialized));
 
-        assertEquals(1, initResult.triggeredEvents().size());
-        Node lifecycleEvent = initResult.triggeredEvents().get(0);
-        Map<String, Node> lifecycleProps = lifecycleEvent.getProperties();
-        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, lifecycleEvent.getType().getBlueId());
-        Node lifecycleDocId = lifecycleProps.get("documentId");
-        assertNotNull(lifecycleDocId);
+        assertProcessorLifecycleIsLocal(initResult);
         Node markerDocId = initialized.getContracts()
                 .getProperties()
                 .get("initialized")
                 .getProperties()
                 .get("documentId");
-        assertEquals(markerDocId.getValue(), lifecycleDocId.getValue());
+        assertNotNull(markerDocId);
 
         Map<String, Node> initializedProps = initialized.getProperties();
         assertNotNull(initializedProps);
@@ -490,11 +499,19 @@ class DocumentProcessorInitializationTest {
 
         assertThrows(IllegalStateException.class, () -> blue.initializeDocument(initialized));
 
-        DocumentProcessingResult postInitProcessResult = blue.processDocument(initialized, new Node().value("external"));
+        DocumentProcessingResult postInitProcessResult =
+                blue.processDocument(
+                        initialized,
+                        new Node().value("external"));
+        assertEquals(ProcessorStatus.NO_MATCH,
+                postInitProcessResult.status());
+        assertFalse(postInitProcessResult.commits());
         Node processed = postInitProcessResult.document();
         assertEquals(new BigInteger("10"), processed.getProperties().get("x").getValue());
+        assertEquals(initialized.toString(),
+                processed.toString());
 
-        assertTrue(postInitProcessResult.triggeredEvents().isEmpty());
+        assertTrue(postInitProcessResult.events().isEmpty());
 
         assertNull(original.getProperties() != null ? original.getProperties().get("x") : null);
     }
@@ -505,14 +522,14 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  setRoot:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 3\n" +
                 "  setNested:\n" +
@@ -523,7 +540,7 @@ class DocumentProcessorInitializationTest {
                 "    path: /nested/branch/\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 7\n" +
                 "  setExplicit:\n" +
@@ -534,7 +551,7 @@ class DocumentProcessorInitializationTest {
                 "    path: a/x\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 11\n";
 
@@ -572,7 +589,7 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
@@ -587,12 +604,12 @@ class DocumentProcessorInitializationTest {
         DocumentProcessingResult result = blue.initializeDocument(original);
         assertTrue(result.capabilityFailure(), "Initialization should fail with must-understand");
         assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(originalJson, blue.nodeToJson(result.document()));
     }
 
     @Test
-    void processDocumentFailsWhenInitializationMarkerIncompatible() {
+    void incompatibleInitializationMarkerOutsideParticipatingClosureKeepsNoMatch() {
         String yaml = "name: Bad Doc\n" +
                 "contracts:\n" +
                 "  initialized:\n" +
@@ -602,9 +619,18 @@ class DocumentProcessorInitializationTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> blue.processDocument(document, new Node().value("event")));
-        assertTrue(ex.getMessage().contains("Processing Initialized Marker"));
+        DocumentProcessingResult result =
+                blue.processDocument(
+                        document,
+                        new Node().value("event"));
+
+        assertEquals(ProcessorStatus.NO_MATCH,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(document.toString(),
+                result.document().toString());
+        assertNull(result.failureReason());
     }
 
     @Test
@@ -648,14 +674,14 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  removeX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
                 "      blueId: 2REa15BDY5EWq4tJsbUaBwhhTG2xSdk2ZyFL1aCpqTVF\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /x\n";
 
         Blue blue = ProcessorTestSupport.blue();
@@ -668,22 +694,18 @@ class DocumentProcessorInitializationTest {
         Node processed = result.document();
 
         assertFalse(processed.getProperties() != null && processed.getProperties().containsKey("x"));
-        assertTrue(result.triggeredEvents().stream()
-                .anyMatch(node -> {
-                    return node.getType() != null
-                            && RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED.equals(node.getType().getBlueId());
-                }));
+        assertProcessorLifecycleIsLocal(result);
 
         assertTrue(original.getProperties().containsKey("x"));
     }
 
     @Test
-    void checkpointBeforeInitializationCausesFatal() {
+    void checkpointBeforeInitializationIsRejected() {
         String yaml = "name: Invalid Doc\n" +
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1\n";
+                "      blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR\n";
 
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
@@ -713,10 +735,10 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1\n" +
+                "      blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR\n" +
                 "  extraCheckpoint:\n" +
                 "    type:\n" +
-                "      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1\n";
+                "      blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR\n";
 
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
@@ -732,17 +754,17 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  triggeredChannel:\n" +
                 "    type:\n" +
-                "      blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ\n" +
+                "      blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf\n" +
                 "  handleLifecycle:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Ht1o66MTLKf7JmnEiR27rRLSwdz8FUTgf2mGPNuLSDUL\n" +
+                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
                 "    propertyKey: /lifecycle\n" +
                 "    propertyValue: 1\n" +
                 "  triggeredHandler:\n" +
@@ -765,7 +787,7 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void childLifecycleIsBridgedToParent() {
+    void processorGeneratedChildLifecycleIsNotBridgedToParent() {
         String yaml = "name: Embedded Lifecycle\n" +
                 "child:\n" +
                 "  name: Inner\n" +
@@ -773,12 +795,12 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  childBridge:\n" +
                 "    type:\n" +
-                "      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i\n" +
+                "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
                 "    childPath: /child\n" +
                 "  captureChildLifecycle:\n" +
                 "    channel: childBridge\n" +
@@ -795,8 +817,8 @@ class DocumentProcessorInitializationTest {
         Node initialized = result.document();
 
         Node childLifecycle = initialized.getProperties().get("childLifecycle");
-        assertNotNull(childLifecycle, "Parent should observe child lifecycle through Embedded Node channel");
-        assertEquals(new BigInteger("1"), childLifecycle.getValue());
+        assertNull(childLifecycle,
+                "processor-generated child lifecycle delivery is local");
     }
 
     private static void assertInitializationUsesContentBlueIdAndReloads(Blue blue, String yaml) {
@@ -806,11 +828,13 @@ class DocumentProcessorInitializationTest {
         DocumentProcessingResult result = blue.initializeDocument(original);
 
         assertFalse(result.capabilityFailure(), result.failureReason());
-        assertEquals(contentBlueId, markerDocumentId(result.document(), "/"), yaml);
-        assertTrue(hasLifecycleDocumentId(result, contentBlueId), yaml);
-        ResolvedSnapshot finalSnapshot = blue.resolveToSnapshot(result.document().clone());
+        Node canonicalDocument = result.canonicalDocument();
+        assertNotNull(canonicalDocument, yaml);
+        assertEquals(contentBlueId, markerDocumentId(canonicalDocument, "/"), yaml);
+        assertProcessorLifecycleIsLocal(result);
+        ResolvedSnapshot finalSnapshot = blue.resolveToSnapshot(canonicalDocument.clone());
         ResolvedSnapshot reloaded = blue.resolveToSnapshot(
-                blue.jsonToNode(blue.nodeToJson(result.document())));
+                blue.jsonToNode(blue.nodeToJson(canonicalDocument)));
         assertEquals(finalSnapshot.blueId(), reloaded.blueId(), yaml);
         assertEquals(blue.nodeToJson(finalSnapshot.canonicalRoot()),
                 blue.nodeToJson(reloaded.canonicalRoot()), yaml);
@@ -860,13 +884,10 @@ class DocumentProcessorInitializationTest {
         return value != null ? String.valueOf(value) : null;
     }
 
-    private static boolean hasLifecycleDocumentId(DocumentProcessingResult result, String documentId) {
-        for (Node event : result.triggeredEvents()) {
-            if (documentId.equals(lifecycleDocumentId(event))) {
-                return true;
-            }
-        }
-        return false;
+    private static void assertProcessorLifecycleIsLocal(
+            DocumentProcessingResult result) {
+        assertTrue(result.events().isEmpty(),
+                "processor-generated initialization lifecycle is local");
     }
 
     @TypeBlueId(CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID)

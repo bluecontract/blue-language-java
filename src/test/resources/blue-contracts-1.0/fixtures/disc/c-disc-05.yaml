@@ -1,0 +1,77 @@
+schema: blue-contracts-fixture/1.0
+id: c-disc-05
+vectors:
+- C-DISC-05
+category: disc
+description: A Handler snapshot survives same-delivery contract mutation.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+      h2:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 1
+        result:
+          patches:
+          - op: replace
+            path: /h2Ran
+            val: true
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+    handlers:
+      /contracts/h:
+        result:
+          patches:
+          - op: remove
+            path: /contracts/h2
+expected:
+  assertions:
+  - actual: result.document.h2Ran
+    op: equals
+    expected: true
+  - actual: result.document.contracts.h2
+    op: absent

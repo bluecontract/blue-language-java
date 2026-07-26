@@ -1,8 +1,9 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeToBlueIdInput;
+import blue.language.utils.NodeToMapListOrValue;
+import blue.language.utils.SchemaToMapListOrValue;
+import blue.language.utils.UncheckedObjectMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +38,7 @@ public final class BlueViewPath {
         for (int i = 0; i < segments.size(); i++) {
             current = child(current, segments, i);
             if (current == null) {
-                throw new IllegalArgumentException("Blue Language view path not found: " + path);
+                return null;
             }
             if ("items".equals(segments.get(i))) {
                 i++;
@@ -53,9 +54,11 @@ public final class BlueViewPath {
         String segment = segments.get(index);
         switch (segment) {
             case "name":
-                return new Node().value(node.getName());
+                return node.getName() == null
+                        ? null : new Node().value(node.getName());
             case "description":
-                return new Node().value(node.getDescription());
+                return node.getDescription() == null
+                        ? null : new Node().value(node.getDescription());
             case "type":
                 return node.getType();
             case "itemType":
@@ -65,12 +68,25 @@ public final class BlueViewPath {
             case "valueType":
                 return node.getValueType();
             case "value":
-                return new Node().value(node.getRawValue());
+                return node.getRawValue() == null
+                        ? null : new Node().value(node.getRawValue());
             case "blueId":
-                return new Node().value(BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node)));
+                // A pure-reference wrapper is representation, not a semantic
+                // child named "blueId".
+                return null;
             case "contracts":
                 return node.getContracts();
+            case "schema":
+                return node.getSchema() == null
+                        ? null
+                        : UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                        SchemaToMapListOrValue.get(
+                                node.getSchema(), NodeToMapListOrValue::get),
+                        Node.class);
             case "items":
+                if (node.getItems() == null) {
+                    return null;
+                }
                 if (index + 1 >= segments.size()) {
                     return new Node().items(node.getItems());
                 }
@@ -82,7 +98,11 @@ public final class BlueViewPath {
     }
 
     private static Node item(Node node, String indexSegment) {
-        if (node.getItems() == null || !isCanonicalArrayIndex(indexSegment)) {
+        if (!isCanonicalArrayIndex(indexSegment)) {
+            throw new IllegalArgumentException(
+                    "Blue Language list view path requires a canonical array index.");
+        }
+        if (node.getItems() == null) {
             return null;
         }
         int index;

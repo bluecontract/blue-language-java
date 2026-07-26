@@ -1,0 +1,18 @@
+id: R_reference_backed_schema
+category: LimitedResolution
+operation: validate
+source:
+  type: Text
+  value: AB
+  schema:
+    blueId: 5VaAKSUY3M7DS1a9VHAJobB4MzDcF426EG8Bh36iebRR
+provider:
+  - requestedBlueId: 5VaAKSUY3M7DS1a9VHAJobB4MzDcF426EG8Bh36iebRR
+    node:
+      minLength: 2
+expectedValid: true
+alsoEquivalentTo:
+  type: Text
+  value: AB
+  schema:
+    minLength: 2

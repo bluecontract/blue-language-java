@@ -1,0 +1,12 @@
+id: R_default_positional_policy
+category: Resolution
+operation: resolve
+parent:
+  type: List
+  items: [A]
+source:
+  items:
+    - $pos: 0
+      value: B
+expectedResolvedItems: [B]
+expectedMergePolicy: positional

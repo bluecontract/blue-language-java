@@ -1058,6 +1058,13 @@ public final class FrozenNode {
         return toBuilder().items(nextItems).deferBlueId().build();
     }
 
+    FrozenNode withValueForPatch(Object nextValue) {
+        return toBuilder()
+                .frozenValue(nextValue)
+                .deferBlueId()
+                .build();
+    }
+
     /**
      * Applies a non-null object overlay while retaining unchanged frozen
      * children. Non-object replacements are returned unchanged.
@@ -1488,7 +1495,7 @@ public final class FrozenNode {
 
     private static void putHashedScalar(Map<String, Object> target, String key, Object value) {
         if (value != null) {
-            putBlueId(target, key, HASH.apply(value));
+            putBlueId(target, key, BlueIdCalculator.INSTANCE.calculate(value));
         }
     }
 

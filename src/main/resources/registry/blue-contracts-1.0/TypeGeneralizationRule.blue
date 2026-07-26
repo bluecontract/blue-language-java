@@ -1,25 +1,16 @@
 name: Type Generalization Rule
-description: >
-  Rule entry used by Type Generalization Policy. It governs a scope-relative
-  subtree path and can reject dynamic generalization or require the generated
-  type to remain equal to or a subtype of a declared floor type.
+description: Path-specific bound for deterministic nearest-valid-ancestor generalization.
 path:
-  type: Text
-  description: >
-    Required scope-relative Blue Runtime Pointer identifying the governed
-    subtree. The pointer is normalized against the scope containing the policy
-    marker before rule selection.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
     required: true
 mode:
-  type: Text
-  description: >
-    Optional mode for this path. Missing means the policy defaultMode. reject
-    forbids generalization at the governed path. nearest-valid permits the
-    nearest valid permitted ancestor type.
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   schema:
-    enum: [nearest-valid, reject]
+    enum:
+    - nearest-valid-ancestor
+    - reject
 mustRemainSubtypeOf:
-  description: >
-    Optional type reference floor. If present, any generated type selected for
-    the governed path must be equal to or a subtype of this type.
+  description: Optional type floor.

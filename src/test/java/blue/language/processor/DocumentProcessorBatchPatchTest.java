@@ -14,6 +14,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessorBatchPatchTest {
@@ -27,7 +29,7 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  lifecycle:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  apply:\n" +
                 "    channel: lifecycle\n" +
                 "    type:\n" +
@@ -40,61 +42,106 @@ class DocumentProcessorBatchPatchTest {
     }
 
     @Test
-    void boundaryViolationInSecondPatchKeepsEarlierSuccessfulPatch() {
+    void boundaryViolationInSecondPatchRollsBackWholeInvocation() {
         Node document = new Node();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        execution.handlePatches("/foo", bundle, Arrays.asList(
-                JsonPatch.add("/foo/a", new Node().value("applied-first")),
-                JsonPatch.add("/bar", new Node().value("outside")),
-                JsonPatch.add("/foo/c", new Node().value("discarded-third"))
-        ), false);
+        assertThrows(RunTerminationException.class,
+                () -> execution.handlePatches(
+                        "/foo", bundle, Arrays.asList(
+                                JsonPatch.add(
+                                        "/foo/a",
+                                        new Node().value(
+                                                "tentative-first")),
+                                JsonPatch.add(
+                                        "/bar",
+                                        new Node().value(
+                                                "outside")),
+                                JsonPatch.add(
+                                        "/foo/c",
+                                        new Node().value(
+                                                "tentative-third"))
+                        ), false));
 
-        Node resultDoc = execution.result().document();
-        Node foo = resultDoc.getAsNode("/foo");
-        assertTrue(hasProperty(foo, "a"));
-        assertEquals("applied-first", foo.getAsText("/a"));
-        assertFalse(hasProperty(foo, "c"));
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
+        DocumentProcessingResult result = execution.result();
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertNull(result.document().getProperties());
+        assertTrue(execution.runtime().isRunTerminated());
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/foo"));
     }
 
     @Test
-    void reservedKeyViolationInSecondPatchKeepsEarlierSuccessfulPatch() {
+    void reservedKeyViolationInSecondPatchRollsBackWholeInvocation() {
         Node document = new Node().properties("foo", new Node());
+        String exactInput = document.toString();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        execution.handlePatches("/foo", bundle, Arrays.asList(
-                JsonPatch.add("/foo/a", new Node().value("applied-first")),
-                JsonPatch.add("/foo/contracts/initialized", new Node().value("reserved"))
-        ), false);
+        assertThrows(RunTerminationException.class,
+                () -> execution.handlePatches(
+                        "/foo", bundle, Arrays.asList(
+                                JsonPatch.add(
+                                        "/foo/a",
+                                        new Node().value(
+                                                "tentative-first")),
+                                JsonPatch.add(
+                                        "/foo/contracts/initialized",
+                                        new Node().value(
+                                                "reserved"))
+                        ), false));
 
-        Node resultDoc = execution.result().document();
-        Node foo = resultDoc.getAsNode("/foo");
-        assertTrue(hasProperty(foo, "a"));
-        assertEquals("applied-first", foo.getAsText("/a"));
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
+        DocumentProcessingResult result = execution.result();
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(exactInput,
+                result.document().toString());
+        assertFalse(hasProperty(
+                result.document().getAsNode("/foo"), "a"));
+        assertNull(result.document().getAsNode("/foo")
+                .getContracts());
+        assertTrue(execution.runtime().isRunTerminated());
     }
 
     @Test
-    void patchTwoFatalPreservesPatchOneAndDiscardsPatchThreeAndEvents() {
+    void invalidSecondPatchRollsBackAllTentativePatches() {
         Node document = new Node().properties("foo", new Node());
+        String exactInput = document.toString();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        execution.handlePatches("/foo", bundle, Arrays.asList(
-                JsonPatch.add("/foo/a", new Node().value("applied-first")),
-                JsonPatch.remove("/foo/missing"),
-                JsonPatch.add("/foo/c", new Node().value("discarded-third"))
-        ), false);
+        assertThrows(RunTerminationException.class,
+                () -> execution.handlePatches(
+                        "/foo", bundle, Arrays.asList(
+                                JsonPatch.add(
+                                        "/foo/a",
+                                        new Node().value(
+                                                "tentative-first")),
+                                JsonPatch.remove(
+                                        "/foo/missing"),
+                                JsonPatch.add(
+                                        "/foo/c",
+                                        new Node().value(
+                                                "tentative-third"))
+                        ), false));
 
-        Node resultDoc = execution.result().document();
-        Node foo = resultDoc.getAsNode("/foo");
-        assertTrue(hasProperty(foo, "a"));
-        assertEquals("applied-first", foo.getAsText("/a"));
+        DocumentProcessingResult result = execution.result();
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(exactInput,
+                result.document().toString());
+        Node foo = result.document().getAsNode("/foo");
+        assertFalse(hasProperty(foo, "a"));
         assertFalse(hasProperty(foo, "c"));
-        assertTrue(execution.runtime().isScopeTerminated("/foo"));
+        assertTrue(execution.runtime().isRunTerminated());
     }
 
     @Test
@@ -108,14 +155,14 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  lifecycle:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
                 "  watchA:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /a\n" +
                 "  watchB:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /b\n" +
                 "  apply:\n" +
                 "    channel: lifecycle\n" +
@@ -143,10 +190,10 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  watchOther:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /other\n");
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
-        execution.loadBundles("/");
+        execution.preflightScope("/");
 
         execution.handlePatches("/", execution.bundleForScope("/"), Collections.singletonList(
                 JsonPatch.add("/a", new Node().value("one"))
@@ -165,10 +212,10 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  watchA:\n" +
                 "    type:\n" +
-                "      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o\n" +
+                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
                 "    path: /a\n");
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
-        execution.loadBundles("/");
+        execution.preflightScope("/");
 
         execution.handlePatches("/", execution.bundleForScope("/"), Collections.singletonList(
                 JsonPatch.replace("/a", new Node().value("new"))

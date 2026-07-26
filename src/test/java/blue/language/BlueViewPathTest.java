@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -63,5 +64,18 @@ class BlueViewPathTest {
                 () -> BlueViewPath.select(root, "/array/items/00"));
         assertThrows(IllegalArgumentException.class,
                 () -> BlueViewPath.select(root, "/array/items/\u0660"));
+    }
+
+    @Test
+    void absentMetadataValueAndReferenceWrapperBlueIdAreNotSemanticChildren() {
+        Node plain = new Node();
+        assertNull(BlueViewPath.select(plain, "/name"));
+        assertNull(BlueViewPath.select(plain, "/description"));
+        assertNull(BlueViewPath.select(plain, "/value"));
+        assertNull(BlueViewPath.select(plain, "/items"));
+
+        Node reference = new Node().blueId(
+                "5nWrS5wTB22MN7HHhyRUy7zQ83Qbf6QEcUY4soFir2Sq");
+        assertNull(BlueViewPath.select(reference, "/blueId"));
     }
 }

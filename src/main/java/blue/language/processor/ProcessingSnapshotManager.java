@@ -7,6 +7,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.snapshot.FrozenNode;
 
+import java.util.Collection;
 import java.util.Objects;
 
 /**
@@ -23,6 +24,40 @@ public interface ProcessingSnapshotManager {
      */
     default ResolvedSnapshot fromDocumentTransient(Node document) {
         return fromDocument(document);
+    }
+
+    /**
+     * Resolves a Processing Document while retaining the exact authored
+     * subtrees at the supplied paths. Contracts uses this boundary for
+     * executable bodies: preflight may resolve their surrounding headers, but
+     * the body itself is not a semantic demand until its Handler matches.
+     *
+     * <p>The default fails closed for a nonempty preservation request.
+     * Silently falling back to ordinary eager resolution would turn a deferred
+     * executable body into a semantic provider demand. Managers backed by a
+     * selective Language resolver must override this method.</p>
+     */
+    default ResolvedSnapshot fromDocumentPreservingPaths(
+            Node document,
+            Collection<String> preservedPaths) {
+        if (preservedPaths == null || preservedPaths.isEmpty()) {
+            return fromDocument(document);
+        }
+        throw new UnsupportedOperationException(
+                "This ProcessingSnapshotManager does not support deferred path resolution");
+    }
+
+    /**
+     * Transient counterpart to
+     * {@link #fromDocumentPreservingPaths(Node, Collection)}.
+     */
+    default ResolvedSnapshot fromDocumentTransientPreservingPaths(
+            Node document,
+            Collection<String> preservedPaths) {
+        if (preservedPaths == null || preservedPaths.isEmpty()) {
+            return fromDocumentTransient(document);
+        }
+        return fromDocumentPreservingPaths(document, preservedPaths);
     }
 
     /**
@@ -80,6 +115,17 @@ public interface ProcessingSnapshotManager {
         // It must not become a mixed-reference shape when consumed as content.
         content.blueId(null);
         return FrozenNode.fromResolvedNode(content);
+    }
+
+    /**
+     * Returns exact canonical provider content for a selected executable-body
+     * reference. Managers with direct verified-provider access should
+     * override; the runtime independently revalidates the returned direct
+     * BlueId and fails closed if a resolved representation was substituted.
+     */
+    default FrozenNode materializeVerifiedExactReference(
+            FrozenNode reference) {
+        return materializeVerifiedReference(reference);
     }
 
     /**

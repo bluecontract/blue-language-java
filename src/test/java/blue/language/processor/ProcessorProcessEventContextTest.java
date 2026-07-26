@@ -9,6 +9,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -359,7 +360,13 @@ final class ProcessorProcessEventContextTest {
         Observation child = capture.only("captureChild");
         Observation bridge = capture.only("captureBridge");
         assertEquals("root", eventKind(child.currentEvent));
-        assertEquals("bridge", eventKind(bridge.currentEvent));
+        assertEmbeddedEventDelivery(
+                bridge.currentEvent,
+                "/child",
+                CheckpointIdentityCalculator.identity(
+                        new Node().properties(
+                                "kind",
+                                new Node().value("bridge"))));
         assertSnapshotKind(child.processEvent, "root");
         assertSnapshotKind(bridge.processEvent, "root");
     }
@@ -456,49 +463,6 @@ final class ProcessorProcessEventContextTest {
         assertEquals(0L, metrics.processEventSnapshotConstructionSamples);
     }
 
-    @Test
-    void snapshotFailureFollowsExistingHandlerFailureMapping() {
-        RecordingMetrics metrics = new RecordingMetrics();
-        DocumentProcessor owner = DocumentProcessor.builder()
-                .withProcessingMetricsSink(metrics)
-                .registerContractProcessor(new TestEventChannelProcessor())
-                .registerContractProcessor(new ReadProcessEventHandler())
-                .build();
-        Node document = ProcessorTestSupport.blue().yamlToNode(
-                "name: Failure Mapping\n" +
-                        "contracts:\n" +
-                        "  events:\n" +
-                        "    type:\n" +
-                        "      blueId: " + TEST_EVENT_CHANNEL_TYPE + "\n" +
-                        handler("read", "events", 0));
-        // This test exercises handler failure mapping, not initialization
-        // identity. Make that precondition explicit instead of relying on an
-        // invented provider node for the registered Java contract classes.
-        document.getContracts().properties("initialized", new Node()
-                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
-                .properties("documentId", new Node().value("existing")));
-        AtomicInteger freezerCalls = new AtomicInteger();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner,
-                document,
-                processEvent("root"),
-                source -> {
-                    freezerCalls.incrementAndGet();
-                    throw new IllegalStateException("snapshot host failure");
-                });
-        execution.loadBundles("/");
-
-        assertThrows(RunTerminationException.class,
-                () -> execution.processExternalEvent("/", processEvent("delivery")));
-
-        DocumentProcessingResult result = execution.result();
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals(ProcessorErrorCategory.HandlerExecutionError, result.errorCategory());
-        assertEquals("snapshot host failure", result.failureReason());
-        assertEquals(1, freezerCalls.get());
-        assertEquals(1L, metrics.processEventSnapshotAttempts);
-        assertEquals(1L, metrics.processEventSnapshotFailures);
-    }
-
     private void assertAbsentProcessEvent(ProcessorEngine.Execution execution) {
         ProcessorExecutionContext context = execution.createContext("/", ContractBundle.empty(), new Node(), false);
         assertFalse(context.hasProcessEvent());
@@ -510,10 +474,16 @@ final class ProcessorProcessEventContextTest {
                                        RecordingMetrics metrics) {
         Blue blue = ProcessorTestSupport.blue();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
-        blue.registerContractProcessor(channelProcessor);
+        ChannelProcessor<TestEventChannel> exactChannelProcessor =
+                channelProcessor.getClass() == TestEventChannelProcessor.class
+                        ? DocumentProcessorExactFeederSupport
+                                .testEventChannelProcessor()
+                        : channelProcessor;
+        blue.registerContractProcessor(exactChannelProcessor);
         if (capture != null) {
             blue.registerContractProcessor(capture);
         }
+        DocumentProcessorExactFeederSupport.install(blue);
         return blue;
     }
 
@@ -593,6 +563,28 @@ final class ProcessorProcessEventContextTest {
         assertEquals(expectedKind, snapshot.toNode().getAsText("/kind"));
     }
 
+    private static void assertEmbeddedEventDelivery(
+            Node delivery,
+            String expectedSourcePath,
+            String expectedEventBlueId) {
+        assertNotNull(delivery);
+        assertNotNull(delivery.getType());
+        assertEquals(RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY,
+                delivery.getType().getBlueId());
+        assertNotNull(delivery.getProperties());
+        assertEquals(2, delivery.getProperties().size());
+        assertEquals(expectedSourcePath,
+                delivery.getAsText("/sourcePath"));
+        assertFalse(delivery.getProperties()
+                .containsKey("childPath"));
+        Node eventReference =
+                delivery.getProperties().get("event");
+        assertNotNull(eventReference);
+        assertTrue(eventReference.isReferenceOnly());
+        assertEquals(expectedEventBlueId,
+                eventReference.getBlueId());
+    }
+
     private static final class CapturingHandler implements HandlerProcessor<SetProperty> {
         private final List<Observation> observations = new ArrayList<>();
 
@@ -663,9 +655,52 @@ final class ProcessorProcessEventContextTest {
     }
 
     private static final class AdaptingTestEventChannelProcessor implements ChannelProcessor<TestEventChannel> {
+        private final ExternalChannelSubscriptionFunctions<TestEventChannel>
+                subscriptionFunctions =
+                new ExternalChannelSubscriptionFunctions<TestEventChannel>() {
+                    @Override
+                    public List<String> channelKeys(
+                            TestEventChannel contract) {
+                        return Collections.singletonList(
+                                contract.getEventType() != null
+                                        ? contract.getEventType()
+                                        : TEST_EVENT_TYPE);
+                    }
+
+                    @Override
+                    public List<String> eventKeys(Node event) {
+                        Node type = event != null ? event.getType() : null;
+                        return type != null && type.getBlueId() != null
+                                ? Collections.singletonList(type.getBlueId())
+                                : Collections.<String>emptyList();
+                    }
+
+                    @Override
+                    public String checkpointDomainDiscriminator(
+                            TestEventChannel contract) {
+                        return null;
+                    }
+
+                    @Override
+                    public Node payload(
+                            TestEventChannel immutableContractSnapshot,
+                            Node exactEvent) {
+                        Node adapted = exactEvent.clone();
+                        adapted.properties(
+                                "kind", new Node().value("adapted"));
+                        return adapted;
+                    }
+                };
+
         @Override
         public Class<TestEventChannel> contractType() {
             return TestEventChannel.class;
+        }
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<TestEventChannel>
+        externalSubscriptionFunctions() {
+            return subscriptionFunctions;
         }
 
         @Override

@@ -1,0 +1,75 @@
+schema: blue-contracts-fixture/1.0
+id: c-rep-02
+vectors:
+- C-REP-02
+category: rep
+description: A patch inside a collapsed branch demands only nodes on the path and semantic dependencies, not sibling bodies.
+operation: process
+input:
+  root:
+    x:
+      a: 1
+      archive:
+        blueId: 5jr562zjJD4JxAB8g14DsYDpdwCREMyFFAAy2e6C4S4s
+    contracts:
+      in:
+        type:
+          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      5jr562zjJD4JxAB8g14DsYDpdwCREMyFFAAy2e6C4S4s:
+        large: not demanded
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+    handlers:
+      /contracts/h:
+        result:
+          patches:
+          - op: replace
+            path: /x/a
+            val: 2
+expected:
+  assertions:
+  - actual: demands.semantic
+    op: contains
+    expected: /x
+  - actual: demands.semantic
+    op: notContains
+    expected: 5jr562zjJD4JxAB8g14DsYDpdwCREMyFFAAy2e6C4S4s

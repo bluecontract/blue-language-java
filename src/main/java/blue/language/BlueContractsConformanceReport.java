@@ -1,6 +1,15 @@
 package blue.language;
 
 import blue.language.utils.UncheckedObjectMapper;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.erdtman.jcs.JsonCanonicalizer;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,21 +24,78 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
+/**
+ * Result and package binding for the exact Blue Contracts 1.0 implementation
+ * baseline. The report deliberately has no skipped-fixture collection: every
+ * inventoried executable fixture must have a PASS or FAIL record.
+ */
 public final class BlueContractsConformanceReport {
 
-    public static final String FIXTURE_MANIFEST_RESOURCE = "blue-contracts-1.0/fixtures/manifest.yaml";
+    public static final String FIXTURE_ROOT_RESOURCE = "blue-contracts-1.0/fixtures/";
+    public static final String FIXTURE_MANIFEST_RESOURCE = FIXTURE_ROOT_RESOURCE + "manifest.yaml";
+    public static final String GAS_MANIFEST_RESOURCE = "blue/language/processor/contracts-gas-1.0.yaml";
+    public static final String REGISTRY_MANIFEST_RESOURCE = "registry/blue-contracts-1.0/manifest.yaml";
+    public static final String RELEASE_MANIFEST_RESOURCE =
+            "release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml";
+    public static final String CONTRACTS_SPECIFICATION_RESOURCE =
+            "specifications/blue-contracts-and-processor-specification-1.0.md";
+
+    public static final String RELEASE_NAME =
+            "blue-language-1.0-contracts-1.0-bex-2.0-implementation-baseline";
+    public static final String RELEASE_PACKAGE_IDENTITY =
+            "sha256:db847cc10e0a8c9dacf529031f49f928ca4b9d62c650270b1bc3dc93c66967a0";
+    public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
+            "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
+    public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
+            "sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb";
+    public static final String CONTRACTS_REGISTRY_PACKAGE_IDENTITY =
+            "sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366";
+    public static final String CONTRACTS_GAS_PACKAGE_IDENTITY =
+            "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
+    public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
+            "sha256:58a3d8446e0e7c63063204c7bfaa312ace1242a182bc2f9c4875479a81149904";
+    /**
+     * @deprecated Use {@link #CONTRACTS_FIXTURE_PACKAGE_IDENTITY}.
+     */
+    @Deprecated
     public static final String BLUE_CONTRACTS_1_0_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:013ad328449a15ae2ff969f4bcb308db7413ffe8138b5309e7a9fe342723fcf3";
+            CONTRACTS_FIXTURE_PACKAGE_IDENTITY;
+    public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
+            "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
+    public static final String CONTRACTS_SPECIFICATION_SHA256 =
+            "d0cb24e8694f759abdab68d62260598b7e26db1373d7cf568edce9c6926708b3";
+
+    /**
+     * Fixture envelopes may use YAML anchors for literal reuse. This parser is
+     * separate from Blue's YAML parser because anchors are envelope syntax, not
+     * part of the Blue value model.
+     */
+    private static final ObjectMapper FIXTURE_YAML = new ObjectMapper(
+            YAMLFactory.builder()
+                    .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+                    .build());
 
     private final String specVersion;
+    private final String releaseName;
+    private final String releasePackageIdentity;
+    private final String languageRegistryPackageIdentity;
+    private final String languageFixturePackageIdentity;
+    private final String contractsRegistryPackageIdentity;
+    private final String contractsGasPackageIdentity;
     private final String fixturePackageIdentity;
     private final List<String> fixtureIds;
     private final List<String> passedFixtureIds;
     private final List<String> failedFixtureIds;
     private final Map<String, BlueContractsFixtureCategory> fixtureCategories;
     private final List<BlueContractsConformanceFailure> failures;
+    private final List<BlueContractsFixtureResult> fixtureResults;
 
+    /**
+     * Compatibility constructor retained for clients that build a synthetic
+     * report. Package-bound reports should use the full constructor.
+     */
     public BlueContractsConformanceReport(String specVersion,
                                           String fixturePackageIdentity,
                                           List<String> fixtureIds,
@@ -37,25 +103,94 @@ public final class BlueContractsConformanceReport {
                                           List<String> failedFixtureIds,
                                           Map<String, BlueContractsFixtureCategory> fixtureCategories,
                                           List<BlueContractsConformanceFailure> failures) {
+        this(specVersion,
+                RELEASE_NAME,
+                RELEASE_PACKAGE_IDENTITY,
+                LANGUAGE_REGISTRY_PACKAGE_IDENTITY,
+                LANGUAGE_FIXTURE_PACKAGE_IDENTITY,
+                CONTRACTS_REGISTRY_PACKAGE_IDENTITY,
+                CONTRACTS_GAS_PACKAGE_IDENTITY,
+                fixturePackageIdentity,
+                fixtureIds,
+                passedFixtureIds,
+                failedFixtureIds,
+                fixtureCategories,
+                failures,
+                Collections.<BlueContractsFixtureResult>emptyList());
+    }
+
+    public BlueContractsConformanceReport(String specVersion,
+                                          String releaseName,
+                                          String releasePackageIdentity,
+                                          String languageRegistryPackageIdentity,
+                                          String languageFixturePackageIdentity,
+                                          String contractsRegistryPackageIdentity,
+                                          String contractsGasPackageIdentity,
+                                          String fixturePackageIdentity,
+                                          List<String> fixtureIds,
+                                          List<String> passedFixtureIds,
+                                          List<String> failedFixtureIds,
+                                          Map<String, BlueContractsFixtureCategory> fixtureCategories,
+                                          List<BlueContractsConformanceFailure> failures,
+                                          List<BlueContractsFixtureResult> fixtureResults) {
         this.specVersion = specVersion;
+        this.releaseName = releaseName;
+        this.releasePackageIdentity = releasePackageIdentity;
+        this.languageRegistryPackageIdentity = languageRegistryPackageIdentity;
+        this.languageFixturePackageIdentity = languageFixturePackageIdentity;
+        this.contractsRegistryPackageIdentity = contractsRegistryPackageIdentity;
+        this.contractsGasPackageIdentity = contractsGasPackageIdentity;
         this.fixturePackageIdentity = fixturePackageIdentity;
-        this.fixtureIds = Collections.unmodifiableList(new ArrayList<>(fixtureIds));
-        this.passedFixtureIds = Collections.unmodifiableList(new ArrayList<>(passedFixtureIds));
-        List<String> effectiveFailed = new ArrayList<>(failedFixtureIds);
-        if (failures != null && !failures.isEmpty()) {
+        this.fixtureIds = immutableCopy(fixtureIds);
+        this.passedFixtureIds = immutableCopy(passedFixtureIds);
+        this.failures = Collections.unmodifiableList(new ArrayList<>(
+                failures != null ? failures : Collections.<BlueContractsConformanceFailure>emptyList()));
+        List<String> effectiveFailed = new ArrayList<>(
+                failedFixtureIds != null ? failedFixtureIds : Collections.<String>emptyList());
+        if (!this.failures.isEmpty()) {
             effectiveFailed.clear();
-            for (BlueContractsConformanceFailure failure : failures) {
+            for (BlueContractsConformanceFailure failure : this.failures) {
                 effectiveFailed.add(failure.getFixtureId());
             }
         }
         this.failedFixtureIds = Collections.unmodifiableList(effectiveFailed);
-        this.fixtureCategories = Collections.unmodifiableMap(new LinkedHashMap<>(fixtureCategories));
-        this.failures = Collections.unmodifiableList(new ArrayList<>(
-                failures != null ? failures : Collections.emptyList()));
+        this.fixtureCategories = Collections.unmodifiableMap(new LinkedHashMap<>(
+                fixtureCategories != null
+                        ? fixtureCategories
+                        : Collections.<String, BlueContractsFixtureCategory>emptyMap()));
+        this.fixtureResults = Collections.unmodifiableList(new ArrayList<>(
+                fixtureResults != null
+                        ? fixtureResults
+                        : Collections.<BlueContractsFixtureResult>emptyList()));
+        validateResultPartition();
     }
 
     public String getSpecVersion() {
         return specVersion;
+    }
+
+    public String getReleaseName() {
+        return releaseName;
+    }
+
+    public String getReleasePackageIdentity() {
+        return releasePackageIdentity;
+    }
+
+    public String getLanguageRegistryPackageIdentity() {
+        return languageRegistryPackageIdentity;
+    }
+
+    public String getLanguageFixturePackageIdentity() {
+        return languageFixturePackageIdentity;
+    }
+
+    public String getContractsRegistryPackageIdentity() {
+        return contractsRegistryPackageIdentity;
+    }
+
+    public String getContractsGasPackageIdentity() {
+        return contractsGasPackageIdentity;
     }
 
     public String getFixturePackageIdentity() {
@@ -82,6 +217,21 @@ public final class BlueContractsConformanceReport {
         return failures;
     }
 
+    public List<BlueContractsFixtureResult> getFixtureResults() {
+        return fixtureResults;
+    }
+
+    public int getSkippedFixtureCount() {
+        return 0;
+    }
+
+    public boolean isConformant() {
+        return failures.isEmpty()
+                && passedFixtureIds.equals(fixtureIds)
+                && hasExactRequiredFixtureSet()
+                && isOfficialContracts10FixturePackage();
+    }
+
     public boolean hasRequiredFixtureCoverage() {
         return fixtureIds.containsAll(requiredFixtureIdsForContracts10());
     }
@@ -93,7 +243,47 @@ public final class BlueContractsConformanceReport {
     }
 
     public boolean isOfficialContracts10FixturePackage() {
-        return BLUE_CONTRACTS_1_0_FIXTURE_PACKAGE_IDENTITY.equals(fixturePackageIdentity);
+        return CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(fixturePackageIdentity);
+    }
+
+    public Map<String, Object> toMachineReadableMap() {
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("schema", "blue-contracts-conformance-report/1.0");
+
+        Map<String, Object> release = new LinkedHashMap<>();
+        release.put("name", releaseName);
+        release.put("packageIdentity", releasePackageIdentity);
+        report.put("release", release);
+
+        Map<String, Object> language = new LinkedHashMap<>();
+        language.put("specificationVersion", "1.0");
+        language.put("registryPackageIdentity", languageRegistryPackageIdentity);
+        language.put("fixturePackageIdentity", languageFixturePackageIdentity);
+        report.put("language", language);
+
+        Map<String, Object> contracts = new LinkedHashMap<>();
+        contracts.put("specificationVersion", specVersion);
+        contracts.put("specificationSha256", CONTRACTS_SPECIFICATION_SHA256);
+        contracts.put("registryPackageIdentity", contractsRegistryPackageIdentity);
+        contracts.put("gasPackageIdentity", contractsGasPackageIdentity);
+        contracts.put("fixturePackageIdentity", fixturePackageIdentity);
+        report.put("contracts", contracts);
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("total", fixtureIds.size());
+        summary.put("passed", passedFixtureIds.size());
+        summary.put("failed", fixtureResults.isEmpty()
+                ? fixtureIds.size() - passedFixtureIds.size()
+                : failedFixtureIds.size());
+        summary.put("skipped", 0);
+        summary.put("conformant", isConformant());
+        report.put("summary", summary);
+        report.put("fixtures", machineFixtureResults());
+        return Collections.unmodifiableMap(report);
+    }
+
+    public String toMachineReadableJson() {
+        return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(toMachineReadableMap());
     }
 
     public static List<String> requiredFixtureIdsForContracts10() {
@@ -101,115 +291,397 @@ public final class BlueContractsConformanceReport {
     }
 
     public static String loadFixturePackageIdentity(String fallback) {
-        Map<?, ?> manifest = loadFixtureManifest();
-        Object identity = manifest != null ? manifest.get("fixturePackageIdentity") : null;
-        return identity == null || identity.toString().trim().isEmpty() ? fallback : identity.toString();
+        validateFixturePackageIntegrity();
+        validateReleaseBindings();
+        JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
+        JsonNode identity = manifest.get("packageIdentity");
+        if (identity == null || !identity.isTextual() || identity.asText().trim().isEmpty()) {
+            throw new IllegalStateException(
+                    "Contracts fixture manifest is missing packageIdentity");
+        }
+        return identity.asText();
     }
 
     public static List<String> loadFixtureIds() {
-        Map<?, ?> manifest = loadFixtureManifest();
-        if (manifest == null || !(manifest.get("fixtures") instanceof List)) {
-            return Collections.emptyList();
-        }
         List<String> ids = new ArrayList<>();
-        for (Object fixture : (List<?>) manifest.get("fixtures")) {
-            if (fixture instanceof Map && ((Map<?, ?>) fixture).get("id") != null) {
-                ids.add(((Map<?, ?>) fixture).get("id").toString());
-            }
+        for (FixtureInventoryEntry entry : loadFixtureInventory()) {
+            ids.add(entry.id);
         }
         return ids;
     }
 
     public static Map<String, BlueContractsFixtureCategory> loadFixtureCategories() {
-        Map<?, ?> manifest = loadFixtureManifest();
-        if (manifest == null || !(manifest.get("fixtures") instanceof List)) {
-            return Collections.emptyMap();
-        }
         Map<String, BlueContractsFixtureCategory> categories = new LinkedHashMap<>();
-        for (Object fixture : (List<?>) manifest.get("fixtures")) {
-            if (fixture instanceof Map) {
-                Map<?, ?> fixtureMap = (Map<?, ?>) fixture;
-                Object id = fixtureMap.get("id");
-                Object category = fixtureMap.get("category");
-                if (id != null && category != null) {
-                    categories.put(id.toString(), BlueContractsFixtureCategory.fromLabel(category.toString()));
-                }
-            }
+        for (FixtureInventoryEntry entry : loadFixtureInventory()) {
+            categories.put(entry.id, entry.category);
         }
         return categories;
     }
 
     public static String computeFixturePackageIdentity() {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update("manifest.yaml\n".getBytes(StandardCharsets.UTF_8));
-            digest.update(normalizeManifestForIdentity(readFixtureResource(FIXTURE_MANIFEST_RESOURCE)));
-            Map<?, ?> manifest = loadFixtureManifest();
-            if (manifest == null || !(manifest.get("fixtures") instanceof List)) {
-                throw new IllegalStateException("Blue Contracts fixture manifest has no fixture list");
-            }
-            for (Object fixture : (List<?>) manifest.get("fixtures")) {
-                if (!(fixture instanceof Map)) {
-                    throw new IllegalStateException("Blue Contracts fixture entry must be a map");
-                }
-                Object path = ((Map<?, ?>) fixture).get("path");
-                if (path == null || path.toString().trim().isEmpty()) {
-                    throw new IllegalStateException("Blue Contracts fixture entry is missing path");
-                }
-                String fixturePath = path.toString();
-                digest.update(("\n--- " + fixturePath + "\n").getBytes(StandardCharsets.UTF_8));
-                digest.update(normalizeLineEndings(readFixtureResource("blue-contracts-1.0/fixtures/" + fixturePath)));
-            }
-            return "sha256:" + toHex(digest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 digest is unavailable", e);
-        }
+        return computeYamlPackageIdentity(FIXTURE_MANIFEST_RESOURCE, "packageIdentity");
+    }
+
+    public static String computeGasPackageIdentity() {
+        return computeYamlPackageIdentity(GAS_MANIFEST_RESOURCE, "packageIdentity");
+    }
+
+    public static String computeRegistryPackageIdentity() {
+        return computeYamlPackageIdentity(
+                REGISTRY_MANIFEST_RESOURCE, "packageIdentity", "fixturePackageIdentity");
+    }
+
+    public static String computeReleasePackageIdentity() {
+        return computeYamlPackageIdentity(RELEASE_MANIFEST_RESOURCE, "packageIdentity");
     }
 
     public static boolean fixturePackageIdentityMatchesFixtureFiles() {
-        String identity = loadFixturePackageIdentity(null);
-        return identity != null && identity.equals(computeFixturePackageIdentity());
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<?, ?> loadFixtureManifest() {
-        try (InputStream inputStream = BlueContractsConformanceReport.class.getClassLoader()
-                .getResourceAsStream(FIXTURE_MANIFEST_RESOURCE)) {
-            if (inputStream == null) {
-                return null;
-            }
-            return UncheckedObjectMapper.YAML_MAPPER.readValue(inputStream, Map.class);
-        } catch (Exception ignored) {
-            return null;
+        try {
+            validateFixturePackageIntegrity();
+            return CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity());
+        } catch (RuntimeException ex) {
+            return false;
         }
     }
 
-    private static byte[] readFixtureResource(String resource) {
-        try (InputStream inputStream = BlueContractsConformanceReport.class.getClassLoader()
+    public static void validateFixturePackageIntegrity() {
+        JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
+        requireText(manifest, "fixturePackage", "blue-contracts-conformance");
+        requireText(manifest, "specificationVersion", "1.0");
+        requireText(manifest, "schemaVersion", "blue-contracts-fixture/1.0");
+        requireText(manifest, "registryPackageIdentity", CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
+        requireText(manifest, "gasSchedule", "blue-contracts/gas/1.0");
+        requireText(manifest, "gasManifestPackageIdentity", CONTRACTS_GAS_PACKAGE_IDENTITY);
+        requireText(manifest, "gasManifestSha256", CONTRACTS_GAS_MANIFEST_SHA256);
+        requireText(manifest, "packageIdentity", CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
+
+        JsonNode files = manifest.get("files");
+        if (files == null || !files.isArray()) {
+            throw new IllegalStateException("Contracts fixture manifest files must be a list");
+        }
+        Set<String> paths = new LinkedHashSet<>();
+        int behavior = 0;
+        int gas = 0;
+        for (JsonNode file : files) {
+            String path = requiredText(file, "path");
+            validateRelativeResourcePath(path);
+            if (!paths.add(path)) {
+                throw new IllegalStateException("Duplicate Contracts fixture file path: " + path);
+            }
+            String role = requiredText(file, "role");
+            if ("behavior-fixture".equals(role)) {
+                behavior++;
+            } else if ("gas-fixture".equals(role)) {
+                gas++;
+            } else if (!"support".equals(role)) {
+                throw new IllegalStateException("Unknown Contracts fixture file role: " + role);
+            }
+            byte[] normalized = normalizeLineEndings(
+                    readRequiredResource(FIXTURE_ROOT_RESOURCE + path));
+            if (file.path("bytes").asLong(-1L) != normalized.length) {
+                throw new IllegalStateException("Contracts fixture byte length mismatch: " + path);
+            }
+            String expectedDigest = requiredText(file, "sha256");
+            String actualDigest = sha256Hex(normalized);
+            if (!expectedDigest.equals(actualDigest)) {
+                throw new IllegalStateException("Contracts fixture digest mismatch: " + path);
+            }
+        }
+        requireCount(manifest, "behaviorFixtureCount", behavior);
+        requireCount(manifest, "gasFixtureCount", gas);
+        requireCount(manifest, "vectorCount", 78);
+        if (behavior != 69 || gas != 58) {
+            throw new IllegalStateException(
+                    "Contracts fixture inventory must contain 69 behavior and 58 gas fixtures");
+        }
+        if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
+            throw new IllegalStateException("Contracts fixture package identity mismatch");
+        }
+        loadFixtureInventory(
+                manifest,
+                new Function<String, JsonNode>() {
+                    @Override
+                    public JsonNode apply(String path) {
+                        return readFixture(path);
+                    }
+                });
+    }
+
+    public static void validateReleaseBindings() {
+        JsonNode release = requireYamlResource(RELEASE_MANIFEST_RESOURCE);
+        requireText(release, "release", RELEASE_NAME);
+        JsonNode components = release.get("components");
+        if (components == null || !components.isObject()) {
+            throw new IllegalStateException("Release components object is required");
+        }
+        requireText(components, "languageRegistryPackage", LANGUAGE_REGISTRY_PACKAGE_IDENTITY);
+        requireText(components, "languageFixturePackage", LANGUAGE_FIXTURE_PACKAGE_IDENTITY);
+        requireText(components, "contractsRegistryPackage", CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
+        requireText(components, "contractsGasPackage", CONTRACTS_GAS_PACKAGE_IDENTITY);
+        requireText(components, "contractsFixturePackage", CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
+        requireText(release, "packageIdentity", RELEASE_PACKAGE_IDENTITY);
+        if (!RELEASE_PACKAGE_IDENTITY.equals(computeReleasePackageIdentity())) {
+            throw new IllegalStateException("Release package identity mismatch");
+        }
+        if (!CONTRACTS_GAS_PACKAGE_IDENTITY.equals(computeGasPackageIdentity())) {
+            throw new IllegalStateException("Contracts gas package identity mismatch");
+        }
+        if (!CONTRACTS_REGISTRY_PACKAGE_IDENTITY.equals(computeRegistryPackageIdentity())) {
+            throw new IllegalStateException("Contracts registry package identity mismatch");
+        }
+        assertRawResourceDigest(GAS_MANIFEST_RESOURCE, CONTRACTS_GAS_MANIFEST_SHA256);
+        assertRawResourceDigest(CONTRACTS_SPECIFICATION_RESOURCE, CONTRACTS_SPECIFICATION_SHA256);
+    }
+
+    static ObjectMapper fixtureYamlMapper() {
+        return FIXTURE_YAML;
+    }
+
+    static JsonNode readFixture(String path) {
+        validateRelativeResourcePath(path);
+        String resource = FIXTURE_ROOT_RESOURCE + path;
+        try (InputStream input = BlueContractsConformanceReport.class
+                .getClassLoader().getResourceAsStream(resource)) {
+            if (input == null) {
+                throw new IllegalStateException(
+                        "Missing required Contracts resource: " + resource);
+            }
+            LoaderOptions options = new LoaderOptions();
+            options.setAllowDuplicateKeys(false);
+            Object envelope =
+                    new Yaml(new SafeConstructor(options)).load(input);
+            if (envelope == null) {
+                throw new IllegalStateException(
+                        "Empty Contracts fixture resource: " + resource);
+            }
+            return UncheckedObjectMapper.JSON_MAPPER.valueToTree(envelope);
+        } catch (IOException ex) {
+            throw new IllegalStateException(
+                    "Unable to read Contracts fixture: " + resource, ex);
+        }
+    }
+
+    static List<FixtureInventoryEntry> loadFixtureInventory() {
+        JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
+        return loadFixtureInventory(
+                manifest,
+                new Function<String, JsonNode>() {
+                    @Override
+                    public JsonNode apply(String path) {
+                        return readFixture(path);
+                    }
+                });
+    }
+
+    static List<FixtureInventoryEntry> loadFixtureInventory(
+            JsonNode manifest,
+            Function<String, JsonNode> fixtureReader) {
+        if (manifest == null || !manifest.isObject()) {
+            throw new IllegalStateException(
+                    "Contracts fixture manifest must be an object");
+        }
+        if (fixtureReader == null) {
+            throw new IllegalArgumentException("fixtureReader is required");
+        }
+        JsonNode files = manifest.get("files");
+        if (files == null || !files.isArray() || files.size() == 0) {
+            throw new IllegalStateException(
+                    "Contracts fixture manifest files must be a non-empty list");
+        }
+        List<FixtureInventoryEntry> entries = new ArrayList<>();
+        Set<String> ids = new LinkedHashSet<>();
+        Set<String> paths = new LinkedHashSet<>();
+        int behavior = 0;
+        int gas = 0;
+        for (JsonNode file : files) {
+            String role = file.path("role").asText();
+            if (!"behavior-fixture".equals(role) && !"gas-fixture".equals(role)) {
+                continue;
+            }
+            String path = requiredText(file, "path");
+            validateRelativeResourcePath(path);
+            if (!paths.add(path)) {
+                throw new IllegalStateException(
+                        "Duplicate executable Contracts fixture path: " + path);
+            }
+            JsonNode fixture = fixtureReader.apply(path);
+            if (fixture == null || !fixture.isObject()) {
+                throw new IllegalStateException(
+                        "Contracts fixture must be an object: " + path);
+            }
+            String id = requiredText(fixture, "id");
+            if (!ids.add(id)) {
+                throw new IllegalStateException(
+                        "Duplicate executable Contracts fixture id: " + id);
+            }
+            List<String> vectors = new ArrayList<>();
+            JsonNode declaredVectors = fixture.get("vectors");
+            if (declaredVectors == null
+                    || !declaredVectors.isArray()
+                    || declaredVectors.size() == 0) {
+                throw new IllegalStateException(
+                        "Contracts fixture has no vector coverage: " + path);
+            }
+            for (JsonNode vector : declaredVectors) {
+                if (!vector.isTextual() || vector.asText().isEmpty()) {
+                    throw new IllegalStateException(
+                            "Contracts fixture has malformed vector coverage: " + path);
+                }
+                vectors.add(vector.asText());
+            }
+            entries.add(new FixtureInventoryEntry(
+                    id,
+                    path,
+                    role,
+                    BlueContractsFixtureCategory.fromLabel(requiredText(fixture, "category")),
+                    requiredText(fixture, "operation"),
+                    vectors));
+            if ("behavior-fixture".equals(role)) {
+                behavior++;
+            } else {
+                gas++;
+            }
+        }
+        if (behavior != 69 || gas != 58 || entries.size() != 127) {
+            throw new IllegalStateException(
+                    "Contracts executable inventory must contain exactly "
+                            + "69 behavior and 58 gas fixtures; found "
+                            + behavior + " behavior and " + gas + " gas");
+        }
+        return Collections.unmodifiableList(entries);
+    }
+
+    private void validateResultPartition() {
+        Set<String> all = new LinkedHashSet<>(fixtureIds);
+        if (all.size() != fixtureIds.size()) {
+            throw new IllegalArgumentException("Fixture IDs must be unique");
+        }
+        Set<String> passed = new LinkedHashSet<>(passedFixtureIds);
+        Set<String> failed = new LinkedHashSet<>(failedFixtureIds);
+        if (passed.size() != passedFixtureIds.size()
+                || failed.size() != failedFixtureIds.size()) {
+            throw new IllegalArgumentException(
+                    "Fixture outcome IDs must be unique");
+        }
+        Set<String> overlap = new LinkedHashSet<>(passed);
+        overlap.retainAll(failed);
+        if (!overlap.isEmpty()) {
+            throw new IllegalArgumentException("Fixtures cannot both pass and fail: " + overlap);
+        }
+        if (!all.containsAll(passed) || !all.containsAll(failed)) {
+            throw new IllegalArgumentException("Fixture outcomes contain unknown fixture IDs");
+        }
+        if (!fixtureCategories.keySet().equals(all)) {
+            throw new IllegalArgumentException(
+                    "Every fixture must have exactly one category");
+        }
+        if (!fixtureResults.isEmpty()) {
+            Set<String> resultIds = new LinkedHashSet<>();
+            Set<String> resultPasses = new LinkedHashSet<>();
+            Set<String> resultFailures = new LinkedHashSet<>();
+            for (BlueContractsFixtureResult result : fixtureResults) {
+                if (!resultIds.add(result.getFixtureId())) {
+                    throw new IllegalArgumentException(
+                            "Duplicate fixture result: " + result.getFixtureId());
+                }
+                if (result.getStatus()
+                        == BlueContractsFixtureResult.Status.PASS) {
+                    resultPasses.add(result.getFixtureId());
+                } else {
+                    resultFailures.add(result.getFixtureId());
+                }
+            }
+            if (!resultIds.equals(all)) {
+                throw new IllegalArgumentException(
+                        "Every fixture must have exactly one machine-readable result");
+            }
+            Set<String> partition = new LinkedHashSet<>(passed);
+            partition.addAll(failed);
+            if (!partition.equals(all)
+                    || !resultPasses.equals(passed)
+                    || !resultFailures.equals(failed)) {
+                throw new IllegalArgumentException(
+                        "Machine-readable results must exactly match "
+                                + "the PASS/FAIL fixture partition");
+            }
+            Set<String> failureIds = new LinkedHashSet<>();
+            for (BlueContractsConformanceFailure failure : failures) {
+                if (!failureIds.add(failure.getFixtureId())) {
+                    throw new IllegalArgumentException(
+                            "Duplicate fixture failure: "
+                                    + failure.getFixtureId());
+                }
+            }
+            if (!failureIds.equals(failed)) {
+                throw new IllegalArgumentException(
+                        "Every failed fixture must have exactly one failure");
+            }
+        }
+    }
+
+    private static String computeYamlPackageIdentity(String resource, String... nulledFields) {
+        JsonNode parsed = requireYamlResource(resource);
+        if (!parsed.isObject()) {
+            throw new IllegalStateException("Package manifest must be an object: " + resource);
+        }
+        ObjectNode normalized = ((ObjectNode) parsed).deepCopy();
+        for (String field : nulledFields) {
+            normalized.putNull(field);
+        }
+        try {
+            // Package identities require explicit null fields. The public
+            // mapper intentionally omits null bean properties, so use a fresh
+            // compact mapper for this canonical payload.
+            String json = new ObjectMapper().writeValueAsString(normalized);
+            byte[] canonical = new JsonCanonicalizer(json).getEncodedUTF8();
+            return "sha256:" + sha256Hex(canonical);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Unable to canonicalize package manifest: " + resource, ex);
+        }
+    }
+
+    private static JsonNode loadYamlResource(String resource) {
+        try (InputStream input = BlueContractsConformanceReport.class.getClassLoader()
                 .getResourceAsStream(resource)) {
-            if (inputStream == null) {
-                throw new IllegalStateException("Missing Blue Contracts fixture resource: " + resource);
+            return input == null ? null : FIXTURE_YAML.readTree(input);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Unable to read YAML resource: " + resource, ex);
+        }
+    }
+
+    private static JsonNode requireYamlResource(String resource) {
+        JsonNode node = loadYamlResource(resource);
+        if (node == null) {
+            throw new IllegalStateException("Missing required Contracts resource: " + resource);
+        }
+        return node;
+    }
+
+    private static byte[] readRequiredResource(String resource) {
+        try (InputStream input = BlueContractsConformanceReport.class.getClassLoader()
+                .getResourceAsStream(resource)) {
+            if (input == null) {
+                throw new IllegalStateException("Missing required Contracts resource: " + resource);
             }
-            return readAll(inputStream);
-        } catch (IOException e) {
-            throw new IllegalStateException("Unable to read Blue Contracts fixture resource: " + resource, e);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        } catch (IOException ex) {
+            throw new IllegalStateException("Unable to read Contracts resource: " + resource, ex);
         }
     }
 
-    private static byte[] readAll(InputStream inputStream) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buffer = new byte[8192];
-        int read;
-        while ((read = inputStream.read(buffer)) != -1) {
-            out.write(buffer, 0, read);
+    private static void assertRawResourceDigest(String resource, String expected) {
+        String actual = sha256Hex(readRequiredResource(resource));
+        if (!expected.equals(actual)) {
+            throw new IllegalStateException(
+                    "Contracts resource digest mismatch for " + resource
+                            + ": expected=" + expected + ", actual=" + actual);
         }
-        return out.toByteArray();
-    }
-
-    private static byte[] normalizeManifestForIdentity(byte[] bytes) {
-        String normalized = new String(normalizeLineEndings(bytes), StandardCharsets.UTF_8)
-                .replaceFirst("(?m)^fixturePackageIdentity:.*$", "fixturePackageIdentity: \"\"");
-        return normalized.getBytes(StandardCharsets.UTF_8);
     }
 
     private static byte[] normalizeLineEndings(byte[] bytes) {
@@ -219,11 +691,122 @@ public final class BlueContractsConformanceReport {
                 .getBytes(StandardCharsets.UTF_8);
     }
 
-    private static String toHex(byte[] bytes) {
-        StringBuilder builder = new StringBuilder(bytes.length * 2);
-        for (byte b : bytes) {
+    private static String sha256Hex(byte[] bytes) {
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new AssertionError("SHA-256 is unavailable", ex);
+        }
+        byte[] value = digest.digest(bytes);
+        StringBuilder builder = new StringBuilder(value.length * 2);
+        for (byte b : value) {
             builder.append(String.format("%02x", b & 0xff));
         }
         return builder.toString();
+    }
+
+    private static void validateRelativeResourcePath(String path) {
+        if (path == null
+                || path.isEmpty()
+                || path.startsWith("/")
+                || path.startsWith("\\")
+                || path.contains("\\")
+                || path.equals("..")
+                || path.startsWith("../")
+                || path.contains("/../")
+                || path.endsWith("/..")) {
+            throw new IllegalArgumentException("Unsafe Contracts fixture resource path: " + path);
+        }
+    }
+
+    private static void requireText(JsonNode object, String field, String expected) {
+        String actual = requiredText(object, field);
+        if (!expected.equals(actual)) {
+            throw new IllegalStateException(
+                    "Contracts package field " + field + " expected " + expected + " but was " + actual);
+        }
+    }
+
+    private static String requiredText(JsonNode object, String field) {
+        JsonNode value = object != null ? object.get(field) : null;
+        if (value == null || !value.isTextual() || value.asText().isEmpty()) {
+            throw new IllegalStateException("Required non-empty text field is missing: " + field);
+        }
+        return value.asText();
+    }
+
+    private static void requireCount(JsonNode manifest, String field, int expected) {
+        if (!manifest.has(field) || manifest.get(field).asInt(-1) != expected) {
+            throw new IllegalStateException(
+                    "Contracts fixture manifest " + field + " mismatch: expected " + expected);
+        }
+    }
+
+    private static List<String> immutableCopy(List<String> values) {
+        return Collections.unmodifiableList(new ArrayList<>(
+                values != null ? values : Collections.<String>emptyList()));
+    }
+
+    private List<Map<String, Object>> machineFixtureResults() {
+        Map<String, BlueContractsFixtureResult> byId = new LinkedHashMap<>();
+        for (BlueContractsFixtureResult result : fixtureResults) {
+            byId.put(result.getFixtureId(), result);
+        }
+        List<Map<String, Object>> encoded = new ArrayList<>(fixtureIds.size());
+        for (String fixtureId : fixtureIds) {
+            BlueContractsFixtureResult result = byId.get(fixtureId);
+            Map<String, Object> value = new LinkedHashMap<>();
+            value.put("id", fixtureId);
+            if (result == null) {
+                BlueContractsFixtureCategory category =
+                        fixtureCategories.get(fixtureId);
+                value.put("category",
+                        category != null ? category.getLabel() : null);
+                value.put("status", "FAIL");
+                value.put("errorCategory", "HarnessDidNotRunFixture");
+                value.put("message", "Fixture has no execution result.");
+                encoded.add(Collections.unmodifiableMap(value));
+                continue;
+            }
+            value.put("path", result.getPath());
+            value.put("role", result.getRole());
+            value.put("category", result.getCategory().getLabel());
+            value.put("operation", result.getOperation());
+            value.put("vectors", result.getVectors());
+            value.put("status", result.getStatus().name());
+            if (result.getFailure() != null) {
+                Map<String, Object> failure = new LinkedHashMap<>();
+                failure.put("exceptionClass",
+                        result.getFailure().getExceptionClass());
+                failure.put("message", result.getFailure().getMessage());
+                value.put("failure", Collections.unmodifiableMap(failure));
+            }
+            encoded.add(Collections.unmodifiableMap(value));
+        }
+        return Collections.unmodifiableList(encoded);
+    }
+
+    static final class FixtureInventoryEntry {
+        final String id;
+        final String path;
+        final String role;
+        final BlueContractsFixtureCategory category;
+        final String operation;
+        final List<String> vectors;
+
+        FixtureInventoryEntry(String id,
+                              String path,
+                              String role,
+                              BlueContractsFixtureCategory category,
+                              String operation,
+                              List<String> vectors) {
+            this.id = id;
+            this.path = path;
+            this.role = role;
+            this.category = category;
+            this.operation = operation;
+            this.vectors = Collections.unmodifiableList(new ArrayList<>(vectors));
+        }
     }
 }

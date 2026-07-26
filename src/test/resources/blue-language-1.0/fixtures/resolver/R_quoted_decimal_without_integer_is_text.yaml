@@ -1,0 +1,7 @@
+id: R_quoted_decimal_without_integer_is_text
+category: Resolution
+operation: resolve
+source:
+  accountId: "9007199254740992"
+expectedEffectiveType:
+  /accountId: Text

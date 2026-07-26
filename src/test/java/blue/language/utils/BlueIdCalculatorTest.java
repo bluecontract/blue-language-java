@@ -2,10 +2,12 @@ package blue.language.utils;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -75,7 +77,10 @@ public class BlueIdCalculatorTest {
                 Map<String, Object> map1 = YAML_MAPPER.readValue(list1, Map.class);
                 String result1 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map1);
 
-                String expectedResult = "hash({abc={blueId=" + fakeListHash("hash(1)", "hash(2)", "hash(3)") + "}})";
+                String expectedResult = "hash({abc={blueId=" + fakeListHash(
+                                fakeScalarHash(INTEGER_TYPE_BLUE_ID, 1),
+                                fakeScalarHash(INTEGER_TYPE_BLUE_ID, 2),
+                                fakeScalarHash(INTEGER_TYPE_BLUE_ID, 3)) + "}})";
                 assertEquals(expectedResult, result1);
         }
 
@@ -118,8 +123,12 @@ public class BlueIdCalculatorTest {
                 String flatResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(flat, Map.class));
                 String nestedResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(nested, Map.class));
 
-                assertEquals("hash({abc={blueId=" + fakeListHash("hash(1)", "hash(2)") + "}})", flatResult);
-                assertEquals("hash({abc={blueId=" + fakeListHash(fakeListHash("hash(1)"), "hash(2)") + "}})", nestedResult);
+                assertEquals("hash({abc={blueId=" + fakeListHash(
+                                fakeScalarHash(INTEGER_TYPE_BLUE_ID, 1),
+                                fakeScalarHash(INTEGER_TYPE_BLUE_ID, 2)) + "}})", flatResult);
+                assertEquals("hash({abc={blueId=" + fakeListHash(
+                                fakeListHash(fakeScalarHash(INTEGER_TYPE_BLUE_ID, 1)),
+                                fakeScalarHash(INTEGER_TYPE_BLUE_ID, 2)) + "}})", nestedResult);
                 assertNotEquals(flatResult, nestedResult);
         }
 
@@ -265,7 +274,13 @@ public class BlueIdCalculatorTest {
         @Test
         public void testLexicographicSorting() {
                 Map map = JSON_MAPPER.readValue("{\"z\":1,\"aa\":65,\"q\":3,\"12\":3.5,\"a\":55,\"ab\":\"sad\"}", Map.class);
-                String expectedBlueId = "hash({12={blueId=hash(3.5)}, a={blueId=hash(55)}, aa={blueId=hash(65)}, ab={blueId=hash(sad)}, q={blueId=hash(3)}, z={blueId=hash(1)}})";
+                String expectedBlueId = "hash({12={blueId="
+                                + fakeScalarHash(DOUBLE_TYPE_BLUE_ID, new BigDecimal("3.5"))
+                                + "}, a={blueId=" + fakeScalarHash(INTEGER_TYPE_BLUE_ID, 55)
+                                + "}, aa={blueId=" + fakeScalarHash(INTEGER_TYPE_BLUE_ID, 65)
+                                + "}, ab={blueId=" + fakeScalarHash(TEXT_TYPE_BLUE_ID, "sad")
+                                + "}, q={blueId=" + fakeScalarHash(INTEGER_TYPE_BLUE_ID, 3)
+                                + "}, z={blueId=" + fakeScalarHash(INTEGER_TYPE_BLUE_ID, 1) + "}})";
                 assertEquals(expectedBlueId, new BlueIdCalculator(fakeHashValueProvider()).calculate(map));
         }
 
@@ -664,6 +679,35 @@ public class BlueIdCalculatorTest {
                 assertThrows(IllegalArgumentException.class, () -> BlueIdCalculator.calculateBlueId(withNull));
         }
 
+        @Test
+        public void nestedBareSchemaScalarUsesTypedScalarIdentity() {
+                Node withBareSchemaScalar = YAML_MAPPER.readValue(
+                                "schema:\n" +
+                                "  required: true", Node.class);
+
+                Schema explicitSchema = new Schema()
+                                .required(new Node()
+                                                .type(new Node().blueId(BOOLEAN_TYPE_BLUE_ID))
+                                                .value(true));
+                Node withExplicitTypedScalar = new Node().schema(explicitSchema);
+
+                assertEquals(
+                                BlueIdCalculator.calculateBlueId(withExplicitTypedScalar),
+                                BlueIdCalculator.calculateBlueId(withBareSchemaScalar));
+        }
+
+        @Test
+        public void checkpointEntryMatchesPublishedLanguage10Identity() throws Exception {
+                try (InputStream input = getClass().getClassLoader().getResourceAsStream(
+                                "registry/blue-contracts-1.0/CheckpointEntry.blue")) {
+                        assertTrue(input != null);
+                        Node checkpointEntry = YAML_MAPPER.readValue(input, Node.class);
+                        assertEquals(
+                                        "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY",
+                                        BlueIdCalculator.calculateBlueId(checkpointEntry));
+                }
+        }
+
         private static Function<Object, String> fakeHashValueProvider() {
                 return obj -> "hash(" + obj + ")";
         }
@@ -674,6 +718,10 @@ public class BlueIdCalculatorTest {
                         accumulator = "hash({$listCons={elem={blueId=" + elementHash + "}, prev={blueId=" + accumulator + "}}})";
                 }
                 return accumulator;
+        }
+
+        private static String fakeScalarHash(String typeBlueId, Object value) {
+                return "hash({type={blueId=" + typeBlueId + "}, value=" + value + "})";
         }
 
 }

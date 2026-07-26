@@ -43,7 +43,7 @@ class PublishedSnapshotRoundTripTest {
     }
 
     @Test
-    void snapshotProcessingPublishesStrictDurableCanonicalSnapshot() {
+    void snapshotProcessingWithNoExternalMatchPublishesStrictDurableCanonicalSnapshot() {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(
                 "name: Published Snapshot Processing\n" +
@@ -60,19 +60,19 @@ class PublishedSnapshotRoundTripTest {
         DocumentProcessingResult result = blue.processDocument(strictInitialized,
                 new Node().name("Ignored Published Snapshot Event"));
 
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.NO_MATCH, result.status(), result.failureReason());
         assertPublishableRoundTrip(blue, result);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(1L, snapshot.counter("processorInputStrictCanonical"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorInputUncheckedCanonical"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorPublishedStrictCanonical"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorPublishedStrictCanonical"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublishedUncheckedCanonical"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublicationCanonicalizations"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublicationCanonicalMaterializations"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublicationStrictBlueIdCalculations"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublicationCanonicalizationNanos"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublicationIdentityMismatches"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorPublicationInvariantChecks"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorPublicationInvariantChecks"), snapshot.toString());
     }
 
     @Test
@@ -101,10 +101,10 @@ class PublishedSnapshotRoundTripTest {
         assertEquals(1L, snapshot.counter("processorInputUncheckedCanonical"), snapshot.toString());
         assertEquals(1L, snapshot.counter("processorPublishedStrictCanonical"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublishedUncheckedCanonical"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorPublicationCanonicalizations"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorPublicationCanonicalMaterializations"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("processorPublicationStrictBlueIdCalculations"), snapshot.toString());
-        assertTrue(snapshot.counter("processorPublicationCanonicalizationNanos") > 0L, snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorPublicationCanonicalizations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorPublicationCanonicalMaterializations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorPublicationStrictBlueIdCalculations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("processorPublicationCanonicalizationNanos"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublicationIdentityMismatches"), snapshot.toString());
         assertEquals(1L, snapshot.counter("processorPublicationInvariantChecks"), snapshot.toString());
     }

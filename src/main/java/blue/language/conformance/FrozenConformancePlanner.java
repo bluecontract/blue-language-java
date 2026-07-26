@@ -11,9 +11,11 @@ import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.MergeReverser;
 import blue.language.utils.NodeProviderWrapper;
+import blue.language.utils.limits.DeferredReferencePathLimits;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,13 +27,28 @@ final class FrozenConformancePlanner {
     private final NodeProvider nodeProvider;
     private final MergingProcessor mergingProcessor;
     private final ResolvedReferenceCache resolvedReferenceCache;
+    private final Limits resolutionLimits;
 
     FrozenConformancePlanner(NodeProvider nodeProvider,
                              MergingProcessor mergingProcessor,
                              ResolvedReferenceCache resolvedReferenceCache) {
+        this(nodeProvider,
+                mergingProcessor,
+                resolvedReferenceCache,
+                Collections.emptySet());
+    }
+
+    FrozenConformancePlanner(NodeProvider nodeProvider,
+                             MergingProcessor mergingProcessor,
+                             ResolvedReferenceCache resolvedReferenceCache,
+                             Collection<String> deferredReferencePaths) {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = Objects.requireNonNull(mergingProcessor, "mergingProcessor");
         this.resolvedReferenceCache = resolvedReferenceCache;
+        this.resolutionLimits = deferredReferencePaths == null
+                || deferredReferencePaths.isEmpty()
+                ? Limits.NO_LIMITS
+                : new DeferredReferencePathLimits(deferredReferencePaths);
     }
 
     ConformancePlan plan(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
@@ -121,7 +138,7 @@ final class FrozenConformancePlanner {
             return GeneralizedNode.unchanged(node);
         }
         Node resolved = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
-                .resolve(canonical, Limits.NO_LIMITS);
+                .resolve(canonical, resolutionLimits);
         return new GeneralizedNode(reuseUnchangedSubtrees(node,
                 resolvedReferenceCache.freezeResolved(resolved)), true, metadataFields);
     }
@@ -142,7 +159,8 @@ final class FrozenConformancePlanner {
 
     private ConformanceResult checkCanonical(Node canonical) {
         try {
-            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(canonical, Limits.NO_LIMITS);
+            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
+                    .resolve(canonical, resolutionLimits);
             return ConformanceResult.conformant();
         } catch (RuntimeException ex) {
             return ConformanceResult.nonConformant(ex.getMessage());
@@ -218,7 +236,7 @@ final class FrozenConformancePlanner {
         }
 
         Node resolvedType = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
-                .resolve(type.toNode(), Limits.NO_LIMITS);
+                .resolve(type.toNode(), resolutionLimits);
         Node parentType = resolvedType.getType();
         return parentType != null ? resolvedReferenceCache.freezeResolved(parentType) : null;
     }
