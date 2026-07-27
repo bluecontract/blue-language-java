@@ -12,6 +12,7 @@ import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.utils.BlueIdCalculator;
 import java.math.BigInteger;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +43,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        ProcessorEngine.Execution execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -96,7 +97,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        ProcessorEngine.Execution execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -147,7 +148,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        ProcessorEngine.Execution execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -196,7 +197,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        ProcessorEngine.Execution execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -242,7 +243,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        ProcessorEngine.Execution execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -267,5 +268,55 @@ final class ChannelRunnerTest {
             ProcessorEngine.Execution execution) {
         execution.preflightScope("/");
         return execution.bundleForScope("/");
+    }
+
+    private static ProcessorEngine.Execution execution(
+            DocumentProcessor owner,
+            Node document) {
+        Node channel = document.getContracts()
+                .getProperties().get("testChannel");
+        String contributionBlueId =
+                BlueIdCalculator.calculateBlueId(channel);
+        String effectiveTypeBlueId =
+                channel.getType().getBlueId();
+        Node bindingEvent = new TestEvent()
+                .eventId("runner-binding")
+                .toNode();
+        ExternalDeliverySnapshot delivery =
+                ExternalDeliverySnapshot.builder("/", "testChannel")
+                        .sourceContribution(contributionBlueId)
+                        .effectiveTypeBlueId(effectiveTypeBlueId)
+                        .subscriptionKey(
+                                bindingEvent.getType().getBlueId())
+                        .checkpointDomainBlueId(
+                                CheckpointDomain.derive(
+                                        effectiveTypeBlueId,
+                                        Collections.singletonList(
+                                                contributionBlueId),
+                                        null))
+                        .checkpointSubjectBlueId(
+                                BlueIdCalculator.calculateBlueId(
+                                        bindingEvent))
+                        .build();
+        VerifiedExecutionEvidence evidence =
+                VerifiedExecutionEvidence.builder(
+                                BlueIdCalculator.calculateBlueId(
+                                        document),
+                                BlueIdCalculator.calculateBlueId(
+                                        bindingEvent))
+                        .revisions(0L, 0L)
+                        .runtimeRegistryIdentity(
+                                owner.runtimeRegistryIdentity())
+                        .eventOrderKey(
+                                ExternalOrderKey.of(
+                                        Collections.<Object>singletonList(
+                                                "runner")))
+                        .delivery(delivery)
+                        .build();
+        return new ProcessorEngine.Execution(
+                owner,
+                document.clone(),
+                bindingEvent,
+                evidence);
     }
 }

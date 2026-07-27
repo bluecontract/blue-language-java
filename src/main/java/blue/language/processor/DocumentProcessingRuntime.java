@@ -12,8 +12,8 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.JsonPointer;
-import blue.language.utils.MergeReverser;
 import blue.language.utils.NodePathEditor;
+import blue.language.utils.ParsedJsonPointer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.IdentityHashMap;
+import java.util.function.Supplier;
 
 /**
  * Runtime state holder for a single document-processing invocation.
@@ -546,16 +547,6 @@ public final class DocumentProcessingRuntime {
         return emissionRegistry.pendingOccurrenceCount();
     }
 
-    /**
-     * @deprecated Contracts 1.0 permits only manifest counters or registered
-     * named runtime child-ledger counters.
-     */
-    @Deprecated
-    public void addGas(long amount) {
-        throw new UnsupportedOperationException(
-                "Anonymous runtime gas is not supported by Contracts 1.0");
-    }
-
     public GasMeter.ChildGasLedger newRuntimeGasLedger(
             String namespace,
             Map<String, Long> counterWeights) {
@@ -797,10 +788,6 @@ public final class DocumentProcessingRuntime {
         gasMeter.chargeLifecycleDelivery();
     }
 
-    public void chargeFatalTerminationOverhead() {
-        gasMeter.chargeFatalTerminationOverhead();
-    }
-
     public boolean isRunTerminated() {
         return runTerminated;
     }
@@ -916,14 +903,13 @@ public final class DocumentProcessingRuntime {
      * <p>Contracts 1.0 §9.2 requires the direct Node BlueId of the exact scope
      * as it exists immediately before initialization effects. It explicitly
      * does not use Content BlueId, resolution, preprocessing, or provider
-     * acquisition. The compatibility method name is retained because it was
-     * exposed before Contracts 1.0 was finalized.</p>
+     * acquisition.</p>
      */
-    public String calculatePreInitializationScopeContentBlueId(String scopePath) {
-        return calculatePreInitializationScopeContentBlueId(scopePath, null);
+    public String calculatePreInitializationScopeNodeBlueId(String scopePath) {
+        return calculatePreInitializationScopeNodeBlueId(scopePath, null);
     }
 
-    String calculatePreInitializationScopeContentBlueId(
+    String calculatePreInitializationScopeNodeBlueId(
             String scopePath,
             ProcessingSnapshotManager scopeIdentitySnapshotManager) {
         String normalized = PointerUtils.normalizeScope(scopePath);
@@ -977,7 +963,7 @@ public final class DocumentProcessingRuntime {
         }
 
         Node root = materializedView.copyRoot();
-        FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(new MergeReverser().reverse(root.clone()));
+        FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(root.clone());
         FrozenNode resolved = FrozenNode.fromResolvedNode(root.clone());
         return new WorkingDocument(normalizedScope,
                 canonical,
@@ -1041,6 +1027,7 @@ public final class DocumentProcessingRuntime {
     }
 
     public void directWrite(String path, Node value) {
+        validateMutationPathWithoutResolution(path);
         chargeSemanticIdentityWork(
                 PointerUtils.normalizePointer(path),
                 value == null ? JsonPatch.Op.REMOVE : JsonPatch.Op.REPLACE,
@@ -1162,9 +1149,7 @@ public final class DocumentProcessingRuntime {
                 || !RuntimeBlueIds.PROCESSING_TERMINATED_MARKER.equals(type.getBlueId())) {
             return false;
         }
-        ProcessorErrorCategory category = ScopeIdentityErrorMapper.from(failure);
-        return category == ProcessorErrorCategory.ProviderUnavailable
-                || category == ProcessorErrorCategory.ProviderBlueIdMismatch;
+        return ScopeIdentityErrorMapper.isProviderIdentityFailure(failure);
     }
 
     private void applyMaterializedDirectWrite(Node root, String path, Node value) {
@@ -1263,6 +1248,7 @@ public final class DocumentProcessingRuntime {
             metrics.incrementSingletonPatchTransactions();
         }
         try {
+            preflightPatchInputsWithoutResolution(patches);
             PlanningContext planning = planningContext(materializedView.root());
             chargeSemanticIdentityWork(patches);
             BatchPatchTransaction transaction = BatchPatchTransaction.fromInputs(originScopePath,
@@ -1322,6 +1308,59 @@ public final class DocumentProcessingRuntime {
                     patch.mutableValue(),
                     patch.frozenValue());
         }
+    }
+
+    void validateMutationPathWithoutResolution(PatchInput patch) {
+        if (patch != null) {
+            validateMutationPathWithoutResolution(patch.authoredPath());
+        }
+    }
+
+    private void validateMutationPathWithoutResolution(String path) {
+        ImmutablePatchPlanner.forFrozen(canonicalRootWithoutResolution())
+                .validateMutationPath(path);
+    }
+
+    private void preflightPatchInputsWithoutResolution(List<PatchInput> patches) {
+        FrozenNode workingRoot = canonicalRootWithoutResolution();
+        boolean exactReplacement = !selectedDocumentBacked;
+        for (PatchInput input : patches) {
+            if (input == null) {
+                continue;
+            }
+            ImmutablePatchPlanner planner = ImmutablePatchPlanner.forFrozen(workingRoot);
+            workingRoot = planner.applyMutationPreflight(
+                    input.op(),
+                    ParsedJsonPointer.parse(input.authoredPath()),
+                    preflightValue(input, workingRoot),
+                    exactReplacement);
+        }
+    }
+
+    private FrozenNode preflightValue(PatchInput input,
+                                      FrozenNode modeRoot) {
+        if (input.op() == JsonPatch.Op.REMOVE) {
+            return null;
+        }
+        FrozenNode frozen = input.frozenValue();
+        if (frozen != null) {
+            return FrozenNode.authoredValueInModeOf(frozen, modeRoot);
+        }
+        Node value = Objects.requireNonNull(
+                input.mutableValue(), "patch value");
+        if (!modeRoot.isStrictCanonical()) {
+            return FrozenNode.fromResolvedNode(value);
+        }
+        return modeRoot.isStrictBlueIdValidation()
+                ? FrozenNode.fromNode(value)
+                : FrozenNode.fromUncheckedCanonicalNode(value);
+    }
+
+    private FrozenNode canonicalRootWithoutResolution() {
+        ResolvedSnapshot current = snapshot;
+        return current != null
+                ? current.frozenCanonicalRoot()
+                : FrozenNode.fromResolvedNode(materializedView.root());
     }
 
     private void chargeSemanticIdentityWork(String path,
@@ -1982,6 +2021,20 @@ public final class DocumentProcessingRuntime {
     }
 
     /**
+     * Captures the snapshot-manager generation that owns the current runtime
+     * operation. Each opened matcher session has independent local caches; a
+     * runtime without a manager can still evaluate inline-only patterns, but
+     * reference demand fails inside the matcher.
+     */
+    ExternalChannelFunctionEvaluation.MatcherSessionFactory
+    externalChannelMatcherSessions() {
+        ProcessingSnapshotManager captured =
+                currentSnapshotManager();
+        return ExternalChannelFunctionEvaluation
+                .verifiedMatcherSessions(captured);
+    }
+
+    /**
      * Opens a selected Handler's deferred executable reference through the
      * snapshot manager that owns this invocation. This deliberately avoids the
      * ContractLoader's independent matching/provider configuration: provider
@@ -2005,19 +2058,61 @@ public final class DocumentProcessingRuntime {
         return materialized;
     }
 
+    /**
+     * Captures the verified snapshot boundary for one stored checkpoint
+     * subject without opening the subject. The returned materializer performs
+     * the provider demand only if a channel's newness policy asks for the
+     * previous exact subject through {@link ChannelCheckpointContext#lastEvent()}.
+     */
+    Supplier<Node> checkpointSubjectMaterializer(
+            Node subjectReference) {
+        final Node capturedReference =
+                Objects.requireNonNull(
+                        subjectReference,
+                        "subjectReference")
+                        .clone();
+        final ProcessingSnapshotManager capturedManager =
+                currentSnapshotManager();
+        return () -> {
+            FrozenNode reference =
+                    FrozenNode.fromNode(
+                            capturedReference);
+            if (!reference.isReferenceOnly()) {
+                throw new ProcessorFailureException(
+                        ProcessorErrorCategory
+                                .InvalidProcessingDocument,
+                        "Checkpoint subject must be an exact pure reference");
+            }
+            if (capturedManager == null) {
+                throw new IllegalStateException(
+                        "Checkpoint subject materialization requires the active "
+                                + "ProcessingSnapshotManager");
+            }
+            return verifiedExactMaterialization(
+                    capturedManager,
+                    reference,
+                    "Checkpoint subject")
+                    .toNode();
+        };
+    }
+
     private static FrozenNode verifiedExactMaterialization(
             ProcessingSnapshotManager manager,
             FrozenNode reference,
             String purpose) {
         FrozenNode materialized =
-                Objects.requireNonNull(
-                        manager.materializeVerifiedExactReference(
-                                reference),
-                        "materializedExactReference");
+                manager.materializeVerifiedExactReference(
+                        reference);
+        if (materialized == null) {
+            throw new InvalidExecutionEvidenceException(
+                    purpose
+                            + " provider returned no content for "
+                            + reference.getReferenceBlueId());
+        }
         if (materialized.isReferenceOnly()) {
             throw new ProcessorFailureException(
                     ProcessorErrorCategory
-                            .ProviderBlueIdMismatch,
+                            .InvalidProcessingDocument,
                     purpose
                             + " provider returned a reference instead of exact content for "
                             + reference.getReferenceBlueId());
@@ -2031,7 +2126,7 @@ public final class DocumentProcessingRuntime {
         } catch (RuntimeException invalidContent) {
             throw new ProcessorFailureException(
                     ProcessorErrorCategory
-                            .ProviderBlueIdMismatch,
+                            .InvalidProcessingDocument,
                     purpose
                             + " provider content is not exact canonical content for "
                             + reference.getReferenceBlueId(),
@@ -2041,7 +2136,7 @@ public final class DocumentProcessingRuntime {
                 .equals(actualBlueId)) {
             throw new ProcessorFailureException(
                     ProcessorErrorCategory
-                            .ProviderBlueIdMismatch,
+                            .InvalidProcessingDocument,
                     purpose
                             + " provider content BlueId mismatch: expected "
                             + reference.getReferenceBlueId()
@@ -2231,6 +2326,11 @@ public final class DocumentProcessingRuntime {
                         executableBodyFieldsByType.get(
                                 exactTypeBlueId(contract));
                 if (fields != null) {
+                    addHandlerEventMatcherPath(
+                            contract,
+                            path,
+                            entry.getKey(),
+                            result);
                     for (String field : fields) {
                         addExecutableBodyPath(
                                 path,
@@ -2264,6 +2364,11 @@ public final class DocumentProcessingRuntime {
                     executableBodyFieldsByType.get(
                             exactTypeBlueId(contract));
             if (fields != null) {
+                addHandlerEventMatcherPath(
+                        contract,
+                        path,
+                        entry.getKey(),
+                        result);
                 for (String field : fields) {
                     addExecutableBodyPath(
                             path,
@@ -2272,6 +2377,38 @@ public final class DocumentProcessingRuntime {
                             result);
                 }
             }
+        }
+    }
+
+    private static void addHandlerEventMatcherPath(
+            Node contract,
+            List<String> scopePath,
+            String contractKey,
+            Set<String> result) {
+        if (contract != null
+                && contract.getProperties() != null
+                && contract.getProperties().containsKey("event")) {
+            addExecutableBodyPath(
+                    scopePath,
+                    contractKey,
+                    "event",
+                    result);
+        }
+    }
+
+    private static void addHandlerEventMatcherPath(
+            FrozenNode contract,
+            List<String> scopePath,
+            String contractKey,
+            Set<String> result) {
+        if (contract != null
+                && contract.getProperties() != null
+                && contract.getProperties().containsKey("event")) {
+            addExecutableBodyPath(
+                    scopePath,
+                    contractKey,
+                    "event",
+                    result);
         }
     }
 
@@ -2504,6 +2641,7 @@ public final class DocumentProcessingRuntime {
                 throw new IllegalStateException("Patch sequence is already closed");
             }
             PatchInput authoredPatch = patchAt(patchIndex);
+            validateMutationPathWithoutResolution(authoredPatch);
             chargeSemanticIdentityWork(
                     Collections.singletonList(authoredPatch));
             if (!counted) {

@@ -2,10 +2,27 @@
 
 ### Feat
 
+- bind the corrected 125-fixture Language 1.0 and 127-fixture Contracts 1.0
+  conformance packages and add a strict machine-readable release gate
+- add the generic cyclic-set member mutation guard before provider demand
+- split canonical identity construction from author-facing minimization
 - add immutable `FrozenJsonPatch` APIs for direct frozen patch-value handoff
 - add configurable per-runtime cache policy, cache statistics, and idempotent runtime close
 - add explicit low-memory, high-throughput, and disabled cache policy profiles
 - add production-path processing metrics snapshots and conservative patch-impact classification
+- add immutable same-scope External Channel member context, including a shallow
+  effective-type-family view whose exact dependencies participate in
+  subscription invalidation, checkpoint domains, and sparse evidence verification
+- add event-scoped External Channel pattern matching with inline/reference
+  parity through a pass-local verified snapshot-manager boundary
+- admit exact pure-reference Root and Event inputs through verified
+  demand-driven fragments without recursively expanding the full graph
+- add immutable same-scope handler routing and logical-delivery coalescing
+  while raw accepted sources retain atomic checkpoint ownership
+- add an event-scoped exact-reference materializer and representation-blind
+  default projection for referenced subscription-key fragments
+- preserve exact inline checkpoint subjects and expose both the frozen current
+  subject and exact prior subject to channel newness policies
 
 ### Performance
 
@@ -20,14 +37,27 @@
 
 ### Compatibility
 
-- retain all existing mutable patch APIs and Java 8 bytecode targeting
+- remove deprecated pre-1.0 aliases, routed-delivery carriers, trusted provider
+  behavior, ambiguous reverse APIs, and fatal-termination compatibility paths
+- retain the released `NodeProviderWrapper.unverified(...)` and
+  `isExplicitlyHostTrusted(...)` descriptors for `blue-repo-java:3.0.0-rc.10`
+  linkage while enforcing verification and always denying host trust
+- keep raw accepted sources as checkpoint owners while allowing immutable
+  same-scope handler selection and logical-delivery coalescing
+- record that downstream BEX 1.1 still needs a named live counter stream before
+  it can supply conforming runtime child-ledger traces
+- retain Java 8 bytecode targeting
 - preserve full-resolution fallbacks for schema, fixed-value type, reference, collection,
   contracts-changing, custom-merger, and unknown-capability cases
 - add reproducible source-release archives and JVM descriptor compatibility reporting
+- pin the Gradle wrapper distribution checksum
 - honor `SOURCE_DATE_EPOCH` for reproducible build metadata timestamps
 
 ### Fix
 
+- pass all corrected Contracts fixtures without an expected-failure whitelist
+- preserve whole-invocation rollback and zero provider demand when rejecting
+  traversal below a cyclic-set member reference
 - keep nested transient planning scopes from closing parent reference state
 - serialize shared processor-registry and type-resolution updates against processing and reject
   lock upgrades instead of deadlocking
@@ -37,6 +67,8 @@
   cache-sensitive work
 - isolate retained conformance views from refreshed cache generations
 - bound transient trusted reference retention and report its real eviction/rejection counters
+- merge an admitted named runtime child ledger before rollbackable handler
+  effects so its gas and ordered trace survive a later runtime-fatal rollback
 
 ## v2.0.0 (2026-05-13)
 

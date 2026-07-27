@@ -2305,7 +2305,7 @@ expected:
 The implementation-baseline fixture-package identity is:
 
 ```text
-sha256:58a3d8446e0e7c63063204c7bfaa312ace1242a182bc2f9c4875479a81149904
+sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5
 ```
 
 The package contains 78 normative vectors, 69 behavior fixtures, and 58 gas fixtures. The behavior-fixture count is not required to equal the vector count because one executable fixture may cover several inseparable normative assertions.

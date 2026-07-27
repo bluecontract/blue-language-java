@@ -2,6 +2,7 @@
 """Dependency-free JVM classfile API compatibility check for release smoke tests."""
 
 import argparse
+import json
 import pathlib
 import struct
 import sys
@@ -114,7 +115,7 @@ def parse_class(data):
     }
 
 
-def classes_in(path):
+def classes_in_jar(path):
     classes = {}
     with zipfile.ZipFile(path) as archive:
         for entry in archive.infolist():
@@ -125,6 +126,39 @@ def classes_in(path):
             parsed = parse_class(archive.read(entry))
             classes[parsed["name"]] = parsed
     return classes
+
+
+def classes_in_snapshot(path):
+    payload = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    if payload.get("schema") != "blue-language-java-api-baseline/1.0":
+        raise ValueError("unsupported API baseline schema")
+    classes = {}
+    for encoded in payload.get("classes", []):
+        parsed = {
+            "name": encoded["name"],
+            "minor_version": encoded["minorVersion"],
+            "major_version": encoded["majorVersion"],
+            "access": encoded["access"],
+            "superclass": encoded.get("superclass"),
+            "interfaces": tuple(encoded.get("interfaces", [])),
+            "fields": {
+                (member["name"], member["descriptor"]): member["access"]
+                for member in encoded.get("fields", [])
+            },
+            "methods": {
+                (member["name"], member["descriptor"]): member["access"]
+                for member in encoded.get("methods", [])
+            },
+        }
+        classes[parsed["name"]] = parsed
+    return classes
+
+
+def classes_in(path):
+    candidate = pathlib.Path(path)
+    if candidate.suffix.lower() == ".json":
+        return classes_in_snapshot(candidate)
+    return classes_in_jar(candidate)
 
 
 def visibility(access):

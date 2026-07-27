@@ -1,13 +1,11 @@
 package blue.language.processor.conformance;
 
 import blue.language.Blue;
-import blue.language.BlueContractsConformanceFailure;
 import blue.language.BlueContractsConformanceReport;
 import blue.language.BlueReleaseConformanceReport;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,25 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueContractsConformanceReportTest {
 
-    private static final List<String> PUBLISHED_FIXTURE_FAILURES =
-            Arrays.asList(
-                    "c-disc-04",
-                    "c-disc-05",
-                    "c-e2e-02",
-                    "c-emb-02",
-                    "c-emb-07",
-                    "c-evt-01",
-                    "c-evt-03",
-                    "c-life-03",
-                    "c-prot-02",
-                    "c-rep-04",
-                    "c-snd-04",
-                    "c-upd-01",
-                    "c-upd-02",
-                    "c-upd-03");
-
     @Test
-    void exactReleaseReportRecordsEveryPassAndPublishedFixtureFailure()
+    void exactReleaseReportRequiresEveryFixtureToPass()
             throws Exception {
         BlueReleaseConformanceReport release =
                 new Blue().runReleaseConformanceSuites();
@@ -63,23 +44,15 @@ class BlueContractsConformanceReportTest {
         assertEquals(58, contracts.getFixtureResults().stream()
                 .filter(result -> "gas-fixture".equals(result.getRole()))
                 .count());
-        assertEquals(
-                PUBLISHED_FIXTURE_FAILURES,
-                contracts.getFailedFixtureIds(),
-                () -> contracts.getFailures().stream()
-                        .map(this::failureMessage)
-                        .collect(Collectors.joining("\n")));
-        assertEquals(113,
-                contracts.getPassedFixtureIds().size());
-        assertEquals(14, contracts.getFailures().size());
-        assertTrue(contracts.getFailures().stream()
-                .allMatch(failure ->
-                        failure.getMessage() != null
-                                && !failure.getMessage()
-                                .trim().isEmpty()));
+        assertEquals(contracts.getFixtureIds(),
+                contracts.getPassedFixtureIds(),
+                () -> contracts.getFailures().toString());
+        assertEquals(127, contracts.getPassedFixtureIds().size());
+        assertTrue(contracts.getFailedFixtureIds().isEmpty());
+        assertTrue(contracts.getFailures().isEmpty());
         assertEquals(0, contracts.getSkippedFixtureCount());
-        assertTrue(!contracts.isConformant());
-        assertTrue(!release.isConformant());
+        assertTrue(contracts.isConformant());
+        assertTrue(release.isConformant());
 
         Map<String, Object> encoded =
                 release.toMachineReadableMap();
@@ -90,10 +63,10 @@ class BlueContractsConformanceReportTest {
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
                 nested(encoded, "packages", "contractsFixtures"));
         assertEquals(252, nested(encoded, "summary", "total"));
-        assertEquals(238, nested(encoded, "summary", "passed"));
-        assertEquals(14, nested(encoded, "summary", "failed"));
+        assertEquals(252, nested(encoded, "summary", "passed"));
+        assertEquals(0, nested(encoded, "summary", "failed"));
         assertEquals(0, nested(encoded, "summary", "skipped"));
-        assertEquals(false,
+        assertEquals(true,
                 nested(encoded, "summary", "conformant"));
 
         @SuppressWarnings("unchecked")
@@ -104,31 +77,20 @@ class BlueContractsConformanceReportTest {
                 .collect(Collectors.toCollection(HashSet::new));
         assertEquals(252, fixtures.size());
         assertEquals(252, keys.size());
-        assertEquals(238, fixtures.stream()
+        assertEquals(252, fixtures.stream()
                 .filter(fixture ->
                         "PASS".equals(fixture.get("status")))
                 .count());
-        List<String> encodedFailures = fixtures.stream()
-                .filter(fixture ->
-                        "contracts".equals(fixture.get("suite"))
-                                && "FAIL".equals(
-                                fixture.get("status")))
-                .map(fixture -> (String) fixture.get("id"))
-                .collect(Collectors.toList());
-        assertEquals(PUBLISHED_FIXTURE_FAILURES,
-                encodedFailures);
         assertTrue(fixtures.stream()
-                .filter(fixture ->
-                        "FAIL".equals(fixture.get("status")))
-                .allMatch(fixture ->
-                        fixture.get("failure") instanceof Map));
+                .noneMatch(fixture ->
+                        "FAIL".equals(fixture.get("status"))));
 
         JsonNode json = JSON_MAPPER.readTree(
                 release.toMachineReadableJson());
         assertEquals(252, json.path("fixtures").size());
-        assertEquals(238,
+        assertEquals(252,
                 json.path("summary").path("passed").asInt());
-        assertEquals(14,
+        assertEquals(0,
                 json.path("summary").path("failed").asInt());
     }
 
@@ -177,11 +139,4 @@ class BlueContractsConformanceReportTest {
         return ((Map<String, Object>) map.get(object)).get(field);
     }
 
-    private String failureMessage(BlueContractsConformanceFailure failure) {
-        return failure.getFixtureId() + " ["
-                + failure.getCategory().name() + "] "
-                + failure.getOperation() + " -> "
-                + failure.getExceptionClass() + ": "
-                + failure.getMessage();
-    }
 }

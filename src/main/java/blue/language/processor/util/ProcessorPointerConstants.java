@@ -30,8 +30,4 @@ public final class ProcessorPointerConstants {
         return JsonPointer.append(relativeContractsEntry(markerKey) + ENTRIES_SUFFIX, rawChannelKey);
     }
 
-    @Deprecated
-    public static String relativeCheckpointLastEvent(String markerKey, String channelKey) {
-        return relativeCheckpointEntry(markerKey, channelKey);
-    }
 }

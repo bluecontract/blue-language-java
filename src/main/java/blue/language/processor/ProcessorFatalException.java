@@ -10,7 +10,7 @@ public class ProcessorFatalException extends RuntimeException {
     }
 
     public ProcessorFatalException(String message, DocumentProcessingResult partialResult) {
-        this(message, partialResult, ProcessorErrorCategory.InternalProcessorError);
+        this(message, partialResult, ProcessorErrorCategory.RuntimeExecutionFailure);
     }
 
     public ProcessorFatalException(String message,
@@ -20,7 +20,7 @@ public class ProcessorFatalException extends RuntimeException {
         this.partialResult = partialResult;
         this.errorCategory = errorCategory != null
                 ? errorCategory
-                : ProcessorErrorCategory.InternalProcessorError;
+                : ProcessorErrorCategory.RuntimeExecutionFailure;
     }
 
     public DocumentProcessingResult partialResult() {

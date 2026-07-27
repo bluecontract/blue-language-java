@@ -1,11 +1,14 @@
 package blue.language.processor;
 
+import blue.language.BlueLanguageErrorCategory;
+import blue.language.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -68,60 +71,57 @@ final class ChannelRunner {
         long channelMatchStart = System.nanoTime();
         boolean matches;
         FrozenNode frozenPayload;
+        FrozenNode frozenCheckpointSubject;
         String recomputedCheckpointSubject;
+        String handlerChannelKey;
+        String logicalDeliveryKey;
         ChannelProcessor<ChannelContract> channelProcessor;
         try {
             ExternalDeliverySnapshot evidence =
                     execution.deliveryEvidence(
                             scopePath, channel.key());
-            if (evidence != null) {
-                EffectiveContractSnapshot snapshot =
-                        bundle.effectiveContractSnapshot(
-                                channel.key());
-                if (snapshot == null) {
-                    throw new IllegalStateException(
-                            "External Channel effective snapshot is absent at "
-                                    + scopePath + "/" + channel.key());
-                }
-                ExternalChannelFunctionEvaluation evaluation =
-                        ExternalChannelFunctionEvaluation.evaluate(
-                                owner.registry(),
-                                owner.contractConverter(),
-                                bundle,
-                                snapshot,
-                                event);
-                matches = evaluation.accepts();
-                frozenPayload = evaluation.payload();
-                recomputedCheckpointSubject =
-                        evaluation.checkpointSubjectBlueId();
-                channelProcessor = registeredProcessor(contract);
-            } else {
-                /*
-                 * Compatibility for the package-level runner API used without
-                 * PROCESS evidence. Verified PROCESS delivery always takes the
-                 * immutable-function branch above.
-                 */
-                ProcessorEngine.ChannelMatch legacy =
-                        ProcessorEngine.evaluateChannel(
-                                owner,
-                                channel,
-                                bundle,
-                                scopePath,
-                                event);
-                matches = legacy.matches;
-                Node payload = legacy.eventNode() != null
-                        ? legacy.eventNode()
-                        : event;
-                frozenPayload = matches && payload != null
-                        ? FrozenNode.fromResolvedNode(payload)
-                        : null;
-                recomputedCheckpointSubject = null;
-                channelProcessor = legacy.processor;
+            if (evidence == null) {
+                throw new IllegalStateException(
+                        "External Channel classification requires verified "
+                                + "delivery evidence at " + scopePath + "/"
+                                + channel.key());
             }
+            EffectiveContractSnapshot snapshot =
+                    bundle.effectiveContractSnapshot(
+                            channel.key());
+            if (snapshot == null) {
+                throw new IllegalStateException(
+                        "External Channel effective snapshot is absent at "
+                                + scopePath + "/" + channel.key());
+            }
+            ExternalChannelFunctionEvaluation evaluation =
+                    ExternalChannelFunctionEvaluation.evaluate(
+                            owner.registry(),
+                            owner.contractConverter(),
+                            runtime.externalChannelMatcherSessions(),
+                            bundle,
+                            snapshot,
+                            event);
+            matches = evaluation.accepts();
+            frozenPayload = evaluation.payload();
+            frozenCheckpointSubject =
+                    evaluation.checkpointSubject();
+            recomputedCheckpointSubject =
+                    evaluation.checkpointSubjectBlueId();
+            handlerChannelKey =
+                    evaluation.handlerChannelKey();
+            logicalDeliveryKey =
+                    evaluation.logicalDeliveryKey();
+            channelProcessor = registeredProcessor(contract);
         } catch (RuntimeException ex) {
+            if (ex instanceof ExecutionEvidenceUnavailableException
+                    || BlueLanguageErrorClassifier.classify(ex)
+                    == BlueLanguageErrorCategory.ProviderUnavailable) {
+                throw ex;
+            }
             execution.abortRuntimeFailure(scopePath,
                     bundle,
-                    execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
+                    execution.fatalCategory(ex, ProcessorErrorCategory.RuntimeExecutionFailure),
                     execution.fatalReason(ex, "Channel execution failed"));
             return ExternalClassification.skipped(
                     scopePath, channel.key());
@@ -133,17 +133,21 @@ final class ChannelRunner {
                     scopePath, channel.key());
         }
         if (frozenPayload == null
+                || frozenCheckpointSubject == null
+                || handlerChannelKey == null
+                || logicalDeliveryKey == null
                 || channelProcessor == null) {
             execution.abortRuntimeFailure(
                     scopePath,
                     bundle,
-                    ProcessorErrorCategory.InternalProcessorError,
+                    ProcessorErrorCategory.RuntimeExecutionFailure,
                     "External Channel immutable evaluation is incomplete");
             return ExternalClassification.skipped(
                     scopePath, channel.key());
         }
         execution.recordAcceptedDelivery(scopePath, channel.key());
-        Node checkpointEvent = event;
+        Node checkpointSubject =
+                frozenCheckpointSubject.toNode();
         long checkpointStart = System.nanoTime();
         CheckpointManager.CheckpointRecord checkpoint;
         String eventSignature;
@@ -164,7 +168,7 @@ final class ChannelRunner {
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
             execution.abortRuntimeFailure(scopePath,
                     bundle,
-                    execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointError),
+                    execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointPolicyError),
                     execution.fatalReason(ex, "Checkpoint error"));
             return ExternalClassification.skipped(
                     scopePath, channel.key());
@@ -173,13 +177,29 @@ final class ChannelRunner {
         long isNewerStart = System.nanoTime();
         try {
             checkpointManager.recordComparison(scopePath, checkpoint, eventSignature);
-            ChannelCheckpointContext checkpointContext = new ChannelCheckpointContext(scopePath,
-                    channel.key(),
-                    checkpointEvent,
-                    eventSignature,
-                    checkpoint != null ? checkpoint.lastEventNode : null,
-                    checkpoint != null ? checkpoint.lastEventSignature : null,
-                    bundle.markers());
+            Node previousSubject =
+                    checkpoint != null
+                            ? checkpoint.lastEventNode
+                            : null;
+            String previousSubjectBlueId =
+                    checkpoint != null
+                            ? checkpoint.lastEventSignature
+                            : null;
+            if (previousSubjectBlueId == null
+                    && previousSubject != null) {
+                previousSubjectBlueId =
+                        previousSubject.getBlueId();
+            }
+            ChannelCheckpointContext checkpointContext =
+                    checkpointContext(
+                            scopePath,
+                            channel.key(),
+                            event,
+                            eventSignature,
+                            checkpointSubject,
+                            previousSubject,
+                            previousSubjectBlueId,
+                            bundle);
             newer = channelProcessor.isNewerEvent(
                     contract, checkpointContext);
         } finally {
@@ -209,10 +229,45 @@ final class ChannelRunner {
         return ExternalClassification.acceptedNew(
                 scopePath,
                 channel.key(),
+                handlerChannelKey,
+                logicalDeliveryKey,
                 frozenPayload,
                 checkpoint,
                 eventSignature,
-                checkpointEvent);
+                checkpointSubject);
+    }
+
+    private ChannelCheckpointContext checkpointContext(
+            String scopePath,
+            String channelKey,
+            Node event,
+            String eventSignature,
+            Node currentSubject,
+            Node previousSubject,
+            String previousSubjectBlueId,
+            ContractBundle bundle) {
+        if (previousSubject == null
+                || !previousSubject.isReferenceOnly()) {
+            return new ChannelCheckpointContext(
+                    scopePath,
+                    channelKey,
+                    event,
+                    eventSignature,
+                    currentSubject,
+                    previousSubject,
+                    previousSubjectBlueId,
+                    bundle.markers());
+        }
+        return ChannelCheckpointContext.withLazyLastEvent(
+                scopePath,
+                channelKey,
+                event,
+                eventSignature,
+                currentSubject,
+                previousSubjectBlueId,
+                bundle.markers(),
+                runtime.checkpointSubjectMaterializer(
+                        previousSubject));
     }
 
     @SuppressWarnings("unchecked")
@@ -233,18 +288,61 @@ final class ChannelRunner {
                 || !classification.acceptedNew()) {
             return;
         }
-        String scopePath = classification.scopePath;
+        ContractBundle checkpointBundle =
+                runClassifiedExternalGroup(
+                        Collections.singletonList(
+                                classification));
+        if (checkpointBundle != null) {
+            queueClassifiedCheckpoints(
+                    Collections.singletonList(
+                            classification),
+                    checkpointBundle);
+        }
+    }
+
+    /**
+     * Executes one logical accepted-new delivery group. All members retain
+     * their raw-source checkpoint ownership, but handlers run once through the
+     * group's immutable handler target.
+     *
+     * @return the exact execution bundle when handler work completed and the
+     *         caller may stage checkpoints after internal FIFO drain
+     */
+    ContractBundle runClassifiedExternalGroup(
+            List<ExternalClassification> classifications) {
+        if (classifications == null
+                || classifications.isEmpty()) {
+            return null;
+        }
+        ExternalClassification first =
+                classifications.get(0);
+        requireCoherentGroup(classifications, first);
+        String scopePath = first.scopePath;
         if (execution.shouldStopScopeWork(scopePath)) {
-            return;
+            return null;
         }
         ContractBundle executionBundle =
                 execution.initializeAcceptedScope(scopePath);
         if (executionBundle == null) {
-            return;
+            /*
+             * Initialization may successfully replace or terminate an
+             * ancestor/target occurrence before the external Channel's local
+             * handlers begin. The admitted accepted-new transition still
+             * owns those lifecycle effects; only deterministic failures roll
+             * them back.
+             */
+            if (!execution.hasFailure()) {
+                execution.recordCompletedDelivery();
+            }
+            return null;
         }
+        requireSameScopeHandlerTarget(
+                scopePath,
+                executionBundle,
+                first.handlerChannelKey);
         if (!runHandlers(scopePath, executionBundle,
-                classification.channelKey,
-                classification.payload.toNode())) {
+                first.handlerChannelKey,
+                first.payload.toNode())) {
             /*
              * A handler may successfully replace/cut off its own embedded
              * occurrence.  That ends later local work and suppresses the
@@ -254,26 +352,97 @@ final class ChannelRunner {
             if (!execution.hasFailure()) {
                 execution.recordCompletedDelivery();
             }
+            return null;
+        }
+        execution.recordCompletedDelivery();
+        return executionBundle;
+    }
+
+    /**
+     * Stages every raw-source checkpoint only after the group's handler and
+     * synchronous internal work have completed successfully.
+     */
+    void queueClassifiedCheckpoints(
+            List<ExternalClassification> classifications,
+            ContractBundle executionBundle) {
+        if (classifications == null
+                || classifications.isEmpty()
+                || executionBundle == null) {
             return;
         }
-        queueCheckpoint(scopePath, executionBundle,
-                classification.checkpoint,
-                classification.eventSignature,
-                classification.checkpointEvent);
-        execution.recordCompletedDelivery();
+        ExternalClassification first =
+                classifications.get(0);
+        requireCoherentGroup(classifications, first);
+        for (ExternalClassification classification
+                : classifications) {
+            queueCheckpoint(
+                    first.scopePath,
+                    executionBundle,
+                    classification.checkpoint,
+                    classification.eventSignature,
+                    classification.checkpointSubject);
+        }
+    }
+
+    private void requireCoherentGroup(
+            List<ExternalClassification> classifications,
+            ExternalClassification first) {
+        if (first == null || !first.acceptedNew()) {
+            throw new IllegalArgumentException(
+                    "Logical delivery group requires accepted-new "
+                            + "classifications");
+        }
+        for (ExternalClassification classification
+                : classifications) {
+            if (classification == null
+                    || !classification.acceptedNew()
+                    || !first.scopePath.equals(
+                    classification.scopePath)
+                    || !first.logicalDeliveryKey.equals(
+                    classification.logicalDeliveryKey)
+                    || !first.handlerChannelKey.equals(
+                    classification.handlerChannelKey)
+                    || !first.payload.blueId().equals(
+                    classification.payload.blueId())) {
+                throw new IllegalArgumentException(
+                        "Logical delivery group is inconsistent at "
+                                + first.scopePath + "/"
+                                + first.logicalDeliveryKey);
+            }
+        }
+    }
+
+    private void requireSameScopeHandlerTarget(
+            String scopePath,
+            ContractBundle bundle,
+            String handlerChannelKey) {
+        if (bundle == null
+                || bundle.channelBinding(
+                handlerChannelKey) == null) {
+            execution.abortRuntimeFailure(
+                    scopePath,
+                    bundle,
+                    ProcessorErrorCategory.RuntimeExecutionFailure,
+                    "External Channel handler target is not an existing "
+                            + "same-scope Channel at "
+                            + scopePath + "/"
+                            + handlerChannelKey);
+        }
     }
 
     private void queueCheckpoint(String scopePath,
                                  ContractBundle bundle,
                                  CheckpointManager.CheckpointRecord checkpoint,
                                  String eventSignature,
-                                 Node checkpointEvent) {
+                                 Node checkpointSubject) {
         String normalized = execution.normalizeScope(scopePath);
         pendingCheckpoints
                 .computeIfAbsent(normalized, ignored -> new ArrayList<>())
                 .add(new PendingCheckpoint(
                         bundle, checkpoint, eventSignature,
-                        checkpointEvent != null ? checkpointEvent.clone() : null));
+                        checkpointSubject != null
+                                ? checkpointSubject.clone()
+                                : null));
     }
 
     /**
@@ -301,7 +470,7 @@ final class ChannelRunner {
                             checkpoint.record.channelKey,
                             null,
                             details,
-                            checkpoint.event);
+                            checkpoint.subject);
                 }
             }
             return;
@@ -314,12 +483,12 @@ final class ChannelRunner {
                         checkpoint.bundle,
                         checkpoint.record,
                         checkpoint.eventSignature,
-                        checkpoint.event);
+                        checkpoint.subject);
             } catch (RuntimeException ex) {
                 execution.abortRuntimeFailure(normalized,
                         checkpoint.bundle,
                         execution.fatalCategory(
-                                ex, ProcessorErrorCategory.CheckpointError),
+                                ex, ProcessorErrorCategory.CheckpointPolicyError),
                         execution.fatalReason(ex, "Checkpoint error"));
                 return;
             } finally {
@@ -335,17 +504,18 @@ final class ChannelRunner {
         private final ContractBundle bundle;
         private final CheckpointManager.CheckpointRecord record;
         private final String eventSignature;
-        private final Node event;
+        private final Node subject;
 
         private PendingCheckpoint(
                 ContractBundle bundle,
                 CheckpointManager.CheckpointRecord record,
                 String eventSignature,
-                Node event) {
+                Node subject) {
             this.bundle = bundle;
             this.record = record;
             this.eventSignature = eventSignature;
-            this.event = event;
+            this.subject =
+                    subject != null ? subject.clone() : null;
         }
     }
 
@@ -359,30 +529,38 @@ final class ChannelRunner {
 
         private final State state;
         private final String scopePath;
-        private final String channelKey;
+        private final String sourceChannelKey;
+        private final String handlerChannelKey;
+        private final String logicalDeliveryKey;
         private final FrozenNode payload;
         private final CheckpointManager.CheckpointRecord checkpoint;
         private final String eventSignature;
-        private final Node checkpointEvent;
+        private final Node checkpointSubject;
 
         private ExternalClassification(
                 State state,
                 String scopePath,
-                String channelKey,
+                String sourceChannelKey,
+                String handlerChannelKey,
+                String logicalDeliveryKey,
                 FrozenNode payload,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
-                Node checkpointEvent) {
+                Node checkpointSubject) {
             this.state = Objects.requireNonNull(state, "state");
             this.scopePath = Objects.requireNonNull(
                     scopePath, "scopePath");
-            this.channelKey = Objects.requireNonNull(
-                    channelKey, "channelKey");
+            this.sourceChannelKey = Objects.requireNonNull(
+                    sourceChannelKey, "sourceChannelKey");
+            this.handlerChannelKey = handlerChannelKey;
+            this.logicalDeliveryKey = logicalDeliveryKey;
             this.payload = payload;
             this.checkpoint = checkpoint;
             this.eventSignature = eventSignature;
-            this.checkpointEvent = checkpointEvent != null
-                    ? checkpointEvent.clone() : null;
+            this.checkpointSubject =
+                    checkpointSubject != null
+                            ? checkpointSubject.clone()
+                            : null;
         }
 
         static ExternalClassification skipped(
@@ -414,24 +592,34 @@ final class ChannelRunner {
                     null,
                     null,
                     null,
+                    null,
+                    null,
                     null);
         }
 
         static ExternalClassification acceptedNew(
                 String scopePath,
-                String channelKey,
+                String sourceChannelKey,
+                String handlerChannelKey,
+                String logicalDeliveryKey,
                 FrozenNode payload,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
-                Node checkpointEvent) {
+                Node checkpointSubject) {
             return new ExternalClassification(
                     State.ACCEPTED_NEW,
                     scopePath,
-                    channelKey,
+                    sourceChannelKey,
+                    Objects.requireNonNull(
+                            handlerChannelKey,
+                            "handlerChannelKey"),
+                    Objects.requireNonNull(
+                            logicalDeliveryKey,
+                            "logicalDeliveryKey"),
                     payload,
                     checkpoint,
                     eventSignature,
-                    checkpointEvent);
+                    checkpointSubject);
         }
 
         boolean acceptedNew() {
@@ -443,7 +631,23 @@ final class ChannelRunner {
         }
 
         String channelKey() {
-            return channelKey;
+            return sourceChannelKey;
+        }
+
+        String sourceChannelKey() {
+            return sourceChannelKey;
+        }
+
+        String handlerChannelKey() {
+            return handlerChannelKey;
+        }
+
+        String logicalDeliveryKey() {
+            return logicalDeliveryKey;
+        }
+
+        String payloadBlueId() {
+            return payload != null ? payload.blueId() : null;
         }
     }
 
@@ -517,12 +721,9 @@ final class ChannelRunner {
                                         runtime
                                                 ::materializeSelectedExecutableReference);
             } catch (RuntimeException ex) {
-                ProcessorErrorCategory providerCategory =
-                        ScopeIdentityErrorMapper.from(ex);
-                if (providerCategory
-                        == ProcessorErrorCategory.ProviderUnavailable
-                        || providerCategory
-                        == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+                if (ex instanceof ExecutionEvidenceUnavailableException
+                        || ScopeIdentityErrorMapper
+                        .isProviderIdentityFailure(ex)) {
                     throw ex;
                 }
                 execution.abortRuntimeFailure(
@@ -531,7 +732,7 @@ final class ChannelRunner {
                         execution.fatalCategory(
                                 ex,
                                 ProcessorErrorCategory
-                                        .HandlerExecutionError),
+                                        .RuntimeExecutionFailure),
                         execution.fatalReason(
                                 ex,
                                 "Handler executable body materialization failed"));
@@ -567,7 +768,7 @@ final class ChannelRunner {
             } catch (RuntimeException ex) {
                 execution.abortRuntimeFailure(scopePath,
                         bundle,
-                        execution.fatalCategory(ex, ProcessorErrorCategory.HandlerExecutionError),
+                        execution.fatalCategory(ex, ProcessorErrorCategory.RuntimeExecutionFailure),
                         execution.fatalReason(ex, "Handler execution failed"));
                 return false;
             } finally {

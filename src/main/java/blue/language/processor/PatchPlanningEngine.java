@@ -541,7 +541,7 @@ final class PatchPlanningEngine {
         } catch (ProcessorFailureException ex) {
             throw ex;
         } catch (RuntimeException ex) {
-            throw new ProcessorFailureException(ProcessorErrorCategory.GeneralizationNoValidType,
+            throw new ProcessorFailureException(ProcessorErrorCategory.TypeGeneralizationFailure,
                     "GeneralizationNoValidType: " + ex.getMessage(),
                     ex);
         }

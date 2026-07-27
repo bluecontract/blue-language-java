@@ -118,10 +118,13 @@ public interface ProcessingSnapshotManager {
     }
 
     /**
-     * Returns exact canonical provider content for a selected executable-body
-     * reference. Managers with direct verified-provider access should
-     * override; the runtime independently revalidates the returned direct
-     * BlueId and fails closed if a resolved representation was substituted.
+     * Returns exact canonical provider content for one demanded pure
+     * reference, including top-level PROCESS inputs, event fragments,
+     * checkpoint subjects, and selected executable bodies.
+     *
+     * <p>Managers with direct verified-provider access should override; the
+     * runtime independently revalidates the returned direct BlueId and fails
+     * closed if a recursively resolved representation was substituted.</p>
      */
     default FrozenNode materializeVerifiedExactReference(
             FrozenNode reference) {

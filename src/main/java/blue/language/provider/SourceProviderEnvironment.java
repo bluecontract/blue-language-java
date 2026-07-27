@@ -17,22 +17,6 @@ public final class SourceProviderEnvironment {
     private final String canonicalRegistryIdentity;
     private final String sourceEvidenceIdentity;
 
-    /**
-     * @deprecated A language version and an ambient environment label do not
-     * bind enough evidence for Source Document provider verification. Values
-     * created by this constructor are deliberately rejected by the verifier.
-     */
-    @Deprecated
-    public SourceProviderEnvironment(String languageVersion,
-                                     String preprocessingEnvironmentId) {
-        this.languageVersion = requireText(languageVersion, "languageVersion");
-        this.preprocessingEnvironmentId = requireText(
-                preprocessingEnvironmentId, "preprocessingEnvironmentId");
-        this.languageReleaseIdentity = null;
-        this.canonicalRegistryIdentity = null;
-        this.sourceEvidenceIdentity = null;
-    }
-
     public SourceProviderEnvironment(String languageVersion,
                                      String languageReleaseIdentity,
                                      String preprocessingEnvironmentId,

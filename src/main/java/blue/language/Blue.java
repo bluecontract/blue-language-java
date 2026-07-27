@@ -19,6 +19,8 @@ import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ExecutionEvidenceUnavailableException;
+import blue.language.processor.InvalidExecutionEvidenceException;
 import blue.language.processor.ProcessingMetricsSink;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.Contract;
@@ -262,37 +264,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
-    /**
-     * @deprecated Use {@link #canonicalize(Node)} for Content BlueId identity
-     * or {@link MergeReverser#reverseToMinimizedOverlay(Node)} for author-facing
-     * minimized output.
-     */
-    @Deprecated
-    public Node reverse(Node node) {
-        return new MergeReverser().reverse(node);
-    }
-
-    /**
-     * @deprecated Use {@link #canonicalize(Object)} for Content BlueId identity
-     * or {@link MergeReverser#reverseToMinimizedOverlay(Node)} for author-facing
-     * minimized output.
-     */
-    @Deprecated
-    public Node reverse(Object object) {
-        beginDirectCacheOperation();
-        try {
-            return reverse(objectToNode(object));
-        } finally {
-            endDirectCacheOperation();
-        }
-    }
-
     public Node canonicalize(Node node) {
         beginDirectCacheOperation();
         try {
             Node preprocessed = preprocess(node.clone());
             Node resolved = resolve(preprocessed.clone());
-            return new MergeReverser().reverseToCanonicalOverlay(resolved, preprocessed);
+            return new CanonicalIdentityInputBuilder().build(resolved, preprocessed);
         } finally {
             endDirectCacheOperation();
         }
@@ -316,7 +293,7 @@ public class Blue implements NodeResolver, AutoCloseable {
         beginDirectCacheOperation();
         try {
             Node resolved = resolve(preprocess(node.clone()));
-            return new MergeReverser().reverseToMinimizedOverlay(resolved);
+            return new MinimizedOverlayBuilder().build(resolved);
         } finally {
             endDirectCacheOperation();
         }
@@ -1029,12 +1006,23 @@ public class Blue implements NodeResolver, AutoCloseable {
         Map<String, BlueContractsFixtureCategory> fixtureCategories =
                 BlueContractsConformanceReport.loadFixtureCategories();
         return new BlueContractsConformanceReport(
-                languageVersion(),
+                "1.0",
+                BlueContractsConformanceReport.RELEASE_NAME,
+                BlueContractsConformanceReport.RELEASE_PACKAGE_IDENTITY,
+                BlueContractsConformanceReport
+                        .LANGUAGE_REGISTRY_PACKAGE_IDENTITY,
+                BlueContractsConformanceReport
+                        .LANGUAGE_FIXTURE_PACKAGE_IDENTITY,
+                BlueContractsConformanceReport
+                        .CONTRACTS_REGISTRY_PACKAGE_IDENTITY,
+                BlueContractsConformanceReport
+                        .CONTRACTS_GAS_PACKAGE_IDENTITY,
                 fixturePackageIdentity,
                 fixtureIds,
                 Collections.emptyList(),
                 Collections.emptyList(),
                 fixtureCategories,
+                Collections.emptyList(),
                 Collections.emptyList());
     }
 
@@ -1344,12 +1332,6 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
-    public Blue registerContractProcessor(String blueId,
-                                          Node canonicalTypeNode,
-                                          ContractProcessor<? extends Contract> processor) {
-        return registerExternalContractType(blueId, canonicalTypeNode, processor);
-    }
-
     public Blue registerExternalContractType(String blueId,
                                              Node canonicalTypeNode,
                                              ContractProcessor<? extends Contract> processor) {
@@ -1388,7 +1370,7 @@ public class Blue implements NodeResolver, AutoCloseable {
         activeProcessingCacheStamp.set(operation.stamp);
         long start = System.nanoTime();
         try {
-            return attachProcessingSnapshot(
+            return rememberPublishedProcessingSnapshot(
                     operation, processor.processDocument(document, event));
         } finally {
             try {
@@ -1414,8 +1396,9 @@ public class Blue implements NodeResolver, AutoCloseable {
         activeProcessingCacheStamp.set(operation.stamp);
         long start = System.nanoTime();
         try {
-            return rememberProcessingResultSnapshot(
-                    processor.processDocument(snapshot, event), operation.stamp);
+            return rememberPublishedProcessingSnapshot(
+                    operation,
+                    processor.processDocument(snapshot, event));
         } finally {
             try {
                 processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
@@ -1474,7 +1457,7 @@ public class Blue implements NodeResolver, AutoCloseable {
         CacheGenerationStamp previousStamp = activeProcessingCacheStamp.get();
         activeProcessingCacheStamp.set(operation.stamp);
         try {
-            return attachProcessingSnapshot(
+            return rememberPublishedProcessingSnapshot(
                     operation, operation.processor.initializeDocument(document));
         } finally {
             finishProcessingOperation(previousStamp);
@@ -1493,8 +1476,9 @@ public class Blue implements NodeResolver, AutoCloseable {
         CacheGenerationStamp previousStamp = activeProcessingCacheStamp.get();
         activeProcessingCacheStamp.set(operation.stamp);
         try {
-            return rememberProcessingResultSnapshot(
-                    operation.processor.initializeDocument(snapshot), operation.stamp);
+            return rememberPublishedProcessingSnapshot(
+                    operation,
+                    operation.processor.initializeDocument(snapshot));
         } finally {
             finishProcessingOperation(previousStamp);
         }
@@ -1687,12 +1671,7 @@ public class Blue implements NodeResolver, AutoCloseable {
                     activeStamp != null
                             ? activeStamp
                             : new CacheGenerationStamp(
-                            processorOwnerToken, runtimeCacheGeneration),
-                    nodeProvider,
-                    processorSnapshotNodeProvider(),
-                    mergingProcessor,
-                    Collections.unmodifiableMap(new HashMap<>(preprocessingAliases)),
-                    globalLimits);
+                            processorOwnerToken, runtimeCacheGeneration));
         }
     }
 
@@ -1853,30 +1832,49 @@ public class Blue implements NodeResolver, AutoCloseable {
         return engine;
     }
 
-    private DocumentProcessingResult attachProcessingSnapshot(ProcessingOperation operation,
-                                                              DocumentProcessingResult result) {
-        DocumentProcessor processor = operation.processor;
-        if (result == null || result.capabilityFailure() || result.snapshot() != null) {
-            return rememberProcessingResultSnapshot(result, operation.stamp);
+    private DocumentProcessingResult rememberPublishedProcessingSnapshot(
+            ProcessingOperation operation,
+            DocumentProcessingResult result) {
+        if (result == null
+                || result.status() == blue.language.processor.ProcessorStatus.CAPABILITY_FAILURE
+                || result.status() == blue.language.processor.ProcessorStatus.INVALID_PROCESSING_DOCUMENT) {
+            return result;
         }
-        long start = System.nanoTime();
-        try {
-            DocumentProcessingResult attached = result.withSnapshot(
-                    resolveProcessingSnapshot(result.document(), operation));
-            return rememberProcessingResultSnapshot(attached, operation.stamp);
-        } finally {
-            long nanos = System.nanoTime() - start;
-            processor.processingMetricsSink().addResultSnapshotAttachNanos(nanos);
-            processor.processingMetricsSink().addBlueIdCalculationNanos(nanos);
-        }
-    }
-
-    private DocumentProcessingResult rememberProcessingResultSnapshot(DocumentProcessingResult result,
-                                                                      CacheGenerationStamp stamp) {
-        if (result != null && result.snapshot() != null && result.document() != null) {
-            rememberProcessingSnapshot(result.document(), result.snapshot(), stamp);
+        ResolvedSnapshot snapshot =
+                publishedProcessingSnapshot(
+                        result.document(), operation.stamp);
+        if (snapshot != null) {
+            rememberProcessingSnapshot(
+                    result.document(), snapshot, operation.stamp);
         }
         return result;
+    }
+
+    /**
+     * Returns an exact snapshot already published by the processing runtime.
+     * A result-cache update must never resolve an additional reference: doing
+     * so would turn an undemanded executable body into semantic work after the
+     * invocation had already completed.
+     */
+    private ResolvedSnapshot publishedProcessingSnapshot(
+            Node document,
+            CacheGenerationStamp stamp) {
+        FrozenNode.ResolvedStructuralKey key;
+        try {
+            key = FrozenNode.fromNode(document).resolvedStructuralKey();
+        } catch (RuntimeException exception) {
+            return null;
+        }
+        synchronized (lifecycleLock) {
+            if (!isCurrentCacheStampLocked(stamp)) {
+                return null;
+            }
+            ResolvedSnapshot pinned =
+                    pinnedSnapshotsByCanonicalRepresentation.get(key);
+            return pinned != null
+                    ? pinned
+                    : derivedSnapshotsByCanonicalRepresentation.peek(key);
+        }
     }
 
     private ResolvedSnapshot cachedProcessingSnapshotFor(Node document,
@@ -2193,16 +2191,29 @@ public class Blue implements NodeResolver, AutoCloseable {
             if (cached != null) {
                 return cached;
             }
-            List<Node> nodes =
+            NodeProviderResult providerResult =
                     snapshotNodeProvider
-                            .fetchByBlueId(blueId);
-            if (nodes == null
-                    || nodes.isEmpty()
-                    || nodes.contains(null)) {
-                throw new IllegalArgumentException(
-                        "Expected exact provider content for "
-                                + blueId);
+                            .fetchResultByBlueId(blueId);
+            if (providerResult.outcome()
+                    == NodeProviderOutcome.NOT_FOUND) {
+                return null;
             }
+            if (providerResult.outcome()
+                    == NodeProviderOutcome.UNAVAILABLE) {
+                throw new ExecutionEvidenceUnavailableException(
+                        providerResult.diagnostic().orElse(
+                                "Exact provider content is unavailable for "
+                                        + blueId),
+                        Collections.singleton(blueId));
+            }
+            if (providerResult.outcome()
+                    == NodeProviderOutcome.INVALID_EVIDENCE) {
+                throw new InvalidExecutionEvidenceException(
+                        providerResult.diagnostic().orElse(
+                                "Provider returned invalid exact evidence for "
+                                        + blueId));
+            }
+            List<Node> nodes = providerResult.nodes();
             Node canonical =
                     nodes.size() == 1
                             ? providerContentWithoutRootIdentity(
@@ -2359,23 +2370,6 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
-    private ResolvedSnapshot resolveProcessingSnapshot(Node node,
-                                                       ProcessingOperation operation) {
-        ResolvedReferenceCache oneShot = resolvedReferenceCache.transientChild();
-        try {
-            ResolvedSnapshot resolved = resolveProcessingSnapshot(node,
-                    oneShot,
-                    operation.preprocessingNodeProvider,
-                    operation.aliases,
-                    operation.snapshotNodeProvider,
-                    operation.snapshotMergingProcessor,
-                    operation.limits);
-            return publishProcessingSnapshot(resolved, oneShot, operation.stamp);
-        } finally {
-            oneShot.close();
-        }
-    }
-
     private ResolvedSnapshot resolveProcessingSnapshot(
             Node node,
             ResolvedReferenceCache resolutionCache,
@@ -2389,8 +2383,9 @@ public class Blue implements NodeResolver, AutoCloseable {
                 snapshotNodeProvider,
                 resolutionCache)
                 .resolve(preprocessed.clone(), limits);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(new MergeReverser()
-                .reverseToCanonicalOverlay(resolved.clone(), preprocessed));
+        FrozenNode canonicalRoot = FrozenNode.fromNode(
+                new CanonicalIdentityInputBuilder().build(
+                        resolved.clone(), preprocessed));
         FrozenNode resolvedRoot = resolutionCache.freezeResolved(resolved);
         return new ResolvedSnapshot(canonicalRoot, resolvedRoot, canonicalRoot.blueId());
     }
@@ -2430,7 +2425,7 @@ public class Blue implements NodeResolver, AutoCloseable {
         restorePreservedPaths(
                 resolved, preprocessed, canonicalPaths);
         FrozenNode canonicalRoot = FrozenNode.fromNode(
-                new MergeReverser().reverseToCanonicalOverlay(
+                new CanonicalIdentityInputBuilder().build(
                         resolved.clone(), preprocessed));
         FrozenNode resolvedRoot =
                 resolutionCache.freezeResolved(resolved);
@@ -2545,7 +2540,7 @@ public class Blue implements NodeResolver, AutoCloseable {
                                                   ResolvedReferenceCache resolutionCache) {
         FrozenNode canonicalRoot = authoritativeCanonicalRoot;
         if (canonicalRoot == null) {
-            Node canonical = new MergeReverser().reverseToCanonicalOverlay(
+            Node canonical = new CanonicalIdentityInputBuilder().build(
                     resolved.clone(), preprocessedSource);
             canonicalRoot = FrozenNode.fromNode(canonical);
         }
@@ -3110,26 +3105,11 @@ public class Blue implements NodeResolver, AutoCloseable {
     private static final class ProcessingOperation {
         private final DocumentProcessor processor;
         private final CacheGenerationStamp stamp;
-        private final NodeProvider preprocessingNodeProvider;
-        private final NodeProvider snapshotNodeProvider;
-        private final MergingProcessor snapshotMergingProcessor;
-        private final Map<String, String> aliases;
-        private final Limits limits;
 
         private ProcessingOperation(DocumentProcessor processor,
-                                    CacheGenerationStamp stamp,
-                                    NodeProvider preprocessingNodeProvider,
-                                    NodeProvider snapshotNodeProvider,
-                                    MergingProcessor snapshotMergingProcessor,
-                                    Map<String, String> aliases,
-                                    Limits limits) {
+                                    CacheGenerationStamp stamp) {
             this.processor = processor;
             this.stamp = stamp;
-            this.preprocessingNodeProvider = preprocessingNodeProvider;
-            this.snapshotNodeProvider = snapshotNodeProvider;
-            this.snapshotMergingProcessor = snapshotMergingProcessor;
-            this.aliases = aliases;
-            this.limits = limits;
         }
     }
 

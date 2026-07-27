@@ -29,7 +29,7 @@ final class TypeGeneralizationPolicyResolver {
                 continue;
             }
             if (!PointerUtils.descendantOrEqual(write.nodePath, normalizedOrigin)) {
-                throw new ProcessorFailureException(ProcessorErrorCategory.BoundaryViolation,
+                throw new ProcessorFailureException(ProcessorErrorCategory.PatchBoundaryViolation,
                         "BoundaryViolation: embedded child patch cannot generalize parent scope");
             }
         }
@@ -62,7 +62,7 @@ final class TypeGeneralizationPolicyResolver {
             Rule rule = policy.ruleFor(write.nodePath);
             String mode = rule != null && rule.mode != null ? rule.mode : policy.defaultMode;
             if ("reject".equals(mode)) {
-                throw new ProcessorFailureException(ProcessorErrorCategory.GeneralizationRejected,
+                throw new ProcessorFailureException(ProcessorErrorCategory.TypeGeneralizationFailure,
                         "GeneralizationRejected: type generalization policy rejects " + write.nodePath);
             }
             String floor = rule != null ? rule.mustRemainSubtypeOf : null;
@@ -74,7 +74,7 @@ final class TypeGeneralizationPolicyResolver {
                     && (Objects.equals(generatedType, floor)
                     || conformanceEngine.isSubtypeOf(generatedType, floor));
             if (!withinFloor) {
-                throw new ProcessorFailureException(ProcessorErrorCategory.GeneralizationRejected,
+                throw new ProcessorFailureException(ProcessorErrorCategory.TypeGeneralizationFailure,
                         "GeneralizationRejected: type generalization would cross policy floor");
             }
         }

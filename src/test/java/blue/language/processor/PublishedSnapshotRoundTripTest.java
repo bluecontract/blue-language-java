@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
@@ -27,7 +29,7 @@ class PublishedSnapshotRoundTripTest {
 
         DocumentProcessingResult result = blue.initializeDocument(input);
 
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertPublishableRoundTrip(blue, result);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(1L, snapshot.counter("processorInputStrictCanonical"), snapshot.toString());
@@ -53,14 +55,14 @@ class PublishedSnapshotRoundTripTest {
                 "      - 2\n" +
                 "contracts: {}\n");
         DocumentProcessingResult initialized = blue.initializeDocument(document);
-        ResolvedSnapshot strictInitialized = blue.loadSnapshot(initialized.snapshot().canonicalRoot());
+        ResolvedSnapshot strictInitialized = snapshot(blue, initialized);
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
 
         DocumentProcessingResult result = blue.processDocument(strictInitialized,
                 new Node().name("Ignored Published Snapshot Event"));
 
-        assertEquals(ProcessorStatus.NO_MATCH, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.NO_MATCH, result.status(), diagnosticMessage(result));
         assertPublishableRoundTrip(blue, result);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(1L, snapshot.counter("processorInputStrictCanonical"), snapshot.toString());
@@ -94,7 +96,7 @@ class PublishedSnapshotRoundTripTest {
 
         DocumentProcessingResult result = blue.initializeDocument(input);
 
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertPublishableRoundTrip(blue, result);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("processorInputStrictCanonical"), snapshot.toString());
@@ -110,13 +112,15 @@ class PublishedSnapshotRoundTripTest {
     }
 
     private static void assertPublishableRoundTrip(Blue blue, DocumentProcessingResult result) {
-        assertNotNull(result.snapshot());
-        assertEquals(result.blueId(), result.snapshot().blueId());
-        assertEquals(result.snapshot().blueId(), result.snapshot().frozenCanonicalRoot().blueId());
-        assertTrue(result.snapshot().frozenCanonicalRoot().isStrictCanonical());
-        assertTrue(result.snapshot().frozenCanonicalRoot().isStrictBlueIdValidation());
-        Node parsed = blue.jsonToNode(blue.nodeToJson(result.snapshot().canonicalRoot()));
+        ResolvedSnapshot published = snapshot(blue, result);
+        assertNotNull(published);
+        String documentBlueId = blue.calculateBlueId(result.document());
+        assertEquals(documentBlueId, published.blueId());
+        assertEquals(published.blueId(), published.frozenCanonicalRoot().blueId());
+        assertTrue(published.frozenCanonicalRoot().isStrictCanonical());
+        assertTrue(published.frozenCanonicalRoot().isStrictBlueIdValidation());
+        Node parsed = blue.jsonToNode(blue.nodeToJson(result.document()));
         ResolvedSnapshot reloaded = blue.loadSnapshot(parsed);
-        assertEquals(result.blueId(), reloaded.blueId());
+        assertEquals(documentBlueId, reloaded.blueId());
     }
 }

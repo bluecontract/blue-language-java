@@ -1,5 +1,7 @@
 package blue.language.processor.external;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.ChannelCheckpointContext;
@@ -63,11 +65,11 @@ class ExternalContractIntegrationTest {
         Node document = blue.yamlToNode(counterDocument(HANDLER_BLUE_ID));
 
         DocumentProcessingResult initialized = processor.initializeDocument(document);
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
 
         DocumentProcessingResult processed = processor.processDocument(initialized.document(), amountEvent(7));
 
-        assertFalse(processed.capabilityFailure(), processed.failureReason());
+        assertFalse(isCapabilityFailure(processed), diagnosticMessage(processed));
         assertEquals(new BigInteger("7"), processed.document().get("/counter"));
         assertEquals(HANDLER_BLUE_ID, ExternalAddAmountProcessor.lastTypeBlueId);
         assertEquals("incoming", ExternalAddAmountProcessor.lastChannelKey);
@@ -87,7 +89,7 @@ class ExternalContractIntegrationTest {
         Node document = blue.yamlToNode(counterDocument(HANDLER_BLUE_ID));
         DocumentProcessingResult initialized = blue.initializeDocument(document);
 
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
         assertTrue(initialized.document().getContracts().getProperties()
                 .containsKey("initialized"));
     }
@@ -128,8 +130,8 @@ class ExternalContractIntegrationTest {
 
         DocumentProcessingResult result = processor.initializeDocument(document);
 
-        assertTrue(result.capabilityFailure());
-        assertTrue(result.failureReason().contains(UNKNOWN_BLUE_ID));
+        assertTrue(isCapabilityFailure(result));
+        assertTrue(diagnosticMessage(result).contains(UNKNOWN_BLUE_ID));
         assertFalse(result.document().getContracts().getProperties().containsKey("initialized"));
         assertEquals(new BigInteger("0"), result.document().get("/counter"));
     }
@@ -276,7 +278,7 @@ class ExternalContractIntegrationTest {
         DocumentProcessingResult initialized = processor.initializeDocument(document);
         DocumentProcessingResult processed = processor.processDocument(initialized.document(), amountEvent(4));
 
-        assertFalse(processed.capabilityFailure(), processed.failureReason());
+        assertFalse(isCapabilityFailure(processed), diagnosticMessage(processed));
         assertEquals("incoming", DerivingAddAmountProcessor.derivedChannel);
         assertEquals(new BigInteger("4"), processed.document().get("/counter"));
         assertEquals(1, DerivingAddAmountProcessor.executions);
@@ -318,7 +320,7 @@ class ExternalContractIntegrationTest {
         DocumentProcessingResult processed = processor.processDocument(
                 initialized.document(), compositeEvent);
 
-        assertFalse(processed.capabilityFailure(), processed.failureReason());
+        assertFalse(isCapabilityFailure(processed), diagnosticMessage(processed));
         assertNull(DelegatingChannelProcessor.lastBindingKey);
         assertFalse(DelegatingChannelProcessor.sawIncomingChannel);
         assertFalse(DelegatingChannelProcessor.sawCompositeChannel);
@@ -350,7 +352,7 @@ class ExternalContractIntegrationTest {
                 "    counterPath: /counter\n");
 
         DocumentProcessingResult initialized = processor.initializeDocument(document);
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
 
         DocumentProcessingResult processed = processor.processDocument(initialized.document(), amountEvent(7));
         assertEquals(BigInteger.ZERO, processed.document().get("/counter"));

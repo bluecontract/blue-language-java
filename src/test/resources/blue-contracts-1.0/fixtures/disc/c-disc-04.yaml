@@ -28,7 +28,7 @@ input:
             path: /value
             val: 1
     type:
-      blueId: 7f1ZXEZsUdZrciGtAQkR1Pav7s3Ngfbv8q9Ct2C9iNYE
+      blueId: 3gwbrYjenX1ji8fHvwnrBv6fijVbau47NchRQtNQxei3
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -53,14 +53,13 @@ input:
     mode: exact-node
     semanticDemandsOnly: true
     nodes:
-      7f1ZXEZsUdZrciGtAQkR1Pav7s3Ngfbv8q9Ct2C9iNYE:
+      3gwbrYjenX1ji8fHvwnrBv6fijVbau47NchRQtNQxei3:
         contracts:
           h:
             type:
               blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
             channel: in
             order: 0
-            result: {}
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
 expected:

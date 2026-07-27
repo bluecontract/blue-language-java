@@ -16,6 +16,80 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class ContractRecognitionMeterTest {
 
     @Test
+    void canonicalClassificationBatchGroupsDistinctHeadersAndDeduplicatesThem() {
+        GasMeter gas = new GasMeter();
+        ContractRecognitionMeter meter =
+                new ContractRecognitionMeter(gas);
+
+        meter.beginCanonicalClassificationBatch();
+        meter.recognizeHeader(
+                "/",
+                "embedded",
+                Arrays.asList("embedded-contribution"),
+                "structural-route-header");
+        meter.recognizeHeader(
+                "/child",
+                "in",
+                Arrays.asList("channel-contribution"),
+                "target-channel-header");
+        meter.recognizeHeader(
+                "/child",
+                "in",
+                Arrays.asList("channel-contribution"),
+                "target-channel-header");
+        meter.flushCanonicalClassificationBatch();
+
+        assertEquals(1, gas.trace().size());
+        GasTraceEntry aggregate = gas.trace().get(0);
+        assertEquals("contractHeaderRecognized", aggregate.counter());
+        assertEquals(2L, aggregate.quantity());
+        assertEquals("/", aggregate.scopePath());
+        assertEquals(
+                "structural-and-channel-headers",
+                aggregate.reason());
+
+        meter.beginCanonicalClassificationBatch();
+        meter.recognizeHeader(
+                "/",
+                "embedded",
+                Arrays.asList("embedded-contribution"),
+                "structural-route-header");
+        meter.recognizeHeader(
+                "/child",
+                "in",
+                Arrays.asList("channel-contribution"),
+                "target-channel-header");
+        meter.flushCanonicalClassificationBatch();
+
+        assertEquals(
+                1,
+                gas.trace().size(),
+                "headers admitted in a prior batch remain recognized");
+    }
+
+    @Test
+    void singleHeaderClassificationBatchPreservesExactContext() {
+        GasMeter gas = new GasMeter();
+        ContractRecognitionMeter meter =
+                new ContractRecognitionMeter(gas);
+
+        meter.beginCanonicalClassificationBatch();
+        meter.recognizeHeader(
+                "/child",
+                "in",
+                Arrays.asList("channel-contribution"),
+                "target-channel-header");
+        meter.flushCanonicalClassificationBatch();
+
+        assertEquals(1, gas.trace().size());
+        GasTraceEntry entry = gas.trace().get(0);
+        assertEquals(1L, entry.quantity());
+        assertEquals("/child", entry.scopePath());
+        assertEquals("in", entry.contractKey());
+        assertEquals("target-channel-header", entry.reason());
+    }
+
+    @Test
     void fullRecognitionChargesEachExactContributionTupleOnce() {
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
@@ -170,6 +244,18 @@ final class ContractRecognitionMeterTest {
                         new ContractRecognitionMeter(
                                 completeGas),
                         "structural-route-header");
+
+        List<String> logicalPaths = new ArrayList<>();
+        for (GasTraceEntry entry : completeGas.trace()) {
+            if ("embeddedPathEntryRead".equals(
+                    entry.counter())) {
+                logicalPaths.add(entry.logicalPath());
+            }
+        }
+        assertEquals(
+                Arrays.asList("/first", "/second/leaf"),
+                logicalPaths,
+                "route gas names the authored logical paths, not manifest pointers");
 
         long prefix = prefixBeforeSecondPathEntry(
                 completeGas);

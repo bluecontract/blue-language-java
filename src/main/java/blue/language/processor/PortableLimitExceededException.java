@@ -26,7 +26,7 @@ public final class PortableLimitExceededException extends RuntimeException {
                                           long limit) {
         super("Portable limit exceeded: " + limitName);
         this.category = category != null
-                ? category.normative()
+                ? category
                 : ProcessorErrorCategory.DirectNodeLimitExceeded;
         this.limitName = limitName;
         this.observed = observed;

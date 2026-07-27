@@ -13,7 +13,6 @@ final class ContractEffectBuffer implements AutoCloseable {
     private final List<PatchInput> patches = new ArrayList<>();
     private final List<PatchBatch> patchBatches = new ArrayList<>();
     private final List<Node> emittedEvents = new ArrayList<>();
-    private GasMeter.ChildGasLedger runtimeLedger;
     private TerminationRequest terminationRequest;
     private boolean closed;
 
@@ -66,19 +65,6 @@ final class ContractEffectBuffer implements AutoCloseable {
         return Collections.unmodifiableList(emittedEvents);
     }
 
-    void runtimeLedger(GasMeter.ChildGasLedger ledger) {
-        ensureOpen();
-        if (runtimeLedger != null) {
-            throw new IllegalStateException(
-                    "A ContractExecutionResult may contain at most one runtime ledger");
-        }
-        runtimeLedger = ledger;
-    }
-
-    GasMeter.ChildGasLedger runtimeLedger() {
-        return runtimeLedger;
-    }
-
     void terminate(String cause,
                    String reason) {
         ensureOpen();
@@ -113,7 +99,6 @@ final class ContractEffectBuffer implements AutoCloseable {
         patches.clear();
         patchBatches.clear();
         emittedEvents.clear();
-        runtimeLedger = null;
         terminationRequest = null;
         if (failure instanceof RuntimeException) {
             throw (RuntimeException) failure;

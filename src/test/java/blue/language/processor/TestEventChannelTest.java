@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.EmitEventsContractProcessor;
@@ -58,7 +60,7 @@ class TestEventChannelTest {
         DocumentProcessingResult testResult = blue.processDocument(afterRandom, testEvent);
         Node afterTest = testResult.document();
 
-        assertEquals(ProcessorStatus.SUCCESS, testResult.status(), testResult.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, testResult.status(), diagnosticMessage(testResult));
         Node xNode = afterTest.getProperties().get("x");
         assertEquals(new BigInteger("1"), xNode.getValue());
     }
@@ -127,7 +129,7 @@ class TestEventChannelTest {
                 "  embeddedEvents:\n" +
                 "    type:\n" +
                 "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
-                "    childPath: /a\n" +
+                "    sourcePath: /a\n" +
                 "  setRootFromChild:\n" +
                 "    channel: embeddedEvents\n" +
                 "    type:\n" +

@@ -145,10 +145,10 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node document = arrayDocument("letters", "x");
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> runtime.applyPatch("/", JsonPatch.remove("/letters/5")));
         assertTrue(ex.getMessage().contains(
-                "removedIndex exceeds result length"));
+                "Array index out of bounds for remove"));
         assertEquals(1, array(document, "letters").size());
     }
 

@@ -128,12 +128,10 @@ final class Contracts10KernelInvariantTest {
     }
 
     @Test
-    void anonymousGasIsRejectedAndPatchIdentityWorkIsMetered() {
+    void patchIdentityWorkIsMetered() {
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
                         new Node().value(0));
-        assertThrows(UnsupportedOperationException.class,
-                () -> runtime.addGas(1L));
 
         runtime.applyPatch(
                 "/",
@@ -169,19 +167,23 @@ final class Contracts10KernelInvariantTest {
 
         SubscriptionDelta local =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
-                        rootWithReservedMissingChild,
-                        afterUnrelatedChange,
-                        Collections.singleton("/value"),
-                        GasSchedule.contracts10());
+                        SubscriptionSurfaceValidationContext.builder(
+                                        rootWithReservedMissingChild,
+                                        afterUnrelatedChange,
+                                        Collections.singleton("/value"),
+                                        GasSchedule.contracts10())
+                                .build());
         assertTrue(local.isEmpty());
 
         SubscriptionDelta changedDeclaration =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
-                        rootWithReservedMissingChild,
-                        afterUnrelatedChange,
-                        Collections.singleton(
-                                "/contracts/embedded/paths"),
-                        GasSchedule.contracts10());
+                        SubscriptionSurfaceValidationContext.builder(
+                                        rootWithReservedMissingChild,
+                                        afterUnrelatedChange,
+                                        Collections.singleton(
+                                                "/contracts/embedded/paths"),
+                                        GasSchedule.contracts10())
+                                .build());
         assertTrue(changedDeclaration.isEmpty());
     }
 
@@ -216,11 +218,13 @@ final class Contracts10KernelInvariantTest {
         SubscriptionSurfaceInvalidException failure = assertThrows(
                 SubscriptionSurfaceInvalidException.class,
                 () -> DirectSubscriptionSurfaceValidator.INSTANCE.validate(
-                        before,
-                        after,
-                        Collections.singleton(
-                                "/contracts/embedded/paths"),
-                        GasSchedule.contracts10()));
+                        SubscriptionSurfaceValidationContext.builder(
+                                        before,
+                                        after,
+                                        Collections.singleton(
+                                                "/contracts/embedded/paths"),
+                                        GasSchedule.contracts10())
+                                .build()));
 
         assertTrue(failure.getMessage().contains(
                 "finite non-empty subscription key set"));

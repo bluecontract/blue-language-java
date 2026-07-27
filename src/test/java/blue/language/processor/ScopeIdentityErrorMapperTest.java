@@ -4,37 +4,53 @@ import blue.language.BlueLanguageErrorCategory;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ScopeIdentityErrorMapperTest {
 
     @Test
     void preservesProviderCategoriesFromLanguageCategories() {
-        assertEquals(ProcessorErrorCategory.ProviderUnavailable,
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
                 ScopeIdentityErrorMapper.from(BlueLanguageErrorCategory.ProviderUnavailable));
-        assertEquals(ProcessorErrorCategory.ProviderBlueIdMismatch,
+        assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
                 ScopeIdentityErrorMapper.from(BlueLanguageErrorCategory.ProviderBlueIdMismatch));
     }
 
     @Test
     void classifiesProviderFailuresFromThrowables() {
-        assertEquals(ProcessorErrorCategory.ProviderUnavailable,
-                ScopeIdentityErrorMapper.from(
-                        new IllegalStateException("No content found for blueId: missing")));
-        assertEquals(ProcessorErrorCategory.ProviderBlueIdMismatch,
-                ScopeIdentityErrorMapper.from(
-                        new IllegalArgumentException(
-                                "Provider returned content for requested BlueId but computed BlueId differs")));
+        IllegalStateException unavailable =
+                new IllegalStateException(
+                        "No content found for blueId: missing");
+        IllegalArgumentException mismatch =
+                new IllegalArgumentException(
+                        "Provider returned content for requested BlueId but computed BlueId differs");
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                ScopeIdentityErrorMapper.from(unavailable));
+        assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
+                ScopeIdentityErrorMapper.from(mismatch));
+        assertTrue(
+                ScopeIdentityErrorMapper.isProviderIdentityFailure(
+                        unavailable));
+        assertTrue(
+                ScopeIdentityErrorMapper.isProviderIdentityFailure(
+                        mismatch));
     }
 
     @Test
-    void mapsOtherLanguageFailuresToInternalProcessorError() {
-        assertEquals(ProcessorErrorCategory.InternalProcessorError,
+    void mapsOtherLanguageFailuresToRuntimeFailureWithoutMarkingThemAsProviderFailures() {
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
                 ScopeIdentityErrorMapper.from(BlueLanguageErrorCategory.CanonicalizationError));
-        assertEquals(ProcessorErrorCategory.InternalProcessorError,
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
                 ScopeIdentityErrorMapper.from(BlueLanguageErrorCategory.InvalidBlueIdInput));
-        assertEquals(ProcessorErrorCategory.InternalProcessorError,
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
                 ScopeIdentityErrorMapper.from((BlueLanguageErrorCategory) null));
-        assertEquals(ProcessorErrorCategory.InternalProcessorError,
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
                 ScopeIdentityErrorMapper.from((Throwable) null));
+        assertFalse(
+                ScopeIdentityErrorMapper.isProviderIdentityFailure(
+                        new IllegalStateException("ordinary runtime failure")));
+        assertFalse(
+                ScopeIdentityErrorMapper.isProviderIdentityFailure(null));
     }
 }

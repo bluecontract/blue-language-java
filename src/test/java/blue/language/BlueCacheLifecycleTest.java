@@ -1285,7 +1285,9 @@ class BlueCacheLifecycleTest {
                 throw new AssertionError(exception);
             }
             return DocumentProcessingResult.of(
-                    resultSnapshot, Collections.<Node>emptyList(), 0L);
+                    resultSnapshot.canonicalRoot(),
+                    Collections.<Node>emptyList(),
+                    0L);
         }
 
         @Override

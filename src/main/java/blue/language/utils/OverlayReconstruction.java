@@ -11,53 +11,16 @@ import static blue.language.utils.Nodes.NodeField.*;
 import static blue.language.utils.Nodes.hasFieldsAndMayHaveFields;
 import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
 
-public class MergeReverser {
+final class OverlayReconstruction {
 
-    /**
-     * @deprecated Use {@code Blue.canonicalize(source)} or
-     * {@link #reverseToCanonicalOverlay(Node, Node)} for Content BlueId identity,
-     * or {@link #reverseToMinimizedOverlay(Node)} for author-facing minimized output.
-     */
-    @Deprecated
-    public Node reverse(Node mergedNode) {
-        return reverseToMinimizedOverlay(mergedNode);
-    }
-
-    public Node reverseToMinimizedOverlay(Node mergedNode) {
+    Node minimizedOverlay(Node mergedNode) {
         Node minimalNode = new Node();
         reverseNode(minimalNode, mergedNode, mergedNode.getType(), false, null,
                 mergedNode.getType() != null);
         return minimalNode;
     }
 
-    /**
-     * Reconstructs the historical resolved-only canonical overlay.
-     *
-     * <p>A completed resolved node does not retain all Source provenance. New
-     * Content BlueId code must use {@link #reverseToCanonicalOverlay(Node, Node)}
-     * with the corresponding preprocessed Source-equivalent node.</p>
-     *
-     * @param mergedNode completed resolved view
-     * @return canonical overlay using the legacy resolved-only behavior
-     * @deprecated Use {@link #reverseToCanonicalOverlay(Node, Node)} whenever
-     * source provenance is available.
-     */
-    @Deprecated
-    public Node reverseToCanonicalOverlay(Node mergedNode) {
-        Node minimalNode = new Node();
-        reverseNode(minimalNode, mergedNode, mergedNode.getType(), true, null);
-        return minimalNode;
-    }
-
-    /**
-     * Reconstructs a canonical overlay while retaining pure-reference provenance
-     * from the preprocessed source document.
-     *
-     * @param mergedNode completed resolved view
-     * @param sourceNode preprocessed source that produced the resolved view
-     * @return strict canonical overlay
-     */
-    public Node reverseToCanonicalOverlay(Node mergedNode, Node sourceNode) {
+    Node canonicalIdentityInput(Node mergedNode, Node sourceNode) {
         Node minimalNode = new Node();
         reverseNode(minimalNode, mergedNode, mergedNode.getType(), true, sourceNode,
                 mergedNode.getType() != null);
@@ -181,7 +144,7 @@ public class MergeReverser {
                                 ? merged.getMergePolicy()
                                 : fromType.getMergePolicy());
                 if (merged.getItems().size() < inheritedSize) {
-                    throw new IllegalStateException("Cannot reverse-minimize a list shorter than its inherited list without an explicit list-deletion control.");
+                    throw new IllegalStateException("Cannot minimize a list shorter than its inherited list without an explicit list-deletion control.");
                 }
                 int commonSize = Math.min(merged.getItems().size(), inheritedSize);
 
@@ -191,7 +154,7 @@ public class MergeReverser {
                     }
                     if (appendOnly) {
                         throw new IllegalStateException(
-                                "Cannot reverse-minimize a modified inherited item in an append-only list.");
+                                "Cannot minimize a modified inherited item in an append-only list.");
                     }
                     Node minimalItem = new Node();
                     reverseNode(minimalItem, merged.getItems().get(i), inheritedItems.get(i), false, null);

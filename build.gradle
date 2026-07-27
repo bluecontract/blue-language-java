@@ -158,6 +158,340 @@ tasks.register('cacheLifecycleTest', Test) {
     }
 }
 
+tasks.register('verifyNoDeprecatedProductionApi') {
+    group = 'verification'
+    description = 'Fails when production Java source declares a deprecated preview API.'
+    def productionSources = fileTree('src/main/java') {
+        include '**/*.java'
+    }
+    inputs.files(productionSources)
+    doLast {
+        def violations = []
+        productionSources.files.sort().each { source ->
+            source.readLines('UTF-8').eachWithIndex { line, index ->
+                if (line.contains('@Deprecated')) {
+                    violations.add("${project.relativePath(source)}:${index + 1}: ${line.trim()}")
+                }
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException(
+                    "Production deprecated APIs are forbidden:\n"
+                            + violations.join('\n'))
+        }
+    }
+}
+
+tasks.register('verifyNoAmbiguousReverseApi') {
+    group = 'verification'
+    description = 'Fails when production Java source reintroduces ambiguous bare reverse semantics.'
+    def productionSources = fileTree('src/main/java') {
+        include '**/*.java'
+    }
+    inputs.files(productionSources)
+    doLast {
+        def reverseCall = ~/\breverse\s*\(/
+        def mergeReverser = ~/\bMergeReverser\b/
+        def violations = []
+        productionSources.files.sort().each { source ->
+            source.readLines('UTF-8').eachWithIndex { line, index ->
+                def trimmed = line.trim()
+                def commentLine = trimmed.startsWith('//')
+                        || trimmed.startsWith('/*')
+                        || trimmed.startsWith('*')
+                        || trimmed.startsWith('*/')
+                if (!commentLine
+                        && ((line =~ reverseCall).find()
+                        || (line =~ mergeReverser).find())) {
+                    violations.add("${project.relativePath(source)}:${index + 1}: ${line.trim()}")
+                }
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException(
+                    "Ambiguous reverse APIs are forbidden:\n"
+                            + violations.join('\n'))
+        }
+    }
+}
+
+def finalApiBaseline = layout.projectDirectory.file(
+        'api/blue-language-java-1.0.json')
+def finalApiReport = layout.buildDirectory.file(
+        'reports/binary-api/final-1.0-baseline-to-candidate.txt')
+tasks.register('verifyFinalApiBaseline', Exec) {
+    group = 'verification'
+    description = 'Checks the candidate JAR against the final Language 1.0 and Contracts kernel 1.0 JVM API baseline.'
+    dependsOn tasks.named('jar')
+    inputs.file(finalApiBaseline)
+    inputs.file(tasks.named('jar').flatMap { it.archiveFile })
+    outputs.file(finalApiReport)
+    doFirst {
+        commandLine 'python3',
+                'tools/check_binary_api.py',
+                finalApiBaseline.asFile.absolutePath,
+                tasks.named('jar').get().archiveFile.get().asFile.absolutePath,
+                finalApiReport.get().asFile.absolutePath
+    }
+}
+
+def releaseConformanceJson = layout.buildDirectory.file(
+        'reports/conformance/release-conformance.json')
+def releaseConformanceText = layout.buildDirectory.file(
+        'reports/conformance/release-conformance.txt')
+tasks.register('releaseConformanceTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs all tests and the strict 125/125 Language plus 127/127 Contracts release gate.'
+    dependsOn tasks.named('test')
+    dependsOn tasks.named('verifyNoDeprecatedProductionApi')
+    dependsOn tasks.named('verifyNoAmbiguousReverseApi')
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'blue.language.conformance.ReleaseConformanceCli'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    args releaseConformanceJson.get().asFile.absolutePath,
+            releaseConformanceText.get().asFile.absolutePath
+    inputs.files(fileTree('src/test/resources/blue-language-1.0/fixtures'))
+    inputs.files(fileTree('src/test/resources/blue-contracts-1.0/fixtures'))
+    inputs.files(fileTree('src/main/resources/registry'))
+    inputs.file('src/main/resources/blue/language/processor/contracts-gas-1.0.yaml')
+    outputs.file(releaseConformanceJson)
+    outputs.file(releaseConformanceText)
+}
+
+def fragmentedProcessingTestResults = layout.buildDirectory.dir(
+        'test-results/fragmentedProcessingTest')
+def fragmentedProcessingJson = layout.buildDirectory.file(
+        'reports/fragmented-processing/fragmented-processing.json')
+tasks.register('fragmentedProcessingTest', Test) {
+    configureFocusedTest(delegate)
+    description = 'Runs provider-fragment admission, physical-locality, and logical-delivery coverage.'
+    reports {
+        junitXml.required = true
+        junitXml.outputLocation = fragmentedProcessingTestResults
+        html.required = true
+    }
+    filter {
+        includeTestsMatching 'blue.language.provider.ExactNodeGraphFragmentsTest'
+        includeTestsMatching 'blue.language.utils.NodeProviderWrapperCompatibilityTest'
+        includeTestsMatching 'blue.language.processor.ProcessingInputAdmissionTest'
+        includeTestsMatching 'blue.language.processor.DeepGraphPhysicalLocalityIntegrationTest'
+        includeTestsMatching 'blue.language.processor.FragmentedProcessingLocalityIntegrationTest'
+        includeTestsMatching 'blue.language.processor.FragmentedProcessingFailureMatrixTest'
+        includeTestsMatching 'blue.language.processor.LogicalDeliveryRoutingTest'
+        includeTestsMatching 'blue.language.processor.*LogicalDelivery*'
+        includeTestsMatching 'blue.language.processor.*LogicalChannel*'
+        includeTestsMatching 'blue.language.processor.*RoutedChannel*'
+        includeTestsMatching 'blue.language.processor.*Routing*'
+        includeTestsMatching 'blue.language.processor.ExternalChannelPatternMatchingTest'
+        includeTestsMatching 'blue.language.processor.ExternalChannelDependencyContextTest'
+    }
+}
+
+tasks.register('fragmentedProcessingReport') {
+    group = 'verification'
+    description = 'Emits deterministic fragmented-processing verification evidence.'
+    dependsOn tasks.named('fragmentedProcessingTest')
+    dependsOn tasks.named('releaseConformanceTest')
+    inputs.dir(fragmentedProcessingTestResults)
+    inputs.file(releaseConformanceJson)
+    outputs.file(fragmentedProcessingJson)
+
+    doLast {
+        def xmlFiles = fileTree(fragmentedProcessingTestResults.get().asFile) {
+            include 'TEST-*.xml'
+        }.files.sort { left, right -> left.name <=> right.name }
+        if (xmlFiles.isEmpty()) {
+            throw new GradleException(
+                    'fragmentedProcessingTest produced no JUnit XML test suites')
+        }
+
+        def documentBuilderFactory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+        documentBuilderFactory.setFeature(
+                'http://apache.org/xml/features/disallow-doctype-decl', true)
+        documentBuilderFactory.setFeature(
+                'http://xml.org/sax/features/external-general-entities', false)
+        documentBuilderFactory.setFeature(
+                'http://xml.org/sax/features/external-parameter-entities', false)
+        documentBuilderFactory.setXIncludeAware(false)
+        documentBuilderFactory.setExpandEntityReferences(false)
+
+        def focusedSuitesByName = new TreeMap<String, Map<String, Object>>()
+        xmlFiles.each { xmlFile ->
+            def suite = documentBuilderFactory.newDocumentBuilder().parse(xmlFile)
+                    .documentElement
+            def suiteName = suite.getAttribute('name')
+            if (suiteName == null || suiteName.trim().isEmpty()) {
+                suiteName = xmlFile.name
+            }
+            int tests = Integer.parseInt(suite.getAttribute('tests') ?: '0')
+            int failures = Integer.parseInt(suite.getAttribute('failures') ?: '0')
+            int errors = Integer.parseInt(suite.getAttribute('errors') ?: '0')
+            int skipped = Integer.parseInt(suite.getAttribute('skipped') ?: '0')
+            int failed = failures + errors
+            int passed = tests - failed - skipped
+            if (passed < 0) {
+                throw new GradleException(
+                        "Invalid JUnit counts in ${xmlFile}: tests=${tests}, "
+                                + "failed=${failed}, skipped=${skipped}")
+            }
+            def prior = focusedSuitesByName.get(suiteName)
+            if (prior == null) {
+                prior = [
+                        name   : suiteName,
+                        tests  : 0,
+                        passed : 0,
+                        failed : 0,
+                        skipped: 0
+                ]
+                focusedSuitesByName.put(suiteName, prior)
+            }
+            prior.tests += tests
+            prior.passed += passed
+            prior.failed += failed
+            prior.skipped += skipped
+        }
+
+        def focusedSuites = focusedSuitesByName.values().findAll {
+            it.tests > 0
+        }.collect { new LinkedHashMap<String, Object>(it) }
+        if (focusedSuites.isEmpty()) {
+            throw new GradleException(
+                    'fragmentedProcessingTest executed no focused tests')
+        }
+        int focusedTests = focusedSuites.sum { it.tests } as int
+        int focusedPassed = focusedSuites.sum { it.passed } as int
+        int focusedFailed = focusedSuites.sum { it.failed } as int
+        int focusedSkipped = focusedSuites.sum { it.skipped } as int
+
+        def releaseReport = new groovy.json.JsonSlurper()
+                .parse(releaseConformanceJson.get().asFile)
+        def requiredPackageKeys = [
+                'languageRegistry',
+                'languageFixtures',
+                'contractsRegistry',
+                'contractsGas',
+                'contractsFixtures'
+        ]
+        if (releaseReport.release == null
+                || !(releaseReport.release.packageIdentity instanceof String)
+                || !releaseReport.release.packageIdentity.startsWith('sha256:')
+                || releaseReport.packages == null
+                || !requiredPackageKeys.every {
+                    releaseReport.packages[it] instanceof String
+                            && releaseReport.packages[it].startsWith('sha256:')
+                }) {
+            throw new GradleException(
+                    'release-conformance.json is missing exact release/package identities')
+        }
+
+        def releaseSuiteNames = releaseReport.fixtures.collect {
+            it.suite.toString()
+        }.toSet().sort().collect {
+            "release-conformance:${it}".toString()
+        }
+        int releaseTests = releaseReport.summary.total as int
+        int releasePassed = releaseReport.summary.passed as int
+        int releaseFailed = releaseReport.summary.failed as int
+        int releaseSkipped = releaseReport.summary.skipped as int
+        boolean focusedConformant = focusedFailed == 0 && focusedSkipped == 0
+        boolean releaseConformant = releaseReport.summary.conformant == true
+        boolean conformant = focusedConformant && releaseConformant
+
+        def report = [
+                schema              : 'blue-language-java-fragmented-processing-report/1.0',
+                version             : '1.0',
+                release             : [
+                        name           : releaseReport.release.name,
+                        packageIdentity: releaseReport.release.packageIdentity
+                ],
+                packages            : [
+                        languageRegistry : releaseReport.packages.languageRegistry,
+                        languageFixtures : releaseReport.packages.languageFixtures,
+                        contractsRegistry: releaseReport.packages.contractsRegistry,
+                        contractsGas     : releaseReport.packages.contractsGas,
+                        contractsFixtures: releaseReport.packages.contractsFixtures
+                ],
+                summary             : [
+                        suiteCount: focusedSuites.size() + releaseSuiteNames.size(),
+                        tests     : focusedTests + releaseTests,
+                        passed    : focusedPassed + releasePassed,
+                        failed    : focusedFailed + releaseFailed,
+                        skipped   : focusedSkipped + releaseSkipped,
+                        conformant: conformant
+                ],
+                focusedVerification : [
+                        suiteCount   : focusedSuites.size(),
+                        tests        : focusedTests,
+                        passed       : focusedPassed,
+                        failed       : focusedFailed,
+                        skipped      : focusedSkipped,
+                        conformant   : focusedConformant,
+                        executedSuites: focusedSuites.collect { it.name },
+                        suites       : focusedSuites
+                ],
+                releaseConformance  : [
+                        schema        : releaseReport.schema,
+                        suiteCount    : releaseSuiteNames.size(),
+                        tests         : releaseTests,
+                        passed        : releasePassed,
+                        failed        : releaseFailed,
+                        skipped       : releaseSkipped,
+                        conformant    : releaseConformant,
+                        executedSuites: releaseSuiteNames
+                ],
+                executedSuites      : focusedSuites.collect { it.name }
+                        + releaseSuiteNames,
+                demandVocabulary    : [
+                        semanticDemands: [
+                                category: 'logical-consensus',
+                                portable: true,
+                                meaning : 'Exact semantic identities demanded by processing.'
+                        ],
+                        logicalGasTrace: [
+                                category: 'logical-consensus',
+                                portable: true,
+                                meaning : 'Deterministic gas-counter sequence for semantic work.'
+                        ],
+                        providerCalls  : [
+                                category: 'physical-observation',
+                                portable: false,
+                                meaning : 'Runtime provider acquisition calls; never a gas input.'
+                        ],
+                        providerBytes  : [
+                                category: 'physical-observation',
+                                portable: false,
+                                meaning : 'Runtime provider bytes transferred; never a gas input.'
+                        ],
+                        invarianceContract:
+                                'Equivalent representations preserve semanticDemands '
+                                        + 'and logicalGasTrace; providerCalls and providerBytes '
+                                        + 'may vary with cache and provider segmentation.'
+                ]
+        ]
+
+        def output = fragmentedProcessingJson.get().asFile
+        output.parentFile.mkdirs()
+        output.setText(
+                groovy.json.JsonOutput.prettyPrint(
+                        groovy.json.JsonOutput.toJson(report)) + '\n',
+                'UTF-8')
+        if (!conformant) {
+            throw new GradleException(
+                    'Fragmented-processing verification is not conformant; see '
+                            + output)
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyNoDeprecatedProductionApi')
+    dependsOn tasks.named('verifyNoAmbiguousReverseApi')
+    dependsOn tasks.named('verifyFinalApiBaseline')
+}
+
 jmh {
     includeTests = true
     jmhVersion = '1.37'
@@ -253,6 +587,7 @@ tasks.register('sourceReleaseArchive', Zip) {
             include 'gradlew'
             include 'gradlew.bat'
             include 'gradle/**'
+            include 'api/**'
             include '.github/**'
             include 'docs/**'
             include 'src/**'
@@ -266,6 +601,9 @@ tasks.register('sourceReleaseArchive', Zip) {
             exclude '**/*.db'
             exclude '**/*.sqlite*'
             exclude '**/node_modules/**'
+            exclude '**/__pycache__/**'
+            exclude '**/*.pyc'
+            exclude '**/*.pyo'
             exclude '**/.gradle/**'
             exclude '**/build/**'
             exclude '**/*.zip'
@@ -323,6 +661,9 @@ tasks.register('verifySourceReleaseArchive') {
             name.contains('__MACOSX/')
                     || name.endsWith('/.DS_Store')
                     || name.contains('/._')
+                    || name.contains('/__pycache__/')
+                    || name.endsWith('.pyc')
+                    || name.endsWith('.pyo')
                     || name.contains('/build/')
                     || name.contains('/docs/performance/')
                     || name.endsWith('/Archive.zip')
@@ -334,6 +675,7 @@ tasks.register('verifySourceReleaseArchive') {
         def root = "blue-language-java-${project.version}/".toString()
         def required = [
                 root + '.cz.toml',
+                root + 'api/blue-language-java-1.0.json',
                 root + 'build.gradle',
                 root + 'settings.gradle.kts',
                 root + 'README.md',
@@ -355,6 +697,8 @@ tasks.register('rcVerify') {
     dependsOn tasks.named('patchSequenceDifferentialTest')
     dependsOn tasks.named('memoryIntegrationTest')
     dependsOn tasks.named('cacheLifecycleTest')
+    dependsOn tasks.named('releaseConformanceTest')
+    dependsOn tasks.named('fragmentedProcessingReport')
     dependsOn tasks.named('verifySourceReleaseArchive')
 }
 

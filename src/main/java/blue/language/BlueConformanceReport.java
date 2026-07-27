@@ -26,12 +26,6 @@ public final class BlueConformanceReport {
             "sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb";
     public static final String BLUE_SPEC_SOURCE =
             "blue-language-1.0-final-implementation-baseline";
-    /** @deprecated use {@link #FIXTURE_PACKAGE_IDENTITY}. */
-    @Deprecated
-    public static final String CANDIDATE_FIXTURE_PACKAGE_IDENTITY = FIXTURE_PACKAGE_IDENTITY;
-    /** @deprecated use {@link #BLUE_SPEC_SOURCE}. */
-    @Deprecated
-    public static final String CANDIDATE_BLUE_SPEC_SOURCE = BLUE_SPEC_SOURCE;
     private static final Set<String> REQUIRED_FIXTURE_IDS = requiredFixtureIds();
 
     private final String specVersion;

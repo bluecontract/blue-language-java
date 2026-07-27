@@ -56,12 +56,7 @@ final class ProcessorEngine {
         } catch (MustUnderstandFailureException ex) {
             return DocumentProcessingResult.capabilityFailure(document.clone(), ex.getMessage(), ex.errorCategory());
         } catch (IllegalArgumentException ex) {
-            ProcessorErrorCategory category =
-                    ScopeIdentityErrorMapper.from(ex);
-            if (category
-                    == ProcessorErrorCategory.ProviderUnavailable
-                    || category
-                    == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+            if (ScopeIdentityErrorMapper.isProviderIdentityFailure(ex)) {
                 throw ex;
             }
             return DocumentProcessingResult.capabilityFailure(
@@ -77,7 +72,7 @@ final class ProcessorEngine {
         Objects.requireNonNull(snapshot, "snapshot");
         DocumentProcessingResult invalid = validateProcessingDocument(snapshot.frozenResolvedRoot());
         if (invalid != null) {
-            return invalid.withSnapshot(snapshot);
+            return invalid;
         }
         if (isInitialized(owner, snapshot)) {
             throw new IllegalStateException("Document already initialized");
@@ -92,26 +87,19 @@ final class ProcessorEngine {
                 return DocumentProcessingResult.runtimeFatal(
                         snapshot.resolvedRoot(),
                         "Initialization terminated before run state was available",
-                        ProcessorErrorCategory.RuntimeExecutionFailure)
-                        .withSnapshot(snapshot);
+                        ProcessorErrorCategory.RuntimeExecutionFailure);
             }
         } catch (MustUnderstandFailureException ex) {
             return DocumentProcessingResult.capabilityFailure(snapshot.resolvedRoot(), ex.getMessage(), ex.errorCategory());
         } catch (IllegalArgumentException ex) {
-            ProcessorErrorCategory category =
-                    ScopeIdentityErrorMapper.from(ex);
-            if (category
-                    == ProcessorErrorCategory.ProviderUnavailable
-                    || category
-                    == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+            if (ScopeIdentityErrorMapper.isProviderIdentityFailure(ex)) {
                 throw ex;
             }
             return DocumentProcessingResult.capabilityFailure(
                     snapshot.resolvedRoot(),
                     deterministicMessage(
                             ex, "Invalid initialization document"),
-                    ProcessorErrorCategory.InvalidProcessingDocument)
-                    .withSnapshot(snapshot);
+                    ProcessorErrorCategory.InvalidProcessingDocument);
         }
         return execution.result();
     }
@@ -227,12 +215,9 @@ final class ProcessorEngine {
             execution.fail(ProcessorStatus.CAPABILITY_FAILURE,
                     ProcessorDiagnostic.of(ex.errorCategory(), ex.getMessage()));
         } catch (RuntimeException ex) {
-            ProcessorErrorCategory providerCategory =
-                    ScopeIdentityErrorMapper.from(ex);
-            if (providerCategory
-                    == ProcessorErrorCategory.ProviderUnavailable
-                    || providerCategory
-                    == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+            if (ex instanceof ExecutionEvidenceUnavailableException
+                    || ScopeIdentityErrorMapper
+                    .isProviderIdentityFailure(ex)) {
                 throw ex;
             }
             if (execution == null) {
@@ -293,13 +278,13 @@ final class ProcessorEngine {
         try {
             DocumentProcessingResult invalid = validateProcessingDocument(snapshot.frozenResolvedRoot());
             if (invalid != null) {
-                return new ProcessingDebugResult(
+                return snapshotDebugResult(
                         nonCommittingSnapshotResult(
                                 snapshot,
                                 invalid.totalGas(),
                                 invalid.status(),
                                 invalid.diagnostic()),
-                        ProcessingConformanceTrace.empty());
+                        snapshot);
             }
             execution = new Execution(owner, snapshot, event, evidence);
             execution.runtime().chargeProcessInvocation();
@@ -320,46 +305,46 @@ final class ProcessorEngine {
             // Processing terminated early; result still returned.
         } catch (GasLimitExceededException ex) {
             if (execution == null) {
-                return new ProcessingDebugResult(
+                return snapshotDebugResult(
                         nonCommittingSnapshotResult(
                                 snapshot,
                                 ex.admittedGas(),
                                 ProcessorStatus.GAS_LIMIT_EXCEEDED,
                                 ex.diagnostic()),
-                        ProcessingConformanceTrace.empty());
+                        snapshot);
             }
             execution.fail(
                     ProcessorStatus.GAS_LIMIT_EXCEEDED,
                     ex.diagnostic());
         } catch (PortableLimitExceededException ex) {
             if (execution == null) {
-                return new ProcessingDebugResult(
+                return snapshotDebugResult(
                         nonCommittingSnapshotResult(
                                 snapshot,
                                 0L,
                                 ProcessorStatus.PORTABLE_LIMIT_EXCEEDED,
                                 ex.diagnostic()),
-                        ProcessingConformanceTrace.empty());
+                        snapshot);
             }
             execution.fail(
                     ProcessorStatus.PORTABLE_LIMIT_EXCEEDED,
                     ex.diagnostic());
         } catch (SubscriptionSurfaceInvalidException ex) {
             if (execution == null) {
-                return new ProcessingDebugResult(
+                return snapshotDebugResult(
                         nonCommittingSnapshotResult(
                                 snapshot,
                                 0L,
                                 ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
                                 ex.diagnostic()),
-                        ProcessingConformanceTrace.empty());
+                        snapshot);
             }
             execution.fail(
                     ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
                     ex.diagnostic());
         } catch (InvalidExecutionEvidenceException ex) {
             if (execution == null) {
-                return new ProcessingDebugResult(
+                return snapshotDebugResult(
                         nonCommittingSnapshotResult(
                                 snapshot,
                                 0L,
@@ -370,7 +355,7 @@ final class ProcessorEngine {
                                         deterministicMessage(
                                                 ex,
                                                 "Invalid external delivery evidence"))),
-                        ProcessingConformanceTrace.empty());
+                        snapshot);
             }
             execution.fail(
                     ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
@@ -383,7 +368,7 @@ final class ProcessorEngine {
         } catch (MustUnderstandFailureException ex) {
             metrics.addProcessDocumentNanos(System.nanoTime() - processStart);
             if (execution == null) {
-                return new ProcessingDebugResult(
+                return snapshotDebugResult(
                         nonCommittingSnapshotResult(
                                 snapshot,
                                 0L,
@@ -391,23 +376,20 @@ final class ProcessorEngine {
                                 ProcessorDiagnostic.of(
                                         ex.errorCategory(),
                                         ex.getMessage())),
-                        ProcessingConformanceTrace.empty());
+                        snapshot);
             }
             execution.fail(
                     ProcessorStatus.CAPABILITY_FAILURE,
                     ProcessorDiagnostic.of(
                             ex.errorCategory(), ex.getMessage()));
         } catch (RuntimeException ex) {
-            ProcessorErrorCategory providerCategory =
-                    ScopeIdentityErrorMapper.from(ex);
-            if (providerCategory
-                    == ProcessorErrorCategory.ProviderUnavailable
-                    || providerCategory
-                    == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+            if (ex instanceof ExecutionEvidenceUnavailableException
+                    || ScopeIdentityErrorMapper
+                    .isProviderIdentityFailure(ex)) {
                 throw ex;
             }
             if (execution == null) {
-                return new ProcessingDebugResult(
+                return snapshotDebugResult(
                         nonCommittingSnapshotResult(
                                 snapshot,
                                 0L,
@@ -418,7 +400,7 @@ final class ProcessorEngine {
                                         deterministicMessage(
                                                 ex,
                                                 "Runtime processing failed"))),
-                        ProcessingConformanceTrace.empty());
+                        snapshot);
             }
             execution.fail(
                     ProcessorStatus.RUNTIME_FATAL,
@@ -440,6 +422,16 @@ final class ProcessorEngine {
         }
     }
 
+    private static ProcessingDebugResult snapshotDebugResult(
+            DocumentProcessingResult result,
+            ResolvedSnapshot snapshot) {
+        return new ProcessingDebugResult(
+                result,
+                ProcessingConformanceTrace.empty(),
+                null,
+                snapshot);
+    }
+
     private static DocumentProcessingResult nonCommittingSnapshotResult(
             ResolvedSnapshot snapshot,
             long admittedGas,
@@ -449,8 +441,7 @@ final class ProcessorEngine {
                 snapshot.canonicalRoot(),
                 admittedGas,
                 status,
-                diagnostic)
-                .withSnapshot(snapshot);
+                diagnostic);
     }
 
     static boolean isInitialized(DocumentProcessor owner, Node document) {
@@ -549,43 +540,6 @@ final class ProcessorEngine {
 
     static String stripSlashes(String value) {
         return PointerUtils.stripSlashes(value);
-    }
-
-    @SuppressWarnings("unchecked")
-    static ChannelMatch evaluateChannel(DocumentProcessor owner,
-                                            ContractBundle.ChannelBinding channel,
-                                            ContractBundle bundle,
-                                            String scopePath,
-                                            Node event) {
-        ChannelContract contract = channel.contract();
-        ChannelProcessor<? extends ChannelContract> processor =
-                owner.registry().lookupChannel(contract).orElse(null);
-        if (processor == null) {
-            return ChannelMatch.noMatch();
-        }
-        Node clonedEvent = event != null ? event.clone() : null;
-        Object eventObject = null;
-        try {
-            eventObject = owner.contractConverter().convertWithType(clonedEvent, Object.class, false);
-        } catch (Exception ignored) {
-        }
-        @SuppressWarnings("unchecked")
-        ChannelProcessor<ChannelContract> typed = (ChannelProcessor<ChannelContract>) processor;
-        ChannelEvaluationContext context = new ChannelEvaluationContext(scopePath,
-                channel.key(),
-                clonedEvent,
-                eventObject,
-                bundle.channels(),
-                bundle.markers(),
-                owner.registry());
-        ChannelEvaluation evaluation = typed.evaluate(contract, context);
-        if (evaluation == null || !evaluation.matches()) {
-            return ChannelMatch.noMatch();
-        }
-        return new ChannelMatch(true,
-                evaluation.eventId(),
-                evaluation.eventForDelivery(),
-                typed);
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
@@ -845,6 +799,7 @@ final class ProcessorEngine {
         private VerifiedExecutionEvidence executionEvidence;
         private ProcessorStatus failureStatus;
         private ProcessorDiagnostic failureDiagnostic;
+        private ResolvedSnapshot resultSnapshot;
         private boolean directRootTerminated;
         private boolean acceptedDelivery;
         private boolean staleDelivery;
@@ -1125,13 +1080,26 @@ final class ProcessorEngine {
             if (node == null || node.isReferenceOnly()) {
                 return;
             }
+            Set<String> selected =
+                    selectedKeys.getOrDefault(
+                            normalizeScope(scopePath),
+                            Collections.emptySet());
+            boolean includeProcessEmbedded =
+                    classificationRequiresEmbeddedRouting(
+                            scopePath,
+                            selectedKeys.keySet());
+            if (!RootExternalDeliveryEvidenceVerifier
+                    .typeContributesToSubscriptionSurface(
+                            owner.snapshotManager(),
+                            node.getType(),
+                            selected,
+                            includeProcessEmbedded,
+                            new LinkedHashSet<String>())) {
+                node.type((Node) null);
+            }
             Node contracts = node.getContracts();
             if (contracts != null
                     && contracts.getProperties() != null) {
-                Set<String> selected =
-                        selectedKeys.getOrDefault(
-                                normalizeScope(scopePath),
-                                Collections.emptySet());
                 contracts.getProperties().entrySet()
                         .removeIf(entry ->
                                 !selected.contains(entry.getKey())
@@ -1166,6 +1134,21 @@ final class ProcessorEngine {
                             selectedKeys);
                 }
             }
+        }
+
+        private boolean classificationRequiresEmbeddedRouting(
+                String scopePath,
+                Set<String> selectedScopes) {
+            String normalized = normalizeScope(scopePath);
+            for (String selectedScope : selectedScopes) {
+                String selected = normalizeScope(selectedScope);
+                if (!selected.equals(normalized)
+                        && PointerUtils.descendantOrEqual(
+                        selected, normalized)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private boolean isDirectProcessorStateKey(String key) {
@@ -1204,68 +1187,93 @@ final class ProcessorEngine {
                     new LinkedHashMap<>();
             for (ExternalDeliverySnapshot delivery
                     : executionEvidence.deliveries()) {
-                List<EvidenceRouteStep> route =
-                        plannedRoutes.get(
-                                normalizeScope(delivery.scopePath()));
-                if (route == null) {
-                    route = routeTo(
-                            delivery.scopePath(),
-                            openedScopes);
-                    plannedRoutes.put(
-                            normalizeScope(delivery.scopePath()),
-                            route);
-                }
-
-                String normalizedTarget =
-                        normalizeScope(delivery.scopePath());
-                if (openedScopes.add(normalizedTarget)) {
-                    runtime.chargeScopeEntry(normalizedTarget);
-                }
-                ContractBundle classificationBundle =
-                        scopeExecutor.externalClassificationBundle(
+                int openedBefore = openedScopes.size();
+                contractRecognitionMeter
+                        .beginCanonicalClassificationBatch();
+                try {
+                    List<EvidenceRouteStep> route =
+                            plannedRoutes.get(
+                                    normalizeScope(
+                                            delivery.scopePath()));
+                    if (route == null) {
+                        route = routeTo(
                                 delivery.scopePath(),
-                                delivery.channelKey(),
-                                false);
-                validateDeliveryBinding(
-                        delivery,
-                        classificationBundle,
-                        "classification");
-                if ("/".equals(delivery.scopePath())
-                        && route.isEmpty()) {
-                    runtime.recordSemanticDemand("/contracts");
-                }
-                if (!"/".equals(delivery.scopePath())) {
-                    runtime.recordSemanticDemand(
-                            delivery.scopePath());
-                }
-                runtime.recordSemanticDemand(contractDemand(
-                        delivery.scopePath(),
-                        delivery.channelKey()));
-                if (event != null
-                        && event.getProperties() != null
-                        && event.getProperties().containsKey(
-                        "subscriptionKey")) {
-                    runtime.recordSemanticDemand(
-                            "/event/subscriptionKey");
-                }
+                                openedScopes);
+                        plannedRoutes.put(
+                                normalizeScope(
+                                        delivery.scopePath()),
+                                route);
+                    }
 
-                ChannelRunner.ExternalClassification classification =
-                        scopeExecutor.classifyEvidenceDelivery(
+                    String normalizedTarget =
+                            normalizeScope(
+                                    delivery.scopePath());
+                    openedScopes.add(normalizedTarget);
+                    ContractBundle classificationBundle =
+                            scopeExecutor
+                                    .externalClassificationBundle(
+                                            delivery.scopePath(),
+                                            delivery.channelKey(),
+                                            false);
+                    validateDeliveryBinding(
+                            delivery,
+                            classificationBundle,
+                            "classification");
+                    if ("/".equals(delivery.scopePath())
+                            && route.isEmpty()) {
+                        runtime.recordSemanticDemand(
+                                "/contracts");
+                    }
+                    if (!"/".equals(
+                            delivery.scopePath())) {
+                        runtime.recordSemanticDemand(
+                                delivery.scopePath());
+                    }
+                    runtime.recordSemanticDemand(
+                            contractDemand(
+                                    delivery.scopePath(),
+                                    delivery.channelKey()));
+                    if (event != null
+                            && event.getProperties() != null
+                            && event.getProperties().containsKey(
+                            "subscriptionKey")) {
+                        runtime.recordSemanticDemand(
+                                "/event/subscriptionKey");
+                    }
+
+                    int newlyOpened =
+                            openedScopes.size()
+                                    - openedBefore;
+                    if (newlyOpened > 0) {
+                        runtime.chargeParticipatingClosure(
+                                newlyOpened);
+                    }
+                    contractRecognitionMeter
+                            .flushCanonicalClassificationBatch();
+
+                    ChannelRunner.ExternalClassification
+                            classification =
+                            scopeExecutor
+                                    .classifyEvidenceDelivery(
+                                            delivery.scopePath(),
+                                            delivery.channelKey(),
+                                            event,
+                                            classificationBundle);
+                    if (classification.acceptedNew()) {
+                        String occurrence = occurrenceKey(
                                 delivery.scopePath(),
-                                delivery.channelKey(),
-                                event,
-                                classificationBundle);
-                if (classification.acceptedNew()) {
-                    String occurrence = occurrenceKey(
-                            delivery.scopePath(),
-                            delivery.channelKey());
-                    acceptedNew.add(classification);
-                    routes.put(
-                            occurrence,
-                            route);
-                    acceptedEvidence.put(
-                            occurrence,
-                            delivery);
+                                delivery.channelKey());
+                        acceptedNew.add(classification);
+                        routes.put(
+                                occurrence,
+                                route);
+                        acceptedEvidence.put(
+                                occurrence,
+                                delivery);
+                    }
+                } finally {
+                    contractRecognitionMeter
+                            .cancelCanonicalClassificationBatch();
                 }
             }
 
@@ -1327,20 +1335,133 @@ final class ProcessorEngine {
                         "accepted-new preflight");
             }
 
-            for (ChannelRunner.ExternalClassification classification
-                    : acceptedNew) {
+            List<List<ChannelRunner.ExternalClassification>>
+                    logicalDeliveryGroups =
+                    logicalDeliveryGroups(acceptedNew);
+            validateLogicalDeliveryGroups(
+                    logicalDeliveryGroups);
+
+            for (List<ChannelRunner.ExternalClassification> group
+                    : logicalDeliveryGroups) {
+                ChannelRunner.ExternalClassification
+                        classification = group.get(0);
                 String occurrence = occurrenceKey(
                         classification.scopePath(),
-                        classification.channelKey());
+                        classification.sourceChannelKey());
                 registerEvidenceRoute(
                         routes.getOrDefault(
                                 occurrence,
                                 Collections.emptyList()));
-                scopeExecutor.processClassifiedEvidenceDelivery(
-                        classification);
+                scopeExecutor
+                        .processClassifiedEvidenceDeliveryGroup(
+                                group);
                 if (shouldStopScopeWork(
                         classification.scopePath())) {
                     return;
+                }
+            }
+        }
+
+        /**
+         * Groups accepted-new occurrences in their canonical first-occurrence
+         * order without allowing a strategy-controlled key to reorder work.
+         */
+        private List<List<ChannelRunner.ExternalClassification>>
+        logicalDeliveryGroups(
+                List<ChannelRunner.ExternalClassification>
+                        acceptedNew) {
+            Map<LogicalDeliveryGroupKey,
+                    List<ChannelRunner.ExternalClassification>>
+                    grouped = new LinkedHashMap<>();
+            for (ChannelRunner.ExternalClassification classification
+                    : acceptedNew) {
+                LogicalDeliveryGroupKey key =
+                        new LogicalDeliveryGroupKey(
+                                normalizeScope(
+                                        classification
+                                                .scopePath()),
+                                classification
+                                        .logicalDeliveryKey());
+                grouped.computeIfAbsent(
+                                key,
+                                ignored -> new ArrayList<>())
+                        .add(classification);
+            }
+            List<List<ChannelRunner.ExternalClassification>>
+                    result = new ArrayList<>(
+                    grouped.size());
+            for (List<ChannelRunner.ExternalClassification> group
+                    : grouped.values()) {
+                result.add(Collections.unmodifiableList(
+                        new ArrayList<>(group)));
+            }
+            return Collections.unmodifiableList(result);
+        }
+
+        /**
+         * Validates every logical route against the fully preflighted,
+         * same-scope contract surface before route registration or scope
+         * initialization can mutate run state.
+         */
+        private void validateLogicalDeliveryGroups(
+                List<List<ChannelRunner.ExternalClassification>>
+                        groups) {
+            for (List<ChannelRunner.ExternalClassification> group
+                    : groups) {
+                if (group == null || group.isEmpty()) {
+                    throw new IllegalStateException(
+                            "Logical delivery group is empty");
+                }
+                ChannelRunner.ExternalClassification first =
+                        group.get(0);
+                String scopePath = normalizeScope(
+                        first.scopePath());
+                String handlerChannelKey =
+                        ExternalChannelFunctionResolver
+                                .immutableRoutingKey(
+                                        first
+                                                .handlerChannelKey(),
+                                        "handler Channel");
+                String logicalDeliveryKey =
+                        ExternalChannelFunctionResolver
+                                .immutableRoutingKey(
+                                        first
+                                                .logicalDeliveryKey(),
+                                        "logical delivery");
+                String payloadBlueId =
+                        first.payloadBlueId();
+                for (ChannelRunner.ExternalClassification
+                        classification : group) {
+                    if (classification == null
+                            || !classification.acceptedNew()
+                            || !scopePath.equals(normalizeScope(
+                            classification.scopePath()))
+                            || !logicalDeliveryKey.equals(
+                            classification
+                                    .logicalDeliveryKey())
+                            || !handlerChannelKey.equals(
+                            classification
+                                    .handlerChannelKey())
+                            || !Objects.equals(
+                            payloadBlueId,
+                            classification.payloadBlueId())) {
+                        throw new IllegalStateException(
+                                "Accepted External Channels disagree on "
+                                        + "logical delivery at "
+                                        + scopePath + "/"
+                                        + logicalDeliveryKey);
+                    }
+                }
+                ContractBundle bundle =
+                        bundles.get(scopePath);
+                if (bundle == null
+                        || bundle.channelBinding(
+                        handlerChannelKey) == null) {
+                    throw new IllegalStateException(
+                            "External Channel handler target is not an "
+                                    + "existing same-scope Channel at "
+                                    + scopePath + "/"
+                                    + handlerChannelKey);
                 }
             }
         }
@@ -1401,9 +1522,7 @@ final class ProcessorEngine {
                     throw new InvalidExecutionEvidenceException(
                             "Cyclic Process Embedded route to " + target);
                 }
-                if (openedScopes.add(currentScope)) {
-                    runtime.chargeScopeEntry(currentScope);
-                }
+                openedScopes.add(currentScope);
                 EvidenceRouteStep selected = null;
                 ContractBundle bundle =
                         scopeExecutor.externalClassificationBundle(
@@ -1563,31 +1682,30 @@ final class ProcessorEngine {
         DocumentProcessingResult result() {
             ProcessorStatus status = selectStatus();
             if (!status.commits()) {
+                resultSnapshot = inputSnapshot;
                 DocumentProcessingResult nonCommitting =
                         DocumentProcessingResult.nonCommitting(
                                 inputDocument.clone(),
                                 runtime.totalGas(),
                                 status,
                                 failureDiagnostic);
-                return inputSnapshot != null
-                        ? nonCommitting.withSnapshot(inputSnapshot)
-                        : nonCommitting;
+                return nonCommitting;
             }
             ResolvedSnapshot snapshot = runtime.snapshot();
             if (snapshot != null) {
                 ResolvedSnapshot publishedSnapshot = publishableSnapshot(snapshot, owner.metricsSink());
+                resultSnapshot = publishedSnapshot;
                 return DocumentProcessingResult.completed(runtime.selectedDocument(),
                         runtime.rootEmissions(),
                         runtime.totalGas(),
                         status,
-                        null,
-                        publishedSnapshot);
+                        null);
             }
+            resultSnapshot = null;
             return DocumentProcessingResult.completed(runtime.document(),
                     runtime.rootEmissions(),
                     runtime.totalGas(),
                     status,
-                    null,
                     null);
         }
 
@@ -1603,7 +1721,8 @@ final class ProcessorEngine {
             return new ProcessingDebugResult(
                     completed,
                     runtime.conformanceTrace(),
-                    companion);
+                    companion,
+                    resultSnapshot);
         }
 
         private ProcessorStatus selectStatus() {
@@ -1969,7 +2088,7 @@ final class ProcessorEngine {
             abortRuntimeFailure(
                     scopePath,
                     bundle,
-                    ProcessorErrorCategory.InternalProcessorError,
+                    ProcessorErrorCategory.RuntimeExecutionFailure,
                     reason);
         }
 
@@ -2051,7 +2170,7 @@ final class ProcessorEngine {
             if (throwable instanceof MustUnderstandFailureException) {
                 return ((MustUnderstandFailureException) throwable).errorCategory();
             }
-            return defaultCategory != null ? defaultCategory : ProcessorErrorCategory.InternalProcessorError;
+            return defaultCategory != null ? defaultCategory : ProcessorErrorCategory.RuntimeExecutionFailure;
         }
 
         void deliverLifecycle(String scopePath,
@@ -2198,6 +2317,44 @@ final class ProcessorEngine {
         }
     }
 
+    private static final class LogicalDeliveryGroupKey {
+        private final String scopePath;
+        private final String logicalDeliveryKey;
+
+        private LogicalDeliveryGroupKey(
+                String scopePath,
+                String logicalDeliveryKey) {
+            this.scopePath = Objects.requireNonNull(
+                    scopePath, "scopePath");
+            this.logicalDeliveryKey =
+                    Objects.requireNonNull(
+                            logicalDeliveryKey,
+                            "logicalDeliveryKey");
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other
+                    instanceof LogicalDeliveryGroupKey)) {
+                return false;
+            }
+            LogicalDeliveryGroupKey that =
+                    (LogicalDeliveryGroupKey) other;
+            return scopePath.equals(that.scopePath)
+                    && logicalDeliveryKey.equals(
+                    that.logicalDeliveryKey);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * scopePath.hashCode()
+                    + logicalDeliveryKey.hashCode();
+        }
+    }
+
 
     @SuppressWarnings("unchecked")
     static void executeHandler(DocumentProcessor owner, HandlerContract contract, ProcessorExecutionContext context) {
@@ -2219,31 +2376,6 @@ final class ProcessorEngine {
                         "No processor registered for contract type " + contract.getTypeBlueId()));
         HandlerProcessor<HandlerContract> typed = (HandlerProcessor<HandlerContract>) processor;
         return typed.matches(contract, context);
-    }
-
-    static final class ChannelMatch {
-        final boolean matches;
-        final String eventId;
-        final Node event;
-        final ChannelProcessor<ChannelContract> processor;
-
-        ChannelMatch(boolean matches,
-                     String eventId,
-                     Node event,
-                     ChannelProcessor<ChannelContract> processor) {
-            this.matches = matches;
-            this.eventId = eventId;
-            this.event = event != null ? event.clone() : null;
-            this.processor = processor;
-        }
-
-        Node eventNode() {
-            return event != null ? event.clone() : null;
-        }
-
-        static ChannelMatch noMatch() {
-            return new ChannelMatch(false, null, null, null);
-        }
     }
 
     static final class BoundaryViolationException extends RuntimeException {

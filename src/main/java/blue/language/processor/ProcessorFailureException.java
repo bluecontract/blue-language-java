@@ -11,14 +11,14 @@ public class ProcessorFailureException extends IllegalArgumentException {
         super(message);
         this.errorCategory = errorCategory != null
                 ? errorCategory
-                : ProcessorErrorCategory.InternalProcessorError;
+                : ProcessorErrorCategory.RuntimeExecutionFailure;
     }
 
     public ProcessorFailureException(ProcessorErrorCategory errorCategory, String message, Throwable cause) {
         super(message, cause);
         this.errorCategory = errorCategory != null
                 ? errorCategory
-                : ProcessorErrorCategory.InternalProcessorError;
+                : ProcessorErrorCategory.RuntimeExecutionFailure;
     }
 
     public ProcessorErrorCategory errorCategory() {

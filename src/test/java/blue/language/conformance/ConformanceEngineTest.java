@@ -4,6 +4,8 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
+import blue.language.utils.CanonicalIdentityInputBuilder;
+import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -102,7 +104,7 @@ public class ConformanceEngineTest {
                 "  currency: EUR", Node.class));
         document.getProperties().get("price").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/price/currency");
@@ -150,7 +152,7 @@ public class ConformanceEngineTest {
 
         document.getProperties().get("status").value("published");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/status");
@@ -224,7 +226,7 @@ public class ConformanceEngineTest {
 
         document.getAsNode("/prices/1").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/prices/-/currency");
@@ -269,7 +271,7 @@ public class ConformanceEngineTest {
 
         document.getAsNode("/prices/sku2").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/prices/sku2/currency");
@@ -300,7 +302,7 @@ public class ConformanceEngineTest {
                 "x: 1", Node.class));
         document.getProperties().get("x").value(2);
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
         assertThrows(IllegalArgumentException.class,
                 () -> blue.conformanceEngine().planGeneralization(canonicalRoot, resolvedRoot, "/x"));
@@ -337,6 +339,14 @@ public class ConformanceEngineTest {
                 "  type:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR"));
         return nodeProvider;
+    }
+
+    private static FrozenNode canonicalIdentityRoot(Node resolved) {
+        Node sourceEquivalent =
+                new MinimizedOverlayBuilder().build(resolved.clone());
+        return FrozenNode.fromNode(
+                new CanonicalIdentityInputBuilder().build(
+                        resolved.clone(), sourceEquivalent));
     }
 
     private static BasicNodeProvider basketProvider() {

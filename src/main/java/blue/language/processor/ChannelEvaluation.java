@@ -2,9 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 
-import java.util.Collections;
-import java.util.List;
-
 /**
  * Immutable result of evaluating an incoming event against a channel contract.
  *
@@ -39,18 +36,6 @@ public final class ChannelEvaluation {
         return new ChannelEvaluation(true, event, eventId);
     }
 
-    /**
-     * @deprecated Contracts 1.0 does not permit a runtime channel to create
-     * caller-authored delivery occurrences. Return {@link #match(Node)} for
-     * the single preselected occurrence instead.
-     */
-    @Deprecated
-    public static ChannelEvaluation matchDeliveries(List<ChannelDelivery> deliveries) {
-        throw new UnsupportedOperationException(
-                "Caller-authored channel deliveries are not executable "
-                        + "under Contracts 1.0");
-    }
-
     public boolean matches() {
         return matches;
     }
@@ -67,12 +52,4 @@ public final class ChannelEvaluation {
         return eventId;
     }
 
-    /**
-     * @deprecated Caller-authored delivery occurrences are not executable
-     * under Contracts 1.0. This compatibility view is always empty.
-     */
-    @Deprecated
-    public List<ChannelDelivery> deliveries() {
-        return Collections.emptyList();
-    }
 }

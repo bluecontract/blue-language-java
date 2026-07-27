@@ -35,7 +35,7 @@ class ProcessorPreviewOwnershipTest {
     }
 
     @Test
-    void anonymousGasRejectionThenFatalExitReleasesBufferedPreview() {
+    void fatalExitReleasesBufferedPreview() {
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         Fixture fixture = fixture(manager);
         List<JsonPatch> patches = Collections.singletonList(
@@ -43,8 +43,6 @@ class ProcessorPreviewOwnershipTest {
         WorkingDocument.Preview preview = preview(fixture.context, patches);
 
         fixture.context.applyPreviewedPatches(patches, preview);
-        assertThrows(UnsupportedOperationException.class,
-                () -> fixture.context.consumeGas(-1L));
         assertThrows(ProcessorFatalException.class,
                 () -> fixture.context.throwFatal(
                         "fatal after rejected anonymous gas"));

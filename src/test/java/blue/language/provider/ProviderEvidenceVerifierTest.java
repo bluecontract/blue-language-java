@@ -60,10 +60,6 @@ class ProviderEvidenceVerifierTest {
                                 preprocessing,
                                 registry,
                                 evidence)));
-        assertThrows(IllegalArgumentException.class,
-                () -> ProviderEvidenceVerifier.verify(
-                        requested, source, ProviderMode.SOURCE_DOCUMENT, blue,
-                        new SourceProviderEnvironment("1.0", "ambient-label")));
     }
 
     private SourceProviderEnvironment environment(Blue blue,

@@ -1,18 +1,17 @@
 package blue.language.processor;
 
+import blue.language.BlueLanguageErrorCategory;
+import blue.language.BlueLanguageErrorClassifier;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
-import blue.language.processor.model.ChannelContract;
-import blue.language.processor.model.Contract;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.FrozenTypeMatcher;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Run-local result of the registered immutable External Channel functions.
@@ -24,13 +23,35 @@ import java.util.Set;
  */
 final class ExternalChannelFunctionEvaluation {
 
+    interface MatcherSession {
+        void requireActive();
+
+        boolean matches(
+                FrozenNode candidate,
+                FrozenNode pattern);
+
+        FrozenNode materializeExactReference(
+                FrozenNode reference);
+
+        void close();
+    }
+
+    @FunctionalInterface
+    interface MatcherSessionFactory {
+        MatcherSession open();
+    }
+
     private final List<String> channelKeys;
     private final List<String> eventKeys;
     private final boolean preselects;
     private final boolean accepts;
     private final String checkpointDomainBlueId;
     private final FrozenNode payload;
+    private final FrozenNode checkpointSubject;
     private final String checkpointSubjectBlueId;
+    private final String handlerChannelKey;
+    private final String logicalDeliveryKey;
+    private final ExternalChannelDependencySnapshot dependencies;
 
     private ExternalChannelFunctionEvaluation(
             List<String> channelKeys,
@@ -39,34 +60,56 @@ final class ExternalChannelFunctionEvaluation {
             boolean accepts,
             String checkpointDomainBlueId,
             FrozenNode payload,
-            String checkpointSubjectBlueId) {
+            FrozenNode checkpointSubject,
+            String checkpointSubjectBlueId,
+            String handlerChannelKey,
+            String logicalDeliveryKey,
+            ExternalChannelDependencySnapshot dependencies) {
         this.channelKeys = channelKeys;
         this.eventKeys = eventKeys;
         this.preselects = preselects;
         this.accepts = accepts;
         this.checkpointDomainBlueId = checkpointDomainBlueId;
         this.payload = payload;
+        this.checkpointSubject = checkpointSubject;
         this.checkpointSubjectBlueId = checkpointSubjectBlueId;
+        this.handlerChannelKey = handlerChannelKey;
+        this.logicalDeliveryKey = logicalDeliveryKey;
+        this.dependencies = dependencies;
     }
 
     static ExternalChannelFunctionEvaluation evaluate(
             ContractProcessorRegistry registry,
             NodeToObjectConverter converter,
+            MatcherSessionFactory matcherSessions,
             ContractBundle bundle,
             EffectiveContractSnapshot snapshot,
             Node exactEvent) {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(converter, "converter");
+        Objects.requireNonNull(
+                matcherSessions,
+                "matcherSessions");
         Objects.requireNonNull(bundle, "bundle");
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(exactEvent, "exactEvent");
 
         ExternalChannelFunctionEvaluation first =
                 evaluateOnce(
-                        registry, converter, bundle, snapshot, exactEvent);
+                        registry,
+                        converter,
+                        matcherSessions,
+                        bundle,
+                        snapshot,
+                        exactEvent);
         ExternalChannelFunctionEvaluation second =
                 evaluateOnce(
-                        registry, converter, bundle, snapshot, exactEvent);
+                        registry,
+                        converter,
+                        matcherSessions,
+                        bundle,
+                        snapshot,
+                        exactEvent);
         if (!first.sameResult(second)) {
             throw new IllegalStateException(
                     "External Channel functions are not deterministic at "
@@ -75,140 +118,216 @@ final class ExternalChannelFunctionEvaluation {
         return first;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private static ExternalChannelFunctionEvaluation evaluateOnce(
             ContractProcessorRegistry registry,
             NodeToObjectConverter converter,
+            MatcherSessionFactory matcherSessions,
             ContractBundle bundle,
             EffectiveContractSnapshot snapshot,
             Node exactEvent) {
-        ChannelContract registrationProbe =
-                freshChannel(converter, bundle, snapshot);
-        ChannelProcessor processor = registry.lookupChannel(
-                registrationProbe)
-                .orElse(null);
-        ExternalChannelSubscriptionFunctions functions =
-                processor != null
-                        ? processor.externalSubscriptionFunctions()
-                        : null;
-        if (functions == null) {
-            throw new IllegalStateException(
-                    "External Channel runtime type does not expose immutable "
-                            + "PRESELECTS/ACCEPTS/PAYLOAD/"
-                            + "CHECKPOINT_SUBJECT functions: "
-                            + snapshot.effectiveTypeBlueId());
+        MatcherSession matcher = Objects.requireNonNull(
+                matcherSessions.open(),
+                "matcherSession");
+        try {
+            ExternalChannelFunctionResolver.Evaluation resolved =
+                    new ExternalChannelFunctionResolver(
+                            registry,
+                            converter,
+                            matcher,
+                            bundle)
+                            .evaluate(snapshot, exactEvent);
+            FrozenNode checkpointSubject =
+                    resolved.checkpointSubject();
+            String checkpointSubjectBlueId =
+                    checkpointSubject != null
+                            ? checkpointSubject.blueId()
+                            : null;
+
+            return new ExternalChannelFunctionEvaluation(
+                    resolved.channelKeys(),
+                    resolved.eventKeys(),
+                    resolved.preselects(),
+                    resolved.accepts(),
+                    resolved.checkpointDomainBlueId(),
+                    resolved.payload(),
+                    checkpointSubject,
+                    checkpointSubjectBlueId,
+                    resolved.handlerChannelKey(),
+                    resolved.logicalDeliveryKey(),
+                    resolved.dependencies());
+        } finally {
+            matcher.close();
+        }
+    }
+
+    /**
+     * Captures one snapshot-manager boundary and creates a new cache-isolated
+     * matcher for each deterministic evaluation pass. A missing manager is
+     * tolerated only until matching demands a non-core reference.
+     */
+    static MatcherSessionFactory verifiedMatcherSessions(
+            ProcessingSnapshotManager snapshotManager) {
+        final ProcessingSnapshotManager captured =
+                snapshotManager;
+        return () -> new VerifiedMatcherSession(captured);
+    }
+
+    /**
+     * A static wrapper prevents a retained function context from acquiring an
+     * implicit reference to the factory that captured the snapshot manager.
+     * Closing severs the only remaining matcher/materializer reference.
+     */
+    private static final class VerifiedMatcherSession
+            implements MatcherSession {
+        private FrozenTypeMatcher matcher;
+        private Function<FrozenNode, FrozenNode>
+                exactReferenceMaterializer;
+
+        private VerifiedMatcherSession(
+                ProcessingSnapshotManager snapshotManager) {
+            final ProcessingSnapshotManager captured =
+                    snapshotManager;
+            this.exactReferenceMaterializer =
+                    reference ->
+                            materializeVerifiedExactReference(
+                                    captured,
+                                    reference,
+                                    "event fragment");
+            this.matcher =
+                    FrozenTypeMatcher
+                            .withVerifiedReferenceMaterializer(
+                                    reference ->
+                                            materializeVerifiedExactReference(
+                                                    captured,
+                                                    reference,
+                                                    "reference matching"));
         }
 
-        List<String> channelKeys = immutableKeys(
-                functions.channelKeys(freshChannel(
-                        converter, bundle, snapshot)),
-                "channel");
-        List<String> eventKeys = immutableKeys(
-                functions.eventKeys(exactEvent.clone()), "event");
-        boolean preselects =
-                functions.preselects(
-                        freshChannel(converter, bundle, snapshot),
-                        exactEvent.clone());
-        boolean accepts =
-                functions.accepts(
-                        freshChannel(converter, bundle, snapshot),
-                        exactEvent.clone());
-        String checkpointDomain = CheckpointDomain.derive(
-                snapshot.effectiveTypeBlueId(),
-                snapshot.sourceContributionNodeBlueIds(),
-                functions.checkpointDomainDiscriminator(
-                        freshChannel(converter, bundle, snapshot)));
+        @Override
+        public synchronized void requireActive() {
+            if (matcher == null) {
+                throw new IllegalStateException(
+                        "External Channel pattern matcher session "
+                                + "is no longer active");
+            }
+        }
 
-        FrozenNode payload = null;
-        String checkpointSubjectBlueId = null;
-        if (accepts) {
-            Node suppliedPayload =
-                    functions.payload(
-                            freshChannel(
-                                    converter, bundle, snapshot),
-                            exactEvent.clone());
-            if (suppliedPayload == null) {
-                throw new IllegalStateException(
-                        "External Channel PAYLOAD returned no exact node at "
-                                + snapshot.scopePath() + "/"
-                                + snapshot.key());
+        @Override
+        public synchronized boolean matches(
+                FrozenNode candidate,
+                FrozenNode pattern) {
+            requireActive();
+            if (pattern == null) {
+                return true;
             }
-            payload = FrozenNode.fromResolvedNode(
-                    suppliedPayload.clone());
-            Node checkpointSubject = functions.checkpointSubject(
-                    freshChannel(converter, bundle, snapshot),
-                    exactEvent.clone(),
-                    payload.toNode());
-            if (checkpointSubject == null) {
-                throw new IllegalStateException(
-                        "External Channel CHECKPOINT_SUBJECT returned no "
-                                + "exact node at " + snapshot.scopePath()
-                                + "/" + snapshot.key());
+            if (candidate == null) {
+                return false;
             }
+            return matcher.matchesType(
+                    candidate,
+                    pattern);
+        }
+
+        @Override
+        public synchronized FrozenNode materializeExactReference(
+                FrozenNode reference) {
+            requireActive();
+            FrozenNode exactReference =
+                    Objects.requireNonNull(
+                            reference, "reference");
+            if (!exactReference.isReferenceOnly()) {
+                throw new IllegalArgumentException(
+                        "External Channel event fragment must be an exact "
+                                + "pure reference");
+            }
+            Function<FrozenNode, FrozenNode> materializer =
+                    exactReferenceMaterializer;
+            if (materializer == null) {
+                throw new IllegalStateException(
+                        "External Channel event fragment materializer "
+                                + "session is no longer active");
+            }
+            FrozenNode materialized =
+                    Objects.requireNonNull(
+                            materializer.apply(
+                                    exactReference),
+                            "materializedExactReference");
+            if (materialized.isReferenceOnly()) {
+                throw new IllegalStateException(
+                        "External Channel event fragment provider returned "
+                                + "a reference instead of exact content for "
+                                + exactReference
+                                .getReferenceBlueId());
+            }
+            Node exact = materialized.toNode();
+            final String actualBlueId;
             try {
-                checkpointSubjectBlueId =
+                actualBlueId =
                         BlueIdCalculator.calculateBlueId(
-                                checkpointSubject.clone());
-            } catch (RuntimeException exception) {
+                                exact);
+            } catch (RuntimeException invalidContent) {
                 throw new IllegalStateException(
-                        "External Channel CHECKPOINT_SUBJECT is not exact "
-                                + "BlueId Input at " + snapshot.scopePath()
-                                + "/" + snapshot.key(),
-                        exception);
+                        "External Channel event fragment provider content is "
+                                + "not exact canonical content for "
+                                + exactReference
+                                .getReferenceBlueId(),
+                        invalidContent);
             }
+            if (!exactReference.getReferenceBlueId()
+                    .equals(actualBlueId)) {
+                throw new IllegalStateException(
+                        "External Channel event fragment provider content "
+                                + "BlueId mismatch: expected "
+                                + exactReference
+                                .getReferenceBlueId()
+                                + " but calculated "
+                                + actualBlueId);
+            }
+            return FrozenNode.fromNode(exact);
         }
 
-        return new ExternalChannelFunctionEvaluation(
-                channelKeys,
-                eventKeys,
-                preselects,
-                accepts,
-                checkpointDomain,
-                payload,
-                checkpointSubjectBlueId);
+        @Override
+        public synchronized void close() {
+            FrozenTypeMatcher active = matcher;
+            if (active == null) {
+                return;
+            }
+            matcher = null;
+            exactReferenceMaterializer = null;
+            active.clearCaches();
+        }
     }
 
-    private static ChannelContract freshChannel(
-            NodeToObjectConverter converter,
-            ContractBundle bundle,
-            EffectiveContractSnapshot snapshot) {
-        FrozenNode content = bundle.contractNode(snapshot.key());
-        if (content == null) {
+    private static FrozenNode materializeVerifiedExactReference(
+            ProcessingSnapshotManager snapshotManager,
+            FrozenNode reference,
+            String purpose) {
+        if (snapshotManager == null) {
             throw new IllegalStateException(
-                    "External Channel effective content is unavailable at "
-                            + snapshot.scopePath() + "/" + snapshot.key());
+                    "External Channel " + purpose
+                            + " requires a verified "
+                            + "ProcessingSnapshotManager");
         }
-        Contract converted = converter.convertWithType(
-                content.toNode().clone(), Contract.class, false);
-        if (!(converted instanceof ChannelContract)) {
-            throw new IllegalStateException(
-                    "External Channel could not be converted at "
-                            + snapshot.scopePath() + "/" + snapshot.key());
-        }
-        ChannelContract channel = (ChannelContract) converted;
-        channel.setKey(snapshot.key());
-        channel.setTypeBlueId(snapshot.effectiveTypeBlueId());
-        return channel;
-    }
-
-    private static List<String> immutableKeys(
-            List<String> supplied,
-            String label) {
-        if (supplied == null) {
-            throw new IllegalStateException(
-                    "External subscription " + label
-                            + " key function returned no finite set");
-        }
-        List<String> copy = new ArrayList<>(supplied);
-        Set<String> unique = new LinkedHashSet<>();
-        for (String key : copy) {
-            if (key == null || key.isEmpty() || !unique.add(key)) {
-                throw new IllegalStateException(
-                        "External subscription " + label
-                                + " keys must be unique non-empty Text");
+        try {
+            return snapshotManager
+                    .materializeVerifiedExactReference(
+                            reference);
+        } catch (ExecutionEvidenceUnavailableException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            if (BlueLanguageErrorClassifier.classify(
+                    exception)
+                    == BlueLanguageErrorCategory
+                    .ProviderUnavailable) {
+                throw new ExecutionEvidenceUnavailableException(
+                        "External Channel " + purpose
+                                + " exact content is unavailable for "
+                                + reference.getReferenceBlueId(),
+                        Collections.singleton(
+                                reference.getReferenceBlueId()));
             }
+            throw exception;
         }
-        return Collections.unmodifiableList(copy);
     }
 
     private boolean sameResult(
@@ -222,7 +341,26 @@ final class ExternalChannelFunctionEvaluation {
                 && Objects.equals(payloadBlueId(), other.payloadBlueId())
                 && Objects.equals(
                 checkpointSubjectBlueId,
-                other.checkpointSubjectBlueId);
+                other.checkpointSubjectBlueId)
+                && Objects.equals(
+                handlerChannelKey,
+                other.handlerChannelKey)
+                && Objects.equals(
+                logicalDeliveryKey,
+                other.logicalDeliveryKey)
+                && sameCheckpointSubject(
+                checkpointSubject,
+                other.checkpointSubject)
+                && dependencies.equals(other.dependencies);
+    }
+
+    private static boolean sameCheckpointSubject(
+            FrozenNode left,
+            FrozenNode right) {
+        return left == right
+                || left != null
+                && right != null
+                && left.sameResolvedStructure(right);
     }
 
     private String payloadBlueId() {
@@ -253,7 +391,23 @@ final class ExternalChannelFunctionEvaluation {
         return payload;
     }
 
+    FrozenNode checkpointSubject() {
+        return checkpointSubject;
+    }
+
     String checkpointSubjectBlueId() {
         return checkpointSubjectBlueId;
+    }
+
+    String handlerChannelKey() {
+        return handlerChannelKey;
+    }
+
+    String logicalDeliveryKey() {
+        return logicalDeliveryKey;
+    }
+
+    ExternalChannelDependencySnapshot dependencies() {
+        return dependencies;
     }
 }

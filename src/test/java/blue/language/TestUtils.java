@@ -16,7 +16,7 @@ public class TestUtils {
     }
 
     public static NodeProvider fakeNameBasedNodeProvider(Collection<Node> nodes) {
-        return NodeProviderWrapper.unverified(new NodeProvider() {
+        return NodeProviderWrapper.wrap(new NodeProvider() {
             private final Map<String, Node> nodeMap = nodes.stream()
                     .collect(Collectors.toMap(
                             node -> "blueId-" + node.getName(),
@@ -32,7 +32,7 @@ public class TestUtils {
     }
 
     public static NodeProvider useNodeNameAsBlueIdProvider(List<Node> nodes) {
-        return NodeProviderWrapper.unverified((blueId) -> nodes.stream()
+        return NodeProviderWrapper.wrap((blueId) -> nodes.stream()
                 .filter(e -> blueId.equals(e.getName()))
                 .findAny()
                 .map(Node::clone)

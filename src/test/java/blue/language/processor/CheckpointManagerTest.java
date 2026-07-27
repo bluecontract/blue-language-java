@@ -53,10 +53,17 @@ final class CheckpointManagerTest {
         assertNotNull(stored);
         assertEquals(domainBlueId,
                 stored.getAsText("/domain/blueId"));
-        assertEquals(subjectBlueId,
-                stored.getAsText("/subject/blueId"));
-        assertEquals(67L, runtime.totalGas(),
-                "checkpoint marker and domain-bound entry writes use the exact manifest schedule");
+        assertEquals("payload",
+                stored.getAsText("/subject"));
+        assertEquals("payload",
+                ((ChannelEventCheckpoint) bundle.marker(
+                                ProcessorContractConstants
+                                        .KEY_CHECKPOINT))
+                        .entry("testChannel")
+                        .getSubject()
+                        .getValue());
+        assertEquals(71L, runtime.totalGas(),
+                "inline exact checkpoint subjects pay their direct identity work");
         assertEquals(subjectBlueId, record.lastEventSignature);
     }
 

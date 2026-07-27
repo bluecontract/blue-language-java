@@ -18,7 +18,7 @@ contracts:
   embeddedNode:
     type:
       blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
-    childPath: /payment
+    sourcePath: /payment
   checkpoint:
     type:
       blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR

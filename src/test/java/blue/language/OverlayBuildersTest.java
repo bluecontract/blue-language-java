@@ -3,7 +3,8 @@ package blue.language;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.CanonicalIdentityInputBuilder;
+import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +13,7 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MergeReverserTest {
+public class OverlayBuildersTest {
 
     @Test
     public void testBasic1() throws Exception {
@@ -46,8 +47,8 @@ public class MergeReverserTest {
         Blue blue = new Blue(nodeProvider);
         Node resolved = blue.resolve(bNode);
 
-        MergeReverser reverser = new MergeReverser();
-        Node reversed = reverser.reverse(resolved);
+        MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
+        Node reversed = builder.build(resolved);
 
         assertFalse(reversed.getProperties().containsKey("x"));
         assertEquals(2, reversed.getAsInteger("/y/value"));
@@ -80,8 +81,8 @@ public class MergeReverserTest {
         Blue blue = new Blue(nodeProvider);
         Node resolved = blue.resolve(cNode);
 
-        MergeReverser reverser = new MergeReverser();
-        Node reversed = reverser.reverse(resolved);
+        MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
+        Node reversed = builder.build(resolved);
 
         assertEquals("C", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("B"), reversed.getType().getBlueId());
@@ -127,8 +128,8 @@ public class MergeReverserTest {
         assertEquals(1, resolved.getAsInteger("/a/b/c/d2/value"));
         assertEquals(3, resolved.getAsInteger("/a/b/c/d3/value"));
 
-        MergeReverser reverser = new MergeReverser();
-        Node reversed = reverser.reverse(resolved);
+        MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
+        Node reversed = builder.build(resolved);
 
         assertEquals("P", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("M"), reversed.getType().getBlueId());
@@ -166,8 +167,8 @@ public class MergeReverserTest {
         Blue blue = new Blue(nodeProvider);
         Node resolved = blue.resolve(derivedNode);
 
-        MergeReverser reverser = new MergeReverser();
-        Node reversed = reverser.reverse(resolved);
+        MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
+        Node reversed = builder.build(resolved);
 
         assertEquals("Derived", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("Base"), reversed.getType().getBlueId());
@@ -199,7 +200,7 @@ public class MergeReverserTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Base"));
 
         Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
-        Node reversed = new MergeReverser().reverse(resolved);
+        Node reversed = new MinimizedOverlayBuilder().build(resolved);
 
         assertTrue(reversed.getProperties() == null || !reversed.getProperties().containsKey("list"));
     }
@@ -231,7 +232,7 @@ public class MergeReverserTest {
                 "      value: C");
 
         Node resolved = blue.resolve(derived);
-        Node reversed = new MergeReverser().reverse(resolved);
+        Node reversed = new MinimizedOverlayBuilder().build(resolved);
         Node reversedList = reversed.getAsNode("/list");
 
         assertEquals(1, reversedList.getItems().size());
@@ -271,7 +272,7 @@ public class MergeReverserTest {
                 "      value: Z\n" +
                 "    - D");
 
-        Node reversed = new MergeReverser().reverse(blue.resolve(derived));
+        Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
         Node reversedList = reversed.getAsNode("/list");
 
         assertEquals(3, reversedList.getItems().size());
@@ -319,7 +320,7 @@ public class MergeReverserTest {
                 "      details:\n" +
                 "        color: red");
 
-        Node reversed = new MergeReverser().reverse(blue.resolve(derived));
+        Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
         Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
         assertNull(overlay.getPreviousBlueId());
@@ -357,7 +358,7 @@ public class MergeReverserTest {
                 "    - $pos: 0\n" +
                 "      value: A");
 
-        Node reversed = new MergeReverser().reverse(blue.resolve(derived));
+        Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
         Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
         assertNull(overlay.getPreviousBlueId());
@@ -393,39 +394,13 @@ public class MergeReverserTest {
                 "      value: C");
 
         Node preprocessed = blue.preprocess(derived.clone());
-        Node canonical = new MergeReverser().reverseToCanonicalOverlay(
+        Node canonical = new CanonicalIdentityInputBuilder().build(
                 blue.resolve(preprocessed.clone()), preprocessed);
         Node canonicalList = canonical.getAsNode("/list");
 
         assertEquals(2, canonicalList.getItems().size());
         assertEquals("A", canonicalList.getItems().get(0).getValue());
         assertEquals("C", canonicalList.getItems().get(1).getValue());
-        canonicalList.getItems().forEach(item -> {
-            assertNull(item.getPreviousBlueId());
-            assertNull(item.getPosition());
-        });
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void resolvedOnlyCanonicalOverlayCompatibilityOverloadRemainsAvailable() throws Exception {
-        BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        nodeProvider.addSingleDocs(
-                "name: Base\n" +
-                "list:\n" +
-                "  type: List\n" +
-                "  items:\n" +
-                "    - A\n" +
-                "    - B");
-        Blue blue = new Blue(nodeProvider);
-        Node resolved = blue.resolve(nodeProvider.getNodeByName("Base"));
-
-        Node canonical = new MergeReverser().reverseToCanonicalOverlay(resolved);
-        Node canonicalList = canonical.getAsNode("/list");
-
-        assertEquals(2, canonicalList.getItems().size());
-        assertEquals("A", canonicalList.getItems().get(0).getValue());
-        assertEquals("B", canonicalList.getItems().get(1).getValue());
         canonicalList.getItems().forEach(item -> {
             assertNull(item.getPreviousBlueId());
             assertNull(item.getPosition());
@@ -447,7 +422,7 @@ public class MergeReverserTest {
                 .type(new Node().blueId(typeBlueId));
 
         Node preprocessed = blue.preprocess(source.clone());
-        Node canonical = new MergeReverser().reverseToCanonicalOverlay(
+        Node canonical = new CanonicalIdentityInputBuilder().build(
                 blue.resolve(preprocessed.clone()), preprocessed);
         Node expectedCanonical = source.clone();
 
@@ -473,7 +448,7 @@ public class MergeReverserTest {
                 "status: draft");
         resolved = new Blue(nodeProvider).resolve(resolved);
         resolved.getProperties().get("status").value("published");
-        Node reversed = new MergeReverser().reverse(resolved);
+        Node reversed = new MinimizedOverlayBuilder().build(resolved);
 
         assertEquals("published", reversed.getAsText("/status/value"));
     }
@@ -495,7 +470,7 @@ public class MergeReverserTest {
                 "  minLength: 3");
 
         Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
-        Node reversed = new MergeReverser().reverse(resolved);
+        Node reversed = new MinimizedOverlayBuilder().build(resolved);
 
         assertNotNull(reversed.getSchema());
         assertEquals(BigInteger.valueOf(3), reversed.getSchema().getMinLengthExact());

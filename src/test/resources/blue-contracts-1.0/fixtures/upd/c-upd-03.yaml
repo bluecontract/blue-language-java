@@ -7,26 +7,49 @@ description: Current update propagation continues on its frozen chain after sour
 operation: process
 input:
   root:
-    value: 0
+    child:
+      x: 0
+      contracts:
+        in:
+          type:
+            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        h:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: in
+          order: 0
+          result:
+            patches:
+            - op: replace
+              path: /child/x
+              val: 1
     contracts:
-      in:
+      embedded:
         type:
-          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
+      childXUpdates:
+        type:
+          blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An
+        path: /child/x
         order: 0
-        subscriptionKey: timeline
-        eventKey: timeline
-        accept: true
-        checkpointDomain: domain-v1
-      h:
+      replaceChild:
         type:
           blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
-        channel: in
+        channel: childXUpdates
         order: 0
         result:
           patches:
           - op: replace
-            path: /value
-            val: 1
+            path: /child
+            val:
+              replacement: true
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -40,7 +63,7 @@ input:
     - timeline
     - 1
     deliverySnapshot:
-    - scopePath: /
+    - scopePath: /child
       channelKey: in
       order: 0
       activationStartExclusive:
@@ -52,10 +75,11 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    cascadeMutation:
-      sourceCutOffDuringUpdate: true
 expected:
   assertions:
   - actual: trace.documentUpdateScopes
     op: contains
     expected: /
+  - actual: result.document.child.replacement
+    op: equals
+    expected: true

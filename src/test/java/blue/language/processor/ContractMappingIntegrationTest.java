@@ -63,7 +63,7 @@ class ContractMappingIntegrationTest {
 
         Contract embeddedNodeContract = converter.convertWithType(contractEntries.get("embeddedNode"), Contract.class, false);
         assertTrue(embeddedNodeContract instanceof EmbeddedNodeChannel);
-        assertEquals("/payment", ((EmbeddedNodeChannel) embeddedNodeContract).getChildPath());
+        assertEquals("/payment", ((EmbeddedNodeChannel) embeddedNodeContract).getSourcePath());
 
         Contract checkpointContract = converter.convertWithType(contractEntries.get("checkpoint"), Contract.class, false);
         assertTrue(checkpointContract instanceof ChannelEventCheckpoint);

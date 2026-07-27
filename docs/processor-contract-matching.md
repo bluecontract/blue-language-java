@@ -58,10 +58,53 @@ subscription-key set, checkpoint domain, and activation data used by
 preselection and changed-surface validation. A registered external type
 without supported functions fails closed.
 
-The pre-1.0 `ChannelDelivery` and
-`ChannelEvaluation.matchDeliveries(...)` APIs are deprecated compatibility
-stubs. Their values cannot be submitted to PROCESS, and
-`matchDeliveries(...)` always rejects the obsolete routed-delivery model.
+Context-aware functions can consult immutable same-scope channels through
+`ExternalChannelFunctionContext`. `member(key)` and `members()` resolve exact
+headers and record direct/whole-surface dependencies. Aggregate types such as
+All-Timelines should use `membersByEffectiveType(timelineTypeBlueId)`: it
+captures that exact type-family membership, including an empty selection,
+without resolving peer aggregate or unrelated channel types. Member and
+type-family identities are included in checkpoint-domain derivation,
+`SubscriptionDelta.Entry`, retained-interval invalidation, and sparse feeder
+evidence verification.
+
+Event functions can use `context.matchesPattern(candidate, pattern)` for the
+same frozen structural/type matching semantics across inline nodes and pure
+references. Each deterministic function-evaluation pass gets an independent
+matcher whose only non-core materialization path is the captured
+`ProcessingSnapshotManager` verified exact-reference boundary. Nested selected
+member evaluation shares that pass-local matcher. Closing the pass clears the
+matcher caches and severs its manager-backed materializer; retained contexts
+reject later matching calls. Provider failures and identity mismatches
+propagate; they are not cached as `false`. Header functions, including their
+event-time consistency recomputation, cannot invoke the matcher directly or
+through `ExternalChannelMemberSnapshot.evaluate(...)`. The strict callback
+supplies exact canonical definitions rather than a fully
+preprocessed/merged Language document; exact canonical type lineage is
+followed, but definitions requiring broader resolution remain outside this
+event-scoped primitive.
+
+Event functions can also use
+`context.materializeExactReference(reference)` to obtain one exact direct
+fragment through the same verified, event-scoped snapshot boundary. The
+default context-aware `eventKeys(...)` uses this operation for referenced
+`subscriptionKey` and `subscriptionKeys` fragments. Ambient and header-time
+materialization remain forbidden; application-specific registry projections
+are not defined by the generic kernel.
+
+After accepted-new classification,
+`handlerChannelKey(...)` may select a different frozen same-scope Handler
+channel and `logicalDeliveryKey(...)` may coalesce multiple fresh accepted
+sources with the same exact payload. Defaults return the raw source key.
+Handlers execute once per logical group; every participating raw source keeps
+its own checkpoint, committed only after complete success. The target is not
+evaluated or checkpointed as another external source unless it independently
+appeared in verified delivery evidence.
+
+The pre-1.0 `ChannelDelivery` carrier and
+`ChannelEvaluation.matchDeliveries(...)` multi-delivery API have been removed.
+External occurrences can enter the kernel only through verified,
+revision-bound `ExternalDeliveryPlan` evidence.
 
 ## Handler SPI
 
@@ -88,6 +131,12 @@ snapshot. Execution uses `ProcessorExecutionContext`, so patches, Root
 emissions, internal events, termination requests, gas, and runtime child
 ledgers remain under the processor's atomic run state.
 
+Runtime ledger submission is the exception to application-effect rollback:
+`submitRuntimeGasLedger(...)` immediately admits one live-bounded named child
+ledger to the invocation meter before buffered effects are applied. A later
+failure discards patches, events, termination, markers, checkpoints, and
+subscription changes, but reports that admitted gas and its ordered trace.
+
 `ContractMatchingService` supplies the shared frozen event-pattern matcher,
 including identity, structural, schema, list, dictionary, primitive-scalar,
 and provider-backed reference/type matching.
@@ -98,12 +147,24 @@ For a verified external occurrence the processor:
 
 1. revalidates the immutable occurrence and activation interval;
 2. performs channel preselection and complete acceptance read-only;
-3. freezes payload, checkpoint domain, and checkpoint subject;
+3. freezes payload, checkpoint domain, checkpoint subject, Handler target, and
+   logical-delivery identity;
 4. rejects stale delivery before initialization;
-5. pre-admits matching handler bodies;
-6. initializes the participating Root-to-target closure top-down;
-7. executes the one selected delivery;
-8. writes its checkpoint only after complete success.
+5. groups fresh accepted sources by same-scope logical-delivery identity and
+   validates target/payload agreement;
+6. pre-admits matching target-handler bodies;
+7. initializes the participating Root-to-target closure top-down;
+8. executes each logical delivery once;
+9. writes every participating source checkpoint only after complete success.
+
+The checkpoint subject is an exact node. A Timeline runtime can freeze an inline
+minimal `{timeline, timestamp}` subject and compare
+`ChannelCheckpointContext.currentSubject()` with the exact prior
+`lastEvent()` in `isNewerEvent(...)`. Their BlueIds are available from
+`eventSignature()` and `lastEventSignature()`. The feeder `eventOrderKey`
+orders occurrence activation; it is not a replacement for per-Timeline
+timestamp newness. Composite/All functions can delegate the selected member's
+subject unchanged.
 
 Triggered and embedded-node events use the invocation-local deterministic
 queue. Root emissions are appended to `ProcessResult.events` immediately and
@@ -133,7 +194,9 @@ progress-only companions and never carry a subscription delta.
 
 ## Atomic failure behavior
 
-All patches, markers, checkpoints, events, ledgers, and subscription changes
-are tentative. A deterministic runtime, evidence, portable-limit, gas, or
-subscription-surface failure returns the exact input Root and no Root events.
-Runtime failure never commits a fatal marker or fatal lifecycle event.
+All patches, markers, checkpoints, events, termination requests, and
+subscription changes are tentative. A deterministic runtime, evidence,
+portable-limit, gas, or subscription-surface failure returns the exact input
+Root and no Root events. Gas already admitted to the live invocation meter,
+including a submitted runtime child ledger, remains in the total and ordered
+trace. Runtime failure never commits a fatal marker or fatal lifecycle event.

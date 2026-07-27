@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 import static blue.language.utils.Properties.*;
 
@@ -23,9 +24,12 @@ import static blue.language.utils.Properties.*;
  * Fast matcher for already-resolved immutable Blue nodes.
  *
  * <p>The matcher treats the second node as a resolved type/shape pattern. It
- * performs no full document resolve during matching; provider access is limited
- * to resolving type references that are not already embedded in the frozen
- * graph, and those lookups are cached for the lifetime of the matcher.</p>
+ * performs no full document resolve during matching. Ordinary instances use
+ * their bound {@link Blue} runtime for type-reference lookup. Event-scoped
+ * callers can instead use {@link #withVerifiedReferenceMaterializer(Function)}
+ * to confine every lookup to an explicitly captured verified materialization
+ * boundary. Resolved references are cached only for the lifetime of this
+ * matcher instance.</p>
  */
 public final class FrozenTypeMatcher {
 
@@ -39,6 +43,8 @@ public final class FrozenTypeMatcher {
     private final Blue blue;
     private final BoundedPlanCache planCache;
     private final boolean resolveCandidateReferences;
+    private final Function<FrozenNode, FrozenNode>
+            verifiedReferenceMaterializer;
 
     public FrozenTypeMatcher(Blue blue) {
         this(blue, true);
@@ -53,10 +59,45 @@ public final class FrozenTypeMatcher {
     FrozenTypeMatcher(Blue blue,
                       boolean resolveCandidateReferences,
                       BlueCachePolicy cachePolicy) {
+        this(
+                blue,
+                resolveCandidateReferences,
+                cachePolicy,
+                null);
+    }
+
+    private FrozenTypeMatcher(
+            Blue blue,
+            boolean resolveCandidateReferences,
+            BlueCachePolicy cachePolicy,
+            Function<FrozenNode, FrozenNode>
+                    verifiedReferenceMaterializer) {
         this.blue = blue;
         this.resolveCandidateReferences = resolveCandidateReferences;
+        this.verifiedReferenceMaterializer =
+                verifiedReferenceMaterializer;
         this.planCache = new BoundedPlanCache(
                 Objects.requireNonNull(cachePolicy, "cachePolicy"));
+    }
+
+    /**
+     * Creates an independent matcher whose non-core reference lookups are
+     * performed only through the supplied verified exact materializer.
+     *
+     * <p>The callback receives the original pure reference. Its exceptions
+     * propagate unchanged, and a null, still-reference-only, or identity-
+     * mismatched result is rejected. No ambient {@link Blue} runtime, raw
+     * provider fallback, or negative-result cache is consulted.</p>
+     */
+    public static FrozenTypeMatcher withVerifiedReferenceMaterializer(
+            Function<FrozenNode, FrozenNode> materializer) {
+        return new FrozenTypeMatcher(
+                null,
+                true,
+                BlueCachePolicy.boundedDefaults(),
+                Objects.requireNonNull(
+                        materializer,
+                        "materializer"));
     }
 
     public boolean matchesType(FrozenNode resolvedNode, FrozenNode resolvedTargetType) {
@@ -711,12 +752,36 @@ public final class FrozenTypeMatcher {
         if (CORE_TYPE_BLUE_IDS.contains(blueId)) {
             return coreType(blueId);
         }
-        if (planCache.get(CACHE_UNRESOLVED_REFERENCE, blueId) != null) {
-            return null;
-        }
         FrozenNode cached = (FrozenNode) planCache.get(CACHE_RESOLVED_REFERENCE, blueId);
         if (cached != null) {
             return cached;
+        }
+        if (verifiedReferenceMaterializer != null) {
+            FrozenNode materialized =
+                    verifiedReferenceMaterializer.apply(type);
+            if (materialized == null) {
+                throw new IllegalArgumentException(
+                        "Verified reference materializer returned no content for "
+                                + blueId);
+            }
+            if (materialized.isReferenceOnly()) {
+                throw new IllegalArgumentException(
+                        "Verified reference materializer retained a pure reference for "
+                                + blueId);
+            }
+            if (!blueId.equals(materialized.blueId())) {
+                throw new IllegalArgumentException(
+                        "Verified reference materializer returned mismatched content for "
+                                + blueId);
+            }
+            planCache.put(
+                    CACHE_RESOLVED_REFERENCE,
+                    blueId,
+                    materialized);
+            return materialized;
+        }
+        if (planCache.get(CACHE_UNRESOLVED_REFERENCE, blueId) != null) {
+            return null;
         }
         FrozenNode resolved;
         try {

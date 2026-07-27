@@ -1,5 +1,7 @@
 package blue.language;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.merge.Merger;
@@ -713,9 +715,13 @@ class ResolvedInstanceSchemaValidationTest {
                 fixture.holderInstance(reference(referenceId))));
         ResolvedSnapshot publicCold = fixture.blue.resolveToSnapshot(source);
         fixture.blue.clearResolvedSnapshotCache();
-        ResolvedSnapshot processingCold = fixture.blue.initializeDocument(source).snapshot();
+        ResolvedSnapshot processingCold = snapshot(
+                fixture.blue,
+                fixture.blue.initializeDocument(source));
         ResolvedSnapshot publicWarm = fixture.blue.resolveToSnapshot(source);
-        ResolvedSnapshot processingWarm = fixture.blue.initializeDocument(source).snapshot();
+        ResolvedSnapshot processingWarm = snapshot(
+                fixture.blue,
+                fixture.blue.initializeDocument(source));
 
         assertEquals(publicCold.blueId(), publicWarm.blueId());
         assertEquals(processingCold.blueId(), processingWarm.blueId());

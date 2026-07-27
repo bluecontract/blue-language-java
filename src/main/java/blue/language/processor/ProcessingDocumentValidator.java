@@ -54,7 +54,7 @@ public final class ProcessingDocumentValidator {
                 return DocumentProcessingResult.runtimeFatal(
                         fallbackDocument(parsedDocument),
                         "Invalid contract key: reserved key '" + key + "'",
-                        ProcessorErrorCategory.InvalidReservedMarker);
+                        ProcessorErrorCategory.InvalidReservedRuntimeState);
             }
         }
         return null;

@@ -20,7 +20,7 @@ public final class ProcessorDiagnostic {
     private ProcessorDiagnostic(ProcessorErrorCategory category,
                                 String message,
                                 Map<String, String> details) {
-        this.category = Objects.requireNonNull(category, "category").normative();
+        this.category = Objects.requireNonNull(category, "category");
         this.message = message;
         this.details = Collections.unmodifiableMap(new LinkedHashMap<>(details));
     }

@@ -6,6 +6,7 @@ import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -297,9 +298,11 @@ public final class RootExternalDeliveryEvidenceVerifier
             remaining.put(occurrenceKey(
                     delivery.scopePath(), delivery.channelKey()), delivery);
         }
-        Node projected = subscriptionIndexProjection(
+        SubscriptionIndexProjection projected =
+                subscriptionIndexProjection(
                 root, evidence.activeSubscriptionIntervals());
-        try (Resolution resolution = resolution(projected)) {
+        try (Resolution resolution =
+                     subscriptionResolution(projected)) {
             for (SubscriptionDelta.Entry activeInterval
                     : evidence.activeSubscriptionIntervals()) {
                 String scopePath = PointerUtils.normalizeScope(
@@ -329,10 +332,17 @@ public final class RootExternalDeliveryEvidenceVerifier
                                     + "reachable through Process Embedded: "
                                     + scopePath);
                 }
+                Map<String, String> selectorTypes =
+                        hasEnumerationSelector(activeInterval)
+                                ? selectorEffectiveContractTypes(
+                                resolution, scopePath)
+                                : null;
                 ContractBundle bundle =
                         resolution.subscriptionBundleAt(
                                 scopePath,
-                                activeInterval.channelKey(),
+                                subscriptionContractKeys(
+                                        activeInterval,
+                                        selectorTypes),
                                 false);
                 EffectiveContractSnapshot snapshot =
                         bundle.effectiveContractSnapshot(
@@ -399,7 +409,10 @@ public final class RootExternalDeliveryEvidenceVerifier
                             scopePath);
                     verifyDeliveryActivation(
                             activeInterval, delivery);
-                    verifyDelivery(resolution, delivery);
+                    verifyDelivery(
+                            resolution,
+                            delivery,
+                            activeInterval);
                 }
             }
         } catch (ExecutionEvidenceUnavailableException exception) {
@@ -435,6 +448,9 @@ public final class RootExternalDeliveryEvidenceVerifier
                 ExternalChannelFunctionEvaluation.evaluate(
                         registry,
                         converter,
+                        ExternalChannelFunctionEvaluation
+                                .verifiedMatcherSessions(
+                                        snapshotManager),
                         bundle,
                         snapshot,
                         event);
@@ -444,7 +460,8 @@ public final class RootExternalDeliveryEvidenceVerifier
                 evaluation.preselects(),
                 evaluation.accepts(),
                 evaluation.checkpointDomainBlueId(),
-                evaluation.checkpointSubjectBlueId());
+                evaluation.checkpointSubjectBlueId(),
+                evaluation.dependencies());
     }
 
     private boolean intersects(
@@ -501,7 +518,9 @@ public final class RootExternalDeliveryEvidenceVerifier
                 || !evaluation.channelKeys.equals(
                 interval.subscriptionKeys())
                 || !evaluation.checkpointDomainBlueId.equals(
-                interval.checkpointDomainBlueId())) {
+                interval.checkpointDomainBlueId())
+                || !evaluation.dependencies.equals(
+                interval.dependencies())) {
             throw invalid(
                     "Retained active subscription interval header mismatch "
                             + "at " + scopePath + "/" + snapshot.key());
@@ -538,22 +557,147 @@ public final class RootExternalDeliveryEvidenceVerifier
                 + "\u0000" + channelKey;
     }
 
+    private Set<String> subscriptionContractKeys(
+            SubscriptionDelta.Entry interval,
+            Map<String, String> selectorTypes) {
+        Set<String> keys = new LinkedHashSet<>();
+        keys.add(interval.channelKey());
+        for (ExternalChannelDependencySnapshot.Entry dependency
+                : interval.dependencies().entries()) {
+            keys.add(dependency.channelKey());
+        }
+        for (ExternalChannelDependencySnapshot.TypeFamily family
+                : interval.dependencies().typeFamilies()) {
+            /*
+             * Retain the claimed family too, so retyping/removal is visible
+             * when the exact dependency snapshot is re-derived.
+             */
+            for (ExternalChannelDependencySnapshot.Member member
+                    : family.members()) {
+                keys.add(member.channelKey());
+            }
+        }
+        if (selectorTypes != null) {
+            for (Map.Entry<String, String> candidate
+                    : selectorTypes.entrySet()) {
+                if (!isExternalChannelType(
+                        candidate.getValue())) {
+                    continue;
+                }
+                if (interval.dependencies()
+                        .wholeSameScopeExternalSurface()
+                        || selectsEffectiveType(
+                        interval.dependencies(),
+                        candidate.getValue())) {
+                    keys.add(candidate.getKey());
+                }
+            }
+        }
+        return keys;
+    }
+
+    private boolean selectsEffectiveType(
+            ExternalChannelDependencySnapshot dependencies,
+            String effectiveTypeBlueId) {
+        for (ExternalChannelDependencySnapshot.TypeFamily family
+                : dependencies.typeFamilies()) {
+            if (family.effectiveTypeBlueId().equals(
+                    effectiveTypeBlueId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isExternalChannelType(String typeBlueId) {
+        ChannelProcessor<?> processor = typeBlueId != null
+                ? registry.lookupChannel(typeBlueId).orElse(null)
+                : null;
+        if (processor == null) {
+            return false;
+        }
+        Class<?> contractType = processor.contractType();
+        for (Class<?> managed
+                : ProcessorContractConstants
+                .PROCESSOR_MANAGED_CHANNEL_TYPES) {
+            if (managed.isAssignableFrom(contractType)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean hasEnumerationSelector(
+            SubscriptionDelta.Entry interval) {
+        return interval.dependencies()
+                .wholeSameScopeExternalSurface()
+                || !interval.dependencies().typeFamilies().isEmpty();
+    }
+
     /**
      * Resolves only the contract headers that the exact occurrence set can
      * semantically demand: its channels, Process Embedded routing, and direct
      * processor state. Unsupported contracts elsewhere remain for the
      * processor's complete participating-closure preflight.
      */
-    private Node subscriptionIndexProjection(
+    private SubscriptionIndexProjection subscriptionIndexProjection(
             Node root,
             List<SubscriptionDelta.Entry> activeIntervals) {
         Map<String, Set<String>> subscriptionKeys =
                 new LinkedHashMap<>();
+        Set<String> selectorScopes = new LinkedHashSet<>();
         for (SubscriptionDelta.Entry interval : activeIntervals) {
+            String scopePath = PointerUtils.normalizeScope(
+                    interval.scopePath());
             subscriptionKeys.computeIfAbsent(
-                    PointerUtils.normalizeScope(interval.scopePath()),
-                    ignored -> new LinkedHashSet<>())
-                    .add(interval.channelKey());
+                            scopePath,
+                            ignored -> new LinkedHashSet<>())
+                    .addAll(subscriptionContractKeys(
+                            interval, null));
+            if (hasEnumerationSelector(interval)) {
+                selectorScopes.add(scopePath);
+            }
+        }
+        if (!selectorScopes.isEmpty()) {
+            /*
+             * Enumeration selectors are absence proofs. First build a
+             * scope-spine projection containing all contract headers only at
+             * selector scopes. Resolve that projection with every discovered
+             * Handler body deferred, then expand selector keys from its full
+             * same-scope External Channel header catalog. The unprojected Root
+             * is never resolved here.
+             */
+            Node selectorProjection =
+                    selectorCatalogProjection(root, selectorScopes);
+            try (Resolution selectorResolution =
+                         selectorResolution(
+                                 selectorProjection,
+                                 selectorScopes)) {
+                Map<String, Map<String, String>> selectorTypesByScope =
+                        new LinkedHashMap<>();
+                for (SubscriptionDelta.Entry interval
+                        : activeIntervals) {
+                    if (!hasEnumerationSelector(interval)) {
+                        continue;
+                    }
+                    String scopePath = PointerUtils.normalizeScope(
+                            interval.scopePath());
+                    Map<String, String> selectorTypes =
+                            selectorTypesByScope.get(scopePath);
+                    if (selectorTypes == null) {
+                        selectorTypes =
+                                selectorEffectiveContractTypes(
+                                        selectorResolution,
+                                        scopePath);
+                        selectorTypesByScope.put(
+                                scopePath, selectorTypes);
+                    }
+                    subscriptionKeys.get(scopePath).addAll(
+                            subscriptionContractKeys(
+                                    interval,
+                                    selectorTypes));
+                }
+            }
         }
         Node projected = copySubscriptionSpine(
                 root, "/", subscriptionKeys);
@@ -563,7 +707,369 @@ public final class RootExternalDeliveryEvidenceVerifier
         }
         clearMaterializationProvenance(
                 projected, new IdentityHashMap<Node, Boolean>());
+        return new SubscriptionIndexProjection(
+                projected, subscriptionKeys);
+    }
+
+    private Node selectorCatalogProjection(
+            Node root,
+            Set<String> selectorScopes) {
+        Node projected = copySelectorCatalogSpine(
+                root, "/", selectorScopes);
+        if (projected == null) {
+            throw invalid(
+                    "Enumeration-selector scope is absent");
+        }
+        clearMaterializationProvenance(
+                projected, new IdentityHashMap<Node, Boolean>());
         return projected;
+    }
+
+    /**
+     * Copies only branches leading to enumeration-selector scopes. At the
+     * selected scope it retains direct contract declarations so the effective
+     * header map can prove additions; at ancestors it retains only processor
+     * state and Process Embedded routing. Declared scope types remain attached
+     * so inherited headers are still observable.
+     */
+    private Node copySelectorCatalogSpine(
+            Node source,
+            String path,
+            Set<String> selectorScopes) {
+        if (source == null || source.isReferenceOnly()) {
+            return source != null ? source.clone() : null;
+        }
+        String normalized = PointerUtils.normalizeScope(path);
+        boolean selected = selectorScopes.contains(normalized);
+        boolean includeRouting =
+                requiresEmbeddedRouting(path, selectorScopes);
+        Node projected = copyNodeHeader(source);
+        Node contracts = selected
+                ? cloneNullable(source.getContracts())
+                : copySubscriptionContracts(
+                        source.getContracts(),
+                        Collections.<String>emptySet(),
+                        includeRouting);
+        if (contracts != null) {
+            projected.contracts(contracts);
+        }
+        if (source.getProperties() != null) {
+            for (Map.Entry<String, Node> entry
+                    : source.getProperties().entrySet()) {
+                String childPath = PointerUtils.appendPointer(
+                        path, entry.getKey());
+                if (!requestedBranch(
+                        childPath, selectorScopes)) {
+                    continue;
+                }
+                Node child = copySelectorCatalogSpine(
+                        entry.getValue(),
+                        childPath,
+                        selectorScopes);
+                if (child != null) {
+                    projected.properties(entry.getKey(), child);
+                }
+            }
+        }
+        return projected;
+    }
+
+    private Resolution selectorResolution(
+            Node selectorProjection,
+            Set<String> selectorScopes) {
+        if (snapshotManager == null) {
+            return resolution(selectorProjection);
+        }
+        Set<String> preserved =
+                selectorDeferredContractPaths(
+                        selectorProjection,
+                        selectorScopes);
+        ResolvedSnapshot snapshot = preserved.isEmpty()
+                ? snapshotManager.fromDocumentTransient(
+                selectorProjection.clone())
+                : snapshotManager
+                .fromDocumentTransientPreservingPaths(
+                        selectorProjection.clone(),
+                        preserved);
+        return new Resolution(selectorProjection, snapshot);
+    }
+
+    private Resolution subscriptionResolution(
+            SubscriptionIndexProjection projection) {
+        if (snapshotManager == null) {
+            return resolution(projection.root);
+        }
+        Set<String> preserved =
+                unrequestedContractPaths(projection);
+        ResolvedSnapshot snapshot = preserved.isEmpty()
+                ? snapshotManager.fromDocumentTransient(
+                projection.root.clone())
+                : snapshotManager
+                .fromDocumentTransientPreservingPaths(
+                        projection.root.clone(),
+                        preserved);
+        return new Resolution(projection.root, snapshot);
+    }
+
+    /**
+     * The final sparse projection may retain a nominal scope type because one
+     * requested Channel is inherited from it. Defer every other inherited
+     * contract subtree before resolving that projection; otherwise an
+     * unrelated Handler/extension body in the same type could become a
+     * provider demand before it is filtered from the subscription bundle.
+     */
+    private Set<String> unrequestedContractPaths(
+            SubscriptionIndexProjection projection) {
+        Set<String> paths = new LinkedHashSet<>();
+        Set<String> openedScopes = openedScopeAncestors(
+                projection.requestedKeys.keySet());
+        for (String scopePath : openedScopes) {
+            Set<String> requested =
+                    projection.requestedKeys.getOrDefault(
+                            scopePath,
+                            Collections.<String>emptySet());
+            boolean includeRouting =
+                    requiresEmbeddedRouting(
+                            scopePath,
+                            projection.requestedKeys.keySet());
+            Map<String, String> types =
+                    exactContractTypes(
+                            exactScopeContributionsAt(
+                                    projection.root,
+                                    scopePath));
+            for (Map.Entry<String, String> entry
+                    : types.entrySet()) {
+                if (requested.contains(entry.getKey())
+                        || isDirectProcessorStateKey(
+                        entry.getKey())
+                        || includeRouting
+                        && RuntimeBlueIds.PROCESS_EMBEDDED.equals(
+                        entry.getValue())) {
+                    continue;
+                }
+                paths.add(contractPath(
+                        scopePath, entry.getKey()));
+            }
+        }
+        return paths;
+    }
+
+    private Set<String> openedScopeAncestors(
+            Iterable<String> scopes) {
+        Set<String> opened = new LinkedHashSet<>();
+        opened.add("/");
+        for (String scope : scopes) {
+            String current = "/";
+            for (String segment : JsonPointer.split(scope)) {
+                current = PointerUtils.appendPointer(
+                        current, segment);
+                opened.add(current);
+            }
+        }
+        return opened;
+    }
+
+    private String contractPath(
+            String scopePath,
+            String contractKey) {
+        List<String> segments =
+                new ArrayList<>(
+                        JsonPointer.split(scopePath));
+        segments.add("contracts");
+        segments.add(contractKey);
+        return JsonPointer.toPointer(segments);
+    }
+
+    /**
+     * Defers every non-external contract as one exact subtree. This protects
+     * registered Handler bodies and unknown extension content alike: selector
+     * discovery needs only the effective key/type headers of registered
+     * External Channels. A reference-only contract contribution is
+     * materialized exactly only to inspect its declared type; nested body
+     * references are never opened.
+     */
+    private Set<String> selectorDeferredContractPaths(
+            Node selectorProjection,
+            Set<String> selectorScopes) {
+        Set<String> paths = new LinkedHashSet<>();
+        Set<String> openedScopes =
+                openedScopeAncestors(selectorScopes);
+        for (String scopePath : openedScopes) {
+            List<Node> contributions =
+                    exactScopeContributionsAt(
+                            selectorProjection, scopePath);
+            Map<String, String> types =
+                    exactContractTypes(contributions);
+            for (Map.Entry<String, String> entry
+                    : types.entrySet()) {
+                if (isExternalChannelType(entry.getValue())) {
+                    continue;
+                }
+                paths.add(contractPath(
+                        scopePath, entry.getKey()));
+            }
+        }
+        return paths;
+    }
+
+    private Map<String, String> selectorEffectiveContractTypes(
+            Resolution resolution,
+            String scopePath) {
+        Node effective = resolution.effectiveNodeAt(scopePath);
+        Node contracts = effective != null
+                ? effective.getContracts()
+                : null;
+        Map<String, String> result = new LinkedHashMap<>();
+        if (contracts == null
+                || contracts.getProperties() == null) {
+            return result;
+        }
+        for (Map.Entry<String, Node> entry
+                : contracts.getProperties().entrySet()) {
+            result.put(
+                    entry.getKey(),
+                    exactTypeBlueId(entry.getValue()));
+        }
+        return result;
+    }
+
+    private List<Node> exactScopeContributionsAt(
+            Node root,
+            String scopePath) {
+        List<Node> current = new ArrayList<>();
+        Node exactRoot = exactHeaderNode(root);
+        if (exactRoot != null) {
+            current.add(exactRoot);
+        }
+        for (String segment : JsonPointer.split(scopePath)) {
+            List<Node> next = new ArrayList<>();
+            Set<String> identities = new LinkedHashSet<>();
+            for (Node contribution : current) {
+                for (Node source : exactNodeAndTypeLineage(
+                        contribution)) {
+                    Node child = source.getProperties() != null
+                            ? source.getProperties().get(segment)
+                            : null;
+                    Node exactChild = exactHeaderNode(child);
+                    if (exactChild == null) {
+                        continue;
+                    }
+                    String identity =
+                            BlueIdCalculator.calculateBlueId(
+                                    exactChild);
+                    if (identities.add(identity)) {
+                        next.add(exactChild);
+                    }
+                }
+            }
+            current = next;
+            if (current.isEmpty()) {
+                break;
+            }
+        }
+        return current;
+    }
+
+    private List<Node> exactNodeAndTypeLineage(Node node) {
+        List<Node> result = new ArrayList<>();
+        collectExactTypeLineage(
+                exactHeaderNode(node),
+                result,
+                new LinkedHashSet<String>(),
+                0);
+        return result;
+    }
+
+    private void collectExactTypeLineage(
+            Node node,
+            List<Node> result,
+            Set<String> active,
+            int depth) {
+        if (node == null) {
+            return;
+        }
+        long limit = GasSchedule.contracts10()
+                .portableLimit("typeChainEdges");
+        if (depth > limit) {
+            throw invalid(
+                    "Enumeration-selector type hierarchy exceeds "
+                            + limit);
+        }
+        Node exact = exactHeaderNode(node);
+        if (exact == null) {
+            return;
+        }
+        String identity =
+                BlueIdCalculator.calculateBlueId(exact);
+        if (!active.add(identity)) {
+            throw invalid(
+                    "Cyclic type hierarchy in enumeration-selector "
+                            + "header catalog");
+        }
+        collectExactTypeLineage(
+                exact.getType(),
+                result,
+                active,
+                depth + 1);
+        result.add(exact);
+        active.remove(identity);
+    }
+
+    private Node exactHeaderNode(Node node) {
+        if (node == null || !node.isReferenceOnly()) {
+            return node;
+        }
+        if (snapshotManager == null) {
+            throw invalid(
+                    "Enumeration-selector exact header materialization "
+                            + "is unavailable");
+        }
+        return snapshotManager
+                .materializeVerifiedExactReference(
+                        FrozenNode.fromNode(node))
+                .toNode();
+    }
+
+    private Map<String, String> exactContractTypes(
+            List<Node> scopeContributions) {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (Node scopeContribution : scopeContributions) {
+            for (Node source : exactNodeAndTypeLineage(
+                    scopeContribution)) {
+                Node contracts = exactHeaderNode(
+                        source.getContracts());
+                if (contracts == null
+                        || contracts.getProperties() == null) {
+                    continue;
+                }
+                for (Map.Entry<String, Node> entry
+                        : contracts.getProperties().entrySet()) {
+                    Node contract =
+                            exactHeaderNode(entry.getValue());
+                    String typeBlueId =
+                            exactTypeBlueId(contract);
+                    if (!result.containsKey(entry.getKey())
+                            || typeBlueId != null) {
+                        result.put(
+                                entry.getKey(),
+                                typeBlueId);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private String exactTypeBlueId(Node contract) {
+        Node type = contract != null
+                ? contract.getType()
+                : null;
+        if (type == null) {
+            return null;
+        }
+        return type.getBlueId() != null
+                ? type.getBlueId()
+                : BlueIdCalculator.calculateBlueId(type);
     }
 
     /**
@@ -578,14 +1084,34 @@ public final class RootExternalDeliveryEvidenceVerifier
         if (source == null || source.isReferenceOnly()) {
             return source != null ? source.clone() : null;
         }
-        Node projected = copyNodeHeader(source);
-        Node contracts = copySubscriptionContracts(
-                source.getContracts(),
+        Set<String> requestedKeys =
                 subscriptionKeys.getOrDefault(
                         PointerUtils.normalizeScope(path),
-                        Collections.emptySet()),
+                        Collections.emptySet());
+        boolean includeProcessEmbedded =
                 requiresEmbeddedRouting(
-                        path, subscriptionKeys.keySet()));
+                        path, subscriptionKeys.keySet());
+        Node projected = copyNodeHeader(source);
+        if (!typeContributesToSubscriptionSurface(
+                snapshotManager,
+                source.getType(),
+                requestedKeys,
+                includeProcessEmbedded,
+                new LinkedHashSet<String>())) {
+            /*
+             * The sparse subscription projection must not resolve unrelated
+             * contracts inherited from the scope type. Exact type-source
+             * inspection above proves that removing this nominal type cannot
+             * change any retained Channel header or Process Embedded route;
+             * the complete participating-closure preflight still resolves
+             * the original type later.
+             */
+            projected.type((Node) null);
+        }
+        Node contracts = copySubscriptionContracts(
+                source.getContracts(),
+                requestedKeys,
+                includeProcessEmbedded);
         if (contracts != null) {
             projected.contracts(contracts);
         }
@@ -608,6 +1134,89 @@ public final class RootExternalDeliveryEvidenceVerifier
             }
         }
         return projected;
+    }
+
+    static boolean typeContributesToSubscriptionSurface(
+            ProcessingSnapshotManager snapshotManager,
+            Node declaredType,
+            Set<String> requestedChannelKeys,
+            boolean includeProcessEmbedded,
+            Set<String> visited) {
+        if (declaredType == null) {
+            return false;
+        }
+        if (requestedChannelKeys.isEmpty()
+                && !includeProcessEmbedded) {
+            return false;
+        }
+        if (snapshotManager == null) {
+            return true;
+        }
+        FrozenNode exactType;
+        if (declaredType.isReferenceOnly()) {
+            exactType = snapshotManager
+                    .materializeVerifiedExactReference(
+                            FrozenNode.fromNode(declaredType));
+        } else {
+            exactType = FrozenNode.fromNode(
+                    declaredType.clone());
+        }
+        String identity = declaredType.getBlueId() != null
+                ? declaredType.getBlueId()
+                : exactType.blueId();
+        if (!visited.add(identity)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Cyclic scope type hierarchy in subscription surface: "
+                            + identity);
+        }
+
+        FrozenNode contracts = exactType.getContracts();
+        if (contracts != null && contracts.isReferenceOnly()) {
+            contracts = snapshotManager
+                    .materializeVerifiedExactReference(contracts);
+        }
+        if (contracts != null
+                && contracts.getProperties() != null) {
+            for (Map.Entry<String, FrozenNode> entry
+                    : contracts.getProperties().entrySet()) {
+                if (requestedChannelKeys.contains(
+                        entry.getKey())) {
+                    return true;
+                }
+                if (includeProcessEmbedded
+                        && isExactProcessEmbeddedContract(
+                        snapshotManager,
+                        entry.getValue())) {
+                    return true;
+                }
+            }
+        }
+        FrozenNode parent = exactType.getType();
+        return parent != null
+                && typeContributesToSubscriptionSurface(
+                        snapshotManager,
+                        parent.toNode(),
+                        requestedChannelKeys,
+                        includeProcessEmbedded,
+                        visited);
+    }
+
+    private static boolean isExactProcessEmbeddedContract(
+            ProcessingSnapshotManager snapshotManager,
+            FrozenNode contract) {
+        FrozenNode exact = contract;
+        if (exact != null && exact.isReferenceOnly()) {
+            exact = snapshotManager
+                    .materializeVerifiedExactReference(exact);
+        }
+        FrozenNode type = exact != null
+                ? exact.getType()
+                : null;
+        return type != null
+                && RuntimeBlueIds.PROCESS_EMBEDDED.equals(
+                type.getReferenceBlueId() != null
+                        ? type.getReferenceBlueId()
+                        : type.blueId());
     }
 
     private Node copySubscriptionContracts(
@@ -846,9 +1455,12 @@ public final class RootExternalDeliveryEvidenceVerifier
     }
 
     private boolean isDirectProcessorStateKey(String key) {
-        return "initialized".equals(key)
-                || "terminated".equals(key)
-                || "checkpoint".equals(key);
+        return ProcessorContractConstants.KEY_INITIALIZED
+                .equals(key)
+                || ProcessorContractConstants.KEY_TERMINATED
+                .equals(key)
+                || ProcessorContractConstants.KEY_CHECKPOINT
+                .equals(key);
     }
 
     private void verifyExactDeliveries(
@@ -908,8 +1520,10 @@ public final class RootExternalDeliveryEvidenceVerifier
                 right.activationEndInclusive());
     }
 
-    private void verifyDelivery(Resolution resolution,
-                                ExternalDeliverySnapshot delivery) {
+    private void verifyDelivery(
+            Resolution resolution,
+            ExternalDeliverySnapshot delivery,
+            SubscriptionDelta.Entry interval) {
         if (!reachableScope(resolution, delivery.scopePath())) {
             throw invalid(
                     "External delivery scope is not reachable through the "
@@ -933,10 +1547,17 @@ public final class RootExternalDeliveryEvidenceVerifier
                     "External delivery scope is directly terminated: "
                             + delivery.scopePath());
         }
+        Map<String, String> selectorTypes =
+                hasEnumerationSelector(interval)
+                        ? selectorEffectiveContractTypes(
+                        resolution,
+                        delivery.scopePath())
+                        : null;
         ContractBundle bundle =
                 resolution.subscriptionBundleAt(
                         delivery.scopePath(),
-                        delivery.channelKey(),
+                        subscriptionContractKeys(
+                                interval, selectorTypes),
                         false);
         EffectiveContractSnapshot contract =
                 bundle.effectiveContractSnapshot(
@@ -1201,6 +1822,29 @@ public final class RootExternalDeliveryEvidenceVerifier
         }
     }
 
+    private static final class SubscriptionIndexProjection {
+        private final Node root;
+        private final Map<String, Set<String>> requestedKeys;
+
+        private SubscriptionIndexProjection(
+                Node root,
+                Map<String, Set<String>> requestedKeys) {
+            this.root = Objects.requireNonNull(root, "root");
+            Map<String, Set<String>> copy =
+                    new LinkedHashMap<>();
+            for (Map.Entry<String, Set<String>> entry
+                    : requestedKeys.entrySet()) {
+                copy.put(
+                        entry.getKey(),
+                        Collections.unmodifiableSet(
+                                new LinkedHashSet<>(
+                                        entry.getValue())));
+            }
+            this.requestedKeys =
+                    Collections.unmodifiableMap(copy);
+        }
+    }
+
     private static final class SubscriptionEvaluation {
         private final List<String> channelKeys;
         private final List<String> eventKeys;
@@ -1208,6 +1852,7 @@ public final class RootExternalDeliveryEvidenceVerifier
         private final boolean accepts;
         private final String checkpointDomainBlueId;
         private final String checkpointSubjectBlueId;
+        private final ExternalChannelDependencySnapshot dependencies;
 
         private SubscriptionEvaluation(
                 List<String> channelKeys,
@@ -1215,7 +1860,8 @@ public final class RootExternalDeliveryEvidenceVerifier
                 boolean preselects,
                 boolean accepts,
                 String checkpointDomainBlueId,
-                String checkpointSubjectBlueId) {
+                String checkpointSubjectBlueId,
+                ExternalChannelDependencySnapshot dependencies) {
             this.channelKeys = channelKeys;
             this.eventKeys = eventKeys;
             this.preselects = preselects;
@@ -1226,6 +1872,8 @@ public final class RootExternalDeliveryEvidenceVerifier
                             "checkpointDomainBlueId");
             this.checkpointSubjectBlueId =
                     checkpointSubjectBlueId;
+            this.dependencies = Objects.requireNonNull(
+                    dependencies, "dependencies");
         }
 
         @Override
@@ -1243,7 +1891,9 @@ public final class RootExternalDeliveryEvidenceVerifier
                     evaluation.checkpointDomainBlueId)
                     && Objects.equals(
                     checkpointSubjectBlueId,
-                    evaluation.checkpointSubjectBlueId);
+                    evaluation.checkpointSubjectBlueId)
+                    && dependencies.equals(
+                    evaluation.dependencies);
         }
 
         @Override
@@ -1254,7 +1904,8 @@ public final class RootExternalDeliveryEvidenceVerifier
                     preselects,
                     accepts,
                     checkpointDomainBlueId,
-                    checkpointSubjectBlueId);
+                    checkpointSubjectBlueId,
+                    dependencies);
         }
     }
 

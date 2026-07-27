@@ -35,6 +35,7 @@ import java.util.function.Function;
  */
 final class ContractLoader {
 
+    private static final String HANDLER_EVENT_MATCHER_FIELD = "event";
     private static final Set<String> INVALID_CONTRACT_KEYS = new LinkedHashSet<>();
 
     static {
@@ -412,14 +413,22 @@ final class ContractLoader {
         if (binding.executableBodyFields().isEmpty()) {
             return binding;
         }
+        Node exactEventMatcher =
+                binding.contract().getEvent();
         Contract converted = converter.convertWithType(
-                executable, Contract.class, false);
+                matcherHeaderNode(
+                        executable,
+                        Collections.singletonList(
+                                HANDLER_EVENT_MATCHER_FIELD)),
+                Contract.class,
+                false);
         if (!(converted instanceof HandlerContract)) {
             throw new MustUnderstandFailureException(
                     "Selected executable body no longer belongs to a Handler",
                     ProcessorErrorCategory.InvalidContractBinding);
         }
         HandlerContract handler = (HandlerContract) converted;
+        restoreEventMatcher(handler, exactEventMatcher);
         handler.setKey(binding.key());
         handler.setTypeBlueId(
                 binding.contract().getTypeBlueId());
@@ -518,14 +527,14 @@ final class ContractLoader {
         if (typeBlueId == null) {
             throw new MustUnderstandFailureException(
                     "Contract '" + key + "' must declare a type",
-                    ProcessorErrorCategory.UnsupportedContract);
+                    ProcessorErrorCategory.UnsupportedRuntimeType);
         }
         Class<?> contractClass = typeResolver.resolveClass(typeBlueId);
         if (contractClass == null
                 || !Contract.class.isAssignableFrom(contractClass)) {
             throw new MustUnderstandFailureException(
                     "Unsupported contract type: " + typeBlueId,
-                    ProcessorErrorCategory.UnsupportedContract);
+                    ProcessorErrorCategory.UnsupportedRuntimeType);
         }
     }
 
@@ -592,19 +601,26 @@ final class ContractLoader {
             if (typeBlueId == null) {
                 throw new MustUnderstandFailureException(
                         "Contract '" + key + "' must declare a type",
-                        ProcessorErrorCategory.UnsupportedContract);
+                        ProcessorErrorCategory.UnsupportedRuntimeType);
             }
             Class<?> contractClass = typeResolver.resolveClass(typeBlueId);
             if (contractClass == null || !Contract.class.isAssignableFrom(contractClass)) {
                 throw new MustUnderstandFailureException("Unsupported contract type: " + typeBlueId,
-                        ProcessorErrorCategory.UnsupportedContract);
+                        ProcessorErrorCategory.UnsupportedRuntimeType);
             }
-            List<String> executableBodyFields =
+            boolean handlerContract =
                     HandlerContract.class.isAssignableFrom(
-                            contractClass)
+                            contractClass);
+            List<String> executableBodyFields =
+                    handlerContract
                             ? registry.executableBodyFields(
                             typeBlueId)
                             : Collections.emptyList();
+            List<String> deferredHandlerFields =
+                    handlerContract
+                            ? handlerDeferredFields(
+                            executableBodyFields)
+                            : executableBodyFields;
             ContractContributionResolver.BindingResolution
                     bindingResolution =
                     contributionResolver.resolveBinding(
@@ -612,7 +628,7 @@ final class ContractLoader {
                             effectiveScopeNode,
                             key,
                             true,
-                            executableBodyFields);
+                            deferredHandlerFields);
             List<String> sourceContributions =
                     bindingResolution
                             .sourceContributions();
@@ -653,24 +669,31 @@ final class ContractLoader {
              */
             Node executableContractNode = executableContractNode(
                     entry.getValue(),
-                    executableBodyFields,
+                    deferredHandlerFields,
                     bindingResolution
                             .exactExecutableBodies());
             FrozenNode exactExecutableContract =
                     FrozenNode.fromResolvedNode(
                             executableContractNode);
             Node conversionNode =
-                    executableBodyFields.isEmpty()
+                    deferredHandlerFields.isEmpty()
                             ? executableContractNode
                             : matcherHeaderNode(
                             executableContractNode,
-                            executableBodyFields);
+                            deferredHandlerFields);
             Contract contract = converter.convertWithType(
                     conversionNode,
                     Contract.class,
                     false);
             if (contract == null) {
                 continue;
+            }
+            if (contract instanceof HandlerContract) {
+                restoreEventMatcher(
+                        (HandlerContract) contract,
+                        bindingResolution
+                                .exactExecutableBodies()
+                                .get(HANDLER_EVENT_MATCHER_FIELD));
             }
             contract.setKey(key);
             contract.setTypeBlueId(typeBlueId);
@@ -687,7 +710,7 @@ final class ContractLoader {
                         && !registry.lookupChannel(channel).isPresent()) {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: " + typeBlueId,
-                            ProcessorErrorCategory.UnsupportedContract);
+                            ProcessorErrorCategory.UnsupportedRuntimeType);
                 }
                 builder.addChannel(key, channel, entry.getValue());
                 snapshot.role(ProcessorContractConstants.isProcessorManagedChannel(channel)
@@ -698,9 +721,7 @@ final class ContractLoader {
                     EmbeddedNodeChannel embedded =
                             (EmbeddedNodeChannel) channel;
                     String sourcePath =
-                            embedded.getSourcePath() != null
-                                    ? embedded.getSourcePath()
-                                    : embedded.getChildPath();
+                            embedded.getSourcePath();
                     snapshot.dispatchField(
                             "sourcePath", sourcePath);
                     addEventDispatchSnapshot(
@@ -718,7 +739,7 @@ final class ContractLoader {
                 if (!processor.isPresent()) {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: " + typeBlueId,
-                            ProcessorErrorCategory.UnsupportedContract);
+                            ProcessorErrorCategory.UnsupportedRuntimeType);
                 }
                 String channelKey = resolveHandlerChannel(scopePath,
                         key,
@@ -802,6 +823,28 @@ final class ContractLoader {
         return header.properties(fields);
     }
 
+    private List<String> handlerDeferredFields(
+            List<String> executableBodyFields) {
+        List<String> fields =
+                new ArrayList<>(
+                        executableBodyFields != null
+                                ? executableBodyFields
+                                : Collections.<String>emptyList());
+        if (!fields.contains(HANDLER_EVENT_MATCHER_FIELD)) {
+            fields.add(HANDLER_EVENT_MATCHER_FIELD);
+        }
+        return fields;
+    }
+
+    private void restoreEventMatcher(
+            HandlerContract handler,
+            Node exactEventMatcher) {
+        handler.setEvent(
+                exactEventMatcher != null
+                        ? exactEventMatcher.clone()
+                        : null);
+    }
+
     private Node executableContractNode(
             FrozenNode effectiveContract,
             List<String> executableBodyFields,
@@ -880,7 +923,7 @@ final class ContractLoader {
         }
         if (INVALID_CONTRACT_KEYS.contains(key)) {
             throw new MustUnderstandFailureException("Invalid contract key: reserved key '" + key + "'",
-                    ProcessorErrorCategory.InvalidReservedMarker);
+                    ProcessorErrorCategory.InvalidReservedRuntimeState);
         }
     }
 
@@ -889,7 +932,7 @@ final class ContractLoader {
         for (String path : embedded.getPaths()) {
             if (!seen.add(path)) {
                 throw new MustUnderstandFailureException("Unique items are required for Process Embedded paths",
-                        ProcessorErrorCategory.BoundaryViolation);
+                        ProcessorErrorCategory.PatchBoundaryViolation);
             }
         }
     }
@@ -907,25 +950,32 @@ final class ContractLoader {
         if (items == null) {
             throw new MustUnderstandFailureException(
                     "Process Embedded paths must be a List",
-                    ProcessorErrorCategory.BoundaryViolation);
+                    ProcessorErrorCategory.PatchBoundaryViolation);
         }
 
         List<String> paths = new ArrayList<>(items.size());
         Set<String> seen = new LinkedHashSet<>();
         for (int index = 0; index < items.size(); index++) {
-            /*
-             * The list position is known without opening the entry. Charge the
-             * entry before obtaining its value, then charge all pointer
-             * segments before validating any of them.
-             */
-            meter.embeddedPathEntryRead(
-                    scopePath, contractKey, index);
             FrozenNode item = items.get(index);
             Object value = item != null ? item.getValue() : null;
+            String logicalPath = value instanceof String
+                    ? logicalEmbeddedPath(
+                    scopePath, (String) value)
+                    : null;
+            /*
+             * The immutable entry exposes enough context to name the charge.
+             * Debit it before validating or using the value, then debit all
+             * pointer segments before validating any of them.
+             */
+            meter.embeddedPathEntryRead(
+                    scopePath,
+                    contractKey,
+                    index,
+                    logicalPath);
             if (!(value instanceof String)) {
                 throw new MustUnderstandFailureException(
                         "Process Embedded path must be Text",
-                        ProcessorErrorCategory.BoundaryViolation);
+                        ProcessorErrorCategory.PatchBoundaryViolation);
             }
             String path = (String) value;
             long segmentCount =
@@ -934,6 +984,7 @@ final class ContractLoader {
                     scopePath,
                     contractKey,
                     index,
+                    logicalPath,
                     segmentCount);
             final String normalized;
             try {
@@ -942,21 +993,36 @@ final class ContractLoader {
             } catch (IllegalArgumentException invalidPointer) {
                 throw new MustUnderstandFailureException(
                         invalidPointer.getMessage(),
-                        ProcessorErrorCategory.BoundaryViolation);
+                        ProcessorErrorCategory.PatchBoundaryViolation);
             }
             if ("/".equals(normalized)) {
                 throw new MustUnderstandFailureException(
                         "Process Embedded path '/' cannot embed its declaring scope",
-                        ProcessorErrorCategory.BoundaryViolation);
+                        ProcessorErrorCategory.PatchBoundaryViolation);
             }
             if (!seen.add(normalized)) {
                 throw new MustUnderstandFailureException(
                         "Unique items are required for Process Embedded paths",
-                        ProcessorErrorCategory.BoundaryViolation);
+                        ProcessorErrorCategory.PatchBoundaryViolation);
             }
             paths.add(normalized);
         }
         return Collections.unmodifiableList(paths);
+    }
+
+    private String logicalEmbeddedPath(
+            String scopePath,
+            String rawPath) {
+        try {
+            return PointerUtils.resolvePointer(
+                    scopePath, rawPath);
+        } catch (IllegalArgumentException invalidPath) {
+            /*
+             * The following validation reports the normative pointer error.
+             * Retain the raw authored value only as trace context.
+             */
+            return rawPath;
+        }
     }
 
     private long uncheckedPointerSegmentCount(String pointer) {

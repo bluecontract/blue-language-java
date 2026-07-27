@@ -3,7 +3,7 @@ package blue.language;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.MinimizedOverlayBuilder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class MergeReverserPureReferenceProvenanceTest {
+class MinimizedOverlayPureReferenceProvenanceTest {
 
     @Test
     void minimizedOverlayPreservesSourceReferenceMaterializedUnderInheritedMetadata() {
@@ -33,7 +33,7 @@ class MergeReverserPureReferenceProvenanceTest {
         assertFalse(resolvedReference.isReferenceOnly());
         assertEquals(referencedBlueId, resolvedReference.getBlueId());
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
         Node minimizedReference = minimized.getProperties() == null
                 ? null
                 : minimized.getProperties().get("prevEntry");
@@ -62,7 +62,7 @@ class MergeReverserPureReferenceProvenanceTest {
                 "type:\n" +
                 "  blueId: " + holderTypeBlueId));
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
 
         assertTrue(minimized.getProperties() == null
                 || !minimized.getProperties().containsKey("prevEntry"));

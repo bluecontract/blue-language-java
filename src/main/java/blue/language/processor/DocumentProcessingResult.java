@@ -1,8 +1,6 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.snapshot.ResolvedSnapshot;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,19 +17,12 @@ public final class DocumentProcessingResult {
     private final long totalGas;
     private final ProcessorStatus status;
     private final ProcessorDiagnostic diagnostic;
-    /**
-     * Legacy host companion.  It is deliberately excluded from the serialized
-     * ProcessResult, whose public semantic projection has exactly five fields.
-     */
-    @JsonIgnore
-    private final ResolvedSnapshot snapshot;
 
     private DocumentProcessingResult(Node document,
                                      List<Node> events,
                                      long totalGas,
                                      ProcessorStatus status,
-                                     ProcessorDiagnostic diagnostic,
-                                     ResolvedSnapshot snapshot) {
+                                     ProcessorDiagnostic diagnostic) {
         this.document = Objects.requireNonNull(document, "document").clone();
         Objects.requireNonNull(events, "events");
         if (totalGas < 0L) {
@@ -41,7 +32,6 @@ public final class DocumentProcessingResult {
         this.totalGas = totalGas;
         this.status = Objects.requireNonNull(status, "status");
         this.diagnostic = diagnostic;
-        this.snapshot = snapshot;
         if (!status.commits() && !this.events.isEmpty()) {
             throw new IllegalArgumentException(
                     "Noncommitting PROCESS status must return an empty Root event sequence");
@@ -52,62 +42,19 @@ public final class DocumentProcessingResult {
                                               List<Node> events,
                                               long totalGas) {
         return completed(document, events, totalGas, ProcessorStatus.SUCCESS,
-                null, null);
-    }
-
-    public static DocumentProcessingResult of(ResolvedSnapshot snapshot,
-                                              List<Node> events,
-                                              long totalGas) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        return completed(snapshot.canonicalRoot(), events, totalGas,
-                ProcessorStatus.SUCCESS, null, snapshot);
-    }
-
-    public static DocumentProcessingResult of(ResolvedSnapshot snapshot,
-                                              List<Node> events,
-                                              long totalGas,
-                                              ProcessorStatus status,
-                                              ProcessorErrorCategory errorCategory,
-                                              String failureReason) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        return completed(snapshot.canonicalRoot(), events, totalGas, status,
-                diagnostic(errorCategory, failureReason), snapshot);
-    }
-
-    public static DocumentProcessingResult of(Node document,
-                                              List<Node> events,
-                                              long totalGas,
-                                              ProcessorStatus status,
-                                              ProcessorErrorCategory errorCategory,
-                                              String failureReason) {
-        return completed(document, events, totalGas, status,
-                diagnostic(errorCategory, failureReason), null);
-    }
-
-    static DocumentProcessingResult ofSelected(Node document,
-                                               ResolvedSnapshot snapshot,
-                                               List<Node> events,
-                                               long totalGas,
-                                               ProcessorStatus status,
-                                               ProcessorErrorCategory errorCategory,
-                                               String failureReason) {
-        return completed(document, events, totalGas, status,
-                diagnostic(errorCategory, failureReason),
-                Objects.requireNonNull(snapshot, "snapshot"));
+                null);
     }
 
     static DocumentProcessingResult completed(Node document,
                                               List<Node> events,
                                               long totalGas,
                                               ProcessorStatus status,
-                                              ProcessorDiagnostic diagnostic,
-                                              ResolvedSnapshot snapshot) {
+                                              ProcessorDiagnostic diagnostic) {
         return new DocumentProcessingResult(document,
                 events,
                 totalGas,
                 status,
-                diagnostic,
-                snapshot);
+                diagnostic);
     }
 
     public static DocumentProcessingResult capabilityFailure(Node inputDocument,
@@ -166,17 +113,7 @@ public final class DocumentProcessingResult {
                 Collections.emptyList(),
                 admittedGas,
                 status,
-                diagnostic,
-                null);
-    }
-
-    public DocumentProcessingResult withSnapshot(ResolvedSnapshot snapshot) {
-        return completed(document,
-                events,
-                totalGas,
-                status,
-                diagnostic,
-                Objects.requireNonNull(snapshot, "snapshot"));
+                diagnostic);
     }
 
     public Node document() {
@@ -188,13 +125,6 @@ public final class DocumentProcessingResult {
      */
     public List<Node> events() {
         return immutableNodes(events);
-    }
-
-    /**
-     * Compatibility alias for the preview API.
-     */
-    public List<Node> triggeredEvents() {
-        return events();
     }
 
     public long totalGas() {
@@ -211,45 +141,6 @@ public final class DocumentProcessingResult {
 
     public ProcessorDiagnostic diagnostic() {
         return diagnostic;
-    }
-
-    /**
-     * Compatibility flag retained for existing hosts.
-     */
-    public boolean capabilityFailure() {
-        return status == ProcessorStatus.CAPABILITY_FAILURE
-                || status == ProcessorStatus.INVALID_PROCESSING_DOCUMENT;
-    }
-
-    public String failureReason() {
-        return diagnostic != null ? diagnostic.message() : null;
-    }
-
-    public ProcessorErrorCategory errorCategory() {
-        return diagnostic != null ? diagnostic.category() : null;
-    }
-
-    public ResolvedSnapshot snapshot() {
-        return snapshot;
-    }
-
-    public String blueId() {
-        return snapshot != null ? snapshot.blueId() : null;
-    }
-
-    public Node canonicalDocument() {
-        return snapshot != null ? snapshot.canonicalRoot() : null;
-    }
-
-    public Node resolvedDocument() {
-        return snapshot != null ? snapshot.resolvedRoot() : null;
-    }
-
-    private static ProcessorDiagnostic diagnostic(ProcessorErrorCategory category,
-                                                  String reason) {
-        return category != null
-                ? ProcessorDiagnostic.of(category, reason)
-                : null;
     }
 
     private static List<Node> immutableNodes(List<Node> nodes) {

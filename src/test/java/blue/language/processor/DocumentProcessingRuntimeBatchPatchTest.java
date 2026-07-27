@@ -25,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessingRuntimeBatchPatchTest {
 
+    private static final String CYCLIC_MEMBER_BLUE_ID =
+            "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
+
     @Test
     void applyPatchesAppliesMultipleObjectPatchesAndCommitsOnce() {
         Node document = new Node();
@@ -82,6 +85,180 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertEquals("idle", document.getAsText("/status"));
         assertNull(document.getProperties().get("missing"));
         assertEquals(0, runtime.batchPatchRollbackCopiesForTest());
+    }
+
+    @Test
+    void atomicBatchRejectsCyclicMemberTraversalBeforeSnapshotProviderDemand() {
+        Node document = new Node().properties(
+                "cyclic",
+                new Node().blueId(CYCLIC_MEMBER_BLUE_ID));
+        String exactInput = document.toString();
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document, null, manager);
+
+        ProcessorFailureException failure = assertThrows(
+                ProcessorFailureException.class,
+                () -> runtime.applyPatches(
+                        "/",
+                        Collections.singletonList(
+                                JsonPatch.add(
+                                        "/cyclic/member",
+                                        new Node().value(1)))));
+
+        assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                failure.errorCategory());
+        assertEquals(exactInput, document.toString());
+        assertEquals(0, manager.fromDocumentCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(0, manager.cacheSnapshotCalls);
+    }
+
+    @Test
+    void directWriteRejectsCyclicMemberTraversalBeforeSnapshotProviderDemand() {
+        Node document = new Node().properties(
+                "cyclic",
+                new Node().blueId(CYCLIC_MEMBER_BLUE_ID));
+        String exactInput = document.toString();
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document, null, manager);
+
+        ProcessorFailureException failure = assertThrows(
+                ProcessorFailureException.class,
+                () -> runtime.directWrite(
+                        "/cyclic/member",
+                        new Node().value(1)));
+
+        assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                failure.errorCategory());
+        assertEquals(exactInput, document.toString());
+        assertEquals(0, manager.fromDocumentCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(0, manager.cacheSnapshotCalls);
+    }
+
+    @Test
+    void intrinsicCyclicMemberTraversalFailsBeforeSnapshotProviderDemand() {
+        for (boolean listPayload : Arrays.asList(false, true)) {
+            for (String field : Arrays.asList(
+                    "type",
+                    "itemType",
+                    "keyType",
+                    "valueType",
+                    "blue",
+                    "contracts")) {
+                Node intrinsic = nodeWithIntrinsicCyclicReference(field);
+                Node document;
+                String path;
+                if (listPayload) {
+                    intrinsic.items(new Node().value("retained item"));
+                    document = new Node().properties("list", intrinsic);
+                    path = "/list/" + field + "/member";
+                } else {
+                    document = intrinsic;
+                    path = "/" + field + "/member";
+                }
+                String exactInput = document.toString();
+                CountingSnapshotManager manager =
+                        new CountingSnapshotManager();
+                DocumentProcessingRuntime runtime =
+                        new DocumentProcessingRuntime(document, null, manager);
+
+                ProcessorFailureException failure = assertThrows(
+                        ProcessorFailureException.class,
+                        () -> runtime.applyPatches(
+                                "/",
+                                Collections.singletonList(
+                                        JsonPatch.add(
+                                                path,
+                                                new Node().value(1)))),
+                        field + ", listPayload=" + listPayload);
+
+                assertEquals(
+                        ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                        failure.errorCategory(),
+                        field);
+                assertEquals(exactInput, document.toString(), field);
+                assertEquals(0, manager.fromDocumentCalls, field);
+                assertEquals(0, manager.applyPatchCalls, field);
+                assertEquals(0, manager.cacheSnapshotCalls, field);
+            }
+        }
+    }
+
+    @Test
+    void atomicBatchPreflightTracksWholeReferenceReplacementBeforeDescendantPatch() {
+        Node document = new Node().properties(
+                "cyclic",
+                new Node().blueId(CYCLIC_MEMBER_BLUE_ID));
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document, null, manager);
+
+        runtime.applyPatches(
+                "/",
+                Arrays.asList(
+                        JsonPatch.replace(
+                                "/cyclic",
+                                new Node().properties(
+                                        "member",
+                                        new Node().value("replacement"))),
+                        JsonPatch.add(
+                                "/cyclic/next",
+                                new Node().value("allowed"))));
+
+        assertEquals("replacement", document.getAsText("/cyclic/member"));
+        assertEquals("allowed", document.getAsText("/cyclic/next"));
+    }
+
+    private Node nodeWithIntrinsicCyclicReference(String field) {
+        Node root = new Node();
+        Node reference = new Node().blueId(CYCLIC_MEMBER_BLUE_ID);
+        if ("type".equals(field)) {
+            return root.type(reference);
+        }
+        if ("itemType".equals(field)) {
+            return root.itemType(reference);
+        }
+        if ("keyType".equals(field)) {
+            return root.keyType(reference);
+        }
+        if ("valueType".equals(field)) {
+            return root.valueType(reference);
+        }
+        if ("blue".equals(field)) {
+            return root.blue(reference);
+        }
+        if ("contracts".equals(field)) {
+            return root.contracts(reference);
+        }
+        throw new IllegalArgumentException("Unsupported intrinsic field: " + field);
+    }
+
+    @Test
+    void atomicBatchPreflightTracksIntroducedReferenceBeforeDescendantPatch() {
+        Node document = new Node();
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document, null, manager);
+
+        ProcessorFailureException failure = assertThrows(
+                ProcessorFailureException.class,
+                () -> runtime.applyPatches(
+                        "/",
+                        Arrays.asList(
+                                JsonPatch.add(
+                                        "/cyclic",
+                                        new Node().blueId(CYCLIC_MEMBER_BLUE_ID)),
+                                JsonPatch.add(
+                                        "/cyclic/member",
+                                        new Node().value("forbidden")))));
+
+        assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                failure.errorCategory());
+        assertNull(document.getProperties());
+        assertEquals(0, manager.fromDocumentCalls);
     }
 
     @Test

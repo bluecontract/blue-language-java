@@ -110,11 +110,6 @@ public final class FrozenJsonPatch {
         return value;
     }
 
-    /** Compatibility-style alias matching {@link JsonPatch#getVal()}. */
-    public FrozenNode getVal() {
-        return value;
-    }
-
     /** Exact legacy authored payload size retained for gas-equivalent handoff. */
     public long getAuthoredCanonicalSizeBytes() {
         return authoredCanonicalSizeBytes;

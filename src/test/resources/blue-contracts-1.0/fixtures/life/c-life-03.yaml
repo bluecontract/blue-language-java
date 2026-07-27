@@ -7,26 +7,51 @@ description: Scope replacement during lifecycle prevents marker write into repla
 operation: process
 input:
   root:
-    value: 0
+    child:
+      state: 0
+      contracts:
+        in:
+          type:
+            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        h:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: in
+          order: 0
+          result:
+            patches:
+            - op: replace
+              path: /child/state
+              val: 1
     contracts:
-      in:
+      embedded:
         type:
-          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
+      rootLifecycle:
+        type:
+          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
         order: 0
-        subscriptionKey: timeline
-        eventKey: timeline
-        accept: true
-        checkpointDomain: domain-v1
-      h:
+      replaceChild:
         type:
           blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
-        channel: in
+        channel: rootLifecycle
         order: 0
+        event:
+          type:
+            blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt
         result:
           patches:
           - op: replace
-            path: /value
-            val: 1
+            path: /child
+            val:
+              replacement: true
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -40,7 +65,7 @@ input:
     - timeline
     - 1
     deliverySnapshot:
-    - scopePath: /
+    - scopePath: /child
       channelKey: in
       order: 0
       activationStartExclusive:
@@ -52,10 +77,13 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    cascadeMutation:
-      replaceScopeDuringLifecycle: true
 expected:
   assertions:
+  - actual: result.document.child.replacement
+    op: equals
+    expected: true
+  - actual: result.document.child.contracts.initialized
+    op: absent
   - actual: trace.markerWrites
     op: notContains
-    expected: replacement-scope
+    expected: /child:initialized-marker

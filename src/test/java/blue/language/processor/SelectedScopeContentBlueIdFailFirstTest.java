@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
@@ -251,16 +253,16 @@ class SelectedScopeContentBlueIdFailFirstTest {
                 new DocumentProcessingRuntime(producerSnapshot, null, manager);
 
         String identity =
-                runtime.calculatePreInitializationScopeContentBlueId("/");
+                runtime.calculatePreInitializationScopeNodeBlueId("/");
 
         assertEquals(producerSnapshot.frozenCanonicalRoot().blueId(), identity);
         assertTrue(manager.requestedScopes.isEmpty());
     }
 
     private static void assertSuccessful(DocumentProcessingResult result) {
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertNull(result.errorCategory(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        assertNull(diagnosticCategory(result), diagnosticMessage(result));
     }
 
     private static void assertRootInitializationIdentity(Blue blue,
@@ -270,7 +272,7 @@ class SelectedScopeContentBlueIdFailFirstTest {
 
         assertSuccessful(result);
         assertEquals(expected, markerDocumentId(result.document(), "/"));
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated lifecycle delivery is not a Root handler emission");
     }
 

@@ -33,7 +33,7 @@ public class ProcessingSelectionCacheBenchmark {
                 .contracts(new Node());
         DocumentProcessingResult initialized = blue.initializeDocument(compact);
         selected = initialized.document();
-        snapshot = initialized.snapshot();
+        snapshot = blue.loadSnapshot(selected);
         resolvedSelected = snapshot.resolvedRoot();
         event = new Node().properties("kind", new Node().value("noop"));
     }

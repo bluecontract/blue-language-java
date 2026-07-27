@@ -33,7 +33,7 @@ import java.util.function.Supplier;
  * such a node differ from the standalone content addressed by that identity.</p>
  */
 public final class ResolvedReferenceCache
-        implements FrozenNode.ResolvedReferenceInterner, AutoCloseable {
+        implements AutoCloseable {
 
     private final ResolvedReferenceCache readThroughParent;
     private final CacheGeneration cacheGeneration;
@@ -44,9 +44,6 @@ public final class ResolvedReferenceCache
     private final ConcurrentMap<String, VerifiedReferenceEntry> entriesByBlueId = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, FrozenNode> transientTrustedCanonicalByBlueId =
             new ConcurrentHashMap<>();
-    /** Isolated compatibility lane; entries here are never verification evidence. */
-    private final ConcurrentMap<String, FrozenNode> legacyResolvedAliasesByBlueId =
-            new ConcurrentHashMap<>();
     private final ConcurrentMap<FrozenNode.ResolvedStructuralKey, FrozenNode> resolvedGraphNodesByStructure =
             new ConcurrentHashMap<>();
     private final FrozenNode.ResolvedStructuralInterner resolvedGraphInterner;
@@ -54,7 +51,6 @@ public final class ResolvedReferenceCache
     private final Set<String> pinnedVerifiedBlueIds = new HashSet<>();
     private final LinkedHashSet<String> verifiedInsertionOrder = new LinkedHashSet<>();
     private final LinkedHashSet<String> trustedInsertionOrder = new LinkedHashSet<>();
-    private final LinkedHashSet<String> legacyInsertionOrder = new LinkedHashSet<>();
     private final LinkedHashSet<FrozenNode.ResolvedStructuralKey> structuralInsertionOrder =
             new LinkedHashSet<>();
     private long verifiedCurrentWeight;
@@ -65,7 +61,6 @@ public final class ResolvedReferenceCache
     private long trustedHighWaterWeight;
     private long trustedEvictions;
     private long trustedOversizedRejections;
-    private long legacyCurrentWeight;
     private long structuralCurrentWeight;
     private long structuralHighWaterWeight;
     private long structuralEvictions;
@@ -171,7 +166,6 @@ public final class ResolvedReferenceCache
                 fork.entriesByBlueId.putAll(entriesByBlueId);
                 fork.transientTrustedCanonicalByBlueId.putAll(
                         transientTrustedCanonicalByBlueId);
-                fork.legacyResolvedAliasesByBlueId.putAll(legacyResolvedAliasesByBlueId);
                 fork.resolvedGraphNodesByStructure.putAll(resolvedGraphNodesByStructure);
                 fork.rebuildLocalWeightAccounting();
             }
@@ -245,92 +239,6 @@ public final class ResolvedReferenceCache
             }
             return existing != null ? existing : canonicalContent;
         }
-    }
-
-    /**
-     * Returns the legacy compatibility view: verified resolved content when
-     * available, otherwise an isolated unverified alias explicitly retained
-     * through the deprecated API.
-     *
-     * @deprecated Use {@link #getVerifiedResolved(String)} whenever provider
-     * verification matters. A compatibility result is not verification evidence.
-     */
-    @Deprecated
-    public Optional<FrozenNode> get(String blueId) {
-        return Optional.ofNullable(lookup(blueId));
-    }
-
-    /**
-     * Returns a mutable copy of the legacy compatibility view. The source may
-     * be an isolated unverified alias and must not be treated as provider proof.
-     *
-     * @deprecated Use {@link #getVerifiedResolved(String)} and
-     * {@link FrozenNode#toNode()}.
-     */
-    @Deprecated
-    public Node mutableCopy(String blueId) {
-        FrozenNode node = lookup(blueId);
-        return node != null ? node.toNode() : null;
-    }
-
-    /**
-     * Retains a BlueId-keyed legacy alias without certifying the
-     * candidate as the standalone content addressed by {@code blueId}.
-     *
-     * @deprecated Publish provider content with
-     * {@link #putVerifiedResolved(VerifiedReferenceResolution)}.
-     */
-    @Deprecated
-    public FrozenNode putIfAbsent(String blueId, FrozenNode node) {
-        Objects.requireNonNull(blueId, "blueId");
-        Objects.requireNonNull(node, "node");
-        synchronized (cacheGeneration.mutationLock) {
-            ensureCurrentGeneration();
-            FrozenNode existing = lookup(blueId);
-            if (existing != null) {
-                return existing;
-            }
-            FrozenNode retained = legacyResolvedAliasesByBlueId.putIfAbsent(blueId, node);
-            if (retained != null) {
-                return retained;
-            }
-            recordLegacyInsertion(blueId, node);
-            return node;
-        }
-    }
-
-    /**
-     * Recursively indexes materialized BlueId-bearing nodes in the isolated
-     * legacy alias lane.
-     *
-     * @deprecated Use {@link #rememberResolvedGraph(FrozenNode)}. This method
-     * never promotes embedded BlueIds to verified provider entries.
-     */
-    @Deprecated
-    public void indexResolved(FrozenNode node) {
-        ensureCurrentGeneration();
-        indexLegacyResolved(node, new HashSet<FrozenNode.ResolvedStructuralKey>());
-    }
-
-    /**
-     * Returns verified resolved content when available, otherwise an isolated
-     * legacy alias. The fallback is not provider verification evidence.
-     */
-    @Override
-    @Deprecated
-    public FrozenNode lookup(String blueId) {
-        FrozenNode verified = getVerifiedResolved(blueId).orElse(null);
-        return verified != null ? verified : findLegacyResolvedAlias(blueId);
-    }
-
-    /**
-     * Implements the legacy interner without treating a materialized resolved
-     * view as proof of provider identity.
-     */
-    @Override
-    @Deprecated
-    public FrozenNode intern(String blueId, FrozenNode node) {
-        return putIfAbsent(blueId, node);
     }
 
     public Optional<FrozenNode> getVerifiedCanonical(String blueId) {
@@ -818,29 +726,6 @@ public final class ResolvedReferenceCache
         }
     }
 
-    private void indexLegacyResolved(FrozenNode node,
-                                     Set<FrozenNode.ResolvedStructuralKey> visited) {
-        if (node == null || !visited.add(node.resolvedStructuralKey())) {
-            return;
-        }
-        if (node.getReferenceBlueId() != null && !node.isReferenceOnly()) {
-            putIfAbsent(node.getReferenceBlueId(), node);
-        }
-        indexLegacyResolved(node.getType(), visited);
-        indexLegacyResolved(node.getItemType(), visited);
-        indexLegacyResolved(node.getKeyType(), visited);
-        indexLegacyResolved(node.getValueType(), visited);
-        indexLegacyResolved(node.getBlue(), visited);
-        indexLegacyResolved(node.getContracts(), visited);
-        if (node.getItems() != null) {
-            node.getItems().forEach(item -> indexLegacyResolved(item, visited));
-        }
-        if (node.getProperties() != null) {
-            node.getProperties().values().forEach(child ->
-                    indexLegacyResolved(child, visited));
-        }
-    }
-
     private void recordVerifiedInsertion(String blueId, VerifiedReferenceEntry entry) {
         recordVerifiedReplacement(blueId, null, entry);
     }
@@ -909,31 +794,6 @@ public final class ResolvedReferenceCache
         evictTrustedToBounds();
     }
 
-    private void recordLegacyInsertion(String blueId, FrozenNode node) {
-        long weight = trustedWeight(blueId, node);
-        if (cachePolicy.transientReferenceMaxEntries() <= 0
-                || weight > cachePolicy.maximumDerivedEntryWeightBytes()
-                || weight > cachePolicy.transientReferenceMaxWeightBytes()) {
-            legacyResolvedAliasesByBlueId.remove(blueId, node);
-            return;
-        }
-        legacyInsertionOrder.remove(blueId);
-        legacyInsertionOrder.add(blueId);
-        legacyCurrentWeight = saturatedAdd(legacyCurrentWeight, weight);
-        evictLegacyToBounds();
-    }
-
-    private void evictLegacyToBounds() {
-        while (legacyResolvedAliasesByBlueId.size()
-                > cachePolicy.transientReferenceMaxEntries()
-                || legacyCurrentWeight > cachePolicy.transientReferenceMaxWeightBytes()) {
-            if (legacyInsertionOrder.isEmpty()) {
-                return;
-            }
-            removeLegacyEntry(legacyInsertionOrder.iterator().next());
-        }
-    }
-
     private void evictTrustedToBounds() {
         while (transientTrustedCanonicalByBlueId.size() > cachePolicy.transientReferenceMaxEntries()
                 || trustedCurrentWeight > cachePolicy.transientReferenceMaxWeightBytes()) {
@@ -997,15 +857,6 @@ public final class ResolvedReferenceCache
         }
     }
 
-    private void removeLegacyEntry(String blueId) {
-        FrozenNode removed = legacyResolvedAliasesByBlueId.remove(blueId);
-        legacyInsertionOrder.remove(blueId);
-        if (removed != null) {
-            legacyCurrentWeight = subtractFloorZero(
-                    legacyCurrentWeight, trustedWeight(blueId, removed));
-        }
-    }
-
     private void removeStructuralEntry(FrozenNode.ResolvedStructuralKey key) {
         FrozenNode removed = resolvedGraphNodesByStructure.remove(key);
         structuralInsertionOrder.remove(key);
@@ -1033,12 +884,6 @@ public final class ResolvedReferenceCache
             trustedCurrentWeight = saturatedAdd(trustedCurrentWeight,
                     trustedWeight(entry.getKey(), entry.getValue()));
         }
-        for (java.util.Map.Entry<String, FrozenNode> entry
-                : legacyResolvedAliasesByBlueId.entrySet()) {
-            legacyInsertionOrder.add(entry.getKey());
-            legacyCurrentWeight = saturatedAdd(legacyCurrentWeight,
-                    trustedWeight(entry.getKey(), entry.getValue()));
-        }
         for (java.util.Map.Entry<FrozenNode.ResolvedStructuralKey, FrozenNode> entry
                 : resolvedGraphNodesByStructure.entrySet()) {
             structuralInsertionOrder.add(entry.getKey());
@@ -1054,11 +899,9 @@ public final class ResolvedReferenceCache
         pinnedVerifiedBlueIds.clear();
         verifiedInsertionOrder.clear();
         trustedInsertionOrder.clear();
-        legacyInsertionOrder.clear();
         structuralInsertionOrder.clear();
         verifiedCurrentWeight = 0L;
         trustedCurrentWeight = 0L;
-        legacyCurrentWeight = 0L;
         structuralCurrentWeight = 0L;
     }
 
@@ -1194,9 +1037,7 @@ public final class ResolvedReferenceCache
 
     public int size() {
         ensureCurrentGeneration();
-        Set<String> retainedBlueIds = new HashSet<>(entriesByBlueId.keySet());
-        retainedBlueIds.addAll(legacyResolvedAliasesByBlueId.keySet());
-        return retainedBlueIds.size();
+        return entriesByBlueId.size();
     }
 
     /** Approximate weight of caller-pinned verified entries retained across configuration refresh. */
@@ -1293,7 +1134,6 @@ public final class ResolvedReferenceCache
             }
             entriesByBlueId.clear();
             transientTrustedCanonicalByBlueId.clear();
-            legacyResolvedAliasesByBlueId.clear();
             resolvedGraphNodesByStructure.clear();
             clearLocalWeightAccounting();
             observedGeneration = current;
@@ -1345,7 +1185,6 @@ public final class ResolvedReferenceCache
     private void clearLocalState() {
         entriesByBlueId.clear();
         transientTrustedCanonicalByBlueId.clear();
-        legacyResolvedAliasesByBlueId.clear();
         resolvedGraphNodesByStructure.clear();
         clearLocalWeightAccounting();
     }
@@ -1398,16 +1237,6 @@ public final class ResolvedReferenceCache
 
     private VerifiedReferenceEntry inheritedEntry(String blueId) {
         return readThroughParent != null ? readThroughParent.findEntry(blueId) : null;
-    }
-
-    private FrozenNode findLegacyResolvedAlias(String blueId) {
-        ensureCurrentGeneration();
-        FrozenNode local = legacyResolvedAliasesByBlueId.get(blueId);
-        return local != null
-                ? local
-                : readThroughParent != null
-                ? readThroughParent.findLegacyResolvedAlias(blueId)
-                : null;
     }
 
     private FrozenNode findResolvedGraph(FrozenNode.ResolvedStructuralKey structuralKey) {

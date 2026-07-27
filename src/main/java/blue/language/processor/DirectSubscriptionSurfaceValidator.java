@@ -2,8 +2,6 @@ package blue.language.processor;
 
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
-import blue.language.processor.model.ChannelContract;
-import blue.language.processor.model.Contract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
@@ -62,22 +60,10 @@ public final class DirectSubscriptionSurfaceValidator
             ContractProcessorRegistry registry,
             NodeToObjectConverter converter) {
         return new DirectSubscriptionSurfaceValidator(
-                contractLoader, snapshotManager, registry, converter);
-    }
-
-    @Override
-    public SubscriptionDelta validate(Node inputRoot,
-                                      Node tentativeRoot,
-                                      Set<String> changedPaths,
-                                      GasSchedule schedule) {
-        return validate(SubscriptionSurfaceValidationContext.builder(
-                        inputRoot,
-                        tentativeRoot,
-                        changedPaths != null
-                                ? changedPaths
-                                : Collections.<String>emptySet(),
-                        schedule)
-                .build());
+                contractLoader,
+                snapshotManager,
+                registry,
+                converter);
     }
 
     @Override
@@ -174,6 +160,10 @@ public final class DirectSubscriptionSurfaceValidator
                         + JsonPointer.escape(interval.channelKey()));
         if (dependencyAffected(
                 scopePath, contractPath, changedPaths)) {
+            return true;
+        }
+        if (sameScopeContractsAffected(
+                scopePath, changedPaths)) {
             return true;
         }
         for (String changed : changedPaths) {
@@ -450,7 +440,9 @@ public final class DirectSubscriptionSurfaceValidator
                             scopePath,
                             contract.key());
                     if (dependencyAffected(
-                            scopePath, contractPath, changedPaths)) {
+                            scopePath, contractPath, changedPaths)
+                            || sameScopeContractsAffected(
+                            scopePath, changedPaths)) {
                         SubscriptionDelta.Entry descriptor =
                                 effectiveExternalDescriptor(
                                         bundle,
@@ -549,18 +541,24 @@ public final class DirectSubscriptionSurfaceValidator
         Node channelNode = frozen.toNode();
         requireObjectLimits(
                 channelNode, schedule, scopePath, contract.key());
-        RegisteredSubscriptionHeader first =
-                registeredSubscriptionHeader(
-                        contract, channelNode, scopePath);
+        ExternalChannelFunctionResolver.Header first =
+                new ExternalChannelFunctionResolver(
+                        registry,
+                        converter,
+                        bundle)
+                        .header(contract);
         /*
          * Invoke the immutable functions against an independent conversion.
          * This catches stateful function implementations without letting a
          * mutating function corrupt the ContractLoader's cached binding.
          */
-        RegisteredSubscriptionHeader second =
-                registeredSubscriptionHeader(
-                        contract, channelNode, scopePath);
-        if (!first.equals(second)) {
+        ExternalChannelFunctionResolver.Header second =
+                new ExternalChannelFunctionResolver(
+                        registry,
+                        converter,
+                        bundle)
+                        .header(contract);
+        if (!first.sameResult(second)) {
             throw invalid(
                     "External Channel subscription functions are not "
                             + "deterministic over an immutable snapshot",
@@ -568,62 +566,22 @@ public final class DirectSubscriptionSurfaceValidator
                     contract.key());
         }
         validateSubscriptionKeys(
-                first.keys, schedule, scopePath, contract.key());
-        String domain = CheckpointDomain.derive(
-                contract.effectiveTypeBlueId(),
-                contract.sourceContributionNodeBlueIds(),
-                first.checkpointDomainDiscriminator);
+                first.channelKeys(),
+                schedule,
+                scopePath,
+                contract.key());
         return new SubscriptionDelta.Entry(
                 scopePath,
                 contract.key(),
                 contract.effectiveTypeBlueId(),
                 contract.sourceContributionNodeBlueIds(),
                 contract.order(),
-                first.keys,
-                domain,
+                first.channelKeys(),
+                first.checkpointDomainBlueId(),
+                first.dependencies(),
+                null,
+                null,
                 null);
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private RegisteredSubscriptionHeader registeredSubscriptionHeader(
-            EffectiveContractSnapshot snapshot,
-            Node channelNode,
-            String scopePath) {
-        Contract converted = converter != null
-                ? converter.convertWithType(
-                channelNode.clone(), Contract.class, false)
-                : null;
-        if (!(converted instanceof ChannelContract)) {
-            throw invalid(
-                    "Effective External Channel could not be converted",
-                    scopePath,
-                    snapshot.key());
-        }
-        ChannelContract channel = (ChannelContract) converted;
-        channel.setKey(snapshot.key());
-        channel.setTypeBlueId(snapshot.effectiveTypeBlueId());
-        ChannelProcessor processor = registry.lookupChannel(channel)
-                .orElse(null);
-        ExternalChannelSubscriptionFunctions functions =
-                processor != null
-                        ? processor.externalSubscriptionFunctions()
-                        : null;
-        if (functions == null) {
-            throw invalid(
-                    "External Channel runtime type does not expose supported "
-                            + "immutable subscription functions: "
-                            + snapshot.effectiveTypeBlueId(),
-                    scopePath,
-                    snapshot.key());
-        }
-        List<String> suppliedKeys =
-                functions.channelKeys(channel);
-        List<String> keys = suppliedKeys != null
-                ? new ArrayList<>(suppliedKeys)
-                : null;
-        String discriminator =
-                functions.checkpointDomainDiscriminator(channel);
-        return new RegisteredSubscriptionHeader(keys, discriminator);
     }
 
     private void validateSubscriptionKeys(
@@ -755,7 +713,9 @@ public final class DirectSubscriptionSurfaceValidator
                             scopePath,
                             contract.getKey());
                     if (dependencyAffected(
-                            scopePath, contractPath, changedPaths)) {
+                            scopePath, contractPath, changedPaths)
+                            || sameScopeContractsAffected(
+                            scopePath, changedPaths)) {
                         SubscriptionDelta.Entry descriptor =
                                 externalDescriptor(
                                         contract.getValue(),
@@ -1029,6 +989,22 @@ public final class DirectSubscriptionSurfaceValidator
                     || overlaps(changed, typePath)
                     || overlaps(changed, terminationPath)
                     || "/".equals(changed)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean sameScopeContractsAffected(
+            String scopePath,
+            Set<String> changes) {
+        String contractsPath = PointerUtils.resolvePointer(
+                scopePath, "/contracts");
+        for (String changed : changes) {
+            if (PointerUtils.descendantOrEqual(
+                    changed, contractsPath)
+                    || overlaps(changed, contractsPath)
+                    && changed.equals(scopePath)) {
                 return true;
             }
         }
@@ -1358,41 +1334,6 @@ public final class DirectSubscriptionSurfaceValidator
             this.selected = selected;
             this.effective = effective;
             this.bundle = Objects.requireNonNull(bundle, "bundle");
-        }
-    }
-
-    private static final class RegisteredSubscriptionHeader {
-        private final List<String> keys;
-        private final String checkpointDomainDiscriminator;
-
-        private RegisteredSubscriptionHeader(
-                List<String> keys,
-                String checkpointDomainDiscriminator) {
-            this.keys = keys != null
-                    ? Collections.unmodifiableList(
-                    new ArrayList<>(keys))
-                    : null;
-            this.checkpointDomainDiscriminator =
-                    checkpointDomainDiscriminator;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (!(other instanceof RegisteredSubscriptionHeader)) {
-                return false;
-            }
-            RegisteredSubscriptionHeader header =
-                    (RegisteredSubscriptionHeader) other;
-            return Objects.equals(keys, header.keys)
-                    && Objects.equals(
-                    checkpointDomainDiscriminator,
-                    header.checkpointDomainDiscriminator);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(
-                    keys, checkpointDomainDiscriminator);
         }
     }
 

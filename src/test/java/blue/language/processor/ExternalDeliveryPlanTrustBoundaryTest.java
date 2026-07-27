@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
@@ -130,7 +132,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     accepted.status(),
-                    accepted.failureReason());
+                    diagnosticMessage(accepted));
 
             ExternalDeliverySnapshot forged =
                     snapshotWithContributions(
@@ -156,7 +158,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.NO_MATCH,
                 directEmpty.status(),
-                directEmpty.failureReason());
+                diagnosticMessage(directEmpty));
 
         DocumentProcessor externalProcessor =
                 processor(null, null, null);
@@ -191,7 +193,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             assertEquals(
                     ProcessorStatus.NO_MATCH,
                     result.status(),
-                    result.failureReason());
+                    diagnosticMessage(result));
         }
     }
 
@@ -212,8 +214,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 omitted.status());
         assertEquals(
                 ProcessorErrorCategory.InvalidExternalChannelSnapshot,
-                omitted.errorCategory());
-        assertTrue(omitted.failureReason().contains(
+                diagnosticCategory(omitted));
+        assertTrue(diagnosticMessage(omitted).contains(
                 "omitted a true preselection"));
     }
 
@@ -262,7 +264,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.NO_MATCH,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
     }
 
     @Test
@@ -280,7 +282,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 omitted.status());
-        assertTrue(omitted.failureReason().contains(
+        assertTrue(diagnosticMessage(omitted).contains(
                 "omitted a true preselection"));
     }
 
@@ -365,7 +367,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
     }
 
     @Test
@@ -384,7 +386,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 accepted.processResult().status(),
-                accepted.processResult().failureReason());
+                diagnosticMessage(accepted.processResult()));
         assertEquals(
                 1L,
                 accepted.trace().counterQuantity(
@@ -409,7 +411,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.NO_MATCH,
                 rejected.processResult().status(),
-                rejected.processResult().failureReason());
+                diagnosticMessage(rejected.processResult()));
         assertEquals(
                 0L,
                 rejected.trace().counterQuantity(
@@ -432,7 +434,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
 
         assertEquals(ProcessorStatus.SUCCESS,
                 debug.processResult().status(),
-                debug.processResult().failureReason());
+                diagnosticMessage(debug.processResult()));
         List<ProcessingTraceRecord> allDequeued =
                 debug.trace().records(
                         ProcessingTraceRecord.Kind.EVENT_DEQUEUED);
@@ -502,7 +504,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                                 RuntimeBlueIds
                                                         .EMBEDDED_NODE_CHANNEL))
                                         .properties(
-                                                "childPath",
+                                                "sourcePath",
                                                 new Node().value(
                                                         "/child")))
                         .properties(
@@ -518,7 +520,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 debug.processResult().status(),
-                debug.processResult().failureReason());
+                diagnosticMessage(debug.processResult()));
         assertEquals(
                 "child-event",
                 debug.processResult().document()
@@ -588,7 +590,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
 
         assertEquals(ProcessorStatus.SUCCESS,
                 debug.processResult().status(),
-                debug.processResult().failureReason());
+                diagnosticMessage(debug.processResult()));
         java.util.List<ProcessingTraceRecord> updates =
                 debug.trace().records(
                         ProcessingTraceRecord.Kind.DOCUMENT_UPDATE);
@@ -619,7 +621,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorErrorCategory
                         .ProtectedProcessorStateMutation,
-                result.errorCategory());
+                diagnosticCategory(result));
     }
 
     @Test
@@ -688,8 +690,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 result.status());
         assertEquals(
                 ProcessorErrorCategory.InvalidExternalChannelSnapshot,
-                result.errorCategory());
-        assertTrue(result.failureReason().contains(
+                diagnosticCategory(result));
+        assertTrue(diagnosticMessage(result).contains(
                 "checkpoint subject mismatch"));
     }
 
@@ -715,8 +717,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 result.status());
         assertEquals(
                 ProcessorErrorCategory.InvalidExternalChannelSnapshot,
-                result.errorCategory());
-        assertTrue(result.failureReason().contains(
+                diagnosticCategory(result));
+        assertTrue(diagnosticMessage(result).contains(
                 "functions are not deterministic"));
     }
 
@@ -779,7 +781,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
         assertEquals(
                 "authoritative",
                 result.document().getAsText(
@@ -792,7 +794,11 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         .getProperties().get("subject");
         assertEquals(
                 authoritativeSubject,
-                checkpointSubject.getBlueId());
+                BlueIdCalculator.calculateBlueId(
+                        checkpointSubject));
+        assertEquals(
+                "subject-v1",
+                checkpointSubject.getValue());
     }
 
     @Test
@@ -839,7 +845,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     nodeResult.status(),
-                    nodeResult.failureReason());
+                    diagnosticMessage(nodeResult));
             assertFalse(hasInitializedMarker(
                     nodeResult.document(), "/child"));
 
@@ -850,7 +856,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     snapshotResult.status(),
-                    snapshotResult.failureReason());
+                    diagnosticMessage(snapshotResult));
             assertFalse(hasInitializedMarker(
                     snapshotResult.document(), "/child"));
         }
@@ -1173,7 +1179,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertEquals(
                 ProcessorErrorCategory
                         .InvalidExternalChannelSnapshot,
-                result.errorCategory());
+                diagnosticCategory(result));
     }
 
     public static final class PlanChannel

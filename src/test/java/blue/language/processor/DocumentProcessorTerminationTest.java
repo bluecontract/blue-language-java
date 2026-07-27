@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorTerminationTest {
@@ -44,7 +45,8 @@ class DocumentProcessorTerminationTest {
 
         Node event = buildTestEvent("evt-1");
         DocumentProcessingResult initialized = blue.initializeDocument(document);
-        DocumentProcessingResult result = blue.processDocument(initialized.snapshot(), event);
+        DocumentProcessingResult result =
+                blue.processDocument(snapshot(blue, initialized), event);
 
         assertEquals(ProcessorStatus.SUCCESS,
                 result.status());
@@ -119,7 +121,7 @@ class DocumentProcessorTerminationTest {
                 "  childBridge:\n" +
                 "    type:\n" +
                 "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
-                "    childPath: /child\n" +
+                "    sourcePath: /child\n" +
                 "  captureChild:\n" +
                 "    channel: childBridge\n" +
                 "    type:\n" +
@@ -130,7 +132,7 @@ class DocumentProcessorTerminationTest {
         Node event = buildTestEvent("evt-3");
         DocumentProcessingResult initialized = blue.initializeDocument(document);
         ProcessingDebugResult debug = blue.getDocumentProcessor()
-                .processDocumentWithTrace(initialized.snapshot(), event);
+                .processDocumentWithTrace(snapshot(blue, initialized), event);
         DocumentProcessingResult result = debug.processResult();
 
         assertEquals(ProcessorStatus.SUCCESS,

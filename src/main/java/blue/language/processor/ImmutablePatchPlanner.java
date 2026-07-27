@@ -7,6 +7,7 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 
@@ -77,6 +78,7 @@ final class ImmutablePatchPlanner {
             throw new IllegalArgumentException(
                     "Resolved scalar metadata preservation requires a non-root replace patch");
         }
+        validateMutationPath(patch.path());
         FrozenNode existing = read(patch.path());
         FrozenNode replacement = patch.valueFor(root);
         if (!PatchImpact.isValueOnlyScalar(existing)
@@ -108,6 +110,7 @@ final class ImmutablePatchPlanner {
         Objects.requireNonNull(patch, "patch");
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
         String path = PointerUtils.canonicalizePointer(patch.getPath());
+        validateMutationPath(path);
         if ((patch.getOp() == JsonPatch.Op.ADD || patch.getOp() == JsonPatch.Op.REPLACE)
                 && JsonPointer.split(path).isEmpty()) {
             return rootReplacement(normalizedScope,
@@ -133,6 +136,7 @@ final class ImmutablePatchPlanner {
         Objects.requireNonNull(originScopePath, "originScopePath");
         Objects.requireNonNull(patch, "patch");
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
+        validateMutationPath(patch.path());
         if ((patch.op() == JsonPatch.Op.ADD || patch.op() == JsonPatch.Op.REPLACE)
                 && patch.path().isRoot()) {
             return rootReplacement(normalizedScope,
@@ -272,6 +276,132 @@ final class ImmutablePatchPlanner {
 
     FrozenNode read(ParsedJsonPointer path) {
         return read(root, path, LookupMode.AFTER);
+    }
+
+    void validateMutationPath(String path) {
+        validateMutationPath(ParsedJsonPointer.parse(path));
+    }
+
+    void validateMutationPath(ParsedJsonPointer path) {
+        Objects.requireNonNull(path, "path");
+        if (path.isRoot() || !root.containsCyclicSetReference()) {
+            return;
+        }
+        FrozenNode current = root;
+        List<String> segments = path.segments();
+        for (int index = 0; index < segments.size() && current != null; index++) {
+            if (isCyclicSetMemberReference(current)) {
+                String boundary = JsonPointer.toPointer(segments.subList(0, index));
+                throw new ProcessorFailureException(
+                        ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                        "Mutation below cyclic-set member reference is unsupported at "
+                                + boundary + ": " + path.pointer());
+            }
+            String segment = segments.get(index);
+            if (isIntrinsicMutationPathChild(segment)) {
+                current = intrinsicMutationPathChild(current, segment);
+            } else if (current.hasItems()) {
+                if ("-".equals(segment)) {
+                    return;
+                }
+                int arrayIndex;
+                try {
+                    arrayIndex = Integer.parseInt(segment);
+                } catch (NumberFormatException ignored) {
+                    return;
+                }
+                current = current.item(arrayIndex);
+            } else {
+                current = current.property(segment);
+            }
+        }
+    }
+
+    /**
+     * Mirrors the intrinsic {@link Node} children addressable by processor
+     * paths. {@link FrozenNode#property(String)} deliberately exposes only
+     * authored object properties and {@code contracts}; mutation preflight must
+     * additionally follow the other intrinsic node-valued fields so a cyclic
+     * member cannot be hidden behind one of them.
+     */
+    private static FrozenNode intrinsicMutationPathChild(FrozenNode node,
+                                                         String segment) {
+        if ("type".equals(segment)) {
+            return node.getType();
+        }
+        if ("itemType".equals(segment)) {
+            return node.getItemType();
+        }
+        if ("keyType".equals(segment)) {
+            return node.getKeyType();
+        }
+        if ("valueType".equals(segment)) {
+            return node.getValueType();
+        }
+        if ("blue".equals(segment)) {
+            return node.getBlue();
+        }
+        if ("contracts".equals(segment)) {
+            return node.getContracts();
+        }
+        throw new IllegalArgumentException(
+                "Not an intrinsic node child: " + segment);
+    }
+
+    private static boolean isIntrinsicMutationPathChild(String segment) {
+        return "type".equals(segment)
+                || "itemType".equals(segment)
+                || "keyType".equals(segment)
+                || "valueType".equals(segment)
+                || "blue".equals(segment)
+                || "contracts".equals(segment);
+    }
+
+    FrozenNode applyMutationPreflight(JsonPatch.Op op,
+                                      ParsedJsonPointer path,
+                                      FrozenNode value,
+                                      boolean exactReplacement) {
+        Objects.requireNonNull(op, "op");
+        Objects.requireNonNull(path, "path");
+        validateMutationPath(path);
+        if (path.isRoot()
+                && (op == JsonPatch.Op.ADD || op == JsonPatch.Op.REPLACE)) {
+            return Objects.requireNonNull(value, "value");
+        }
+        CanonicalOverlayPatchEngine engine =
+                new CanonicalOverlayPatchEngine(root);
+        if (!exactReplacement
+                || op == JsonPatch.Op.REMOVE) {
+            return engine.apply(op, path, value).root();
+        }
+        if (op == JsonPatch.Op.ADD && targetsListMember(path)) {
+            return engine.apply(op, path, value).root();
+        }
+        if (read(path) == null) {
+            return engine.apply(JsonPatch.Op.ADD, path, value).root();
+        }
+        FrozenNode removed = engine
+                .apply(JsonPatch.Op.REMOVE, path, null)
+                .root();
+        return new CanonicalOverlayPatchEngine(removed)
+                .apply(JsonPatch.Op.ADD, path, value)
+                .root();
+    }
+
+    private static boolean isCyclicSetMemberReference(FrozenNode node) {
+        if (!node.isReferenceOnly()) {
+            return false;
+        }
+        String blueId = node.getReferenceBlueId();
+        if (blueId == null || blueId.indexOf('#') < 0) {
+            return false;
+        }
+        try {
+            BlueIds.requireBlueIdOrCyclicMember(blueId, "cyclic-set member reference");
+            return true;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     static FrozenNode readAfter(ResolvedSnapshot snapshot, String path, boolean resolved) {

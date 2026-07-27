@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.TestEventChannelProcessor;
@@ -260,7 +262,7 @@ final class ProcessorProcessEventContextTest {
 
         DocumentProcessingResult result = blue.getDocumentProcessor().processDocument(initialized, processEvent("root"));
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Observation direct = capture.only("emitFirst");
         Observation triggered = capture.only("captureTriggered");
         assertEquals("root", eventKind(direct.currentEvent));
@@ -318,7 +320,7 @@ final class ProcessorProcessEventContextTest {
 
         DocumentProcessingResult result = blue.getDocumentProcessor().processDocument(document, processEvent("root"));
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Observation lifecycle = capture.only("captureLifecycle");
         Observation direct = capture.only("captureDirect");
         assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
@@ -351,7 +353,7 @@ final class ProcessorProcessEventContextTest {
                         "  childBridge:\n" +
                         "    type:\n" +
                         "      blueId: " + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n" +
-                        "    childPath: /child\n" +
+                        "    sourcePath: /child\n" +
                         handler("captureBridge", "childBridge", 2))).document();
         capture.clear();
 
@@ -433,7 +435,9 @@ final class ProcessorProcessEventContextTest {
         assertSnapshotKind(capture.only("capture").processEvent, "direct-root");
 
         capture.clear();
-        blue.getDocumentProcessor().processDocument(initialized.snapshot(), processEvent("snapshot-root"));
+        blue.getDocumentProcessor().processDocument(
+                DocumentProcessingResultTestSupport.snapshot(blue, initialized),
+                processEvent("snapshot-root"));
         assertSnapshotKind(capture.only("capture").processEvent, "snapshot-root");
         assertEquals(2L, metrics.processEventSnapshotAttempts);
         assertEquals(2L, metrics.processEventSnapshotBuilds);
@@ -454,8 +458,12 @@ final class ProcessorProcessEventContextTest {
 
         blue.getDocumentProcessor().processDocument(initialized.document(), wide);
         blue.getDocumentProcessor().processDocument(initialized.document(), deep);
-        blue.getDocumentProcessor().processDocument(initialized.snapshot(), wide);
-        blue.getDocumentProcessor().processDocument(initialized.snapshot(), deep);
+        blue.getDocumentProcessor().processDocument(
+                DocumentProcessingResultTestSupport.snapshot(blue, initialized),
+                wide);
+        blue.getDocumentProcessor().processDocument(
+                DocumentProcessingResultTestSupport.snapshot(blue, initialized),
+                deep);
 
         assertEquals(0L, metrics.processEventSnapshotAttempts);
         assertEquals(0L, metrics.processEventSnapshotBuilds);

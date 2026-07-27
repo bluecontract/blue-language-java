@@ -75,10 +75,10 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void verifiedEvidenceValueRemainsOpaqueWhenMergerIsExtensible()
+    void verifiedEvidenceValueRemainsOpaqueWhenMergerIsFinal()
             throws NoSuchMethodException {
-        assertFalse(Modifier.isFinal(Merger.class.getModifiers()),
-                "Merger remains extensible for the published 3.0 API");
+        assertTrue(Modifier.isFinal(Merger.class.getModifiers()),
+                "Merger is a concrete engine; MergingProcessor is the supported extension point");
         assertTrue(Modifier.isFinal(VerifiedReferenceResolution.class.getModifiers()));
         assertTrue(Modifier.isPrivate(VerifiedReferenceResolution.class
                         .getDeclaredConstructor(String.class, FrozenNode.class, FrozenNode.class)

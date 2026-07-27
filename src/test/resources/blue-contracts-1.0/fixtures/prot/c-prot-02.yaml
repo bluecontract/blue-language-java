@@ -7,7 +7,9 @@ description: Only `Process Embedded.paths` may change under its exact exception.
 operation: process
 input:
   root:
-    value: 0
+    counter: 0
+    child:
+      state: 0
     contracts:
       in:
         type:
@@ -25,8 +27,14 @@ input:
         result:
           patches:
           - op: replace
-            path: /value
-            val: 1
+            path: /contracts/embedded/paths
+            val:
+            - /child2
+      embedded:
+        type:
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -52,14 +60,6 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    handlers:
-      /contracts/h:
-        result:
-          patches:
-          - op: replace
-            path: /contracts/embedded/paths
-            val:
-            - /child2
 expected:
   assertions:
   - actual: result.status
@@ -68,3 +68,7 @@ expected:
   - actual: trace.protectedState.nonPathsUnchanged
     op: equals
     expected: true
+  - actual: result.document.contracts.embedded.paths
+    op: sequenceEquals
+    expected:
+    - /child2

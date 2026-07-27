@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.processor.model.FrozenJsonPatch;
@@ -25,6 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PreparedPatchSequenceTest {
+
+    private static final String CYCLIC_MEMBER_BLUE_ID =
+            "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
     void preparedSequenceDefersSnapshotAndPlanningUntilPatchZeroApplication() {
@@ -56,6 +61,62 @@ class PreparedPatchSequenceTest {
             assertEquals(1, metrics.patchSequencesPrepared);
             assertEquals(1, metrics.patchesPrepared);
         }
+    }
+
+    @Test
+    void forbiddenCyclicMemberTraversalFailsBeforeAnySnapshotProviderDemand() {
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                new Node().properties(
+                        "cyclic",
+                        new Node().blueId(CYCLIC_MEMBER_BLUE_ID)),
+                null,
+                unchangedConformanceOverride(),
+                manager,
+                new RecordingMetrics());
+
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     runtime.preparePatchSequence(
+                             "/",
+                             Arrays.asList(JsonPatch.add(
+                                     "/cyclic/member",
+                                     new Node().value(1))),
+                             null)) {
+            ProcessorFailureException failure = assertThrows(
+                    ProcessorFailureException.class,
+                    () -> sequence.applyNext(0));
+
+            assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                    failure.errorCategory());
+        }
+
+        assertEquals(0, manager.fromDocumentCalls);
+        assertEquals(0, manager.applyPatchCalls);
+        assertEquals(0, manager.cacheSnapshotCalls);
+    }
+
+    @Test
+    void sequentialWholeReferenceReplacementAllowsFollowingDescendantMutation() {
+        CountingSnapshotManager manager = new CountingSnapshotManager();
+        Node document = new Node().properties(
+                "cyclic",
+                new Node().blueId(CYCLIC_MEMBER_BLUE_ID));
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document, null, manager);
+        List<JsonPatch> patches = Arrays.asList(
+                JsonPatch.replace(
+                        "/cyclic",
+                        new Node().properties("member", new Node().value("replacement"))),
+                JsonPatch.add("/cyclic/next", new Node().value("allowed")));
+
+        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+                     runtime.preparePatchSequence("/", patches, null)) {
+            sequence.applyNext(0);
+            sequence.applyNext(1);
+        }
+
+        assertEquals("replacement", document.getAsText("/cyclic/member"));
+        assertEquals("allowed", document.getAsText("/cyclic/next"));
     }
 
     @Test
@@ -449,7 +510,7 @@ class PreparedPatchSequenceTest {
         DocumentProcessingResult result = execution.result();
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                result.errorCategory());
+                diagnosticCategory(result));
         assertThrows(IllegalArgumentException.class,
                 () -> result.document().getAsNode("/outside"));
         assertThrows(IllegalArgumentException.class, () -> document.getAsNode("/scope/invalid"));

@@ -15,16 +15,7 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
             subscriptionFunctions;
 
     public MockExternalChannelProcessor() {
-        this(null, null);
-    }
-
-    /**
-     * The runtime parameter is retained only as constructor-level source
-     * compatibility. Channel behavior is entirely declared by the selected
-     * Scripted External Channel itself.
-     */
-    public MockExternalChannelProcessor(ScriptedContractsRuntime scriptedRuntime) {
-        this(scriptedRuntime, null);
+        this(null);
     }
 
     /**
@@ -34,7 +25,6 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
      * the same exact subject.
      */
     public MockExternalChannelProcessor(
-            ScriptedContractsRuntime scriptedRuntime,
             Node checkpointSubjectOverride) {
         this.subscriptionFunctions =
                 new FixtureSubscriptionFunctions(

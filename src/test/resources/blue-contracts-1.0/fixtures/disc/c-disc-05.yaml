@@ -7,7 +7,6 @@ description: A Handler snapshot survives same-delivery contract mutation.
 operation: process
 input:
   root:
-    value: 0
     contracts:
       in:
         type:
@@ -24,9 +23,8 @@ input:
         order: 0
         result:
           patches:
-          - op: replace
-            path: /value
-            val: 1
+          - op: remove
+            path: /contracts/h2
       h2:
         type:
           blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
@@ -37,6 +35,8 @@ input:
           - op: replace
             path: /h2Ran
             val: true
+    counter: 0
+    h2Ran: false
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -62,12 +62,6 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    handlers:
-      /contracts/h:
-        result:
-          patches:
-          - op: remove
-            path: /contracts/h2
 expected:
   assertions:
   - actual: result.document.h2Ran

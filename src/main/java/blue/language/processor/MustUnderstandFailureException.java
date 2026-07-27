@@ -5,14 +5,14 @@ class MustUnderstandFailureException extends RuntimeException {
     private final ProcessorErrorCategory errorCategory;
 
     MustUnderstandFailureException(String message) {
-        this(message, ProcessorErrorCategory.UnsupportedContract);
+        this(message, ProcessorErrorCategory.UnsupportedRuntimeType);
     }
 
     MustUnderstandFailureException(String message, ProcessorErrorCategory errorCategory) {
         super(message);
         this.errorCategory = errorCategory != null
                 ? errorCategory
-                : ProcessorErrorCategory.UnsupportedContract;
+                : ProcessorErrorCategory.UnsupportedRuntimeType;
     }
 
     ProcessorErrorCategory errorCategory() {

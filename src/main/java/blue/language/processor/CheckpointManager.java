@@ -82,12 +82,20 @@ final class CheckpointManager {
             boolean domainMatches = storedEntry != null
                     && Objects.equals(checkpointDomainBlueId, storedEntry.domainBlueId());
             Node storedSubject = domainMatches ? storedEntry.getSubject() : null;
-            return new CheckpointRecord(entry.getKey(),
+            CheckpointRecord record = new CheckpointRecord(entry.getKey(),
                     checkpoint,
                     rawChannelKey,
                     checkpointDomainBlueId,
                     storedSubject,
                     domainMatches);
+            if (storedSubject != null) {
+                record.lastEventSignature =
+                        identityCache.storedIdentity(
+                                checkpoint,
+                                rawChannelKey,
+                                storedSubject);
+            }
+            return record;
         }
         return new CheckpointRecord(ProcessorContractConstants.KEY_CHECKPOINT,
                 null,
@@ -95,11 +103,6 @@ final class CheckpointManager {
                 checkpointDomainBlueId,
                 null,
                 false);
-    }
-
-    @Deprecated
-    CheckpointRecord findCheckpoint(ContractBundle bundle, String channelKey) {
-        return findCheckpoint(bundle, channelKey, null);
     }
 
     boolean isDuplicate(CheckpointRecord record, String subjectBlueId) {
@@ -133,9 +136,27 @@ final class CheckpointManager {
                  ContractBundle bundle,
                  CheckpointRecord record,
                  String subjectBlueId,
-                 Node ignoredEventNode) {
+                 Node exactSubject) {
         if (record == null || subjectBlueId == null) {
             return;
+        }
+        Node storedSubject =
+                exactSubject != null
+                        ? exactSubject.clone()
+                        : new Node().blueId(
+                                subjectBlueId);
+        String calculatedSubjectBlueId =
+                identityCache.identity(
+                        storedSubject);
+        if (!subjectBlueId.equals(
+                calculatedSubjectBlueId)) {
+            throw new ProcessorFailureException(
+                    ProcessorErrorCategory
+                            .CheckpointPolicyError,
+                    "Frozen checkpoint subject identity mismatch: expected "
+                            + subjectBlueId
+                            + " but calculated "
+                            + calculatedSubjectBlueId);
         }
         ensureCheckpointMarker(scopePath, bundle);
         CheckpointRecord active = record.checkpoint != null
@@ -150,13 +171,22 @@ final class CheckpointManager {
         Node entryNode = new Node()
                 .properties("domain",
                         new Node().blueId(domainBlueId))
-                .properties("subject", new Node().blueId(subjectBlueId));
+                .properties("subject",
+                        storedSubject.clone());
         runtime.chargeCheckpointUpdate();
         runtime.directWrite(pointer, entryNode);
         active.checkpoint.putEntry(
                 active.channelKey, domainBlueId, subjectBlueId);
-        active.lastEventNode = new Node().blueId(subjectBlueId);
+        active.checkpoint.entry(
+                active.channelKey)
+                .subject(storedSubject);
+        active.lastEventNode =
+                storedSubject.clone();
         active.lastEventSignature = subjectBlueId;
+        identityCache.updateStoredIdentity(
+                active.checkpoint,
+                active.channelKey,
+                subjectBlueId);
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("domain", domainBlueId);

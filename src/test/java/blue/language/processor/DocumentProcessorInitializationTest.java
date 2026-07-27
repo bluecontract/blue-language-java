@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.TypeBlueId;
 import blue.language.provider.BasicNodeProvider;
@@ -39,8 +41,8 @@ class DocumentProcessorInitializationTest {
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertNull(result.errorCategory(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        assertNull(diagnosticCategory(result), diagnosticMessage(result));
         assertTrue(blue.isInitialized(result.document()));
         assertProcessorLifecycleIsLocal(result);
 
@@ -67,7 +69,7 @@ class DocumentProcessorInitializationTest {
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node initialized = result.document()
                 .getContracts()
                 .getProperties()
@@ -102,7 +104,7 @@ class DocumentProcessorInitializationTest {
 
         DocumentProcessingResult result = blue.initializeDocument(preInitialization);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertProcessorLifecycleIsLocal(result);
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
@@ -136,7 +138,7 @@ class DocumentProcessorInitializationTest {
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         String markerDocumentId = markerDocumentId(result.document(), "/");
         assertEquals(canonical, markerDocumentId,
                 "canonical=" + canonical + ", unchecked=" + unchecked);
@@ -368,7 +370,7 @@ class DocumentProcessorInitializationTest {
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node initialized = result.document();
         assertEquals(rootContentBlueId, markerDocumentId(initialized, "/"));
         assertEquals(childContentBlueId, markerDocumentId(initialized, "/child"));
@@ -404,11 +406,11 @@ class DocumentProcessorInitializationTest {
         String exactInput = original.toString();
         DocumentProcessingResult result = blue.initializeDocument(original);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertFalse(result.commits());
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                result.errorCategory().normative());
+                diagnosticCategory(result));
         assertEquals(exactInput,
                 result.document().toString());
         assertNull(result.document().getContracts().getProperties().get("initialized"));
@@ -602,7 +604,7 @@ class DocumentProcessorInitializationTest {
         String originalJson = blue.nodeToJson(original.clone());
 
         DocumentProcessingResult result = blue.initializeDocument(original);
-        assertTrue(result.capabilityFailure(), "Initialization should fail with must-understand");
+        assertTrue(isCapabilityFailure(result), "Initialization should fail with must-understand");
         assertEquals(0L, result.totalGas());
         assertTrue(result.events().isEmpty());
         assertEquals(originalJson, blue.nodeToJson(result.document()));
@@ -630,7 +632,7 @@ class DocumentProcessorInitializationTest {
         assertTrue(result.events().isEmpty());
         assertEquals(document.toString(),
                 result.document().toString());
-        assertNull(result.failureReason());
+        assertNull(diagnosticMessage(result));
     }
 
     @Test
@@ -801,7 +803,7 @@ class DocumentProcessorInitializationTest {
                 "  childBridge:\n" +
                 "    type:\n" +
                 "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
-                "    childPath: /child\n" +
+                "    sourcePath: /child\n" +
                 "  captureChildLifecycle:\n" +
                 "    channel: childBridge\n" +
                 "    type:\n" +
@@ -827,8 +829,8 @@ class DocumentProcessorInitializationTest {
 
         DocumentProcessingResult result = blue.initializeDocument(original);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        Node canonicalDocument = result.canonicalDocument();
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        Node canonicalDocument = result.document();
         assertNotNull(canonicalDocument, yaml);
         assertEquals(contentBlueId, markerDocumentId(canonicalDocument, "/"), yaml);
         assertProcessorLifecycleIsLocal(result);

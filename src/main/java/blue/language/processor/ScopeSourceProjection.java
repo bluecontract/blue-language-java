@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.JsonPointer;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.Nodes;
 
 import java.util.ArrayList;
@@ -78,9 +78,8 @@ final class ScopeSourceProjection {
                     projected = null;
                 }
             } catch (RuntimeException failure) {
-                ProcessorErrorCategory category = ScopeIdentityErrorMapper.from(failure);
-                if (category == ProcessorErrorCategory.ProviderUnavailable
-                        || category == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+                if (ScopeIdentityErrorMapper.isProviderIdentityFailure(
+                        failure)) {
                     throw failure;
                 }
                 selectedProjectionFailure = failure;
@@ -102,8 +101,8 @@ final class ScopeSourceProjection {
                     : new Node();
             makeStandaloneRoot(canonicalSeed, selectedContribution,
                     canonicalFragment, capturedResolvedScope);
-            Node desiredStandaloneCanonical = new MergeReverser()
-                    .reverseToCanonicalOverlay(
+            Node desiredStandaloneCanonical =
+                    new CanonicalIdentityInputBuilder().build(
                             capturedResolvedScope.toNode(), canonicalSeed);
             standaloneSource = sourceifyCanonicalFinalLists(
                     desiredStandaloneCanonical,

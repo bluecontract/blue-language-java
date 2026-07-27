@@ -7,7 +7,7 @@ description: Presence Booleans preserve add/remove identity without null sentine
 operation: process
 input:
   root:
-    value: 0
+    counter: 0
     contracts:
       in:
         type:
@@ -24,9 +24,11 @@ input:
         order: 0
         result:
           patches:
-          - op: replace
-            path: /value
+          - op: add
+            path: /new
             val: 1
+          - op: remove
+            path: /new
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -52,15 +54,6 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    handlers:
-      /contracts/h:
-        result:
-          patches:
-          - op: add
-            path: /new
-            val: 1
-          - op: remove
-            path: /new
 expected:
   assertions:
   - actual: trace.documentUpdates.0.beforePresent

@@ -180,6 +180,14 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
                         }
 
                         @Override
+                        public ResolvedSnapshot fromDocumentPreservingPaths(
+                                Node document,
+                                java.util.Collection<String> preservedPaths) {
+                            return blue.resolveToSnapshotPreservingPaths(
+                                    document, preservedPaths);
+                        }
+
+                        @Override
                         public ResolvedSnapshot applyPatch(
                                 ResolvedSnapshot snapshot,
                                 JsonPatch patch) {

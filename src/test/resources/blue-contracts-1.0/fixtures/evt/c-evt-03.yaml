@@ -7,26 +7,31 @@ description: Child emissions are not returned unless Root explicitly emits.
 operation: process
 input:
   root:
-    value: 0
+    child:
+      state: 0
+      contracts:
+        in:
+          type:
+            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        emitA:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: in
+          order: 0
+          result:
+            events:
+            - id: A
     contracts:
-      in:
+      embedded:
         type:
-          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
-        order: 0
-        subscriptionKey: timeline
-        eventKey: timeline
-        accept: true
-        checkpointDomain: domain-v1
-      h:
-        type:
-          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
-        channel: in
-        order: 0
-        result:
-          patches:
-          - op: replace
-            path: /value
-            val: 1
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -40,7 +45,7 @@ input:
     - timeline
     - 1
     deliverySnapshot:
-    - scopePath: /
+    - scopePath: /child
       channelKey: in
       order: 0
       activationStartExclusive:
@@ -52,10 +57,8 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    childEmissions:
-    - id: A
 expected:
   assertions:
   - actual: result.events
-    op: equals
+    op: sequenceEquals
     expected: []

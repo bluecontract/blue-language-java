@@ -23,9 +23,9 @@ class ProcessorPointerConstantsTest {
 
     @Test
     void checkpointEntryPointerIncludesChannelKey() {
-        String pointer = ProcessorPointerConstants.relativeCheckpointLastEvent("checkpoint", "channelA");
+        String pointer = ProcessorPointerConstants.relativeCheckpointEntry("checkpoint", "channelA");
         assertEquals("/contracts/checkpoint/entries/channelA", pointer);
         assertEquals("/contracts/check~1point/entries/channel~0A",
-                ProcessorPointerConstants.relativeCheckpointLastEvent("check/point", "channel~A"));
+                ProcessorPointerConstants.relativeCheckpointEntry("check/point", "channel~A"));
     }
 }

@@ -3,8 +3,7 @@ id: c-e2e-02
 vectors:
 - C-E2E-02
 category: e2e
-description: Complete deep-scope no-match result opens only the selected branch and
-  returns no public Root event.
+description: Complete deep-scope no-match result opens only the selected branch and returns no public Root event.
 operation: process
 input:
   root:
@@ -15,7 +14,6 @@ input:
         paths:
         - /child
     child:
-      value: 0
       contracts:
         in:
           type:
@@ -25,6 +23,7 @@ input:
           eventKey: timeline
           accept: false
           checkpointDomain: domain-v1
+      state: 0
     unrelated:
       blueId: AE57CRExXVfGYwpgXisJtSh2D1ZfoMXzZu1cn4XJzuBS
     counter: 0

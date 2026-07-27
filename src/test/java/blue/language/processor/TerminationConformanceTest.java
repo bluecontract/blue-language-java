@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
@@ -53,7 +55,7 @@ final class TerminationConformanceTest {
         assertEquals(new BigInteger("1"), nodeAt(result.document(), "/first").getValue());
         assertEquals(new BigInteger("2"), nodeAt(result.document(), "/second").getValue());
         assertEquals(ProcessorStatus.SUCCESS, result.status());
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated termination lifecycle is local");
     }
 
@@ -71,8 +73,8 @@ final class TerminationConformanceTest {
         assertTrue(observed.isEmpty());
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
-        assertEquals("first", result.failureReason());
+                diagnosticCategory(result));
+        assertEquals("first", diagnosticMessage(result));
         assertRolledBack(initialized, result);
     }
 
@@ -93,7 +95,7 @@ final class TerminationConformanceTest {
         Node marker = result.document().getAsNode("/contracts/terminated");
         assertEquals("graceful", marker.getAsText("/cause"));
         assertEquals("first", marker.getAsText("/reason"));
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated termination lifecycle is local");
     }
 
@@ -111,8 +113,8 @@ final class TerminationConformanceTest {
         assertEquals(Collections.singletonList("/reentrantFatal"), observed);
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
-        assertEquals("ignored reentrant fatal request", result.failureReason());
+                diagnosticCategory(result));
+        assertEquals("ignored reentrant fatal request", diagnosticMessage(result));
         assertRolledBack(initialized, result);
     }
 
@@ -268,10 +270,10 @@ final class TerminationConformanceTest {
         assertNull(nodeOrNull(
                 result.document(), "/triggeredDrained"));
         assertTerminationEventSequence(
-                result.triggeredEvents(),
+                result.events(),
                 TEST_EVENT_TYPE);
         assertEquals("termination-lifecycle-emission",
-                result.triggeredEvents().get(0).getAsText("/eventId"));
+                result.events().get(0).getAsText("/eventId"));
     }
 
     @Test
@@ -296,7 +298,7 @@ final class TerminationConformanceTest {
         assertEquals(ProcessorStatus.SUCCESS, result.status());
         assertEquals("graceful", result.document().getAsNode("/contracts/terminated").getAsText("/cause"));
         assertNull(nodeOrNull(result.document(), "/contracts/initialized"));
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated lifecycle occurrences are local");
     }
 
@@ -334,7 +336,7 @@ final class TerminationConformanceTest {
         assertEquals("graceful", result.document().getAsNode("/contracts/terminated").getAsText("/cause"));
         assertNull(nodeOrNull(result.document(), "/contracts/initialized"));
         assertNull(nodeOrNull(result.document(), "/external"));
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated lifecycle occurrences are local");
     }
 
@@ -358,8 +360,8 @@ final class TerminationConformanceTest {
                 processExternal(blue, initialized, testEvent("graceful-result"));
 
         assertEquals(ProcessorStatus.SUCCESS, result.status());
-        assertNull(result.errorCategory());
-        assertNull(result.failureReason());
+        assertNull(diagnosticCategory(result));
+        assertNull(diagnosticMessage(result));
         assertEquals("first", result.document().getAsNode("/contracts/terminated").getAsText("/reason"));
     }
 
@@ -394,9 +396,9 @@ final class TerminationConformanceTest {
         assertEquals(Arrays.asList("/failing"), observed);
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
+                diagnosticCategory(result));
         assertEquals("termination lifecycle handler failed",
-                result.failureReason());
+                diagnosticMessage(result));
         assertRolledBack(document, result);
     }
 
@@ -413,14 +415,14 @@ final class TerminationConformanceTest {
                 () -> execution.abortRuntimeFailure(
                         "/child",
                         null,
-                        ProcessorErrorCategory.BoundaryViolation,
+                        ProcessorErrorCategory.PatchBoundaryViolation,
                         "child failure"));
 
         DocumentProcessingResult result = execution.result();
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                result.errorCategory());
-        assertEquals("child failure", result.failureReason());
+                diagnosticCategory(result));
+        assertEquals("child failure", diagnosticMessage(result));
         assertRolledBack(document, result);
     }
 
@@ -454,7 +456,7 @@ final class TerminationConformanceTest {
 
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
+                diagnosticCategory(result));
         assertRolledBack(initialized, result);
     }
 
@@ -473,8 +475,8 @@ final class TerminationConformanceTest {
         assertEquals(Arrays.asList("/first", "/failing"), observed);
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
-        assertEquals("termination lifecycle handler failed", result.failureReason());
+                diagnosticCategory(result));
+        assertEquals("termination lifecycle handler failed", diagnosticMessage(result));
         assertRolledBack(initialized, result);
     }
 
@@ -508,7 +510,7 @@ final class TerminationConformanceTest {
         assertEquals(Arrays.asList("/failing"), observed);
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
+                diagnosticCategory(result));
         assertRolledBack(document, result);
     }
 
@@ -524,7 +526,7 @@ final class TerminationConformanceTest {
         DocumentProcessingResult result = execution.result();
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
+                diagnosticCategory(result));
         assertEquals("not-an-object", result.document().getContracts().getValue());
         assertNull(nodeOrNull(result.document(), "/contracts/terminated"));
         assertRolledBack(document, result);
@@ -551,7 +553,7 @@ final class TerminationConformanceTest {
         DocumentProcessingResult result = execution.result();
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
+                diagnosticCategory(result));
         assertEquals("preserve", nodeAt(result.document(), "/contracts/rootOnly").getValue());
         assertNull(nodeOrNull(result.document(), "/contracts/terminated"));
         assertNull(nodeOrNull(result.document(), "/child/contracts/terminated"));
@@ -580,10 +582,10 @@ final class TerminationConformanceTest {
         DocumentProcessingResult result = execution.result();
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
-                result.errorCategory());
+                diagnosticCategory(result));
         assertEquals("malformed", result.document().getContracts().getValue());
         assertNull(nodeOrNull(result.document(), "/contracts/terminated"));
-        assertFalse(result.failureReason().isEmpty());
+        assertFalse(diagnosticMessage(result).isEmpty());
         assertRolledBack(document, result);
     }
 
@@ -670,7 +672,7 @@ final class TerminationConformanceTest {
             Node input,
             DocumentProcessingResult result) {
         assertFalse(result.commits());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(input.toString(),
                 result.document().toString());
     }
@@ -802,7 +804,7 @@ final class TerminationConformanceTest {
                 context.terminateGracefully("ignored reentrant request");
             }
             if ("/reentrantFatal".equals(propertyKey)) {
-                context.terminateFatally("ignored reentrant fatal request");
+                context.throwFatal("ignored reentrant fatal request");
             }
             if ("/failing".equals(propertyKey)) {
                 throw new IllegalStateException("termination lifecycle handler failed");

@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.MinimizedOverlayBuilder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class MergeReverserNestedTypedNodeTest {
+class MinimizedOverlayNestedTypedNodeTest {
 
     @Test
     void canonicalPatchOfTypedChildRoundTripsThroughMinimizedSource() {
@@ -32,7 +32,7 @@ class MergeReverserNestedTypedNodeTest {
         assertCanonicalMarkerContainsOnlyInstanceContent(
                 patched.canonicalRoot().getAsNode("/contracts/initialized"));
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(
+        Node minimized = new MinimizedOverlayBuilder().build(
                 patched.resolvedRoot());
 
         BasicNodeProvider readerProvider = provider();
@@ -61,7 +61,7 @@ class MergeReverserNestedTypedNodeTest {
                 "    documentId: document-1"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
 
         Node minimizedDocumentId = minimized.getContracts().getProperties().get("initialized")
                 .getProperties().get("documentId");
@@ -104,7 +104,7 @@ class MergeReverserNestedTypedNodeTest {
                 "    documentId: item"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
 
         assertExplicitMarkerLabels(minimized.getAsNode("/direct"));
         assertExplicitMarkerLabels(minimized.getAsNode("/contracts/labeled"));
@@ -132,7 +132,7 @@ class MergeReverserNestedTypedNodeTest {
                 "  documentId: inline"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
 
         Node minimizedInline = minimized.getAsNode("/inline");
         assertEquals("Inline Marker", minimizedInline.getName());

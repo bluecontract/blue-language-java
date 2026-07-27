@@ -1,5 +1,7 @@
 package blue.language;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture;
 import blue.language.model.Node;
 import blue.language.processor.CheckpointDomain;
@@ -11,7 +13,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.Test;
 
@@ -155,20 +157,26 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         DocumentProcessingResult completed = processor.processDocument(
                 fixture.materializedSource(), eventA);
 
-        assertEquals(ProcessorStatus.SUCCESS, completed.status(), completed.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, completed.status(), diagnosticMessage(completed));
         assertEquals(1, executions.get());
         assertFalse(hasSelectedContract(completed.document(), "audit"),
                 "the committed Root is Canonical, not a fifth materialized selection form");
-        assertTrue(hasSelectedContract(completed.resolvedDocument(), "audit"));
+        ResolvedSnapshot completedSnapshot =
+                snapshot(processor, completed);
+        assertTrue(hasSelectedContract(
+                completedSnapshot.resolvedRoot(), "audit"));
         assertEquals(Boolean.TRUE, completed.document().get("/auditRan"));
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(completed.resolvedDocument());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                completedSnapshot.resolvedRoot());
         Node transported = processor.jsonToNode(processor.nodeToJson(minimized));
         Blue reloader = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot reloaded = reloader.resolveToSnapshot(transported);
 
-        assertEquals(completed.blueId(), reloaded.blueId());
-        assertNull(firstDifference(completed.resolvedDocument(), reloaded.resolvedRoot()));
+        assertEquals(completedSnapshot.blueId(), reloaded.blueId());
+        assertNull(firstDifference(
+                completedSnapshot.resolvedRoot(),
+                reloaded.resolvedRoot()));
         assertEquals(Boolean.TRUE, reloaded.resolvedNodeAt("/auditRan").getValue());
         assertEquals(eventBlueId, reloaded.resolvedNodeAt(
                 "/contracts/checkpoint/entries/incoming/subject").getBlueId());
@@ -183,13 +191,20 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         String callerBefore = executionBlue.nodeToJson(callerInput);
         DocumentProcessingResult result = transition.apply();
         assertEquals(callerBefore, executionBlue.nodeToJson(callerInput), label + " mutated caller input");
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), label + ": " + result.failureReason());
-        assertNotNull(result.snapshot(), label + " must return its semantic snapshot");
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), label + ": " + diagnosticMessage(result));
+        ResolvedSnapshot actualSnapshot =
+                snapshot(executionBlue, result);
+        assertNotNull(actualSnapshot,
+                label + " must retain an out-of-band snapshot");
 
         Blue verifier = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot expectedSnapshot = verifier.resolveToSnapshot(expectedSource.clone());
         return new Observation(
-                label, expectedSnapshot.canonicalRoot(), expectedSnapshot, result);
+                label,
+                expectedSnapshot.canonicalRoot(),
+                expectedSnapshot,
+                result,
+                actualSnapshot);
     }
 
     private static Node expectedInitializedSelected(AuditFixture fixture, Node selectedBefore) {
@@ -310,34 +325,43 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         private final Node expectedDocument;
         private final ResolvedSnapshot expectedSnapshot;
         private final DocumentProcessingResult actual;
+        private final ResolvedSnapshot actualSnapshot;
 
         private Observation(String label,
                             Node expectedDocument,
                             ResolvedSnapshot expectedSnapshot,
-                            DocumentProcessingResult actual) {
+                            DocumentProcessingResult actual,
+                            ResolvedSnapshot actualSnapshot) {
             this.label = label;
             this.expectedDocument = expectedDocument;
             this.expectedSnapshot = expectedSnapshot;
             this.actual = actual;
+            this.actualSnapshot = actualSnapshot;
         }
 
         private void assertThreeViewInvariant() {
             String documentDifference = firstDifference(expectedDocument, actual.document());
-            String canonicalDifference = firstDifference(expectedSnapshot.canonicalRoot(), actual.canonicalDocument());
-            String resolvedDifference = firstDifference(expectedSnapshot.resolvedRoot(), actual.resolvedDocument());
+            String canonicalDifference = firstDifference(expectedSnapshot.canonicalRoot(), actual.document());
+            String resolvedDifference = firstDifference(
+                    expectedSnapshot.resolvedRoot(),
+                    actualSnapshot.resolvedRoot());
             List<String> diagnostics = new ArrayList<>();
             diagnostics.add("document=" + documentDifference);
             diagnostics.add("canonical=" + canonicalDifference);
             diagnostics.add("resolved=" + resolvedDifference);
             diagnostics.add("expectedBlueId=" + expectedSnapshot.blueId());
-            diagnostics.add("actualBlueId=" + actual.blueId());
+            diagnostics.add("actualBlueId="
+                    + actualSnapshot.blueId());
             String message = label + " divergence: " + diagnostics;
 
             assertAll(label,
                     () -> assertNull(documentDifference, message),
                     () -> assertNull(canonicalDifference, message),
                     () -> assertNull(resolvedDifference, message),
-                    () -> assertEquals(expectedSnapshot.blueId(), actual.blueId(), message));
+                    () -> assertEquals(
+                            expectedSnapshot.blueId(),
+                            actualSnapshot.blueId(),
+                            message));
         }
     }
 }

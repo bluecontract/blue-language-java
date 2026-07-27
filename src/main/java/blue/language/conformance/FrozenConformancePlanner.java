@@ -7,9 +7,9 @@ import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.JsonPointer;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.DeferredReferencePathLimits;
 import blue.language.utils.limits.Limits;
@@ -78,7 +78,12 @@ final class FrozenConformancePlanner {
 
             if (nextCanonicalRoot != null) {
                 FrozenNode before = read(nextCanonicalRoot, path);
-                FrozenNode after = reuseUnchangedSubtrees(before, canonicalize(generalizedNode.resolved(), nextCanonicalRoot));
+                FrozenNode after = reuseUnchangedSubtrees(
+                        before,
+                        canonicalize(
+                                generalizedNode.resolved(),
+                                generalizedNode.source(),
+                                nextCanonicalRoot));
                 nextCanonicalRoot = replaceAt(nextCanonicalRoot, path, after);
                 canonicalPatches.add(new CanonicalGeneralizationPatch(path, before, after));
             }
@@ -100,7 +105,8 @@ final class FrozenConformancePlanner {
             return GeneralizedNode.unchanged(node);
         }
 
-        Node canonical = new MergeReverser().reverse(node.toNode());
+        Node source = new MinimizedOverlayBuilder().build(node.toNode());
+        Node canonical = source.clone();
         ConformanceResult result = checkCanonical(canonical);
         FrozenNode type = node.getType();
         FrozenNode itemType = node.getItemType();
@@ -139,8 +145,13 @@ final class FrozenConformancePlanner {
         }
         Node resolved = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
                 .resolve(canonical, resolutionLimits);
-        return new GeneralizedNode(reuseUnchangedSubtrees(node,
-                resolvedReferenceCache.freezeResolved(resolved)), true, metadataFields);
+        return new GeneralizedNode(
+                reuseUnchangedSubtrees(
+                        node,
+                        resolvedReferenceCache.freezeResolved(resolved)),
+                true,
+                metadataFields,
+                canonical);
     }
 
     private boolean hasTypeMetadata(FrozenNode node) {
@@ -154,7 +165,8 @@ final class FrozenConformancePlanner {
         if (node == null) {
             return ConformanceResult.conformant();
         }
-        return checkCanonical(new MergeReverser().reverse(node.toNode()));
+        return checkCanonical(
+                new MinimizedOverlayBuilder().build(node.toNode()));
     }
 
     private ConformanceResult checkCanonical(Node canonical) {
@@ -244,11 +256,14 @@ final class FrozenConformancePlanner {
     private String typeReferenceBlueId(FrozenNode type) {
         return type.getReferenceBlueId() != null
                 ? type.getReferenceBlueId()
-                : BlueIdCalculator.calculateBlueId(new MergeReverser().reverse(type.toNode()));
+                : type.blueId();
     }
 
-    private FrozenNode canonicalize(FrozenNode resolvedNode, FrozenNode canonicalRoot) {
-        Node canonical = new MergeReverser().reverse(resolvedNode.toNode());
+    private FrozenNode canonicalize(FrozenNode resolvedNode,
+                                    Node source,
+                                    FrozenNode canonicalRoot) {
+        Node canonical = new CanonicalIdentityInputBuilder().build(
+                resolvedNode.toNode(), source);
         if (canonicalRoot != null && !canonicalRoot.isStrictBlueIdValidation()) {
             return FrozenNode.fromUncheckedCanonicalNode(canonical);
         }
@@ -412,15 +427,20 @@ final class FrozenConformancePlanner {
         private final FrozenNode resolved;
         private final boolean generalized;
         private final List<String> metadataFields;
+        private final Node source;
 
         private GeneralizedNode(FrozenNode resolved, boolean generalized) {
-            this(resolved, generalized, Collections.emptyList());
+            this(resolved, generalized, Collections.emptyList(), null);
         }
 
-        private GeneralizedNode(FrozenNode resolved, boolean generalized, List<String> metadataFields) {
+        private GeneralizedNode(FrozenNode resolved,
+                                boolean generalized,
+                                List<String> metadataFields,
+                                Node source) {
             this.resolved = resolved;
             this.generalized = generalized;
             this.metadataFields = metadataFields;
+            this.source = source;
         }
 
         private static GeneralizedNode unchanged(FrozenNode resolved) {
@@ -437,6 +457,10 @@ final class FrozenConformancePlanner {
 
         private List<String> metadataFields() {
             return metadataFields;
+        }
+
+        private Node source() {
+            return source;
         }
     }
 

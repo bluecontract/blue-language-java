@@ -156,7 +156,7 @@ class DocumentProcessorGeneralizationTest {
                 )));
 
         assertEquals(ProcessorErrorCategory.ProtectedProcessorStateMutation,
-                failure.errorCategory().normative());
+                failure.errorCategory());
         assertEquivalentDocuments(original, document,
                 "protected processor state rejection must roll back the batch");
     }
@@ -543,7 +543,7 @@ class DocumentProcessorGeneralizationTest {
                 () -> runtime(blue, document)
                         .applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD"))));
 
-        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure,
                 failure.errorCategory(),
                 "Unexpected category for " + failure.getMessage());
         assertEquals("EUR", document.getAsText("/price/currency"));
@@ -617,7 +617,7 @@ class DocumentProcessorGeneralizationTest {
                 () -> runtime(blue, document)
                         .applyPatch("/", JsonPatch.replace("/paymentKind", new Node().value("card"))));
 
-        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure,
                 failure.errorCategory(),
                 "Unexpected category for " + failure.getMessage());
         assertEquals("bank-transfer", document.getAsText("/paymentKind"));
@@ -647,7 +647,7 @@ class DocumentProcessorGeneralizationTest {
                 () -> runtime(blue, document)
                         .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD"))));
 
-        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure,
                 failure.errorCategory(),
                 "Unexpected category for " + failure.getMessage());
         assertEquals("EUR", document.getAsText("/child/price/currency"));
@@ -734,7 +734,7 @@ class DocumentProcessorGeneralizationTest {
                         .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD"))));
 
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                failure.errorCategory().normative());
+                failure.errorCategory());
         assertEquals("EUR", document.getAsText("/child/price/currency"));
         assertEquals(nodeProvider.getBlueIdByName("Price in EUR"),
                 document.getAsNode("/child/price/type").getBlueId());

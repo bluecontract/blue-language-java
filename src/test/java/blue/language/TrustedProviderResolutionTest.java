@@ -32,7 +32,7 @@ class TrustedProviderResolutionTest {
     void deprecatedUnverifiedWrapperStillRejectsNonDirectContent() {
         Fixture fixture = new Fixture();
         AtomicInteger fetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId -> {
+        Blue blue = new Blue(NodeProviderWrapper.wrap(blueId -> {
             fetches.incrementAndGet();
             return fixture.requestedBlueId.equals(blueId)
                     ? Collections.singletonList(fixture.mismatchedType.clone())

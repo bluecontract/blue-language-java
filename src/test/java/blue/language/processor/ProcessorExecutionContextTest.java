@@ -5,6 +5,8 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -128,7 +130,7 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void runtimeFailureDoesNotApplyBufferedEffectsOrAnonymousGas() {
+    void runtimeFailureDoesNotApplyBufferedEffects() {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("existing", new Node().value(1)));
         execution.preflightScope("/");
@@ -137,9 +139,6 @@ final class ProcessorExecutionContextTest {
 
         context.applyPatch(JsonPatch.add("/x", new Node().value(7)));
         context.emitEvent(new Node().properties("message", new Node().value("queued before fatal")));
-        assertThrows(UnsupportedOperationException.class,
-                () -> context.consumeGas(123L));
-
         ProcessorFatalException ex = assertThrows(ProcessorFatalException.class,
                 () -> context.throwFatal("fatal after partial work"));
 
@@ -149,8 +148,106 @@ final class ProcessorExecutionContextTest {
         assertEquals(admittedBeforeEffects, ex.totalGas(),
                 "handler failure admits no gas beyond exact contract-recognition preflight");
         assertFalse(ex.partialResult().document().getProperties().containsKey("x"));
-        assertTrue(ex.partialResult().triggeredEvents().isEmpty());
-        assertNull(ex.partialResult().blueId(), "plain processor executions have no snapshot identity unless one is available");
+        assertTrue(ex.partialResult().events().isEmpty());
+    }
+
+    @Test
+    void submittedRuntimeLedgerSurvivesFatalWhileEffectsRollBack() {
+        Node input = new Node().properties(
+                "existing", new Node().value(1));
+        ProcessorEngine.Execution execution =
+                new ProcessorEngine.Execution(
+                        new DocumentProcessor(), input.clone());
+        execution.preflightScope("/");
+        long admittedBeforeRuntime =
+                execution.runtime().totalGas();
+        ProcessorExecutionContext context =
+                execution.createContext(
+                        "/",
+                        execution.bundleForScope("/"),
+                        new Node(),
+                        false);
+        GasMeter.ChildGasLedger ledger =
+                context.newRuntimeGasLedger(
+                        "fatal-runtime",
+                        Collections.singletonMap("step", 7L));
+        ledger.charge(
+                "step",
+                2L,
+                GasChargeContext.reason("before-fatal"));
+        context.applyPatch(JsonPatch.add(
+                "/notApplied", new Node().value(9)));
+        context.emitEvent(new Node().value("not-emitted"));
+
+        context.submitRuntimeGasLedger(ledger);
+        long admittedAfterRuntime =
+                execution.runtime().totalGas();
+        ProcessorFatalException failure =
+                assertThrows(
+                        ProcessorFatalException.class,
+                        () -> context.throwFatal(
+                                "fatal after admitted runtime work"));
+
+        assertEquals(
+                admittedBeforeRuntime + 14L,
+                admittedAfterRuntime);
+        assertEquals(
+                admittedAfterRuntime,
+                failure.totalGas());
+        assertEquals(
+                input.toString(),
+                failure.partialResult().document().toString());
+        assertTrue(failure.partialResult().events().isEmpty());
+        assertNull(execution.runtime().nodeAt("/notApplied"));
+        assertTrue(execution.runtime().rootEmissions().isEmpty());
+
+        java.util.List<GasTraceEntry> trace =
+                execution.runtime().gasMeter().trace();
+        GasTraceEntry admitted =
+                trace.get(trace.size() - 1);
+        assertEquals("fatal-runtime", admitted.namespace());
+        assertEquals("step", admitted.counter());
+        assertEquals(2L, admitted.quantity());
+        assertEquals(14L, admitted.subtotal());
+        assertEquals("before-fatal", admitted.reason());
+    }
+
+    @Test
+    void runtimeLedgerCanBeSubmittedOnlyOnce() {
+        ProcessorEngine.Execution execution =
+                new ProcessorEngine.Execution(
+                        new DocumentProcessor(), new Node());
+        execution.preflightScope("/");
+        ProcessorExecutionContext context =
+                execution.createContext(
+                        "/",
+                        execution.bundleForScope("/"),
+                        new Node(),
+                        false);
+        GasMeter.ChildGasLedger first =
+                context.newRuntimeGasLedger(
+                        "first-runtime",
+                        Collections.singletonMap("step", 1L));
+        GasMeter.ChildGasLedger second =
+                context.newRuntimeGasLedger(
+                        "second-runtime",
+                        Collections.singletonMap("step", 1L));
+        first.charge("step", 1L);
+        second.charge("step", 1L);
+
+        context.submitRuntimeGasLedger(first);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> context.submitRuntimeGasLedger(second));
+        assertEquals(
+                1L,
+                execution.runtime().conformanceTrace()
+                        .counterQuantity("first-runtime", "step"));
+        assertEquals(
+                0L,
+                execution.runtime().conformanceTrace()
+                        .counterQuantity("second-runtime", "step"));
     }
 
     @Test

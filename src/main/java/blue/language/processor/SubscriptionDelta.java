@@ -10,6 +10,10 @@ import java.util.Set;
 
 /**
  * Deterministic pre-commit change to the managed external subscription index.
+ *
+ * <p>An entry includes immutable External Channel dependency evidence.
+ * Dependency changes retire and re-add the occurrence even when its raw key
+ * and subscription keys remain unchanged.</p>
  */
 public final class SubscriptionDelta {
 
@@ -81,6 +85,7 @@ public final class SubscriptionDelta {
         private final int order;
         private final List<String> subscriptionKeys;
         private final String checkpointDomainBlueId;
+        private final ExternalChannelDependencySnapshot dependencies;
         private final Long activationRootRevision;
         private final ExternalOrderKey startAfterExternalOrderKey;
         private final Long endAtRootRevision;
@@ -97,6 +102,7 @@ public final class SubscriptionDelta {
                     0,
                     subscriptionKeys,
                     checkpointDomainBlueId,
+                    ExternalChannelDependencySnapshot.none(),
                     null,
                     null,
                     null);
@@ -117,6 +123,7 @@ public final class SubscriptionDelta {
                     order,
                     subscriptionKeys,
                     checkpointDomainBlueId,
+                    ExternalChannelDependencySnapshot.none(),
                     null,
                     startAfterExternalOrderKey,
                     null);
@@ -132,6 +139,31 @@ public final class SubscriptionDelta {
                      Long activationRootRevision,
                      ExternalOrderKey startAfterExternalOrderKey,
                      Long endAtRootRevision) {
+            this(scopePath,
+                    channelKey,
+                    effectiveTypeBlueId,
+                    sourceContributionNodeBlueIds,
+                    order,
+                    subscriptionKeys,
+                    checkpointDomainBlueId,
+                    ExternalChannelDependencySnapshot.none(),
+                    activationRootRevision,
+                    startAfterExternalOrderKey,
+                    endAtRootRevision);
+        }
+
+        public Entry(
+                String scopePath,
+                String channelKey,
+                String effectiveTypeBlueId,
+                List<String> sourceContributionNodeBlueIds,
+                int order,
+                List<String> subscriptionKeys,
+                String checkpointDomainBlueId,
+                ExternalChannelDependencySnapshot dependencies,
+                Long activationRootRevision,
+                ExternalOrderKey startAfterExternalOrderKey,
+                Long endAtRootRevision) {
             this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
             this.channelKey = Objects.requireNonNull(channelKey, "channelKey");
             this.effectiveTypeBlueId =
@@ -146,6 +178,8 @@ public final class SubscriptionDelta {
                     Objects.requireNonNull(
                             checkpointDomainBlueId,
                             "checkpointDomainBlueId");
+            this.dependencies = Objects.requireNonNull(
+                    dependencies, "dependencies");
             requireRevision(
                     activationRootRevision, "activationRootRevision");
             this.startAfterExternalOrderKey = startAfterExternalOrderKey;
@@ -189,6 +223,10 @@ public final class SubscriptionDelta {
             return checkpointDomainBlueId;
         }
 
+        public ExternalChannelDependencySnapshot dependencies() {
+            return dependencies;
+        }
+
         public Long activationRootRevision() {
             return activationRootRevision;
         }
@@ -223,7 +261,8 @@ public final class SubscriptionDelta {
                     && order == other.order
                     && subscriptionKeys.equals(other.subscriptionKeys)
                     && checkpointDomainBlueId.equals(
-                    other.checkpointDomainBlueId);
+                    other.checkpointDomainBlueId)
+                    && dependencies.equals(other.dependencies);
         }
 
         Entry activatedAt(long rootRevision,
@@ -236,6 +275,7 @@ public final class SubscriptionDelta {
                     order,
                     subscriptionKeys,
                     checkpointDomainBlueId,
+                    dependencies,
                     rootRevision,
                     Objects.requireNonNull(
                             eventOrderKey, "eventOrderKey"),
@@ -251,6 +291,7 @@ public final class SubscriptionDelta {
                     order,
                     subscriptionKeys,
                     checkpointDomainBlueId,
+                    dependencies,
                     activationRootRevision,
                     startAfterExternalOrderKey,
                     rootRevision);
@@ -275,6 +316,7 @@ public final class SubscriptionDelta {
                     && subscriptionKeys.equals(entry.subscriptionKeys)
                     && checkpointDomainBlueId.equals(
                     entry.checkpointDomainBlueId)
+                    && dependencies.equals(entry.dependencies)
                     && Objects.equals(activationRootRevision,
                     entry.activationRootRevision)
                     && Objects.equals(startAfterExternalOrderKey,
@@ -293,6 +335,7 @@ public final class SubscriptionDelta {
                     order,
                     subscriptionKeys,
                     checkpointDomainBlueId,
+                    dependencies,
                     activationRootRevision,
                     startAfterExternalOrderKey,
                     endAtRootRevision);

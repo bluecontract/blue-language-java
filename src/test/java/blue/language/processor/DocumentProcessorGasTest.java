@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
@@ -329,13 +331,13 @@ class DocumentProcessorGasTest {
 
         DocumentProcessingResult initialized = blue.initializeDocument(document);
 
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
         assertEquals(0, firstProvider.fetchCount());
         assertFetched(secondProvider, secondTypes.accountId);
         assertFetched(secondProvider, secondTypes.moneyId);
 
         secondProvider.reset();
-        DocumentProcessingResult processed = blue.processDocument(initialized.canonicalDocument().clone(),
+        DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
                 blue.objectToNode(new TestEvent().eventId("evt-provider-swap")));
 
         assertProcessedAccount(processed, secondTypes);
@@ -345,7 +347,7 @@ class DocumentProcessorGasTest {
     }
 
     @Test
-    void processDocumentResultExposesCanonicalSnapshotBlueIdAndResolvedView() {
+    void processDocumentResultIsCanonicalAndCanBeResolvedExplicitly() {
         ProcessingTypeGraph types = processingTypeGraph();
         Node initialized = initializedProcessingDocument(types);
         CountingNodeProvider provider = new CountingNodeProvider(types.provider);
@@ -356,19 +358,21 @@ class DocumentProcessorGasTest {
                 blue.objectToNode(new TestEvent().eventId("evt-snapshot")));
 
         assertProcessedAccount(result, types);
-        assertNotNull(result.snapshot());
-        assertEquals(result.snapshot().blueId(), result.blueId());
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalDocument()), result.blueId());
-        assertEquals(1, result.canonicalDocument().getAsInteger("/balance/cents"));
-        assertEquals(1, result.resolvedDocument().getAsInteger("/balance/cents"));
-        assertNullNode(result.canonicalDocument(), "/balance/currency");
-        assertEquals("USD", result.resolvedDocument().getAsText("/balance/currency"));
+        ResolvedSnapshot snapshot = snapshot(blue, result);
+        assertEquals(snapshot.blueId(), documentBlueId(result));
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.document()),
+                documentBlueId(result));
+        assertEquals(1, result.document().getAsInteger("/balance/cents"));
+        assertEquals(1, snapshot.resolvedRoot().getAsInteger("/balance/cents"));
+        assertNullNode(result.document(), "/balance/currency");
+        assertEquals("USD",
+                snapshot.resolvedRoot().getAsText("/balance/currency"));
         assertFetched(provider, types.accountId);
         assertFetched(provider, types.moneyId);
     }
 
     @Test
-    void initializeDocumentResultExposesCanonicalSnapshotBlueIdAndResolvedView() {
+    void initializeDocumentResultIsCanonicalAndCanBeResolvedExplicitly() {
         ProcessingTypeGraph types = processingTypeGraph();
         CountingNodeProvider provider = new CountingNodeProvider(types.provider);
         Blue blue = processingBlue(provider);
@@ -376,19 +380,21 @@ class DocumentProcessorGasTest {
         DocumentProcessingResult result = blue.initializeDocument(accountDocument(types));
 
         assertInitializedAccount(result, types);
-        assertNotNull(result.snapshot());
-        assertEquals(result.snapshot().blueId(), result.blueId());
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalDocument()), result.blueId());
-        assertEquals(0, result.canonicalDocument().getAsInteger("/balance/cents"));
-        assertEquals(0, result.resolvedDocument().getAsInteger("/balance/cents"));
-        assertNullNode(result.canonicalDocument(), "/balance/currency");
-        assertEquals("USD", result.resolvedDocument().getAsText("/balance/currency"));
+        ResolvedSnapshot snapshot = snapshot(blue, result);
+        assertEquals(snapshot.blueId(), documentBlueId(result));
+        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.document()),
+                documentBlueId(result));
+        assertEquals(0, result.document().getAsInteger("/balance/cents"));
+        assertEquals(0, snapshot.resolvedRoot().getAsInteger("/balance/cents"));
+        assertNullNode(result.document(), "/balance/currency");
+        assertEquals("USD",
+                snapshot.resolvedRoot().getAsText("/balance/currency"));
         assertFetched(provider, types.accountId);
         assertFetched(provider, types.moneyId);
     }
 
     @Test
-    void capabilityFailureResultDoesNotBuildSnapshotOrSpendGasOnResolution() {
+    void capabilityFailureReturnsInputWithoutSpendingGasOnResolution() {
         Blue blue = ProcessorTestSupport.blue();
         String yaml = "contracts:\n" +
                 "  unsupported:\n" +
@@ -398,14 +404,15 @@ class DocumentProcessorGasTest {
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
 
-        DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
+        Node input = blue.yamlToNode(yaml);
+        DocumentProcessingResult result = blue.initializeDocument(input);
 
-        assertTrue(result.capabilityFailure());
+        assertTrue(isCapabilityFailure(result));
         assertEquals(0L, result.totalGas());
-        assertEquals(null, result.snapshot());
-        assertEquals(null, result.blueId());
-        assertEquals(null, result.canonicalDocument());
-        assertEquals(null, result.resolvedDocument());
+        assertEquals(blue.nodeToJson(input),
+                blue.nodeToJson(result.document()),
+                "a noncommitting result returns the exact input document");
+        assertTrue(result.events().isEmpty());
     }
 
     private Node extractInitializedMarker(Node document) {
@@ -470,8 +477,8 @@ class DocumentProcessorGasTest {
         Node document = processingDocument(types);
         DocumentProcessingResult initialized = setupBlue.initializeDocument(document);
         assertTrue(setupBlue.isInitialized(initialized.document()),
-                initialized.status() + ": " + initialized.failureReason());
-        return initialized.canonicalDocument().clone();
+                initialized.status() + ": " + diagnosticMessage(initialized));
+        return initialized.document().clone();
     }
 
     private Node processingDocument(ProcessingTypeGraph types) {
@@ -518,18 +525,18 @@ class DocumentProcessorGasTest {
     }
 
     private void assertProcessedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertEquals(1, document.getAsInteger("/balance/cents"));
         assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/balance/type").getName());
         assertEquals(typeName(types.provider, types.accountId), resolved.getType().getName());
     }
 
     private void assertInitializedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertNotNull(document.getAsNode("/contracts/initialized"));
         assertEquals(0, document.getAsInteger("/balance/cents"));
         assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/balance/type").getName());
@@ -598,7 +605,7 @@ class DocumentProcessorGasTest {
                 Node.class);
         DocumentProcessingResult initialized = setupBlue.initializeDocument(document);
         assertTrue(setupBlue.isInitialized(initialized.document()));
-        return initialized.canonicalDocument().clone();
+        return initialized.document().clone();
     }
 
     private Node portfolioCanonical(RepeatedTypeGraph types) {
@@ -613,9 +620,9 @@ class DocumentProcessorGasTest {
     }
 
     private void assertProcessedPortfolio(DocumentProcessingResult result, RepeatedTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertEquals(0, document.getAsInteger("/primary/balance/cents"));
         assertEquals(1, document.getAsInteger("/secondary/balance/cents"));
         assertEquals(typeName(types.provider, types.portfolioId), resolved.getType().getName());
@@ -658,8 +665,8 @@ class DocumentProcessorGasTest {
         Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
         DocumentProcessingResult initialized =
                 setupBlue.initializeDocument(embeddedAccountsProcessingDocument(types));
-        assertTrue(setupBlue.isInitialized(initialized.canonicalDocument()));
-        return initialized.canonicalDocument().clone();
+        assertTrue(setupBlue.isInitialized(initialized.document()));
+        return initialized.document().clone();
     }
 
     private Node embeddedAccountsProcessingDocument(ProcessingTypeGraph types) {
@@ -714,9 +721,9 @@ class DocumentProcessorGasTest {
     }
 
     private void assertInitializedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertNotNull(document.getAsNode("/contracts/initialized"));
         assertInitializedEmbeddedAccount(document, resolved, "/primary", types);
         assertInitializedEmbeddedAccount(document, resolved, "/secondary", types);
@@ -730,9 +737,9 @@ class DocumentProcessorGasTest {
     }
 
     private void assertProcessedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertProcessedEmbeddedAccount(document, resolved, "/primary", types);
         assertProcessedEmbeddedAccount(document, resolved, "/secondary", types);
     }
@@ -747,6 +754,17 @@ class DocumentProcessorGasTest {
     private String typeName(BasicNodeProvider provider, String blueId) {
         Node node = provider.fetchFirstByBlueId(blueId);
         return node != null ? node.getName() : null;
+    }
+
+    private Node resolveResultDocument(DocumentProcessingResult result,
+                                       BasicNodeProvider provider) {
+        Blue resolver = processingBlue(
+                new CountingNodeProvider(provider));
+        try {
+            return resolvedDocument(resolver, result);
+        } finally {
+            resolver.close();
+        }
     }
 
     private void assertFetched(CountingNodeProvider provider, String blueId) {

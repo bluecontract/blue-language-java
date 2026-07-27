@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.HandlerContract;
@@ -59,7 +61,7 @@ final class InternalEventOccurrenceFifoTest {
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
-                    result.failureReason());
+                    diagnosticMessage(result));
             assertEquals(
                     Arrays.asList(
                             "leaf:T:A",
@@ -135,7 +137,7 @@ final class InternalEventOccurrenceFifoTest {
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
-                    result.failureReason());
+                    diagnosticMessage(result));
             assertEquals(
                     Arrays.asList("root:T:D", "root:T:D"),
                     probe.order);
@@ -162,7 +164,7 @@ final class InternalEventOccurrenceFifoTest {
         blue.registerContractProcessor(
                 DocumentProcessorExactFeederSupport
                         .testEventChannelProcessor());
-        blue.registerContractProcessor(
+        blue.registerExternalContractType(
                 PROBE_HANDLER_BLUE_ID,
                 PROBE_HANDLER_TYPE,
                 probe);

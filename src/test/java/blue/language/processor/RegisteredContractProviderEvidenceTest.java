@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.BlueLanguageErrorCategory;
 import blue.language.BlueLanguageErrorClassifier;
@@ -44,9 +46,9 @@ class RegisteredContractProviderEvidenceTest {
         }
 
         assertEquals(ProcessorStatus.SUCCESS, standaloneResult.status(),
-                standaloneResult.failureReason());
+                diagnosticMessage(standaloneResult));
         assertEquals(ProcessorStatus.SUCCESS, fullRuntimeResult.status(),
-                fullRuntimeResult.failureReason());
+                diagnosticMessage(fullRuntimeResult));
         assertEquals(initializationDocumentId(fullRuntimeResult),
                 initializationDocumentId(standaloneResult));
         assertNotEquals(EvidenceChannel.class.getSimpleName(),
@@ -69,7 +71,7 @@ class RegisteredContractProviderEvidenceTest {
         DocumentProcessingResult result = standalone.initializeDocument(
                 fixture.document());
 
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertNotNull(initializationDocumentId(result));
     }
 
@@ -87,7 +89,7 @@ class RegisteredContractProviderEvidenceTest {
 
         assertEquals(EvidenceChannel.class,
                 standalone.getContractTypeResolver().resolveClass(fixture.blueId));
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertSame(registered, registry.processors().get(fixture.blueId));
     }
 

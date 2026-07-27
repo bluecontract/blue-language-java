@@ -3,8 +3,7 @@ id: c-emb-02
 vectors:
 - C-EMB-02
 category: emb
-description: One external event produces one atomic Root transition across all selected
-  scopes.
+description: One external event produces one atomic Root transition across all selected scopes.
 operation: process
 input:
   root:
@@ -33,7 +32,6 @@ input:
         paths:
         - /child
     child:
-      value: 0
       contracts:
         in:
           type:
@@ -51,8 +49,9 @@ input:
           result:
             patches:
             - op: replace
-              path: /child/value
+              path: /child/state
               val: 1
+      state: 0
     counter: 0
   event:
     type:
@@ -70,9 +69,17 @@ input:
     - scopePath: /child
       channelKey: in
       order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
     - scopePath: /
       channelKey: in
       order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
   provider:
     mode: exact-node
     semanticDemandsOnly: true

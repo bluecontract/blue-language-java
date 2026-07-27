@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
@@ -77,7 +79,7 @@ class ProcessEmbeddedTest {
         assertNotNull(rootMarkerDocId.getValue());
         assertFalse(rootMarkerDocId.getValue().equals(childMarkerDocId.getValue()));
 
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated initialization lifecycle is local");
     }
 
@@ -493,7 +495,7 @@ class ProcessEmbeddedTest {
                 afterSecond.getProperties().get("c")
                         .getProperties().get("x").getValue());
         assertNotNull(afterSecond.getProperties().get("itShouldHappen"),
-                secondResult.status() + ": " + secondResult.failureReason()
+                secondResult.status() + ": " + diagnosticMessage(secondResult)
                         + "\n" + blue.nodeToYaml(afterSecond));
     }
 
@@ -533,7 +535,7 @@ class ProcessEmbeddedTest {
                 "  embeddedBridge:\n" +
                 "    type:\n" +
                 "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
-                "    childPath: /child\n" +
+                "    sourcePath: /child\n" +
                 "  bridgePre:\n" +
                 "    channel: embeddedBridge\n" +
                 "    type:\n" +
@@ -568,13 +570,13 @@ class ProcessEmbeddedTest {
         assertNull(processed.getProperties() != null ? processed.getProperties().get("child") : null,
                 "Child scope should remain removed after cut-off; status="
                         + result.status() + ", reason="
-                        + result.failureReason() + "\n"
+                        + diagnosticMessage(result) + "\n"
                         + blue.nodeToYaml(processed));
 
         assertNull(processed.getProperties() != null ? processed.getProperties().get("postSeen") : null,
                 "No post-cut-off emission should be bridged");
 
-        boolean postEmissionRecorded = result.triggeredEvents().stream()
+        boolean postEmissionRecorded = result.events().stream()
                 .map(Node::getProperties)
                 .filter(props -> props != null && props.get("kind") != null)
                 .anyMatch(props -> "post".equals(props.get("kind").getValue()));
@@ -596,11 +598,11 @@ class ProcessEmbeddedTest {
         DocumentProcessingResult result = blue.initializeDocument(input);
 
         assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
-                result.status(), result.failureReason());
+                result.status(), diagnosticMessage(result));
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                result.errorCategory(), result.failureReason());
+                diagnosticCategory(result), diagnosticMessage(result));
         assertFalse(result.commits());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(input.toString(), result.document().toString());
         assertNull(terminatedMarker(result.document(), "/"));
     }
@@ -622,8 +624,8 @@ class ProcessEmbeddedTest {
         Node input = blue.yamlToNode(yaml);
         DocumentProcessingResult result = blue.initializeDocument(input);
 
-        assertTrue(result.capabilityFailure());
-        assertTrue(result.failureReason().contains("Unique items"));
+        assertTrue(isCapabilityFailure(result));
+        assertTrue(diagnosticMessage(result).contains("Unique items"));
         assertEquals(input.toString(), result.document().toString());
     }
 
@@ -676,12 +678,12 @@ class ProcessEmbeddedTest {
         Blue blue = ProcessorTestSupport.blue(provider);
         DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
 
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), diagnosticMessage(result));
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                result.errorCategory(), result.failureReason());
+                diagnosticCategory(result), diagnosticMessage(result));
         assertTrue(result.document().getProperties().get("child").isReferenceOnly(),
                 "the referenced child must not be initialized or mutated as an active scope");
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertFalse(result.commits());
     }
 
@@ -709,20 +711,20 @@ class ProcessEmbeddedTest {
 
         DocumentProcessingResult result = blue.initializeDocument(document);
         assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
-                result.status(), result.failureReason());
+                result.status(), diagnosticMessage(result));
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                result.errorCategory(), result.failureReason());
-        assertTrue(result.failureReason().contains("Process Embedded"));
+                diagnosticCategory(result), diagnosticMessage(result));
+        assertTrue(diagnosticMessage(result).contains("Process Embedded"));
         assertFalse(result.commits());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(document.toString(), result.document().toString());
     }
 
     private void assertRolledBack(Node input, DocumentProcessingResult result) {
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
-                result.status(), result.failureReason());
+                result.status(), diagnosticMessage(result));
         assertFalse(result.commits());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(input.toString(), result.document().toString());
         assertNull(terminatedMarker(result.document(), "/"));
     }

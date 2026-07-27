@@ -3,11 +3,13 @@ id: c-snd-04
 vectors:
 - C-SND-04
 category: snd
-description: Cyclic-set member mutation is rejected.
+description: Cyclic-set member mutation is rejected before provider traversal or mutation.
 operation: process
 input:
   root:
-    value: 0
+    state: 0
+    cyclic:
+      blueId: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0
     contracts:
       in:
         type:
@@ -25,7 +27,7 @@ input:
         result:
           patches:
           - op: replace
-            path: /value
+            path: /cyclic/member/x
             val: 1
   event:
     type:
@@ -52,15 +54,17 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    handlers:
-      /contracts/h:
-        result:
-          patches:
-          - op: replace
-            path: /cyclic/member/x
-            val: 1
 expected:
   assertions:
+  - actual: result.status
+    op: equals
+    expected: runtime-fatal
   - actual: result.diagnostic.category
     op: equals
     expected: CyclicSetMutationUnsupported
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: result.events
+    op: sequenceEquals
+    expected: []

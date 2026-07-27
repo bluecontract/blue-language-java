@@ -107,16 +107,6 @@ public final class GasMeter {
         }
     }
 
-    /**
-     * Compatibility entry point for pre-1.0 runtime processors. New runtimes
-     * should publish named counter weights and use a child ledger.
-     */
-    @Deprecated
-    void add(long amount) {
-        chargeWeighted("runtime", "legacyUnits", amount, 1L,
-                GasChargeContext.reason("legacy-runtime-ledger"));
-    }
-
     void chargeProcessInvocation() {
         charge("processor", "processInvocation", 1L,
                 GasChargeContext.of("/", null, null, "invocation"));
@@ -296,15 +286,6 @@ public final class GasMeter {
     void chargeLifecycleDelivery() {
         charge("processor", "lifecycleDelivered", 1L,
                 GasChargeContext.reason("lifecycle"));
-    }
-
-    /**
-     * Fatal closeout gas was removed by Contracts 1.0. Kept as a no-op binary
-     * compatibility shim for callers compiled against the preview.
-     */
-    @Deprecated
-    void chargeFatalTerminationOverhead() {
-        // No committed fatal mode and no fixed closeout charge in Contracts 1.0.
     }
 
     private void chargeWeighted(String namespace,

@@ -48,10 +48,7 @@ public class ProcessorProcessEventContextBenchmark {
         processor = blue.getDocumentProcessor();
         DocumentProcessingResult initialized = blue.initializeDocument(blue.yamlToNode(documentYaml()));
         initializedDocument = initialized.document();
-        initializedSnapshot = initialized.snapshot();
-        if (initializedSnapshot == null) {
-            throw new IllegalStateException("Benchmark initialization did not produce a Processing Document snapshot");
-        }
+        initializedSnapshot = blue.loadSnapshot(initializedDocument);
         event = "wide".equals(shape) ? wideEvent() : deepEvent();
     }
 

@@ -7,26 +7,50 @@ description: Source Triggered handling precedes nearest-to-farthest ancestor Emb
 operation: process
 input:
   root:
-    value: 0
+    child:
+      state: 0
+      contracts:
+        in:
+          type:
+            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        emitA:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: in
+          order: 0
+          result:
+            events:
+            - id: A
+        triggered:
+          type:
+            blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+          order: 0
+        localObserver:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: triggered
+          order: 0
     contracts:
-      in:
+      embedded:
         type:
-          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
+      childEvents:
+        type:
+          blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
+        sourcePath: /child
         order: 0
-        subscriptionKey: timeline
-        eventKey: timeline
-        accept: true
-        checkpointDomain: domain-v1
-      h:
+      rootObserver:
         type:
           blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
-        channel: in
+        channel: childEvents
         order: 0
-        result:
-          patches:
-          - op: replace
-            path: /value
-            val: 1
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -40,7 +64,7 @@ input:
     - timeline
     - 1
     deliverySnapshot:
-    - scopePath: /
+    - scopePath: /child
       channelKey: in
       order: 0
       activationStartExclusive:
@@ -52,11 +76,6 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    handlers:
-      /child/contracts/h:
-        result:
-          events:
-          - id: A
 expected:
   assertions:
   - actual: trace.eventDeliveryOrder
@@ -64,3 +83,6 @@ expected:
     expected:
     - /child:triggered:A
     - /:embedded:A
+  - actual: result.events
+    op: sequenceEquals
+    expected: []

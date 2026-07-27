@@ -1,7 +1,6 @@
 package blue.language.merge;
 
 import blue.language.Blue;
-import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
 import java.math.BigInteger;
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,11 +59,8 @@ public class MergerIntegrationTest {
     }
 
     @Test
-    public void remainsExtensibleForBinaryCompatibility() {
-        assertFalse(Modifier.isFinal(Merger.class.getModifiers()));
-
-        Merger merger = new CompatibleMerger();
-        assertNotNull(merger);
+    public void exposesMergingProcessorAsItsExtensionPoint() {
+        assertTrue(Modifier.isFinal(Merger.class.getModifiers()));
     }
 
     @Test
@@ -91,12 +86,5 @@ public class MergerIntegrationTest {
                 orderNumber.getValue());
         assertEquals(orderNumberBlueId,
                 orderNumber.getType().getBlueId());
-    }
-
-    private static final class CompatibleMerger extends Merger {
-
-        private CompatibleMerger() {
-            super(new SequentialMergingProcessor(Collections.emptyList()), blueId -> Collections.emptyList());
-        }
     }
 }

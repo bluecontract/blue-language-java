@@ -28,18 +28,23 @@ public class NodeProviderWrapper {
     }
 
     /**
-     * @deprecated Blue Language 1.0 does not permit host-trusted direct
-     * provider content. The compatibility entry point now verifies exactly
-     * like {@link #wrap(NodeProvider)}.
+     * Binary-compatibility entry point for released repository integrations.
+     *
+     * <p>Language 1.0 has no host-trusted provider bypass. Despite the legacy
+     * method name, this path deliberately applies the same exact evidence
+     * verification as {@link #wrap(NodeProvider)}.</p>
      */
-    @Deprecated
-    public static NodeProvider unverified(NodeProvider originalProvider) {
-        return new VerifyingNodeProvider(originalProvider);
+    public static NodeProvider unverified(
+            NodeProvider originalProvider) {
+        return wrap(originalProvider);
     }
 
-    /** @deprecated Direct provider evidence is never host-trusted in 1.0. */
-    @Deprecated
-    public static boolean isExplicitlyHostTrusted(NodeProvider provider) {
+    /**
+     * Reports the Language 1.0 trust rule to released callers that still
+     * probe the former host-trust marker.
+     */
+    public static boolean isExplicitlyHostTrusted(
+            NodeProvider provider) {
         return false;
     }
 

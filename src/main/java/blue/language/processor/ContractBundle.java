@@ -321,7 +321,7 @@ public final class ContractBundle {
             if (embeddedDeclared) {
                 throw new MustUnderstandFailureException(
                         "Multiple Process Embedded markers detected in same contracts map",
-                        ProcessorErrorCategory.BoundaryViolation);
+                        ProcessorErrorCategory.PatchBoundaryViolation);
             }
             embeddedDeclared = true;
             if (node != null && embedded.getKey() != null) {

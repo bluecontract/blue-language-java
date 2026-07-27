@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
@@ -283,7 +285,7 @@ final class ProcessorPhasePrecedenceTest {
         assertEquals(
                 expectedStatus,
                 debug.processResult().status(),
-                debug.processResult().failureReason());
+                diagnosticMessage(debug.processResult()));
         assertEquals(
                 BlueIdCalculator.calculateBlueId(root),
                 BlueIdCalculator.calculateBlueId(
@@ -338,7 +340,7 @@ final class ProcessorPhasePrecedenceTest {
         assertEquals(
                 ProcessorStatus.TERMINATED,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
         assertEquals(
                 BlueIdCalculator.calculateBlueId(inputRoot),
                 BlueIdCalculator.calculateBlueId(
@@ -347,7 +349,7 @@ final class ProcessorPhasePrecedenceTest {
         if (expectedSnapshot != null) {
             assertSame(
                     expectedSnapshot,
-                    result.snapshot());
+                    debug.resultingSnapshot());
         }
         assertEquals(
                 GasSchedule.contracts10().weight(

@@ -76,7 +76,7 @@ final class TerminationService {
                 execution.abortRuntimeFailure(
                         transition.scopePath,
                         transition.bundle,
-                        ProcessorErrorCategory.TerminationError,
+                        ProcessorErrorCategory.RuntimeExecutionFailure,
                         "Unable to write terminated marker at scope "
                                 + transition.scopePath);
                 return;

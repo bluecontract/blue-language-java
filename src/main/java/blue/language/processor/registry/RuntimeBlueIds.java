@@ -66,15 +66,6 @@ public final class RuntimeBlueIds {
     public static final String TYPE_GENERALIZATION_RULE =
             "5BwjjfvodMVCfD2cKChbUMmjEBd83vv5kbEQwAFHcSnv";
 
-    /**
-     * Preview-only identity retained so old source code can compile. Contracts
-     * 1.0 has no fatal lifecycle event and the runtime registry does not expose
-     * this type.
-     */
-    @Deprecated
-    public static final String DOCUMENT_PROCESSING_FATAL_ERROR =
-            "AMZbj5tNGxjPrvaNyw56sfqcLSW2j1XmkncEYUVtgmVC";
-
     private RuntimeBlueIds() {
     }
 

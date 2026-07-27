@@ -392,11 +392,13 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         SubscriptionSurfaceInvalidException failure = assertThrows(
                 SubscriptionSurfaceInvalidException.class,
                 () -> DirectSubscriptionSurfaceValidator.INSTANCE.validate(
-                        root,
-                        root.clone(),
-                        Collections.singleton(
-                                "/contracts/embedded/paths"),
-                        GasSchedule.contracts10()));
+                        SubscriptionSurfaceValidationContext.builder(
+                                        root,
+                                        root.clone(),
+                                        Collections.singleton(
+                                                "/contracts/embedded/paths"),
+                                        GasSchedule.contracts10())
+                                .build()));
 
         assertTrue(failure.getMessage().contains(
                 "revisits exact node same-exact-scope"));

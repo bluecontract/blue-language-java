@@ -212,15 +212,33 @@ public class DocumentProcessor implements AutoCloseable {
         lifecycleRead.lock();
         try {
             ensureOpen();
+            ProcessingInputAdmission admission =
+                    new ProcessingInputAdmission(snapshotManager);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            document, "Processing Root");
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    document)) {
-                return ProcessorEngine.processDocument(
-                        this, document, event, null);
+                    admittedRoot.node())) {
+                return processAdmitted(
+                        admission, admittedRoot, event, null);
             }
+            Node admittedEvent = admission.materializeTopLevel(
+                    event, "Processing Event").node();
+            ExternalDeliveryPlan plan =
+                    deriveExternalDeliveryPlan(
+                            admittedRoot.node(), admittedEvent);
+            admittedRoot = admitDeliveryScopes(
+                    admission, admittedRoot, plan.deliveries());
             VerifiedExecutionEvidence evidence =
-                    deriveExternalDeliveryEvidence(document, event);
-            return ProcessorEngine.processDocument(
-                    this, document, event, evidence);
+                    bindAndVerifyDerived(
+                            admittedRoot.node(),
+                            admittedEvent,
+                            plan);
+            return processAdmitted(
+                    admission,
+                    admittedRoot,
+                    admittedEvent,
+                    evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidExternalDeliveryResult(
                     document, exception);
@@ -243,14 +261,32 @@ public class DocumentProcessor implements AutoCloseable {
         lifecycleRead.lock();
         try {
             ensureOpen();
+            ProcessingInputAdmission admission =
+                    new ProcessingInputAdmission(snapshotManager);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            document, "Processing Root");
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    document)) {
-                return ProcessorEngine.processDocument(
-                        this, document, event, null);
+                    admittedRoot.node())) {
+                return processAdmitted(
+                        admission, admittedRoot, event, null);
             }
+            Node admittedEvent = admission.materializeTopLevel(
+                    event, "Processing Event").node();
+            admittedRoot = admitDeliveryScopes(
+                    admission,
+                    admittedRoot,
+                    evidence.deliveries());
             evidence.revalidate(
-                    document, event, runtimeRegistryIdentity, deliveryEvidenceVerifier);
-            return ProcessorEngine.processDocument(this, document, event, evidence);
+                    admittedRoot.node(),
+                    admittedEvent,
+                    runtimeRegistryIdentity,
+                    deliveryEvidenceVerifier);
+            return processAdmitted(
+                    admission,
+                    admittedRoot,
+                    admittedEvent,
+                    evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             return DocumentProcessingResult.nonCommitting(document,
                     0L,
@@ -284,22 +320,37 @@ public class DocumentProcessor implements AutoCloseable {
         lifecycleRead.lock();
         try {
             ensureOpen();
+            ProcessingInputAdmission admission =
+                    new ProcessingInputAdmission(snapshotManager);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            document, "Processing Root");
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    document)) {
+                    admittedRoot.node())) {
                 evidence.revalidateBinding(
-                        document,
+                        admittedRoot.node(),
                         event,
                         runtimeRegistryIdentity);
             } else {
+                Node admittedEvent = admission.materializeTopLevel(
+                        event, "Processing Event").node();
+                admittedRoot = admitDeliveryScopes(
+                        admission,
+                        admittedRoot,
+                        evidence.deliveries());
                 evidence.revalidate(
-                        document,
-                        event,
+                        admittedRoot.node(),
+                        admittedEvent,
                         runtimeRegistryIdentity,
                         deliveryEvidenceVerifier);
+                event = admittedEvent;
             }
             ProcessingDebugResult debug =
-                    ProcessorEngine.processDocumentWithTrace(
-                            this, document, event, evidence);
+                    processAdmittedWithTrace(
+                            admission,
+                            admittedRoot,
+                            event,
+                            evidence);
             PlatformCommitCompanion companion =
                     debug.platformCommitCompanion();
             if (companion == null) {
@@ -325,15 +376,33 @@ public class DocumentProcessor implements AutoCloseable {
         lifecycleRead.lock();
         try {
             ensureOpen();
+            ProcessingInputAdmission admission =
+                    new ProcessingInputAdmission(snapshotManager);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            document, "Processing Root");
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    document)) {
-                return ProcessorEngine.processDocumentWithTrace(
-                        this, document, event, null);
+                    admittedRoot.node())) {
+                return processAdmittedWithTrace(
+                        admission, admittedRoot, event, null);
             }
+            Node admittedEvent = admission.materializeTopLevel(
+                    event, "Processing Event").node();
+            ExternalDeliveryPlan plan =
+                    deriveExternalDeliveryPlan(
+                            admittedRoot.node(), admittedEvent);
+            admittedRoot = admitDeliveryScopes(
+                    admission, admittedRoot, plan.deliveries());
             VerifiedExecutionEvidence evidence =
-                    deriveExternalDeliveryEvidence(document, event);
-            return ProcessorEngine.processDocumentWithTrace(
-                    this, document, event, evidence);
+                    bindAndVerifyDerived(
+                            admittedRoot.node(),
+                            admittedEvent,
+                            plan);
+            return processAdmittedWithTrace(
+                    admission,
+                    admittedRoot,
+                    admittedEvent,
+                    evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             return new ProcessingDebugResult(
                     invalidExternalDeliveryResult(document, exception),
@@ -352,14 +421,32 @@ public class DocumentProcessor implements AutoCloseable {
         lifecycleRead.lock();
         try {
             ensureOpen();
+            ProcessingInputAdmission admission =
+                    new ProcessingInputAdmission(snapshotManager);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            document, "Processing Root");
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    document)) {
-                return ProcessorEngine.processDocumentWithTrace(
-                        this, document, event, null);
+                    admittedRoot.node())) {
+                return processAdmittedWithTrace(
+                        admission, admittedRoot, event, null);
             }
+            Node admittedEvent = admission.materializeTopLevel(
+                    event, "Processing Event").node();
+            admittedRoot = admitDeliveryScopes(
+                    admission,
+                    admittedRoot,
+                    evidence.deliveries());
             evidence.revalidate(
-                    document, event, runtimeRegistryIdentity, deliveryEvidenceVerifier);
-            return ProcessorEngine.processDocumentWithTrace(this, document, event, evidence);
+                    admittedRoot.node(),
+                    admittedEvent,
+                    runtimeRegistryIdentity,
+                    deliveryEvidenceVerifier);
+            return processAdmittedWithTrace(
+                    admission,
+                    admittedRoot,
+                    admittedEvent,
+                    evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             DocumentProcessingResult result = DocumentProcessingResult.nonCommitting(
                     document,
@@ -386,18 +473,37 @@ public class DocumentProcessor implements AutoCloseable {
         lifecycleRead.lock();
         try {
             ensureOpen();
+            ProcessingInputAdmission admission =
+                    new ProcessingInputAdmission(snapshotManager);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            document, "Processing Root");
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    document)) {
+                    admittedRoot.node())) {
                 return ProcessAttemptResult.complete(
-                        ProcessorEngine.processDocument(
-                                this, document, event, null));
+                        processAdmitted(
+                                admission,
+                                admittedRoot,
+                                event,
+                                null));
             }
+            Node admittedEvent = admission.materializeTopLevel(
+                    event, "Processing Event").node();
             ExternalDeliveryPlan plan =
-                    deriveExternalDeliveryPlan(document, event);
+                    deriveExternalDeliveryPlan(
+                            admittedRoot.node(), admittedEvent);
             VerifiedExecutionEvidence evidence =
-                    plan.bind(document, event, runtimeRegistryIdentity);
+                    plan.bind(
+                            admittedRoot.node(),
+                            admittedEvent,
+                            runtimeRegistryIdentity);
             return completeAttempt(
-                    document, event, evidence, plan);
+                    document,
+                    admission,
+                    admittedRoot,
+                    admittedEvent,
+                    evidence,
+                    plan);
         } catch (ExecutionEvidenceUnavailableException exception) {
             return needsResources(exception);
         } catch (InvalidExecutionEvidenceException exception) {
@@ -444,14 +550,37 @@ public class DocumentProcessor implements AutoCloseable {
                 return ProcessAttemptResult.needsResources(missing);
             }
             try {
+                ProcessingInputAdmission admission =
+                        new ProcessingInputAdmission(snapshotManager);
+                ProcessingInputAdmission.AdmittedNode admittedRoot =
+                        admission.materializeTopLevel(
+                                document, "Processing Root");
+                if (ProcessorEngine.hasDirectRootTerminationEntry(
+                        admittedRoot.node())) {
+                    return ProcessAttemptResult.complete(
+                            processAdmitted(
+                                    admission,
+                                    admittedRoot,
+                                    event,
+                                    null));
+                }
+                Node admittedEvent = admission.materializeTopLevel(
+                        event, "Processing Event").node();
+                admittedRoot = admitDeliveryScopes(
+                        admission,
+                        admittedRoot,
+                        evidence.deliveries());
                 evidence.revalidate(
-                        document,
-                        event,
+                        admittedRoot.node(),
+                        admittedEvent,
                         runtimeRegistryIdentity,
                         deliveryEvidenceVerifier);
                 return ProcessAttemptResult.complete(
-                        ProcessorEngine.processDocument(
-                                this, document, event, evidence));
+                        processAdmitted(
+                                admission,
+                                admittedRoot,
+                                admittedEvent,
+                                evidence));
             } catch (ExecutionEvidenceUnavailableException exception) {
                 return needsResources(exception);
             } catch (InvalidExecutionEvidenceException exception) {
@@ -477,20 +606,25 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
+            Node canonicalRoot = snapshot.canonicalRoot();
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    snapshot.canonicalRoot())) {
+                    canonicalRoot)) {
                 return ProcessorEngine.processDocument(
                         this, snapshot, event, null);
             }
+            Node admittedEvent =
+                    new ProcessingInputAdmission(snapshotManager)
+                            .materializeTopLevel(
+                                    event, "Processing Event")
+                            .node();
             VerifiedExecutionEvidence evidence =
                     deriveExternalDeliveryEvidence(
-                            snapshot.canonicalRoot(), event);
+                            canonicalRoot, admittedEvent);
             return ProcessorEngine.processDocument(
-                    this, snapshot, event, evidence);
+                    this, snapshot, admittedEvent, evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidExternalDeliveryResult(
-                    snapshot.canonicalRoot(), exception)
-                    .withSnapshot(snapshot);
+                    snapshot.canonicalRoot(), exception);
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
         }
@@ -519,17 +653,21 @@ public class DocumentProcessor implements AutoCloseable {
                 return ProcessorEngine.processDocument(
                         this, snapshot, event, null);
             }
+            Node admittedEvent =
+                    new ProcessingInputAdmission(snapshotManager)
+                            .materializeTopLevel(
+                                    event, "Processing Event")
+                            .node();
             evidence.revalidate(
                     canonicalRoot,
-                    event,
+                    admittedEvent,
                     runtimeRegistryIdentity,
                     deliveryEvidenceVerifier);
             return ProcessorEngine.processDocument(
-                    this, snapshot, event, evidence);
+                    this, snapshot, admittedEvent, evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidExternalDeliveryResult(
-                    snapshot.canonicalRoot(), exception)
-                    .withSnapshot(snapshot);
+                    snapshot.canonicalRoot(), exception);
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
         }
@@ -560,6 +698,11 @@ public class DocumentProcessor implements AutoCloseable {
                         event,
                         runtimeRegistryIdentity);
             } else {
+                event = new ProcessingInputAdmission(
+                        snapshotManager)
+                        .materializeTopLevel(
+                                event, "Processing Event")
+                        .node();
                 evidence.revalidate(
                         canonicalRoot,
                         event,
@@ -603,17 +746,24 @@ public class DocumentProcessor implements AutoCloseable {
                 return ProcessorEngine.processDocumentWithTrace(
                         this, snapshot, event, null);
             }
+            Node admittedEvent =
+                    new ProcessingInputAdmission(snapshotManager)
+                            .materializeTopLevel(
+                                    event, "Processing Event")
+                            .node();
             VerifiedExecutionEvidence evidence =
                     deriveExternalDeliveryEvidence(
-                            snapshot.canonicalRoot(), event);
+                            snapshot.canonicalRoot(),
+                            admittedEvent);
             return ProcessorEngine.processDocumentWithTrace(
-                    this, snapshot, event, evidence);
+                    this, snapshot, admittedEvent, evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             return new ProcessingDebugResult(
                     invalidExternalDeliveryResult(
-                            snapshot.canonicalRoot(), exception)
-                            .withSnapshot(snapshot),
-                    ProcessingConformanceTrace.empty());
+                            snapshot.canonicalRoot(), exception),
+                    ProcessingConformanceTrace.empty(),
+                    null,
+                    snapshot);
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
         }
@@ -641,19 +791,25 @@ public class DocumentProcessor implements AutoCloseable {
                 return ProcessorEngine.processDocumentWithTrace(
                         this, snapshot, event, null);
             }
+            Node admittedEvent =
+                    new ProcessingInputAdmission(snapshotManager)
+                            .materializeTopLevel(
+                                    event, "Processing Event")
+                            .node();
             evidence.revalidate(
                     canonicalRoot,
-                    event,
+                    admittedEvent,
                     runtimeRegistryIdentity,
                     deliveryEvidenceVerifier);
             return ProcessorEngine.processDocumentWithTrace(
-                    this, snapshot, event, evidence);
+                    this, snapshot, admittedEvent, evidence);
         } catch (InvalidExecutionEvidenceException exception) {
             return new ProcessingDebugResult(
                     invalidExternalDeliveryResult(
-                            snapshot.canonicalRoot(), exception)
-                            .withSnapshot(snapshot),
-                    ProcessingConformanceTrace.empty());
+                            snapshot.canonicalRoot(), exception),
+                    ProcessingConformanceTrace.empty(),
+                    null,
+                    snapshot);
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
         }
@@ -664,19 +820,16 @@ public class DocumentProcessor implements AutoCloseable {
             Node event) {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(event, "event");
-        if (deliveryEvidenceVerifier
-                instanceof RootExternalDeliveryEvidenceVerifier) {
-            return ((RootExternalDeliveryEvidenceVerifier)
-                    deliveryEvidenceVerifier).deriveAndVerify(
-                    document, event, runtimeRegistryIdentity);
-        }
         ExternalDeliveryPlan plan =
-                externalDeliveryPlanDeriver.derive(
-                        document.clone(), event.clone());
-        if (plan == null || !plan.exactRuntimeState()) {
-            throw new InvalidExecutionEvidenceException(
-                    "External delivery plan is not certified complete");
-        }
+                deriveExternalDeliveryPlan(document, event);
+        return bindAndVerifyDerived(
+                document, event, plan);
+    }
+
+    private VerifiedExecutionEvidence bindAndVerifyDerived(
+            Node document,
+            Node event,
+            ExternalDeliveryPlan plan) {
         VerifiedExecutionEvidence evidence =
                 plan.bind(document, event, runtimeRegistryIdentity);
         evidence.revalidateDerived(
@@ -708,32 +861,89 @@ public class DocumentProcessor implements AutoCloseable {
         return plan;
     }
 
+    private ProcessingInputAdmission.AdmittedNode admitDeliveryScopes(
+            ProcessingInputAdmission admission,
+            ProcessingInputAdmission.AdmittedNode admittedRoot,
+            java.util.List<ExternalDeliverySnapshot> deliveries) {
+        java.util.List<String> scopePaths =
+                new java.util.ArrayList<>();
+        for (ExternalDeliverySnapshot delivery : deliveries) {
+            scopePaths.add(delivery.scopePath());
+        }
+        return admission.materializeScopePaths(
+                admittedRoot, scopePaths);
+    }
+
+    private DocumentProcessingResult processAdmitted(
+            ProcessingInputAdmission admission,
+            ProcessingInputAdmission.AdmittedNode admittedRoot,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        if (admittedRoot.wasMaterialized()) {
+            return ProcessorEngine.processDocument(
+                    this,
+                    admission.deferredSnapshot(admittedRoot),
+                    event,
+                    evidence);
+        }
+        return ProcessorEngine.processDocument(
+                this, admittedRoot.node(), event, evidence);
+    }
+
+    private ProcessingDebugResult processAdmittedWithTrace(
+            ProcessingInputAdmission admission,
+            ProcessingInputAdmission.AdmittedNode admittedRoot,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        if (admittedRoot.wasMaterialized()) {
+            return ProcessorEngine.processDocumentWithTrace(
+                    this,
+                    admission.deferredSnapshot(admittedRoot),
+                    event,
+                    evidence);
+        }
+        return ProcessorEngine.processDocumentWithTrace(
+                this, admittedRoot.node(), event, evidence);
+    }
+
     private ProcessAttemptResult completeAttempt(
-            Node document,
+            Node originalDocument,
+            ProcessingInputAdmission admission,
+            ProcessingInputAdmission.AdmittedNode admittedRoot,
             Node event,
             VerifiedExecutionEvidence evidence,
             ExternalDeliveryPlan derivedPlan) {
         try {
             evidence.revalidateBinding(
-                    document, event, runtimeRegistryIdentity);
+                    admittedRoot.node(),
+                    event,
+                    runtimeRegistryIdentity);
             java.util.List<String> missing =
                     evidence.missingRequiredExactNodeBlueIds();
             if (!missing.isEmpty()) {
                 return ProcessAttemptResult.needsResources(missing);
             }
+            admittedRoot = admitDeliveryScopes(
+                    admission,
+                    admittedRoot,
+                    derivedPlan.deliveries());
             evidence.revalidateDerived(
-                    document,
+                    admittedRoot.node(),
                     event,
                     runtimeRegistryIdentity,
                     deliveryEvidenceVerifier,
                     derivedPlan);
             return ProcessAttemptResult.complete(
-                    ProcessorEngine.processDocument(
-                            this, document, event, evidence));
+                    processAdmitted(
+                            admission,
+                            admittedRoot,
+                            event,
+                            evidence));
         } catch (ExecutionEvidenceUnavailableException exception) {
             return needsResources(exception);
         } catch (InvalidExecutionEvidenceException exception) {
-            return invalidAttempt(document, exception);
+            return invalidAttempt(
+                    originalDocument, exception);
         }
     }
 
@@ -829,7 +1039,7 @@ public class DocumentProcessor implements AutoCloseable {
      * <p>For standalone initialization, configure a verified provider-backed
      * snapshot manager/Blue runtime or use the exact-canonical-content overload.
      * Otherwise a scope that requires the registered type fails before
-     * initiation with {@link ProcessorErrorCategory#ProviderUnavailable}.</p>
+     * initiation with {@link ProcessorErrorCategory#RuntimeExecutionFailure}.</p>
      */
     public DocumentProcessor registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
         rejectWriteUpgrade();
@@ -1229,7 +1439,7 @@ public class DocumentProcessor implements AutoCloseable {
         /**
          * Registers a processor mapping without supplying provider content.
          * Standalone initialization that needs this type fails with
-         * {@link ProcessorErrorCategory#ProviderUnavailable} unless a verified
+         * {@link ProcessorErrorCategory#RuntimeExecutionFailure} unless a verified
          * provider-backed manager/Blue runtime is configured.
          */
         public Builder registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {

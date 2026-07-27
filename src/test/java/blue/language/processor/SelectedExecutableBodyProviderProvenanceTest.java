@@ -161,7 +161,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
 
         assertEquals(
                 ProcessorErrorCategory
-                        .ProviderBlueIdMismatch,
+                        .InvalidProcessingDocument,
                 failure.errorCategory());
     }
 

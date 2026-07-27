@@ -19,6 +19,9 @@ final class ContractRecognitionMeter {
     private final GasMeter gas;
     private final Set<HeaderIdentity> recognizedHeaders =
             new LinkedHashSet<>();
+    private final List<PendingHeader> pendingHeaders =
+            new ArrayList<>();
+    private boolean canonicalClassificationBatch;
 
     ContractRecognitionMeter(GasMeter gas) {
         this.gas = Objects.requireNonNull(gas, "gas");
@@ -35,6 +38,16 @@ final class ContractRecognitionMeter {
         if (recognizedHeaders.contains(identity)) {
             return;
         }
+        if (canonicalClassificationBatch) {
+            for (PendingHeader pending : pendingHeaders) {
+                if (pending.identity.equals(identity)) {
+                    return;
+                }
+            }
+            pendingHeaders.add(
+                    new PendingHeader(identity, reason));
+            return;
+        }
         /*
          * Mutate the deduplication set only after the charge is admitted. A gas
          * failure therefore leaves the failed charge and its logical header
@@ -47,21 +60,68 @@ final class ContractRecognitionMeter {
         recognizedHeaders.add(identity);
     }
 
+    void beginCanonicalClassificationBatch() {
+        if (canonicalClassificationBatch) {
+            throw new IllegalStateException(
+                    "Contract-recognition batch is already active");
+        }
+        pendingHeaders.clear();
+        canonicalClassificationBatch = true;
+    }
+
+    void flushCanonicalClassificationBatch() {
+        if (!canonicalClassificationBatch) {
+            throw new IllegalStateException(
+                    "No contract-recognition batch is active");
+        }
+        if (pendingHeaders.size() == 1) {
+            PendingHeader pending =
+                    pendingHeaders.get(0);
+            gas.chargeContractHeaderRecognized(
+                    pending.identity.scopePath,
+                    pending.identity.contractKey,
+                    pending.reason);
+        } else if (!pendingHeaders.isEmpty()) {
+            gas.chargeContractHeadersRecognized(
+                    pendingHeaders.size(),
+                    "structural-and-channel-headers");
+        }
+        for (PendingHeader pending : pendingHeaders) {
+            recognizedHeaders.add(
+                    pending.identity);
+        }
+        pendingHeaders.clear();
+        canonicalClassificationBatch = false;
+    }
+
+    void cancelCanonicalClassificationBatch() {
+        pendingHeaders.clear();
+        canonicalClassificationBatch = false;
+    }
+
     void embeddedPathEntryRead(String scopePath,
                                String contractKey,
-                               int index) {
+                               int index,
+                               String logicalPath) {
         gas.chargeEmbeddedPathEntryRead(
                 scopePath,
-                embeddedPath(scopePath, contractKey, index));
+                logicalPath != null
+                        ? logicalPath
+                        : embeddedPath(
+                        scopePath, contractKey, index));
     }
 
     void embeddedPathSegmentsValidated(String scopePath,
                                        String contractKey,
                                        int index,
+                                       String logicalPath,
                                        long quantity) {
         gas.chargeEmbeddedPathSegmentsValidated(
                 scopePath,
-                embeddedPath(scopePath, contractKey, index),
+                logicalPath != null
+                        ? logicalPath
+                        : embeddedPath(
+                        scopePath, contractKey, index),
                 quantity);
     }
 
@@ -118,6 +178,19 @@ final class ContractRecognitionMeter {
                     scopePath,
                     contractKey,
                     orderedContributionBlueIds);
+        }
+    }
+
+    private static final class PendingHeader {
+        private final HeaderIdentity identity;
+        private final String reason;
+
+        private PendingHeader(
+                HeaderIdentity identity,
+                String reason) {
+            this.identity = Objects.requireNonNull(
+                    identity, "identity");
+            this.reason = reason;
         }
     }
 }

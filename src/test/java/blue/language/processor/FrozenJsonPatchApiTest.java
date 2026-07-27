@@ -42,7 +42,7 @@ class FrozenJsonPatchApiTest {
         assertEquals("/a~1b/~0key", add.getPath());
         assertEquals(Arrays.asList("a/b", "~key"), add.parsedPath().segments());
         assertSame(value, add.getValue());
-        assertSame(value, add.getVal());
+        assertSame(value, add.getValue());
         assertEquals(add, FrozenJsonPatch.add("/a~1b/~0key", value));
         assertEquals(add.hashCode(), FrozenJsonPatch.add("/a~1b/~0key", value).hashCode());
         assertEquals(JsonPatch.Op.REPLACE, replace.getOp());

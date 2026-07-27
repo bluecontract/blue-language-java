@@ -7,7 +7,28 @@ description: Re-adding a path does not resurrect the old occurrence in the curre
 operation: process
 input:
   root:
-    value: 0
+    counter: 0
+    child:
+      state: 0
+      contracts:
+        in:
+          type:
+            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        h:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: in
+          order: 0
+          result:
+            patches:
+            - op: replace
+              path: /child/state
+              val: 1
     contracts:
       in:
         type:
@@ -25,8 +46,33 @@ input:
         result:
           patches:
           - op: replace
-            path: /value
+            path: /counter
             val: 1
+      embedded:
+        type:
+          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+        paths:
+        - /child
+      counterUpdates:
+        type:
+          blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An
+        path: /counter
+        order: 0
+      replaceAndReadd:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: counterUpdates
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /child
+            val:
+              generation: 1
+          - op: replace
+            path: /child
+            val:
+              generation: 2
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -40,6 +86,13 @@ input:
     - timeline
     - 1
     deliverySnapshot:
+    - scopePath: /child
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
     - scopePath: /
       channelKey: in
       order: 0
@@ -52,11 +105,11 @@ input:
     semanticDemandsOnly: true
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
-    cascadeMutation:
-      replaceScope: /child
-      thenReaddSamePath: true
 expected:
   assertions:
   - actual: trace.scopeExecutions./child
     op: equals
     expected: 1
+  - actual: result.document.child.generation
+    op: equals
+    expected: 2

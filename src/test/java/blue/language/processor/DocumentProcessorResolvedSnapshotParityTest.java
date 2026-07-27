@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
@@ -56,15 +58,15 @@ class DocumentProcessorResolvedSnapshotParityTest {
                     "mode=" + mode);
             assertEquals(
                     mode.expectedCategory,
-                    snapshotResult.processResult().errorCategory(),
+                    diagnosticCategory(snapshotResult.processResult()),
                     "mode=" + mode);
             assertNotNull(
-                    snapshotResult.processResult().snapshot(),
+                    snapshotResult.resultingSnapshot(),
                     "mode=" + mode);
             if (!mode.expectedStatus.commits()) {
                 assertSame(
                         snapshot,
-                        snapshotResult.processResult().snapshot(),
+                        snapshotResult.resultingSnapshot(),
                         "a noncommitting snapshot run must retain its exact input snapshot");
                 assertEquals(
                         BlueIdCalculator.calculateBlueId(root),
@@ -99,9 +101,9 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 snapshotResult.processResult().status());
         assertEquals(
                 ProcessorErrorCategory.GasLimitExceeded,
-                snapshotResult.processResult().errorCategory());
+                diagnosticCategory(snapshotResult.processResult()));
         assertEquals(0L, snapshotResult.processResult().totalGas());
-        assertSame(snapshot, snapshotResult.processResult().snapshot());
+        assertSame(snapshot, snapshotResult.resultingSnapshot());
         assertTrue(snapshotResult.trace().gas().isEmpty());
         assertTrue(snapshotResult.trace().records().isEmpty());
     }
@@ -142,9 +144,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 snapshotResult.processResult().status());
         assertEquals(
                 ProcessorErrorCategory.InvalidExternalChannelSnapshot,
-                snapshotResult.processResult().errorCategory());
-        assertSame(snapshot, snapshotResult.processResult().snapshot());
-        assertSame(snapshot, snapshotWithoutTrace.snapshot());
+                diagnosticCategory(snapshotResult.processResult()));
+        assertSame(snapshot, snapshotResult.resultingSnapshot());
         assertEquals(
                 BlueIdCalculator.calculateBlueId(root),
                 BlueIdCalculator.calculateBlueId(
@@ -177,7 +178,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 BlueIdCalculator.calculateBlueId(canonical),
                 BlueIdCalculator.calculateBlueId(
                         result.processResult().document()));
-        assertSame(snapshot, result.processResult().snapshot());
+        assertSame(snapshot, result.resultingSnapshot());
         assertEquals(0L, result.processResult().totalGas());
         assertTrue(result.processResult().events().isEmpty());
         assertTrue(result.trace().gas().isEmpty());
@@ -191,8 +192,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
         DocumentProcessingResult left = node.processResult();
         DocumentProcessingResult right = snapshot.processResult();
         assertEquals(left.status(), right.status(), context);
-        assertEquals(left.errorCategory(), right.errorCategory(), context);
-        assertEquals(left.failureReason(), right.failureReason(), context);
+        assertEquals(diagnosticCategory(left), diagnosticCategory(right), context);
+        assertEquals(diagnosticMessage(left), diagnosticMessage(right), context);
         assertEquals(
                 left.diagnostic() != null
                         ? left.diagnostic().details()
@@ -440,33 +441,33 @@ class DocumentProcessorResolvedSnapshotParityTest {
         private SubscriptionSurfaceValidator validator() {
             switch (this) {
                 case PORTABLE_LIMIT:
-                    return (input, tentative, changed, schedule) -> {
+                    return context -> {
                         throw new PortableLimitExceededException(
                                 "directObjectEntriesMaterializedOrRebuilt",
                                 2L,
                                 1L);
                     };
                 case SUBSCRIPTION_SURFACE:
-                    return (input, tentative, changed, schedule) -> {
+                    return context -> {
                         throw new SubscriptionSurfaceInvalidException(
                                 "invalid test subscription surface",
                                 "/",
                                 "incoming");
                     };
                 case MUST_UNDERSTAND:
-                    return (input, tentative, changed, schedule) -> {
+                    return context -> {
                         throw new MustUnderstandFailureException(
                                 "unsupported test runtime type",
                                 ProcessorErrorCategory
                                         .UnsupportedRuntimeType);
                     };
                 case RUNTIME:
-                    return (input, tentative, changed, schedule) -> {
+                    return context -> {
                         throw new IllegalStateException(
                                 "test runtime failure");
                     };
                 default:
-                    return (input, tentative, changed, schedule) ->
+                    return context ->
                             SubscriptionDelta.empty();
             }
         }

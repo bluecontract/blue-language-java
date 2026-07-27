@@ -99,6 +99,15 @@ entries:
 - path: result.document.child.b
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.child.contracts.initialized
+  type: value
+  definition: Exact child-scope initialization marker projection; absence proves no marker was written into a replacement occurrence.
+- path: result.document.child.generation
+  type: scalar-or-node
+  definition: Exact fixture child value after same-path replacement and re-add sequencing.
+- path: result.document.child.replacement
+  type: scalar-or-node
+  definition: Exact fixture child replacement marker in the resulting authoritative Root.
 - path: result.document.child.x
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -114,6 +123,9 @@ entries:
 - path: result.document.contracts.checkpoint.entries.old
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.embedded.paths
+  type: sequence-or-value
+  definition: Exact resulting Process Embedded paths value.
 - path: result.document.contracts.h2
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -129,6 +141,9 @@ entries:
 - path: result.document.h2Ran
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.large
+  type: value
+  definition: Exact large-node reference retained in the resulting Root without semantic materialization.
 - path: result.document.postInitRan
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -172,9 +187,6 @@ entries:
   type: value
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
 - path: trace.counters.contractHeaderRecognized
-  type: integer
-  definition: Final quantity of the named canonical counter in the invocation trace.
-- path: trace.counters.directIdentityHashBlock
   type: integer
   definition: Final quantity of the named canonical counter in the invocation trace.
 - path: trace.counters.textBlockExamined

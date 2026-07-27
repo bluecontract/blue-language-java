@@ -7,13 +7,9 @@ import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
-import blue.language.provider.BootstrapProvider;
-import blue.language.provider.PotentialBlueIdNodeProvider;
-import blue.language.provider.SequentialNodeProvider;
-import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.JsonPointer;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.Types;
 import blue.language.utils.limits.Limits;
@@ -45,15 +41,13 @@ import static blue.language.utils.Properties.CORE_TYPES;
  * Concrete Blue Language merge engine.
  *
  * <p>Custom merge behavior should use {@link MergingProcessor}, which is the
- * supported extension point. The class remains extensible for compatibility
- * with existing clients.</p>
+ * supported extension point.</p>
  */
-public class Merger implements NodeResolver {
+public final class Merger implements NodeResolver {
 
     private final MergingProcessor mergingProcessor;
     private final NodeProvider nodeProvider;
     private final ResolvedReferenceCache resolvedReferenceCache;
-    private final boolean hasExplicitlyHostTrustedProvider;
     private ResolutionState resolutionState;
     private boolean lastResolutionUsedNonDirectTrustedContent;
 
@@ -65,7 +59,6 @@ public class Merger implements NodeResolver {
         this.mergingProcessor = mergingProcessor;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.resolvedReferenceCache = resolvedReferenceCache;
-        this.hasExplicitlyHostTrustedProvider = containsExplicitlyHostTrustedProvider(this.nodeProvider);
     }
 
     /**
@@ -76,7 +69,7 @@ public class Merger implements NodeResolver {
         Objects.requireNonNull(preprocessedSource, "preprocessedSource");
         Objects.requireNonNull(limits, "limits");
         Node resolved = resolve(preprocessedSource.clone(), limits);
-        Node canonical = new MergeReverser().reverseToCanonicalOverlay(
+        Node canonical = new CanonicalIdentityInputBuilder().build(
                 resolved.clone(), preprocessedSource);
         return snapshotResolution(FrozenNode.fromNode(canonical), resolved, limits);
     }
@@ -148,7 +141,19 @@ public class Merger implements NodeResolver {
         }
 
         TypeResolutionKey deferredTypeResolution = null;
-        if (source.getType() != null) {
+        /*
+         * A selectively preserved path is an exact authored subtree, not a
+         * complete instance of its declared type. Keep its type metadata for
+         * the eventual exact-path restoration, but do not expand the type or
+         * validate its schema while walking the surrounding document.
+         *
+         * DeferredReferencePathLimits expresses that boundary by allowing the
+         * path itself to merge while denying reference expansion below it.
+         * Ordinary limited and unlimited resolution continue to enter merged
+         * paths with reference expansion enabled.
+         */
+        if (source.getType() != null
+                && resolutionState.referenceExpansionAllowed) {
             Node typeNode = source.getType();
             String typeBlueId = typeNode.getBlueId();
             boolean typeContributionApplied = hasAppliedDeclaredTypeContribution(target, typeBlueId);
@@ -280,27 +285,14 @@ public class Merger implements NodeResolver {
             return rememberCanonical(state, blueId, transientTrusted, false);
         }
 
-        if (!hasExplicitlyHostTrustedProvider) {
-            FrozenNode canonical = canCacheDirectCanonical(blueId)
-                    ? resolvedReferenceCache.getOrLoadVerifiedCanonical(blueId,
-                    () -> FrozenNode.fromNode(singleTypeProviderContent(blueId)))
-                    : FrozenNode.fromNode(singleTypeProviderContent(blueId));
-            return rememberCanonical(state, blueId, canonical, true);
-        }
-
-        ProviderLookup lookup = providerLookup(blueId, state);
-        if (lookup.nodes.size() > 1) {
-            throw new IllegalStateException(String.format(
-                    "Expected a single node for type with blueId '%s', but found multiple.", blueId));
-        }
-        CanonicalReference loaded = canonicalFromLookup(blueId, lookup, state);
-        FrozenNode canonical = loaded.canonical;
-        if (loaded.directlyVerified && canCacheDirectCanonical(blueId)) {
-            canonical = resolvedReferenceCache.putVerifiedCanonical(blueId, canonical);
-        } else if (!loaded.directlyVerified && resolvedReferenceCache != null) {
-            canonical = resolvedReferenceCache.putTransientTrustedCanonical(blueId, canonical);
-        }
-        return rememberCanonical(state, blueId, canonical, loaded.directlyVerified);
+        FrozenNode canonical = canCacheDirectCanonical(blueId)
+                ? resolvedReferenceCache.getOrLoadVerifiedCanonical(
+                blueId,
+                () -> FrozenNode.fromNode(
+                        singleTypeProviderContent(blueId)))
+                : FrozenNode.fromNode(
+                singleTypeProviderContent(blueId));
+        return rememberCanonical(state, blueId, canonical, true);
     }
 
     private boolean canCacheDirectCanonical(String blueId) {
@@ -1395,23 +1387,16 @@ public class Merger implements NodeResolver {
         }
 
         try {
-            if (!hasExplicitlyHostTrustedProvider) {
-                FrozenNode canonical = canCacheDirectCanonical(blueId)
-                        ? resolvedReferenceCache.getOrLoadVerifiedCanonical(blueId,
-                        () -> FrozenNode.fromNode(requiredProviderContent(blueId, state)))
-                        : FrozenNode.fromNode(requiredProviderContent(blueId, state));
-                return rememberCanonical(state, blueId, canonical, true);
-            }
-
-            ProviderLookup lookup = providerLookup(blueId, state);
-            CanonicalReference loaded = canonicalFromLookup(blueId, lookup, state);
-            FrozenNode canonical = loaded.canonical;
-            if (loaded.directlyVerified && canCacheDirectCanonical(blueId)) {
-                canonical = resolvedReferenceCache.putVerifiedCanonical(blueId, canonical);
-            } else if (!loaded.directlyVerified && resolvedReferenceCache != null) {
-                canonical = resolvedReferenceCache.putTransientTrustedCanonical(blueId, canonical);
-            }
-            return rememberCanonical(state, blueId, canonical, loaded.directlyVerified);
+            FrozenNode canonical = canCacheDirectCanonical(blueId)
+                    ? resolvedReferenceCache.getOrLoadVerifiedCanonical(
+                    blueId,
+                    () -> FrozenNode.fromNode(
+                            requiredProviderContent(
+                                    blueId, state)))
+                    : FrozenNode.fromNode(
+                    requiredProviderContent(blueId, state));
+            return rememberCanonical(
+                    state, blueId, canonical, true);
         } catch (RuntimeException ex) {
             if (state.failedProviderReferences == null) {
                 state.failedProviderReferences = new HashSet<>();
@@ -1428,103 +1413,6 @@ public class Merger implements NodeResolver {
                     + " at path " + currentPath(state) + ".");
         }
         return providerContent(nodes, blueId);
-    }
-
-    private ProviderLookup providerLookup(String blueId, ResolutionState state) {
-        if (state.providerLookups != null) {
-            ProviderLookup existing = state.providerLookups.get(blueId);
-            if (existing != null) {
-                return existing;
-            }
-        }
-        ProviderLookup lookup = fetchWithProvenance(nodeProvider, blueId);
-        if (lookup == null || lookup.nodes.isEmpty()) {
-            throw new IllegalArgumentException("No content found for required blueId " + blueId
-                    + " at path " + currentPath(state) + ".");
-        }
-        if (state.providerLookups == null) {
-            state.providerLookups = new LinkedHashMap<>();
-        }
-        state.providerLookups.put(blueId, lookup);
-        return lookup;
-    }
-
-    private CanonicalReference canonicalFromLookup(String blueId,
-                                                   ProviderLookup lookup,
-                                                   ResolutionState state) {
-        Node content = providerContent(lookup.nodes, blueId);
-        FrozenNode canonical;
-        boolean directlyVerified;
-        if (lookup.provenance == LookupProvenance.PLAIN_VERIFIED) {
-            canonical = FrozenNode.fromNode(content);
-            directlyVerified = true;
-        } else {
-            try {
-                canonical = FrozenNode.fromNode(content);
-                directlyVerified = blueId.equals(canonical.blueId());
-            } catch (IllegalArgumentException invalidDirectContent) {
-                canonical = FrozenNode.fromResolvedNode(content);
-                directlyVerified = false;
-            }
-        }
-        state.usedNonDirectTrustedContent |= !directlyVerified;
-        return new CanonicalReference(canonical, directlyVerified);
-    }
-
-    private ProviderLookup fetchWithProvenance(NodeProvider provider, String blueId) {
-        if (provider instanceof PotentialBlueIdNodeProvider) {
-            PotentialBlueIdNodeProvider filtered = (PotentialBlueIdNodeProvider) provider;
-            return filtered.acceptsBlueId(blueId)
-                    ? fetchWithProvenance(filtered.delegate(), blueId)
-                    : null;
-        }
-        if (provider instanceof SequentialNodeProvider) {
-            for (NodeProvider candidate : ((SequentialNodeProvider) provider).getNodeProviders()) {
-                ProviderLookup lookup = fetchWithProvenance(candidate, blueId);
-                if (lookup != null) {
-                    return lookup;
-                }
-            }
-            return null;
-        }
-
-        boolean explicitlyTrusted = NodeProviderWrapper.isExplicitlyHostTrusted(provider);
-        boolean internallyTrusted = provider == BootstrapProvider.INSTANCE
-                || provider == BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider();
-        List<Node> nodes;
-        if (explicitlyTrusted || internallyTrusted || provider instanceof VerifyingNodeProvider) {
-            nodes = provider.fetchByBlueId(blueId);
-        } else {
-            nodes = new VerifyingNodeProvider(provider).fetchByBlueId(blueId);
-        }
-        if (nodes == null) {
-            return null;
-        }
-        List<Node> retained = new ArrayList<>(nodes.size());
-        for (Node node : nodes) {
-            retained.add(node.clone());
-        }
-        return new ProviderLookup(retained, explicitlyTrusted || internallyTrusted
-                ? LookupProvenance.HOST_TRUSTED
-                : LookupProvenance.PLAIN_VERIFIED);
-    }
-
-    private boolean containsExplicitlyHostTrustedProvider(NodeProvider provider) {
-        if (NodeProviderWrapper.isExplicitlyHostTrusted(provider)) {
-            return true;
-        }
-        if (provider instanceof PotentialBlueIdNodeProvider) {
-            return containsExplicitlyHostTrustedProvider(
-                    ((PotentialBlueIdNodeProvider) provider).delegate());
-        }
-        if (provider instanceof SequentialNodeProvider) {
-            for (NodeProvider candidate : ((SequentialNodeProvider) provider).getNodeProviders()) {
-                if (containsExplicitlyHostTrustedProvider(candidate)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private Node providerContent(List<Node> nodes, String blueId) {
@@ -1961,7 +1849,6 @@ public class Merger implements NodeResolver {
         private Map<String, PresenceGate> presenceGates;
         private Set<String> incompletePaths;
         private Map<String, CanonicalReference> canonicalReferences;
-        private Map<String, ProviderLookup> providerLookups;
         private Map<String, Node> fullyResolvedReferences;
         private Map<Node, Set<String>> appliedTypeContributions;
         private Set<String> materializingReferences;
@@ -1974,21 +1861,6 @@ public class Merger implements NodeResolver {
         private boolean rootSourceSchemaChecked;
         private boolean rootSourceContainsSchema;
         private boolean schemaRequiresTypeSourceProvenance;
-    }
-
-    private enum LookupProvenance {
-        PLAIN_VERIFIED,
-        HOST_TRUSTED
-    }
-
-    private static final class ProviderLookup {
-        private final List<Node> nodes;
-        private final LookupProvenance provenance;
-
-        private ProviderLookup(List<Node> nodes, LookupProvenance provenance) {
-            this.nodes = nodes;
-            this.provenance = provenance;
-        }
     }
 
     private static final class CanonicalReference {

@@ -4,54 +4,35 @@ import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
-import java.util.Collections;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChannelEvaluationTest {
 
     @Test
-    void deliveryRequiresNonNullEvent() {
-        assertThrows(NullPointerException.class,
-                () -> ChannelDelivery.of(null, "event-1", "checkpoint", Boolean.TRUE));
-    }
-
-    @Test
-    void deliveryDefensivelyCopiesEvent() {
+    void matchDefensivelyCopiesEvent() {
         Node event = amountEvent(1);
 
-        ChannelDelivery delivery = ChannelDelivery.of(event, "event-1", "checkpoint", Boolean.TRUE);
+        ChannelEvaluation evaluation =
+                ChannelEvaluation.match(event, "event-1");
         event.properties("amount", new Node().value(BigInteger.TEN));
-        Node firstRead = delivery.event();
+        Node firstRead = evaluation.event();
         firstRead.properties("amount", new Node().value(new BigInteger("20")));
 
-        assertEquals(BigInteger.ONE, delivery.event().get("/amount"));
-        assertNotSame(firstRead, delivery.event());
+        assertEquals(BigInteger.ONE, evaluation.event().get("/amount"));
+        assertNotSame(firstRead, evaluation.event());
+        assertEquals("event-1", evaluation.eventId());
     }
 
     @Test
-    void callerAuthoredDeliveriesAreFailClosedCompatibilityOnly() {
-        ChannelDelivery delivery = ChannelDelivery.of(
-                amountEvent(4),
-                "event-4",
-                "source-checkpoint",
-                Boolean.TRUE,
-                "effective-channel",
-                "logical-delivery");
+    void contracts10EvaluationHasOnlyMatchAndNoMatch() {
+        ChannelEvaluation matched =
+                ChannelEvaluation.match(amountEvent(4));
 
-        UnsupportedOperationException failure =
-                assertThrows(UnsupportedOperationException.class,
-                        () -> ChannelEvaluation.matchDeliveries(
-                                Collections.singletonList(delivery)));
-
-        assertEquals(
-                "Caller-authored channel deliveries are not executable "
-                        + "under Contracts 1.0",
-                failure.getMessage());
-        assertEquals(Collections.emptyList(),
-                ChannelEvaluation.match(amountEvent(1)).deliveries());
+        assertTrue(matched.matches());
+        assertFalse(ChannelEvaluation.noMatch().matches());
     }
 
     private static Node amountEvent(int amount) {

@@ -1,5 +1,7 @@
 package blue.language;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.model.Node;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessingResult;
@@ -55,9 +57,11 @@ class ProcessingSnapshotProviderProvenanceTest {
         DocumentProcessingResult result = fixture.blue.initializeDocument(fixture.document());
 
         assertEquals("verified", directlyResolved.getAsText("/fixed"));
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertNotNull(result.snapshot());
-        assertEquals("verified", result.snapshot().resolvedRoot().getAsText("/fixed"));
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        ResolvedSnapshot resultSnapshot =
+                snapshot(fixture.blue, result);
+        assertNotNull(resultSnapshot);
+        assertEquals("verified", resultSnapshot.resolvedRoot().getAsText("/fixed"));
         assertTrue(fixture.fetches.get() > 0);
     }
 
@@ -68,9 +72,11 @@ class ProcessingSnapshotProviderProvenanceTest {
         DocumentProcessingResult result = fixture.blue.processDocument(
                 fixture.document(), new Node().properties("kind", new Node().value("process")));
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertNotNull(result.snapshot());
-        assertEquals("verified", result.snapshot().resolvedRoot().getAsText("/fixed"));
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        ResolvedSnapshot resultSnapshot =
+                snapshot(fixture.blue, result);
+        assertNotNull(resultSnapshot);
+        assertEquals("verified", resultSnapshot.resolvedRoot().getAsText("/fixed"));
     }
 
     @Test
@@ -96,9 +102,10 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         DocumentProcessingResult result = blue.initializeDocument(document);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertNotNull(result.snapshot());
-        assertNotNull(result.snapshot().resolvedRoot().getAsNode("/contracts/derived"));
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        ResolvedSnapshot resultSnapshot = snapshot(blue, result);
+        assertNotNull(resultSnapshot);
+        assertNotNull(resultSnapshot.resolvedRoot().getAsNode("/contracts/derived"));
     }
 
     @Test
@@ -211,8 +218,9 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         DocumentProcessingResult trustedResult = trustedBlue.initializeDocument(fixture.document());
 
-        assertFalse(trustedResult.capabilityFailure(), trustedResult.failureReason());
-        assertEquals("verified", trustedResult.snapshot().resolvedRoot().getAsText("/fixed"));
+        assertFalse(isCapabilityFailure(trustedResult), diagnosticMessage(trustedResult));
+        assertEquals("verified", snapshot(trustedBlue, trustedResult)
+                .resolvedRoot().getAsText("/fixed"));
 
         AtomicInteger trustedFallbackFetches = new AtomicInteger();
         NodeProvider plainNested = new SequentialNodeProvider(
@@ -254,11 +262,14 @@ class ProcessingSnapshotProviderProvenanceTest {
         Node document = new Node().type(reference(memberBlueId)).contracts(new Node());
 
         Node direct = new Blue(provider).resolve(document.clone());
-        DocumentProcessingResult initialized = new Blue(provider).initializeDocument(document);
+        Blue cyclicBlue = new Blue(provider);
+        DocumentProcessingResult initialized =
+                cyclicBlue.initializeDocument(document);
 
         assertEquals("cyclic", direct.getAsText("/fixed"));
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
-        assertEquals("cyclic", initialized.snapshot().resolvedRoot().getAsText("/fixed"));
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
+        assertEquals("cyclic", snapshot(cyclicBlue, initialized)
+                .resolvedRoot().getAsText("/fixed"));
     }
 
     @ParameterizedTest(name = "explicit verifying wrapper: {0}")
@@ -303,14 +314,15 @@ class ProcessingSnapshotProviderProvenanceTest {
         Blue bootstrapBlue = new Blue(countingMiss(bootstrapFallbackFetches));
         DocumentProcessingResult bootstrap = bootstrapBlue.initializeDocument(
                 new Node().type(reference(DICTIONARY_TYPE_BLUE_ID)).contracts(new Node()));
-        assertFalse(bootstrap.capabilityFailure(), bootstrap.failureReason());
+        assertFalse(isCapabilityFailure(bootstrap), diagnosticMessage(bootstrap));
         assertEquals(0, bootstrapFallbackFetches.get());
 
         AtomicInteger runtimeFallbackFetches = new AtomicInteger();
         Blue runtimeBlue = new Blue(countingMiss(runtimeFallbackFetches));
         DocumentProcessingResult runtime = runtimeBlue.initializeDocument(new Node());
-        assertFalse(runtime.capabilityFailure(), runtime.failureReason());
-        assertNotNull(runtime.snapshot().resolvedRoot().getAsNode("/contracts/initialized"));
+        assertFalse(isCapabilityFailure(runtime), diagnosticMessage(runtime));
+        assertNotNull(snapshot(runtimeBlue, runtime)
+                .resolvedRoot().getAsNode("/contracts/initialized"));
         assertEquals(0, runtimeFallbackFetches.get());
 
         AtomicInteger extensionFallbackFetches = new AtomicInteger();
@@ -322,7 +334,7 @@ class ProcessingSnapshotProviderProvenanceTest {
         DocumentProcessingResult extension = extensionBlue.initializeDocument(
                 new Node().contracts(new Node().properties(
                         "extension", new Node().type(reference(extensionBlueId)))));
-        assertFalse(extension.capabilityFailure(), extension.failureReason());
+        assertFalse(isCapabilityFailure(extension), diagnosticMessage(extension));
         assertEquals(0, extensionFallbackFetches.get());
 
         assertTrue(BlueRuntimeTypeRegistry.getDefault().blueId(
@@ -354,8 +366,10 @@ class ProcessingSnapshotProviderProvenanceTest {
         DocumentProcessingResult result = fixture.blue.initializeDocument(fixture.document());
 
         assertTrue(fixture.blue.resolvedReferenceCacheSize() > 0);
-        assertNotNull(result.snapshot());
-        assertEquals("verified", result.snapshot().resolvedRoot().getAsText("/fixed"));
+        ResolvedSnapshot resultSnapshot =
+                snapshot(fixture.blue, result);
+        assertNotNull(resultSnapshot);
+        assertEquals("verified", resultSnapshot.resolvedRoot().getAsText("/fixed"));
     }
 
     @Test
@@ -373,12 +387,13 @@ class ProcessingSnapshotProviderProvenanceTest {
         fetches.set(0);
         DocumentProcessingResult second = blue.initializeDocument(fixture.document());
 
-        assertFalse(first.capabilityFailure(), first.failureReason());
-        assertFalse(second.capabilityFailure(), second.failureReason());
+        assertFalse(isCapabilityFailure(first), diagnosticMessage(first));
+        assertFalse(isCapabilityFailure(second), diagnosticMessage(second));
         assertTrue(cacheSize >= 1);
         assertTrue(blue.resolvedReferenceCacheSize() >= cacheSize);
         assertEquals(0, fetches.get());
-        assertEquals("verified", second.snapshot().resolvedRoot().getAsText("/fixed"));
+        assertEquals("verified", snapshot(blue, second)
+                .resolvedRoot().getAsText("/fixed"));
     }
 
     @Test
@@ -395,8 +410,10 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         DocumentProcessingResult verified = fixture.blue.initializeDocument(fixture.document());
 
-        assertEquals("verified", trusted.snapshot().resolvedRoot().getAsText("/fixed"));
-        assertEquals("verified", verified.snapshot().resolvedRoot().getAsText("/fixed"));
+        assertEquals("verified", snapshot(fixture.blue, trusted)
+                .resolvedRoot().getAsText("/fixed"));
+        assertEquals("verified", snapshot(fixture.blue, verified)
+                .resolvedRoot().getAsText("/fixed"));
         assertEquals(trustedFetches, fixture.fetches.get());
         assertEquals(1, replacementFetches.get());
         assertTrue(fixture.blue.resolvedReferenceCacheSize() >= 1);
@@ -425,10 +442,14 @@ class ProcessingSnapshotProviderProvenanceTest {
             Future<DocumentProcessingResult> plain = executor.submit(
                     () -> plainBlue.initializeDocument(fixture.document()));
 
-            assertEquals("verified", trusted.get(10, TimeUnit.SECONDS)
-                    .snapshot().resolvedRoot().getAsText("/fixed"));
-            assertEquals("verified", plain.get(10, TimeUnit.SECONDS)
-                    .snapshot().resolvedRoot().getAsText("/fixed"));
+            assertEquals("verified", snapshot(
+                    trustedBlue,
+                    trusted.get(10, TimeUnit.SECONDS))
+                    .resolvedRoot().getAsText("/fixed"));
+            assertEquals("verified", snapshot(
+                    plainBlue,
+                    plain.get(10, TimeUnit.SECONDS))
+                    .resolvedRoot().getAsText("/fixed"));
         } finally {
             executor.shutdownNow();
         }

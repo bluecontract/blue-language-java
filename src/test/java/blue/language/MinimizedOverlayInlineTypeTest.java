@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.MergeReverser;
+import blue.language.utils.MinimizedOverlayBuilder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class MergeReverserInlineTypeTest {
+class MinimizedOverlayInlineTypeTest {
 
     @Test
     void anonymousAppendOnlyTypeRoundTripsAcrossIndependentBlueInstances() {
@@ -141,7 +141,7 @@ class MergeReverserInlineTypeTest {
                 "  - B");
 
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
         Blue reader = new Blue(readerProvider);
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(reader.jsonToNode(writer.nodeToJson(minimized)));
 
@@ -154,7 +154,7 @@ class MergeReverserInlineTypeTest {
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
         String resolvedBefore = writer.nodeToJson(original.resolvedRoot());
 
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
 
         assertEquals(resolvedBefore, writer.nodeToJson(original.resolvedRoot()),
                 "Minimization must not mutate the resolved snapshot.");

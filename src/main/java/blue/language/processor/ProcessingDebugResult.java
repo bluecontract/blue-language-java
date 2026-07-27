@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.snapshot.ResolvedSnapshot;
+
 import java.util.Objects;
 
 /**
@@ -13,19 +15,29 @@ public final class ProcessingDebugResult {
     private final DocumentProcessingResult processResult;
     private final ProcessingConformanceTrace trace;
     private final PlatformCommitCompanion platformCommitCompanion;
+    private final ResolvedSnapshot resultingSnapshot;
 
     public ProcessingDebugResult(DocumentProcessingResult processResult,
                                  ProcessingConformanceTrace trace) {
-        this(processResult, trace, null);
+        this(processResult, trace, null, null);
     }
 
     ProcessingDebugResult(
             DocumentProcessingResult processResult,
             ProcessingConformanceTrace trace,
             PlatformCommitCompanion platformCommitCompanion) {
+        this(processResult, trace, platformCommitCompanion, null);
+    }
+
+    ProcessingDebugResult(
+            DocumentProcessingResult processResult,
+            ProcessingConformanceTrace trace,
+            PlatformCommitCompanion platformCommitCompanion,
+            ResolvedSnapshot resultingSnapshot) {
         this.processResult = Objects.requireNonNull(processResult, "processResult");
         this.trace = Objects.requireNonNull(trace, "trace");
         this.platformCommitCompanion = platformCommitCompanion;
+        this.resultingSnapshot = resultingSnapshot;
     }
 
     public DocumentProcessingResult processResult() {
@@ -43,5 +55,13 @@ public final class ProcessingDebugResult {
      */
     public PlatformCommitCompanion platformCommitCompanion() {
         return platformCommitCompanion;
+    }
+
+    /**
+     * Returns the out-of-band immutable processing snapshot, when execution
+     * used the snapshot-native runtime. It is not a ProcessResult field.
+     */
+    public ResolvedSnapshot resultingSnapshot() {
+        return resultingSnapshot;
     }
 }

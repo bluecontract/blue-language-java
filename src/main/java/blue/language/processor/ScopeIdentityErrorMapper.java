@@ -16,13 +16,21 @@ final class ScopeIdentityErrorMapper {
         return from(BlueLanguageErrorClassifier.classify(failure));
     }
 
+    static boolean isProviderIdentityFailure(Throwable failure) {
+        BlueLanguageErrorCategory category =
+                BlueLanguageErrorClassifier.classify(failure);
+        return category == BlueLanguageErrorCategory.ProviderUnavailable
+                || category
+                == BlueLanguageErrorCategory.ProviderBlueIdMismatch;
+    }
+
     static ProcessorErrorCategory from(BlueLanguageErrorCategory category) {
         if (category == BlueLanguageErrorCategory.ProviderUnavailable) {
-            return ProcessorErrorCategory.ProviderUnavailable;
+            return ProcessorErrorCategory.RuntimeExecutionFailure;
         }
         if (category == BlueLanguageErrorCategory.ProviderBlueIdMismatch) {
-            return ProcessorErrorCategory.ProviderBlueIdMismatch;
+            return ProcessorErrorCategory.InvalidProcessingDocument;
         }
-        return ProcessorErrorCategory.InternalProcessorError;
+        return ProcessorErrorCategory.RuntimeExecutionFailure;
     }
 }

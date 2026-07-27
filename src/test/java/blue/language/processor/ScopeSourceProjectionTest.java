@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.BlueLanguageErrorCategory;
 import blue.language.BlueLanguageErrorClassifier;
@@ -38,7 +40,7 @@ class ScopeSourceProjectionTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 authoritative, null, manager);
 
-        String actual = runtime.calculatePreInitializationScopeContentBlueId("/");
+        String actual = runtime.calculatePreInitializationScopeNodeBlueId("/");
 
         assertEquals(authoritative.blueId(), actual);
         assertNull(manager.capturedSnapshot,
@@ -449,13 +451,13 @@ class ScopeSourceProjectionTest {
         DocumentProcessingResult result = processor.initializeDocument(source);
 
         assertEquals(ProcessorStatus.SUCCESS,
-                result.status(), result.failureReason());
+                result.status(), diagnosticMessage(result));
         assertEquals(configured.resolveToSnapshot(source).blueId(),
                 result.document().getAsText(
                         "/contracts/initialized/documentId"));
         assertTrue(hasNode(result.document(), "/contracts/initialized"));
         assertFalse(hasNode(result.document(), "/contracts/terminated"));
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated lifecycle delivery is not a Root emission");
     }
 
@@ -522,28 +524,28 @@ class ScopeSourceProjectionTest {
 
     private static void assertInitializationIdentity(DocumentProcessingResult result,
                                                      String expected) {
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertEquals(expected,
                 result.document().getAsText("/contracts/initialized/documentId"));
-        assertTrue(result.triggeredEvents().isEmpty(),
+        assertTrue(result.events().isEmpty(),
                 "processor-generated lifecycle delivery is not a Root emission");
     }
 
     private static void assertScopeInitializationIdentity(DocumentProcessingResult result,
                                                           String scopePath,
                                                           String expected) {
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertEquals(expected, result.document().getAsText(
                 scopePath + "/contracts/initialized/documentId"));
     }
 
     private static void assertInvalidProcessingDocument(DocumentProcessingResult result) {
         assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                result.status(), result.failureReason());
+                result.status(), diagnosticMessage(result));
         assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
-                result.errorCategory(), result.failureReason());
+                diagnosticCategory(result), diagnosticMessage(result));
         assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertTrue(result.document().isReferenceOnly());
     }
 

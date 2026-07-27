@@ -823,7 +823,7 @@ Node event = blue.yamlToNode(
 
 DocumentProcessingResult result = blue.processDocument(document, event);
 
-System.out.println(result.blueId());
+System.out.println(blue.calculateBlueId(result.document()));
 System.out.println(result.totalGas());
 System.out.println(blue.nodeToYaml(result.document()));
 ```
@@ -837,6 +837,51 @@ PROCESS API and initializes scopes as part of the run when needed. A configured
 it is not a third semantic input. Without complete evidence, use
 `DocumentProcessor.processAttempt(...)`, acquire the reported exact resources,
 and retry from the original Root and event.
+
+Composite External Channel runtime types use the context-aware overloads on
+`ExternalChannelSubscriptionFunctions`. `ExternalChannelFunctionContext.member`
+resolves one required same-scope channel and records its exact dependency.
+`membersByEffectiveType(...)` returns a shallow, canonically ordered view of one
+exact runtime-type family; family additions, removals, replacements, and
+retyping invalidate the owning subscription without pulling unrelated channel
+types into its checkpoint domain. The broader `members()` view resolves the
+complete same-scope External Channel surface and should be reserved for runtime
+types that intentionally depend on all of it. Captured dependencies travel with
+the active `SubscriptionDelta.Entry`, participate in checkpoint-domain
+derivation, and are rechecked by both subscription invalidation and sparse
+feeder-evidence verification.
+
+Event-evaluation functions can call
+`ExternalChannelFunctionContext.matchesPattern(candidate, pattern)` to apply
+the processor's frozen Blue matcher without reaching through ambient
+`Blue`, repository, or provider state. Each deterministic evaluation pass opens
+an independent matcher session bound to that pass's captured
+`ProcessingSnapshotManager`; nested member evaluation reuses only that session.
+The session closes at the pass boundary, clears its caches, and severs the
+manager-backed materializer, so a retained context cannot match afterward.
+Pure references are materialized through the manager's verified exact-reference
+boundary, and missing, reference-only, or identity-mismatched content fails
+closed. The matcher consumes that exact canonical definition directly; it does
+not preprocess or merge a definition through the full Language resolver.
+Subscription-header functions cannot use this operation directly or through a
+member snapshot's event evaluator.
+
+`checkpointSubject(...)` may return either the default pure event reference or
+an exact inline node. A Timeline integration can return a minimal inline
+`{timeline, timestamp}` subject. `ChannelCheckpointContext.currentSubject()`
+then exposes that frozen current subject, while `lastEvent()` exposes the exact
+prior subject and lazily verifies a stored pure reference only if needed.
+`eventSignature()` and `lastEventSignature()` expose the corresponding subject
+BlueIds. Per-channel newness belongs in `isNewerEvent(...)`; the feeder
+`eventOrderKey` orders external occurrences and activation intervals and is not
+a substitute for Timeline timestamp comparison. Composite and All channel
+functions can delegate the selected member's checkpoint subject unchanged.
+
+Named runtime child ledgers are live-bounded. Submitting one through
+`submitRuntimeGasLedger(...)` merges it immediately into the invocation meter,
+before buffered patches, events, or termination are applied. Those application
+effects still roll back atomically on a later runtime failure, but already
+admitted gas and its ordered named trace remain in the noncommitting result.
 
 ## Serialization Helpers
 
@@ -929,7 +974,7 @@ Implemented and covered by tests:
 - reference-only `blueId` semantics;
 - payload-kind exclusivity;
 - schema validation for deterministic core keywords;
-- list control forms and reverse minimization;
+- list control forms and author-facing minimization;
 - circular self-reference ingestion;
 - immutable snapshots with path indexes and resolved type cache reuse;
 - canonical overlay patching and patch-time minimization;
@@ -945,10 +990,29 @@ Known boundaries:
 
 - provider ingestion stores strict canonical/preprocessed content and does not
   default to semantic resolve/minimize storage;
+- the published `blue.repo:blue-repo-java:3.0.0-rc.10`
+  `BlueRepository.configure()` descriptor remains binary-linkable:
+  `NodeProviderWrapper.unverified(NodeProvider)` delegates to the verified
+  `wrap(...)` boundary, and `isExplicitlyHostTrusted(...)` always returns
+  `false`;
 - conformance/generalization is snapshot-safe at the boundary but still bridges
   through mutable resolver internals in some checks;
 - concrete business contracts are supplied by applications through explicitly
   registered processors and canonical type nodes;
+- Contracts 1.0 defaults to same-key dispatch, while immutable
+  `handlerChannelKey(...)` and `logicalDeliveryKey(...)` functions can select
+  a different frozen same-scope Handler channel and coalesce fresh accepted
+  sources. Raw sources retain checkpoint ownership, and application-specific
+  request parsing and authorization remain outside this module;
+- event-scoped matching and `materializeExactReference(...)` provide
+  inline/pure-reference parity. The default context-aware `eventKeys(...)`
+  projects referenced `subscriptionKey` and `subscriptionKeys` fragments;
+  application-specific registry projections remain downstream, and
+  header-time materialization remains fail-closed;
+- the generic named child-ledger API is present, but downstream BEX 1.1 does
+  not yet expose the required named live counter stream. A coordinated BEX
+  update is required before that runtime can supply Contracts 1.0 child-ledger
+  traces;
 - canonical-plus-bundle transport/webhook export is not part of this module yet.
 
 For deeper design notes, see:
@@ -957,13 +1021,16 @@ For deeper design notes, see:
 - [Frozen Type Matching](docs/frozen-type-matching.md)
 - [Processor Contract Matching](docs/processor-contract-matching.md)
 - [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md)
+- [Fragmented PROCESS inputs and logical delivery](docs/fragmented-processing-and-logical-delivery.md)
 - [Language 1.0 and Contracts Kernel 1.0 migration](docs/language-1.0-contracts-kernel-1.0-migration.md)
+- [Language 1.0 and Contracts Kernel 1.0 final JVM API report](docs/language-1.0-contracts-kernel-1.0-api-report.md)
 
 ## Build And Test
 
-The project publishes Java 8-compatible bytecode, runs Gradle on JDK 25, and
-executes tests on a Java 8 toolchain. If Java 8 is not installed locally, Gradle
-can provision it through the configured Foojay toolchain resolver.
+The project publishes Java 8-compatible bytecode, runs the checksum-pinned
+Gradle 9.6.0 wrapper on JDK 25, and executes tests on a Java 8 toolchain. If
+Java 8 is not installed locally, Gradle can provision it through the configured
+Foojay toolchain resolver.
 
 Run the full CI-style verification command:
 
@@ -1011,7 +1078,7 @@ fixture suite. The contracts fixture package under
 `src/test/resources/blue-contracts-1.0/fixtures` is an exact vendored copy of
 the release package. It contains 69 behavior and 58 gas fixtures and has
 identity
-`sha256:58a3d8446e0e7c63063204c7bfaa312ace1242a182bc2f9c4875479a81149904`.
+`sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5`.
 The runtime registry package identity is
 `sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366`,
 and the gas manifest package identity is
@@ -1020,14 +1087,24 @@ Verify fixture content with
 `BlueContractsConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`
 and `contractsConformanceReport().isOfficialContracts10FixturePackage()`.
 `new Blue().runReleaseConformanceSuites()` emits one machine-readable record
-for each of the 252 manifest-listed fixtures and has no skip outcome. With the
-exact bound baseline it currently records 125/125 Language passes and 113/127
-Contracts passes (238 pass, 14 fail, zero skipped overall). The combined report
-is intentionally non-conformant because the 14 identity-bound Contracts
-fixtures listed in the
-[migration notes](docs/language-1.0-contracts-kernel-1.0-migration.md)
-contain inputs or expectations that cannot be executed without inventing
-undeclared state or modifying the package.
+for each of the 252 manifest-listed fixtures and has no skip outcome. The exact
+bound release records 125/125 Language passes and 127/127 Contracts passes:
+252 pass, zero fail, and zero skipped overall.
+
+Run the hard release gate:
+
+```bash
+./gradlew releaseConformanceTest
+```
+
+The task runs the repository tests, rejects deprecated or ambiguous preview API
+surface, validates every manifest/package identity, executes all 252 fixtures,
+and writes:
+
+```text
+build/reports/conformance/release-conformance.json
+build/reports/conformance/release-conformance.txt
+```
 
 Build jars:
 
@@ -1042,10 +1119,19 @@ Publish to local Maven:
 ```
 
 The Gradle wrapper uses the distribution declared in
-`gradle/wrapper/gradle-wrapper.properties`. Local and CI environments need either
-network access for that first wrapper download or a cached Gradle distribution;
-offline verification works once the wrapper distribution and normal dependency
-cache are already present.
+`gradle/wrapper/gradle-wrapper.properties`: Gradle 9.6.0 with SHA-256
+`bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01`.
+Local and CI environments need either network access for that first wrapper
+download or a cached Gradle distribution; offline verification works once the
+wrapper distribution and normal dependency cache are already present.
+
+The checked-in `api/blue-language-java-1.0.json` file is the final
+Language 1.0 and Contracts kernel 1.0 JVM descriptor baseline. Verify a
+candidate against it with:
+
+```bash
+./gradlew verifyFinalApiBaseline
+```
 
 ## Project Layout
 

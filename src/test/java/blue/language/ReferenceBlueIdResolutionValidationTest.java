@@ -1,5 +1,7 @@
 package blue.language;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.DocumentProcessingResult;
@@ -96,17 +98,17 @@ class ReferenceBlueIdResolutionValidationTest {
                 trusted.initializeDocument(malformedTypeDocument(true));
 
         assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                ordinaryResult.status(), ordinaryResult.failureReason());
+                ordinaryResult.status(), diagnosticMessage(ordinaryResult));
         assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
-                ordinaryResult.errorCategory(), ordinaryResult.failureReason());
-        assertTrue(ordinaryResult.failureReason().contains("/type/blueId"),
-                ordinaryResult.failureReason());
+                diagnosticCategory(ordinaryResult), diagnosticMessage(ordinaryResult));
+        assertTrue(diagnosticMessage(ordinaryResult).contains("/type/blueId"),
+                diagnosticMessage(ordinaryResult));
         assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                trustedResult.status(), trustedResult.failureReason());
+                trustedResult.status(), diagnosticMessage(trustedResult));
         assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
-                trustedResult.errorCategory(), trustedResult.failureReason());
-        assertTrue(trustedResult.failureReason().contains("/type/blueId"),
-                trustedResult.failureReason());
+                diagnosticCategory(trustedResult), diagnosticMessage(trustedResult));
+        assertTrue(diagnosticMessage(trustedResult).contains("/type/blueId"),
+                diagnosticMessage(trustedResult));
         assertEquals(0, ordinaryFetches.get());
         assertEquals(0, trustedFetches.get());
     }
@@ -248,7 +250,7 @@ class ReferenceBlueIdResolutionValidationTest {
                 .properties("fixed", new Node().value("trusted"));
         String requestedBlueId = BlueIdCalculator.calculateBlueId(requested);
         AtomicInteger fetches = new AtomicInteger();
-        Blue blue = new Blue(NodeProviderWrapper.unverified(blueId -> {
+        Blue blue = new Blue(NodeProviderWrapper.wrap(blueId -> {
             fetches.incrementAndGet();
             return requestedBlueId.equals(blueId)
                     ? Collections.singletonList(trusted.clone())

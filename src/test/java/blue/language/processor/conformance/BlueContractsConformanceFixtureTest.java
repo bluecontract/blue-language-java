@@ -1,5 +1,7 @@
 package blue.language.processor.conformance;
 
+import blue.language.Blue;
+import blue.language.BlueContractsConformanceReport;
 import blue.language.BlueContractsConformanceSuiteRunner;
 import blue.language.model.Node;
 import blue.language.processor.CheckpointDomain;
@@ -32,6 +34,20 @@ class BlueContractsConformanceFixtureTest {
                     .build());
 
     @Test
+    void everyInventoriedExecutableFixturePassesClosedExecution() {
+        BlueContractsConformanceReport report =
+                new Blue().runContractsConformanceSuite();
+
+        assertEquals(127, report.getFixtureIds().size());
+        assertEquals(report.getFixtureIds(),
+                report.getPassedFixtureIds(),
+                report.getFailures()::toString);
+        assertTrue(report.getFailedFixtureIds().isEmpty());
+        assertEquals(0, report.getSkippedFixtureCount());
+        assertTrue(report.isConformant());
+    }
+
+    @Test
     void everyInventoriedExecutableFixturePassesClosedMetadataValidation()
             throws IOException {
         JsonNode manifest = resource("manifest.yaml");
@@ -54,6 +70,16 @@ class BlueContractsConformanceFixtureTest {
             throws IOException {
         JsonNode fixture =
                 resource("disc/c-disc-03.yaml");
+
+        assertDoesNotThrow(
+                () -> new ContractsFixtureHarness()
+                        .execute(fixture, null, false));
+    }
+
+    @Test
+    void cyclicSetMemberMutationFixtureUsesGenericRuntimeGuard()
+            throws IOException {
+        JsonNode fixture = resource("snd/c-snd-04.yaml");
 
         assertDoesNotThrow(
                 () -> new ContractsFixtureHarness()

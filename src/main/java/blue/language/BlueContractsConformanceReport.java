@@ -45,7 +45,7 @@ public final class BlueContractsConformanceReport {
     public static final String RELEASE_NAME =
             "blue-language-1.0-contracts-1.0-bex-2.0-implementation-baseline";
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:db847cc10e0a8c9dacf529031f49f928ca4b9d62c650270b1bc3dc93c66967a0";
+            "sha256:e114721126a0c74aade6f4a6530583848de191a727d84dd3b49ce48a384f180d";
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
     public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
@@ -55,17 +55,11 @@ public final class BlueContractsConformanceReport {
     public static final String CONTRACTS_GAS_PACKAGE_IDENTITY =
             "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:58a3d8446e0e7c63063204c7bfaa312ace1242a182bc2f9c4875479a81149904";
-    /**
-     * @deprecated Use {@link #CONTRACTS_FIXTURE_PACKAGE_IDENTITY}.
-     */
-    @Deprecated
-    public static final String BLUE_CONTRACTS_1_0_FIXTURE_PACKAGE_IDENTITY =
-            CONTRACTS_FIXTURE_PACKAGE_IDENTITY;
+            "sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5";
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
             "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "d0cb24e8694f759abdab68d62260598b7e26db1373d7cf568edce9c6926708b3";
+            "e109bed525acc3c183742a656aa33d0c5291116d1e3cf9909ae971e3f63bca2f";
 
     /**
      * Fixture envelopes may use YAML anchors for literal reuse. This parser is
@@ -91,33 +85,6 @@ public final class BlueContractsConformanceReport {
     private final Map<String, BlueContractsFixtureCategory> fixtureCategories;
     private final List<BlueContractsConformanceFailure> failures;
     private final List<BlueContractsFixtureResult> fixtureResults;
-
-    /**
-     * Compatibility constructor retained for clients that build a synthetic
-     * report. Package-bound reports should use the full constructor.
-     */
-    public BlueContractsConformanceReport(String specVersion,
-                                          String fixturePackageIdentity,
-                                          List<String> fixtureIds,
-                                          List<String> passedFixtureIds,
-                                          List<String> failedFixtureIds,
-                                          Map<String, BlueContractsFixtureCategory> fixtureCategories,
-                                          List<BlueContractsConformanceFailure> failures) {
-        this(specVersion,
-                RELEASE_NAME,
-                RELEASE_PACKAGE_IDENTITY,
-                LANGUAGE_REGISTRY_PACKAGE_IDENTITY,
-                LANGUAGE_FIXTURE_PACKAGE_IDENTITY,
-                CONTRACTS_REGISTRY_PACKAGE_IDENTITY,
-                CONTRACTS_GAS_PACKAGE_IDENTITY,
-                fixturePackageIdentity,
-                fixtureIds,
-                passedFixtureIds,
-                failedFixtureIds,
-                fixtureCategories,
-                failures,
-                Collections.<BlueContractsFixtureResult>emptyList());
-    }
 
     public BlueContractsConformanceReport(String specVersion,
                                           String releaseName,

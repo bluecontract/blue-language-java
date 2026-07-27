@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.ApplyBatchPatchContractProcessor;
@@ -19,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessorBatchPatchTest {
+
+    private static final String CYCLIC_MEMBER_BLUE_ID =
+            "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
     void processorExecutionContextApplyPatchesWorksInsideHandler() {
@@ -142,6 +147,40 @@ class DocumentProcessorBatchPatchTest {
         assertFalse(hasProperty(foo, "a"));
         assertFalse(hasProperty(foo, "c"));
         assertTrue(execution.runtime().isRunTerminated());
+    }
+
+    @Test
+    void cyclicMemberTraversalInLaterPatchRollsBackWholeInvocation() {
+        Node document = new Node().properties(
+                "foo",
+                new Node().properties(
+                        "cyclic",
+                        new Node().blueId(CYCLIC_MEMBER_BLUE_ID)));
+        String exactInput = document.toString();
+        ProcessorEngine.Execution execution =
+                new ProcessorEngine.Execution(new DocumentProcessor(), document);
+
+        assertThrows(RunTerminationException.class,
+                () -> execution.handlePatches(
+                        "/foo",
+                        ContractBundle.builder().build(),
+                        Arrays.asList(
+                                JsonPatch.add(
+                                        "/foo/tentative",
+                                        new Node().value("must roll back")),
+                                JsonPatch.add(
+                                        "/foo/cyclic/member",
+                                        new Node().value("forbidden"))),
+                        false));
+
+        DocumentProcessingResult result = execution.result();
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                diagnosticCategory(result));
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(exactInput, result.document().toString());
+        assertFalse(hasProperty(result.document().getAsNode("/foo"), "tentative"));
     }
 
     @Test

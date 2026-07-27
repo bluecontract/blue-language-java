@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
@@ -235,7 +237,7 @@ class DocumentUpdateChannelTest {
         Node processed = result.document();
 
         Node rootA = processed.getProperties().get("a");
-        assertNotNull(rootA, result.status() + ": " + result.failureReason()
+        assertNotNull(rootA, result.status() + ": " + diagnosticMessage(result)
                 + "\n" + blue.nodeToYaml(processed));
         assertEquals(new BigInteger("1"), rootA.getValue());
 
@@ -315,7 +317,7 @@ class DocumentUpdateChannelTest {
         Node original = blue.yamlToNode(yaml);
         DocumentProcessingResult result = blue.initializeDocument(original);
         assertEquals(ProcessorStatus.SUCCESS,
-                result.status(), result.failureReason());
+                result.status(), diagnosticMessage(result));
         Node processed = result.document();
 
         Node a = processed.getProperties().get("a");

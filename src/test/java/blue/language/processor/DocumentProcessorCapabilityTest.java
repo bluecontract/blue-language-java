@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.ApplyBatchPatchContractProcessor;
@@ -30,11 +32,11 @@ class DocumentProcessorCapabilityTest {
         String originalJson = blue.nodeToJson(document.clone());
 
         DocumentProcessingResult result = blue.initializeDocument(document);
-        assertTrue(result.capabilityFailure());
+        assertTrue(isCapabilityFailure(result));
         assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(originalJson, blue.nodeToJson(result.document()));
-        assertNotNull(result.failureReason());
+        assertNotNull(diagnosticMessage(result));
     }
 
     @Test
@@ -50,11 +52,11 @@ class DocumentProcessorCapabilityTest {
 
         DocumentProcessingResult result = blue.initializeDocument(document);
 
-        assertTrue(result.capabilityFailure());
+        assertTrue(isCapabilityFailure(result));
         assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(originalJson, blue.nodeToJson(result.document()));
-        assertTrue(result.failureReason().contains("must declare a type"));
+        assertTrue(diagnosticMessage(result).contains("must declare a type"));
     }
 
     @Test
@@ -169,7 +171,7 @@ class DocumentProcessorCapabilityTest {
         DocumentProcessingResult result =
                 blue.initializeDocument(input);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
         assertFalse(result.commits());
@@ -250,6 +252,6 @@ class DocumentProcessorCapabilityTest {
         assertFalse(result.commits());
         assertTrue(result.totalGas() > 0L);
         assertTrue(result.events().isEmpty());
-        assertTrue(result.failureReason().contains("terminated"));
+        assertTrue(diagnosticMessage(result).contains("terminated"));
     }
 }

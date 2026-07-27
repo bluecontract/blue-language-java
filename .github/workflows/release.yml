@@ -44,12 +44,24 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
-    
+
+      - name: Configure reproducible build timestamp
+        run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+
       - name: Execute Gradle build
-        run: >-
-          ./gradlew clean build identityDifferentialTest
-          patchSequenceDifferentialTest memoryIntegrationTest cacheLifecycleTest
-          jmhClasses sourceReleaseArchive
+        run: ./gradlew clean build rcVerify jmhClasses
+
+      - name: Verify reproducible source release
+        run: |
+          mapfile -t source_archives < <(find build/release -maxdepth 1 -type f -name '*-source-release.zip')
+          test "${#source_archives[@]}" -eq 1
+          first_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+          ./gradlew sourceReleaseArchive --rerun-tasks
+          second_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+          test "$first_sha" = "$second_sha"
+
+      - name: Verify final Language 1.0 and Contracts kernel 1.0 API baseline
+        run: ./gradlew verifyFinalApiBaseline
     
       - name: Execute Gradle publish
         run: ./gradlew publish
@@ -73,4 +85,6 @@ jobs:
             build/libs
             build/publications
             build/release
+            build/reports/binary-api
+            build/reports/conformance
             build/jreleaser

@@ -28,6 +28,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     private final Node event;
     private final boolean allowReservedMutation;
     private final ContractEffectBuffer effects = new ContractEffectBuffer();
+    private boolean runtimeLedgerSubmitted;
     private boolean effectsApplied;
     private boolean closed;
 
@@ -199,9 +200,6 @@ public final class ProcessorExecutionContext implements AutoCloseable {
             recordCutOffDiscardedEffects(0, 0);
             return;
         }
-        if (effects.runtimeLedger() != null) {
-            runtime().mergeRuntimeGasLedger(effects.runtimeLedger());
-        }
         for (int batchIndex = 0;
              batchIndex < effects.patchBatches().size();
              batchIndex++) {
@@ -339,19 +337,6 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     }
 
     /**
-     * @deprecated Contracts 1.0 requires named, weighted runtime counters.
-     * Create a child ledger with {@link #newRuntimeGasLedger(String, Map)}
-     * and submit it with {@link #submitRuntimeGasLedger(GasMeter.ChildGasLedger)}.
-     */
-    @Deprecated
-    public void consumeGas(long units) {
-        ensureOpen();
-        throw new UnsupportedOperationException(
-                "Anonymous runtime gas is not supported by Contracts 1.0; "
-                        + "use a named runtime child ledger");
-    }
-
-    /**
      * Creates a live-bounded, named runtime child ledger using the exact
      * currently remaining shared budget.
      */
@@ -363,13 +348,24 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     }
 
     /**
-     * Attaches the completed named runtime ledger to this result.  It is
-     * validated and merged exactly once before any patch, event, or
-     * termination effect.
+     * Submits the completed named runtime ledger to the invocation meter.
+     *
+     * <p>The merge is immediate because admitted gas is run state, not a
+     * rollbackable application effect. It therefore remains in the final
+     * total and ordered trace if this handler or a later effect fails, while
+     * patches, events, and termination remain buffered and atomic. At most
+     * one runtime ledger may be submitted by this handler context.</p>
      */
     public void submitRuntimeGasLedger(GasMeter.ChildGasLedger ledger) {
         ensureOpen();
-        effects.runtimeLedger(Objects.requireNonNull(ledger, "ledger"));
+        GasMeter.ChildGasLedger exactLedger =
+                Objects.requireNonNull(ledger, "ledger");
+        if (runtimeLedgerSubmitted) {
+            throw new IllegalStateException(
+                    "A ContractExecutionResult may contain at most one runtime ledger");
+        }
+        runtimeLedgerSubmitted = true;
+        runtime().mergeRuntimeGasLedger(exactLedger);
     }
 
     public void throwFatal(String reason) {
@@ -382,7 +378,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         close();
         throw new ProcessorFatalException(reason,
                 execution.partialResult(),
-                ProcessorErrorCategory.HandlerExecutionError);
+                ProcessorErrorCategory.RuntimeExecutionFailure);
     }
 
     public String resolvePointer(String pointer) {
@@ -444,15 +440,6 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         effects.terminate(cause, reason);
     }
 
-    /**
-     * @deprecated Contracts 1.0 has no committing fatal termination mode.
-     * Calling this method aborts atomically as a deterministic runtime failure.
-     */
-    @Deprecated
-    public void terminateFatally(String reason) {
-        throwFatal(reason != null ? reason : "Runtime requested fatal termination");
-    }
-
     private void ensureOpen() {
         if (closed) {
             throw new IllegalStateException("Processor execution context is closed");
@@ -467,7 +454,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         } catch (RuntimeException ex) {
             execution.abortRuntimeFailure(scopePath,
                     bundle,
-                    ProcessorErrorCategory.InvalidPatchValue,
+                    ProcessorErrorCategory.InvalidPatch,
                     "Invalid emitted event: " + ex.getMessage());
             return false;
         }

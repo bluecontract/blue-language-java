@@ -535,7 +535,6 @@ public final class ContractsFixtureHarness {
                 new ScriptedContractsRuntime(input.runtimeControls);
         MockExternalChannelProcessor channel =
                 new MockExternalChannelProcessor(
-                        scripted,
                         input.checkpointSubjectOverride);
         MockHandlerProcessor handler =
                 new MockHandlerProcessor(scripted);
@@ -1227,7 +1226,7 @@ public final class ContractsFixtureHarness {
                 ObjectNode channel = installContract(
                         contracts, channelKey,
                         registryId("EmbeddedNodeChannel"));
-                channel.put("childPath", childPaths.get(index));
+                channel.put("sourcePath", childPaths.get(index));
                 installScriptedHandler(
                         contracts,
                         FIXTURE_FORWARD_HANDLER + suffix,
@@ -1562,18 +1561,6 @@ public final class ContractsFixtureHarness {
             ProcessExecution execution) {
         DocumentProcessingResult result = execution.result;
         ProcessingConformanceTrace trace = execution.trace;
-        if (Boolean.getBoolean("blue.contracts.debugHandlers")) {
-            System.err.println(
-                    "fixture result " + result.status() + " "
-                            + NodeToMapListOrValue.get(
-                            result.document()));
-            for (ProcessingTraceRecord record : trace.records()) {
-                System.err.println(
-                        "record " + record.kind()
-                                + " label="
-                                + lifecycleLabel(record.node()));
-            }
-        }
         ContractsConformanceProjection projection =
                 new ContractsConformanceProjection()
                         .put("input.root", input.root)
@@ -1594,6 +1581,16 @@ public final class ContractsFixtureHarness {
                         .put("commit.progressCommitted", result.commits())
                         .put("commit.progressWritten", result.commits())
                         .put("commit.casWorkPortableGas", 0L);
+        Node embeddedPaths = property(
+                property(result.document().getContracts(), "embedded"),
+                "paths");
+        if (embeddedPaths != null) {
+            projection.put(
+                    "result.document.contracts.embedded.paths",
+                    NodeToMapListOrValue.get(
+                            embeddedPaths,
+                            NodeToMapListOrValue.Strategy.SIMPLE));
+        }
         ProcessorDiagnostic diagnostic = result.diagnostic();
         if (diagnostic != null) {
             projection.put("result.diagnostic.category",
@@ -1857,7 +1854,9 @@ public final class ContractsFixtureHarness {
         projection.put("trace.acceptedChannelSnapshot.usedAfterInitialization",
                 acceptedSnapshotFrozen(trace));
         projection.put("trace.protectedState.nonPathsUnchanged",
-                protectedStateUnchanged(input.root, execution.result.document()));
+                processEmbeddedNonPathsUnchanged(
+                        input.root,
+                        execution.result.document()));
         projection.put("trace.terminationEvents",
                 terminationEventCount(trace));
     }
@@ -1879,9 +1878,11 @@ public final class ContractsFixtureHarness {
         List<String> deliveryOrder = new ArrayList<>();
         List<String> occurrenceOrder = new ArrayList<>();
         Set<String> drainOwners = new LinkedHashSet<>();
+        String currentOccurrenceLabel = null;
         for (ProcessingTraceRecord record : trace.records()) {
             if (record.kind() == ProcessingTraceRecord.Kind.EVENT_DEQUEUED) {
-                occurrenceOrder.add(traceEventLabel(record));
+                currentOccurrenceLabel = traceEventLabel(record);
+                occurrenceOrder.add(currentOccurrenceLabel);
                 String owner = record.detail("drainOwner");
                 if (owner != null) {
                     drainOwners.add(owner);
@@ -1890,6 +1891,18 @@ public final class ContractsFixtureHarness {
                     == ProcessingTraceRecord.Kind.EVENT_DELIVERED) {
                 String mode = record.detail("mode");
                 String label = traceEventLabel(record);
+                /*
+                 * An Embedded delivery record deliberately retains the exact
+                 * EmbeddedEventDelivery wrapper passed to the ancestor
+                 * handler. The human-readable delivery-order projection,
+                 * however, names the underlying FIFO occurrence. Carry the
+                 * label established by the immediately preceding dequeue
+                 * rather than treating the wrapper's event reference as an
+                 * unlabeled new event.
+                 */
+                if (label == null) {
+                    label = currentOccurrenceLabel;
+                }
                 deliveryOrder.add(record.scopePath() + ":"
                         + (mode != null ? mode : "event") + ":" + label);
             }
@@ -2436,31 +2449,30 @@ public final class ContractsFixtureHarness {
         return count;
     }
 
-    private static boolean protectedStateUnchanged(Node before, Node after) {
+    private static boolean processEmbeddedNonPathsUnchanged(
+            Node before,
+            Node after) {
         return semanticEquals(
-                protectedState(before),
-                protectedState(after));
+                processEmbeddedWithoutPaths(before),
+                processEmbeddedWithoutPaths(after));
     }
 
-    private static Map<String, Object> protectedState(Node root) {
-        Map<String, Object> value = new LinkedHashMap<>();
+    private static Map<String, Object> processEmbeddedWithoutPaths(
+            Node root) {
         Node contracts = root != null ? root.getContracts() : null;
-        value.put("initialized", normalizeNode(property(contracts, "initialized")));
-        value.put("terminated", normalizeNode(property(contracts, "terminated")));
-        value.put("checkpoint", normalizeNode(property(contracts, "checkpoint")));
         Node embedded = property(contracts, "embedded");
-        Map<String, Object> embeddedWithoutPaths = null;
-        if (embedded != null) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> raw =
-                    (Map<String, Object>) ContractsConformanceProjection.normalize(embedded);
-            embeddedWithoutPaths = new LinkedHashMap<>(raw);
-            embeddedWithoutPaths.remove("paths");
+        if (embedded == null) {
+            return null;
         }
-        value.put("embeddedNonPaths", embeddedWithoutPaths);
-        value.put("generalizationPolicy",
-                normalizeNode(property(contracts, "typeGeneralizationPolicy")));
-        return value;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> raw =
+                (Map<String, Object>)
+                        ContractsConformanceProjection.normalize(
+                                embedded);
+        Map<String, Object> withoutPaths =
+                new LinkedHashMap<>(raw);
+        withoutPaths.remove("paths");
+        return withoutPaths;
     }
 
     private static Object normalizeNode(Node node) {

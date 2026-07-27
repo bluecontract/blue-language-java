@@ -80,7 +80,7 @@ final class ScopeExecutor {
         } catch (IllegalStateException ex) {
             execution.abortRuntimeFailure(normalizedScope,
                     null,
-                    ProcessorErrorCategory.InvalidReservedMarker,
+                    ProcessorErrorCategory.InvalidReservedRuntimeState,
                     execution.fatalReason(ex, "Invalid terminated marker"));
             return;
         }
@@ -110,7 +110,7 @@ final class ScopeExecutor {
             } catch (ProcessorEngine.BoundaryViolationException | IllegalArgumentException ex) {
                 execution.abortRuntimeFailure(normalizedScope,
                         bundle,
-                        ProcessorErrorCategory.BoundaryViolation,
+                        ProcessorErrorCategory.PatchBoundaryViolation,
                         execution.fatalReason(ex, "Invalid embedded path"));
                 return;
             }
@@ -130,7 +130,7 @@ final class ScopeExecutor {
                 if (!isObjectScope(selectedChildNode) || !isObjectScope(childNode)) {
                     execution.abortRuntimeFailure(normalizedScope,
                             bundle,
-                            ProcessorErrorCategory.BoundaryViolation,
+                            ProcessorErrorCategory.PatchBoundaryViolation,
                             "Embedded path " + childScope + " does not select an object scope");
                     return;
                 }
@@ -154,7 +154,7 @@ final class ScopeExecutor {
         runtime.chargeInitialization(normalizedScope);
         String documentId;
         try {
-            documentId = runtime.calculatePreInitializationScopeContentBlueId(
+            documentId = runtime.calculatePreInitializationScopeNodeBlueId(
                     normalizedScope, owner.scopeIdentitySnapshotManager());
         } catch (RuntimeException ex) {
             execution.abortRuntimeFailure(normalizedScope,
@@ -195,7 +195,7 @@ final class ScopeExecutor {
             execution.abortRuntimeFailure(
                     normalizedScope,
                     bundles.get(normalizedScope),
-                    ProcessorErrorCategory.InvalidReservedMarker,
+                    ProcessorErrorCategory.InvalidReservedRuntimeState,
                     execution.fatalReason(ex, "Invalid terminated marker"));
             return;
         }
@@ -284,13 +284,28 @@ final class ScopeExecutor {
 
     void processClassifiedEvidenceDelivery(
             ChannelRunner.ExternalClassification classification) {
-        if (classification == null
-                || !classification.acceptedNew()) {
+        if (classification == null) {
+            return;
+        }
+        processClassifiedEvidenceDeliveryGroup(
+                Collections.singletonList(classification));
+    }
+
+    void processClassifiedEvidenceDeliveryGroup(
+            List<ChannelRunner.ExternalClassification>
+                    classifications) {
+        if (classifications == null
+                || classifications.isEmpty()) {
+            return;
+        }
+        ChannelRunner.ExternalClassification first =
+                classifications.get(0);
+        if (first == null || !first.acceptedNew()) {
             return;
         }
         String normalizedScope =
                 ProcessorEngine.normalizeScope(
-                        classification.scopePath());
+                        first.scopePath());
         if (execution.shouldStopScopeWork(normalizedScope)) {
             return;
         }
@@ -300,21 +315,44 @@ final class ScopeExecutor {
                     "External delivery scope was not preflighted: "
                             + normalizedScope);
         }
-        ContractBundle.ChannelBinding channel =
-                bundle.channelBinding(
-                        classification.channelKey());
-        if (channel == null
-                || ProcessorContractConstants
-                .isProcessorManagedChannel(
-                        channel.contract())) {
-            throw new InvalidExecutionEvidenceException(
-                    "External delivery occurrence changed before execution at "
-                            + normalizedScope + "/"
-                            + classification.channelKey());
+        for (ChannelRunner.ExternalClassification classification
+                : classifications) {
+            if (classification == null
+                    || !classification.acceptedNew()
+                    || !normalizedScope.equals(
+                    ProcessorEngine.normalizeScope(
+                            classification.scopePath()))) {
+                throw new InvalidExecutionEvidenceException(
+                        "Logical delivery group changed before execution at "
+                                + normalizedScope);
+            }
+            ContractBundle.ChannelBinding channel =
+                    bundle.channelBinding(
+                            classification.sourceChannelKey());
+            if (channel == null
+                    || ProcessorContractConstants
+                    .isProcessorManagedChannel(
+                            channel.contract())) {
+                throw new InvalidExecutionEvidenceException(
+                        "External delivery occurrence changed before "
+                                + "execution at "
+                                + normalizedScope + "/"
+                                + classification
+                                .sourceChannelKey());
+            }
         }
-        channelRunner.runClassifiedExternalChannel(
-                classification);
+        ContractBundle checkpointBundle =
+                channelRunner.runClassifiedExternalGroup(
+                        classifications);
         drainInternalEvents();
+        if (checkpointBundle != null
+                && !execution.hasFailure()
+                && execution.isScopeActive(
+                normalizedScope)) {
+            channelRunner.queueClassifiedCheckpoints(
+                    classifications,
+                    checkpointBundle);
+        }
         channelRunner.persistPendingCheckpoints(
                 normalizedScope);
     }
@@ -369,12 +407,8 @@ final class ScopeExecutor {
              */
             throw exception;
         } catch (RuntimeException exception) {
-            ProcessorErrorCategory providerCategory =
-                    ScopeIdentityErrorMapper.from(exception);
-            if (providerCategory
-                    == ProcessorErrorCategory.ProviderUnavailable
-                    || providerCategory
-                    == ProcessorErrorCategory.ProviderBlueIdMismatch) {
+            if (ScopeIdentityErrorMapper.isProviderIdentityFailure(
+                    exception)) {
                 throw exception;
             }
             throw new InvalidExecutionEvidenceException(
@@ -409,7 +443,7 @@ final class ScopeExecutor {
             return bundle;
         }
         runtime.chargeInitialization(normalizedScope);
-        String documentId = runtime.calculatePreInitializationScopeContentBlueId(
+        String documentId = runtime.calculatePreInitializationScopeNodeBlueId(
                 normalizedScope, owner.scopeIdentitySnapshotManager());
         Node lifecycleEvent =
                 ProcessorEngine.createLifecycleInitiatedEvent(documentId);
@@ -483,11 +517,12 @@ final class ScopeExecutor {
                     validatePatchBoundary(scopePath, bundle, patch);
                     enforceReservedKeyWriteProtection(scopePath, patch, allowReservedMutation);
                     preflightDirectContractMutation(scopePath, patch);
+                    runtime.validateMutationPathWithoutResolution(patch);
                     owner.metricsSink().addPatchBoundaryNanos(System.nanoTime() - boundaryStart);
                 } catch (ProcessorEngine.BoundaryViolationException ex) {
                     execution.abortRuntimeFailure(scopePath,
                             bundle,
-                            ProcessorErrorCategory.BoundaryViolation,
+                            ProcessorErrorCategory.PatchBoundaryViolation,
                             execution.fatalReason(ex, "Boundary violation"));
                     return;
                 } catch (ProcessorFailureException ex) {
@@ -522,7 +557,7 @@ final class ScopeExecutor {
                 } catch (ProcessorEngine.BoundaryViolationException ex) {
                     execution.abortRuntimeFailure(scopePath,
                             bundle,
-                            ProcessorErrorCategory.BoundaryViolation,
+                            ProcessorErrorCategory.PatchBoundaryViolation,
                             execution.fatalReason(ex, "Boundary violation"));
                     return;
                 } catch (MustUnderstandFailureException ex) {
@@ -540,7 +575,7 @@ final class ScopeExecutor {
                 } catch (IllegalArgumentException | IllegalStateException ex) {
                     execution.abortRuntimeFailure(scopePath,
                             bundle,
-                            execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
+                            execution.fatalCategory(ex, ProcessorErrorCategory.RuntimeExecutionFailure),
                             execution.fatalReason(ex, "Runtime fatal"));
                     return;
                 }
@@ -556,7 +591,7 @@ final class ScopeExecutor {
         } catch (RuntimeException ex) {
             execution.abortRuntimeFailure(scopePath,
                     bundle,
-                    execution.fatalCategory(ex, ProcessorErrorCategory.InternalProcessorError),
+                    execution.fatalCategory(ex, ProcessorErrorCategory.RuntimeExecutionFailure),
                     execution.fatalReason(ex, "Snapshot publication failed"));
         }
     }
@@ -1108,9 +1143,6 @@ final class ScopeExecutor {
             String absoluteSourcePath,
             EmbeddedNodeChannel channel) {
         String configured = channel.getSourcePath();
-        if (configured == null) {
-            configured = channel.getChildPath();
-        }
         return configured == null
                 || ProcessorEngine.resolvePointer(
                 receivingPath, configured)
@@ -1257,7 +1289,7 @@ final class ScopeExecutor {
                         return;
                     }
                 }
-                throw new ProcessorFailureException(ProcessorErrorCategory.ReservedKeyWrite,
+                throw new ProcessorFailureException(ProcessorErrorCategory.ProtectedProcessorStateMutation,
                         "Reserved key '" + key + "' is write-protected at " + reservedPointer);
             }
         }
@@ -1312,7 +1344,7 @@ final class ScopeExecutor {
             for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
                 String reservedPointer = ProcessorEngine.resolvePointer(scopePath, ProcessorPointerConstants.relativeContractsEntry(key));
                 if (runtime.selectedFrozenAt(reservedPointer) != null) {
-                    throw new ProcessorFailureException(ProcessorErrorCategory.ReservedKeyWrite,
+                    throw new ProcessorFailureException(ProcessorErrorCategory.ProtectedProcessorStateMutation,
                             "Replacing /contracts must preserve reserved key '" + key + "'");
                 }
             }
@@ -1348,7 +1380,7 @@ final class ScopeExecutor {
                 equal = semanticallyEqual(existing, proposed);
             }
             if (!equal) {
-                throw new ProcessorFailureException(ProcessorErrorCategory.ReservedKeyWrite,
+                throw new ProcessorFailureException(ProcessorErrorCategory.ProtectedProcessorStateMutation,
                         "Replacing /contracts must preserve reserved key '" + key + "'");
             }
         }

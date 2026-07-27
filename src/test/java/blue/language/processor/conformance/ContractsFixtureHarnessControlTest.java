@@ -1,6 +1,5 @@
 package blue.language.processor.conformance;
 
-import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -22,23 +21,53 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ContractsFixtureHarnessControlTest {
 
     @Test
-    void publishedUnexecutableControlsArePackageContradictions()
+    void correctedLifecycleFixtureReplacesChildBeforeItsMarkerWrite()
             throws IOException {
-        assertContradiction(
-                "evt/c-evt-03.yaml",
-                "c-evt-03",
-                "runtime.childEmissions",
-                "no non-root occurrence");
-        assertContradiction(
+        ObjectNode fixture = copy("life/c-life-03.yaml");
+        ArrayNode assertions = (ArrayNode) fixture.path("expected")
+                .path("assertions");
+        assertions.removeAll();
+        ObjectNode status = assertions.addObject();
+        status.put("actual", "result.status");
+        status.put("op", "equals");
+        status.put("expected", "success");
+
+        ContractsConformanceProjection projection = execute(fixture);
+
+        assertTrue(
+                projection.project(
+                        "result.document.child.replacement").isPresent(),
+                projection.values()::toString);
+        assertTrue(
+                ContractsAssertionEvaluator.deepEquals(
+                        projection.project(
+                                "result.document.child.replacement")
+                                .getValue(),
+                        true));
+    }
+
+    @Test
+    void correctedAssignedFixturesPassTheirPublishedAssertions()
+            throws IOException {
+        for (String fixture : Arrays.asList(
+                "disc/c-disc-04.yaml",
+                "e2e/c-e2e-02.yaml",
+                "evt/c-evt-01.yaml",
                 "life/c-life-03.yaml",
-                "c-life-03",
-                "runtime.cascadeMutation.replaceScopeDuringLifecycle",
-                "no exact non-root replacement scope");
-        assertContradiction(
-                "upd/c-upd-03.yaml",
-                "c-upd-03",
-                "runtime.cascadeMutation.sourceCutOffDuringUpdate",
-                "only possible Document Update source is Root");
+                "prot/c-prot-02.yaml")) {
+            execute(resource(fixture));
+        }
+    }
+
+    @Test
+    void publishedNestedScopeControlsUseDeclaredEmbeddedScopes()
+            throws IOException {
+        for (String fixture : Arrays.asList(
+                "evt/c-evt-03.yaml",
+                "life/c-life-03.yaml",
+                "upd/c-upd-03.yaml")) {
+            execute(resource(fixture));
+        }
     }
 
     @Test
@@ -57,10 +86,8 @@ class ContractsFixtureHarnessControlTest {
     @Test
     void selectedChildEmissionsRemainNonPublicWithoutRootForward()
             throws IOException {
-        ObjectNode fixture = executableChildEmissionFixture();
-
         ContractsConformanceProjection projection =
-                execute(fixture);
+                execute(resource("evt/c-evt-03.yaml"));
         @SuppressWarnings("unchecked")
         List<Object> events = (List<Object>) projection
                 .project("result.events").getValue();
@@ -253,58 +280,9 @@ class ContractsFixtureHarnessControlTest {
                         .getValue()).size());
     }
 
-    private static void assertContradiction(
-            String resource,
-            String fixtureId,
-            String control,
-            String reason) throws IOException {
-        FixturePackageContradictionException exception =
-                assertThrows(
-                        FixturePackageContradictionException.class,
-                        () -> execute(resource(resource)));
-        assertEquals(fixtureId, exception.fixtureId());
-        assertEquals(control, exception.control());
-        assertTrue(exception.getMessage().contains(reason));
-    }
-
     private static ObjectNode firstAssertion(ObjectNode fixture) {
         return (ObjectNode) fixture.path("expected")
                 .path("assertions").get(0);
-    }
-
-    private static ObjectNode executableChildEmissionFixture()
-            throws IOException {
-        ObjectNode fixture = copy("evt/c-evt-03.yaml");
-        ObjectNode root =
-                (ObjectNode) fixture.path("input").path("root");
-        ObjectNode rootContracts =
-                (ObjectNode) root.path("contracts");
-        ObjectNode childContracts = rootContracts.deepCopy();
-
-        JsonNode scalar = root.remove("value");
-        root.set("rootValue", scalar);
-        ((ObjectNode) rootContracts.path("h")
-                .path("result")).remove("patches");
-        ObjectNode embedded =
-                rootContracts.putObject("embedded");
-        embedded.putObject("type").put(
-                "blueId", RuntimeBlueIds.PROCESS_EMBEDDED);
-        embedded.putArray("paths").add("/child");
-
-        ObjectNode child = root.putObject("child");
-        child.put("counter", 0);
-        ((ObjectNode) childContracts.path("h")
-                .path("result").path("patches").get(0))
-                .put("path", "/child/counter");
-        child.set("contracts", childContracts);
-
-        ArrayNode hints = (ArrayNode) fixture.path("input")
-                .path("feeder").path("deliverySnapshot");
-        ObjectNode childHint =
-                ((ObjectNode) hints.get(0)).deepCopy();
-        childHint.put("scopePath", "/child");
-        hints.insert(0, childHint);
-        return fixture;
     }
 
     private static ObjectNode copy(String path) throws IOException {

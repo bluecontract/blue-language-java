@@ -10,13 +10,6 @@ public class EmbeddedNodeChannel extends ChannelContract {
     private String sourcePath;
     private Node event;
 
-    /**
-     * Preview compatibility alias. Contracts 1.0 calls this field
-     * {@code sourcePath}.
-     */
-    @Deprecated
-    private String childPath;
-
     public String getSourcePath() {
         return sourcePath;
     }
@@ -33,13 +26,4 @@ public class EmbeddedNodeChannel extends ChannelContract {
         this.event = event;
     }
 
-    @Deprecated
-    public String getChildPath() {
-        return childPath;
-    }
-
-    @Deprecated
-    public void setChildPath(String childPath) {
-        this.childPath = childPath;
-    }
 }

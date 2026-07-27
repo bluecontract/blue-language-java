@@ -103,26 +103,8 @@ public class Schema implements Cloneable {
         return required == null ? null : getBooleanFromObject(required.getValue());
     }
 
-    /**
-     * @deprecated Blue Language 1.0 count and length schema keywords use the
-     * interoperable JSON integer range. Use {@link #getMinLengthExact()}.
-     */
-    @Deprecated
-    public Integer getMinLengthValue() {
-        return minLength == null ? null : getIntegerFromObject(minLength.getValue());
-    }
-
     public BigInteger getMinLengthExact() {
         return minLength == null ? null : getBigIntegerFromObject(minLength.getValue());
-    }
-
-    /**
-     * @deprecated Blue Language 1.0 count and length schema keywords use the
-     * interoperable JSON integer range. Use {@link #getMaxLengthExact()}.
-     */
-    @Deprecated
-    public Integer getMaxLengthValue() {
-        return maxLength == null ? null : getIntegerFromObject(maxLength.getValue());
     }
 
     public BigInteger getMaxLengthExact() {
@@ -149,26 +131,8 @@ public class Schema implements Cloneable {
         return multipleOf == null ? null : getBigDecimalFromObject(multipleOf.getValue());
     }
 
-    /**
-     * @deprecated Blue Language 1.0 count and length schema keywords use the
-     * interoperable JSON integer range. Use {@link #getMinItemsExact()}.
-     */
-    @Deprecated
-    public Integer getMinItemsValue() {
-        return minItems == null ? null : getIntegerFromObject(minItems.getValue());
-    }
-
     public BigInteger getMinItemsExact() {
         return minItems == null ? null : getBigIntegerFromObject(minItems.getValue());
-    }
-
-    /**
-     * @deprecated Blue Language 1.0 count and length schema keywords use the
-     * interoperable JSON integer range. Use {@link #getMaxItemsExact()}.
-     */
-    @Deprecated
-    public Integer getMaxItemsValue() {
-        return maxItems == null ? null : getIntegerFromObject(maxItems.getValue());
     }
 
     public BigInteger getMaxItemsExact() {
@@ -192,26 +156,8 @@ public class Schema implements Cloneable {
         return enumValues;
     }
 
-    /**
-     * @deprecated Blue Language 1.0 count and length schema keywords use the
-     * interoperable JSON integer range. Use {@link #getMinFieldsExact()}.
-     */
-    @Deprecated
-    public Integer getMinFieldsValue() {
-        return minFields == null ? null : getIntegerFromObject(minFields.getValue());
-    }
-
     public BigInteger getMinFieldsExact() {
         return minFields == null ? null : getBigIntegerFromObject(minFields.getValue());
-    }
-
-    /**
-     * @deprecated Blue Language 1.0 count and length schema keywords use the
-     * interoperable JSON integer range. Use {@link #getMaxFieldsExact()}.
-     */
-    @Deprecated
-    public Integer getMaxFieldsValue() {
-        return maxFields == null ? null : getIntegerFromObject(maxFields.getValue());
     }
 
     public BigInteger getMaxFieldsExact() {

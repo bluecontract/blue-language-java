@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
@@ -22,10 +24,86 @@ import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExecutableBodyFieldMetadataTest {
+
+    @Test
+    void handlerEventMatcherIsPreservedAsAuthoredPartialData() {
+        Node document = new Node()
+                .contracts(new Node()
+                        .properties(
+                                "h",
+                                new Node()
+                                        .type(new Node().blueId(
+                                                RuntimeBlueIds.HANDLER))
+                                        .properties(
+                                                "event",
+                                                new Node()
+                                                        .properties(
+                                                                "documentId",
+                                                                new Node()
+                                                                        .value(
+                                                                                "expected")))));
+        Map<String, List<String>> handlerMetadata =
+                Collections.singletonMap(
+                        RuntimeBlueIds.HANDLER,
+                        Collections.emptyList());
+
+        Set<String> mutablePaths =
+                DocumentProcessingRuntime.executableBodyPaths(
+                        document,
+                        Collections.singleton("/"),
+                        handlerMetadata);
+        Set<String> frozenPaths =
+                DocumentProcessingRuntime.executableBodyPaths(
+                        FrozenNode.fromUncheckedCanonicalNode(
+                                document),
+                        Collections.singleton("/"),
+                        handlerMetadata);
+
+        assertEquals(
+                Collections.singleton(
+                        "/contracts/h/event"),
+                mutablePaths);
+        assertEquals(mutablePaths, frozenPaths);
+    }
+
+    @Test
+    void typedPartialEventMatcherRemainsExactThroughMatchAndBodyMaterialization() {
+        Fixture fixture =
+                new Fixture(
+                        true,
+                        BodyForm.DIRECT_REFERENCE,
+                        false,
+                        true);
+
+        DocumentProcessingResult result =
+                fixture.initialize();
+
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                result.status(),
+                diagnosticMessage(result));
+        assertExactTypeOnlyInitiatedMatcher(
+                fixture.processor.eventMatcherDuringMatch);
+        assertExactTypeOnlyInitiatedMatcher(
+                fixture.processor.eventMatcherDuringExecution);
+    }
+
+    private void assertExactTypeOnlyInitiatedMatcher(Node matcher) {
+        assertNotNull(matcher);
+        assertNotNull(matcher.getType());
+        assertEquals(
+                RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
+                matcher.getType().getBlueId());
+        assertNull(
+                matcher.getProperties(),
+                "a type-only event pattern must not acquire required event fields");
+    }
 
     @Test
     void registryCapturesExactRuntimeMetadataAndPreservesInheritedProgramPath() {
@@ -83,7 +161,7 @@ class ExecutableBodyFieldMetadataTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
         assertFalse(fixture.processor.executed);
         assertFalse(
                 fixture.providerRequests.contains(
@@ -109,7 +187,7 @@ class ExecutableBodyFieldMetadataTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
         assertFalse(fixture.processor.executed);
         assertFalse(
                 fixture.providerRequests.contains(
@@ -134,7 +212,7 @@ class ExecutableBodyFieldMetadataTest {
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
-                    form + ": " + result.failureReason());
+                    form + ": " + diagnosticMessage(result));
             assertEquals(
                     1,
                     result.document()
@@ -187,7 +265,7 @@ class ExecutableBodyFieldMetadataTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
         assertTrue(fixture.processor.executed);
         assertEquals("ran", result.document().getAsText("/ran"));
         assertTrue(fixture.processor.programWasMaterialized);
@@ -219,7 +297,7 @@ class ExecutableBodyFieldMetadataTest {
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
-                    form + ": " + result.failureReason());
+                    form + ": " + diagnosticMessage(result));
             assertFalse(
                     fixture.processor
                             .programWasVisibleDuringMatch,
@@ -324,7 +402,7 @@ class ExecutableBodyFieldMetadataTest {
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
-                result.failureReason());
+                diagnosticMessage(result));
         assertFalse(
                 processor.programWasVisibleDuringMatch);
         assertEquals(
@@ -408,6 +486,7 @@ class ExecutableBodyFieldMetadataTest {
         private final ProgramHandlerProcessor processor;
         private final BodyForm bodyForm;
         private final boolean patchBeforeProgramMatch;
+        private final boolean typedPartialEventMatcher;
 
         private Fixture(boolean matches) {
             this(matches,
@@ -423,6 +502,16 @@ class ExecutableBodyFieldMetadataTest {
         private Fixture(boolean matches,
                         BodyForm bodyForm,
                         boolean patchBeforeProgramMatch) {
+            this(matches,
+                    bodyForm,
+                    patchBeforeProgramMatch,
+                    false);
+        }
+
+        private Fixture(boolean matches,
+                        BodyForm bodyForm,
+                        boolean patchBeforeProgramMatch,
+                        boolean typedPartialEventMatcher) {
             this.processor =
                     new ProgramHandlerProcessor(
                             matches,
@@ -431,6 +520,8 @@ class ExecutableBodyFieldMetadataTest {
             this.bodyForm = bodyForm;
             this.patchBeforeProgramMatch =
                     patchBeforeProgramMatch;
+            this.typedPartialEventMatcher =
+                    typedPartialEventMatcher;
             Node inheritedProgram =
                     bodyForm
                             == BodyForm
@@ -522,6 +613,14 @@ class ExecutableBodyFieldMetadataTest {
                             "body",
                             new Node().blueId(
                                     ordinaryBodyBlueId));
+            if (typedPartialEventMatcher) {
+                handler.properties(
+                        "event",
+                        new Node().type(
+                                new Node().blueId(
+                                        RuntimeBlueIds
+                                                .DOCUMENT_PROCESSING_INITIATED)));
+            }
             if (bodyForm == BodyForm.DIRECT_INLINE) {
                 handler.properties(
                         "program", program.clone());
@@ -777,6 +876,8 @@ class ExecutableBodyFieldMetadataTest {
         private boolean programWasMaterialized;
         private boolean programPatchEntryStayedExact;
         private boolean ordinaryBodyWasMaterialized;
+        private Node eventMatcherDuringMatch;
+        private Node eventMatcherDuringExecution;
         private int matchAttempts;
         private boolean programWasRequestedBeforeMatch;
         private final BooleanSupplier
@@ -819,6 +920,10 @@ class ExecutableBodyFieldMetadataTest {
                             .getAsBoolean();
             programWasVisibleDuringMatch =
                     contract.getProgram() != null;
+            eventMatcherDuringMatch =
+                    contract.getEvent() != null
+                            ? contract.getEvent().clone()
+                            : null;
             return matches;
         }
 
@@ -849,6 +954,10 @@ class ExecutableBodyFieldMetadataTest {
                     contract.getBody() != null
                             && !contract.getBody()
                             .isReferenceOnly();
+            eventMatcherDuringExecution =
+                    contract.getEvent() != null
+                            ? contract.getEvent().clone()
+                            : null;
             Node value =
                     contract.getProgram()
                             .getProperties()
