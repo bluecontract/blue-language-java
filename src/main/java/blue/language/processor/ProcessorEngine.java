@@ -1017,16 +1017,49 @@ final class ProcessorEngine {
         FrozenNode classificationSelectedAt(String scopePath) {
             String normalized = normalizeScope(scopePath);
             if (inputSnapshot != null) {
-                return inputSnapshot.canonicalAt(normalized);
+                return classificationSelectedAt(
+                        inputSnapshot, normalized);
             }
             ensureClassificationView();
             if (classificationSnapshot != null) {
-                return classificationSnapshot.canonicalAt(normalized);
+                return classificationSelectedAt(
+                        classificationSnapshot, normalized);
             }
             Node selected = nodeAt(classificationDocument, normalized);
             return selected != null
                     ? FrozenNode.fromResolvedNode(selected)
                     : null;
+        }
+
+        private FrozenNode classificationSelectedAt(
+                ResolvedSnapshot snapshot,
+                String normalizedScope) {
+            FrozenNode selected =
+                    snapshot.canonicalAt(normalizedScope);
+            if (selected != null && selected.isReferenceOnly()) {
+                ProcessingSnapshotManager manager =
+                        owner.snapshotManager();
+                return manager != null
+                        ? manager.materializeVerifiedExactReference(
+                        selected)
+                        : selected;
+            }
+            if (selected != null) {
+                return selected;
+            }
+            FrozenNode root = snapshot.frozenCanonicalRoot();
+            if (!root.isReferenceOnly()) {
+                return null;
+            }
+            ProcessingSnapshotManager manager =
+                    owner.snapshotManager();
+            if (manager == null) {
+                return null;
+            }
+            FrozenNode materializedRoot =
+                    manager.materializeVerifiedExactReference(root);
+            return materializedRoot.pathIndex()
+                    .get(normalizedScope);
         }
 
         FrozenNode classificationResolvedAt(String scopePath) {
@@ -1052,13 +1085,32 @@ final class ProcessorEngine {
             Node projected = inputDocument.clone();
             Map<String, Set<String>> selectedKeys =
                     new LinkedHashMap<>();
+            Map<String, Map<String, String>> selectedTypes =
+                    new LinkedHashMap<>();
             if (executionEvidence != null) {
                 for (ExternalDeliverySnapshot delivery
                         : executionEvidence.deliveries()) {
-                    selectedKeys.computeIfAbsent(
-                            normalizeScope(delivery.scopePath()),
-                            ignored -> new LinkedHashSet<>())
-                            .add(delivery.channelKey());
+                    String scopePath =
+                            normalizeScope(delivery.scopePath());
+                    Set<String> retained =
+                            selectedKeys.computeIfAbsent(
+                            scopePath,
+                            ignored -> new LinkedHashSet<>());
+                    retained.add(delivery.channelKey());
+                    Map<String, String> types =
+                            selectedTypes.computeIfAbsent(
+                                    scopePath,
+                                    ignored -> new LinkedHashMap<>());
+                    recordClassificationType(
+                            types,
+                            delivery.channelKey(),
+                            delivery.effectiveTypeBlueId());
+                    addClassificationDependencyKeys(
+                            retained,
+                            types,
+                            activeSubscriptionInterval(
+                                    delivery.scopePath(),
+                                    delivery.channelKey()));
                 }
             }
             pruneClassificationContracts(
@@ -1066,11 +1118,132 @@ final class ProcessorEngine {
             ProcessingSnapshotManager manager =
                     owner.snapshotManager();
             if (manager != null) {
+                Set<String> preservedBodies =
+                        classificationExecutableBodyPaths(
+                                selectedTypes);
                 classificationSnapshot =
-                        manager.fromDocumentTransient(projected);
+                        preservedBodies.isEmpty()
+                                ? manager.fromDocumentTransient(
+                                projected)
+                                : manager
+                                .fromDocumentTransientPreservingPaths(
+                                        projected,
+                                        preservedBodies);
             } else {
                 classificationDocument = projected;
             }
+        }
+
+        private void addClassificationDependencyKeys(
+                Set<String> retained,
+                Map<String, String> retainedTypes,
+                SubscriptionDelta.Entry interval) {
+            if (interval == null) {
+                return;
+            }
+            ExternalChannelDependencySnapshot dependencies =
+                    interval.dependencies();
+            for (ExternalChannelDependencySnapshot.Entry dependency
+                    : dependencies.entries()) {
+                retained.add(dependency.channelKey());
+                recordClassificationType(
+                        retainedTypes,
+                        dependency.channelKey(),
+                        dependency.effectiveTypeBlueId());
+            }
+            for (ExternalChannelDependencySnapshot.TypeFamily family
+                    : dependencies.typeFamilies()) {
+                for (ExternalChannelDependencySnapshot.Member member
+                        : family.members()) {
+                    retained.add(member.channelKey());
+                    recordClassificationType(
+                            retainedTypes,
+                            member.channelKey(),
+                            family.effectiveTypeBlueId());
+                }
+            }
+            for (ExternalChannelDependencySnapshot.ChannelEntry channel
+                    : dependencies.channelEntries()) {
+                retained.add(channel.channelKey());
+                recordClassificationType(
+                        retainedTypes,
+                        channel.channelKey(),
+                        channel.effectiveTypeBlueId());
+            }
+        }
+
+        private void recordClassificationType(
+                Map<String, String> retainedTypes,
+                String contractKey,
+                String effectiveTypeBlueId) {
+            String prior = retainedTypes.put(
+                    contractKey,
+                    effectiveTypeBlueId);
+            if (prior != null
+                    && !prior.equals(effectiveTypeBlueId)) {
+                throw new InvalidExecutionEvidenceException(
+                        "Conflicting retained Phase-B effective types for "
+                                + contractKey);
+            }
+        }
+
+        private Set<String> classificationExecutableBodyPaths(
+                Map<String, Map<String, String>> retainedTypes) {
+            Map<String, List<String>> fieldsByType =
+                    owner.registry()
+                            .executableBodyFieldsByType();
+            if (fieldsByType.isEmpty()) {
+                return Collections.emptySet();
+            }
+            Set<String> preserved = new LinkedHashSet<>();
+            for (Map.Entry<String, Map<String, String>> scope
+                    : retainedTypes.entrySet()) {
+                for (Map.Entry<String, String> contract
+                        : scope.getValue().entrySet()) {
+                    List<String> fields =
+                            fieldsByType.get(contract.getValue());
+                    if (fields == null || fields.isEmpty()) {
+                        continue;
+                    }
+                    String contractPath = resolvePointer(
+                            scope.getKey(),
+                            ProcessorPointerConstants.RELATIVE_CONTRACTS
+                                    + "/"
+                                    + JsonPointer.escape(
+                                    contract.getKey()));
+                    for (String field : fields) {
+                        preserved.add(
+                                contractPath + "/"
+                                        + JsonPointer.escape(
+                                        field));
+                    }
+                }
+            }
+            return preserved;
+        }
+
+        SubscriptionDelta.Entry activeSubscriptionInterval(
+                String scopePath,
+                String channelKey) {
+            if (executionEvidence == null
+                    || !executionEvidence
+                    .hasActiveSubscriptionIntervals()) {
+                return null;
+            }
+            String normalized = normalizeScope(scopePath);
+            for (SubscriptionDelta.Entry interval
+                    : executionEvidence
+                    .activeSubscriptionIntervals()) {
+                if (interval.isActiveInterval()
+                        && normalized.equals(
+                        normalizeScope(
+                                interval.scopePath()))
+                        && channelKey.equals(
+                        interval.channelKey())) {
+                    return interval;
+                }
+            }
+            return null;
         }
 
         private void pruneClassificationContracts(
@@ -1209,12 +1382,21 @@ final class ProcessorEngine {
                             normalizeScope(
                                     delivery.scopePath());
                     openedScopes.add(normalizedTarget);
+                    SubscriptionDelta.Entry activeInterval =
+                            activeSubscriptionInterval(
+                                    delivery.scopePath(),
+                                    delivery.channelKey());
                     ContractBundle classificationBundle =
                             scopeExecutor
                                     .externalClassificationBundle(
                                             delivery.scopePath(),
                                             delivery.channelKey(),
-                                            false);
+                                            false,
+                                            activeInterval != null
+                                                    ? activeInterval
+                                                    .dependencies()
+                                                    : ExternalChannelDependencySnapshot
+                                                    .none());
                     validateDeliveryBinding(
                             delivery,
                             classificationBundle,
@@ -1442,6 +1624,10 @@ final class ProcessorEngine {
                             || !handlerChannelKey.equals(
                             classification
                                     .handlerChannelKey())
+                            || !sameChannelMember(
+                            first.handlerChannel(),
+                            classification
+                                    .handlerChannel())
                             || !Objects.equals(
                             payloadBlueId,
                             classification.payloadBlueId())) {
@@ -1454,16 +1640,74 @@ final class ProcessorEngine {
                 }
                 ContractBundle bundle =
                         bundles.get(scopePath);
+                EffectiveContractSnapshot target =
+                        bundle != null
+                                ? bundle
+                                .effectiveContractSnapshot(
+                                        handlerChannelKey)
+                                : null;
+                ChannelMemberSnapshot finalTarget =
+                        target != null
+                                ? ChannelMemberSnapshot.from(target)
+                                : null;
                 if (bundle == null
                         || bundle.channelBinding(
-                        handlerChannelKey) == null) {
+                        handlerChannelKey) == null
+                        || target == null
+                        || first.handlerChannel() != null
+                        && !sameChannelMember(
+                        first.handlerChannel(),
+                        finalTarget)) {
                     throw new IllegalStateException(
                             "External Channel handler target is not an "
-                                    + "existing same-scope Channel at "
+                                    + "unchanged existing same-scope Channel "
+                                    + "at "
                                     + scopePath + "/"
-                                    + handlerChannelKey);
+                                    + handlerChannelKey
+                                    + " (classified="
+                                    + channelMemberDiagnostic(
+                                    first.handlerChannel())
+                                    + ", preflight="
+                                    + channelMemberDiagnostic(
+                                    finalTarget)
+                                    + ")");
                 }
             }
+        }
+
+        private String channelMemberDiagnostic(
+                ChannelMemberSnapshot snapshot) {
+            if (snapshot == null) {
+                return "absent";
+            }
+            return snapshot.role()
+                    + ":" + snapshot.effectiveTypeBlueId()
+                    + ":" + snapshot.order()
+                    + ":" + snapshot
+                    .sourceContributionNodeBlueIds()
+                    + ":" + snapshot
+                    .deterministicDependencyNodeBlueIds()
+                    + ":" + snapshot.headerIdentityBlueId();
+        }
+
+        private boolean sameChannelMember(
+                ChannelMemberSnapshot left,
+                ChannelMemberSnapshot right) {
+            return left == right
+                    || left != null
+                    && right != null
+                    && left.channelKey().equals(
+                    right.channelKey())
+                    && left.order() == right.order()
+                    && left.effectiveTypeBlueId().equals(
+                    right.effectiveTypeBlueId())
+                    && left.role().equals(right.role())
+                    && left.sourceContributionNodeBlueIds().equals(
+                    right.sourceContributionNodeBlueIds())
+                    && left.deterministicDependencyNodeBlueIds().equals(
+                    right.deterministicDependencyNodeBlueIds())
+                    && left.headerIdentityBlueId().equals(
+                    right.headerIdentityBlueId());
         }
 
         private void validateDeliveryBinding(

@@ -265,6 +265,17 @@ def fragmentedProcessingTestResults = layout.buildDirectory.dir(
         'test-results/fragmentedProcessingTest')
 def fragmentedProcessingJson = layout.buildDirectory.file(
         'reports/fragmented-processing/fragmented-processing.json')
+def fragmentedProcessingJar = tasks.named('jar', Jar).flatMap {
+    it.archiveFile
+}
+def fragmentedProcessingSourceRelease = layout.buildDirectory.file(
+        "release/blue-language-java-${project.version}-source-release.zip")
+def fragmentedProcessingSourceCommit = providers.exec {
+    workingDir rootDir
+    commandLine 'git', 'rev-parse', '--verify', 'HEAD^{commit}'
+}.standardOutput.asText.map {
+    it.trim()
+}
 tasks.register('fragmentedProcessingTest', Test) {
     configureFocusedTest(delegate)
     description = 'Runs provider-fragment admission, physical-locality, and logical-delivery coverage.'
@@ -287,6 +298,15 @@ tasks.register('fragmentedProcessingTest', Test) {
         includeTestsMatching 'blue.language.processor.*Routing*'
         includeTestsMatching 'blue.language.processor.ExternalChannelPatternMatchingTest'
         includeTestsMatching 'blue.language.processor.ExternalChannelDependencyContextTest'
+        includeTestsMatching 'blue.language.processor.ExternalChannelCatalogContextTest'
+        includeTestsMatching 'blue.language.processor.EffectiveFragmentationCatalogTest'
+        includeTestsMatching 'blue.language.processor.ImmutablePatchPlannerTest'
+        includeTestsMatching 'blue.language.processor.DocumentProcessingRuntimeBatchPatchTest'
+        includeTestsMatching 'blue.language.processor.PreparedPatchSequenceTest'
+        includeTestsMatching 'blue.language.processor.ProcessorPhasePrecedenceTest'
+        includeTestsMatching 'blue.language.processor.CyclicProcessingBoundaryTest'
+        includeTestsMatching 'blue.language.CyclicProviderFallbackTest'
+        includeTestsMatching 'blue.language.RecursiveTypeResolutionTest'
     }
 }
 
@@ -295,8 +315,13 @@ tasks.register('fragmentedProcessingReport') {
     description = 'Emits deterministic fragmented-processing verification evidence.'
     dependsOn tasks.named('fragmentedProcessingTest')
     dependsOn tasks.named('releaseConformanceTest')
+    dependsOn tasks.named('jar')
+    dependsOn 'sourceReleaseArchive'
     inputs.dir(fragmentedProcessingTestResults)
     inputs.file(releaseConformanceJson)
+    inputs.file(fragmentedProcessingJar)
+    inputs.file(fragmentedProcessingSourceRelease)
+    inputs.property('sourceCommit', fragmentedProcessingSourceCommit)
     outputs.file(fragmentedProcessingJson)
 
     doLast {
@@ -400,9 +425,37 @@ tasks.register('fragmentedProcessingReport') {
         boolean releaseConformant = releaseReport.summary.conformant == true
         boolean conformant = focusedConformant && releaseConformant
 
+        def sourceCommit = fragmentedProcessingSourceCommit.get()
+        if (!(sourceCommit ==~ /(?:[0-9a-f]{40}|[0-9a-f]{64})/)) {
+            throw new GradleException(
+                    "Git returned an invalid source commit identity: '${sourceCommit}'")
+        }
+        def sha256Identity = { artifact ->
+            if (!artifact.isFile()) {
+                throw new GradleException(
+                        "Required report artifact does not exist: ${artifact}")
+            }
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            artifact.withInputStream { input ->
+                byte[] buffer = new byte[8192]
+                int read
+                while ((read = input.read(buffer)) != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            'sha256:' + digest.digest().collect {
+                String.format('%02x', ((byte) it) & 0xff)
+            }.join()
+        }
+        def jarArtifact = fragmentedProcessingJar.get().asFile
+        def sourceReleaseArtifact = fragmentedProcessingSourceRelease.get().asFile
+
         def report = [
-                schema              : 'blue-language-java-fragmented-processing-report/1.0',
-                version             : '1.0',
+                schema              : 'blue-language-java-fragmented-processing-report/1.1',
+                version             : '1.1',
+                source              : [
+                        commit: sourceCommit
+                ],
                 release             : [
                         name           : releaseReport.release.name,
                         packageIdentity: releaseReport.release.packageIdentity
@@ -413,6 +466,16 @@ tasks.register('fragmentedProcessingReport') {
                         contractsRegistry: releaseReport.packages.contractsRegistry,
                         contractsGas     : releaseReport.packages.contractsGas,
                         contractsFixtures: releaseReport.packages.contractsFixtures
+                ],
+                artifacts           : [
+                        jar          : [
+                                name    : jarArtifact.name,
+                                identity: sha256Identity(jarArtifact)
+                        ],
+                        sourceRelease: [
+                                name    : sourceReleaseArtifact.name,
+                                identity: sha256Identity(sourceReleaseArtifact)
+                        ]
                 ],
                 summary             : [
                         suiteCount: focusedSuites.size() + releaseSuiteNames.size(),

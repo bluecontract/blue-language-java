@@ -116,6 +116,23 @@ class ImmutablePatchPlannerTest {
     }
 
     @Test
+    void processEmbeddedCannotTreatCyclicMemberEndpointAsScope() {
+        ImmutablePatchPlanner planner =
+                new ImmutablePatchPlanner(cyclicMemberRoot());
+
+        ProcessorFailureException failure = assertThrows(
+                ProcessorFailureException.class,
+                () -> planner.validateProcessEmbeddedTraversalPath(
+                        "/cyclic"));
+
+        assertEquals(
+                ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                failure.errorCategory());
+        assertTrue(failure.getMessage().contains(
+                "Process Embedded traversal into cyclic-set member"));
+    }
+
+    @Test
     void introducingPureCyclicSetMemberReferenceBlocksOnlyLaterDescendantMutation() {
         FrozenNode initial = FrozenNode.fromNode(new Node());
         ImmutablePatchPlanner.PatchPlan introduced =

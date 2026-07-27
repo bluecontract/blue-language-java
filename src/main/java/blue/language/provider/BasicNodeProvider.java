@@ -89,12 +89,31 @@ public class BasicNodeProvider extends PreloadedNodeProvider implements CyclicAw
 
     @Override
     public boolean hasVerifiedContentForBlueId(String blueId) {
-        String baseBlueId = blueId;
         int memberSeparator = blueId.indexOf('#');
-        if (memberSeparator >= 0) {
-            baseBlueId = blueId.substring(0, memberSeparator);
+        if (memberSeparator < 0) {
+            return blueIdToContentMap.containsKey(blueId);
         }
-        return blueIdToContentMap.containsKey(baseBlueId);
+        String baseBlueId =
+                blueId.substring(0, memberSeparator);
+        JsonNode content =
+                blueIdToContentMap.get(baseBlueId);
+        if (!Boolean.TRUE.equals(
+                blueIdToMultipleDocumentsMap.get(
+                        baseBlueId))
+                || content == null
+                || !content.isArray()) {
+            return false;
+        }
+        final int memberIndex;
+        try {
+            memberIndex = Integer.parseInt(
+                    blueId.substring(
+                            memberSeparator + 1));
+        } catch (NumberFormatException invalidIndex) {
+            return false;
+        }
+        return memberIndex >= 0
+                && memberIndex < content.size();
     }
 
     public void addSingleNodes(Node... nodes) {

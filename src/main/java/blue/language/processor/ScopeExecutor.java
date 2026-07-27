@@ -124,6 +124,19 @@ final class ScopeExecutor {
                     normalizedScope,
                     childScope);
             runtime.setScopeEmbeddedDepth(childScope, runtime.scopeEmbeddedDepth(normalizedScope) + 1);
+            try {
+                runtime.validateProcessEmbeddedTraversalWithoutResolution(
+                        childScope);
+            } catch (ProcessorFailureException ex) {
+                execution.abortRuntimeFailure(
+                        normalizedScope,
+                        bundle,
+                        ex.errorCategory(),
+                        execution.fatalReason(
+                                ex,
+                                "Invalid opaque embedded boundary"));
+                return;
+            }
             FrozenNode selectedChildNode = runtime.selectedFrozenAt(childScope);
             FrozenNode childNode = runtime.resolvedFrozenAt(childScope);
             if (childNode != null) {
@@ -228,26 +241,45 @@ final class ScopeExecutor {
             String scopePath,
             String channelKey,
             boolean includeProcessEmbedded) {
+        return externalClassificationBundle(
+                scopePath,
+                channelKey,
+                includeProcessEmbedded,
+                ExternalChannelDependencySnapshot.none());
+    }
+
+    ContractBundle externalClassificationBundle(
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ExternalChannelDependencySnapshot
+                    declaredDependencies) {
         String normalizedScope =
                 ProcessorEngine.normalizeScope(scopePath);
+        runtime.validateProcessEmbeddedTraversalWithoutResolution(
+                normalizedScope);
         FrozenNode selected =
                 execution.classificationSelectedAt(normalizedScope);
         FrozenNode resolved =
                 execution.classificationResolvedAt(normalizedScope);
+        FrozenNode recognitionScope =
+                runtime.contractRecognitionScope(
+                        selected, resolved);
         if (!isValidParticipatingScope(
                 normalizedScope, selected)
                 || !isValidParticipatingScope(
-                normalizedScope, resolved)) {
+                normalizedScope, recognitionScope)) {
             throw new InvalidExecutionEvidenceException(
                     "External delivery scope is absent or not an object: "
                             + normalizedScope);
         }
         return owner.contractLoader().loadExternalClassification(
                 selected,
-                resolved,
+                recognitionScope,
                 normalizedScope,
                 channelKey,
                 includeProcessEmbedded,
+                declaredDependencies,
                 owner.metricsSink(),
                 execution.contractRecognitionMeter(),
                 includeProcessEmbedded
@@ -370,6 +402,8 @@ final class ScopeExecutor {
             String scopePath,
             boolean preflightSelectedHeaders) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        runtime.validateProcessEmbeddedTraversalWithoutResolution(
+                normalizedScope);
         FrozenNode selected = runtime.selectedFrozenAt(normalizedScope);
         try {
             /*

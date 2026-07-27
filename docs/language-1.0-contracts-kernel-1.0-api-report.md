@@ -6,10 +6,12 @@ the final Language 1.0 / Contracts Kernel 1.0 candidate working tree.
 
 The inventory is based on compiled production class files, not on source names
 alone. It covers every externally reachable public or protected class, field,
-constructor, and method descriptor. The comparison contains 79 intentionally
-incompatible changes and 30 additions. The tables below account for all 79
-changes; when an entire type was removed, they also list every public member of
-that type even though the class-file comparison reports the type as one change.
+constructor, and method descriptor. The final comparison contains 79
+intentional pre-1.0 incompatibilities and 44 additions: 30 from the original
+Language/Contracts cleanup and 14 from the subsequent Phase-B/fragmentation
+completion. The tables below account for all 79 changes; when an entire type
+was removed, they also list every public member of that type even though the
+class-file comparison reports the type as one change.
 
 This is an API-shape report. It does not report test or conformance outcomes.
 
@@ -32,6 +34,9 @@ first final baseline:
 - composite External Channel functions receive immutable same-scope member and
   filtered effective-type-family context whose dependencies rotate subscription
   intervals and checkpoint domains;
+- event-selected peer routes use a separate immutable read-only Channel header,
+  declared exactly or through a bounded whole same-scope catalog and
+  rehydrated from the retained interval in Phase B;
 - event-evaluation functions can match inline or referenced candidates through
   a pass-local frozen matcher whose only non-core lookup is the captured
   verified processing-snapshot boundary;
@@ -39,6 +44,11 @@ first final baseline:
   subject, including inline subjects smaller than the processing event;
 - exact pure-reference Root and Event inputs are admitted through the verified
   processing snapshot boundary without recursive whole-graph expansion;
+- finalized cyclic-member references remain opaque exact edges during generic
+  fragmentation and require cyclic-set proof when opened;
+- application splitters can inspect effective/inherited `Process Embedded`,
+  header, contribution, and executable-body boundaries without execution or
+  body materialization;
 - accepted-new source occurrences can select and coalesce one same-scope
   logical handler delivery while retaining their own atomic checkpoints;
 - fatal runtime failure is atomic and noncommitting, while graceful
@@ -69,6 +79,16 @@ their original raw source keys. This supplies the generic Coordination
 prerequisite without reintroducing caller-authored `ChannelDelivery` state.
 Application-specific parsing of `request.channel`, authorization, registry
 policy, and source persistence remain outside this repository.
+
+That routing boundary is now closed across Phase B. A fixed peer target is
+declared with `dependOnSameScopeChannel(key)`; an event-selected target uses
+`dependOnSameScopeChannelCatalog()` followed by event-only `channel(key)`.
+`ChannelMemberSnapshot` proves the effective Channel role and sanitized header
+without granting External-source or checkpoint behavior. The active interval
+retains exact Channel entries and whole-catalog raw-key membership so Phase B
+can rehydrate only declared headers, distinguish absence from a present
+non-Channel key, and keep unrelated bodies cold. The selected target snapshot
+is compared again with the full Phase-C bundle before mutation.
 
 The generic named child-ledger surface is also not a claim that every
 downstream runtime can already populate it. BEX 1.1 lacks the required named
@@ -249,7 +269,7 @@ Provider/snapshot subtotal: **13 JVM changes**.
 
 ## Intentional additions
 
-The same class-file comparison identifies 30 additions:
+The pre-Phase-B class-file comparison identifies 30 additions:
 
 | JVM additions | Added API | Purpose |
 | ---: | --- | --- |
@@ -270,6 +290,28 @@ The same class-file comparison identifies 30 additions:
 
 The package-private `OverlayReconstruction` implementation is not a JVM API
 addition.
+
+### Additive Phase-B and fragmentation surface
+
+The subsequent Phase-B/cyclic-fragment completion is additive to the checked
+Language/Contracts API. The class-file checker reports zero incompatibilities
+and 14 additions relative to the prior checked baseline:
+
+| Added API | Purpose |
+| --- | --- |
+| `ChannelMemberSnapshot` | Frozen, read-only same-scope External or processor-managed Channel header. It carries key, order, effective type, role, ordered contributions, deterministic header dependencies, header identity, and a defensive sanitized header node—never source evaluation, checkpoint, handler execution, or executable-body authority. |
+| `ExternalChannelFunctionContext.dependOnSameScopeChannel(String)` | Declares one required fixed Channel target during subscription-header evaluation and returns its immutable header. |
+| `ExternalChannelFunctionContext.dependOnSameScopeChannelCatalog()` | Declares the bounded complete same-scope Channel-header selector when an event may name any target key. |
+| `ExternalChannelFunctionContext.channel(String)` | Performs one event-only exact raw-key lookup covered by an exact or whole-catalog declaration. Empty means proven semantic absence; a present non-Channel or incomplete evidence fails distinctly. |
+| `ExternalChannelDependencySnapshot.ChannelEntry`, `channelEntries()`, `wholeSameScopeChannelCatalog()`, and `channelCatalogContractKeys()` | Retain exact target headers plus complete raw-key membership for checkpoint-domain derivation, interval invalidation, sparse evidence verification, and Phase-B rehydration. |
+| Dependency-snapshot constructors carrying Channel entries/catalog membership | Provide a public canonical round trip for retained evidence. |
+| `DocumentProcessor.effectiveFragmentationCatalog(Node)` and `EffectiveFragmentationCatalog` | Expose immutable provider-verified effective fragmentation boundaries without executing contracts or consuming Contracts gas. |
+| `EffectiveContractSnapshot.headerFields()`, `executableBodyFields()`, and `executableBodyNodeBlueIdsByField()` | Expose sanitized effective header fields and registered named body boundaries without assigning a BlueId to a merged contract or fetching body content. |
+
+`ExactNodeGraphFragments` requires no new public descriptor for cyclic support;
+its existing constructors now preserve finalized `MASTER#index` references as
+opaque external edges while its local provider continues to return
+`NOT_FOUND` for the member identity.
 
 ## Non-public deprecated shims removed by the source gate
 

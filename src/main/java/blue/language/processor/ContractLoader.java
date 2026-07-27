@@ -165,10 +165,37 @@ final class ContractLoader {
             ProcessingMetricsSink metricsSink,
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason) {
+        return loadExternalClassification(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                channelKey,
+                includeProcessEmbedded,
+                ExternalChannelDependencySnapshot.none(),
+                metricsSink,
+                recognitionMeter,
+                recognitionReason);
+    }
+
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ExternalChannelDependencySnapshot declaredDependencies,
+            ProcessingMetricsSink metricsSink,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason) {
         Set<String> retainedKeys = new LinkedHashSet<>();
         if (channelKey != null) {
             retainedKeys.add(channelKey);
         }
+        retainDeclaredClassificationDependencies(
+                retainedKeys,
+                Objects.requireNonNull(
+                        declaredDependencies,
+                        "declaredDependencies"));
         if (includeProcessEmbedded) {
             /*
              * Contracts 1.0 fixes Process Embedded at the reserved raw key.
@@ -192,6 +219,26 @@ final class ContractLoader {
                 metricsSink,
                 recognitionMeter,
                 recognitionReason);
+    }
+
+    private void retainDeclaredClassificationDependencies(
+            Set<String> retainedKeys,
+            ExternalChannelDependencySnapshot dependencies) {
+        for (ExternalChannelDependencySnapshot.Entry dependency
+                : dependencies.entries()) {
+            retainedKeys.add(dependency.channelKey());
+        }
+        for (ExternalChannelDependencySnapshot.TypeFamily family
+                : dependencies.typeFamilies()) {
+            for (ExternalChannelDependencySnapshot.Member member
+                    : family.members()) {
+                retainedKeys.add(member.channelKey());
+            }
+        }
+        for (ExternalChannelDependencySnapshot.ChannelEntry channel
+                : dependencies.channelEntries()) {
+            retainedKeys.add(channel.channelKey());
+        }
     }
 
     private Node selectedContractContainer(FrozenNode selectedScopeNode) {
@@ -704,6 +751,10 @@ final class ContractLoader {
             for (String contribution : sourceContributions) {
                 snapshot.sourceContribution(contribution);
             }
+            addHeaderFields(
+                    snapshot,
+                    exactExecutableContract,
+                    executableBodyFields);
             if (contract instanceof ChannelContract) {
                 ChannelContract channel = (ChannelContract) contract;
                 if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
@@ -757,6 +808,7 @@ final class ContractLoader {
                         .dispatchField("order", handler.getOrder())
                         .dispatchField("channel", channelKey);
                 for (String field : executableBodyFields) {
+                    snapshot.executableBodyField(field);
                     addExecutableBody(
                             snapshot,
                             exactExecutableContract,
@@ -899,7 +951,32 @@ final class ContractLoader {
                                    String field) {
         FrozenNode body = property(contract, field);
         if (body != null) {
-            snapshot.executableBody(body.blueId());
+            snapshot.executableBody(field, body.blueId());
+        }
+    }
+
+    private void addHeaderFields(
+            EffectiveContractSnapshot.Builder snapshot,
+            FrozenNode contract,
+            List<String> executableBodyFields) {
+        if (contract == null
+                || contract.getProperties() == null
+                || contract.getProperties().isEmpty()) {
+            return;
+        }
+        Set<String> executable = new LinkedHashSet<>(
+                executableBodyFields != null
+                        ? executableBodyFields
+                        : Collections.<String>emptyList());
+        List<String> names = new ArrayList<>(
+                contract.getProperties().keySet());
+        names.sort(ExternalOrderKey::compareTextCodePoints);
+        for (String name : names) {
+            if (!executable.contains(name)) {
+                snapshot.headerField(
+                        name,
+                        contract.getProperties().get(name));
+            }
         }
     }
 

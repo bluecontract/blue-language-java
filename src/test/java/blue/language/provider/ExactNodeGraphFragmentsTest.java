@@ -4,6 +4,7 @@ import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -196,19 +197,143 @@ class ExactNodeGraphFragmentsTest {
     }
 
     @Test
-    void rejectsCyclicMembersMixedObjectCyclesAndSelfIdentityContent() {
+    void preservesOpaqueFinalCyclicMemberEdgesWithoutClaimingThemLocally() {
+        CyclicMemberFixture cyclic = cyclicMemberFixture();
+        Node root = new Node()
+                .name("root-with-cyclic-edge")
+                .type(new Node().blueId(cyclic.memberBlueId))
+                .properties(
+                        "member",
+                        new Node().blueId(cyclic.memberBlueId));
+        Node event = new Node()
+                .name("event-with-cyclic-edge")
+                .properties(
+                        "member",
+                        new Node().blueId(cyclic.memberBlueId));
+        String expectedRootBlueId =
+                BlueIdCalculator.calculateBlueId(root);
+        String expectedEventBlueId =
+                BlueIdCalculator.calculateBlueId(event);
+
+        ExactNodeGraphFragments graph =
+                new ExactNodeGraphFragments(root, event);
+
+        ExactNodeGraphFragments.RootRepresentation rootForms =
+                graph.roots().get(0);
+        ExactNodeGraphFragments.RootRepresentation eventForms =
+                graph.roots().get(1);
+        assertEquals(expectedRootBlueId, rootForms.blueId());
+        assertEquals(expectedRootBlueId,
+                BlueIdCalculator.calculateBlueId(
+                        rootForms.directFragment()));
+        assertEquals(expectedEventBlueId, eventForms.blueId());
+        assertEquals(expectedEventBlueId,
+                BlueIdCalculator.calculateBlueId(
+                        eventForms.directFragment()));
+        assertEquals(cyclic.memberBlueId,
+                rootForms.directFragment().getType().getBlueId());
+        assertEquals(cyclic.memberBlueId,
+                rootForms.directFragment().getProperties()
+                        .get("member").getBlueId());
+        assertEquals(cyclic.memberBlueId,
+                eventForms.directFragment().getProperties()
+                        .get("member").getBlueId());
+        assertFalse(graph.blueIds().contains(cyclic.memberBlueId));
+        assertFalse(graph.fragments().containsKey(
+                cyclic.memberBlueId));
+        assertEquals(NodeProviderOutcome.NOT_FOUND,
+                graph.provider()
+                        .fetchResultByBlueId(cyclic.memberBlueId)
+                        .outcome());
+        assertNull(graph.provider().fetchByBlueId(
+                cyclic.memberBlueId));
+    }
+
+    @Test
+    void composedVerifiedProviderResolvesOpaqueCyclicMemberButPlainProviderCannot() {
+        CyclicMemberFixture cyclic = cyclicMemberFixture();
+        ExactNodeGraphFragments graph =
+                new ExactNodeGraphFragments(
+                        new Node().properties(
+                                "member",
+                                new Node().blueId(
+                                        cyclic.memberBlueId)));
+        NodeProvider composed = NodeProviderWrapper.wrap(
+                new SequentialNodeProvider(
+                        graph.provider(),
+                        cyclic.provider));
+
+        NodeProviderResult found =
+                composed.fetchResultByBlueId(
+                        cyclic.memberBlueId);
+
+        assertEquals(NodeProviderOutcome.FOUND,
+                found.outcome());
+        assertFalse(found.nodes().isEmpty());
+
+        List<Node> unprovedContent =
+                cyclic.provider.fetchByBlueId(
+                        cyclic.memberBlueId);
+        NodeProvider unproved = blueId ->
+                cyclic.memberBlueId.equals(blueId)
+                        ? unprovedContent
+                        : null;
+        NodeProviderResult invalid =
+                new VerifyingNodeProvider(unproved)
+                        .fetchResultByBlueId(
+                                cyclic.memberBlueId);
+        assertEquals(NodeProviderOutcome.INVALID_EVIDENCE,
+                invalid.outcome());
+        assertTrue(invalid.diagnostic().orElse("")
+                .contains("cyclic-set-aware verifier"));
+    }
+
+    @Test
+    void supportsOpaqueFinalCyclicMembersInSchemaReferencesAndValues() {
+        CyclicMemberFixture cyclic = cyclicMemberFixture();
+        Node schemaReferenceRoot = new Node()
+                .schema(new Schema().blueId(
+                        cyclic.memberBlueId));
+        Node schemaValueRoot = new Node()
+                .schema(new Schema().enumValues(
+                        Collections.singletonList(
+                                new Node().blueId(
+                                        cyclic.memberBlueId))));
+
+        ExactNodeGraphFragments graph =
+                new ExactNodeGraphFragments(
+                        schemaReferenceRoot,
+                        schemaValueRoot);
+
+        Node directSchemaReference =
+                graph.roots().get(0).directFragment();
+        Node directSchemaValue =
+                graph.roots().get(1).directFragment();
+        assertEquals(cyclic.memberBlueId,
+                directSchemaReference.getSchema()
+                        .getBlueId());
+        assertEquals(cyclic.memberBlueId,
+                directSchemaValue.getSchema()
+                        .getEnum().get(0).getBlueId());
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        schemaReferenceRoot),
+                BlueIdCalculator.calculateBlueId(
+                        directSchemaReference));
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        schemaValueRoot),
+                BlueIdCalculator.calculateBlueId(
+                        directSchemaValue));
+        assertFalse(graph.fragments().containsKey(
+                cyclic.memberBlueId));
+    }
+
+    @Test
+    void rejectsCyclicPlaceholdersPreviousMembersMixedObjectCyclesAndSelfIdentityContent() {
         String plainBlueId = BlueIdCalculator.calculateBlueId(
                 new Node().value("ordinary-reference-target"));
-
-        IllegalArgumentException memberFailure =
-                assertThrows(IllegalArgumentException.class,
-                        () -> new ExactNodeGraphFragments(
-                                new Node().properties(
-                                        "member",
-                                        new Node().blueId(
-                                                plainBlueId + "#0"))));
-        assertTrue(memberFailure.getMessage()
-                .contains("Cyclic-set/member"));
+        String cyclicMemberBlueId = plainBlueId + "#0";
 
         IllegalArgumentException placeholderFailure =
                 assertThrows(IllegalArgumentException.class,
@@ -217,7 +342,33 @@ class ExactNodeGraphFragmentsTest {
                                         "member",
                                         new Node().blueId("this#0"))));
         assertTrue(placeholderFailure.getMessage()
-                .contains("Cyclic-set/member"));
+                .contains("only inside cyclic BlueId calculation"));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new ExactNodeGraphFragments(
+                        new Node().properties(
+                                "member",
+                                new Node().blueId(
+                                        NodeContentHandler.ZERO_BLUE_ID))));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ExactNodeGraphFragments(
+                        new Node().properties(
+                                "member",
+                                new Node().blueId(
+                                        plainBlueId + "#01"))));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ExactNodeGraphFragments(
+                        new Node().items(
+                                new Node().previousBlueId(
+                                        cyclicMemberBlueId),
+                                new Node().value("tail"))));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ExactNodeGraphFragments(
+                        new Node().properties(
+                                "member",
+                                new Node()
+                                        .blueId(cyclicMemberBlueId)
+                                        .value("claimed member content"))));
 
         Node mixedCycle = new Node();
         mixedCycle.properties(
@@ -243,7 +394,35 @@ class ExactNodeGraphFragmentsTest {
                         new Node().blueId(plainBlueId)));
         assertThrows(IllegalArgumentException.class,
                 () -> new ExactNodeGraphFragments(
+                        new Node().blueId(
+                                cyclicMemberBlueId)));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ExactNodeGraphFragments(
                         Collections.<Node>emptyList()));
+    }
+
+    private static CyclicMemberFixture cyclicMemberFixture() {
+        Node cyclicSet = new Node().items(
+                new Node()
+                        .name("Fragment Cyclic A")
+                        .properties(
+                                "next",
+                                new Node().type(
+                                        new Node().blueId(
+                                                "this#1"))),
+                new Node()
+                        .name("Fragment Cyclic B")
+                        .properties(
+                                "next",
+                                new Node().type(
+                                        new Node().blueId(
+                                                "this#0"))));
+        BasicNodeProvider provider =
+                new BasicNodeProvider(cyclicSet);
+        return new CyclicMemberFixture(
+                provider,
+                provider.getBlueIdByName(
+                        "Fragment Cyclic A"));
     }
 
     private static Fixture fixture() {
@@ -421,6 +600,19 @@ class ExactNodeGraphFragmentsTest {
 
         private Fixture(Node root) {
             this.root = root;
+        }
+    }
+
+    private static final class CyclicMemberFixture {
+
+        private final BasicNodeProvider provider;
+        private final String memberBlueId;
+
+        private CyclicMemberFixture(
+                BasicNodeProvider provider,
+                String memberBlueId) {
+            this.provider = provider;
+            this.memberBlueId = memberBlueId;
         }
     }
 }

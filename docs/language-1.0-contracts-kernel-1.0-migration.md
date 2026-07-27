@@ -50,6 +50,28 @@ The canonical `Text`, `Integer`, `Double`, `Boolean`, `Dictionary`, and `List`
 nodes are loaded from the release registry files and verified against both
 their file digests and published BlueIds. BlueId v1 itself is unchanged.
 
+### Fragmentation and finalized cyclic members
+
+`ExactNodeGraphFragments` now accepts a finalized `MASTER#index` pure
+reference as an opaque edge inside an otherwise ordinary Root or Event. It
+preserves the parent identity and direct-edge metadata but deliberately does
+not publish a local fragment under the member identity. Compose its provider
+with a `CyclicAwareNodeProvider` when member content is required; plain
+independently hashed member content remains invalid evidence.
+
+This does not introduce independent member processing or mutation. A top-level
+pure member is rejected as a `PROCESS` Root/Event, mutation and
+`Process Embedded` traversal below an opaque member edge fail before provider
+demand, and whole-edge replacement remains supported.
+
+Downstream splitters should use
+`DocumentProcessor.effectiveFragmentationCatalog(Node)`. The immutable catalog
+reports effective/inherited `Process Embedded` paths and, for each scope,
+ordered `EffectiveContractSnapshot` entries with exact source contributions,
+sanitized header fields, registered executable-body field names, and present
+body BlueIds by field. Inspection is provider-verified, body-cold, read-only,
+and outside Contracts gas.
+
 ## Contracts result and failure model
 
 The semantic operation remains:
@@ -181,6 +203,36 @@ Coordination routing boundary without restoring caller-authored
 `ChannelDelivery`. Application parsing of `request.channel`, authorization,
 and registry policy remain downstream responsibilities.
 
+### Phase-B Channel dependencies
+
+Source semantics and target proof are intentionally separate:
+
+- `ExternalChannelMemberSnapshot` remains the surface for composing genuine
+  External sources and their subscription/checkpoint functions.
+- `ChannelMemberSnapshot` is a read-only frozen header for any effective
+  External or processor-managed Channel. It exposes no acceptance,
+  checkpoint, execution, or executable-body capability.
+
+When the target key is fixed by the channel header, declare it with
+`ExternalChannelFunctionContext.dependOnSameScopeChannel(key)`. When an event
+may select any raw key, declare
+`dependOnSameScopeChannelCatalog()` and use the event-only
+`channel(key)` lookup. Every peer route must be covered by one of those
+declarations; the source key alone is implicit.
+
+The retained active interval carries the exact Channel entries and, for the
+whole selector, canonical effective raw-key membership. Phase B rehydrates
+only the source and declared Channel headers. Thus a dynamic lookup can
+distinguish exact absence from a present non-Channel key without recognizing
+that unrelated contract. Bodies remain collapsed. Catalog additions,
+removals, retyping, ordering changes, contribution changes, or header changes
+rotate the checkpoint-domain dependency and invalidate stale retained
+evidence.
+
+The selected target snapshot is frozen with classification and compared with
+the fully preflighted Phase-C bundle before mutation. Selecting a target does
+not evaluate it as an External source and does not create a target checkpoint.
+
 ### Composite and All channel dependencies
 
 The generic External Channel SPI now exposes
@@ -280,7 +332,8 @@ as follows:
 | `ImmutablePatchPlanner`, `PatchPlanningEngine`, and `BatchPatchTransaction` | Immutable patch planning, state-aware sequential planning, atomic commit/rollback, and changed-spine rebuilding. |
 | `WorkingDocument` | Noncommitting read-your-writes previews over the same immutable patch machinery. |
 | `ContractLoader` and `ContractContributionResolver` | Type recognition, must-understand enforcement, frozen effective snapshots, ordered Source contributions, dispatch projection, and selected body admission. |
-| `ExternalChannelFunctionResolver` and `ExternalChannelFunctionContext` | Deterministic immutable channel functions, same-scope member/type-family lookup, dependency capture, event-scoped verified pattern matching, and checkpoint-domain contribution. |
+| `ExternalChannelFunctionResolver`, `ExternalChannelFunctionContext`, and `ChannelMemberSnapshot` | Deterministic immutable source functions, exact/whole same-scope Channel-header declaration, Phase-B target lookup and freezing, External member/type-family composition, event-scoped verified matching, and checkpoint-domain contribution. |
+| `EffectiveFragmentationCatalogBuilder` | Read-only effective `Process Embedded`, header, contribution, and executable-body-boundary inspection through the verified snapshot context. |
 | `DeclaredTypeLineageMatcher` | Exact declared-type ancestry matching without structural guesses. |
 | `ProtectedStateGuard`, `TypeGeneralizationPolicyResolver`, and `DirectSubscriptionSurfaceValidator` | Precommit protected-state, generalized-type, and subscription-surface validation. |
 

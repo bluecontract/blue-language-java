@@ -4482,6 +4482,62 @@
       "superclass": "java.lang.Object"
     },
     {
+      "access": 49,
+      "fields": [],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "channelKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Lblue/language/model/Node;",
+          "name": "contractNode"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
+          "name": "deterministicDependencyNodeBlueIds"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "effectiveTypeBlueId"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Z",
+          "name": "externalSource"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "headerIdentityBlueId"
+        },
+        {
+          "access": 1,
+          "descriptor": "()I",
+          "name": "order"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "role"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
+          "name": "sourceContributionNodeBlueIds"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.processor.ChannelMemberSnapshot",
+      "superclass": "java.lang.Object"
+    },
+    {
       "access": 1537,
       "fields": [],
       "interfaces": [
@@ -5586,6 +5642,11 @@
         },
         {
           "access": 1,
+          "descriptor": "(Lblue/language/model/Node;)Lblue/language/processor/EffectiveFragmentationCatalog;",
+          "name": "effectiveFragmentationCatalog"
+        },
+        {
+          "access": 1,
           "descriptor": "()Lblue/language/processor/ContractProcessorRegistry;",
           "name": "getContractRegistry"
         },
@@ -5859,7 +5920,22 @@
         {
           "access": 1,
           "descriptor": "()Ljava/util/List;",
+          "name": "executableBodyFields"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
           "name": "executableBodyNodeBlueIds"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/Map;",
+          "name": "executableBodyNodeBlueIdsByField"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/Map;",
+          "name": "headerFields"
         },
         {
           "access": 1,
@@ -5950,6 +6026,32 @@
       "methods": [
         {
           "access": 1,
+          "descriptor": "()Ljava/util/Map;",
+          "name": "effectiveContractsByScope"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/Map;",
+          "name": "effectiveProcessEmbeddedPathsByScope"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "rootBlueId"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.processor.EffectiveFragmentationCatalog",
+      "superclass": "java.lang.Object"
+    },
+    {
+      "access": 49,
+      "fields": [],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
+          "access": 1,
           "descriptor": "(Ljava/lang/String;)V",
           "name": "<init>"
         },
@@ -5981,8 +6083,23 @@
         },
         {
           "access": 1,
+          "descriptor": "(Ljava/util/List;Ljava/util/List;Ljava/util/List;ZLjava/util/List;ZLjava/util/List;)V",
+          "name": "<init>"
+        },
+        {
+          "access": 1,
           "descriptor": "(Ljava/util/List;Ljava/util/List;Z)V",
           "name": "<init>"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
+          "name": "channelCatalogContractKeys"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
+          "name": "channelEntries"
         },
         {
           "access": 1,
@@ -6027,11 +6144,87 @@
         {
           "access": 1,
           "descriptor": "()Z",
+          "name": "wholeSameScopeChannelCatalog"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Z",
           "name": "wholeSameScopeExternalSurface"
         }
       ],
       "minorVersion": 0,
       "name": "blue.language.processor.ExternalChannelDependencySnapshot",
+      "superclass": "java.lang.Object"
+    },
+    {
+      "access": 49,
+      "fields": [],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/lang/String;)V",
+          "name": "<init>"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "channelKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
+          "name": "deterministicDependencyNodeBlueIds"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "effectiveTypeBlueId"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/Object;)Z",
+          "name": "equals"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Z",
+          "name": "externalSource"
+        },
+        {
+          "access": 1,
+          "descriptor": "()I",
+          "name": "hashCode"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "headerIdentityBlueId"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "identityBlueId"
+        },
+        {
+          "access": 1,
+          "descriptor": "()I",
+          "name": "order"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "role"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
+          "name": "sourceContributionNodeBlueIds"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.processor.ExternalChannelDependencySnapshot$ChannelEntry",
       "superclass": "java.lang.Object"
     },
     {
@@ -6200,8 +6393,23 @@
       "methods": [
         {
           "access": 1,
+          "descriptor": "(Ljava/lang/String;)Ljava/util/Optional;",
+          "name": "channel"
+        },
+        {
+          "access": 1,
           "descriptor": "()Ljava/lang/String;",
           "name": "channelKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)Lblue/language/processor/ChannelMemberSnapshot;",
+          "name": "dependOnSameScopeChannel"
+        },
+        {
+          "access": 1,
+          "descriptor": "()V",
+          "name": "dependOnSameScopeChannelCatalog"
         },
         {
           "access": 1,

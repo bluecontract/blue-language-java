@@ -2223,6 +2223,16 @@ public class Blue implements NodeResolver, AutoCloseable {
                                             nodes));
             FrozenNode exact =
                     FrozenNode.fromNode(canonical);
+            if (blueId.indexOf('#') >= 0) {
+                /*
+                 * snapshotNodeProvider has already required the delegate's
+                 * complete cyclic-set proof for this member identity.
+                 * A member has no independently hashable ordinary BlueId, so
+                 * it must not enter the canonical cache keyed by MASTER#index
+                 * and must never be checked by hashing the member alone.
+                 */
+                return exact;
+            }
             if (!blueId.equals(exact.blueId())) {
                 throw new IllegalArgumentException(
                         "Provider content BlueId mismatch for "

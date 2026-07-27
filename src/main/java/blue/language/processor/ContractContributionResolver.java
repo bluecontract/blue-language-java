@@ -250,6 +250,14 @@ final class ContractContributionResolver {
              */
             canonicalContent.blueId(null);
         }
+        if (blueId.indexOf('#') >= 0) {
+            /*
+             * The processor's provider graph verifies MASTER#index through
+             * the owning cyclic set. A member is not ordinary standalone
+             * content and therefore must never be hashed independently.
+             */
+            return canonicalContent;
+        }
         String calculated =
                 BlueIdCalculator.calculateBlueId(canonicalContent);
         if (!blueId.equals(calculated)) {

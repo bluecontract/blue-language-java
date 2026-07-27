@@ -5,6 +5,7 @@ import blue.language.snapshot.FrozenNode;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Immutable, same-scope view supplied to registered External Channel
@@ -29,6 +30,13 @@ public final class ExternalChannelFunctionContext {
 
         List<ExternalChannelMemberSnapshot> membersByEffectiveType(
                 String effectiveTypeBlueId);
+
+        ChannelMemberSnapshot dependOnSameScopeChannel(
+                String key);
+
+        void dependOnSameScopeChannelCatalog();
+
+        Optional<ChannelMemberSnapshot> channel(String key);
 
         boolean matchesPattern(
                 FrozenNode candidate,
@@ -108,6 +116,68 @@ public final class ExternalChannelFunctionContext {
         }
         return access.membersByEffectiveType(
                 effectiveTypeBlueId);
+    }
+
+    /**
+     * Declares that this External Channel's immutable subscription header
+     * depends on the complete bounded same-scope Channel-header catalog.
+     *
+     * <p>This operation is available only while subscription-header functions
+     * are evaluated. It captures External and processor-managed Channel
+     * headers without evaluating any peer as an External source and without
+     * loading handler or executable-body content. A later event-time
+     * {@link #channel(String)} lookup is permitted only when this declaration
+     * was present in the exact retained header dependency snapshot.</p>
+     */
+    public void dependOnSameScopeChannelCatalog() {
+        access.dependOnSameScopeChannelCatalog();
+    }
+
+    /**
+     * Declares and returns one required same-scope Channel header during
+     * immutable subscription-header evaluation.
+     *
+     * <p>This exact-key form is preferred when the target key is known from
+     * the contract header. It captures only that effective Channel header,
+     * does not evaluate an External peer, and does not load executable-body
+     * content. Missing and non-Channel keys fail closed.</p>
+     *
+     * @param rawContractKey exact same-scope raw contract key
+     * @return the immutable declared Channel header
+     */
+    public ChannelMemberSnapshot dependOnSameScopeChannel(
+            String rawContractKey) {
+        if (rawContractKey == null || rawContractKey.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Channel dependency key must be non-empty");
+        }
+        return access.dependOnSameScopeChannel(
+                rawContractKey);
+    }
+
+    /**
+     * Looks up one exact raw key in the declared same-scope Channel surface.
+     *
+     * <p>This operation is available only during event evaluation and fails
+     * closed unless the subscription header declared that exact key with
+     * {@link #dependOnSameScopeChannel(String)} or declared the complete
+     * catalog with {@link #dependOnSameScopeChannelCatalog()}. An empty result
+     * is available only under the complete catalog and proves semantic
+     * absence from the effective contract map. A missing exact dependency,
+     * present non-Channel contract, incomplete evidence, or unavailable exact
+     * header is reported as an error rather than as absence.</p>
+     *
+     * @param rawContractKey exact same-scope raw contract key
+     * @return an immutable read-only Channel header, or empty only for proven
+     *         semantic absence
+     */
+    public Optional<ChannelMemberSnapshot> channel(
+            String rawContractKey) {
+        if (rawContractKey == null || rawContractKey.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Channel catalog lookup key must be non-empty");
+        }
+        return access.channel(rawContractKey);
     }
 
     /**

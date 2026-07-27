@@ -51,6 +51,7 @@ final class ExternalChannelFunctionEvaluation {
     private final String checkpointSubjectBlueId;
     private final String handlerChannelKey;
     private final String logicalDeliveryKey;
+    private final ChannelMemberSnapshot handlerChannel;
     private final ExternalChannelDependencySnapshot dependencies;
 
     private ExternalChannelFunctionEvaluation(
@@ -64,6 +65,7 @@ final class ExternalChannelFunctionEvaluation {
             String checkpointSubjectBlueId,
             String handlerChannelKey,
             String logicalDeliveryKey,
+            ChannelMemberSnapshot handlerChannel,
             ExternalChannelDependencySnapshot dependencies) {
         this.channelKeys = channelKeys;
         this.eventKeys = eventKeys;
@@ -75,6 +77,7 @@ final class ExternalChannelFunctionEvaluation {
         this.checkpointSubjectBlueId = checkpointSubjectBlueId;
         this.handlerChannelKey = handlerChannelKey;
         this.logicalDeliveryKey = logicalDeliveryKey;
+        this.handlerChannel = handlerChannel;
         this.dependencies = dependencies;
     }
 
@@ -85,6 +88,24 @@ final class ExternalChannelFunctionEvaluation {
             ContractBundle bundle,
             EffectiveContractSnapshot snapshot,
             Node exactEvent) {
+        return evaluate(
+                registry,
+                converter,
+                matcherSessions,
+                bundle,
+                snapshot,
+                exactEvent,
+                null);
+    }
+
+    static ExternalChannelFunctionEvaluation evaluate(
+            ContractProcessorRegistry registry,
+            NodeToObjectConverter converter,
+            MatcherSessionFactory matcherSessions,
+            ContractBundle bundle,
+            EffectiveContractSnapshot snapshot,
+            Node exactEvent,
+            List<String> effectiveContractKeys) {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(converter, "converter");
         Objects.requireNonNull(
@@ -101,7 +122,8 @@ final class ExternalChannelFunctionEvaluation {
                         matcherSessions,
                         bundle,
                         snapshot,
-                        exactEvent);
+                        exactEvent,
+                        effectiveContractKeys);
         ExternalChannelFunctionEvaluation second =
                 evaluateOnce(
                         registry,
@@ -109,7 +131,8 @@ final class ExternalChannelFunctionEvaluation {
                         matcherSessions,
                         bundle,
                         snapshot,
-                        exactEvent);
+                        exactEvent,
+                        effectiveContractKeys);
         if (!first.sameResult(second)) {
             throw new IllegalStateException(
                     "External Channel functions are not deterministic at "
@@ -124,7 +147,8 @@ final class ExternalChannelFunctionEvaluation {
             MatcherSessionFactory matcherSessions,
             ContractBundle bundle,
             EffectiveContractSnapshot snapshot,
-            Node exactEvent) {
+            Node exactEvent,
+            List<String> effectiveContractKeys) {
         MatcherSession matcher = Objects.requireNonNull(
                 matcherSessions.open(),
                 "matcherSession");
@@ -134,7 +158,8 @@ final class ExternalChannelFunctionEvaluation {
                             registry,
                             converter,
                             matcher,
-                            bundle)
+                            bundle,
+                            effectiveContractKeys)
                             .evaluate(snapshot, exactEvent);
             FrozenNode checkpointSubject =
                     resolved.checkpointSubject();
@@ -154,6 +179,7 @@ final class ExternalChannelFunctionEvaluation {
                     checkpointSubjectBlueId,
                     resolved.handlerChannelKey(),
                     resolved.logicalDeliveryKey(),
+                    resolved.handlerChannel(),
                     resolved.dependencies());
         } finally {
             matcher.close();
@@ -348,6 +374,9 @@ final class ExternalChannelFunctionEvaluation {
                 && Objects.equals(
                 logicalDeliveryKey,
                 other.logicalDeliveryKey)
+                && sameHandlerChannel(
+                handlerChannel,
+                other.handlerChannel)
                 && sameCheckpointSubject(
                 checkpointSubject,
                 other.checkpointSubject)
@@ -361,6 +390,26 @@ final class ExternalChannelFunctionEvaluation {
                 || left != null
                 && right != null
                 && left.sameResolvedStructure(right);
+    }
+
+    private static boolean sameHandlerChannel(
+            ChannelMemberSnapshot left,
+            ChannelMemberSnapshot right) {
+        return left == right
+                || left != null
+                && right != null
+                && left.channelKey().equals(
+                right.channelKey())
+                && left.order() == right.order()
+                && left.effectiveTypeBlueId().equals(
+                right.effectiveTypeBlueId())
+                && left.role().equals(right.role())
+                && left.sourceContributionNodeBlueIds().equals(
+                right.sourceContributionNodeBlueIds())
+                && left.deterministicDependencyNodeBlueIds().equals(
+                right.deterministicDependencyNodeBlueIds())
+                && left.headerIdentityBlueId().equals(
+                right.headerIdentityBlueId());
     }
 
     private String payloadBlueId() {
@@ -405,6 +454,10 @@ final class ExternalChannelFunctionEvaluation {
 
     String logicalDeliveryKey() {
         return logicalDeliveryKey;
+    }
+
+    ChannelMemberSnapshot handlerChannel() {
+        return handlerChannel;
     }
 
     ExternalChannelDependencySnapshot dependencies() {

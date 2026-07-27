@@ -279,10 +279,27 @@ final class ImmutablePatchPlanner {
     }
 
     void validateMutationPath(String path) {
-        validateMutationPath(ParsedJsonPointer.parse(path));
+        validatePath(
+                ParsedJsonPointer.parse(path),
+                "Mutation",
+                false);
     }
 
     void validateMutationPath(ParsedJsonPointer path) {
+        validatePath(path, "Mutation", false);
+    }
+
+    void validateProcessEmbeddedTraversalPath(String path) {
+        validatePath(
+                ParsedJsonPointer.parse(path),
+                "Process Embedded traversal",
+                true);
+    }
+
+    private void validatePath(
+            ParsedJsonPointer path,
+            String operation,
+            boolean rejectCyclicEndpoint) {
         Objects.requireNonNull(path, "path");
         if (path.isRoot() || !root.containsCyclicSetReference()) {
             return;
@@ -294,7 +311,9 @@ final class ImmutablePatchPlanner {
                 String boundary = JsonPointer.toPointer(segments.subList(0, index));
                 throw new ProcessorFailureException(
                         ProcessorErrorCategory.CyclicSetMutationUnsupported,
-                        "Mutation below cyclic-set member reference is unsupported at "
+                        operation
+                                + " below cyclic-set member reference is "
+                                + "unsupported at "
                                 + boundary + ": " + path.pointer());
             }
             String segment = segments.get(index);
@@ -314,6 +333,14 @@ final class ImmutablePatchPlanner {
             } else {
                 current = current.property(segment);
             }
+        }
+        if (rejectCyclicEndpoint
+                && isCyclicSetMemberReference(current)) {
+            throw new ProcessorFailureException(
+                    ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                    operation
+                            + " into cyclic-set member reference is "
+                            + "unsupported at " + path.pointer());
         }
     }
 

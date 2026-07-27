@@ -200,6 +200,7 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
+            requireProcessableSnapshotRoot(snapshot);
             return ProcessorEngine.initializeDocument(this, snapshot);
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
@@ -606,7 +607,8 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
-            Node canonicalRoot = snapshot.canonicalRoot();
+            Node canonicalRoot =
+                    requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
                     canonicalRoot)) {
                 return ProcessorEngine.processDocument(
@@ -647,7 +649,8 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
-            Node canonicalRoot = snapshot.canonicalRoot();
+            Node canonicalRoot =
+                    requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
                     canonicalRoot)) {
                 return ProcessorEngine.processDocument(
@@ -690,7 +693,8 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
-            Node canonicalRoot = snapshot.canonicalRoot();
+            Node canonicalRoot =
+                    requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
                     canonicalRoot)) {
                 evidence.revalidateBinding(
@@ -741,8 +745,10 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
+            Node canonicalRoot =
+                    requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    snapshot.canonicalRoot())) {
+                    canonicalRoot)) {
                 return ProcessorEngine.processDocumentWithTrace(
                         this, snapshot, event, null);
             }
@@ -753,7 +759,7 @@ public class DocumentProcessor implements AutoCloseable {
                             .node();
             VerifiedExecutionEvidence evidence =
                     deriveExternalDeliveryEvidence(
-                            snapshot.canonicalRoot(),
+                            canonicalRoot,
                             admittedEvent);
             return ProcessorEngine.processDocumentWithTrace(
                     this, snapshot, admittedEvent, evidence);
@@ -785,7 +791,8 @@ public class DocumentProcessor implements AutoCloseable {
         try {
             ensureOpen();
             requireSnapshotManager();
-            Node canonicalRoot = snapshot.canonicalRoot();
+            Node canonicalRoot =
+                    requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
                     canonicalRoot)) {
                 return ProcessorEngine.processDocumentWithTrace(
@@ -824,6 +831,19 @@ public class DocumentProcessor implements AutoCloseable {
                 deriveExternalDeliveryPlan(document, event);
         return bindAndVerifyDerived(
                 document, event, plan);
+    }
+
+    private Node requireProcessableSnapshotRoot(
+            ResolvedSnapshot snapshot) {
+        Node canonicalRoot =
+                Objects.requireNonNull(
+                        snapshot, "snapshot")
+                        .canonicalRoot();
+        new ProcessingInputAdmission(snapshotManager)
+                .requireProcessableTopLevel(
+                        canonicalRoot,
+                        "Processing Root");
+        return canonicalRoot;
     }
 
     private VerifiedExecutionEvidence bindAndVerifyDerived(
@@ -1231,6 +1251,48 @@ public class DocumentProcessor implements AutoCloseable {
             return bundle.markers();
         } finally {
             releaseLifecycleReadAndConfiguration(configurationRead);
+        }
+    }
+
+    /**
+     * Inspects the effective Process Embedded and executable-body
+     * fragmentation boundaries of one exact Root without executing contracts
+     * or consuming Contracts gas.
+     *
+     * <p>Pure-reference and partially materialized Roots are opened only
+     * through this processor's verified snapshot/provider context. Registered
+     * executable bodies remain exact inline values or pure-reference handles;
+     * a body reference is never fetched merely to report its identity.</p>
+     *
+     * @param document exact inline, fragmented, or pure-reference Root
+     * @return an immutable effective fragmentation catalog
+     */
+    public EffectiveFragmentationCatalog effectiveFragmentationCatalog(
+            Node document) {
+        Objects.requireNonNull(document, "document");
+        Lock configurationRead =
+                contractRegistry.configurationReadLock();
+        configurationRead.lock();
+        lifecycleRead.lock();
+        try {
+            ensureOpen();
+            ProcessingSnapshotManager manager =
+                    scopeIdentitySnapshotManager();
+            if (manager == null) {
+                throw new IllegalStateException(
+                        "Effective fragmentation catalog requires a "
+                                + "verified ProcessingSnapshotManager");
+            }
+            return new EffectiveFragmentationCatalogBuilder(
+                    contractLoader,
+                    contractRegistry,
+                    contractTypeResolver,
+                    manager,
+                    gasSchedule)
+                    .build(document);
+        } finally {
+            releaseLifecycleReadAndConfiguration(
+                    configurationRead);
         }
     }
 

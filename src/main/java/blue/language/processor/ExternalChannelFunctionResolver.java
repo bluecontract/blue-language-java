@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -32,6 +33,7 @@ final class ExternalChannelFunctionResolver {
     private final ExternalChannelFunctionEvaluation.MatcherSession
             eventMatcher;
     private final ContractBundle bundle;
+    private final List<String> effectiveContractKeys;
     private final Map<String, Header> headers = new LinkedHashMap<>();
     private final Deque<String> resolvingHeaders = new ArrayDeque<>();
     private final Deque<String> evaluatingEvents = new ArrayDeque<>();
@@ -40,7 +42,12 @@ final class ExternalChannelFunctionResolver {
             ContractProcessorRegistry registry,
             NodeToObjectConverter converter,
             ContractBundle bundle) {
-        this(registry, converter, null, bundle);
+        this(
+                registry,
+                converter,
+                null,
+                bundle,
+                null);
     }
 
     ExternalChannelFunctionResolver(
@@ -49,12 +56,32 @@ final class ExternalChannelFunctionResolver {
             ExternalChannelFunctionEvaluation.MatcherSession
                     eventMatcher,
             ContractBundle bundle) {
+        this(
+                registry,
+                converter,
+                eventMatcher,
+                bundle,
+                null);
+    }
+
+    ExternalChannelFunctionResolver(
+            ContractProcessorRegistry registry,
+            NodeToObjectConverter converter,
+            ExternalChannelFunctionEvaluation.MatcherSession
+                    eventMatcher,
+            ContractBundle bundle,
+            List<String> effectiveContractKeys) {
         this.registry = Objects.requireNonNull(
                 registry, "registry");
         this.converter = Objects.requireNonNull(
                 converter, "converter");
         this.eventMatcher = eventMatcher;
         this.bundle = Objects.requireNonNull(bundle, "bundle");
+        this.effectiveContractKeys =
+                immutableEffectiveContractKeys(
+                        effectiveContractKeys != null
+                                ? effectiveContractKeys
+                                : snapshotKeys(bundle));
     }
 
     Header header(EffectiveContractSnapshot snapshot) {
@@ -99,7 +126,11 @@ final class ExternalChannelFunctionResolver {
                             snapshot
                                     .deterministicDependencyNodeBlueIds());
             ExternalChannelFunctionContext context =
-                    context(snapshot, capture, false);
+                    context(
+                            snapshot,
+                            capture,
+                            false,
+                            ExternalChannelDependencySnapshot.none());
             List<String> channelKeys = immutableKeys(
                     functions.channelKeys(
                             freshChannel(snapshot), context),
@@ -163,7 +194,11 @@ final class ExternalChannelFunctionResolver {
                             snapshot
                                     .deterministicDependencyNodeBlueIds());
             ExternalChannelFunctionContext headerContext =
-                    context(snapshot, capture, false);
+                    context(
+                            snapshot,
+                            capture,
+                            false,
+                            header.dependencies);
             List<String> channelKeys = immutableKeys(
                     functions.channelKeys(
                             freshChannel(snapshot),
@@ -176,7 +211,11 @@ final class ExternalChannelFunctionResolver {
                                 + snapshot.scopePath() + "/" + key);
             }
             ExternalChannelFunctionContext context =
-                    context(snapshot, capture, true);
+                    context(
+                            snapshot,
+                            capture,
+                            true,
+                            header.dependencies);
             List<String> eventKeys = immutableKeys(
                     functions.eventKeys(
                             exactEvent.clone(), context),
@@ -199,6 +238,7 @@ final class ExternalChannelFunctionResolver {
             FrozenNode checkpointSubject = null;
             String handlerChannelKey = null;
             String logicalDeliveryKey = null;
+            ChannelMemberSnapshot handlerChannel = null;
             if (accepts) {
                 Node suppliedPayload = functions.payload(
                         freshChannel(snapshot),
@@ -219,6 +259,10 @@ final class ExternalChannelFunctionResolver {
                                 payload.toNode(),
                                 context),
                         "handler Channel");
+                handlerChannel = handlerChannelForDispatch(
+                        snapshot,
+                        handlerChannelKey,
+                        header.dependencies);
                 logicalDeliveryKey = immutableRoutingKey(
                         functions.logicalDeliveryKey(
                                 freshChannel(snapshot),
@@ -267,6 +311,7 @@ final class ExternalChannelFunctionResolver {
                     checkpointSubject,
                     handlerChannelKey,
                     logicalDeliveryKey,
+                    handlerChannel,
                     header.dependencies);
         } finally {
             evaluatingEvents.removeLast();
@@ -280,7 +325,8 @@ final class ExternalChannelFunctionResolver {
     private ExternalChannelFunctionContext context(
             EffectiveContractSnapshot owner,
             DependencyCapture capture,
-            boolean eventEvaluation) {
+            boolean eventEvaluation,
+            ExternalChannelDependencySnapshot declaredDependencies) {
         return new ExternalChannelFunctionContext(
                 owner.scopePath(),
                 owner.key(),
@@ -347,6 +393,105 @@ final class ExternalChannelFunctionResolver {
                                     eventEvaluation));
                         }
                         return Collections.unmodifiableList(members);
+                    }
+
+                    @Override
+                    public ChannelMemberSnapshot
+                    dependOnSameScopeChannel(String key) {
+                        if (eventEvaluation) {
+                            throw new IllegalStateException(
+                                    "Exact same-scope Channel dependencies "
+                                            + "must be declared during "
+                                            + "subscription-header evaluation "
+                                            + "at " + owner.scopePath() + "/"
+                                            + owner.key());
+                        }
+                        ChannelMemberSnapshot selected =
+                                channelSnapshot(key);
+                        if (selected == null) {
+                            throw new IllegalStateException(
+                                    "Missing required same-scope Channel "
+                                            + "dependency: " + key);
+                        }
+                        capture.record(
+                                channelDependencyEntry(
+                                        selected));
+                        return selected;
+                    }
+
+                    @Override
+                    public void dependOnSameScopeChannelCatalog() {
+                        if (eventEvaluation) {
+                            throw new IllegalStateException(
+                                    "Same-scope Channel catalog dependencies "
+                                            + "must be declared during "
+                                            + "subscription-header evaluation "
+                                            + "at " + owner.scopePath() + "/"
+                                            + owner.key());
+                        }
+                        capture.channelCatalog(
+                                channelDependencyEntries(),
+                                effectiveContractKeys);
+                    }
+
+                    @Override
+                    public Optional<ChannelMemberSnapshot> channel(
+                            String key) {
+                        requireEventEvaluation(
+                                owner,
+                                eventEvaluation,
+                                "same-scope Channel catalog lookup");
+                        ExternalChannelDependencySnapshot.ChannelEntry
+                                declaredEntry =
+                                declaredChannelEntry(
+                                        declaredDependencies,
+                                        key);
+                        if (!declaredDependencies
+                                .wholeSameScopeChannelCatalog()
+                                && declaredEntry == null) {
+                            throw new IllegalStateException(
+                                    "External Channel event evaluation "
+                                            + "consulted an undeclared "
+                                            + "same-scope Channel header at "
+                                            + owner.scopePath() + "/"
+                                            + owner.key() + ": " + key);
+                        }
+                        /*
+                         * Record the complete catalog selector before looking
+                         * up the key. An empty Optional is therefore an exact
+                         * absence proof, never a consequence of a pruned
+                         * classification bundle.
+                         */
+                        if (declaredDependencies
+                                .wholeSameScopeChannelCatalog()) {
+                            capture.channelCatalog(
+                                    channelDependencyEntries(),
+                                    declaredDependencies
+                                            .channelCatalogContractKeys());
+                        }
+                        ChannelMemberSnapshot selected =
+                                channelSnapshot(key);
+                        if (selected == null) {
+                            if (declaredEntry != null) {
+                                throw new IllegalStateException(
+                                        "Required same-scope Channel "
+                                                + "dependency is unavailable: "
+                                                + key);
+                            }
+                            return Optional.empty();
+                        }
+                        ExternalChannelDependencySnapshot.ChannelEntry
+                                actual =
+                                channelDependencyEntry(selected);
+                        if (declaredEntry != null
+                                && !declaredEntry.equals(actual)) {
+                            throw new IllegalStateException(
+                                    "Same-scope Channel dependency changed "
+                                            + "during event evaluation: "
+                                            + key);
+                        }
+                        capture.record(actual);
+                        return Optional.of(selected);
                     }
 
                     @Override
@@ -535,6 +680,182 @@ final class ExternalChannelFunctionResolver {
             }
         });
         return snapshots;
+    }
+
+    /**
+     * Returns the complete immutable same-scope Channel header catalog without
+     * evaluating any Channel's External subscription functions.
+     */
+    private List<EffectiveContractSnapshot> channelSnapshots() {
+        List<EffectiveContractSnapshot> snapshots =
+                new ArrayList<>();
+        for (EffectiveContractSnapshot snapshot
+                : bundle.effectiveContractSnapshots()) {
+            if (isChannelRole(snapshot.role())) {
+                snapshots.add(snapshot);
+            }
+        }
+        long memberLimit = PORTABLE_LIMITS.portableLimit(
+                "effectiveContractsPerParticipatingScope");
+        if (snapshots.size() > memberLimit) {
+            throw new IllegalStateException(
+                    "Same-scope Channel header catalog exceeds "
+                            + memberLimit);
+        }
+        snapshots.sort(new Comparator<EffectiveContractSnapshot>() {
+            @Override
+            public int compare(
+                    EffectiveContractSnapshot left,
+                    EffectiveContractSnapshot right) {
+                int order = Integer.compare(
+                        left.order(), right.order());
+                if (order != 0) {
+                    return order;
+                }
+                int key = ExternalOrderKey.compareTextCodePoints(
+                        left.key(), right.key());
+                if (key != 0) {
+                    return key;
+                }
+                return ExternalOrderKey.compareTextCodePoints(
+                        left.effectiveTypeBlueId(),
+                        right.effectiveTypeBlueId());
+            }
+        });
+        return snapshots;
+    }
+
+    private List<ExternalChannelDependencySnapshot.ChannelEntry>
+    channelDependencyEntries() {
+        List<ExternalChannelDependencySnapshot.ChannelEntry> entries =
+                new ArrayList<>();
+        for (EffectiveContractSnapshot snapshot
+                : channelSnapshots()) {
+            entries.add(channelDependencyEntry(
+                    channelSnapshot(snapshot)));
+        }
+        return Collections.unmodifiableList(entries);
+    }
+
+    private ChannelMemberSnapshot channelSnapshot(String key) {
+        EffectiveContractSnapshot snapshot =
+                bundle.effectiveContractSnapshot(key);
+        if (snapshot == null) {
+            if (effectiveContractKeys.contains(key)) {
+                throw new IllegalStateException(
+                        "Same-scope contract is not a Channel: " + key);
+            }
+            return null;
+        }
+        if (!isChannelRole(snapshot.role())) {
+            throw new IllegalStateException(
+                    "Same-scope contract is not a Channel: " + key);
+        }
+        return channelSnapshot(snapshot);
+    }
+
+    private ChannelMemberSnapshot channelSnapshot(
+            EffectiveContractSnapshot snapshot) {
+        return ChannelMemberSnapshot.from(snapshot);
+    }
+
+    private ExternalChannelDependencySnapshot.ChannelEntry
+    channelDependencyEntry(ChannelMemberSnapshot snapshot) {
+        return new ExternalChannelDependencySnapshot.ChannelEntry(
+                snapshot.channelKey(),
+                snapshot.order(),
+                snapshot.effectiveTypeBlueId(),
+                snapshot.role(),
+                snapshot.sourceContributionNodeBlueIds(),
+                snapshot.deterministicDependencyNodeBlueIds(),
+                snapshot.headerIdentityBlueId());
+    }
+
+    private ExternalChannelDependencySnapshot.ChannelEntry
+    declaredChannelEntry(
+            ExternalChannelDependencySnapshot dependencies,
+            String key) {
+        for (ExternalChannelDependencySnapshot.ChannelEntry entry
+                : dependencies.channelEntries()) {
+            if (key.equals(entry.channelKey())) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    private ChannelMemberSnapshot handlerChannelForDispatch(
+            EffectiveContractSnapshot source,
+            String handlerChannelKey,
+            ExternalChannelDependencySnapshot dependencies) {
+        ChannelMemberSnapshot target =
+                channelSnapshot(handlerChannelKey);
+        if (target == null) {
+            throw new IllegalStateException(
+                    "External Channel handler target is absent from the "
+                            + "same-scope Channel catalog: "
+                            + handlerChannelKey);
+        }
+        if (source.key().equals(handlerChannelKey)) {
+            return target;
+        }
+        ExternalChannelDependencySnapshot.ChannelEntry targetEntry =
+                channelDependencyEntry(target);
+        boolean covered = false;
+        for (ExternalChannelDependencySnapshot.ChannelEntry entry
+                : dependencies.channelEntries()) {
+            if (targetEntry.equals(entry)) {
+                covered = true;
+                break;
+            }
+        }
+        if (!covered) {
+            throw new IllegalStateException(
+                    "External Channel handler target was not declared as a "
+                            + "same-scope Channel dependency at "
+                            + source.scopePath() + "/" + source.key()
+                            + ": " + handlerChannelKey);
+        }
+        return target;
+    }
+
+    private boolean isChannelRole(String role) {
+        return "external-channel".equals(role)
+                || "processor-channel".equals(role);
+    }
+
+    private static List<String> snapshotKeys(
+            ContractBundle bundle) {
+        List<String> keys = new ArrayList<>();
+        for (EffectiveContractSnapshot snapshot
+                : bundle.effectiveContractSnapshots()) {
+            keys.add(snapshot.key());
+        }
+        return keys;
+    }
+
+    private static List<String> immutableEffectiveContractKeys(
+            List<String> supplied) {
+        Set<String> unique = new LinkedHashSet<>();
+        for (String key : Objects.requireNonNull(
+                supplied, "effectiveContractKeys")) {
+            if (key == null || key.isEmpty()
+                    || !unique.add(key)) {
+                throw new IllegalArgumentException(
+                        "Invalid or duplicate effective contract key: "
+                                + key);
+            }
+        }
+        long limit = PORTABLE_LIMITS.portableLimit(
+                "effectiveContractsPerParticipatingScope");
+        if (unique.size() > limit) {
+            throw new IllegalStateException(
+                    "Same-scope effective contract key catalog exceeds "
+                            + limit);
+        }
+        List<String> keys = new ArrayList<>(unique);
+        keys.sort(ExternalOrderKey::compareTextCodePoints);
+        return Collections.unmodifiableList(keys);
     }
 
     private EffectiveContractSnapshot requireExternalSnapshot(
@@ -819,6 +1140,7 @@ final class ExternalChannelFunctionResolver {
         private final FrozenNode checkpointSubject;
         private final String handlerChannelKey;
         private final String logicalDeliveryKey;
+        private final ChannelMemberSnapshot handlerChannel;
         private final ExternalChannelDependencySnapshot dependencies;
 
         private Evaluation(
@@ -831,6 +1153,7 @@ final class ExternalChannelFunctionResolver {
                 FrozenNode checkpointSubject,
                 String handlerChannelKey,
                 String logicalDeliveryKey,
+                ChannelMemberSnapshot handlerChannel,
                 ExternalChannelDependencySnapshot dependencies) {
             this.channelKeys = channelKeys;
             this.eventKeys = eventKeys;
@@ -842,6 +1165,7 @@ final class ExternalChannelFunctionResolver {
             this.checkpointSubject = checkpointSubject;
             this.handlerChannelKey = handlerChannelKey;
             this.logicalDeliveryKey = logicalDeliveryKey;
+            this.handlerChannel = handlerChannel;
             this.dependencies = dependencies;
         }
 
@@ -881,6 +1205,10 @@ final class ExternalChannelFunctionResolver {
             return logicalDeliveryKey;
         }
 
+        ChannelMemberSnapshot handlerChannel() {
+            return handlerChannel;
+        }
+
         ExternalChannelDependencySnapshot dependencies() {
             return dependencies;
         }
@@ -892,7 +1220,12 @@ final class ExternalChannelFunctionResolver {
                 entries = new LinkedHashMap<>();
         private final Map<String, ExternalChannelDependencySnapshot.TypeFamily>
                 typeFamilies = new LinkedHashMap<>();
+        private final Map<String, ExternalChannelDependencySnapshot.ChannelEntry>
+                channelEntries = new LinkedHashMap<>();
+        private List<String> channelCatalogContractKeys =
+                Collections.emptyList();
         private boolean wholeSurface;
+        private boolean wholeChannelCatalog;
 
         private DependencyCapture(List<String> intrinsic) {
             this.intrinsic = new ArrayList<>(intrinsic);
@@ -916,8 +1249,20 @@ final class ExternalChannelFunctionResolver {
                     : header.dependencies.typeFamilies()) {
                 record(family);
             }
+            for (ExternalChannelDependencySnapshot.ChannelEntry entry
+                    : header.dependencies.channelEntries()) {
+                record(entry);
+            }
             wholeSurface |= header.dependencies
                     .wholeSameScopeExternalSurface();
+            wholeChannelCatalog |= header.dependencies
+                    .wholeSameScopeChannelCatalog();
+            if (header.dependencies
+                    .wholeSameScopeChannelCatalog()) {
+                recordChannelCatalogKeys(
+                        header.dependencies
+                                .channelCatalogContractKeys());
+            }
         }
 
         private void record(
@@ -978,18 +1323,66 @@ final class ExternalChannelFunctionResolver {
             wholeSurface = true;
         }
 
+        private void record(
+                ExternalChannelDependencySnapshot.ChannelEntry entry) {
+            ExternalChannelDependencySnapshot.ChannelEntry prior =
+                    channelEntries.get(entry.channelKey());
+            if (prior != null && !prior.equals(entry)) {
+                throw new IllegalStateException(
+                        "Conflicting same-scope Channel header dependency "
+                                + "snapshot for " + entry.channelKey());
+            }
+            if (prior == null) {
+                channelEntries.put(entry.channelKey(), entry);
+            }
+        }
+
+        private void channelCatalog(
+                List<ExternalChannelDependencySnapshot.ChannelEntry>
+                        entries,
+                List<String> contractKeys) {
+            for (ExternalChannelDependencySnapshot.ChannelEntry entry
+                    : entries) {
+                record(entry);
+            }
+            recordChannelCatalogKeys(contractKeys);
+            wholeChannelCatalog = true;
+        }
+
+        private void recordChannelCatalogKeys(
+                List<String> contractKeys) {
+            List<String> exact =
+                    immutableEffectiveContractKeys(
+                            contractKeys);
+            if (!channelCatalogContractKeys.isEmpty()
+                    && !channelCatalogContractKeys.equals(
+                    exact)) {
+                throw new IllegalStateException(
+                        "Conflicting same-scope Channel catalog raw-key "
+                                + "membership");
+            }
+            channelCatalogContractKeys = exact;
+        }
+
         private ExternalChannelDependencySnapshot snapshot() {
             if (intrinsic.isEmpty()
                     && entries.isEmpty()
                     && typeFamilies.isEmpty()
-                    && !wholeSurface) {
+                    && !wholeSurface
+                    && channelEntries.isEmpty()
+                    && !wholeChannelCatalog) {
                 return ExternalChannelDependencySnapshot.none();
             }
             return new ExternalChannelDependencySnapshot(
                     intrinsic,
                     new ArrayList<>(entries.values()),
                     new ArrayList<>(typeFamilies.values()),
-                    wholeSurface);
+                    wholeSurface,
+                    new ArrayList<>(channelEntries.values()),
+                    wholeChannelCatalog,
+                    wholeChannelCatalog
+                            ? channelCatalogContractKeys
+                            : Collections.<String>emptyList());
         }
     }
 }

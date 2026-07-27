@@ -23,8 +23,10 @@ import java.util.Set;
  * family, without resolving unrelated families. A whole-surface dependency
  * records that any same-scope External Channel addition or removal can change
  * the subscription even when none of the previously present entries changed.
- * Every resulting identity participates in checkpoint-domain derivation and
- * retained-subscription validation.</p>
+ * The separate Channel catalog records read-only External and
+ * processor-managed Channel headers without granting External-source
+ * capabilities. Every resulting identity participates in checkpoint-domain
+ * derivation and retained-subscription validation.</p>
  */
 public final class ExternalChannelDependencySnapshot {
 
@@ -32,12 +34,19 @@ public final class ExternalChannelDependencySnapshot {
             new ExternalChannelDependencySnapshot(
                     Collections.<String>emptyList(),
                     Collections.<Entry>emptyList(),
-                    false);
+                    Collections.<TypeFamily>emptyList(),
+                    false,
+                    Collections.<ChannelEntry>emptyList(),
+                    false,
+                    Collections.<String>emptyList());
 
     private final List<String> intrinsicNodeBlueIds;
     private final List<Entry> entries;
     private final List<TypeFamily> typeFamilies;
     private final boolean wholeSameScopeExternalSurface;
+    private final List<ChannelEntry> channelEntries;
+    private final boolean wholeSameScopeChannelCatalog;
+    private final List<String> channelCatalogContractKeys;
     private final List<String> deterministicDependencyNodeBlueIds;
 
     public ExternalChannelDependencySnapshot(
@@ -48,7 +57,10 @@ public final class ExternalChannelDependencySnapshot {
                 intrinsicNodeBlueIds,
                 entries,
                 Collections.<TypeFamily>emptyList(),
-                wholeSameScopeExternalSurface);
+                wholeSameScopeExternalSurface,
+                Collections.<ChannelEntry>emptyList(),
+                false,
+                Collections.<String>emptyList());
     }
 
     public ExternalChannelDependencySnapshot(
@@ -56,12 +68,61 @@ public final class ExternalChannelDependencySnapshot {
             List<Entry> entries,
             List<TypeFamily> typeFamilies,
             boolean wholeSameScopeExternalSurface) {
+        this(
+                intrinsicNodeBlueIds,
+                entries,
+                typeFamilies,
+                wholeSameScopeExternalSurface,
+                Collections.<ChannelEntry>emptyList(),
+                false,
+                Collections.<String>emptyList());
+    }
+
+    /**
+     * Creates a dependency snapshot with the complete effective raw-key
+     * membership that accompanied a declared Channel catalog.
+     *
+     * <p>Exact Channel entries may be supplied with
+     * {@code wholeSameScopeChannelCatalog == false} and an empty raw-key list.
+     * Whole-catalog evidence must supply every effective raw contract key,
+     * including keys whose contracts are not Channels.</p>
+     *
+     * <p>Non-Channel keys carry no header data here. Their membership exists
+     * solely so an event-time exact lookup can distinguish semantic absence
+     * from a present non-Channel contract without recognizing that unrelated
+     * header.</p>
+     */
+    public ExternalChannelDependencySnapshot(
+            List<String> intrinsicNodeBlueIds,
+            List<Entry> entries,
+            List<TypeFamily> typeFamilies,
+            boolean wholeSameScopeExternalSurface,
+            List<ChannelEntry> channelEntries,
+            boolean wholeSameScopeChannelCatalog,
+            List<String> channelCatalogContractKeys) {
         this.intrinsicNodeBlueIds = immutableText(
                 intrinsicNodeBlueIds, "intrinsic dependency");
         this.entries = immutableEntries(entries);
         this.typeFamilies = immutableTypeFamilies(typeFamilies);
         this.wholeSameScopeExternalSurface =
                 wholeSameScopeExternalSurface;
+        this.channelEntries =
+                immutableChannelEntries(channelEntries);
+        this.wholeSameScopeChannelCatalog =
+                wholeSameScopeChannelCatalog;
+        this.channelCatalogContractKeys =
+                wholeSameScopeChannelCatalog
+                        ? immutableCatalogKeys(
+                                channelCatalogContractKeys)
+                        : requireNoCatalogKeys(
+                                channelCatalogContractKeys);
+        if (wholeSameScopeChannelCatalog
+                && !this.channelCatalogContractKeys.containsAll(
+                channelEntryKeys(this.channelEntries))) {
+            throw new IllegalArgumentException(
+                    "Channel catalog raw-key membership omits a Channel "
+                            + "entry");
+        }
         List<String> identities = new ArrayList<>(
                 this.intrinsicNodeBlueIds);
         for (Entry entry : this.entries) {
@@ -72,6 +133,14 @@ public final class ExternalChannelDependencySnapshot {
         }
         if (wholeSameScopeExternalSurface) {
             identities.add(surfaceIdentity(identities));
+        }
+        for (ChannelEntry entry : this.channelEntries) {
+            identities.add(entry.identityBlueId());
+        }
+        if (wholeSameScopeChannelCatalog) {
+            identities.add(channelCatalogIdentity(
+                    this.channelEntries,
+                    this.channelCatalogContractKeys));
         }
         this.deterministicDependencyNodeBlueIds =
                 Collections.unmodifiableList(identities);
@@ -98,6 +167,32 @@ public final class ExternalChannelDependencySnapshot {
     }
 
     /**
+     * Exact read-only same-scope Channel headers captured by this dependency.
+     */
+    public List<ChannelEntry> channelEntries() {
+        return channelEntries;
+    }
+
+    /**
+     * Whether the exact complete same-scope Channel-header catalog was
+     * declared, including an empty catalog.
+     */
+    public boolean wholeSameScopeChannelCatalog() {
+        return wholeSameScopeChannelCatalog;
+    }
+
+    /**
+     * Returns the complete canonical raw-key membership captured with a
+     * declared whole Channel catalog.
+     *
+     * <p>Keys naming non-Channel contracts intentionally expose no contract
+     * content or runtime role beyond their proven presence.</p>
+     */
+    public List<String> channelCatalogContractKeys() {
+        return channelCatalogContractKeys;
+    }
+
+    /**
      * Returns the exact ordered identities committed into checkpoint-domain
      * derivation.
      */
@@ -109,7 +204,10 @@ public final class ExternalChannelDependencySnapshot {
         return intrinsicNodeBlueIds.isEmpty()
                 && entries.isEmpty()
                 && typeFamilies.isEmpty()
-                && !wholeSameScopeExternalSurface;
+                && !wholeSameScopeExternalSurface
+                && channelEntries.isEmpty()
+                && !wholeSameScopeChannelCatalog
+                && channelCatalogContractKeys.isEmpty();
     }
 
     boolean covers(ExternalChannelDependencySnapshot demanded) {
@@ -118,6 +216,10 @@ public final class ExternalChannelDependencySnapshot {
         }
         if (demanded.wholeSameScopeExternalSurface
                 && !wholeSameScopeExternalSurface) {
+            return false;
+        }
+        if (demanded.wholeSameScopeChannelCatalog
+                && !wholeSameScopeChannelCatalog) {
             return false;
         }
         if (!intrinsicNodeBlueIds.containsAll(
@@ -144,6 +246,24 @@ public final class ExternalChannelDependencySnapshot {
                 return false;
             }
         }
+        Map<String, ChannelEntry> availableChannels =
+                new LinkedHashMap<>();
+        for (ChannelEntry entry : channelEntries) {
+            availableChannels.put(entry.channelKey(), entry);
+        }
+        for (ChannelEntry entry : demanded.channelEntries) {
+            if (!entry.equals(
+                    availableChannels.get(entry.channelKey()))) {
+                return false;
+            }
+        }
+        if (demanded.wholeSameScopeChannelCatalog
+                && (!channelEntries.equals(
+                demanded.channelEntries)
+                || !channelCatalogContractKeys.equals(
+                demanded.channelCatalogContractKeys))) {
+            return false;
+        }
         return true;
     }
 
@@ -159,7 +279,12 @@ public final class ExternalChannelDependencySnapshot {
                 && entries.equals(snapshot.entries)
                 && typeFamilies.equals(snapshot.typeFamilies)
                 && wholeSameScopeExternalSurface
-                == snapshot.wholeSameScopeExternalSurface;
+                == snapshot.wholeSameScopeExternalSurface
+                && channelEntries.equals(snapshot.channelEntries)
+                && wholeSameScopeChannelCatalog
+                == snapshot.wholeSameScopeChannelCatalog
+                && channelCatalogContractKeys.equals(
+                snapshot.channelCatalogContractKeys);
     }
 
     @Override
@@ -168,7 +293,10 @@ public final class ExternalChannelDependencySnapshot {
                 intrinsicNodeBlueIds,
                 entries,
                 typeFamilies,
-                wholeSameScopeExternalSurface);
+                wholeSameScopeExternalSurface,
+                channelEntries,
+                wholeSameScopeChannelCatalog,
+                channelCatalogContractKeys);
     }
 
     private static List<Entry> immutableEntries(
@@ -208,6 +336,60 @@ public final class ExternalChannelDependencySnapshot {
         return Collections.unmodifiableList(copy);
     }
 
+    private static List<ChannelEntry> immutableChannelEntries(
+            List<ChannelEntry> supplied) {
+        Objects.requireNonNull(supplied, "channelEntries");
+        List<ChannelEntry> copy = new ArrayList<>(
+                supplied.size());
+        Set<String> keys = new LinkedHashSet<>();
+        for (ChannelEntry entry : supplied) {
+            ChannelEntry exact = Objects.requireNonNull(
+                    entry, "Channel dependency entry");
+            if (!keys.add(exact.channelKey())) {
+                throw new IllegalArgumentException(
+                        "Duplicate Channel dependency key: "
+                                + exact.channelKey());
+            }
+            copy.add(exact);
+        }
+        return Collections.unmodifiableList(copy);
+    }
+
+    private static List<String> channelEntryKeys(
+            List<ChannelEntry> supplied) {
+        Objects.requireNonNull(supplied, "channelEntries");
+        List<String> keys = new ArrayList<>(supplied.size());
+        for (ChannelEntry entry : supplied) {
+            keys.add(Objects.requireNonNull(
+                    entry, "Channel dependency entry")
+                    .channelKey());
+        }
+        keys.sort(ExternalOrderKey::compareTextCodePoints);
+        return keys;
+    }
+
+    private static List<String> immutableCatalogKeys(
+            List<String> supplied) {
+        List<String> keys = new ArrayList<>(
+                immutableText(
+                        supplied,
+                        "Channel catalog contract key"));
+        keys.sort(ExternalOrderKey::compareTextCodePoints);
+        return Collections.unmodifiableList(keys);
+    }
+
+    private static List<String> requireNoCatalogKeys(
+            List<String> supplied) {
+        Objects.requireNonNull(
+                supplied, "channelCatalogContractKeys");
+        if (!supplied.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Channel catalog contract keys require a whole "
+                            + "same-scope Channel catalog declaration");
+        }
+        return Collections.emptyList();
+    }
+
     private static List<String> immutableText(
             List<String> supplied,
             String label) {
@@ -240,6 +422,29 @@ public final class ExternalChannelDependencySnapshot {
                 .properties(
                         "orderedDependencyNodeBlueIds",
                         new Node().items(items));
+        return BlueIdCalculator.calculateBlueId(descriptor);
+    }
+
+    private static String channelCatalogIdentity(
+            List<ChannelEntry> channelEntries,
+            List<String> contractKeys) {
+        List<Node> items = new ArrayList<>(
+                channelEntries.size());
+        for (ChannelEntry entry : channelEntries) {
+            items.add(new Node().value(
+                    entry.identityBlueId()));
+        }
+        Node descriptor = new Node()
+                .properties(
+                        "kind",
+                        new Node().value(
+                                "whole-same-scope-channel-catalog"))
+                .properties(
+                        "orderedChannelEntryIdentityBlueIds",
+                        new Node().items(items))
+                .properties(
+                        "effectiveContractKeys",
+                        Entry.textList(contractKeys));
         return BlueIdCalculator.calculateBlueId(descriptor);
     }
 
@@ -380,6 +585,169 @@ public final class ExternalChannelDependencySnapshot {
                         label + " must be non-empty");
             }
             return value;
+        }
+    }
+
+    /**
+     * Exact immutable identity of one read-only same-scope Channel header.
+     *
+     * <p>This entry records no External subscription keys, checkpoint domain,
+     * event evaluator, or handler capability.</p>
+     */
+    public static final class ChannelEntry {
+        private final String channelKey;
+        private final int order;
+        private final String effectiveTypeBlueId;
+        private final String role;
+        private final List<String> sourceContributionNodeBlueIds;
+        private final List<String> deterministicDependencyNodeBlueIds;
+        private final String headerIdentityBlueId;
+        private final String identityBlueId;
+
+        /**
+         * Creates one exact read-only Channel-header dependency entry.
+         */
+        public ChannelEntry(
+                String channelKey,
+                int order,
+                String effectiveTypeBlueId,
+                String role,
+                List<String> sourceContributionNodeBlueIds,
+                List<String> deterministicDependencyNodeBlueIds,
+                String headerIdentityBlueId) {
+            this.channelKey = Entry.requireText(
+                    channelKey, "channelKey");
+            this.order = order;
+            this.effectiveTypeBlueId = Entry.requireText(
+                    effectiveTypeBlueId, "effectiveTypeBlueId");
+            this.role = Entry.requireText(role, "role");
+            if (!"external-channel".equals(role)
+                    && !"processor-channel".equals(role)) {
+                throw new IllegalArgumentException(
+                        "Unsupported Channel runtime role: " + role);
+            }
+            this.sourceContributionNodeBlueIds = immutableText(
+                    sourceContributionNodeBlueIds,
+                    "source contribution");
+            this.deterministicDependencyNodeBlueIds = immutableText(
+                    deterministicDependencyNodeBlueIds,
+                    "deterministic dependency");
+            this.headerIdentityBlueId = Entry.requireText(
+                    headerIdentityBlueId,
+                    "headerIdentityBlueId");
+            this.identityBlueId = calculateIdentity();
+        }
+
+        /** Returns the exact raw same-scope contract key. */
+        public String channelKey() {
+            return channelKey;
+        }
+
+        /** Returns the effective Channel order. */
+        public int order() {
+            return order;
+        }
+
+        /** Returns the exact effective runtime type BlueId. */
+        public String effectiveTypeBlueId() {
+            return effectiveTypeBlueId;
+        }
+
+        /** Returns {@code external-channel} or {@code processor-channel}. */
+        public String role() {
+            return role;
+        }
+
+        /** Returns whether the header also has External-source semantics. */
+        public boolean externalSource() {
+            return "external-channel".equals(role);
+        }
+
+        /** Returns ordered exact Source contribution identities. */
+        public List<String> sourceContributionNodeBlueIds() {
+            return sourceContributionNodeBlueIds;
+        }
+
+        /** Returns deterministic dependencies carried by the header. */
+        public List<String> deterministicDependencyNodeBlueIds() {
+            return deterministicDependencyNodeBlueIds;
+        }
+
+        /** Returns the exact sanitized effective-header identity. */
+        public String headerIdentityBlueId() {
+            return headerIdentityBlueId;
+        }
+
+        /** Returns the canonical identity of this dependency descriptor. */
+        public String identityBlueId() {
+            return identityBlueId;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (!(other instanceof ChannelEntry)) {
+                return false;
+            }
+            ChannelEntry entry = (ChannelEntry) other;
+            return channelKey.equals(entry.channelKey)
+                    && order == entry.order
+                    && effectiveTypeBlueId.equals(
+                    entry.effectiveTypeBlueId)
+                    && role.equals(entry.role)
+                    && sourceContributionNodeBlueIds.equals(
+                    entry.sourceContributionNodeBlueIds)
+                    && deterministicDependencyNodeBlueIds.equals(
+                    entry.deterministicDependencyNodeBlueIds)
+                    && headerIdentityBlueId.equals(
+                    entry.headerIdentityBlueId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(
+                    channelKey,
+                    order,
+                    effectiveTypeBlueId,
+                    role,
+                    sourceContributionNodeBlueIds,
+                    deterministicDependencyNodeBlueIds,
+                    headerIdentityBlueId);
+        }
+
+        private String calculateIdentity() {
+            Node descriptor = new Node()
+                    .properties(
+                            "kind",
+                            new Node().value(
+                                    "same-scope-channel-header"))
+                    .properties(
+                            "channelKey",
+                            new Node().value(channelKey))
+                    .properties(
+                            "order",
+                            new Node().value(
+                                    BigInteger.valueOf(order)))
+                    .properties(
+                            "effectiveTypeBlueId",
+                            new Node().value(
+                                    effectiveTypeBlueId))
+                    .properties(
+                            "role",
+                            new Node().value(role))
+                    .properties(
+                            "sourceContributionNodeBlueIds",
+                            Entry.textList(
+                                    sourceContributionNodeBlueIds))
+                    .properties(
+                            "deterministicDependencyNodeBlueIds",
+                            Entry.textList(
+                                    deterministicDependencyNodeBlueIds))
+                    .properties(
+                            "headerIdentityBlueId",
+                            new Node().value(
+                                    headerIdentityBlueId));
+            return BlueIdCalculator.calculateBlueId(
+                    descriptor);
         }
     }
 

@@ -34,10 +34,14 @@ import java.util.TreeSet;
  * Replacing an inline child with a reference to that child's exact identity
  * preserves the identity of every ancestor.</p>
  *
- * <p>This utility deliberately does not flatten cyclic sets. Cyclic-member
- * references require the proof supplied by a cyclic-set-aware provider and are
- * rejected here. Object cycles and cycles assembled by mixing inline content
- * with references to other admitted fragments are rejected as well.</p>
+ * <p>This utility deliberately does not flatten cyclic sets. A finalized
+ * cyclic-member reference ({@code MASTER#index}) is retained as an opaque
+ * external edge: it is recorded in the direct-edge graph but is neither
+ * recursively fragmented nor served by this fragment set's local provider.
+ * Materializing that edge requires the proof supplied by a cyclic-set-aware
+ * provider. Cyclic-calculation placeholders, object cycles, and cycles assembled
+ * by mixing inline content with references to other admitted fragments remain
+ * invalid.</p>
  */
 public final class ExactNodeGraphFragments {
 
@@ -127,7 +131,9 @@ public final class ExactNodeGraphFragments {
      *
      * <p>Known identities return {@link NodeProviderOutcome#FOUND}; unknown
      * identities retain normal provider miss semantics and return
-     * {@link NodeProviderOutcome#NOT_FOUND}.</p>
+     * {@link NodeProviderOutcome#NOT_FOUND}. This includes opaque finalized
+     * cyclic-member edges, whose content must come from a separate
+     * cyclic-set-aware provider.</p>
      */
     public NodeProvider provider() {
         return provider;
@@ -300,7 +306,7 @@ public final class ExactNodeGraphFragments {
             }
             String childBlueId;
             if (child.isReferenceOnly()) {
-                childBlueId = requireOrdinaryReference(
+                childBlueId = requireFinalReference(
                         child.getBlueId(), path + "/blueId");
             } else {
                 childBlueId = record(child, path).blueId;
@@ -313,7 +319,7 @@ public final class ExactNodeGraphFragments {
                                       String path,
                                       Set<String> directEdges) {
             if (schema.isReferenceOnly()) {
-                String schemaBlueId = requireOrdinaryReference(
+                String schemaBlueId = requireFinalReference(
                         schema.getBlueId(), path + "/blueId");
                 directEdges.add(schemaBlueId);
                 return new Schema().blueId(schemaBlueId);
@@ -428,7 +434,7 @@ public final class ExactNodeGraphFragments {
             }
             try {
                 if (node.getBlueId() != null) {
-                    requireOrdinaryReference(
+                    requireFinalReference(
                             node.getBlueId(), path + "/blueId");
                     if (!node.isReferenceOnly()) {
                         throw new IllegalArgumentException(
@@ -464,7 +470,7 @@ public final class ExactNodeGraphFragments {
                 validate(node.getSchema(), path + "/schema");
                 validateValue(node.getRawValue(), path + "/value");
                 if (node.getPreviousBlueId() != null) {
-                    requireOrdinaryReference(
+                    BlueIds.requirePlainBlueId(
                             node.getPreviousBlueId(),
                             path + "/$previous/blueId");
                 }
@@ -479,7 +485,7 @@ public final class ExactNodeGraphFragments {
                 return;
             }
             if (schema.getBlueId() != null) {
-                requireOrdinaryReference(
+                requireFinalReference(
                         schema.getBlueId(), path + "/blueId");
                 if (!schema.isReferenceOnly()) {
                     throw new IllegalArgumentException(
@@ -563,15 +569,11 @@ public final class ExactNodeGraphFragments {
         }
     }
 
-    private static String requireOrdinaryReference(String blueId, String path) {
-        if (BlueIds.isCyclicCalculationPlaceholder(blueId)
-                || (blueId != null && blueId.indexOf('#') >= 0)) {
-            throw new IllegalArgumentException(
-                    "Cyclic-set/member content is not supported at " + path
-                            + "; use a cyclic-set-aware provider with verified "
-                            + "cyclic proof.");
-        }
-        return BlueIds.requirePlainBlueId(blueId, path);
+    private static String requireFinalReference(String blueId, String path) {
+        return BlueIds.requireBlueIdOrCyclicMember(
+                BlueIds.requireNoThisPlaceholderOutsideCyclicApi(
+                        blueId, path),
+                path);
     }
 
     private static boolean isPlainSchemaScalar(Node node) {

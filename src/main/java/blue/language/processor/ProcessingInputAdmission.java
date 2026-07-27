@@ -7,6 +7,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodePathEditor;
 
@@ -37,11 +38,24 @@ final class ProcessingInputAdmission {
     AdmittedNode materializeTopLevel(Node input, String label) {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(label, "label");
+        requireProcessableTopLevel(input, label);
         if (snapshotManager == null || !input.isReferenceOnly()) {
             return AdmittedNode.unchanged(input);
         }
         return AdmittedNode.materialized(
                 exactContent(input, label));
+    }
+
+    void requireProcessableTopLevel(Node input, String label) {
+        Objects.requireNonNull(input, "input");
+        Objects.requireNonNull(label, "label");
+        if (isFinalCyclicMemberReference(input)) {
+            throw invalid(
+                    label + " cannot be an independently processed "
+                            + "cyclic-set member; process the owning ordinary "
+                            + "Root or Event instead",
+                    null);
+        }
     }
 
     AdmittedNode materializeScopePaths(
@@ -74,6 +88,13 @@ final class ProcessingInputAdmission {
                 if (!selected.isReferenceOnly()) {
                     continue;
                 }
+                if (isFinalCyclicMemberReference(selected)) {
+                    throw invalid(
+                            "Process Embedded traversal cannot cross opaque "
+                                    + "cyclic-set member boundary at "
+                                    + prefix,
+                            null);
+                }
                 if (!copied) {
                     working = working.clone();
                     copied = true;
@@ -96,6 +117,21 @@ final class ProcessingInputAdmission {
                 working,
                 "Processing Root");
         return new AdmittedNode(working, materialized);
+    }
+
+    private boolean isFinalCyclicMemberReference(Node node) {
+        if (node == null || !node.isReferenceOnly()) {
+            return false;
+        }
+        String blueId = node.getBlueId();
+        if (blueId == null || blueId.indexOf('#') < 0) {
+            return false;
+        }
+        BlueIds.requireNoThisPlaceholderOutsideCyclicApi(
+                blueId, "processing input");
+        BlueIds.requireBlueIdOrCyclicMember(
+                blueId, "processing input");
+        return true;
     }
 
     ResolvedSnapshot deferredSnapshot(AdmittedNode admittedRoot) {

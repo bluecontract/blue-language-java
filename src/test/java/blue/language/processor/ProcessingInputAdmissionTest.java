@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProcessingInputAdmissionTest {
@@ -33,6 +34,8 @@ class ProcessingInputAdmissionTest {
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.<Object>asList(
                     1, "fragment-input", 1));
+    private static final String CYCLIC_MEMBER_BLUE_ID =
+            "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
     void blueFacadeProcessesExactPureReferenceRootAndEvent() {
@@ -256,6 +259,48 @@ class ProcessingInputAdmissionTest {
         assertFalse(
                 admission.deferredSnapshot(admitted)
                         .isResolutionComplete());
+    }
+
+    @Test
+    void topLevelCyclicMemberIsRejectedWithoutProviderDemand() {
+        StrictFragmentSnapshotManager fragments =
+                new StrictFragmentSnapshotManager();
+        ProcessingInputAdmission admission =
+                new ProcessingInputAdmission(fragments);
+
+        InvalidExecutionEvidenceException failure = assertThrows(
+                InvalidExecutionEvidenceException.class,
+                () -> admission.materializeTopLevel(
+                        reference(CYCLIC_MEMBER_BLUE_ID),
+                        "Processing Root"));
+
+        assertTrue(failure.getMessage()
+                .contains("cannot be an independently processed"));
+        assertTrue(fragments.requests().isEmpty());
+    }
+
+    @Test
+    void scopeAdmissionRejectsOpaqueCyclicBoundaryBeforeProviderDemand() {
+        StrictFragmentSnapshotManager fragments =
+                new StrictFragmentSnapshotManager();
+        ProcessingInputAdmission admission =
+                new ProcessingInputAdmission(fragments);
+        ProcessingInputAdmission.AdmittedNode admitted =
+                ProcessingInputAdmission.AdmittedNode.unchanged(
+                        new Node().properties(
+                                "cyclic",
+                                reference(CYCLIC_MEMBER_BLUE_ID)));
+
+        InvalidExecutionEvidenceException failure = assertThrows(
+                InvalidExecutionEvidenceException.class,
+                () -> admission.materializeScopePaths(
+                        admitted,
+                        Collections.singletonList(
+                                "/cyclic/embedded")));
+
+        assertTrue(failure.getMessage()
+                .contains("cannot cross opaque cyclic-set member"));
+        assertTrue(fragments.requests().isEmpty());
     }
 
     @Test

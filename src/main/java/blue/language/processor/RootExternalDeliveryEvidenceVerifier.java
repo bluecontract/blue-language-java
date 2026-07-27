@@ -334,8 +334,8 @@ public final class RootExternalDeliveryEvidenceVerifier
                 }
                 Map<String, String> selectorTypes =
                         hasEnumerationSelector(activeInterval)
-                                ? selectorEffectiveContractTypes(
-                                resolution, scopePath)
+                                ? projected.selectorTypes(
+                                scopePath)
                                 : null;
                 ContractBundle bundle =
                         resolution.subscriptionBundleAt(
@@ -356,7 +356,14 @@ public final class RootExternalDeliveryEvidenceVerifier
                 }
                 SubscriptionEvaluation evaluation =
                         evaluateSubscription(
-                                bundle, snapshot, event);
+                                bundle,
+                                snapshot,
+                                event,
+                                activeInterval.dependencies()
+                                        .wholeSameScopeChannelCatalog()
+                                        ? projected.contractKeys(
+                                        scopePath)
+                                        : null);
                 if (evaluation.accepts
                         && !evaluation.preselects) {
                     throw invalid(
@@ -444,6 +451,18 @@ public final class RootExternalDeliveryEvidenceVerifier
             ContractBundle bundle,
             EffectiveContractSnapshot snapshot,
             Node event) {
+        return evaluateSubscription(
+                bundle,
+                snapshot,
+                event,
+                null);
+    }
+
+    private SubscriptionEvaluation evaluateSubscription(
+            ContractBundle bundle,
+            EffectiveContractSnapshot snapshot,
+            Node event,
+            List<String> effectiveContractKeys) {
         ExternalChannelFunctionEvaluation evaluation =
                 ExternalChannelFunctionEvaluation.evaluate(
                         registry,
@@ -453,7 +472,8 @@ public final class RootExternalDeliveryEvidenceVerifier
                                         snapshotManager),
                         bundle,
                         snapshot,
-                        event);
+                        event,
+                        effectiveContractKeys);
         return new SubscriptionEvaluation(
                 evaluation.channelKeys(),
                 evaluation.eventKeys(),
@@ -577,14 +597,24 @@ public final class RootExternalDeliveryEvidenceVerifier
                 keys.add(member.channelKey());
             }
         }
+        for (ExternalChannelDependencySnapshot.ChannelEntry channel
+                : interval.dependencies().channelEntries()) {
+            keys.add(channel.channelKey());
+        }
         if (selectorTypes != null) {
             for (Map.Entry<String, String> candidate
                     : selectorTypes.entrySet()) {
-                if (!isExternalChannelType(
+                boolean channelCatalog =
+                        interval.dependencies()
+                                .wholeSameScopeChannelCatalog();
+                if (channelCatalog
+                        ? !isChannelType(candidate.getValue())
+                        : !isExternalChannelType(
                         candidate.getValue())) {
                     continue;
                 }
-                if (interval.dependencies()
+                if (channelCatalog
+                        || interval.dependencies()
                         .wholeSameScopeExternalSurface()
                         || selectsEffectiveType(
                         interval.dependencies(),
@@ -627,10 +657,17 @@ public final class RootExternalDeliveryEvidenceVerifier
         return true;
     }
 
+    private boolean isChannelType(String typeBlueId) {
+        return typeBlueId != null
+                && registry.lookupChannel(typeBlueId).isPresent();
+    }
+
     private boolean hasEnumerationSelector(
             SubscriptionDelta.Entry interval) {
         return interval.dependencies()
                 .wholeSameScopeExternalSurface()
+                || interval.dependencies()
+                .wholeSameScopeChannelCatalog()
                 || !interval.dependencies().typeFamilies().isEmpty();
     }
 
@@ -645,7 +682,10 @@ public final class RootExternalDeliveryEvidenceVerifier
             List<SubscriptionDelta.Entry> activeIntervals) {
         Map<String, Set<String>> subscriptionKeys =
                 new LinkedHashMap<>();
+        Map<String, Map<String, String>> selectorTypesByScope =
+                new LinkedHashMap<>();
         Set<String> selectorScopes = new LinkedHashSet<>();
+        Set<String> channelCatalogScopes = new LinkedHashSet<>();
         for (SubscriptionDelta.Entry interval : activeIntervals) {
             String scopePath = PointerUtils.normalizeScope(
                     interval.scopePath());
@@ -656,6 +696,10 @@ public final class RootExternalDeliveryEvidenceVerifier
                             interval, null));
             if (hasEnumerationSelector(interval)) {
                 selectorScopes.add(scopePath);
+            }
+            if (interval.dependencies()
+                    .wholeSameScopeChannelCatalog()) {
+                channelCatalogScopes.add(scopePath);
             }
         }
         if (!selectorScopes.isEmpty()) {
@@ -672,9 +716,8 @@ public final class RootExternalDeliveryEvidenceVerifier
             try (Resolution selectorResolution =
                          selectorResolution(
                                  selectorProjection,
-                                 selectorScopes)) {
-                Map<String, Map<String, String>> selectorTypesByScope =
-                        new LinkedHashMap<>();
+                                 selectorScopes,
+                                 channelCatalogScopes)) {
                 for (SubscriptionDelta.Entry interval
                         : activeIntervals) {
                     if (!hasEnumerationSelector(interval)) {
@@ -708,7 +751,9 @@ public final class RootExternalDeliveryEvidenceVerifier
         clearMaterializationProvenance(
                 projected, new IdentityHashMap<Node, Boolean>());
         return new SubscriptionIndexProjection(
-                projected, subscriptionKeys);
+                projected,
+                subscriptionKeys,
+                selectorTypesByScope);
     }
 
     private Node selectorCatalogProjection(
@@ -776,14 +821,16 @@ public final class RootExternalDeliveryEvidenceVerifier
 
     private Resolution selectorResolution(
             Node selectorProjection,
-            Set<String> selectorScopes) {
+            Set<String> selectorScopes,
+            Set<String> channelCatalogScopes) {
         if (snapshotManager == null) {
             return resolution(selectorProjection);
         }
         Set<String> preserved =
                 selectorDeferredContractPaths(
                         selectorProjection,
-                        selectorScopes);
+                        selectorScopes,
+                        channelCatalogScopes);
         ResolvedSnapshot snapshot = preserved.isEmpty()
                 ? snapshotManager.fromDocumentTransient(
                 selectorProjection.clone())
@@ -881,20 +928,26 @@ public final class RootExternalDeliveryEvidenceVerifier
     }
 
     /**
-     * Defers every non-external contract as one exact subtree. This protects
-     * registered Handler bodies and unknown extension content alike: selector
-     * discovery needs only the effective key/type headers of registered
-     * External Channels. A reference-only contract contribution is
-     * materialized exactly only to inspect its declared type; nested body
-     * references are never opened.
+     * Defers every contract outside the exact selector family as one exact
+     * subtree. This protects registered Handler bodies and unknown extension
+     * content alike. Whole External selectors retain only External Channel
+     * headers; whole Channel-catalog selectors also retain processor-managed
+     * Channel headers. A reference-only contribution is materialized exactly
+     * only to inspect its declared type; nested body references are never
+     * opened.
      */
     private Set<String> selectorDeferredContractPaths(
             Node selectorProjection,
-            Set<String> selectorScopes) {
+            Set<String> selectorScopes,
+            Set<String> channelCatalogScopes) {
         Set<String> paths = new LinkedHashSet<>();
         Set<String> openedScopes =
                 openedScopeAncestors(selectorScopes);
         for (String scopePath : openedScopes) {
+            boolean includeAllChannels =
+                    channelCatalogScopes.contains(
+                            PointerUtils.normalizeScope(
+                                    scopePath));
             List<Node> contributions =
                     exactScopeContributionsAt(
                             selectorProjection, scopePath);
@@ -902,7 +955,9 @@ public final class RootExternalDeliveryEvidenceVerifier
                     exactContractTypes(contributions);
             for (Map.Entry<String, String> entry
                     : types.entrySet()) {
-                if (isExternalChannelType(entry.getValue())) {
+                if (isExternalChannelType(entry.getValue())
+                        || includeAllChannels
+                        && isChannelType(entry.getValue())) {
                     continue;
                 }
                 paths.add(contractPath(
@@ -1825,10 +1880,14 @@ public final class RootExternalDeliveryEvidenceVerifier
     private static final class SubscriptionIndexProjection {
         private final Node root;
         private final Map<String, Set<String>> requestedKeys;
+        private final Map<String, Map<String, String>>
+                selectorTypesByScope;
 
         private SubscriptionIndexProjection(
                 Node root,
-                Map<String, Set<String>> requestedKeys) {
+                Map<String, Set<String>> requestedKeys,
+                Map<String, Map<String, String>>
+                        selectorTypesByScope) {
             this.root = Objects.requireNonNull(root, "root");
             Map<String, Set<String>> copy =
                     new LinkedHashMap<>();
@@ -1842,6 +1901,48 @@ public final class RootExternalDeliveryEvidenceVerifier
             }
             this.requestedKeys =
                     Collections.unmodifiableMap(copy);
+            Map<String, Map<String, String>> typesCopy =
+                    new LinkedHashMap<>();
+            for (Map.Entry<String, Map<String, String>> entry
+                    : selectorTypesByScope.entrySet()) {
+                typesCopy.put(
+                        entry.getKey(),
+                        Collections.unmodifiableMap(
+                                new LinkedHashMap<>(
+                                        entry.getValue())));
+            }
+            this.selectorTypesByScope =
+                    Collections.unmodifiableMap(typesCopy);
+        }
+
+        private Map<String, String> selectorTypes(
+                String scopePath) {
+            return selectorTypesByScope.get(
+                    PointerUtils.normalizeScope(
+                            scopePath));
+        }
+
+        private List<String> contractKeys(
+                String scopePath) {
+            Map<String, String> types =
+                    selectorTypes(scopePath);
+            if (types == null || types.isEmpty()) {
+                return Collections.emptyList();
+            }
+            List<String> keys = new ArrayList<>();
+            for (String key : types.keySet()) {
+                if (!ProcessorContractConstants.KEY_INITIALIZED
+                        .equals(key)
+                        && !ProcessorContractConstants.KEY_TERMINATED
+                        .equals(key)
+                        && !ProcessorContractConstants.KEY_CHECKPOINT
+                        .equals(key)) {
+                    keys.add(key);
+                }
+            }
+            keys.sort(
+                    ExternalOrderKey::compareTextCodePoints);
+            return Collections.unmodifiableList(keys);
         }
     }
 

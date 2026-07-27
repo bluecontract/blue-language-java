@@ -292,6 +292,18 @@ public final class DocumentProcessingRuntime {
             if (!visited.add(scopePath)) {
                 continue;
             }
+            try {
+                ImmutablePatchPlanner.forFrozen(canonicalRoot)
+                        .validateProcessEmbeddedTraversalPath(
+                                scopePath);
+            } catch (ProcessorFailureException opaqueBoundary) {
+                /*
+                 * Runtime preflight owns the deterministic diagnostic.
+                 * Snapshot admission must not inspect executable bodies
+                 * beyond an opaque finalized cyclic-member edge first.
+                 */
+                continue;
+            }
             FrozenNode selectedScope =
                     canonicalRoot.at(scopePath);
             FrozenNode effectiveScope =
@@ -1314,6 +1326,13 @@ public final class DocumentProcessingRuntime {
         if (patch != null) {
             validateMutationPathWithoutResolution(patch.authoredPath());
         }
+    }
+
+    void validateProcessEmbeddedTraversalWithoutResolution(
+            String path) {
+        ImmutablePatchPlanner.forFrozen(
+                canonicalRootWithoutResolution())
+                .validateProcessEmbeddedTraversalPath(path);
     }
 
     private void validateMutationPathWithoutResolution(String path) {

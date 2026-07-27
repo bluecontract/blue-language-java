@@ -75,6 +75,7 @@ final class ChannelRunner {
         String recomputedCheckpointSubject;
         String handlerChannelKey;
         String logicalDeliveryKey;
+        ChannelMemberSnapshot handlerChannel;
         ChannelProcessor<ChannelContract> channelProcessor;
         try {
             ExternalDeliverySnapshot evidence =
@@ -94,6 +95,9 @@ final class ChannelRunner {
                         "External Channel effective snapshot is absent at "
                                 + scopePath + "/" + channel.key());
             }
+            SubscriptionDelta.Entry activeInterval =
+                    execution.activeSubscriptionInterval(
+                            scopePath, channel.key());
             ExternalChannelFunctionEvaluation evaluation =
                     ExternalChannelFunctionEvaluation.evaluate(
                             owner.registry(),
@@ -101,7 +105,13 @@ final class ChannelRunner {
                             runtime.externalChannelMatcherSessions(),
                             bundle,
                             snapshot,
-                            event);
+                            event,
+                            activeInterval != null
+                                    && activeInterval.dependencies()
+                                    .wholeSameScopeChannelCatalog()
+                                    ? activeInterval.dependencies()
+                                    .channelCatalogContractKeys()
+                                    : null);
             matches = evaluation.accepts();
             frozenPayload = evaluation.payload();
             frozenCheckpointSubject =
@@ -112,9 +122,28 @@ final class ChannelRunner {
                     evaluation.handlerChannelKey();
             logicalDeliveryKey =
                     evaluation.logicalDeliveryKey();
+            handlerChannel =
+                    evaluation.handlerChannel();
+            if (activeInterval != null
+                    && !activeInterval.dependencies().equals(
+                    evaluation.dependencies())) {
+                throw new InvalidExecutionEvidenceException(
+                        "External Channel declared dependency surface "
+                                + "changed before Phase-B classification at "
+                                + scopePath + "/" + channel.key());
+            }
+            if (evaluation.accepts()
+                    && activeInterval != null
+                    && handlerChannel == null) {
+                throw new InvalidExecutionEvidenceException(
+                        "External Channel handler target was not frozen by "
+                                + "the retained Phase-B dependency surface at "
+                                + scopePath + "/" + channel.key());
+            }
             channelProcessor = registeredProcessor(contract);
         } catch (RuntimeException ex) {
             if (ex instanceof ExecutionEvidenceUnavailableException
+                    || ex instanceof InvalidExecutionEvidenceException
                     || BlueLanguageErrorClassifier.classify(ex)
                     == BlueLanguageErrorCategory.ProviderUnavailable) {
                 throw ex;
@@ -231,6 +260,7 @@ final class ChannelRunner {
                 channel.key(),
                 handlerChannelKey,
                 logicalDeliveryKey,
+                handlerChannel,
                 frozenPayload,
                 checkpoint,
                 eventSignature,
@@ -532,6 +562,7 @@ final class ChannelRunner {
         private final String sourceChannelKey;
         private final String handlerChannelKey;
         private final String logicalDeliveryKey;
+        private final ChannelMemberSnapshot handlerChannel;
         private final FrozenNode payload;
         private final CheckpointManager.CheckpointRecord checkpoint;
         private final String eventSignature;
@@ -543,6 +574,7 @@ final class ChannelRunner {
                 String sourceChannelKey,
                 String handlerChannelKey,
                 String logicalDeliveryKey,
+                ChannelMemberSnapshot handlerChannel,
                 FrozenNode payload,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
@@ -554,6 +586,7 @@ final class ChannelRunner {
                     sourceChannelKey, "sourceChannelKey");
             this.handlerChannelKey = handlerChannelKey;
             this.logicalDeliveryKey = logicalDeliveryKey;
+            this.handlerChannel = handlerChannel;
             this.payload = payload;
             this.checkpoint = checkpoint;
             this.eventSignature = eventSignature;
@@ -594,6 +627,7 @@ final class ChannelRunner {
                     null,
                     null,
                     null,
+                    null,
                     null);
         }
 
@@ -602,6 +636,7 @@ final class ChannelRunner {
                 String sourceChannelKey,
                 String handlerChannelKey,
                 String logicalDeliveryKey,
+                ChannelMemberSnapshot handlerChannel,
                 FrozenNode payload,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
@@ -616,6 +651,7 @@ final class ChannelRunner {
                     Objects.requireNonNull(
                             logicalDeliveryKey,
                             "logicalDeliveryKey"),
+                    handlerChannel,
                     payload,
                     checkpoint,
                     eventSignature,
@@ -644,6 +680,10 @@ final class ChannelRunner {
 
         String logicalDeliveryKey() {
             return logicalDeliveryKey;
+        }
+
+        ChannelMemberSnapshot handlerChannel() {
+            return handlerChannel;
         }
 
         String payloadBlueId() {

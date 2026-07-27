@@ -5,6 +5,7 @@ import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
@@ -187,6 +188,53 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
+    void allStaleSourcesExecuteNothingAndWriteNoCheckpoint() {
+        Node event = event("topic", "event-all-stale");
+        try (Fixture fixture = new Fixture(event)) {
+            Node initialized = fixture.initialize(
+                    routedDocument(
+                            fixture,
+                            "shared-payload",
+                            "shared-payload"));
+            ProcessingDebugResult seed = fixture.process(
+                    initialized,
+                    event,
+                    fixture.prepare(
+                            initialized,
+                            event,
+                            "source-a",
+                            "source-b"));
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    seed.processResult().status());
+            fixture.handlers.reset();
+            Node checkpointed =
+                    seed.processResult().document();
+
+            ProcessingDebugResult replay = fixture.process(
+                    checkpointed,
+                    event,
+                    fixture.prepare(
+                            checkpointed,
+                            event,
+                            "source-a",
+                            "source-b"));
+
+            assertEquals(
+                    ProcessorStatus.STALE,
+                    replay.processResult().status());
+            assertEquals(0, fixture.handlers.executions());
+            assertTrue(checkpointWrites(
+                    replay.trace()).isEmpty());
+            assertEquals(
+                    BlueIdCalculator.calculateBlueId(
+                            checkpointed),
+                    BlueIdCalculator.calculateBlueId(
+                            replay.processResult().document()));
+        }
+    }
+
+    @Test
     void handlerFailureCommitsNoParticipatingCheckpoint() {
         Node event = event("topic", "event-failure");
         try (Fixture fixture = new Fixture(event)) {
@@ -258,6 +306,150 @@ final class LogicalDeliveryRoutingTest {
             assertEquals(
                     Collections.singletonList("target"),
                     fixture.handlers.matchedChannels());
+        }
+    }
+
+    @Test
+    void phaseBRehydratesDeclaredCatalogForExternalAndManagedTargets() {
+        Node event = event("topic", "event-phase-b-catalog");
+        for (boolean managedTarget : Arrays.asList(
+                false, true)) {
+            try (Fixture fixture = new Fixture(event)) {
+                String targetKey =
+                        managedTarget ? "managed" : "target";
+                Node target =
+                        managedTarget
+                                ? managedChannel(
+                                targetKey, 2)
+                                : routingChannel(
+                                targetKey,
+                                2,
+                                "other",
+                                "domain-target",
+                                targetKey,
+                                targetKey,
+                                "target");
+                Node document = fixture.initialize(
+                        root(
+                                catalogRoutingChannel(
+                                        "source",
+                                        0,
+                                        "topic",
+                                        "domain-source",
+                                        targetKey,
+                                        "logical",
+                                        "payload"),
+                                target,
+                                handler(
+                                        "handler",
+                                        targetKey,
+                                        fixture
+                                                .selectedBodyBlueId)));
+                fixture.routing.resetEventEvaluations();
+
+                ProcessingDebugResult debug =
+                        fixture.process(
+                                document,
+                                event,
+                                fixture.prepareWithActiveIntervals(
+                                        document,
+                                        event,
+                                        "source"));
+
+                assertEquals(
+                        ProcessorStatus.SUCCESS,
+                        debug.processResult().status());
+                assertEquals(
+                        Collections.singletonList(targetKey),
+                        fixture.handlers.matchedChannels());
+                assertTrue(hasCheckpoint(
+                        debug.processResult().document(),
+                        "source"));
+                assertFalse(hasCheckpoint(
+                        debug.processResult().document(),
+                        targetKey));
+                if (!managedTarget) {
+                    assertEquals(
+                            0,
+                            fixture.routing
+                                    .eventEvaluations(
+                                            targetKey));
+                }
+            }
+        }
+    }
+
+    @Test
+    void phaseBRehydratesAnInheritedExactTargetKey() {
+        Node event = event(
+                "topic",
+                "event-inherited-phase-b-target");
+        try (Fixture fixture = new Fixture(event)) {
+            Node inheritedTarget =
+                    routingChannel(
+                            "target",
+                            2,
+                            "other",
+                            "domain-target",
+                            "target",
+                            "target",
+                            "target");
+            inheritedTarget.name(null);
+            Node inheritedHandler =
+                    handler(
+                            "handler",
+                            "target",
+                            fixture.selectedBodyBlueId);
+            inheritedHandler.name(null);
+            Node scopeType =
+                    new Node().contracts(
+                            new Node()
+                                    .properties(
+                                            "target",
+                                            inheritedTarget)
+                                    .properties(
+                                            "handler",
+                                            inheritedHandler));
+            String scopeTypeBlueId =
+                    BlueIdCalculator.calculateBlueId(
+                            scopeType);
+            fixture.provider.put(
+                    scopeTypeBlueId,
+                    scopeType);
+            Node document = fixture.initialize(
+                    root(
+                            routingChannel(
+                                    "source",
+                                    0,
+                                    "topic",
+                                    "domain-source",
+                                    "target",
+                                    "logical",
+                                    "payload"))
+                            .type(reference(
+                                    scopeTypeBlueId)));
+
+            ProcessingDebugResult debug =
+                    fixture.process(
+                            document,
+                            event,
+                            fixture.prepare(
+                                    document,
+                                    event,
+                                    "source"));
+
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    debug.processResult().status());
+            assertEquals(
+                    Collections.singletonList("target"),
+                    fixture.handlers.matchedChannels());
+            assertTrue(hasCheckpoint(
+                    debug.processResult().document(),
+                    "source"));
+            assertFalse(hasCheckpoint(
+                    debug.processResult().document(),
+                    "target"));
         }
     }
 
@@ -359,6 +551,14 @@ final class LogicalDeliveryRoutingTest {
                             inlineDocument),
                     BlueIdCalculator.calculateBlueId(
                             fragmentDocument));
+            String fragmentRootBlueId =
+                    BlueIdCalculator.calculateBlueId(
+                            fragmentDocument);
+            fragmented.provider.put(
+                    fragmentRootBlueId,
+                    fragmentDocument);
+            Node fragmentRoot =
+                    reference(fragmentRootBlueId);
 
             PreparedRun inlinePrepared =
                     inline.prepare(
@@ -381,7 +581,7 @@ final class LogicalDeliveryRoutingTest {
                     inlineEvent,
                     inlinePrepared);
             fragmentDebug = fragmented.process(
-                    fragmentDocument,
+                    fragmentRoot,
                     fragmentEvent,
                     fragmentPrepared);
         }
@@ -599,15 +799,24 @@ final class LogicalDeliveryRoutingTest {
             Node document = fixture.initialize(
                     root(all.toArray(
                             new Node[all.size()])));
-            PreparedRun prepared = fixture.prepare(
-                    document,
-                    event,
-                    "source-a",
-                    contracts.length > 1
-                            && "source-b".equals(
-                            contracts[1].getName())
-                            ? "source-b"
-                            : "source-a");
+            PreparedRun prepared;
+            try {
+                prepared = fixture.prepare(
+                        document,
+                        event,
+                        "source-a",
+                        contracts.length > 1
+                                && "source-b".equals(
+                                contracts[1].getName())
+                                ? "source-b"
+                                : "source-a");
+            } catch (IllegalStateException invalidDependency) {
+                assertTrue(
+                        invalidDependency.getMessage().contains(
+                                "Missing required same-scope Channel"));
+                assertEquals(0, fixture.handlers.executions());
+                return;
+            }
             ProcessingDebugResult debug =
                     fixture.process(
                             document, event, prepared);
@@ -757,6 +966,46 @@ final class LogicalDeliveryRoutingTest {
                 .properties(
                         "payload",
                         new Node().value(payload));
+    }
+
+    private static Node catalogRoutingChannel(
+            String key,
+            int order,
+            String subscriptionKey,
+            String domain,
+            String handlerChannelKey,
+            String logicalDeliveryKey,
+            String payload) {
+        return routingChannel(
+                key,
+                order,
+                subscriptionKey,
+                domain,
+                handlerChannelKey,
+                logicalDeliveryKey,
+                payload)
+                .properties(
+                        "declareChannelCatalog",
+                        new Node().value(true));
+    }
+
+    private static Node managedChannel(
+            String key,
+            int order) {
+        return new Node()
+                .name(key)
+                .type(reference(
+                        RuntimeBlueIds
+                                .TRIGGERED_EVENT_CHANNEL))
+                .properties(
+                        "order",
+                        new Node().value(order))
+                .properties(
+                        "event",
+                        new Node().properties(
+                                "kind",
+                                new Node().value(
+                                        "managed-event")));
     }
 
     private static Node handler(
@@ -925,6 +1174,7 @@ final class LogicalDeliveryRoutingTest {
         private String handlerChannelKey;
         private String logicalDeliveryKey;
         private String payload;
+        private Boolean declareChannelCatalog;
 
         public String getSubscriptionKey() {
             return subscriptionKey;
@@ -970,6 +1220,16 @@ final class LogicalDeliveryRoutingTest {
 
         public void setPayload(String payload) {
             this.payload = payload;
+        }
+
+        public Boolean getDeclareChannelCatalog() {
+            return declareChannelCatalog;
+        }
+
+        public void setDeclareChannelCatalog(
+                Boolean declareChannelCatalog) {
+            this.declareChannelCatalog =
+                    declareChannelCatalog;
         }
     }
 
@@ -1048,7 +1308,20 @@ final class LogicalDeliveryRoutingTest {
                         RoutingExternalChannel>() {
                     @Override
                     public List<String> channelKeys(
-                            RoutingExternalChannel contract) {
+                            RoutingExternalChannel contract,
+                            ExternalChannelFunctionContext context) {
+                        if (Boolean.TRUE.equals(
+                                contract
+                                        .getDeclareChannelCatalog())) {
+                            context
+                                    .dependOnSameScopeChannelCatalog();
+                        } else if (!contract.getKey().equals(
+                                contract
+                                        .getHandlerChannelKey())) {
+                            context.dependOnSameScopeChannel(
+                                    contract
+                                            .getHandlerChannelKey());
+                        }
                         return Collections.singletonList(
                                 contract
                                         .getSubscriptionKey());
@@ -1083,6 +1356,30 @@ final class LogicalDeliveryRoutingTest {
                             Node exactEvent,
                             Node exactPayload,
                             ExternalChannelFunctionContext context) {
+                        if (Boolean.TRUE.equals(
+                                contract
+                                        .getDeclareChannelCatalog())) {
+                            return context.channel(
+                                            contract
+                                                    .getHandlerChannelKey())
+                                    .orElseThrow(
+                                            () -> new IllegalStateException(
+                                                    "Declared handler "
+                                                            + "Channel is absent"))
+                                    .channelKey();
+                        }
+                        if (!contract.getKey().equals(
+                                contract
+                                        .getHandlerChannelKey())) {
+                            return context.channel(
+                                            contract
+                                                    .getHandlerChannelKey())
+                                    .orElseThrow(
+                                            () -> new IllegalStateException(
+                                                    "Exact handler Channel "
+                                                            + "is absent"))
+                                    .channelKey();
+                        }
                         return contract
                                 .getHandlerChannelKey();
                     }
@@ -1407,10 +1704,6 @@ final class LogicalDeliveryRoutingTest {
                     ExternalDeliveryPlan.builder()
                             .revisions(7L, 7L)
                             .eventOrderKey(EVENT_ORDER)
-                            .activeSubscriptionIntervals(
-                                    Collections
-                                            .<SubscriptionDelta.Entry>
-                                                    emptyList())
                             .exactRuntimeState();
             for (String sourceKey : sourceKeys) {
                 EffectiveContractSnapshot contract =
@@ -1430,8 +1723,12 @@ final class LogicalDeliveryRoutingTest {
                                         bundle,
                                         contract,
                                         event);
-                plan.delivery(delivery(
-                        contract, evaluation));
+                plan.activeSubscriptionInterval(
+                                activeInterval(
+                                        contract,
+                                        evaluation))
+                        .delivery(delivery(
+                                contract, evaluation));
             }
             ExternalDeliveryPlan built = plan.build();
             return new PreparedRun(
@@ -1441,6 +1738,16 @@ final class LogicalDeliveryRoutingTest {
                             event,
                             processor
                                     .runtimeRegistryIdentity()));
+        }
+
+        private PreparedRun prepareWithActiveIntervals(
+                Node document,
+                Node event,
+                String... sourceKeys) {
+            return prepare(
+                    document,
+                    event,
+                    sourceKeys);
         }
 
         private ProcessingDebugResult process(
@@ -1499,6 +1806,23 @@ final class LogicalDeliveryRoutingTest {
                     subscriptionKey);
         }
         return builder.build();
+    }
+
+    private static SubscriptionDelta.Entry activeInterval(
+            EffectiveContractSnapshot snapshot,
+            ExternalChannelFunctionEvaluation evaluation) {
+        return new SubscriptionDelta.Entry(
+                snapshot.scopePath(),
+                snapshot.key(),
+                snapshot.effectiveTypeBlueId(),
+                snapshot.sourceContributionNodeBlueIds(),
+                snapshot.order(),
+                evaluation.channelKeys(),
+                evaluation.checkpointDomainBlueId(),
+                evaluation.dependencies(),
+                1L,
+                null,
+                null);
     }
 
     private static final class CountingProvider
@@ -1566,6 +1890,14 @@ final class LogicalDeliveryRoutingTest {
         private synchronized void unavailable(
                 String blueId) {
             unavailable.add(blueId);
+        }
+
+        private synchronized void put(
+                String blueId,
+                Node node) {
+            exact.put(
+                    blueId,
+                    node.clone());
         }
     }
 }
