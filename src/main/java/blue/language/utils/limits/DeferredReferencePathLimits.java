@@ -19,6 +19,12 @@ public final class DeferredReferencePathLimits implements Limits {
     private final List<String> currentPath = new ArrayList<>();
     private final List<Boolean> enteredSegments = new ArrayList<>();
 
+    /**
+     * Creates limits from canonicalized RFC 6901 paths.
+     *
+     * @param deferredPaths paths below which reference expansion is deferred;
+     *                      {@code null} means no deferred paths
+     */
     public DeferredReferencePathLimits(Collection<String> deferredPaths) {
         this.deferredPaths = new LinkedHashSet<>();
         if (deferredPaths != null) {

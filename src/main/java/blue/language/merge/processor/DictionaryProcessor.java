@@ -5,6 +5,7 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.utils.NodeToMapListOrValue;
+import blue.language.utils.Properties;
 import blue.language.utils.Types;
 
 import java.math.BigDecimal;
@@ -13,7 +14,15 @@ import java.util.Map;
 
 import static blue.language.utils.Types.isSubtype;
 
+/**
+ * Propagates Dictionary key/value type metadata and validates every contributed
+ * property against the resulting constraints.
+ */
 public class DictionaryProcessor implements MergingProcessor {
+
+    /** Creates a stateless Dictionary merge processor. */
+    public DictionaryProcessor() {
+    }
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
@@ -109,7 +118,8 @@ public class DictionaryProcessor implements MergingProcessor {
                         + "' is not a canonical Double textual form.");
             }
         } else if (Types.isBooleanType(keyType, nodeProvider)) {
-            if (!"true".equals(key) && !"false".equals(key)) {
+            if (!Properties.BOOLEAN_TEXT_TRUE.equals(key)
+                    && !Properties.BOOLEAN_TEXT_FALSE.equals(key)) {
                 throw new IllegalArgumentException("Dictionary key '" + key
                         + "' is not a canonical Boolean textual form.");
             }

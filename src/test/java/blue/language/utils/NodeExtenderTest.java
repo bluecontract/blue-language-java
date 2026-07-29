@@ -85,13 +85,16 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void testExtendSingleProperty() {
+    public void shouldExtendSingleProperty() {
+        // given
         Node node = nodes.get("Y").clone();
         Limits limits = new PathLimits.Builder()
                 .addPath("/forA")
                 .build();
+        // when
         nodeExtender.extend(node, limits);
 
+        // then
         assertEquals("A", node.get("/forA/name"));
         assertEquals(BigInteger.valueOf(1), node.get("/forA/x"));
         assertEquals(BigInteger.valueOf(1), node.get("/forA/y/z"));
@@ -99,26 +102,32 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void testExtendNestedProperty() {
+    public void shouldExtendNestedProperty() {
+        // given
         Node node = nodes.get("Y").clone();
         Limits limits = new PathLimits.Builder()
                 .addPath("/forX/a")
                 .build();
+        // when
         nodeExtender.extend(node, limits);
 
+        // then
         assertEquals("X", node.get("/forX/name"));
         assertEquals("A", node.get("/forX/a/type/name"));
         assertEquals(BigInteger.valueOf(1), node.get("/forX/a/type/x"));
     }
 
     @Test
-    public void testExtendListItem() {
+    public void shouldExtendListItem() {
+        // given
         Node node = nodes.get("Y").clone();
         Limits limits = new PathLimits.Builder()
                 .addPath("/forX/d/0")
                 .build();
+        // when
         nodeExtender.extend(node, limits);
 
+        // then
         assertEquals("X", node.get("/forX/name"));
         assertEquals("C", node.get("/forX/d/0/name"));
         assertEquals("B", node.get("/forX/d/0/type/name"));
@@ -126,14 +135,17 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void testExtendWithMultiplePaths() {
+    public void shouldExtendWithMultiplePaths() {
+        // given
         Node node = nodes.get("Y").clone();
         Limits limits = new PathLimits.Builder()
                 .addPath("/forA")
                 .addPath("/forX/b")
                 .build();
+        // when
         nodeExtender.extend(node, limits);
 
+        // then
         assertEquals("A", node.get("/forA/name"));
         assertEquals(BigInteger.valueOf(1), node.get("/forA/x"));
         assertEquals("X", node.get("/forX/name"));
@@ -141,8 +153,9 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void testExtendList() throws Exception {
+    public void shouldExtendList() throws Exception {
 
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A\nvalue: 1";
@@ -171,8 +184,10 @@ public class NodeExtenderTest {
         Limits limits = new PathLimits.Builder()
                 .addPath("/*")
                 .build();
+        // when
         nodeExtender.extend(node, limits);
 
+        // then
         assertEquals("ListNode", node.getName());
         assertEquals(3, node.getItems().size());
 
@@ -187,7 +202,8 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void testExtendListDirectly() throws Exception {
+    public void shouldExtendListDirectly() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A\nvalue: 1";
@@ -216,8 +232,10 @@ public class NodeExtenderTest {
         Limits limits = new PathLimits.Builder()
                 .addPath("/*")
                 .build();
+        // when
         nodeExtender.extend(nodeABC, limits);
 
+        // then
         assertEquals(3, nodeABC.getItems().size());
 
         assertEquals("A", nodeABC.get("/0/name"));

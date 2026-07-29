@@ -4,9 +4,12 @@ import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodePathEditor;
 import blue.language.utils.Nodes;
@@ -69,10 +72,10 @@ final class EffectiveFragmentationCatalogBuilder {
                             admitted.node());
             Set<String> participatingScopePaths =
                     new LinkedHashSet<>();
-            participatingScopePaths.add("/");
+            participatingScopePaths.add(JsonPointer.ROOT);
             long maximumScopes =
                     limits.portableLimit(
-                            "participatingScopesPerEvent");
+                            GasScheduleConstants.PortableLimit.PARTICIPATING_SCOPES_PER_EVENT);
             while (true) {
                 admitted = admission.materializeScopePaths(
                         admitted,
@@ -103,7 +106,7 @@ final class EffectiveFragmentationCatalogBuilder {
                 participatingScopePaths.addAll(
                         pass.unmaterializedScopePaths);
                 requireLimit(
-                        "participatingScopesPerEvent",
+                        GasScheduleConstants.PortableLimit.PARTICIPATING_SCOPES_PER_EVENT,
                         participatingScopePaths.size());
                 if (participatingScopePaths.size() == before
                         || participatingScopePaths.size()
@@ -129,25 +132,25 @@ final class EffectiveFragmentationCatalogBuilder {
         Deque<ScopeFrame> pending = new ArrayDeque<>();
         pending.addLast(
                 new ScopeFrame(
-                        "/",
+                        JsonPointer.ROOT,
                         0,
                         Collections.<String>emptySet()));
         Set<String> scheduled = new LinkedHashSet<>();
-        scheduled.add("/");
+        scheduled.add(JsonPointer.ROOT);
         Set<String> unmaterializedScopePaths =
                 new LinkedHashSet<>();
 
         while (!pending.isEmpty()) {
             ScopeFrame frame = pending.removeFirst();
             requireLimit(
-                    "participatingScopesPerEvent",
+                    GasScheduleConstants.PortableLimit.PARTICIPATING_SCOPES_PER_EVENT,
                     contractsByScope.size() + 1L);
-            requireLimit("embeddedDepth", frame.depth);
+            requireLimit(GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH, frame.depth);
 
             FrozenNode effective =
                     snapshot.resolvedAt(frame.scopePath);
             if (effective == null) {
-                if ("/".equals(frame.scopePath)) {
+                if (JsonPointer.ROOT.equals(frame.scopePath)) {
                     throw new InvalidExecutionEvidenceException(
                             "Fragmentation catalog Root is absent");
                 }
@@ -194,13 +197,14 @@ final class EffectiveFragmentationCatalogBuilder {
                             ExternalOrderKey.compareTextCodePoints(
                                     left.key(), right.key()));
             requireLimit(
-                    "effectiveContractsPerParticipatingScope",
+                    GasScheduleConstants.PortableLimit.EFFECTIVE_CONTRACTS_PER_SCOPE,
                     contracts.size());
             for (EffectiveContractSnapshot contract : contracts) {
                 validateContractKey(
                         frame.scopePath,
                         contract.key());
-                if ("executable-extension".equals(
+                if (EffectiveContractSnapshotConstants
+                        .Role.EXECUTABLE_EXTENSION.equals(
                         contract.role())) {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: "
@@ -215,7 +219,7 @@ final class EffectiveFragmentationCatalogBuilder {
                             new ArrayList<>(
                                     bundle.embeddedPaths()));
             requireLimit(
-                    "processEmbeddedPathsPerScope",
+                    GasScheduleConstants.PortableLimit.PROCESS_EMBEDDED_PATHS_PER_SCOPE,
                     embeddedPaths.size());
             pathsByScope.put(
                     frame.scopePath,
@@ -310,10 +314,10 @@ final class EffectiveFragmentationCatalogBuilder {
         long utf8Bytes =
                 key.getBytes(StandardCharsets.UTF_8).length;
         requireLimit(
-                "contractKeyCodePoints",
+                GasScheduleConstants.PortableLimit.CONTRACT_KEY_CODE_POINTS,
                 codePoints);
         requireLimit(
-                "contractKeyUtf8Bytes",
+                GasScheduleConstants.PortableLimit.CONTRACT_KEY_UTF8_BYTES,
                 utf8Bytes);
         if (key.isEmpty()) {
             throw new MustUnderstandFailureException(
@@ -452,7 +456,7 @@ final class EffectiveFragmentationCatalogBuilder {
                     contractTypes,
                     path);
             requireLimit(
-                    "effectiveContractsPerParticipatingScope",
+                    GasScheduleConstants.PortableLimit.EFFECTIVE_CONTRACTS_PER_SCOPE,
                     contractTypes.size());
             for (Map.Entry<String, String> contract
                     : contractTypes.entrySet()) {
@@ -471,19 +475,22 @@ final class EffectiveFragmentationCatalogBuilder {
                         .isAssignableFrom(
                                 contractClass)
                         && !deferredFields.contains(
-                        "event")) {
-                    deferredFields.add("event");
+                        EffectiveContractSnapshotConstants
+                                .DispatchField.EVENT)) {
+                    deferredFields.add(
+                            EffectiveContractSnapshotConstants
+                                    .DispatchField.EVENT);
                 }
                 for (String field : deferredFields) {
                     executableBodyPaths.add(
-                            PointerUtils.resolvePointer(
-                                    path,
-                                    "/contracts/"
-                                            + JsonPointer.escape(
-                                            contract.getKey())
-                                            + "/"
-                                            + JsonPointer.escape(
-                                            field)));
+                            JsonPointer.append(
+                                    PointerUtils.resolvePointer(
+                                            path,
+                                            ProcessorPointerConstants
+                                                    .relativeContractsEntry(
+                                                            contract
+                                                                    .getKey())),
+                                    field));
                 }
             }
         }
@@ -496,7 +503,7 @@ final class EffectiveFragmentationCatalogBuilder {
             if (typeReference == null) {
                 return;
             }
-            requireLimit("typeChainEdges", depth + 1L);
+            requireLimit(GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES, depth + 1L);
             Node type = exactContent(
                     typeReference,
                     "Fragmentation catalog type contribution");
@@ -549,7 +556,7 @@ final class EffectiveFragmentationCatalogBuilder {
                                 .InvalidProcessingDocument);
             }
             requireLimit(
-                    "directObjectEntriesMaterializedOrRebuilt",
+                    GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES,
                     contracts.getProperties().size());
             for (Map.Entry<String, Node> entry :
                     contracts.getProperties().entrySet()) {
@@ -616,8 +623,7 @@ final class EffectiveFragmentationCatalogBuilder {
             }
             String expected = supplied.getBlueId();
             boolean cyclicMember =
-                    expected != null
-                            && expected.indexOf('#') >= 0;
+                    BlueIds.hasCyclicMemberSeparator(expected);
             if (!activeReferenceBlueIds.add(expected)) {
                 throw new MustUnderstandFailureException(
                         "Cyclic exact-reference dependency at "
@@ -689,9 +695,9 @@ final class EffectiveFragmentationCatalogBuilder {
 
         private boolean isDirectProcessorStateKey(
                 String key) {
-            return "initialized".equals(key)
-                    || "terminated".equals(key)
-                    || "checkpoint".equals(key);
+            return ProcessorContractConstants.KEY_INITIALIZED.equals(key)
+                    || ProcessorContractConstants.KEY_TERMINATED.equals(key)
+                    || ProcessorContractConstants.KEY_CHECKPOINT.equals(key);
         }
     }
 }

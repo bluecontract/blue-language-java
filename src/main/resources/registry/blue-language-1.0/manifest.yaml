@@ -1,7 +1,7 @@
 registry: blue-language-core
 registryKind: core-type
 specificationVersion: '1.0'
-fixturePackageIdentity: sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb
+fixturePackageIdentity: sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5
 entries:
 - key: Boolean
   path: Boolean.blue

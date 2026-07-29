@@ -1124,6 +1124,16 @@
         {
           "access": 25,
           "descriptor": "Ljava/lang/String;",
+          "name": "LANGUAGE_SPECIFICATION_RESOURCE"
+        },
+        {
+          "access": 25,
+          "descriptor": "Ljava/lang/String;",
+          "name": "LANGUAGE_SPECIFICATION_SHA256"
+        },
+        {
+          "access": 25,
+          "descriptor": "Ljava/lang/String;",
           "name": "REGISTRY_MANIFEST_RESOURCE"
         },
         {
@@ -1553,6 +1563,11 @@
           "access": 16409,
           "descriptor": "Lblue/language/BlueFixtureCategory;",
           "name": "CIRCULAR"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/BlueFixtureCategory;",
+          "name": "CIRCULAR_REFERENCES"
         },
         {
           "access": 16409,
@@ -4488,6 +4503,94 @@
       "majorVersion": 52,
       "methods": [
         {
+          "access": 9,
+          "descriptor": "()Lblue/language/processor/ChannelLookupResult;",
+          "name": "absent"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/Optional;",
+          "name": "channel"
+        },
+        {
+          "access": 9,
+          "descriptor": "(Lblue/language/processor/ChannelMemberSnapshot;)Lblue/language/processor/ChannelLookupResult;",
+          "name": "channel"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Z",
+          "name": "isAbsent"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Z",
+          "name": "isChannel"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Z",
+          "name": "isNonChannel"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Lblue/language/processor/ChannelLookupResult$Kind;",
+          "name": "kind"
+        },
+        {
+          "access": 9,
+          "descriptor": "()Lblue/language/processor/ChannelLookupResult;",
+          "name": "nonChannel"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.processor.ChannelLookupResult",
+      "superclass": "java.lang.Object"
+    },
+    {
+      "access": 16433,
+      "fields": [
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ChannelLookupResult$Kind;",
+          "name": "ABSENT"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ChannelLookupResult$Kind;",
+          "name": "CHANNEL"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ChannelLookupResult$Kind;",
+          "name": "NON_CHANNEL"
+        }
+      ],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
+          "access": 9,
+          "descriptor": "(Ljava/lang/String;)Lblue/language/processor/ChannelLookupResult$Kind;",
+          "name": "valueOf"
+        },
+        {
+          "access": 9,
+          "descriptor": "()[Lblue/language/processor/ChannelLookupResult$Kind;",
+          "name": "values"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.processor.ChannelLookupResult$Kind",
+      "superclass": "java.lang.Enum"
+    },
+    {
+      "access": 49,
+      "fields": [],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
           "access": 1,
           "descriptor": "()Ljava/lang/String;",
           "name": "channelKey"
@@ -5244,11 +5347,6 @@
         },
         {
           "access": 1,
-          "descriptor": "(Ljava/lang/String;)Ljava/lang/String;",
-          "name": "calculatePreInitializationScopeNodeBlueId"
-        },
-        {
-          "access": 1,
           "descriptor": "(Ljava/lang/String;)Lblue/language/snapshot/FrozenNode;",
           "name": "canonicalFrozenAt"
         },
@@ -5256,6 +5354,11 @@
           "access": 1,
           "descriptor": "(Ljava/lang/String;)Lblue/language/model/Node;",
           "name": "canonicalNodeAt"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)Lblue/language/snapshot/FrozenNode;",
+          "name": "capturePreInitializationScopeDocument"
         },
         {
           "access": 1,
@@ -6413,6 +6516,11 @@
         },
         {
           "access": 1,
+          "descriptor": "(Ljava/lang/String;)Lblue/language/processor/ChannelLookupResult;",
+          "name": "lookupChannel"
+        },
+        {
+          "access": 1,
           "descriptor": "(Lblue/language/model/Node;Lblue/language/model/Node;)Z",
           "name": "matchesPattern"
         },
@@ -7491,6 +7599,16 @@
           "access": 1,
           "descriptor": "(Ljava/lang/String;)V",
           "name": "<init>"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;Lblue/language/processor/ProcessorErrorCategory;)V",
+          "name": "<init>"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Lblue/language/processor/ProcessorErrorCategory;",
+          "name": "errorCategory"
         }
       ],
       "minorVersion": 0,
@@ -8458,31 +8576,6 @@
         {
           "access": 1,
           "descriptor": "()V",
-          "name": "incrementInitializationDocumentIdCanonicalMaterializations"
-        },
-        {
-          "access": 1,
-          "descriptor": "()V",
-          "name": "incrementInitializationDocumentIdContentBlueIdCalculations"
-        },
-        {
-          "access": 1,
-          "descriptor": "()V",
-          "name": "incrementInitializationDocumentIdFrozenUncheckedCalculations"
-        },
-        {
-          "access": 1,
-          "descriptor": "()V",
-          "name": "incrementInitializationDocumentIdNodeMaterializations"
-        },
-        {
-          "access": 1,
-          "descriptor": "()V",
-          "name": "incrementInitializationDocumentIdUncheckedCalculations"
-        },
-        {
-          "access": 1,
-          "descriptor": "()V",
           "name": "incrementJcsFallbacks"
         },
         {
@@ -8969,6 +9062,11 @@
         {
           "access": 16409,
           "descriptor": "Lblue/language/processor/ProcessingTraceRecord$Kind;",
+          "name": "CHANNEL_LOOKUP"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ProcessingTraceRecord$Kind;",
           "name": "CHECKPOINT_CLEANUP"
         },
         {
@@ -9014,7 +9112,17 @@
         {
           "access": 16409,
           "descriptor": "Lblue/language/processor/ProcessingTraceRecord$Kind;",
+          "name": "HANDLER_EXECUTION"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ProcessingTraceRecord$Kind;",
           "name": "LIFECYCLE"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ProcessingTraceRecord$Kind;",
+          "name": "LOGICAL_DELIVERY_GROUP"
         },
         {
           "access": 16409,
@@ -9153,6 +9261,21 @@
         {
           "access": 16409,
           "descriptor": "Lblue/language/processor/ProcessorErrorCategory;",
+          "name": "CyclicMemberProcessingEventUnsupported"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ProcessorErrorCategory;",
+          "name": "CyclicMemberProcessingRootUnsupported"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ProcessorErrorCategory;",
+          "name": "CyclicSetEmbeddedBoundaryUnsupported"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ProcessorErrorCategory;",
           "name": "CyclicSetMutationUnsupported"
         },
         {
@@ -9189,6 +9312,11 @@
           "access": 16409,
           "descriptor": "Lblue/language/processor/ProcessorErrorCategory;",
           "name": "GasLimitExceeded"
+        },
+        {
+          "access": 16409,
+          "descriptor": "Lblue/language/processor/ProcessorErrorCategory;",
+          "name": "InconsistentLogicalDelivery"
         },
         {
           "access": 16409,
@@ -10204,6 +10332,11 @@
         },
         {
           "access": 1,
+          "descriptor": "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lblue/language/processor/ProcessorErrorCategory;)V",
+          "name": "<init>"
+        },
+        {
+          "access": 1,
           "descriptor": "()Lblue/language/processor/ProcessorDiagnostic;",
           "name": "diagnostic"
         }
@@ -10890,6 +11023,42 @@
       "methods": [
         {
           "access": 1,
+          "descriptor": "()V",
+          "name": "<init>"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "getId"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "getSubscriptionKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)V",
+          "name": "setId"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)V",
+          "name": "setSubscriptionKey"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.processor.conformance.FixtureNonChannelContract",
+      "superclass": "blue.language.processor.model.Contract"
+    },
+    {
+      "access": 49,
+      "fields": [],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
+          "access": 1,
           "descriptor": "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
           "name": "<init>"
         },
@@ -10932,7 +11101,32 @@
         {
           "access": 1,
           "descriptor": "()Ljava/lang/String;",
+          "name": "getDependencyMode"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "getDependentChannelKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
           "name": "getEventKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/Boolean;",
+          "name": "getFallbackToSourceOnAbsentOrNonChannel"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "getHandlerChannelKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "()Ljava/lang/String;",
+          "name": "getLogicalDeliveryKey"
         },
         {
           "access": 1,
@@ -10957,7 +11151,32 @@
         {
           "access": 1,
           "descriptor": "(Ljava/lang/String;)V",
+          "name": "setDependencyMode"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)V",
+          "name": "setDependentChannelKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)V",
           "name": "setEventKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/Boolean;)V",
+          "name": "setFallbackToSourceOnAbsentOrNonChannel"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)V",
+          "name": "setHandlerChannelKey"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)V",
+          "name": "setLogicalDeliveryKey"
         },
         {
           "access": 1,
@@ -11661,13 +11880,13 @@
         },
         {
           "access": 1,
-          "descriptor": "()Ljava/lang/String;",
-          "name": "getDocumentId"
+          "descriptor": "()Lblue/language/model/Node;",
+          "name": "getDocument"
         },
         {
           "access": 1,
-          "descriptor": "(Ljava/lang/String;)V",
-          "name": "setDocumentId"
+          "descriptor": "(Lblue/language/model/Node;)V",
+          "name": "setDocument"
         }
       ],
       "minorVersion": 0,
@@ -12020,6 +12239,11 @@
           "access": 1,
           "descriptor": "(Ljava/lang/String;)Z",
           "name": "isProcessorManagedTypeBlueId"
+        },
+        {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;Lblue/language/processor/registry/RuntimeTypeKey;)Z",
+          "name": "isRegisteredSubtype"
         },
         {
           "access": 1,
@@ -12658,6 +12882,11 @@
           "name": "addSingleNodes"
         },
         {
+          "access": 1,
+          "descriptor": "(Ljava/lang/String;)Lblue/language/provider/CyclicSetProofResult;",
+          "name": "cyclicSetProofFor"
+        },
+        {
           "access": 4,
           "descriptor": "(Ljava/lang/String;)Lcom/fasterxml/jackson/databind/JsonNode;",
           "name": "fetchContentByBlueId"
@@ -12671,11 +12900,6 @@
           "access": 1,
           "descriptor": "(Ljava/lang/String;)Lblue/language/model/Node;",
           "name": "getNodeByName"
-        },
-        {
-          "access": 1,
-          "descriptor": "(Ljava/lang/String;)Z",
-          "name": "hasVerifiedContentForBlueId"
         },
         {
           "access": 1,
@@ -12789,12 +13013,33 @@
       "methods": [
         {
           "access": 1,
-          "descriptor": "(Ljava/lang/String;)Z",
-          "name": "hasVerifiedContentForBlueId"
+          "descriptor": "(Ljava/lang/String;)Lblue/language/provider/CyclicSetProofResult;",
+          "name": "cyclicSetProofFor"
         }
       ],
       "minorVersion": 0,
       "name": "blue.language.provider.CyclicAwareNodeProvider",
+      "superclass": "java.lang.Object"
+    },
+    {
+      "access": 49,
+      "fields": [],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
+          "access": 1,
+          "descriptor": "()Ljava/util/List;",
+          "name": "declaredPlaceholderSet"
+        },
+        {
+          "access": 9,
+          "descriptor": "(Ljava/util/List;)Lblue/language/provider/CyclicSetProof;",
+          "name": "fromDeclaredPlaceholderSet"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.provider.CyclicSetProof",
       "superclass": "java.lang.Object"
     },
     {
@@ -12909,6 +13154,11 @@
           "access": 1,
           "descriptor": "()Ljava/util/List;",
           "name": "roots"
+        },
+        {
+          "access": 9,
+          "descriptor": "(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/provider/ExactNodeGraphFragments;",
+          "name": "split"
         }
       ],
       "minorVersion": 0,
@@ -13957,11 +14207,6 @@
         {
           "access": 1,
           "descriptor": "(Ljava/lang/String;)Ljava/util/Optional;",
-          "name": "getTransientTrustedCanonical"
-        },
-        {
-          "access": 1,
-          "descriptor": "(Ljava/lang/String;)Ljava/util/Optional;",
           "name": "getVerifiedCanonical"
         },
         {
@@ -13993,11 +14238,6 @@
           "access": 1,
           "descriptor": "(Lblue/language/merge/Merger$VerifiedReferenceResolution;)Lblue/language/snapshot/FrozenNode;",
           "name": "putPinnedVerifiedResolved"
-        },
-        {
-          "access": 1,
-          "descriptor": "(Ljava/lang/String;Lblue/language/snapshot/FrozenNode;)Lblue/language/snapshot/FrozenNode;",
-          "name": "putTransientTrustedCanonical"
         },
         {
           "access": 1,
@@ -15477,6 +15717,32 @@
       ],
       "minorVersion": 0,
       "name": "blue.language.utils.Properties",
+      "superclass": "java.lang.Object"
+    },
+    {
+      "access": 49,
+      "fields": [],
+      "interfaces": [],
+      "majorVersion": 52,
+      "methods": [
+        {
+          "access": 9,
+          "descriptor": "(Lblue/language/model/Node;)Ljava/lang/String;",
+          "name": "blueId"
+        },
+        {
+          "access": 9,
+          "descriptor": "(Lblue/language/model/Node;)Ljava/lang/String;",
+          "name": "canonicalJson"
+        },
+        {
+          "access": 9,
+          "descriptor": "(Lblue/language/model/Node;)Lblue/language/model/Node;",
+          "name": "normalized"
+        }
+      ],
+      "minorVersion": 0,
+      "name": "blue.language.utils.ScalarNodeIdentity",
       "superclass": "java.lang.Object"
     },
     {

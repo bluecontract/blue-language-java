@@ -1,5 +1,7 @@
 package blue.language.snapshot;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.utils.JsonPointer;
@@ -9,22 +11,56 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static blue.language.utils.Properties.OBJECT_CONTRACTS;
+import static blue.language.utils.Properties.OBJECT_VALUE;
+
+/**
+ * Applies JSON Patch operations to an immutable canonical or resolved frozen
+ * tree using structural sharing.
+ *
+ * <p>The original root is never modified. Root replacement is forbidden;
+ * object paths may create missing intermediate containers, while list and
+ * scalar traversal remain strict.</p>
+ */
 public final class CanonicalOverlayPatchEngine {
+
+    private static final String ARRAY_APPEND_TOKEN = "-";
 
     private final FrozenNode root;
 
+    /**
+     * Creates an engine retaining an immutable root.
+     *
+     * @param root canonical or resolved frozen root
+     */
     public CanonicalOverlayPatchEngine(FrozenNode root) {
         this.root = Objects.requireNonNull(root, "root");
     }
 
+    /**
+     * Strictly freezes a mutable canonical root.
+     *
+     * @param canonicalRoot mutable canonical root
+     * @return patch engine
+     */
     public static CanonicalOverlayPatchEngine forNode(Node canonicalRoot) {
         return new CanonicalOverlayPatchEngine(FrozenNode.fromNode(canonicalRoot));
     }
 
+    /** Returns the retained root.
+     * @return immutable root */
     public FrozenNode root() {
         return root;
     }
 
+    /**
+     * Applies one patch and returns the new root plus before/after evidence.
+     *
+     * @param patch mutable patch input
+     * @return immutable patch result
+     * @throws IllegalArgumentException for malformed/root paths
+     * @throws IllegalStateException for shape or existence violations
+     */
     public CanonicalPatchResult apply(JsonPatch patch) {
         Objects.requireNonNull(patch, "patch");
         ParsedJsonPointer path = ParsedJsonPointer.parse(patch.getPath());
@@ -36,6 +72,11 @@ public final class CanonicalOverlayPatchEngine {
      * Applies a patch whose pointer and immutable value were prepared at the
      * transaction boundary. This avoids reparsing paths and refreezing values
      * in each canonical/resolved planning layer.
+     *
+     * @param op patch operation
+     * @param parsedPath parsed non-root pointer
+     * @param value frozen value, or {@code null} for REMOVE
+     * @return immutable patch result
      */
     public CanonicalPatchResult apply(JsonPatch.Op op,
                                       ParsedJsonPointer parsedPath,
@@ -48,7 +89,7 @@ public final class CanonicalOverlayPatchEngine {
             throw new IllegalArgumentException("Canonical overlay patches cannot target the root document");
         }
         if (op != JsonPatch.Op.REMOVE) {
-            Objects.requireNonNull(value, "value");
+            Objects.requireNonNull(value, Properties.OBJECT_VALUE);
         }
 
         FrozenNode before = read(root, segments, op == JsonPatch.Op.ADD, path);
@@ -154,7 +195,7 @@ public final class CanonicalOverlayPatchEngine {
                                  FrozenNode value,
                                  String path,
                                  WriteMode mode) {
-        if ("value".equals(leaf)) {
+        if (OBJECT_VALUE.equals(leaf)) {
             Object nextValue = mode == WriteMode.REMOVE
                     ? null
                     : scalarPatchValue(value, path);
@@ -166,7 +207,7 @@ public final class CanonicalOverlayPatchEngine {
         }
         if (node.hasItems()) {
             List<FrozenNode> nextItems = new ArrayList<>(node.getItems());
-            if ("-".equals(leaf)) {
+            if (ARRAY_APPEND_TOKEN.equals(leaf)) {
                 if (mode == WriteMode.REMOVE || mode == WriteMode.REPLACE) {
                     throw new IllegalStateException("Only add supports append token '-' at path: " + path);
                 }
@@ -203,7 +244,7 @@ public final class CanonicalOverlayPatchEngine {
             throw new IllegalStateException("Cannot traverse into scalar at path: " + path);
         }
 
-        if ("-".equals(leaf)) {
+        if (ARRAY_APPEND_TOKEN.equals(leaf)) {
             throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
         }
 
@@ -286,7 +327,7 @@ public final class CanonicalOverlayPatchEngine {
             }
             String segment = segments.get(i);
             boolean last = i == segments.size() - 1;
-            if ("value".equals(segment)) {
+            if (OBJECT_VALUE.equals(segment)) {
                 if (!last || current.getValue() == null) {
                     return null;
                 }
@@ -295,7 +336,7 @@ public final class CanonicalOverlayPatchEngine {
             } else if (isContractsMetadata(segment)) {
                 current = current.property(segment);
             } else if (current.hasItems()) {
-                if ("-".equals(segment)) {
+                if (ARRAY_APPEND_TOKEN.equals(segment)) {
                     return beforeAdd && last ? null : current.item(current.getItems().size() - 1);
                 }
                 current = current.item(parseArrayIndex(segment, renderedPath));
@@ -320,7 +361,7 @@ public final class CanonicalOverlayPatchEngine {
     }
 
     private boolean isContractsMetadata(String segment) {
-        return "contracts".equals(segment);
+        return OBJECT_CONTRACTS.equals(segment);
     }
 
     private int parseArrayIndex(String segment, String path) {

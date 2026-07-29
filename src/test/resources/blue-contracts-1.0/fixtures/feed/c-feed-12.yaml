@@ -1,0 +1,74 @@
+schema: blue-contracts-fixture/1.0
+id: c-feed-12
+vectors:
+- C-ROUTE-03
+category: feed
+description: A runtime-defined absent-target fallback preserves ordinary source-channel Handler delivery without fabricating a target.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      source:
+        type:
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-v1
+        dependencyMode: catalog
+        handlerChannelKey: missing
+        logicalDeliveryKey: fallback:absent
+        fallbackToSourceOnAbsentOrNonChannel: true
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: source
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 2
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: route
+    id: E-route
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - source
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: source
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.value
+    op: equals
+    expected: 2
+  - actual: trace.channelLookupResults
+    op: sequenceEquals
+    expected:
+    - missing:ABSENT
+  - actual: trace.handlerChannelKeys
+    op: sequenceEquals
+    expected:
+    - source

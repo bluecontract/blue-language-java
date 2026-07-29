@@ -12,14 +12,40 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Calculates stable member BlueIds for a closed set of mutually referencing
+ * documents.
+ *
+ * <p>References use {@code this#<original-index>}. Documents are ordered by a
+ * placeholder-based preliminary identity before the master identity is
+ * calculated, making results independent of caller order.</p>
+ */
 public final class CircularBlueIdCalculator {
 
-    private static final Pattern THIS_REFERENCE_PATTERN = Pattern.compile("^this(#\\d+)?$");
-    private static final Pattern THIS_INDEX_REFERENCE_PATTERN = Pattern.compile("^this#(\\d+)$");
+    private static final Pattern THIS_REFERENCE_PATTERN =
+            Pattern.compile(
+                    "^" + BlueIds.THIS_PLACEHOLDER
+                            + "("
+                            + Pattern.quote(
+                                    BlueIds.CYCLIC_MEMBER_SEPARATOR)
+                            + "\\d+)?$");
+    private static final Pattern THIS_INDEX_REFERENCE_PATTERN =
+            Pattern.compile(
+                    "^" + BlueIds.THIS_MEMBER_PREFIX
+                            + "(\\d+)$");
 
     private CircularBlueIdCalculator() {
     }
 
+    /**
+     * Returns member identifiers in the same order as {@code documents}.
+     *
+     * @param documents non-empty cyclic document set
+     * @return calculated member BlueIds
+     * @throws IllegalArgumentException for an empty set, malformed/out-of-range
+     *                                  internal references, or ambiguous
+     *                                  duplicate preliminary inputs
+     */
     public static List<String> calculateCircularSetBlueIds(List<Node> documents) {
         if (documents == null || documents.isEmpty()) {
             throw new IllegalArgumentException("Circular BlueId calculation requires at least one document.");
@@ -53,7 +79,8 @@ public final class CircularBlueIdCalculator {
             Node rewritten = indexedNode.node.clone();
             rewriteThisReferences(rewritten, reference -> {
                 int targetIndex = parseThisIndex(reference);
-                return "this#" + originalIndexToSortedIndex.get(targetIndex);
+                return BlueIds.indexedThisPlaceholder(
+                        originalIndexToSortedIndex.get(targetIndex));
             });
             sortedNodes.add(rewritten);
         }
@@ -61,7 +88,9 @@ public final class CircularBlueIdCalculator {
         String masterBlueId = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(sortedNodes);
         List<String> result = new ArrayList<>(documents.size());
         for (int originalIndex = 0; originalIndex < documents.size(); originalIndex++) {
-            result.add(masterBlueId + "#" + originalIndexToSortedIndex.get(originalIndex));
+            result.add(BlueIds.indexedCyclicMemberBlueId(
+                    masterBlueId,
+                    originalIndexToSortedIndex.get(originalIndex)));
         }
         return result;
     }
@@ -87,7 +116,9 @@ public final class CircularBlueIdCalculator {
             }
             int targetIndex = Integer.parseInt(matcher.group(1));
             if (targetIndex >= documentCount) {
-                throw new IllegalArgumentException("'this#" + targetIndex + "' points outside the cyclic document set.");
+                throw new IllegalArgumentException(
+                        "'" + BlueIds.indexedThisPlaceholder(targetIndex)
+                                + "' points outside the cyclic document set.");
             }
         }
     }
@@ -132,6 +163,12 @@ public final class CircularBlueIdCalculator {
         if (schema == null) {
             return;
         }
+        if (schema.getBlueId() != null
+                && THIS_REFERENCE_PATTERN
+                .matcher(schema.getBlueId()).matches()) {
+            references.add(new ThisReference(
+                    schema.getBlueId()));
+        }
         collectThisReferences(schema.getRequired(), references);
         collectThisReferences(schema.getMinLength(), references);
         collectThisReferences(schema.getMaxLength(), references);
@@ -175,6 +212,12 @@ public final class CircularBlueIdCalculator {
     private static void rewriteThisReferences(Schema schema, java.util.function.Function<String, String> replacement) {
         if (schema == null) {
             return;
+        }
+        if (schema.getBlueId() != null
+                && THIS_REFERENCE_PATTERN
+                .matcher(schema.getBlueId()).matches()) {
+            schema.blueId(replacement.apply(
+                    schema.getBlueId()));
         }
         rewriteThisReferences(schema.getRequired(), replacement);
         rewriteThisReferences(schema.getMinLength(), replacement);

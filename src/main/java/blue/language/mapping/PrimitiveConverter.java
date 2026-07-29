@@ -4,6 +4,7 @@ import blue.language.model.Node;
 
 import java.lang.reflect.Type;
 
+/** Package-local adapter from the converter SPI to scalar {@link ValueConverter}. */
 class PrimitiveConverter implements Converter<Object> {
     @Override
     public Object convert(Node node, Type targetType) {

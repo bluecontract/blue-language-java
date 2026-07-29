@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -20,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class ProcessorExecutionContextTest {
 
     @Test
-    void documentHelpersExposeSnapshots() {
+    void shouldVerifyDocumentHelpersExposeSnapshots() {
+        // given
         Node document = new Node()
                 .properties("value", new Node().value(1))
                 .properties("nested", new Node().properties("inner", new Node().value("x")));
@@ -29,38 +29,45 @@ final class ProcessorExecutionContextTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
         execution.preflightScope("/");
 
+        // when
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
-
-        assertNull(context.contractKey());
-        assertNull(context.contractNode());
-        assertNull(context.frozenContractNode());
-
+        String contractKey = context.contractKey();
+        Node contractNode = context.contractNode();
+        FrozenNode frozenContractNode = context.frozenContractNode();
         Node snapshot = context.documentAt("/nested/inner");
-        assertNotNull(snapshot);
-        assertEquals("x", snapshot.getValue());
-
+        Object snapshotValue = snapshot.getValue();
         Node missing = context.documentAt("/unknown");
-        assertNull(missing);
-
-        assertTrue(context.documentContains("/value"));
-        assertFalse(context.documentContains("/value/missing"));
-
-        // Ensure the returned node is a clone (mutation should not leak back).
+        boolean containsValue = context.documentContains("/value");
+        boolean containsMissing =
+                context.documentContains("/value/missing");
         snapshot.value("mutated");
         Node reread = context.documentAt("/nested/inner");
+
+        // then
+        assertNull(contractKey);
+        assertNull(contractNode);
+        assertNull(frozenContractNode);
+        assertNotNull(snapshot);
+        assertEquals("x", snapshotValue);
+        assertNull(missing);
+        assertTrue(containsValue);
+        assertFalse(containsMissing);
         assertEquals("x", reread.getValue());
     }
 
     @Test
-    void emitEventEnqueuesOneInvocationOccurrenceAndRecordsRootOutput() {
+    void shouldEnqueueOneInvocationOccurrenceAndRecordRootOutputWhenEmittingEvent() {
+        // given
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
         execution.preflightScope("/");
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
 
+        // when
         context.emitEvent(new Node().value("payload"));
         context.applyBufferedEffects();
 
+        // then
         assertEquals(1,
                 execution.runtime().pendingEventOccurrenceCount());
         assertEquals(1,
@@ -71,7 +78,8 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void cutOffScopeRecordsBufferedPatchesAndEventsAsDiscarded() {
+    void shouldVerifyCutOffScopeRecordsBufferedPatchesAndEventsAsDiscarded() {
+        // given
         Node document = new Node().properties(
                 "child",
                 new Node().properties(
@@ -86,6 +94,7 @@ final class ProcessorExecutionContextTest {
                 new Node(),
                 false);
 
+        // when
         context.applyPatch(JsonPatch.replace(
                 "/child/x", new Node().value(1)));
         context.emitEvent(new Node().properties(
@@ -93,13 +102,14 @@ final class ProcessorExecutionContextTest {
         execution.runtime().scope("/child");
         execution.markCutOff("/child");
         context.applyBufferedEffects();
-
-        assertEquals("0", String.valueOf(
-                execution.runtime().nodeAt(
-                        "/child/x").getValue()));
         java.util.List<ProcessingTraceRecord> discarded =
                 execution.runtime().conformanceTrace().records(
                         ProcessingTraceRecord.Kind.DISCARDED_EFFECT);
+
+        // then
+        assertEquals("0", String.valueOf(
+                execution.runtime().nodeAt(
+                        "/child/x").getValue()));
         assertEquals(2, discarded.size());
         assertEquals("/child/x",
                 discarded.get(0).detail("label"));
@@ -108,7 +118,8 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void invalidEmitEventAbortsBeforeQueueOrPortableGas() {
+    void shouldVerifyInvalidEmitEventAbortsBeforeQueueOrPortableGas() {
+        // given
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
         execution.preflightScope("/");
@@ -118,9 +129,14 @@ final class ProcessorExecutionContextTest {
                 .value("payload")
                 .properties("alsoPayload", new Node().value("invalid"));
 
+        // when
         context.emitEvent(invalidEvent);
-        assertThrows(RunTerminationException.class, context::applyBufferedEffects);
+        RunTerminationException failure =
+                FailureCapture.captureFailure(
+                        context::applyBufferedEffects);
 
+        // then
+        assertNotNull(failure);
         assertEquals(0,
                 execution.runtime().pendingEventOccurrenceCount());
         assertEquals(admittedBeforeEffects, execution.runtime().totalGas(),
@@ -130,7 +146,8 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void runtimeFailureDoesNotApplyBufferedEffects() {
+    void shouldVerifyRuntimeFailureDoesNotApplyBufferedEffects() {
+        // given
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("existing", new Node().value(1)));
         execution.preflightScope("/");
@@ -139,9 +156,15 @@ final class ProcessorExecutionContextTest {
 
         context.applyPatch(JsonPatch.add("/x", new Node().value(7)));
         context.emitEvent(new Node().properties("message", new Node().value("queued before fatal")));
-        ProcessorFatalException ex = assertThrows(ProcessorFatalException.class,
-                () -> context.throwFatal("fatal after partial work"));
 
+        // when
+        ProcessorFatalException ex =
+                FailureCapture.captureFailure(
+                        () -> context.throwFatal(
+                                "fatal after partial work"));
+
+        // then
+        assertNotNull(ex);
         assertEquals("fatal after partial work", ex.getMessage());
         assertNotNull(ex.partialResult());
         assertEquals(ex.partialResult().totalGas(), ex.totalGas());
@@ -152,7 +175,8 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void submittedRuntimeLedgerSurvivesFatalWhileEffectsRollBack() {
+    void shouldVerifySubmittedRuntimeLedgerSurvivesFatalWhileEffectsRollBack() {
+        // given
         Node input = new Node().properties(
                 "existing", new Node().value(1));
         ProcessorEngine.Execution execution =
@@ -182,17 +206,25 @@ final class ProcessorExecutionContextTest {
         context.submitRuntimeGasLedger(ledger);
         long admittedAfterRuntime =
                 execution.runtime().totalGas();
+
+        // when
         ProcessorFatalException failure =
-                assertThrows(
-                        ProcessorFatalException.class,
+                FailureCapture.captureFailure(
                         () -> context.throwFatal(
                                 "fatal after admitted runtime work"));
+        java.util.List<GasTraceEntry> trace =
+                execution.runtime().gasMeter().trace();
+        GasTraceEntry admitted =
+                trace.get(trace.size() - 1);
 
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                admittedBeforeRuntime,
+                admittedAfterRuntime,
+                "submitted work remains staged until the processor finalizes the execution unit");
         assertEquals(
                 admittedBeforeRuntime + 14L,
-                admittedAfterRuntime);
-        assertEquals(
-                admittedAfterRuntime,
                 failure.totalGas());
         assertEquals(
                 input.toString(),
@@ -201,10 +233,6 @@ final class ProcessorExecutionContextTest {
         assertNull(execution.runtime().nodeAt("/notApplied"));
         assertTrue(execution.runtime().rootEmissions().isEmpty());
 
-        java.util.List<GasTraceEntry> trace =
-                execution.runtime().gasMeter().trace();
-        GasTraceEntry admitted =
-                trace.get(trace.size() - 1);
         assertEquals("fatal-runtime", admitted.namespace());
         assertEquals("step", admitted.counter());
         assertEquals(2L, admitted.quantity());
@@ -213,7 +241,8 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void runtimeLedgerCanBeSubmittedOnlyOnce() {
+    void shouldVerifySeveralRuntimeLedgersMergeOnceInCanonicalNamespaceOrder() {
+        // given
         ProcessorEngine.Execution execution =
                 new ProcessorEngine.Execution(
                         new DocumentProcessor(), new Node());
@@ -237,21 +266,29 @@ final class ProcessorExecutionContextTest {
 
         context.submitRuntimeGasLedger(first);
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> context.submitRuntimeGasLedger(second));
+        // when
+        context.submitRuntimeGasLedger(second);
+        IllegalStateException failure =
+                FailureCapture.captureFailure(
+                        () -> context.submitRuntimeGasLedger(
+                                first));
+        context.applyBufferedEffects();
+
+        // then
+        assertNotNull(failure);
         assertEquals(
                 1L,
                 execution.runtime().conformanceTrace()
                         .counterQuantity("first-runtime", "step"));
         assertEquals(
-                0L,
+                1L,
                 execution.runtime().conformanceTrace()
                         .counterQuantity("second-runtime", "step"));
     }
 
     @Test
-    void executingHandlerContextExposesDefensiveContractSnapshot() {
+    void shouldVerifyExecutingHandlerContextExposesDefensiveContractSnapshot() {
+        // given
         Node contract = new Node()
                 .name("Probe Handler")
                 .description("Captures execution context metadata")
@@ -260,6 +297,7 @@ final class ProcessorExecutionContextTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
                 new DocumentProcessor(), new Node());
         execution.preflightScope("/");
+        // when
         ProcessorExecutionContext context = execution.createContext(
                 "/",
                 execution.bundleForScope("/"),
@@ -267,17 +305,28 @@ final class ProcessorExecutionContextTest {
                 "probe",
                 frozen,
                 false);
-
-        assertEquals("probe", context.contractKey());
+        String contractKey = context.contractKey();
         Node contractNode = context.contractNode();
-        assertNotNull(contractNode);
-        assertEquals("Probe Handler", contractNode.getName());
-        assertEquals("Captures execution context metadata", contractNode.getDescription());
-        assertEquals("/x", contractNode.get("/propertyKey"));
-        assertEquals("Probe Handler", context.frozenContractNode().toNode().getName());
-
+        FrozenNode frozenContractNode =
+                context.frozenContractNode();
+        String contractName = contractNode.getName();
+        String contractDescription = contractNode.getDescription();
+        Object propertyKey = contractNode.get("/propertyKey");
         contractNode.name("Mutated");
-        assertEquals("Probe Handler", context.contractNode().getName(),
+        Node reread = context.contractNode();
+
+        // then
+        assertEquals("probe", contractKey);
+        assertNotNull(contractNode);
+        assertEquals("Probe Handler", contractName);
+        assertEquals(
+                "Captures execution context metadata",
+                contractDescription);
+        assertEquals("/x", propertyKey);
+        assertEquals(
+                "Probe Handler",
+                frozenContractNode.toNode().getName());
+        assertEquals("Probe Handler", reread.getName(),
                 "contractNode() must return a defensive materialization");
     }
 }

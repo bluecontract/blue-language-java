@@ -2,7 +2,9 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.utils.JsonPointer;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -87,7 +89,7 @@ final class TerminationService {
             scopeContext.finalizeTermination(
                     transition.reason);
 
-            if ("/".equals(transition.scopePath)) {
+            if (JsonPointer.ROOT.equals(transition.scopePath)) {
                 execution.recordRootTermination();
                 runtime.markRunTerminated();
                 throw new RunTerminationException();
@@ -108,18 +110,26 @@ final class TerminationService {
     private Node createTerminationMarker(String cause, String reason) {
         Node marker = new Node()
                 .type(new Node().blueId(RuntimeBlueIds.PROCESSING_TERMINATED_MARKER))
-                .properties("cause", new Node().value(cause));
+                .properties(
+                        ProcessorContractConstants.KEY_CAUSE,
+                        new Node().value(cause));
         if (reason != null && !reason.isEmpty()) {
-            marker.properties("reason", new Node().value(reason));
+            marker.properties(
+                    ProcessorContractConstants.KEY_REASON,
+                    new Node().value(reason));
         }
         return marker;
     }
 
     private Node createTerminationLifecycleEvent(String cause, String reason) {
         Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED));
-        event.properties("cause", new Node().value(cause));
+        event.properties(
+                ProcessorContractConstants.KEY_CAUSE,
+                new Node().value(cause));
         if (reason != null && !reason.isEmpty()) {
-            event.properties("reason", new Node().value(reason));
+            event.properties(
+                    ProcessorContractConstants.KEY_REASON,
+                    new Node().value(reason));
         }
         return event;
     }

@@ -1,13 +1,18 @@
 package blue.language.processor.conformance;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.Node;
 import blue.language.processor.GasMeter;
 import blue.language.processor.GasSchedule;
+import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.HandlerMatchContext;
+import blue.language.processor.ProcessingTraceConstants;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,15 +33,18 @@ public final class ScriptedContractsRuntime {
 
     private static final String SCRIPTED_RESULT_APPLIED =
             "scriptedResultApplied";
-    private static final String TEXT_BLOCK_CONSTRUCTED =
-            "textBlockConstructed";
     private static final long CONFORMANCE_RUNTIME_COUNTER_WEIGHT = 1L;
     private static final long TEXT_BLOCK_CONSTRUCTED_WEIGHT =
             GasSchedule.contracts10()
-                    .weight("semantic", TEXT_BLOCK_CONSTRUCTED);
+                    .weight(
+                            GasScheduleConstants.Namespace.SEMANTIC,
+                            GasScheduleConstants.SemanticCounter
+                                    .TEXT_BLOCK_CONSTRUCTED);
     private static final long TEXT_BLOCK_CODE_POINTS =
             GasSchedule.contracts10()
-                    .formulaParameter("textBlockCodePoints");
+                    .formulaParameter(
+                            GasScheduleConstants.FormulaParameter
+                                    .TEXT_BLOCK_CODE_POINTS);
 
     private static final ScriptedContractsRuntime EMPTY =
             new ScriptedContractsRuntime(null);
@@ -48,6 +56,14 @@ public final class ScriptedContractsRuntime {
     private boolean cascadeMutationApplied;
     private int cascadeUpdateIndex;
 
+    /**
+     * Creates a fixture runtime from closed scripted controls.
+     *
+     * <p>Object controls and handler scripts are deep-copied. A
+     * {@code null} or non-object value creates an empty runtime.</p>
+     *
+     * @param runtimeControls fixture runtime controls, or {@code null}
+     */
     public ScriptedContractsRuntime(JsonNode runtimeControls) {
         this.controls = runtimeControls != null && runtimeControls.isObject()
                 ? runtimeControls.deepCopy()
@@ -55,7 +71,7 @@ public final class ScriptedContractsRuntime {
         if (controls == null) {
             return;
         }
-        JsonNode handlers = controls.get("handlers");
+        JsonNode handlers = controls.get(ContractsFixtureConstants.Field.HANDLERS);
         if (handlers != null && handlers.isObject()) {
             handlers.fields().forEachRemaining(entry ->
                     handlerScripts.put(
@@ -64,20 +80,47 @@ public final class ScriptedContractsRuntime {
         }
     }
 
+    /**
+     * Returns the shared runtime with no scripted controls.
+     *
+     * @return stateless empty fixture runtime
+     */
     public static ScriptedContractsRuntime empty() {
         return EMPTY;
     }
 
+    /**
+     * Tests whether a normalized contract path has a handler script.
+     *
+     * @param contractPath absolute or root-equivalent contract path
+     * @return {@code true} when a script is installed
+     */
     public boolean hasHandlerScript(String contractPath) {
         return handlerScripts.containsKey(normalizeContractPath(contractPath));
     }
 
+    /**
+     * Evaluates the selected handler's ordinary event pattern.
+     *
+     * @param contractPath selected handler path retained for fixture
+     *        attribution
+     * @param contract selected fixture handler
+     * @param context invocation match context
+     * @return whether the handler event pattern matches
+     */
     public boolean matchesHandler(String contractPath,
                                   MockHandler contract,
                                   HandlerMatchContext context) {
         return context.matchesEventPattern(contract.getEvent());
     }
 
+    /**
+     * Executes the script installed for a selected fixture handler.
+     *
+     * @param contractPath selected handler path
+     * @param contract selected fixture handler
+     * @param context invocation execution capability
+     */
     public void executeHandler(String contractPath,
                                MockHandler contract,
                                ProcessorExecutionContext context) {
@@ -85,17 +128,20 @@ public final class ScriptedContractsRuntime {
         if (script == null) {
             return;
         }
-        String fail = text(script, "fail");
+        String fail = text(script, ContractsFixtureConstants.Field.FAIL);
         if (fail != null) {
             context.throwFatal("Scripted Handler failed: " + fail);
         }
-        executeResult(script.get("result"), context);
+        executeResult(script.get(ContractsFixtureConstants.Field.RESULT), context);
         executeInstalledControl(context);
         applyFirstTerminationRequest(context);
     }
 
     /**
      * Executes a result declared directly by a selected Scripted Handler.
+     *
+     * @param result declared handler result, or {@code null}
+     * @param context invocation execution capability
      */
     public void executeDeclaredResult(Node result,
                                       ProcessorExecutionContext context) {
@@ -225,7 +271,7 @@ public final class ScriptedContractsRuntime {
 
     private static Node nestedEvent(long sequence) {
         return new Node()
-                .properties("id",
+                .properties(ProcessingTraceConstants.EVENT_LABEL_PROPERTY,
                         new Node().value("nested-" + sequence))
                 .properties("fixtureSequence",
                         new Node().value(BigInteger.valueOf(sequence)));
@@ -243,7 +289,7 @@ public final class ScriptedContractsRuntime {
             return;
         }
 
-        JsonNode runtimeCounters = result.get("runtimeCounters");
+        JsonNode runtimeCounters = result.get(ContractsFixtureConstants.Field.RUNTIME_COUNTERS);
         Map<String, Long> weights = new LinkedHashMap<>();
         weights.put(
                 SCRIPTED_RESULT_APPLIED,
@@ -254,15 +300,18 @@ public final class ScriptedContractsRuntime {
                             name,
                             CONFORMANCE_RUNTIME_COUNTER_WEIGHT));
         }
-        if (hasConstructedText(result.get("events"))) {
+        if (hasConstructedText(result.get(ContractsFixtureConstants.Field.EVENTS))) {
             weights.put(
-                    TEXT_BLOCK_CONSTRUCTED,
+                    GasScheduleConstants.SemanticCounter
+                            .TEXT_BLOCK_CONSTRUCTED,
                     TEXT_BLOCK_CONSTRUCTED_WEIGHT);
         }
 
         GasMeter.ChildGasLedger ledger =
-                context.newRuntimeGasLedger("runtime", weights);
-        String fail = text(result, "fail");
+                context.newRuntimeGasLedger(
+                        ContractsFixtureConstants.RuntimeNamespace.RUNTIME,
+                        weights);
+        String fail = text(result, ContractsFixtureConstants.Field.FAIL);
         try {
             ledger.charge(SCRIPTED_RESULT_APPLIED, 1L);
 
@@ -277,20 +326,20 @@ public final class ScriptedContractsRuntime {
                                         "runtimeCounters." + entry.getKey())));
             }
             if (fail == null) {
-                JsonNode patches = listItems(result.get("patches"));
+                JsonNode patches = listItems(result.get(ContractsFixtureConstants.Field.PATCHES));
                 if (patches != null) {
                     for (JsonNode patch : patches) {
                         context.applyPatch(toPatch(patch));
                     }
                 }
-                JsonNode events = listItems(result.get("events"));
+                JsonNode events = listItems(result.get(ContractsFixtureConstants.Field.EVENTS));
                 if (events != null) {
                     for (JsonNode event : events) {
                         context.emitEvent(
                                 expandConstructedText(readNode(event), ledger));
                     }
                 }
-                JsonNode termination = result.get("termination");
+                JsonNode termination = result.get(ContractsFixtureConstants.Field.TERMINATION);
                 if (termination != null && !termination.isNull()) {
                     applyTermination(termination, context);
                 }
@@ -319,7 +368,7 @@ public final class ScriptedContractsRuntime {
                                          ProcessorExecutionContext context) {
         if (termination.isObject()) {
             String cause = text(termination, "cause");
-            String reason = text(termination, "reason");
+            String reason = text(termination, ContractsFixtureConstants.Field.REASON);
             context.terminate(cause != null ? cause : "completed", reason);
             return;
         }
@@ -330,25 +379,30 @@ public final class ScriptedContractsRuntime {
         if (patch == null || !patch.isObject()) {
             throw new IllegalArgumentException("Scripted patch must be an object");
         }
-        String op = text(patch, "op");
-        String path = text(patch, "path");
+        String op = text(
+                patch,
+                ContractsFixtureConstants.PatchField.OPERATION);
+        String path = text(
+                patch,
+                ContractsFixtureConstants.PatchField.PATH);
         if (op == null || path == null) {
             throw new IllegalArgumentException(
                     "Scripted patch requires op and path");
         }
-        if ("remove".equals(op)) {
+        if (ContractsFixtureConstants.PatchOperation.REMOVE.equals(op)) {
             return JsonPatch.remove(path);
         }
-        JsonNode rawValue = patch.get("val");
+        JsonNode rawValue = patch.get(
+                ContractsFixtureConstants.PatchField.VALUE);
         if (rawValue == null) {
             throw new IllegalArgumentException(
                     "Scripted add/replace patch requires val");
         }
         Node value = readNode(rawValue);
-        if ("add".equals(op)) {
+        if (ContractsFixtureConstants.PatchOperation.ADD.equals(op)) {
             return JsonPatch.add(path, value);
         }
-        if ("replace".equals(op)) {
+        if (ContractsFixtureConstants.PatchOperation.REPLACE.equals(op)) {
             return JsonPatch.replace(path, value);
         }
         throw new IllegalArgumentException("Unsupported scripted patch op: " + op);
@@ -383,7 +437,8 @@ public final class ScriptedContractsRuntime {
                     "constructedText requires one code point and a non-negative count");
         }
         ledger.charge(
-                TEXT_BLOCK_CONSTRUCTED,
+                GasScheduleConstants.SemanticCounter
+                        .TEXT_BLOCK_CONSTRUCTED,
                 textBlocks(count));
         StringBuilder text = new StringBuilder();
         for (long index = 0L; index < count; index++) {
@@ -401,14 +456,24 @@ public final class ScriptedContractsRuntime {
                 : 1L + ((codePointCount - 1L) / TEXT_BLOCK_CODE_POINTS);
     }
 
+    /**
+     * Builds the canonical path of a scope-local contract.
+     *
+     * @param scopePath absolute or root-equivalent scope path
+     * @param contractKey scope-local contract key; {@code null} selects the
+     *        empty key
+     * @return normalized absolute contract path
+     */
     public static String contractPath(String scopePath, String contractKey) {
         String scope = PointerUtils.normalizePointer(scopePath);
         String escaped = contractKey == null ? "" : contractKey
                 .replace("~", "~0")
                 .replace("/", "~1");
         return "/".equals(scope)
-                ? "/contracts/" + escaped
-                : scope + "/contracts/" + escaped;
+                ? ProcessorPointerConstants.RELATIVE_CONTRACTS
+                        + "/" + escaped
+                : scope + ProcessorPointerConstants.RELATIVE_CONTRACTS
+                        + "/" + escaped;
     }
 
     private static String normalizeContractPath(String path) {
@@ -443,13 +508,13 @@ public final class ScriptedContractsRuntime {
         if (value.isArray()) {
             return value;
         }
-        JsonNode items = value.isObject() ? value.get("items") : null;
+        JsonNode items = value.isObject() ? value.get(Properties.OBJECT_ITEMS) : null;
         return items != null && items.isArray() ? items : null;
     }
 
     private static JsonNode scalarValue(JsonNode value) {
         if (value != null && value.isObject()) {
-            JsonNode scalar = value.get("value");
+            JsonNode scalar = value.get(Properties.OBJECT_VALUE);
             if (scalar != null) {
                 return scalar;
             }
@@ -458,18 +523,18 @@ public final class ScriptedContractsRuntime {
     }
 
     private static boolean isDefinitionOnlyResult(JsonNode result) {
-        JsonNode type = result != null ? result.get("type") : null;
+        JsonNode type = result != null ? result.get(Properties.OBJECT_TYPE) : null;
         if (type == null
                 || !type.isObject()
-                || type.path("blueId").isTextual()) {
+                || type.path(Properties.OBJECT_BLUE_ID).isTextual()) {
             return false;
         }
-        return listItems(result.get("patches")) == null
-                && listItems(result.get("events")) == null
-                && text(result, "fail") == null
-                && result.get("runtimeCounters") == null
+        return listItems(result.get(ContractsFixtureConstants.Field.PATCHES)) == null
+                && listItems(result.get(ContractsFixtureConstants.Field.EVENTS)) == null
+                && text(result, ContractsFixtureConstants.Field.FAIL) == null
+                && result.get(ContractsFixtureConstants.Field.RUNTIME_COUNTERS) == null
                 && !hasConcreteTermination(
-                result.get("termination"));
+                result.get(ContractsFixtureConstants.Field.TERMINATION));
     }
 
     private static boolean hasConcreteTermination(JsonNode termination) {
@@ -480,7 +545,7 @@ public final class ScriptedContractsRuntime {
         return termination != null
                 && termination.isObject()
                 && (text(termination, "cause") != null
-                || text(termination, "reason") != null);
+                || text(termination, ContractsFixtureConstants.Field.REASON) != null);
     }
 
     private static Node property(Node node, String key) {

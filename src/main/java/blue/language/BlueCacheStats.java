@@ -21,15 +21,30 @@ public final class BlueCacheStats {
         this.closed = closed;
     }
 
-    /** Cache regions keyed by the metric name reported by this runtime. */
+    /**
+     * Returns cache regions keyed by runtime metric name.
+     *
+     * @return immutable region map
+     */
     public Map<String, Region> regions() {
         return regions;
     }
 
+    /**
+     * Returns one named cache region.
+     *
+     * @param name runtime metric name
+     * @return region statistics, or {@code null} when absent
+     */
     public Region region(String name) {
         return regions.get(name);
     }
 
+    /**
+     * Returns saturated total retained weight across all regions.
+     *
+     * @return retained weight in bytes
+     */
     public long currentWeightBytes() {
         long total = 0L;
         for (Region region : regions.values()) {
@@ -38,6 +53,11 @@ public final class BlueCacheStats {
         return total;
     }
 
+    /**
+     * Returns saturated total entry count across all regions.
+     *
+     * @return retained entry count
+     */
     public int entries() {
         int total = 0;
         for (Region region : regions.values()) {
@@ -49,6 +69,11 @@ public final class BlueCacheStats {
         return total;
     }
 
+    /**
+     * Tests whether the owning runtime has closed its cache lifecycle.
+     *
+     * @return whether the owning runtime is closed
+     */
     public boolean isClosed() {
         return closed;
     }
@@ -95,34 +120,50 @@ public final class BlueCacheStats {
             this.pinned = pinned;
         }
 
+        /** Returns retained entries.
+         * @return retained entry count */
         public int entries() {
             return entries;
         }
 
+        /** Returns current retained weight.
+         * @return current retained weight in bytes */
         public long currentWeightBytes() {
             return currentWeightBytes;
         }
 
+        /** Returns the retained-weight high-water mark.
+         * @return highest observed retained weight in bytes */
         public long highWaterWeightBytes() {
             return highWaterWeightBytes;
         }
 
+        /** Returns successful lookups.
+         * @return successful lookup count */
         public long hits() {
             return hits;
         }
 
+        /** Returns unsuccessful lookups.
+         * @return unsuccessful lookup count */
         public long misses() {
             return misses;
         }
 
+        /** Returns evictions.
+         * @return eviction count */
         public long evictions() {
             return evictions;
         }
 
+        /** Returns oversized-entry rejections.
+         * @return oversized rejection count */
         public long oversizedRejections() {
             return oversizedRejections;
         }
 
+        /** Tests whether authoritative entries are pinned.
+         * @return whether the region is pinned */
         public boolean isPinned() {
             return pinned;
         }

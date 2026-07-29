@@ -16,6 +16,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Thread-safe registry from released type BlueIds to Java classes.
+ *
+ * <p>Mappings may be registered explicitly or discovered from
+ * {@link TypeBlueId}-annotated classes. Duplicate BlueIds may be re-registered
+ * only for the same class. The exposed map is a live, unmodifiable,
+ * synchronization-safe view.</p>
+ */
 public class TypeClassResolver {
 
     private final Map<String, Class<?>> blueIdMap = new HashMap<>();
@@ -75,15 +83,27 @@ public class TypeClassResolver {
                 }
             });
 
+    /** Creates an empty registry. */
     public TypeClassResolver() {
     }
 
+    /**
+     * Creates a registry and scans the supplied packages in order.
+     *
+     * @param packagesToScan package names to scan
+     */
     public TypeClassResolver(String... packagesToScan) {
         for (String packageName : packagesToScan) {
             scanPackage(packageName);
         }
     }
 
+    /**
+     * Discovers and registers every {@link TypeBlueId}-annotated class in a package.
+     *
+     * @param packageName package to scan
+     * @return this registry
+     */
     public synchronized TypeClassResolver scanPackage(String packageName) {
         Reflections reflections = new Reflections(new ConfigurationBuilder()
                 .setUrls(ClasspathHelper.forPackage(packageName))
@@ -98,6 +118,12 @@ public class TypeClassResolver {
         return this;
     }
 
+    /**
+     * Registers all usable BlueIds declared by one annotated class.
+     *
+     * @param clazz annotated class to register
+     * @return this registry
+     */
     public synchronized TypeClassResolver registerAnnotatedClass(Class<?> clazz) {
         TypeBlueId annotation = clazz.getAnnotation(TypeBlueId.class);
         if (annotation == null) {
@@ -123,6 +149,14 @@ public class TypeClassResolver {
         return this;
     }
 
+    /**
+     * Registers one exact mapping.
+     *
+     * @param blueId exact type BlueId
+     * @param clazz Java class represented by the BlueId
+     * @return this registry
+     * @throws IllegalStateException if the BlueId already maps to another class
+     */
     public synchronized TypeClassResolver register(String blueId, Class<?> clazz) {
         if (blueId == null || blueId.isEmpty()) {
             throw new IllegalArgumentException("blueId must not be empty");
@@ -138,6 +172,12 @@ public class TypeClassResolver {
         return this;
     }
 
+    /**
+     * Resolves the effective type of a node.
+     *
+     * @param node node whose effective type should be resolved
+     * @return registered Java class, or {@code null} if unregistered
+     */
     public synchronized Class<?> resolveClass(Node node) {
         String blueId = getEffectiveBlueId(node);
         if (blueId == null) {
@@ -147,6 +187,12 @@ public class TypeClassResolver {
         return resolveClass(blueId);
     }
 
+    /**
+     * Resolves an exact BlueId.
+     *
+     * @param blueId exact type BlueId
+     * @return registered Java class, or {@code null} if unregistered
+     */
     public synchronized Class<?> resolveClass(String blueId) {
         return blueIdMap.get(blueId);
     }
@@ -160,6 +206,11 @@ public class TypeClassResolver {
         return null;
     }
 
+    /**
+     * Returns a live unmodifiable view of registered mappings.
+     *
+     * @return synchronization-safe BlueId-to-class view
+     */
     public synchronized Map<String, Class<?>> getBlueIdMap() {
         return blueIdView;
     }

@@ -18,6 +18,12 @@ public final class BlueContractsConformanceSuiteRunner {
     private BlueContractsConformanceSuiteRunner() {
     }
 
+    /**
+     * Executes every bundled Contracts fixture.
+     *
+     * @param blue runtime under test
+     * @return complete Contracts conformance report
+     */
     public static BlueContractsConformanceReport run(Blue blue) {
         BlueContractsConformanceReport.validateFixturePackageIntegrity();
         BlueContractsConformanceReport.validateReleaseBindings();
@@ -99,10 +105,20 @@ public final class BlueContractsConformanceSuiteRunner {
                 results);
     }
 
+    /**
+     * Validates one parsed fixture envelope for focused tests.
+     *
+     * @param fixture parsed fixture envelope
+     */
     public static void validateFixtureMetadataForTest(JsonNode fixture) {
         new ContractsFixtureHarness().validate(fixture);
     }
 
+    /**
+     * Executes one parsed fixture envelope for focused tests.
+     *
+     * @param fixture parsed fixture envelope
+     */
     public static void runFixtureSpecForTest(JsonNode fixture) {
         new ContractsFixtureHarness().execute(fixture, new Blue(), false);
     }

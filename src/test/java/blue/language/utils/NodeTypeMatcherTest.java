@@ -11,6 +11,7 @@ import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class NodeTypeMatcherTest {
 
     @Test
-    void matchesBasicTypeValueAndShapeCases() {
+    void shouldMatchBasicTypeValueAndShapeCases() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: A\nvalue: AAA");
         nodeProvider.addSingleDocs(
@@ -39,8 +41,10 @@ public class NodeTypeMatcherTest {
                 "x: AAA");
 
         Blue blue = new Blue(nodeProvider);
+        // when
         Node node = nodeProvider.getNodeByName("B Instance");
 
+        // then
         assertTrue(blue.nodeMatchesType(node, blue.yamlToNode("x:\n  type:\n    blueId: " + nodeProvider.getBlueIdByName("A"))));
         assertTrue(blue.nodeMatchesType(node, blue.yamlToNode("x: AAA")));
         assertFalse(blue.nodeMatchesType(node, blue.yamlToNode("x:\n  type:\n    blueId: " + nodeProvider.getBlueIdByName("C"))));
@@ -56,7 +60,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void doesNotTreatSameNamedTypesWithDifferentDefinitionsAsTheSameType() {
+    void shouldNotTreatSameNamedTypesWithDifferentDefinitionsAsTheSameType() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
         Node node = blue.yamlToNode(
                 "type:\n" +
@@ -64,17 +69,20 @@ public class NodeTypeMatcherTest {
                 "  description: Candidate description\n" +
                 "  value: active\n" +
                 "value: active");
+        // when
         Node target = blue.yamlToNode(
                 "type:\n" +
                 "  name: Shared Type\n" +
                 "  description: Target description\n" +
                 "  value: inactive");
 
+        // then
         assertFalse(blue.nodeMatchesType(node, target));
     }
 
     @Test
-    void ignoresNameAndDescriptionForMatcherAndTypeCompatibility() {
+    void shouldIgnoreNameAndDescriptionForMatcherAndTypeCompatibility() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
         Node node = blue.yamlToNode(
                 "name: Candidate label\n" +
@@ -85,6 +93,7 @@ public class NodeTypeMatcherTest {
                 "  score:\n" +
                 "    type: Integer\n" +
                 "score: 7");
+        // when
         Node target = blue.yamlToNode(
                 "name: Target label ignored\n" +
                 "description: Target description ignored\n" +
@@ -96,13 +105,16 @@ public class NodeTypeMatcherTest {
                 "score:\n" +
                 "  type: Integer");
 
+        // then
         assertTrue(blue.nodeMatchesType(node, target));
     }
 
     @Test
-    void targetLabelsDoNotConstrainPresenceOrMatching() {
+    void shouldNotConstrainPresenceOrMatchingWithTargetLabels() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
         Node node = blue.yamlToNode("x: 1");
+        // when
         Node target = blue.yamlToNode(
                 "name: Root label ignored\n" +
                 "description: Root description ignored\n" +
@@ -113,11 +125,13 @@ public class NodeTypeMatcherTest {
                 "  name: Missing field label ignored\n" +
                 "  description: Missing field description ignored");
 
+        // then
         assertTrue(blue.nodeMatchesType(node, target));
     }
 
     @Test
-    void providerBackedTypeCompatibilityIgnoresNameDescriptionOnTypes() {
+    void shouldIgnoreTypeNameAndDescriptionForProviderBackedCompatibility() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Provider Request\n" +
@@ -151,23 +165,28 @@ public class NodeTypeMatcherTest {
                 "    schema:\n" +
                 "      minimum: 1\n" +
                 "payload: 5");
+        // when
         Node providerReferenceTarget = blue.yamlToNode(
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Provider Request"));
 
+        // then
         assertTrue(blue.nodeMatchesType(providerTypedNode, inlineEquivalentTarget));
         assertTrue(blue.nodeMatchesType(inlineTypedNode, providerReferenceTarget));
     }
 
     @Test
-    void pureBlueIdReferencesStillRequireExactIdentityIncludingLabels() {
+    void shouldRequireExactIdentityIncludingLabelsForPureBlueIdReferences() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Exact State\n" +
                 "description: Exact description\n" +
                 "value: active");
+        // when
         Blue blue = new Blue(nodeProvider);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 blue.yamlToNode(
                         "state:\n" +
@@ -180,7 +199,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void appliesInheritedFixedValuesFromReferencedTargetTypes() {
+    void shouldApplyInheritedFixedValuesFromReferencedTargetTypes() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Activation State\n" +
@@ -200,21 +220,26 @@ public class NodeTypeMatcherTest {
                         .blueId(nodeProvider.getBlueIdByName("Wrong State"))
                         .type(new Node().blueId(nodeProvider.getBlueIdByName("Wrong State")))
                         .value("wrong"));
+        // when
         Node target = blue.yamlToNode(
                 "state:\n" +
                 "  type:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Activation State"));
 
+        // then
         assertTrue(blue.nodeMatchesType(matching, target));
         assertFalse(blue.nodeMatchesType(mismatched, target));
     }
 
     @Test
-    void honorsOptionalAndRequiredSchemaPropertiesWithoutResolvingTargetAsDocument() {
+    void shouldHonorOptionalAndRequiredSchemaPropertiesWithoutResolvingTargetAsDocument() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);
+        // when
         Node node = blue.yamlToNode("x: ABC");
 
+        // then
         assertTrue(blue.nodeMatchesType(node, blue.yamlToNode(
                 "x:\n" +
                 "  schema:\n" +
@@ -236,7 +261,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void enforcesRequiredProviderBackedTypeDefinitionsWithoutTreatingThemAsInstances() {
+    void shouldEnforceRequiredProviderBackedTypeDefinitionsWithoutTreatingThemAsInstances() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Required Request\n" +
@@ -245,17 +271,20 @@ public class NodeTypeMatcherTest {
                 "  schema:\n" +
                 "    required: true");
         Blue blue = new Blue(nodeProvider);
+        // when
         Node target = blue.yamlToNode(
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Required Request"));
 
+        // then
         assertTrue(blue.nodeMatchesType(blue.yamlToNode("payload: 5"), target));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode("payload: five"), target));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode("other: 5"), target));
     }
 
     @Test
-    void verifiesSchemaKeywordsOnFrozenNodes() {
+    void shouldVerifySchemaKeywordsOnFrozenNodes() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);
 
@@ -267,6 +296,7 @@ public class NodeTypeMatcherTest {
                 "  - B\n" +
                 "flags:\n" +
                 "  enabled: true");
+        // when
         Node target = blue.yamlToNode(
                 "score:\n" +
                 "  type: Integer\n" +
@@ -291,6 +321,7 @@ public class NodeTypeMatcherTest {
                 "    minFields: 1\n" +
                 "    maxFields: 2");
 
+        // then
         assertTrue(blue.nodeMatchesType(valid, target));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode("score: 11"), blue.yamlToNode(
                 "score:\n" +
@@ -305,7 +336,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void verifiesEnumByCanonicalNodeIdentityIgnoringCandidateSchema() {
+    void shouldVerifyEnumByCanonicalNodeIdentityIgnoringCandidateSchema() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
         Node node = blue.yamlToNode(
                 "status:\n" +
@@ -318,18 +350,21 @@ public class NodeTypeMatcherTest {
                 "    enum:\n" +
                 "      - active\n" +
                 "      - paused");
+        // when
         Node wrongTarget = blue.yamlToNode(
                 "status:\n" +
                 "  schema:\n" +
                 "    enum:\n" +
                 "      - disabled");
 
+        // then
         assertTrue(blue.nodeMatchesType(node, target));
         assertFalse(blue.nodeMatchesType(node, wrongTarget));
     }
 
     @Test
-    void supportsNestedListAndPropertyShapes() {
+    void shouldSupportNestedListAndPropertyShapes() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: Item\nvalue: 1");
         nodeProvider.addSingleDocs("name: Item2\nvalue: 2");
@@ -342,8 +377,10 @@ public class NodeTypeMatcherTest {
                 "list:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("ListOwner"));
         Blue blue = new Blue(nodeProvider);
+        // when
         Node container = nodeProvider.getNodeByName("Container");
 
+        // then
         assertTrue(blue.nodeMatchesType(container, blue.yamlToNode(
                 "list:\n" +
                 "  items:\n" +
@@ -359,7 +396,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void matchesExactBlueIdReferencesAgainstNodeOrNodeTypeIdentity() {
+    void shouldMatchExactBlueIdReferencesAgainstNodeOrNodeTypeIdentity() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: Alpha");
         nodeProvider.addSingleDocs("name: Beta");
@@ -368,8 +406,10 @@ public class NodeTypeMatcherTest {
         Node typedReference = new Node().properties("x", new Node().type(new Node().blueId(nodeProvider.getBlueIdByName("Alpha"))));
 
         Node ok = blue.yamlToNode("x:\n  blueId: " + nodeProvider.getBlueIdByName("Alpha"));
+        // when
         Node fail = blue.yamlToNode("x:\n  blueId: " + nodeProvider.getBlueIdByName("Beta"));
 
+        // then
         assertTrue(blue.nodeMatchesType(directReference, ok));
         assertTrue(blue.nodeMatchesType(typedReference, ok));
         assertFalse(blue.nodeMatchesType(directReference, fail));
@@ -377,7 +417,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void pureReferencePatternDoesNotExpandCandidateReferenceLeaf() {
+    void shouldNotExpandCandidateReferenceLeafForPureReferencePattern() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Expected\nvalue: expected");
         delegate.addSingleDocs(
@@ -388,8 +429,10 @@ public class NodeTypeMatcherTest {
                 "  d:\n" +
                 "    e: ignored");
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 blue.yamlToNode("x:\n  blueId: " + delegate.getBlueIdByName("Huge Candidate")),
                 blue.yamlToNode("x:\n  blueId: " + delegate.getBlueIdByName("Expected"))));
@@ -397,7 +440,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void nestedPatternExpandsOnlyRequiredPrefixAndKeepsReferenceLeavesUnexpanded() {
+    void shouldExpandOnlyRequiredPrefixAndKeepReferenceLeavesUnexpandedForNestedPattern() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Expected Z\nvalue: z");
         delegate.addSingleDocs("name: Unchecked Huge\nvalue: huge");
@@ -409,8 +453,10 @@ public class NodeTypeMatcherTest {
                 "ignored:\n" +
                 "  blueId: " + delegate.getBlueIdByName("Unchecked Huge"));
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("x:\n  blueId: " + delegate.getBlueIdByName("Checked X")),
                 blue.yamlToNode(
@@ -422,7 +468,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void callerGlobalLimitsStillBoundTargetPatternMatching() {
+    void shouldRespectCallerGlobalLimitsDuringTargetPatternMatching() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs(
                 "name: Branch\n" +
@@ -434,8 +481,10 @@ public class NodeTypeMatcherTest {
         Blue blue = new Blue(provider);
         Node candidate = blue.yamlToNode("x:\n  blueId: " + delegate.getBlueIdByName("Branch"));
         Node pattern = blue.yamlToNode("x:\n  y: 1");
+        // when
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
+        // then
         assertFalse(matcher.matchesType(candidate, pattern, PathLimits.withSinglePath("/other")));
         assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("Branch")));
 
@@ -444,7 +493,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void targetBoundedMatchingUsesLiteralPathSegmentsForKeysContainingSlash() {
+    void shouldUseLiteralPathSegmentsForSlashKeysDuringTargetBoundedMatching() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Expected Slash Value\nvalue: slash");
         delegate.addSingleDocs("name: Unchecked Slash Huge\nvalue: huge");
@@ -455,8 +505,10 @@ public class NodeTypeMatcherTest {
                 "ignored:\n" +
                 "  blueId: " + delegate.getBlueIdByName("Unchecked Slash Huge"));
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("x:\n  blueId: " + delegate.getBlueIdByName("Slash X")),
                 blue.yamlToNode(
@@ -467,7 +519,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void globalPathLimitsUseJsonPointerEscapesForKeysContainingSlashOrTilde() {
+    void shouldUseJsonPointerEscapesForSlashOrTildeKeysInGlobalPathLimits() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Unchecked Escaped Huge\nvalue: huge");
         delegate.addSingleDocs(
@@ -483,15 +536,18 @@ public class NodeTypeMatcherTest {
                 "x:\n" +
                 "  'a/b':\n" +
                 "    'c~d': 7");
+        // when
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
+        // then
         assertTrue(matcher.matchesType(candidate, pattern, PathLimits.withSinglePath("/x/a~1b/c~0d")));
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Escaped Branch")));
         assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("Unchecked Escaped Huge")));
     }
 
     @Test
-    void listSchemaCardinalityMergesItemsWithoutExpandingItemReferences() {
+    void shouldMergeItemsForListSchemaCardinalityWithoutExpandingReferences() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Huge One\nvalue: one");
         delegate.addSingleDocs("name: Huge Two\nvalue: two");
@@ -502,8 +558,10 @@ public class NodeTypeMatcherTest {
                 "  - blueId: " + delegate.getBlueIdByName("Huge One") + "\n" +
                 "  - blueId: " + delegate.getBlueIdByName("Huge Two"));
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("values:\n  blueId: " + delegate.getBlueIdByName("List Candidate")),
                 blue.yamlToNode(
@@ -518,11 +576,14 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitThreeItemListPatternAgainstListReferenceExpandsOnlyRequiredItems() {
+    void shouldExpandOnlyRequiredItemsForThreeItemPatternAgainstListReference() {
+        // given
         BasicNodeProvider delegate = explicitListProvider(false, false);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("values:\n  blueId: " + delegate.getBlueIdByName("Candidate List")),
                 explicitThreeItemListPattern(blue, delegate)));
@@ -536,11 +597,14 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitThreeItemListPatternAgainstInlineReferenceEdgesExpandsOnlyNonExactItems() {
+    void shouldExpandOnlyNonExactItemsForThreeItemPatternAgainstInlineReferenceEdges() {
+        // given
         BasicNodeProvider delegate = explicitListProvider(false, false);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode(
                         "values:\n" +
@@ -560,10 +624,13 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitListPatternRequiresPureReferenceItemsToBePresent() {
+    void shouldRequirePureReferenceItemsForExplicitListPattern() {
+        // given
         BasicNodeProvider delegate = explicitListProvider(false, false);
+        // when
         Blue blue = new Blue(delegate);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 blue.yamlToNode(
                         "values:\n" +
@@ -574,11 +641,14 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitListPatternRejectsNestedReferenceMismatchWithoutFetchingReferenceLeaves() {
+    void shouldRejectNestedReferenceMismatchWithoutFetchingLeavesForExplicitListPattern() {
+        // given
         BasicNodeProvider delegate = explicitListProvider(true, false);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 blue.yamlToNode("values:\n  blueId: " + delegate.getBlueIdByName("Candidate List")),
                 explicitThreeItemListPattern(blue, delegate)));
@@ -593,13 +663,16 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitListPatternAllowsExtraItemsUnlessCardinalityConstrainsThem() {
+    void shouldAllowExtraItemsForExplicitListPatternUnlessCardinalityConstrainsThem() {
+        // given
         BasicNodeProvider delegate = explicitListProvider(false, true);
         Blue blue = new Blue(delegate);
         Node unconstrainedPattern = explicitThreeItemListPattern(blue, delegate);
         Node constrainedPattern = explicitThreeItemListPattern(blue, delegate);
+        // when
         constrainedPattern.getProperties().get("values").schema(new blue.language.model.Schema().maxItems(3));
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("values:\n  blueId: " + delegate.getBlueIdByName("Candidate List")),
                 unconstrainedPattern));
@@ -609,14 +682,17 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitListPatternRejectsNonListCandidatesEvenWhenItemsAreOptional() {
+    void shouldRejectNonListCandidatesForExplicitListPatternEvenWithOptionalItems() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
+        // when
         Node optionalListPattern = blue.yamlToNode(
                 "values:\n" +
                 "  items:\n" +
                 "    - name: Optional list item label\n" +
                 "      description: Optional list item description");
 
+        // then
         assertTrue(blue.nodeMatchesType(blue.yamlToNode("other: true"), optionalListPattern));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode("values: scalar"), optionalListPattern));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode(
@@ -632,11 +708,14 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitThreeItemListPatternRejectsListWithOnlyFirstAndLastReferenceItems() {
+    void shouldRejectIncompleteListForExplicitThreeItemReferencePattern() {
+        // given
         BasicNodeProvider delegate = explicitListProvider(false, false);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 blue.yamlToNode(
                         "values:\n" +
@@ -652,7 +731,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitListPatternReconstructsBundledFirstItemOnlyWhenMorePositionsAreNeeded() {
+    void shouldReconstructBundledFirstItemOnlyWhenExplicitListPatternNeedsMorePositions() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Active Status\nvalue: active");
         List<Node> bundledItems = Arrays.asList(
@@ -674,6 +754,7 @@ public class NodeTypeMatcherTest {
                 "  type: List\n" +
                 "  items:\n" +
                 "    - blueId: " + bundleBlueId);
+        // when
         Node pattern = blue.yamlToNode(
                 "values:\n" +
                 "  type: List\n" +
@@ -687,6 +768,7 @@ public class NodeTypeMatcherTest {
                 "        status:\n" +
                 "          blueId: " + delegate.getBlueIdByName("Active Status"));
 
+        // then
         assertTrue(blue.nodeMatchesType(candidate, pattern));
 
         assertEquals(1, provider.fetchesFor(bundleBlueId));
@@ -694,14 +776,17 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void explicitObjectPatternRejectsNonObjectCandidatesEvenWhenFieldsAreOptional() {
+    void shouldRejectNonObjectCandidatesForExplicitObjectPatternEvenWithOptionalFields() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
+        // when
         Node optionalObjectPattern = blue.yamlToNode(
                 "profile:\n" +
                 "  nickname:\n" +
                 "    name: Optional nickname label\n" +
                 "    description: Optional nickname description");
 
+        // then
         assertTrue(blue.nodeMatchesType(blue.yamlToNode("other: true"), optionalObjectPattern));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode("profile: scalar"), optionalObjectPattern));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode(
@@ -717,53 +802,69 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void collectionTypeMetadataRejectsWrongPayloadKindsWhenCandidateNodeExists() {
+    void shouldRejectWrongPayloadKindsForCollectionTypeMetadataWhenCandidateExists() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
+        Node scalarCandidate =
+                blue.yamlToNode("values: scalar");
+        Node objectCandidate = blue.yamlToNode(
+                "values:\n" +
+                "  a: 1");
+        Node listCandidate = blue.yamlToNode(
+                "values:\n" +
+                "  type: List");
+        Node listItemsCandidate = blue.yamlToNode(
+                "values:\n" +
+                "  - one");
+        Node dictionaryCandidate = blue.yamlToNode(
+                "values:\n" +
+                "  type: Dictionary");
+        Node listPattern = blue.yamlToNode(
+                "values:\n" +
+                "  itemType: Text");
+        Node dictionaryKeyPattern = blue.yamlToNode(
+                "values:\n" +
+                "  keyType: Text");
+        Node dictionaryValuePattern = blue.yamlToNode(
+                "values:\n" +
+                "  valueType: Text");
+        Node dictionaryPattern = blue.yamlToNode(
+                "values:\n" +
+                "  keyType: Text\n" +
+                "  valueType: Text");
 
-        assertFalse(blue.nodeMatchesType(
-                blue.yamlToNode("values: scalar"),
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  itemType: Text")));
-        assertFalse(blue.nodeMatchesType(
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  a: 1"),
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  itemType: Text")));
-        assertTrue(blue.nodeMatchesType(
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  type: List"),
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  itemType: Text")));
+        // when
+        boolean scalarMatchesList =
+                blue.nodeMatchesType(scalarCandidate, listPattern);
+        boolean objectMatchesList =
+                blue.nodeMatchesType(objectCandidate, listPattern);
+        boolean listMatchesList =
+                blue.nodeMatchesType(listCandidate, listPattern);
+        boolean scalarMatchesDictionary =
+                blue.nodeMatchesType(
+                        scalarCandidate,
+                        dictionaryKeyPattern);
+        boolean listItemsMatchDictionary =
+                blue.nodeMatchesType(
+                        listItemsCandidate,
+                        dictionaryValuePattern);
+        boolean dictionaryMatchesDictionary =
+                blue.nodeMatchesType(
+                        dictionaryCandidate,
+                        dictionaryPattern);
 
-        assertFalse(blue.nodeMatchesType(
-                blue.yamlToNode("values: scalar"),
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  keyType: Text")));
-        assertFalse(blue.nodeMatchesType(
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  - one"),
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  valueType: Text")));
-        assertTrue(blue.nodeMatchesType(
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  type: Dictionary"),
-                blue.yamlToNode(
-                        "values:\n" +
-                        "  keyType: Text\n" +
-                        "  valueType: Text")));
+        // then
+        assertFalse(scalarMatchesList);
+        assertFalse(objectMatchesList);
+        assertTrue(listMatchesList);
+        assertFalse(scalarMatchesDictionary);
+        assertFalse(listItemsMatchDictionary);
+        assertTrue(dictionaryMatchesDictionary);
     }
 
     @Test
-    void dictionaryKeyTypeMergesKeysWithoutExpandingValues() {
+    void shouldMergeDictionaryKeysWithoutExpandingValues() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Huge Value\nvalue: huge");
         delegate.addSingleDocs(
@@ -774,8 +875,10 @@ public class NodeTypeMatcherTest {
                 "'2':\n" +
                 "  blueId: " + delegate.getBlueIdByName("Huge Value"));
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("values:\n  blueId: " + delegate.getBlueIdByName("Integer Key Dictionary")),
                 blue.yamlToNode(
@@ -786,7 +889,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void dictionaryValueTypeResolvesOnlyNonExactReferenceValuesNeededForConformance() {
+    void shouldResolveOnlyNonExactDictionaryReferenceValuesNeededForConformance() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: Active Value\nvalue: active");
         delegate.addSingleDocs("name: Ignored Value\nvalue: ignored");
@@ -800,8 +904,10 @@ public class NodeTypeMatcherTest {
                 "ignored:\n" +
                 "  blueId: " + delegate.getBlueIdByName("Ignored Value"));
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 blue.yamlToNode("values:\n  blueId: " + delegate.getBlueIdByName("Active Dictionary")),
                 blue.yamlToNode(
@@ -814,11 +920,14 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void complexMultiLevelObjectMatchesByExpandingOnlyObservedBranches() {
+    void shouldMatchComplexMultiLevelObjectByExpandingOnlyObservedBranches() {
+        // given
         BasicNodeProvider delegate = complexOrderProvider(false);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("order:\n  blueId: " + delegate.getBlueIdByName("Order")),
                 complexOrderPattern(blue, delegate.getBlueIdByName("Active Status"))));
@@ -833,11 +942,14 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void complexMultiLevelObjectRejectsDeepMismatchWithoutExpandingUnobservedBranches() {
+    void shouldRejectDeepComplexObjectMismatchWithoutExpandingUnobservedBranches() {
+        // given
         BasicNodeProvider delegate = complexOrderProvider(true);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 blue.yamlToNode("order:\n  blueId: " + delegate.getBlueIdByName("Order")),
                 complexOrderPattern(blue, delegate.getBlueIdByName("Active Status"))));
@@ -852,13 +964,16 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void generatedMultiLevelObjectPatternMatchesByWalkingOnlyObservedReferencePath() {
+    void shouldMatchGeneratedMultiLevelObjectPatternByWalkingObservedReferencePath() {
+        // given
         int depth = 7;
         int ignoredSiblings = 20;
         BasicNodeProvider delegate = generatedNestedReferenceProvider(false, depth, ignoredSiblings);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 generatedNestedCandidate(blue, delegate),
                 generatedNestedPattern(blue, delegate, depth)));
@@ -867,13 +982,16 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void generatedMultiLevelObjectPatternRejectsDeepMismatchWithSameBoundedFetches() {
+    void shouldRejectDeepGeneratedMultiLevelObjectMismatchWithBoundedFetches() {
+        // given
         int depth = 7;
         int ignoredSiblings = 20;
         BasicNodeProvider delegate = generatedNestedReferenceProvider(true, depth, ignoredSiblings);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertFalse(blue.nodeMatchesType(
                 generatedNestedCandidate(blue, delegate),
                 generatedNestedPattern(blue, delegate, depth)));
@@ -882,7 +1000,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void generatedFrozenMatcherCachesObservedReferencePathAcrossRepeatedMatches() {
+    void shouldCacheObservedReferencePathAcrossRepeatedFrozenMatches() {
+        // given
         int depth = 7;
         int ignoredSiblings = 20;
         BasicNodeProvider delegate = generatedNestedReferenceProvider(false, depth, ignoredSiblings);
@@ -890,21 +1009,28 @@ public class NodeTypeMatcherTest {
         Blue blue = new Blue(provider);
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
         FrozenNode candidate = FrozenNode.fromResolvedNode(generatedNestedCandidate(blue, delegate));
+        // when
         FrozenNode pattern = FrozenNode.fromResolvedNode(generatedNestedPattern(blue, delegate, depth));
-
-        assertTrue(matcher.matchesResolvedType(candidate, pattern));
-        assertGeneratedNestedFetches(delegate, provider, depth, ignoredSiblings);
-
+        boolean firstMatch = matcher.matchesResolvedType(candidate, pattern);
         int fetchesAfterFirstMatch = provider.fetches;
+        List<Boolean> repeatedMatches = new ArrayList<>();
         for (int i = 0; i < 25; i++) {
-            assertTrue(matcher.matchesResolvedType(candidate, pattern));
+            repeatedMatches.add(
+                    matcher.matchesResolvedType(candidate, pattern));
         }
-        assertEquals(fetchesAfterFirstMatch, provider.fetches,
+        int fetchesAfterRepeatedMatches = provider.fetches;
+
+        // then
+        assertTrue(firstMatch);
+        assertGeneratedNestedFetches(delegate, provider, depth, ignoredSiblings);
+        assertTrue(repeatedMatches.stream().allMatch(Boolean::booleanValue));
+        assertEquals(fetchesAfterFirstMatch, fetchesAfterRepeatedMatches,
                 "repeated frozen matches should reuse the already-resolved observed path");
     }
 
     @Test
-    void complexItemTypeConformanceResolvesOnlyItemsAndTypeDefinitionsThatMatter() {
+    void shouldResolveOnlyRelevantItemsAndTypeDefinitionsForComplexItemConformance() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs("name: USD\nvalue: USD");
         delegate.addSingleDocs(
@@ -948,8 +1074,10 @@ public class NodeTypeMatcherTest {
                 "  - blueId: " + delegate.getBlueIdByName("Line Item One") + "\n" +
                 "  - blueId: " + delegate.getBlueIdByName("Line Item Two"));
         CountingNodeProvider provider = new CountingNodeProvider(delegate);
+        // when
         Blue blue = new Blue(provider);
 
+        // then
         assertTrue(blue.nodeMatchesType(
                 blue.yamlToNode("cart:\n  blueId: " + delegate.getBlueIdByName("Cart")),
                 blue.yamlToNode(
@@ -967,7 +1095,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void enforcesListItemTypeAcrossAllItems() {
+    void shouldEnforceListItemTypeAcrossAllItems() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: Allowed Item\nvalue: ok");
         nodeProvider.addSingleDocs("name: Forbidden Item\nvalue: not-ok");
@@ -984,30 +1113,35 @@ public class NodeTypeMatcherTest {
                 "  items:\n" +
                 "    - blueId: " + nodeProvider.getBlueIdByName("Forbidden Item"));
         Blue blue = new Blue(nodeProvider);
+        // when
         Node target = blue.yamlToNode(
                 "itemsList:\n" +
                 "  type: List\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Allowed Item"));
 
+        // then
         assertTrue(blue.nodeMatchesType(nodeProvider.getNodeByName("Allowed Container"), target));
         assertFalse(blue.nodeMatchesType(nodeProvider.getNodeByName("Forbidden Container"), target));
     }
 
     @Test
-    void listItemTypeCanMatchNarrowerTypeByConcreteItemConformance() {
+    void shouldAllowListItemTypeToMatchNarrowerTypeByConcreteConformance() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Active State\n" +
                 "type: Text\n" +
                 "value: active");
         Blue blue = new Blue(nodeProvider);
+        // when
         Node target = blue.yamlToNode(
                 "states:\n" +
                 "  type: List\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Active State"));
 
+        // then
         assertTrue(blue.nodeMatchesType(blue.yamlToNode(
                 "states:\n" +
                 "  type: List\n" +
@@ -1029,7 +1163,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void supportsImplicitListAndDictionaryPayloadsForCoreTypes() {
+    void shouldSupportImplicitListAndDictionaryPayloadsForCoreTypes() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: ImplicitListNode\n" +
@@ -1042,8 +1177,10 @@ public class NodeTypeMatcherTest {
                 "  value: 1\n" +
                 "b:\n" +
                 "  value: 2");
+        // when
         Blue blue = new Blue(nodeProvider);
 
+        // then
         assertTrue(blue.nodeMatchesType(nodeProvider.getNodeByName("ImplicitListNode"), blue.yamlToNode("type: List")));
         assertTrue(blue.nodeMatchesType(nodeProvider.getNodeByName("ImplicitDictNode"), blue.yamlToNode("type: Dictionary")));
         assertFalse(blue.nodeMatchesType(nodeProvider.getNodeByName("ImplicitListNode"), blue.yamlToNode("type: Dictionary")));
@@ -1055,13 +1192,16 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void supportsEventPayloadsWhereJsonArrayIsImplicitList() {
+    void shouldSupportEventPayloadsWhereJsonArrayIsImplicitList() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
+        // when
         Node target = blue.yamlToNode(
                 "message:\n" +
                 "  request:\n" +
                 "    type: List");
 
+        // then
         assertTrue(blue.nodeMatchesType(blue.yamlToNode(
                 "message:\n" +
                 "  request:\n" +
@@ -1084,7 +1224,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void enforcesDictionaryKeyAndValueTypes() {
+    void shouldEnforceDictionaryKeyAndValueTypes() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: Activation State\nvalue: active");
         nodeProvider.addSingleDocs("name: Wrong State\nvalue: wrong");
@@ -1106,12 +1247,14 @@ public class NodeTypeMatcherTest {
                                         .type(new Node().blueId(nodeProvider.getBlueIdByName("Activation State")))
                                         .value("active")));
         Node mismatched = matching.clone();
+        // when
         mismatched.getProperties().get("participantsState").getProperties().put("alice",
                 new Node()
                         .blueId(nodeProvider.getBlueIdByName("Wrong State"))
                         .type(new Node().blueId(nodeProvider.getBlueIdByName("Wrong State")))
                         .value("wrong"));
 
+        // then
         assertTrue(blue.nodeMatchesType(matching, target));
         assertFalse(blue.nodeMatchesType(mismatched, target));
         assertFalse(blue.nodeMatchesType(blue.yamlToNode("participantsState:\n  not-an-int: active"), blue.yamlToNode(
@@ -1121,19 +1264,55 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void dictionaryValueTypeCanMatchNarrowerTypeByConcreteValueConformance() {
+    void shouldRequireCanonicalLowercaseBooleanDictionaryKeys() {
+        // given
+        Blue blue = new Blue(new BasicNodeProvider());
+        Node booleanDictionary = new Node()
+                .type(new Node().blueId(
+                        DICTIONARY_TYPE_BLUE_ID))
+                .keyType(new Node().blueId(
+                        Properties.BOOLEAN_TYPE_BLUE_ID));
+        Node canonical = booleanDictionary.clone()
+                .properties(
+                        Properties.BOOLEAN_TEXT_TRUE,
+                        new Node().value("accepted"));
+        Node noncanonical = booleanDictionary.clone()
+                .properties(
+                        "TRUE",
+                        new Node().value("rejected"));
+
+        // when
+        boolean canonicalMatch =
+                blue.nodeMatchesType(
+                        canonical,
+                        booleanDictionary);
+        boolean noncanonicalMatch =
+                blue.nodeMatchesType(
+                        noncanonical,
+                        booleanDictionary);
+
+        // then
+        assertTrue(canonicalMatch);
+        assertFalse(noncanonicalMatch);
+    }
+
+    @Test
+    void shouldAllowDictionaryValueTypeToMatchNarrowerTypeByConcreteConformance() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Active State\n" +
                 "type: Text\n" +
                 "value: active");
         Blue blue = new Blue(nodeProvider);
+        // when
         Node target = blue.yamlToNode(
                 "states:\n" +
                 "  type: Dictionary\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Active State"));
 
+        // then
         assertTrue(blue.nodeMatchesType(blue.yamlToNode(
                 "states:\n" +
                 "  type: Dictionary\n" +
@@ -1153,23 +1332,46 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void rejectsPrimitiveCoreTypePayloadMismatches() {
+    void shouldRejectPrimitiveCoreTypePayloadMismatches() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
+        Node integerCandidate = blue.yamlToNode("x: 1");
+        Node textCandidate = blue.yamlToNode("x: one");
+        Node booleanCandidate = blue.yamlToNode("x: true");
+        Node integerPattern =
+                blue.yamlToNode("x:\n  type: Integer");
+        Node booleanPattern =
+                blue.yamlToNode("x:\n  type: Boolean");
+        Node textPattern = blue.yamlToNode("x:\n  type: Text");
 
-        assertTrue(blue.nodeMatchesType(blue.yamlToNode("x: 1"), blue.yamlToNode("x:\n  type: Integer")));
-        assertFalse(blue.nodeMatchesType(blue.yamlToNode("x: one"), blue.yamlToNode("x:\n  type: Integer")));
-        assertTrue(blue.nodeMatchesType(blue.yamlToNode("x: true"), blue.yamlToNode("x:\n  type: Boolean")));
-        assertFalse(blue.nodeMatchesType(blue.yamlToNode("x: true"), blue.yamlToNode("x:\n  type: Text")));
+        // when
+        boolean integerMatchesInteger =
+                blue.nodeMatchesType(integerCandidate, integerPattern);
+        boolean textMatchesInteger =
+                blue.nodeMatchesType(textCandidate, integerPattern);
+        boolean booleanMatchesBoolean =
+                blue.nodeMatchesType(booleanCandidate, booleanPattern);
+        boolean booleanMatchesText =
+                blue.nodeMatchesType(booleanCandidate, textPattern);
+
+        // then
+        assertTrue(integerMatchesInteger);
+        assertFalse(textMatchesInteger);
+        assertTrue(booleanMatchesBoolean);
+        assertFalse(booleanMatchesText);
     }
 
     @Test
-    void acceptsUntypedProgrammaticScalarPayloadsForCorePrimitivePatterns() {
+    void shouldAcceptUntypedProgrammaticScalarPayloadsForCorePrimitivePatterns() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
+        // when
         Node event = new Node()
                 .properties("kind", new Node().value("allowed"))
                 .properties("amount", new Node().value(new java.math.BigInteger("5")))
                 .properties("enabled", new Node().value(true));
 
+        // then
         assertTrue(blue.nodeMatchesType(event, blue.yamlToNode(
                 "kind:\n" +
                 "  type: Text\n" +
@@ -1183,7 +1385,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void compatibilityApiDoesNotMutateInputNodes() {
+    void shouldNotMutateInputNodesThroughCompatibilityApi() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -1197,8 +1400,10 @@ public class NodeTypeMatcherTest {
                 "x: abc");
         Node target = blue.yamlToNode("x:\n  type: Text");
         String beforeNode = YAML_MAPPER.writeValueAsString(node);
+        // when
         String beforeTarget = YAML_MAPPER.writeValueAsString(target);
 
+        // then
         assertTrue(blue.nodeMatchesType(node, target));
 
         assertEquals(beforeNode, YAML_MAPPER.writeValueAsString(node));
@@ -1206,7 +1411,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void resolvedFrozenMatchingDoesNotFetchFromProviderAfterSnapshotResolution() {
+    void shouldNotFetchFromProviderDuringFrozenMatchingAfterSnapshotResolution() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs(
                 "name: Request\n" +
@@ -1232,7 +1438,9 @@ public class NodeTypeMatcherTest {
         int fetchesAfterResolution = provider.fetches;
 
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
+        // when
         for (int i = 0; i < 100; i++) {
+            // then
             assertTrue(matcher.matchesResolvedType(snapshot.frozenResolvedRoot(), target));
         }
 
@@ -1240,7 +1448,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void directFrozenReferenceMatchingCachesResolvedReferenceLookups() {
+    void shouldCacheResolvedReferenceLookupsDuringDirectFrozenMatching() {
+        // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs(
                 "name: Request Event\n" +
@@ -1257,7 +1466,9 @@ public class NodeTypeMatcherTest {
                 "  payload: 7"));
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
+        // when
         for (int i = 0; i < 20; i++) {
+            // then
             assertTrue(matcher.matchesResolvedType(candidateReference, target));
         }
 
@@ -1265,7 +1476,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void directFrozenReferenceMatchingCachesUnresolvedReferenceMisses() {
+    void shouldCacheUnresolvedReferenceMissesDuringDirectFrozenMatching() {
+        // given
         CountingNodeProvider provider = new CountingNodeProvider(new BasicNodeProvider());
         Blue blue = new Blue(provider);
         String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().value("missing"));
@@ -1273,7 +1485,9 @@ public class NodeTypeMatcherTest {
         FrozenNode target = FrozenNode.fromResolvedNode(blue.yamlToNode("payload: 1"));
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
+        // when
         for (int i = 0; i < 20; i++) {
+            // then
             assertFalse(matcher.matchesResolvedType(missingReference, target));
         }
 
@@ -1281,7 +1495,8 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void resolvedSnapshotPointerMatchingUsesPathIndex() {
+    void shouldUsePathIndexForResolvedSnapshotPointerMatching() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Request\n" +
@@ -1294,17 +1509,20 @@ public class NodeTypeMatcherTest {
                 "    type:\n" +
                 "      blueId: " + nodeProvider.getBlueIdByName("Request") + "\n" +
                 "    payload: 5"));
+        // when
         FrozenNode requestTarget = FrozenNode.fromResolvedNode(blue.yamlToNode(
                 "payload:\n" +
                 "  schema:\n" +
                 "    required: true"));
 
+        // then
         assertTrue(blue.nodeMatchesType(snapshot, "/message/request", requestTarget));
         assertFalse(blue.nodeMatchesType(snapshot, "/message", requestTarget));
     }
 
     @Test
-    void missingSnapshotPointerMatchesOnlyOptionalTargetPatterns() {
+    void shouldMatchOnlyOptionalTargetPatternsForMissingSnapshotPointer() {
+        // given
         Blue blue = new Blue(new BasicNodeProvider());
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(blue.yamlToNode("message: ok"));
         FrozenNode optionalTarget = FrozenNode.fromResolvedNode(blue.yamlToNode(
@@ -1313,8 +1531,10 @@ public class NodeTypeMatcherTest {
         FrozenNode requiredTarget = FrozenNode.fromResolvedNode(blue.yamlToNode(
                 "schema:\n" +
                 "  required: true"));
+        // when
         FrozenNode valueTarget = FrozenNode.fromResolvedNode(blue.yamlToNode("value: ok"));
 
+        // then
         assertTrue(blue.nodeMatchesType(snapshot, "/missing", optionalTarget));
         assertFalse(blue.nodeMatchesType(snapshot, "/missing", requiredTarget));
         assertFalse(blue.nodeMatchesType(snapshot, "/missing", valueTarget));

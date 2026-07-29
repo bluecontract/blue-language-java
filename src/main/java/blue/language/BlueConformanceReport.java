@@ -1,6 +1,7 @@
 package blue.language;
 
 import blue.language.registry.BlueCoreTypeRegistry;
+import blue.language.registry.RegistryManifestConstants;
 import blue.language.utils.UncheckedObjectMapper;
 
 import java.io.ByteArrayOutputStream;
@@ -19,11 +20,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+/**
+ * Immutable metadata and execution results for the closed Blue Language 1.0
+ * conformance package.
+ *
+ * <p>Collection arguments are defensively copied. Machine-readable output
+ * always contains one result for every manifest fixture; a fixture with no
+ * recorded execution is represented as a failure rather than a skip.</p>
+ */
 public final class BlueConformanceReport {
 
+    /** Classpath location of the authoritative fixture manifest. */
     public static final String FIXTURE_MANIFEST_RESOURCE = "blue-language-1.0/fixtures/manifest.yaml";
+    /** Expected identity of the complete final fixture package. */
     public static final String FIXTURE_PACKAGE_IDENTITY =
-            "sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb";
+            "sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5";
+    /** Human-readable identifier of the specification source bound to the package. */
     public static final String BLUE_SPEC_SOURCE =
             "blue-language-1.0-final-implementation-baseline";
     private static final Set<String> REQUIRED_FIXTURE_IDS = requiredFixtureIds();
@@ -37,6 +49,14 @@ public final class BlueConformanceReport {
     private final List<BlueConformanceFailure> failures;
     private final Map<String, BlueFixtureCategory> fixtureCategories;
 
+    /**
+     * Creates a legacy report containing only passed fixture identities.
+     *
+     * @param specVersion specification version
+     * @param coreRegistryBlueIds core registry identities by type name
+     * @param fixturePackageIdentity exact fixture package identity
+     * @param passedFixtureIds fixtures that passed
+     */
     public BlueConformanceReport(String specVersion,
                                  Map<String, String> coreRegistryBlueIds,
                                  String fixturePackageIdentity,
@@ -44,6 +64,17 @@ public final class BlueConformanceReport {
         this(specVersion, coreRegistryBlueIds, fixturePackageIdentity, Collections.emptyList(), passedFixtureIds, Collections.emptyList(), Collections.emptyMap());
     }
 
+    /**
+     * Creates a report without detailed failure records.
+     *
+     * @param specVersion specification version
+     * @param coreRegistryBlueIds core registry identities by type name
+     * @param fixturePackageIdentity exact fixture package identity
+     * @param fixtureIds all manifest fixture identities
+     * @param passedFixtureIds fixtures that passed
+     * @param failedFixtureIds fixtures that failed
+     * @param fixtureCategories categories keyed by fixture identity
+     */
     public BlueConformanceReport(String specVersion,
                                  Map<String, String> coreRegistryBlueIds,
                                  String fixturePackageIdentity,
@@ -54,6 +85,19 @@ public final class BlueConformanceReport {
         this(specVersion, coreRegistryBlueIds, fixturePackageIdentity, fixtureIds, passedFixtureIds, failedFixtureIds, fixtureCategories, Collections.emptyList());
     }
 
+    /**
+     * Creates a complete conformance report.
+     *
+     * @param specVersion specification version
+     * @param coreRegistryBlueIds core registry identities by type name
+     * @param fixturePackageIdentity exact fixture package identity
+     * @param fixtureIds all manifest fixture identities
+     * @param passedFixtureIds fixtures that passed
+     * @param failedFixtureIds fixtures that failed when detailed records are
+     *                         absent
+     * @param fixtureCategories categories keyed by fixture identity
+     * @param failures detailed failure records
+     */
     public BlueConformanceReport(String specVersion,
                                  Map<String, String> coreRegistryBlueIds,
                                  String fixturePackageIdentity,
@@ -79,44 +123,91 @@ public final class BlueConformanceReport {
         this.fixtureCategories = Collections.unmodifiableMap(new LinkedHashMap<>(fixtureCategories));
     }
 
+    /**
+     * Returns the specification version.
+     *
+     * @return specification version
+     */
     public String getSpecVersion() {
         return specVersion;
     }
 
+    /**
+     * Returns core registry identities by type name.
+     *
+     * @return immutable registry identity map
+     */
     public Map<String, String> getCoreRegistryBlueIds() {
         return coreRegistryBlueIds;
     }
 
+    /**
+     * Returns the exact fixture package identity.
+     *
+     * @return fixture package identity
+     */
     public String getFixturePackageIdentity() {
         return fixturePackageIdentity;
     }
 
+    /**
+     * Returns all manifest fixture identities.
+     *
+     * @return immutable fixture identity list
+     */
     public List<String> getFixtureIds() {
         return fixtureIds;
     }
 
+    /**
+     * Returns fixture identities that passed.
+     *
+     * @return immutable passed-fixture list
+     */
     public List<String> getPassedFixtureIds() {
         return passedFixtureIds;
     }
 
+    /**
+     * Returns fixture identities that failed.
+     *
+     * @return immutable failed-fixture list
+     */
     public List<String> getFailedFixtureIds() {
         return failedFixtureIds;
     }
 
+    /**
+     * Returns detailed failure records.
+     *
+     * @return immutable failure list
+     */
     public List<BlueConformanceFailure> getFailures() {
         return failures;
     }
 
+    /**
+     * Returns fixture categories keyed by identity.
+     *
+     * @return immutable fixture-category map
+     */
     public Map<String, BlueFixtureCategory> getFixtureCategories() {
         return fixtureCategories;
     }
 
+    /**
+     * Returns the active canonical registry package identity.
+     *
+     * @return core registry package identity
+     */
     public String getCoreRegistryPackageIdentity() {
         return BlueCoreTypeRegistry.INSTANCE.packageIdentity();
     }
 
     /**
      * Complete one-result-per-fixture report for CI and release tooling.
+     *
+     * @return immutable machine-readable report map
      */
     public Map<String, Object> toMachineReadableMap() {
         Map<String, BlueConformanceFailure> failuresById = new LinkedHashMap<>();
@@ -128,71 +219,128 @@ public final class BlueConformanceReport {
         List<Map<String, Object>> results = new ArrayList<>(fixtureIds.size());
         for (String id : fixtureIds) {
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("id", id);
+            result.put(ConformanceReportConstants.Field.ID, id);
             BlueFixtureCategory category = fixtureCategories.get(id);
-            result.put("category", category == null ? null : category.getLabel());
-            result.put("operation", operations.get(id));
+            result.put(ConformanceReportConstants.Field.CATEGORY,
+                    category == null ? null : category.getLabel());
+            result.put(ConformanceReportConstants.Field.OPERATION,
+                    operations.get(id));
             BlueConformanceFailure failure = failuresById.get(id);
             if (failure != null) {
-                result.put("status", "FAIL");
-                result.put("errorCategory", failure.getErrorCategory() == null
-                        ? null : failure.getErrorCategory().name());
-                result.put("exceptionClass", failure.getExceptionClass());
-                result.put("message", failure.getMessage());
+                result.put(ConformanceReportConstants.Field.STATUS,
+                        ConformanceReportConstants.Status.FAIL);
+                result.put(ConformanceReportConstants.Field.ERROR_CATEGORY,
+                        failure.getErrorCategory() == null
+                                ? null
+                                : failure.getErrorCategory().name());
+                result.put(ConformanceReportConstants.Field.EXCEPTION_CLASS,
+                        failure.getExceptionClass());
+                result.put(ConformanceReportConstants.Field.MESSAGE,
+                        failure.getMessage());
             } else if (passed.contains(id)) {
-                result.put("status", "PASS");
+                result.put(ConformanceReportConstants.Field.STATUS,
+                        ConformanceReportConstants.Status.PASS);
             } else {
-                result.put("status", "FAIL");
-                result.put("errorCategory", "HarnessDidNotRunFixture");
-                result.put("message", "Fixture has no execution result.");
+                result.put(ConformanceReportConstants.Field.STATUS,
+                        ConformanceReportConstants.Status.FAIL);
+                result.put(ConformanceReportConstants.Field.ERROR_CATEGORY,
+                        ConformanceReportConstants.ErrorCategory
+                                .HARNESS_DID_NOT_RUN_FIXTURE);
+                result.put(ConformanceReportConstants.Field.MESSAGE,
+                        "Fixture has no execution result.");
             }
             results.add(result);
         }
 
         Map<String, Object> report = new LinkedHashMap<>();
-        report.put("specificationVersion", specVersion);
-        report.put("registryPackageIdentity", getCoreRegistryPackageIdentity());
-        report.put("fixturePackageIdentity", fixturePackageIdentity);
-        report.put("coreRegistryBlueIds", coreRegistryBlueIds);
-        report.put("fixtureCount", fixtureIds.size());
-        report.put("passedCount", passedFixtureIds.size());
-        report.put("failedCount", fixtureIds.size() - passedFixtureIds.size());
-        report.put("results", results);
+        report.put(ConformanceReportConstants.Field.SPECIFICATION_VERSION,
+                specVersion);
+        report.put(ConformanceReportConstants.Field.REGISTRY_PACKAGE_IDENTITY,
+                getCoreRegistryPackageIdentity());
+        report.put(ConformanceReportConstants.Field.FIXTURE_PACKAGE_IDENTITY,
+                fixturePackageIdentity);
+        report.put(ConformanceReportConstants.Field.CORE_REGISTRY_BLUE_IDS,
+                coreRegistryBlueIds);
+        report.put(ConformanceReportConstants.Field.FIXTURE_COUNT,
+                fixtureIds.size());
+        report.put(ConformanceReportConstants.Field.PASSED_COUNT,
+                passedFixtureIds.size());
+        report.put(ConformanceReportConstants.Field.FAILED_COUNT,
+                fixtureIds.size() - passedFixtureIds.size());
+        report.put(ConformanceReportConstants.Field.RESULTS, results);
         return Collections.unmodifiableMap(report);
     }
 
+    /**
+     * Serializes the machine-readable report.
+     *
+     * @return JSON report
+     */
     public String toMachineReadableJson() {
         return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(toMachineReadableMap());
     }
 
+    /**
+     * Tests whether this report uses the final fixture package identity.
+     *
+     * @return whether the fixture identity is release-grade and exact
+     */
     public boolean isReleaseGradeFixtureIdentity() {
         return FIXTURE_PACKAGE_IDENTITY.equals(fixturePackageIdentity)
                 && isReleaseGradeFixtureIdentity(fixturePackageIdentity);
     }
 
+    /**
+     * Tests whether every required fixture appears in this report.
+     *
+     * @return whether required fixture coverage is present
+     */
     public boolean hasRequiredFixtureCoverage() {
         return new HashSet<>(fixtureIds).containsAll(REQUIRED_FIXTURE_IDS);
     }
 
+    /**
+     * Tests whether this report contains exactly the required fixture set.
+     *
+     * @return whether the fixture set is exact
+     */
     public boolean hasExactRequiredFixtureSet() {
         return new LinkedHashSet<>(fixtureIds).equals(REQUIRED_FIXTURE_IDS);
     }
 
+    /**
+     * Returns the normative Blue Language 1.0 fixture identities.
+     *
+     * @return immutable required fixture set
+     */
     public static Set<String> requiredFixtureIdsForBlueLanguage10() {
         return Collections.unmodifiableSet(REQUIRED_FIXTURE_IDS);
     }
 
+    /**
+     * Loads the fixture package identity from the manifest.
+     *
+     * @param fallback value returned when the manifest declares no identity
+     * @return declared package identity or {@code fallback}
+     */
     public static String loadFixturePackageIdentity(String fallback) {
         Map<?, ?> manifest = loadFixtureManifest();
         if (manifest == null) {
             return fallback;
         }
-        Object identity = manifest.get("packageIdentity");
+        Object identity = manifest.get(
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
         return identity == null || identity.toString().trim().isEmpty()
                 ? fallback
                 : identity.toString();
     }
 
+    /**
+     * Loads behavior-fixture identities in manifest order.
+     *
+     * @return fixture identity list
+     * @throws IllegalStateException when manifest evidence is malformed
+     */
     public static List<String> loadFixtureIds() {
         Map<?, ?> manifest = loadFixtureManifest();
         if (manifest == null) {
@@ -201,15 +349,24 @@ public final class BlueConformanceReport {
         List<String> ids = new ArrayList<>();
         for (Map<?, ?> file : behaviorFixtureFiles(manifest)) {
             Map<?, ?> fixture = loadFixture(file);
-            Object id = fixture.get("id");
+            Object id = fixture.get(ConformanceReportConstants.Field.ID);
             if (id == null || id.toString().trim().isEmpty()) {
-                throw new IllegalStateException("Blue Language fixture is missing id: " + file.get("path"));
+                throw new IllegalStateException(
+                        "Blue Language fixture is missing id: "
+                                + file.get(
+                                        RegistryManifestConstants.FIELD_PATH));
             }
             ids.add(id.toString());
         }
         return ids;
     }
 
+    /**
+     * Loads fixture categories keyed by identity.
+     *
+     * @return fixture-category map
+     * @throws IllegalStateException when manifest evidence is malformed
+     */
     public static Map<String, BlueFixtureCategory> loadFixtureCategories() {
         Map<?, ?> manifest = loadFixtureManifest();
         if (manifest == null) {
@@ -218,33 +375,51 @@ public final class BlueConformanceReport {
         Map<String, BlueFixtureCategory> categories = new LinkedHashMap<>();
         for (Map<?, ?> file : behaviorFixtureFiles(manifest)) {
             Map<?, ?> fixture = loadFixture(file);
-            Object id = fixture.get("id");
-            Object category = fixture.get("category");
+            Object id = fixture.get(ConformanceReportConstants.Field.ID);
+            Object category = fixture.get(
+                    ConformanceReportConstants.Field.CATEGORY);
             if (id == null || category == null) {
                 throw new IllegalStateException(
-                        "Blue Language fixture is missing id/category: " + file.get("path"));
+                        "Blue Language fixture is missing id/category: "
+                                + file.get(
+                                        RegistryManifestConstants.FIELD_PATH));
             }
             categories.put(id.toString(), BlueFixtureCategory.fromLabel(category.toString()));
         }
         return categories;
     }
 
+    /**
+     * Loads fixture operations keyed by identity.
+     *
+     * @return immutable fixture-operation map
+     * @throws IllegalStateException when manifest evidence is malformed
+     */
     public static Map<String, String> loadFixtureOperations() {
         Map<?, ?> manifest = loadFixtureManifest();
         Map<String, String> operations = new LinkedHashMap<>();
         for (Map<?, ?> file : behaviorFixtureFiles(manifest)) {
             Map<?, ?> fixture = loadFixture(file);
-            Object id = fixture.get("id");
-            Object operation = fixture.get("operation");
+            Object id = fixture.get(ConformanceReportConstants.Field.ID);
+            Object operation = fixture.get(
+                    ConformanceReportConstants.Field.OPERATION);
             if (id == null || operation == null) {
                 throw new IllegalStateException(
-                        "Blue Language fixture is missing id/operation: " + file.get("path"));
+                        "Blue Language fixture is missing id/operation: "
+                                + file.get(
+                                        RegistryManifestConstants.FIELD_PATH));
             }
             operations.put(id.toString(), operation.toString());
         }
         return Collections.unmodifiableMap(operations);
     }
 
+    /**
+     * Recomputes the canonical fixture manifest identity.
+     *
+     * @return SHA-256 fixture package identity
+     * @throws IllegalStateException when the manifest cannot be read or hashed
+     */
     public static String computeFixturePackageIdentity() {
         try {
             Map<?, ?> loaded = loadFixtureManifest();
@@ -255,7 +430,9 @@ public final class BlueConformanceReport {
             for (Map.Entry<?, ?> entry : loaded.entrySet()) {
                 normalized.put(entry.getKey().toString(), entry.getValue());
             }
-            normalized.put("packageIdentity", null);
+            normalized.put(
+                    RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                    null);
             Object canonical = canonicalizeJsonValue(normalized);
             // The shared mapper is intentionally pretty-printing and omits
             // nulls for public Blue serialization. Package identity requires
@@ -269,6 +446,11 @@ public final class BlueConformanceReport {
         }
     }
 
+    /**
+     * Verifies the manifest identity and every declared file digest.
+     *
+     * @return whether all fixture package evidence matches
+     */
     public static boolean fixturePackageIdentityMatchesFixtureFiles() {
         String identity = loadFixturePackageIdentity(null);
         return identity != null
@@ -276,6 +458,12 @@ public final class BlueConformanceReport {
                 && manifestFileDigestsMatch();
     }
 
+    /**
+     * Tests whether an identity has a release-grade format.
+     *
+     * @param identity identity to inspect
+     * @return whether the identity is non-placeholder and well formed
+     */
     public static boolean isReleaseGradeFixtureIdentity(String identity) {
         if (identity == null || identity.trim().isEmpty()) {
             return false;
@@ -325,7 +513,7 @@ public final class BlueConformanceReport {
     }
 
     private static Map<?, ?> loadFixture(Map<?, ?> file) {
-        Object path = file.get("path");
+        Object path = file.get(RegistryManifestConstants.FIELD_PATH);
         if (path == null || path.toString().trim().isEmpty()) {
             throw new IllegalStateException("Blue Language fixture manifest entry is missing path");
         }
@@ -353,9 +541,11 @@ public final class BlueConformanceReport {
                     return false;
                 }
                 Map<?, ?> entry = (Map<?, ?>) file;
-                Object path = entry.get("path");
+                Object path = entry.get(
+                        RegistryManifestConstants.FIELD_PATH);
                 Object expectedBytes = entry.get("bytes");
-                Object expectedDigest = entry.get("sha256");
+                Object expectedDigest = entry.get(
+                        RegistryManifestConstants.FIELD_SHA256);
                 if (path == null || expectedBytes == null || expectedDigest == null) {
                     return false;
                 }
@@ -431,9 +621,11 @@ public final class BlueConformanceReport {
 
     private static Set<String> requiredFixtureIds() {
         List<String> ids = loadFixtureIds();
-        if (ids.size() != 125 || new LinkedHashSet<>(ids).size() != 125) {
+        if (ids.size() != BlueReleaseConformanceReport.LANGUAGE_FIXTURE_COUNT
+                || new LinkedHashSet<>(ids).size()
+                != BlueReleaseConformanceReport.LANGUAGE_FIXTURE_COUNT) {
             throw new IllegalStateException(
-                    "Blue Language 1.0 requires exactly 125 unique behavior fixtures; found "
+                    "Blue Language 1.0 requires exactly 128 unique behavior fixtures; found "
                             + ids.size());
         }
         String calculatedIdentity = computeFixturePackageIdentity();

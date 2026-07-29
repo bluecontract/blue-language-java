@@ -10,6 +10,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
+/**
+ * Size-bounded compatibility cache in front of another {@link NodeProvider}.
+ *
+ * <p>The byte bound is an approximate serialized-character count. Cached lists
+ * are returned directly, so this class is an acceleration adapter rather than
+ * an immutable evidence store; verification must occur at the consuming
+ * boundary.</p>
+ */
 public class CachingNodeProvider implements NodeProvider {
     private final NodeProvider delegate;
     private final Map<String, List<Node>> cache;
@@ -17,6 +25,12 @@ public class CachingNodeProvider implements NodeProvider {
     private final AtomicLong currentSize;
     private final long maxSizeBytes;
 
+    /**
+     * Creates a cache with the requested approximate maximum retained size.
+     *
+     * @param delegate backing provider
+     * @param maxSizeBytes approximate maximum serialized retained size
+     */
     public CachingNodeProvider(NodeProvider delegate, long maxSizeBytes) {
         this.delegate = delegate;
         this.cache = new ConcurrentHashMap<>();
@@ -79,10 +93,20 @@ public class CachingNodeProvider implements NodeProvider {
         return nodes.stream().mapToLong(node -> YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node)).length()).sum();
     }
 
+    /**
+     * Returns the current approximate retained size.
+     *
+     * @return approximate serialized size in bytes
+     */
     public long getCurrentSize() {
         return currentSize.get();
     }
 
+    /**
+     * Returns the current cache entry count.
+     *
+     * @return number of cached identities
+     */
     public int getCacheSize() {
         return cache.size();
     }

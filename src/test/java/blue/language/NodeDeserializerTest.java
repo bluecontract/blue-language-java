@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
@@ -19,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class NodeDeserializerTest {
 
     @Test
-    public void testBasics() throws Exception {
+    public void shouldDeserializeBasicNodeFields() throws Exception {
+        // given
         String doc = "name: name\n" +
                      "description: description\n" +
                      "type: type\n" +
@@ -28,33 +30,36 @@ public class NodeDeserializerTest {
                      "  y1: y1\n" +
                      "  y2:\n" +
                      "    value: y2";
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
+        Node y = node.getProperties().get("y");
+        Node y1 = y.getProperties().get("y1");
+        Node y2 = y.getProperties().get("y2");
 
+        // then
         assertEquals("name", node.getName());
         assertEquals("description", node.getDescription());
         assertEquals("type", node.getType().getValue());
         assertEquals("x", node.getProperties().get("x").getValue());
-
-        Node y = node.getProperties().get("y");
-        Node y1 = y.getProperties().get("y1");
         assertEquals("y1", y1.getValue());
         assertTrue(y1.isInlineValue());
-
-        Node y2 = y.getProperties().get("y2");
         assertEquals("y2", y2.getValue());
         assertFalse(y2.isInlineValue());
 
     }
 
     @Test
-    public void testValuePayloadWithMetadata() throws Exception {
+    public void shouldDeserializeValuePayloadWithMetadata() throws Exception {
+        // given
         String doc = "name: name\n" +
                      "description: description\n" +
                      "type: Text\n" +
                      "value: value";
 
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // then
         assertEquals("name", node.getName());
         assertEquals("description", node.getDescription());
         assertEquals("Text", node.getType().getValue());
@@ -62,68 +67,129 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void testReferenceOnlyBlueId() throws Exception {
-        Node node = YAML_MAPPER.readValue("blueId: abc", Node.class);
+    public void shouldDeserializeReferenceOnlyBlueId() throws Exception {
+        // given
+        String document = "blueId: abc";
 
+        // when
+        Node node = YAML_MAPPER.readValue(document, Node.class);
+
+        // then
         assertTrue(node.isReferenceOnly());
         assertEquals("abc", node.getBlueId());
     }
 
     @Test
-    public void testBlueIdWithSiblingFieldsIsRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "blueId: abc\n" +
-                "name: Invalid", Node.class));
+    public void shouldRejectBlueIdWithSiblingFields() {
+        // given
+        String document = "blueId: abc\n" +
+                "name: Invalid";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void testPayloadKindExclusivity() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "value: abc\n" +
-                "child: value", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "items:\n" +
+    public void shouldEnforcePayloadKindExclusivity() {
+        // given
+        String valueWithProperty = "value: abc\n" +
+                "child: value";
+        String itemsWithProperty = "items:\n" +
                 "  - abc\n" +
-                "child: value", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "value: abc\n" +
+                "child: value";
+        String valueWithItems = "value: abc\n" +
                 "items:\n" +
-                "  - def", Node.class));
+                "  - def";
+
+        // when
+        Throwable valueWithPropertyFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(valueWithProperty, Node.class));
+        Throwable itemsWithPropertyFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(itemsWithProperty, Node.class));
+        Throwable valueWithItemsFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(valueWithItems, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, valueWithPropertyFailure);
+        assertInstanceOf(RuntimeException.class, itemsWithPropertyFailure);
+        assertInstanceOf(RuntimeException.class, valueWithItemsFailure);
     }
 
     @Test
-    public void contractsAreReservedIdentityContent() throws Exception {
-        Node valueWithContracts = YAML_MAPPER.readValue(
-                "value: abc\n" +
-                "contracts:\n" +
-                "  audit:\n" +
-                "    value: enabled", Node.class);
-        assertEquals("abc", valueWithContracts.getValue());
-        assertNotNull(valueWithContracts.getContracts());
-        assertFalse(valueWithContracts.getProperties() != null
-                && valueWithContracts.getProperties().containsKey("contracts"));
-        assertEquals("enabled", valueWithContracts.getAsText("/contracts/audit/value"));
+    public void shouldDeserializeContractsAsReservedContentForValuePayload() throws Exception {
+        // given
+        String document = "value: abc\n"
+                + "contracts:\n"
+                + "  audit:\n"
+                + "    value: enabled";
 
-        Node itemsWithContracts = YAML_MAPPER.readValue(
-                "items:\n" +
-                "  - abc\n" +
-                "contracts:\n" +
-                "  audit:\n" +
-                "    value: enabled", Node.class);
-        assertEquals(1, itemsWithContracts.getItems().size());
-        assertEquals("enabled", itemsWithContracts.getAsText("/contracts/audit/value"));
+        // when
+        Node node = YAML_MAPPER.readValue(document, Node.class);
 
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("contracts: false", Node.class));
+        // then
+        assertEquals("abc", node.getValue());
+        assertNotNull(node.getContracts());
+        assertFalse(node.getProperties() != null
+                && node.getProperties().containsKey("contracts"));
+        assertEquals("enabled", node.getAsText("/contracts/audit/value"));
+    }
 
-        String baseId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("value: abc", Node.class));
-        String contractsId = BlueIdCalculator.calculateBlueId(valueWithContracts);
+    @Test
+    public void shouldDeserializeContractsAsReservedContentForItemsPayload() throws Exception {
+        // given
+        String document = "items:\n"
+                + "  - abc\n"
+                + "contracts:\n"
+                + "  audit:\n"
+                + "    value: enabled";
+
+        // when
+        Node node = YAML_MAPPER.readValue(document, Node.class);
+
+        // then
+        assertEquals(1, node.getItems().size());
+        assertEquals("enabled", node.getAsText("/contracts/audit/value"));
+    }
+
+    @Test
+    public void shouldRejectNonObjectContractsPayload() {
+        // given
+        String document = "contracts: false";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
+    }
+
+    @Test
+    public void shouldIncludeContractsInCanonicalIdentity() throws Exception {
+        // given
+        Node withoutContracts = YAML_MAPPER.readValue("value: abc", Node.class);
+        Node withContracts = YAML_MAPPER.readValue(
+                "value: abc\n"
+                        + "contracts:\n"
+                        + "  audit:\n"
+                        + "    value: enabled",
+                Node.class);
+
+        // when
+        String baseId = BlueIdCalculator.calculateBlueId(withoutContracts);
+        String contractsId = BlueIdCalculator.calculateBlueId(withContracts);
+
+        // then
         assertNotEquals(baseId, contractsId);
     }
 
     @Test
-    public void testListControlMetadata() throws Exception {
+    public void shouldDeserializeListControlMetadata() throws Exception {
+        // given
         String doc = "type: List\n" +
                      "mergePolicy: append-only\n" +
                      "items:\n" +
@@ -133,8 +199,10 @@ public class NodeDeserializerTest {
                      "    value: C\n" +
                      "  - $empty: true";
 
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // then
         assertEquals("append-only", node.getMergePolicy());
         assertEquals("prevHash", node.getItems().get(0).getPreviousBlueId());
         assertEquals((Integer) 2, node.getItems().get(1).getPosition());
@@ -143,59 +211,73 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void testPreviousControlWithSiblingsIsRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "$previous:\n" +
+    public void shouldRejectPreviousControlWithSiblings() {
+        // given
+        String document = "$previous:\n" +
                 "  blueId: prevHash\n" +
-                "value: C", Node.class));
+                "value: C";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void testInvalidListControlMetadataIsRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "mergePolicy: replace-all", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "$previous: prevHash", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+    public void shouldRejectInvalidListControlMetadata() {
+        // given
+        String[] invalidDocuments = {
+                "mergePolicy: replace-all",
+                "$previous: prevHash",
                 "$previous:\n" +
-                "  blueId: prevHash\n" +
-                "  extra: value", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                        "  blueId: prevHash\n" +
+                        "  extra: value",
                 "$pos: -1\n" +
-                "value: C", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                        "value: C",
                 "$pos: 1.5\n" +
-                "value: C", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                        "value: C",
                 "$pos: \"1\"\n" +
-                "value: C", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                        "value: C",
                 "$pos: 2147483648\n" +
-                "value: C", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "$pos: 0", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
+                        "value: C",
+                "$pos: 0",
                 "$previous:\n" +
-                "  blueId: 123", Node.class));
+                        "  blueId: 123"
+        };
+
+        // when
+        Throwable[] failures = new Throwable[invalidDocuments.length];
+        for (int index = 0; index < invalidDocuments.length; index++) {
+            String document = invalidDocuments[index];
+            failures[index] = captureFailure(
+                    () -> YAML_MAPPER.readValue(document, Node.class));
+        }
+
+        // then
+        for (Throwable failure : failures) {
+            assertInstanceOf(RuntimeException.class, failure);
+        }
     }
 
     @Test
-    public void testInternalPropertiesFieldIsRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "properties:\n" +
-                "  x: y", Node.class));
+    public void shouldRejectInternalPropertiesField() {
+        // given
+        String document = "properties:\n" +
+                "  x: y";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void testNumbers() throws Exception {
+    public void shouldDeserializeSupportedNumericForms() throws Exception {
+        // given
         String doc = "int1: 9007199254740991\n" +
                      "int2: \"132452345234524739582739458723948572934875\"\n" +
                      "int3:\n" +
@@ -207,8 +289,10 @@ public class NodeDeserializerTest {
                      "  type:\n" +
                      "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
                      "  value: \"132452345234524739582739458723948572934875.132452345234524739582739458723948572934875\"\n";
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // then
         assertEquals(new BigInteger("9007199254740991"), node.getProperties().get("int1").getValue());
         assertEquals("132452345234524739582739458723948572934875", node.getProperties().get("int2").getValue());
         assertEquals(new BigInteger("132452345234524739582739458723948572934875"), node.getProperties().get("int3").getValue());
@@ -217,13 +301,21 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void testUnquotedLargeIntegerIsRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "x: 132452345234524739582739458723948572934875", Node.class));
+    public void shouldRejectUnquotedLargeInteger() {
+        // given
+        String document = "x: 132452345234524739582739458723948572934875";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void testTypedDoubleCanonicalizesNumericFormsToBinary64() throws Exception {
+    public void shouldCanonicalizeTypedDoubleNumericFormsToBinary64() throws Exception {
+        // given
         String doc = "fromInteger:\n" +
                      "  type:\n" +
                      "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
@@ -237,48 +329,62 @@ public class NodeDeserializerTest {
                      "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
                      "  value: \"1\"";
 
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // then
         assertEquals(new BigDecimal("1.0"), node.getProperties().get("fromInteger").getValue());
         assertEquals(new BigDecimal("1.0"), node.getProperties().get("fromDecimal").getValue());
         assertEquals(new BigDecimal("1.0"), node.getProperties().get("fromString").getValue());
     }
 
     @Test
-    public void testTypedDoubleRejectsNonFiniteStrings() throws Exception {
+    public void shouldRejectNonFiniteStringsForTypedDouble() throws Exception {
+        // given
         String doc = "x:\n" +
                      "  type:\n" +
                      "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
                      "  value: NaN";
 
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
+        Throwable failure = captureFailure(
+                () -> node.getProperties().get("x").getValue());
 
-        assertThrows(IllegalArgumentException.class, () -> node.getProperties().get("x").getValue());
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void explicitBooleanTextValuesAreParsedStrictly() {
-        Node trueNode = YAML_MAPPER.readValue(
-                "type:\n" +
+    public void shouldParseExplicitBooleanTextValuesStrictly() {
+        // given
+        String trueDocument = "type:\n" +
                 "  blueId: " + BOOLEAN_TYPE_BLUE_ID + "\n" +
-                "value: \"true\"", Node.class);
-        assertEquals(true, trueNode.getValue());
+                "value: \"true\"";
+        String falseDocument = "type:\n" +
+                "  blueId: " + BOOLEAN_TYPE_BLUE_ID + "\n" +
+                "value: \"false\"";
+        String invalidDocument = "type:\n" +
+                "  blueId: " + BOOLEAN_TYPE_BLUE_ID + "\n" +
+                "value: \"anything\"";
 
-        Node falseNode = YAML_MAPPER.readValue(
-                "type:\n" +
-                "  blueId: " + BOOLEAN_TYPE_BLUE_ID + "\n" +
-                "value: \"false\"", Node.class);
-        assertEquals(false, falseNode.getValue());
+        // when
+        Node trueNode = YAML_MAPPER.readValue(trueDocument, Node.class);
+        Node falseNode = YAML_MAPPER.readValue(falseDocument, Node.class);
+        Node invalid = YAML_MAPPER.readValue(invalidDocument, Node.class);
+        Object trueValue = trueNode.getValue();
+        Object falseValue = falseNode.getValue();
+        Throwable invalidValueFailure = captureFailure(invalid::getValue);
 
-        Node invalid = YAML_MAPPER.readValue(
-                "type:\n" +
-                "  blueId: " + BOOLEAN_TYPE_BLUE_ID + "\n" +
-                "value: \"anything\"", Node.class);
-        assertThrows(IllegalArgumentException.class, invalid::getValue);
+        // then
+        assertEquals(true, trueValue);
+        assertEquals(false, falseValue);
+        assertInstanceOf(IllegalArgumentException.class, invalidValueFailure);
     }
 
     @Test
-    public void testType() throws Exception {
+    public void shouldDeserializeTypeMetadata() throws Exception {
+        // given
         String doc = "a:\n" +
                      "  type:\n" +
                      "    name: Integer\n" +
@@ -291,8 +397,10 @@ public class NodeDeserializerTest {
                      "d:\n" +
                      "  type:\n" +
                      "    blueId: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // then
         assertEquals("Integer", node.getProperties().get("a").getType().getName());
         assertEquals("Integer", node.getProperties().get("b").getType().getName());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("c").getType().getBlueId());
@@ -300,14 +408,17 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void testBlueId() throws Exception {
+    public void shouldDeserializeBlueIdMetadata() throws Exception {
+        // given
         String doc = "name: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
                      "description: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
                      "x: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH\n" +
                      "y:\n" +
                      "  value: 84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH";
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // then
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getName());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getDescription());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("x").getValue());
@@ -315,7 +426,8 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void testItems() throws Exception {
+    public void shouldDeserializeItemPayloads() throws Exception {
+        // given
         String doc = "name: Abc\n" +
                      "props1:\n" +
                      "  items:\n" +
@@ -324,29 +436,38 @@ public class NodeDeserializerTest {
                      "props2:\n" +
                      "  - name: A\n" +
                      "  - name: B";
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // then
         assertEquals(2, node.getProperties().get("props1").getItems().size());
         assertEquals(2, node.getProperties().get("props2").getItems().size());
     }
 
     @Test
-    public void testText() throws Exception {
+    public void shouldDeserializeTextPayloads() throws Exception {
+        // given
         String doc = "abc";
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
+        // then
         assertEquals("abc", node.getValue());
     }
 
     @Test
-    public void testList() throws Exception {
+    public void shouldDeserializeListPayloads() throws Exception {
+        // given
         String doc = "- A\n" +
                      "- B";
+        // when
         Node node = YAML_MAPPER.readValue(doc, Node.class);
+        // then
         assertEquals(2, node.getItems().size());
     }
 
     @Test
-    public void testSchema() throws Exception {
+    public void shouldDeserializeSchemaMetadata() throws Exception {
+        // given
         String doc = "name: name\n" +
                      "schema:\n" +
                      "  required: true\n" +
@@ -367,7 +488,9 @@ public class NodeDeserializerTest {
                      "    - value: blue";
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
+        // when
         Schema schema = node.getSchema();
+        // then
         assertTrue(schema.getRequiredValue());
 
         assertEquals(BigInteger.valueOf(5), schema.getMinLengthExact());
@@ -389,222 +512,391 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void testSchemaPatternIsRejected() {
+    public void shouldRejectSchemaPattern() {
+        // given
         String doc = "name: name\n" +
                      "schema:\n" +
                      "  pattern: \"^[a-z]+$\"";
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
+        // when
+        Throwable exception = captureFailure(
+                () -> YAML_MAPPER.readValue(doc, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, exception);
         assertTrue(exception.getMessage().contains("schema.pattern"));
     }
 
     @Test
-    public void testInvalidSchemaOptionsKeyIsRejected() {
+    public void shouldRejectInvalidSchemaOptionsKey() {
+        // given
         String doc = "name: name\n" +
                      "schema:\n" +
                      "  options:\n" +
                      "    - value: red\n" +
                      "    - value: blue";
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
+        // when
+        Throwable exception = captureFailure(
+                () -> YAML_MAPPER.readValue(doc, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, exception);
         assertTrue(exception.getMessage().contains("schema.options"));
     }
 
     @Test
-    public void testInvalidConstraintsKeyIsRejected() {
+    public void shouldRejectInvalidConstraintsKey() {
+        // given
         String doc = "name: name\n" +
                      "constraints:\n" +
                      "  minLength: 5";
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
+        // when
+        Throwable exception = captureFailure(
+                () -> YAML_MAPPER.readValue(doc, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, exception);
         assertTrue(exception.getMessage().contains("\"constraints\" is not part of the Blue Language 1.0"));
     }
 
     @Test
-    public void testSchemaAllowMultipleIsRejected() {
+    public void shouldRejectSchemaAllowMultiple() {
+        // given
         String doc = "name: name\n" +
                      "schema:\n" +
                      "  allowMultiple: true";
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(doc, Node.class));
+        // when
+        Throwable exception = captureFailure(
+                () -> YAML_MAPPER.readValue(doc, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, exception);
         assertTrue(exception.getMessage().contains("schema.allowMultiple"));
     }
 
     @Test
-    public void testSchemaAndConstraintsConflictIsRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "schema:\n" +
+    public void shouldRejectSchemaAndConstraintsConflict() {
+        // given
+        String document = "schema:\n" +
                 "  minLength: 5\n" +
                 "constraints:\n" +
-                "  maxLength: 10", Node.class));
+                "  maxLength: 10";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void rootNullIsRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("null", Node.class));
+    public void shouldRejectRootNull() {
+        // given
+        String document = "null";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void rootScalarListObjectAndReferenceAreAccepted() {
-        assertEquals("abc", YAML_MAPPER.readValue("abc", Node.class).getValue());
-        assertNotNull(YAML_MAPPER.readValue("[]", Node.class).getItems());
-        assertNotNull(YAML_MAPPER.readValue("{}", Node.class));
-        assertTrue(YAML_MAPPER.readValue("blueId: abc", Node.class).isReferenceOnly());
+    public void shouldAcceptRootScalarListObjectAndReference() {
+        // given
+        String scalarDocument = "abc";
+        String listDocument = "[]";
+        String objectDocument = "{}";
+        String referenceDocument = "blueId: abc";
+
+        // when
+        Node scalar = YAML_MAPPER.readValue(scalarDocument, Node.class);
+        Node list = YAML_MAPPER.readValue(listDocument, Node.class);
+        Node object = YAML_MAPPER.readValue(objectDocument, Node.class);
+        Node reference = YAML_MAPPER.readValue(referenceDocument, Node.class);
+
+        // then
+        assertEquals("abc", scalar.getValue());
+        assertNotNull(list.getItems());
+        assertNotNull(object);
+        assertTrue(reference.isReferenceOnly());
     }
 
     @Test
-    public void rejectsWrongReservedFieldTypes() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("name: true", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("description: 123", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("blueId: 123", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("mergePolicy: true", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema: []", Node.class));
+    public void shouldRejectWrongReservedFieldTypes() {
+        // given
+        String[] invalidDocuments = {
+                "name: true",
+                "description: 123",
+                "blueId: 123",
+                "mergePolicy: true",
+                "schema: []"
+        };
+
+        // when
+        Throwable[] failures = new Throwable[invalidDocuments.length];
+        for (int index = 0; index < invalidDocuments.length; index++) {
+            String document = invalidDocuments[index];
+            failures[index] = captureFailure(
+                    () -> YAML_MAPPER.readValue(document, Node.class));
+        }
+
+        // then
+        for (Throwable failure : failures) {
+            assertInstanceOf(RuntimeException.class, failure);
+        }
     }
 
     @Test
-    public void rejectsObjectValuedItems() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "items:\n" +
-                "  blueId: abc", Node.class));
+    public void shouldRejectObjectValuedItems() {
+        // given
+        String document = "items:\n" +
+                "  blueId: abc";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void nestedBlueAndRootBlueListAreRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "child:\n" +
-                "  blue: x", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "blue:\n" +
-                "  - x", Node.class));
+    public void shouldRejectNestedBlueAndRootBlueList() {
+        // given
+        String nestedBlue = "child:\n" +
+                "  blue: x";
+        String rootBlueList = "blue:\n" +
+                "  - x";
+
+        // when
+        Throwable nestedBlueFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(nestedBlue, Node.class));
+        Throwable rootBlueListFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(rootBlueList, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, nestedBlueFailure);
+        assertInstanceOf(RuntimeException.class, rootBlueListFailure);
     }
 
     @Test
-    public void schemaKeywordValueShapesAreStrict() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  required: \"true\"", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  required:\n    value: true", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  uniqueItems:\n    value: true", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minItems: \"1\"", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minItems: 9007199254740992", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minItems:\n    type: Integer\n    value: \"5\"", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minLength:\n    type: Integer\n    value: \"5\"", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum: red", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - {}", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - $empty: true", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - blueId: abc", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - blueId: this#0", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - value: 1\n      contracts: {}", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - name: one\n      value: 1", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - value: 1\n      schema:\n        minimum: 0", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minimum: \"9007199254740992\"", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minimum: 9007199254740992", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minimum:\n    type: Integer\n    value: \"1\"\n    contracts: {}", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema:\n  minimum:\n    type: Integer\n    value: \"1\"\n    name: one", Node.class));
-
-        Node node = YAML_MAPPER.readValue(
-                "schema:\n" +
+    public void shouldEnforceStrictSchemaKeywordValueShapes() {
+        // given
+        String typedMinimumDocument = "schema:\n" +
                 "  minimum:\n" +
                 "    type:\n" +
                 "      blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
-                "    value: \"9007199254740992\"", Node.class);
-        assertEquals(new BigInteger("9007199254740992"), node.getSchema().getMinimum().getValue());
-
-        Node safeLargeCount = YAML_MAPPER.readValue("schema:\n  minItems: 9007199254740991", Node.class);
-        assertEquals(new BigInteger("9007199254740991"), safeLargeCount.getSchema().getMinItems().getValue());
-
-        Node enumNode = YAML_MAPPER.readValue(
-                "schema:\n" +
+                "    value: \"9007199254740992\"";
+        String safeLargeCountDocument = "schema:\n  minItems: 9007199254740991";
+        String enumDocument = "schema:\n" +
                 "  enum:\n" +
                 "    - type:\n" +
                 "        blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
-                "      value: \"9007199254740992\"", Node.class);
+                "      value: \"9007199254740992\"";
+        String[] invalidDocuments = {
+                "schema:\n  required: \"true\"",
+                "schema:\n  required:\n    value: true",
+                "schema:\n  uniqueItems:\n    value: true",
+                "schema:\n  minItems: \"1\"",
+                "schema:\n  minItems: 9007199254740992",
+                "schema:\n  minItems:\n    type: Integer\n    value: \"5\"",
+                "schema:\n  minLength:\n    type: Integer\n    value: \"5\"",
+                "schema:\n  enum: red",
+                "schema:\n  enum:\n    - null",
+                "schema:\n  enum:\n    - {}",
+                "schema:\n  enum:\n    - $empty: true",
+                "schema:\n  enum:\n    - blueId: abc",
+                "schema:\n  enum:\n    - blueId: this#0",
+                "schema:\n  enum:\n    - value: 1\n      contracts: {}",
+                "schema:\n  enum:\n    - name: one\n      value: 1",
+                "schema:\n  enum:\n    - value: 1\n      schema:\n        minimum: 0",
+                "schema:\n  minimum: \"9007199254740992\"",
+                "schema:\n  minimum: 9007199254740992",
+                "schema:\n  minimum:\n    type: Integer\n    value: \"1\"\n    contracts: {}",
+                "schema:\n  minimum:\n    type: Integer\n    value: \"1\"\n    name: one"
+        };
+
+        // when
+        Node node = YAML_MAPPER.readValue(typedMinimumDocument, Node.class);
+        Node safeLargeCount = YAML_MAPPER.readValue(safeLargeCountDocument, Node.class);
+        Node enumNode = YAML_MAPPER.readValue(enumDocument, Node.class);
+        Throwable[] failures = new Throwable[invalidDocuments.length];
+        for (int index = 0; index < invalidDocuments.length; index++) {
+            String document = invalidDocuments[index];
+            failures[index] = captureFailure(
+                    () -> YAML_MAPPER.readValue(document, Node.class));
+        }
+
+        // then
+        for (Throwable failure : failures) {
+            assertInstanceOf(RuntimeException.class, failure);
+        }
+
+        assertEquals(new BigInteger("9007199254740992"), node.getSchema().getMinimum().getValue());
+        assertEquals(new BigInteger("9007199254740991"), safeLargeCount.getSchema().getMinItems().getValue());
         assertEquals(new BigInteger("9007199254740992"), enumNode.getSchema().getEnum().get(0).getValue());
     }
 
     @Test
-    public void explicitIntegerStringsEnforceCanonicalAsciiGrammar() throws Exception {
-        Node negativeZero = YAML_MAPPER.readValue(
-                "schema:\n" +
+    public void shouldEnforceCanonicalAsciiGrammarForExplicitIntegerStrings() throws Exception {
+        // given
+        String negativeZeroDocument = "schema:\n" +
                 "  minimum:\n" +
                 "    type: Integer\n" +
-                "    value: \"-0\"", Node.class);
+                "    value: \"-0\"";
+        String leadingZeroDocument =
+                "schema:\n  minimum:\n    type: Integer\n    value: \"01\"";
+        String explicitPlusDocument =
+                "schema:\n  minimum:\n    type: Integer\n    value: \"+1\"";
+        String nonAsciiDigitDocument =
+                "schema:\n  minimum:\n    type: Integer\n    value: \"\u0661\"";
 
-        assertEquals("-0", negativeZero.getSchema().getMinimum().getRawValue());
+        // when
+        Node negativeZero = YAML_MAPPER.readValue(negativeZeroDocument, Node.class);
         Node preprocessedNegativeZero = new Blue().preprocess(negativeZero);
-        assertThrows(IllegalArgumentException.class,
+        Throwable negativeZeroFailure = captureFailure(
                 () -> preprocessedNegativeZero.getSchema().getMinimum().getValue());
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "schema:\n  minimum:\n    type: Integer\n    value: \"01\"", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "schema:\n  minimum:\n    type: Integer\n    value: \"+1\"", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "schema:\n  minimum:\n    type: Integer\n    value: \"\u0661\"", Node.class));
+        Throwable leadingZeroFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(leadingZeroDocument, Node.class));
+        Throwable explicitPlusFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(explicitPlusDocument, Node.class));
+        Throwable nonAsciiDigitFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(nonAsciiDigitDocument, Node.class));
+
+        // then
+        assertEquals("-0", negativeZero.getSchema().getMinimum().getRawValue());
+        assertInstanceOf(IllegalArgumentException.class, negativeZeroFailure);
+        assertInstanceOf(RuntimeException.class, leadingZeroFailure);
+        assertInstanceOf(RuntimeException.class, explicitPlusFailure);
+        assertInstanceOf(RuntimeException.class, nonAsciiDigitFailure);
     }
 
     @Test
-    public void schemaEnumRejectsContractsOnExplicitScalar() {
-        assertThrows(RuntimeException.class,
-                () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - value: 1\n      contracts: {}", Node.class));
+    public void shouldRejectContractsOnExplicitScalarForSchemaEnum() {
+        // given
+        String document = "schema:\n  enum:\n    - value: 1\n      contracts: {}";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void schemaEnumRejectsNameDescriptionOnExplicitScalar() {
-        assertThrows(RuntimeException.class,
-                () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - name: one\n      value: 1", Node.class));
-        assertThrows(RuntimeException.class,
-                () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - description: one\n      value: 1", Node.class));
+    public void shouldRejectNameAndDescriptionOnExplicitScalarForSchemaEnum() {
+        // given
+        String nameDocument = "schema:\n  enum:\n    - name: one\n      value: 1";
+        String descriptionDocument =
+                "schema:\n  enum:\n    - description: one\n      value: 1";
+
+        // when
+        Throwable nameFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(nameDocument, Node.class));
+        Throwable descriptionFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(descriptionDocument, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, nameFailure);
+        assertInstanceOf(RuntimeException.class, descriptionFailure);
     }
 
     @Test
-    public void schemaEnumRejectsSchemaOnExplicitScalar() {
-        assertThrows(RuntimeException.class,
-                () -> YAML_MAPPER.readValue("schema:\n  enum:\n    - value: 1\n      schema:\n        minimum: 0", Node.class));
+    public void shouldRejectSchemaOnExplicitScalarForSchemaEnum() {
+        // given
+        String document =
+                "schema:\n  enum:\n    - value: 1\n      schema:\n        minimum: 0";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void schemaMinimumRejectsContractsOnExplicitNumericNode() {
-        assertThrows(RuntimeException.class,
-                () -> YAML_MAPPER.readValue("schema:\n  minimum:\n    type: Integer\n    value: \"1\"\n    contracts: {}", Node.class));
+    public void shouldRejectContractsOnExplicitNumericNodeForSchemaMinimum() {
+        // given
+        String document =
+                "schema:\n  minimum:\n    type: Integer\n    value: \"1\"\n    contracts: {}";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void schemaMinItemsExplicitNodeRejected() {
-        assertThrows(RuntimeException.class,
-                () -> YAML_MAPPER.readValue("schema:\n  minItems:\n    type: Integer\n    value: \"5\"", Node.class));
+    public void shouldRejectExplicitNodeForSchemaMinItems() {
+        // given
+        String document =
+                "schema:\n  minItems:\n    type: Integer\n    value: \"5\"";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void schemaMinLengthExplicitNodeRejected() {
-        assertThrows(RuntimeException.class,
-                () -> YAML_MAPPER.readValue("schema:\n  minLength:\n    type: Integer\n    value: \"5\"", Node.class));
+    public void shouldRejectExplicitNodeForSchemaMinLength() {
+        // given
+        String document =
+                "schema:\n  minLength:\n    type: Integer\n    value: \"5\"";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void schemaMinimumTypedLargeIntegerAliasIsAcceptedAndPreprocessed() {
-        Node parsed = YAML_MAPPER.readValue(
-                "schema:\n" +
+    public void shouldAcceptAndPreprocessTypedLargeIntegerAliasForSchemaMinimum() {
+        // given
+        String document = "schema:\n" +
                 "  minimum:\n" +
                 "    type: Integer\n" +
-                "    value: \"9007199254740992\"", Node.class);
+                "    value: \"9007199254740992\"";
 
-        assertEquals("Integer", parsed.getSchema().getMinimum().getType().getValue());
-
+        // when
+        Node parsed = YAML_MAPPER.readValue(document, Node.class);
         Node preprocessed = new Blue().preprocess(parsed);
+
+        // then
+        assertEquals("Integer", parsed.getSchema().getMinimum().getType().getValue());
         assertEquals(INTEGER_TYPE_BLUE_ID, preprocessed.getSchema().getMinimum().getType().getBlueId());
         assertEquals(new BigInteger("9007199254740992"), preprocessed.getSchema().getMinimum().getValue());
     }
 
     @Test
-    public void schemaCountKeywordsExposeExactSafeLargeIntegerValues() {
-        Node parsed = YAML_MAPPER.readValue(
-                "schema:\n" +
+    public void shouldExposeExactSafeLargeIntegerValuesForSchemaCountKeywords() {
+        // given
+        String document = "schema:\n" +
                 "  minItems: 2147483648\n" +
                 "  maxItems: 9007199254740991\n" +
                 "  minLength: 2147483648\n" +
                 "  maxLength: 9007199254740991\n" +
                 "  minFields: 2147483648\n" +
-                "  maxFields: 9007199254740991", Node.class);
+                "  maxFields: 9007199254740991";
 
+        // when
+        Node parsed = YAML_MAPPER.readValue(document, Node.class);
+
+        // then
         assertEquals(new BigInteger("2147483648"), parsed.getSchema().getMinItemsExact());
         assertEquals(new BigInteger("9007199254740991"), parsed.getSchema().getMaxItemsExact());
         assertEquals(new BigInteger("2147483648"), parsed.getSchema().getMinLengthExact());
@@ -615,72 +907,151 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void schemaVerifierHandlesLargeButSafeCountDeterministically() {
-        Node parsed = YAML_MAPPER.readValue(
-                "items: []\n" +
+    public void shouldLetSchemaVerifierHandleLargeSafeCountDeterministically() {
+        // given
+        String document = "items: []\n" +
                 "schema:\n" +
-                "  minItems: 2147483648", Node.class);
+                "  minItems: 2147483648";
+        Node parsed = YAML_MAPPER.readValue(document, Node.class);
 
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable error = captureFailure(
                 () -> new Blue().resolve(parsed));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, error);
         assertTrue(error.getMessage().contains("minimum required items"));
     }
 
     @Test
-    public void reservedNullFieldsAreRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("name: null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("description: null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("mergePolicy: null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("value: null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("items: null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("type: null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("schema: null", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("contracts: null", Node.class));
+    public void shouldRejectReservedNullFields() {
+        // given
+        String[] invalidDocuments = {
+                "name: null",
+                "description: null",
+                "mergePolicy: null",
+                "value: null",
+                "items: null",
+                "type: null",
+                "schema: null",
+                "contracts: null"
+        };
+
+        // when
+        Throwable[] failures = new Throwable[invalidDocuments.length];
+        for (int index = 0; index < invalidDocuments.length; index++) {
+            String document = invalidDocuments[index];
+            failures[index] = captureFailure(
+                    () -> YAML_MAPPER.readValue(document, Node.class));
+        }
+
+        // then
+        for (Throwable failure : failures) {
+            assertInstanceOf(RuntimeException.class, failure);
+        }
     }
 
     @Test
-    public void nullAndEmptyStringParsingPreservesBlueSemantics() {
-        Node objectNull = YAML_MAPPER.readValue("x: null", Node.class);
+    public void shouldPreserveBlueSemanticsWhenParsingNullAndEmptyString() {
+        // given
+        String objectNullDocument = "x: null";
+        String listNullDocument = "items:\n  - null";
+        String emptyStringDocument = "value: \"\"";
+        String rootNullDocument = "null";
+
+        // when
+        Node objectNull = YAML_MAPPER.readValue(objectNullDocument, Node.class);
+        Node listNull = YAML_MAPPER.readValue(listNullDocument, Node.class);
+        Node empty = YAML_MAPPER.readValue(emptyStringDocument, Node.class);
+        Throwable rootNullFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(rootNullDocument, Node.class));
+
+        // then
         assertTrue(objectNull.getProperties().containsKey("x"));
         assertNull(objectNull.getProperties().get("x").getValue());
-
-        Node listNull = YAML_MAPPER.readValue("items:\n  - null", Node.class);
         assertEquals(1, listNull.getItems().size());
         assertNull(listNull.getItems().get(0).getValue());
 
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("null", Node.class));
-        assertEquals("", YAML_MAPPER.readValue("value: \"\"", Node.class).getValue());
+        assertInstanceOf(RuntimeException.class, rootNullFailure);
+        assertEquals("", empty.getValue());
     }
 
     @Test
-    public void duplicateKeysAreRejected() {
-        assertThrows(RuntimeException.class, () -> JSON_MAPPER.readValue("{\"x\":1,\"x\":2}", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("x: 1\nx: 2", Node.class));
+    public void shouldRejectDuplicateKeys() {
+        // given
+        String duplicateJsonKeys = "{\"x\":1,\"x\":2}";
+        String duplicateYamlKeys = "x: 1\nx: 2";
+
+        // when
+        Throwable jsonFailure = captureFailure(
+                () -> JSON_MAPPER.readValue(duplicateJsonKeys, Node.class));
+        Throwable yamlFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(duplicateYamlKeys, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, jsonFailure);
+        assertInstanceOf(RuntimeException.class, yamlFailure);
     }
 
     @Test
-    public void yamlCustomTagsAreRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("value: !custom tagged", Node.class));
+    public void shouldRejectYamlCustomTags() {
+        // given
+        String document = "value: !custom tagged";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void yamlAnchorsAreRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("x: &shared abc\ny: *shared", Node.class));
+    public void shouldRejectYamlAnchors() {
+        // given
+        String document = "x: &shared abc\ny: *shared";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> YAML_MAPPER.readValue(document, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
     }
 
     @Test
-    public void yamlOnlyTagsAreRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("value: !!binary SGVsbG8=", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("value: !!set\n  ? a\n  ? b", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue("value: !!omap\n  - a: 1", Node.class));
+    public void shouldRejectYamlOnlyTags() {
+        // given
+        String binaryDocument = "value: !!binary SGVsbG8=";
+        String setDocument = "value: !!set\n  ? a\n  ? b";
+        String orderedMapDocument = "value: !!omap\n  - a: 1";
+
+        // when
+        Throwable binaryFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(binaryDocument, Node.class));
+        Throwable setFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(setDocument, Node.class));
+        Throwable orderedMapFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(orderedMapDocument, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, binaryFailure);
+        assertInstanceOf(RuntimeException.class, setFailure);
+        assertInstanceOf(RuntimeException.class, orderedMapFailure);
     }
 
     @Test
-    public void yamlTimestampAndEmptyStringStayInJsonDataModel() {
-        Node timestamp = YAML_MAPPER.readValue("value: 2026-05-24", Node.class);
+    public void shouldKeepYamlTimestampAndEmptyStringInJsonDataModel() {
+        // given
+        String timestampDocument = "value: 2026-05-24";
+        String emptyStringDocument = "value: \"\"";
+
+        // when
+        Node timestamp = YAML_MAPPER.readValue(timestampDocument, Node.class);
+        Node empty = YAML_MAPPER.readValue(emptyStringDocument, Node.class);
+
+        // then
         assertEquals("2026-05-24", timestamp.getValue());
-
-        Node empty = YAML_MAPPER.readValue("value: \"\"", Node.class);
         assertEquals("", empty.getValue());
     }
 

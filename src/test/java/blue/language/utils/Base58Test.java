@@ -19,31 +19,56 @@ class Base58Test {
     private static final BigInteger LEGACY_BASE_58 = BigInteger.valueOf(58);
 
     @Test
-    void knownVectorsPreserveLegacyZeroSemantics() {
-        assertEquals("", Base58.encode(new byte[0]));
-        assertEquals("1", Base58.encode(new byte[]{0}));
-        assertEquals("11", Base58.encode(new byte[]{0, 0}));
-        assertEquals("2", Base58.encode(new byte[]{1}));
-        assertEquals("z", Base58.encode(new byte[]{57}));
-        assertEquals("21", Base58.encode(new byte[]{58}));
-        assertEquals("12", Base58.encode(new byte[]{0, 1}));
-        assertEquals("JxF12TrwUP45BMd",
-                Base58.encode("Hello World".getBytes(StandardCharsets.US_ASCII)));
+    void shouldPreserveLegacyZeroSemanticsForKnownVectors() {
+        // given
+        byte[][] valuesToEncode = {
+                new byte[0],
+                new byte[]{0},
+                new byte[]{0, 0},
+                new byte[]{1},
+                new byte[]{57},
+                new byte[]{58},
+                new byte[]{0, 1},
+                "Hello World".getBytes(StandardCharsets.US_ASCII)
+        };
+        String[] expectedEncodings = {
+                "", "1", "11", "2", "z", "21", "12", "JxF12TrwUP45BMd"
+        };
+        String[] valuesToDecode = {"", "1", "11", "12", "JxF12TrwUP45BMd"};
+        byte[][] expectedDecodings = {
+                new byte[]{0},
+                new byte[]{0, 0},
+                new byte[]{0, 0, 0},
+                new byte[]{0, 1},
+                "Hello World".getBytes(StandardCharsets.US_ASCII)
+        };
 
-        assertArrayEquals(new byte[]{0}, Base58.decode(""));
-        assertArrayEquals(new byte[]{0, 0}, Base58.decode("1"));
-        assertArrayEquals(new byte[]{0, 0, 0}, Base58.decode("11"));
-        assertArrayEquals(new byte[]{0, 1}, Base58.decode("12"));
-        assertArrayEquals("Hello World".getBytes(StandardCharsets.US_ASCII),
-                Base58.decode("JxF12TrwUP45BMd"));
+        // when
+        String[] actualEncodings = new String[valuesToEncode.length];
+        for (int index = 0; index < valuesToEncode.length; index++) {
+            actualEncodings[index] = Base58.encode(valuesToEncode[index]);
+        }
+        byte[][] actualDecodings = new byte[valuesToDecode.length][];
+        for (int index = 0; index < valuesToDecode.length; index++) {
+            actualDecodings[index] = Base58.decode(valuesToDecode[index]);
+        }
+
+        // then
+        assertArrayEquals(expectedEncodings, actualEncodings);
+        for (int index = 0; index < expectedDecodings.length; index++) {
+            assertArrayEquals(expectedDecodings[index], actualDecodings[index]);
+        }
     }
 
     @Test
-    void everyTwoByteValueMatchesLegacyOracle() {
+    void shouldMatchLegacyOracleForEveryTwoByteValue() {
+        // given
         byte[] value = new byte[2];
+        // when
         for (int unsigned = 0; unsigned <= 0xFFFF; unsigned++) {
             value[0] = (byte) (unsigned >>> 8);
             value[1] = (byte) unsigned;
+            // then
             assertEncodingMatchesLegacy(value, "two-byte value " + unsigned);
 
             String encoded = legacyEncode(value);
@@ -53,9 +78,11 @@ class Base58Test {
     }
 
     @Test
-    void oneHundredThousandShaSizedValuesMatchLegacyAndRoundTrip() {
+    void shouldMatchLegacyAndRoundTripForOneHundredThousandShaSizedValues() {
+        // given
         Random random = new Random(0x5A17B1E58L);
         byte[] value = new byte[32];
+        // when
         for (int iteration = 0; iteration < 100_000; iteration++) {
             random.nextBytes(value);
             int leadingZeros = iteration % 5;
@@ -65,6 +92,7 @@ class Base58Test {
             String expected = legacyEncode(value);
             String encoded = Base58.encode(value);
             if (!expected.equals(encoded)) {
+                // then
                 fail(description + ": expected " + expected + " but got " + encoded);
             }
             assertBytesEqual(value, Base58.decode(encoded), description + " round trip");
@@ -74,8 +102,10 @@ class Base58Test {
     }
 
     @Test
-    void arbitraryValidStringsMatchLegacyDecoder() {
+    void shouldMatchLegacyDecoderForArbitraryValidStrings() {
+        // given
         Random random = new Random(0xDEC0DE58L);
+        // when
         for (int iteration = 0; iteration < 10_000; iteration++) {
             int length = random.nextInt(96);
             char[] value = new char[length];
@@ -87,17 +117,21 @@ class Base58Test {
                 }
             }
             String encoded = new String(value);
+            // then
             assertBytesEqual(legacyDecode(encoded), Base58.decode(encoded),
                     "valid Base58 string " + iteration);
         }
     }
 
     @Test
-    void invalidCharactersRetainExactLegacyDiagnostic() {
+    void shouldRetainExactLegacyDiagnosticForInvalidCharacters() {
+        // given
         char[] invalid = {'0', 'O', 'I', 'l', '+', '/', ' ', '\t', '\u0000', '\u00E9', '\u20AC'};
+        // when
         for (char character : invalid) {
             try {
                 Base58.decode("2" + character + "3");
+                // then
                 fail("Expected invalid character to be rejected: " + (int) character);
             } catch (IllegalArgumentException exception) {
                 assertEquals("Invalid character found: " + character, exception.getMessage());
@@ -106,12 +140,15 @@ class Base58Test {
     }
 
     @Test
-    void encodingDoesNotMutateItsInput() {
+    void shouldNotMutateInputDuringEncoding() {
+        // given
         byte[] input = {0, 0, (byte) 0x80, 1, 2, 3, (byte) 0xFF};
         byte[] original = input.clone();
 
+        // when
         Base58.encode(input);
 
+        // then
         assertArrayEquals(original, input);
     }
 

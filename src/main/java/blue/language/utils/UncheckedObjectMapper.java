@@ -26,17 +26,33 @@ import static com.fasterxml.jackson.databind.DeserializationFeature.*;
 import static com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT;
 import static com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.MINIMIZE_QUOTES;
 
+/**
+ * Language-configured JSON/YAML mapper that converts checked Jackson failures
+ * to runtime exceptions.
+ *
+ * <p>Both shared instances reject duplicate keys and preserve arbitrary
+ * precision numeric tokens. The YAML instance additionally rejects tags,
+ * anchors, and aliases because they are outside the Blue data model.</p>
+ */
 public class UncheckedObjectMapper extends ObjectMapper {
 
     private static final Pattern YAML_TAG_PATTERN = Pattern.compile("(^|[\\s\\[{,])![^\\s]+");
     private static final Pattern YAML_ANCHOR_OR_ALIAS_PATTERN = Pattern.compile("(^|\\s)[&*][A-Za-z0-9_-]+");
 
+    /**
+     * Shared strict YAML mapper. Treat it as process configuration and do not
+     * reconfigure it after application startup.
+     */
     public static final UncheckedObjectMapper YAML_MAPPER =  new UncheckedObjectMapper(
             YAMLFactory.builder()
                     .enable(MINIMIZE_QUOTES)
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
                     .build());
 
+    /**
+     * Shared strict JSON mapper. Treat it as process configuration and do not
+     * reconfigure it after application startup.
+     */
     public static final UncheckedObjectMapper JSON_MAPPER = new UncheckedObjectMapper(
             JsonFactory.builder()
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -65,9 +81,8 @@ public class UncheckedObjectMapper extends ObjectMapper {
         module.addSerializer(BigInteger.class, new JsonSerializer<BigInteger>() {
             @Override
             public void serialize(BigInteger value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-                BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-                if (value.compareTo(lowerBound) >= 0 && value.compareTo(upperBound) <= 0) {
+                if (value.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) >= 0
+                        && value.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) <= 0) {
                     gen.writeNumber(value);
                 } else {
                     gen.writeString(value.toString());
@@ -214,6 +229,14 @@ public class UncheckedObjectMapper extends ObjectMapper {
         return new String(out.toByteArray(), StandardCharsets.UTF_8);
     }
 
+    /**
+     * Converts nested mapping failures to {@link NestedJsonException}.
+     *
+     * @param <T> target value type
+     * @param fromValue source value
+     * @param toValueType target class
+     * @return converted target value
+     */
     public <T> T nestedConvertValue(Object fromValue, Class<T> toValueType) {
         try {
             return super.convertValue(fromValue, toValueType);
@@ -224,6 +247,14 @@ public class UncheckedObjectMapper extends ObjectMapper {
         }
     }
 
+    /**
+     * Converts nested generic mapping failures to {@link NestedJsonException}.
+     *
+     * @param <T> target value type
+     * @param fromValue source value
+     * @param toValueTypeRef target generic type reference
+     * @return converted target value
+     */
     public <T> T nestedConvertValue(Object fromValue, TypeReference<T> toValueTypeRef) {
         try {
             return super.convertValue(fromValue, toValueTypeRef);
@@ -246,17 +277,30 @@ public class UncheckedObjectMapper extends ObjectMapper {
         return this;
     }
 
+    /** Runtime wrapper used by ordinary top-level mapping operations. */
     public static class JsonException extends RuntimeException {
 
+        /**
+         * Creates an unchecked wrapper for a mapping failure.
+         *
+         * @param cause underlying mapping failure
+         */
         public JsonException(Throwable cause) {
             super(cause);
         }
     }
 
+    /** Runtime wrapper that preserves the innermost nested conversion failure. */
     public static class NestedJsonException extends RuntimeException {
 
+        /** Innermost nested conversion failure retained for compatibility. */
         private final Throwable nestedException;
 
+        /**
+         * Creates a wrapper retaining the innermost conversion failure.
+         *
+         * @param nestedException innermost nested conversion failure
+         */
         public NestedJsonException(Throwable nestedException) {
             this.nestedException = nestedException;
         }

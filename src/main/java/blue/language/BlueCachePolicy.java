@@ -112,12 +112,18 @@ public final class BlueCachePolicy {
      * Conservative production default for one runtime. Use
      * {@link #highThroughputDefaults()} only when the host has made an explicit
      * memory/throughput tradeoff.
+     *
+     * @return bounded production policy
      */
     public static BlueCachePolicy boundedDefaults() {
         return builder().build();
     }
 
-    /** Smaller per-runtime bounds intended for low-memory service profiles. */
+    /**
+     * Returns smaller per-runtime bounds for low-memory service profiles.
+     *
+     * @return low-memory policy
+     */
     public static BlueCachePolicy lowMemoryDefaults() {
         return new BlueCachePolicy(
                 LOW_MEMORY_DERIVED_SNAPSHOT_ENTRIES,
@@ -133,7 +139,11 @@ public final class BlueCachePolicy {
                 LOW_MEMORY_MAXIMUM_DERIVED_ENTRY_WEIGHT);
     }
 
-    /** Previous high-memory defaults for hosts that need throughput over footprint. */
+    /**
+     * Returns high-memory defaults for hosts favoring throughput.
+     *
+     * @return high-throughput policy
+     */
     public static BlueCachePolicy highThroughputDefaults() {
         return new BlueCachePolicy(
                 HIGH_THROUGHPUT_DERIVED_SNAPSHOT_ENTRIES,
@@ -152,55 +162,84 @@ public final class BlueCachePolicy {
     /**
      * Disables retention of reloadable acceleration data. Authoritative
      * snapshots explicitly cached by the caller remain pinned.
+     *
+     * @return zero-retention acceleration policy
      */
     public static BlueCachePolicy disabled() {
         return new BlueCachePolicy(0, 0L, 0, 0L, 0, 0L, 0, 0L, 0, 0L, 0L);
     }
 
+    /**
+     * Starts a builder with bounded production defaults.
+     *
+     * @return mutable policy builder
+     */
     public static Builder builder() {
         return new Builder();
     }
 
+    /** Returns the derived-snapshot entry bound.
+     * @return maximum retained entries */
     public int derivedSnapshotMaxEntries() {
         return derivedSnapshotMaxEntries;
     }
 
+    /** Returns the derived-snapshot weight bound.
+     * @return maximum retained weight in bytes */
     public long derivedSnapshotMaxWeightBytes() {
         return derivedSnapshotMaxWeightBytes;
     }
 
+    /** Returns the canonical-alias entry bound.
+     * @return maximum retained entries */
     public int canonicalAliasMaxEntries() {
         return canonicalAliasMaxEntries;
     }
 
+    /** Returns the canonical-alias weight bound.
+     * @return maximum retained weight in bytes */
     public long canonicalAliasMaxWeightBytes() {
         return canonicalAliasMaxWeightBytes;
     }
 
+    /** Returns the resolved-structural entry bound.
+     * @return maximum retained entries */
     public int resolvedStructuralMaxEntries() {
         return resolvedStructuralMaxEntries;
     }
 
+    /** Returns the resolved-structural weight bound.
+     * @return maximum retained weight in bytes */
     public long resolvedStructuralMaxWeightBytes() {
         return resolvedStructuralMaxWeightBytes;
     }
 
+    /** Returns the transient-reference entry bound.
+     * @return maximum retained entries */
     public int transientReferenceMaxEntries() {
         return transientReferenceMaxEntries;
     }
 
+    /** Returns the transient-reference weight bound.
+     * @return maximum retained weight in bytes */
     public long transientReferenceMaxWeightBytes() {
         return transientReferenceMaxWeightBytes;
     }
 
+    /** Returns the conformance-plan entry bound.
+     * @return maximum retained entries */
     public int conformancePlanMaxEntries() {
         return conformancePlanMaxEntries;
     }
 
+    /** Returns the conformance-plan weight bound.
+     * @return maximum retained weight in bytes */
     public long conformancePlanMaxWeightBytes() {
         return conformancePlanMaxWeightBytes;
     }
 
+    /** Returns the individual derived-entry weight bound.
+     * @return maximum admitted weight in bytes */
     public long maximumDerivedEntryWeightBytes() {
         return maximumDerivedEntryWeightBytes;
     }
@@ -233,6 +272,7 @@ public final class BlueCachePolicy {
         return value;
     }
 
+    /** Mutable builder for independently sizing each cache region. */
     public static final class Builder {
         private int derivedSnapshotMaxEntries = DEFAULT_DERIVED_SNAPSHOT_ENTRIES;
         private long derivedSnapshotMaxWeightBytes = DEFAULT_DERIVED_SNAPSHOT_WEIGHT;
@@ -249,41 +289,89 @@ public final class BlueCachePolicy {
         private Builder() {
         }
 
+        /**
+         * Configures derived-snapshot retention.
+         *
+         * @param maxEntries maximum retained entries
+         * @param maxWeightBytes maximum retained weight in bytes
+         * @return this builder
+         */
         public Builder derivedSnapshots(int maxEntries, long maxWeightBytes) {
             this.derivedSnapshotMaxEntries = maxEntries;
             this.derivedSnapshotMaxWeightBytes = maxWeightBytes;
             return this;
         }
 
+        /**
+         * Configures canonical-alias retention.
+         *
+         * @param maxEntries maximum retained entries
+         * @param maxWeightBytes maximum retained weight in bytes
+         * @return this builder
+         */
         public Builder canonicalAliases(int maxEntries, long maxWeightBytes) {
             this.canonicalAliasMaxEntries = maxEntries;
             this.canonicalAliasMaxWeightBytes = maxWeightBytes;
             return this;
         }
 
+        /**
+         * Configures resolved-structural retention.
+         *
+         * @param maxEntries maximum retained entries
+         * @param maxWeightBytes maximum retained weight in bytes
+         * @return this builder
+         */
         public Builder resolvedStructuralEntries(int maxEntries, long maxWeightBytes) {
             this.resolvedStructuralMaxEntries = maxEntries;
             this.resolvedStructuralMaxWeightBytes = maxWeightBytes;
             return this;
         }
 
+        /**
+         * Configures transient-reference retention.
+         *
+         * @param maxEntries maximum retained entries
+         * @param maxWeightBytes maximum retained weight in bytes
+         * @return this builder
+         */
         public Builder transientReferences(int maxEntries, long maxWeightBytes) {
             this.transientReferenceMaxEntries = maxEntries;
             this.transientReferenceMaxWeightBytes = maxWeightBytes;
             return this;
         }
 
+        /**
+         * Configures conformance-plan retention.
+         *
+         * @param maxEntries maximum retained entries
+         * @param maxWeightBytes maximum retained weight in bytes
+         * @return this builder
+         */
         public Builder conformancePlans(int maxEntries, long maxWeightBytes) {
             this.conformancePlanMaxEntries = maxEntries;
             this.conformancePlanMaxWeightBytes = maxWeightBytes;
             return this;
         }
 
+        /**
+         * Sets the largest weight admitted for one derived entry.
+         *
+         * @param maxWeightBytes maximum individual derived-entry weight
+         * @return this builder
+         */
         public Builder maximumDerivedEntryWeightBytes(long maxWeightBytes) {
             this.maximumDerivedEntryWeightBytes = maxWeightBytes;
             return this;
         }
 
+        /**
+         * Validates and creates an immutable policy.
+         *
+         * @return configured cache policy
+         * @throws IllegalArgumentException when any configured bound is not
+         *                                  positive
+         */
         public BlueCachePolicy build() {
             return new BlueCachePolicy(this);
         }

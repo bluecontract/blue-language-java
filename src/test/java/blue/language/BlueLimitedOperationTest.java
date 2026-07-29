@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BlueLimitedOperationTest {
 
     @Test
-    void resolveLimitedNeverFetchesUnrelatedSiblingAndCacheWarmthCannotChangeOutcome() {
+    void shouldResolveLimitedNeverFetchesUnrelatedSiblingAndCacheWarmthCannotChangeOutcome() {
+        // given
         Node unrelated = new Node().properties(
                 "deep", new Node().value("not demanded"));
         String unrelatedBlueId = BlueIdCalculator.calculateBlueId(unrelated);
@@ -38,21 +39,23 @@ class BlueLimitedOperationTest {
                 BlueOperationLimits.demandedPath("/wanted")
                         .withMaxReferenceExpansions(1);
 
+        // when
         BlueOperationResult<Node> cold = blue.resolveLimited(
                 new Node().type(new Node().blueId(typeBlueId)), oneExpansion);
-
-        assertEquals(BlueOperationOutcome.ESTABLISHED, cold.outcome());
-        assertEquals("yes", BlueViewPath.select(cold.requireEstablished(), "/wanted").getValue());
-        assertTrue(requested.contains(typeBlueId));
-        assertFalse(requested.contains(unrelatedBlueId));
-
+        Set<String> coldRequests = new LinkedHashSet<>(requested);
         blue.loadSnapshot(unrelatedBlueId);
         requested.clear();
         BlueOperationResult<Node> warm = blue.resolveLimited(
                 new Node().type(new Node().blueId(typeBlueId)), oneExpansion);
+        Set<String> warmRequests = new LinkedHashSet<>(requested);
 
+        // then
+        assertEquals(BlueOperationOutcome.ESTABLISHED, cold.outcome());
+        assertEquals("yes", BlueViewPath.select(cold.requireEstablished(), "/wanted").getValue());
+        assertTrue(coldRequests.contains(typeBlueId));
+        assertFalse(coldRequests.contains(unrelatedBlueId));
         assertEquals(cold.outcome(), warm.outcome());
         assertEquals("yes", BlueViewPath.select(warm.requireEstablished(), "/wanted").getValue());
-        assertFalse(requested.contains(unrelatedBlueId));
+        assertFalse(warmRequests.contains(unrelatedBlueId));
     }
 }

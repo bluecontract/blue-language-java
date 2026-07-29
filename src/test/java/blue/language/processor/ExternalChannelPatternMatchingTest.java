@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport
         .diagnosticMessage;
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -49,135 +50,102 @@ final class ExternalChannelPatternMatchingTest {
                             "pattern-event"));
 
     @Test
-    void inlineAndPureReferenceCandidatesMatchWithPassLocalCaches() {
-        Node extended = extendedCandidate();
-        String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(extended);
-        AtomicInteger providerFetches =
-                new AtomicInteger();
-        NodeProvider provider = blueId -> {
-            if (!candidateBlueId.equals(blueId)) {
-                return null;
-            }
-            providerFetches.incrementAndGet();
-            return Collections.singletonList(
-                    extended.clone());
-        };
-        PatternLeafProcessor leaf =
-                new PatternLeafProcessor(false);
-        PatternAggregateProcessor aggregate =
-                new PatternAggregateProcessor();
+    void shouldMatchInlineCandidateWithoutExactMaterialization() {
+        // given
+        boolean referenceCandidate = false;
 
-        try (Blue blue = runtime(
-                provider, leaf, aggregate)) {
-            DocumentProcessor processor =
-                    blue.getDocumentProcessor();
-            Node pattern = kindPattern();
-            Node document = root(
-                    aggregate("outer", "leaf"),
-                    leaf("leaf", pattern));
-            ContractBundle bundle = bundle(
-                    processor, document);
-            CountingSnapshotManager manager =
-                    new CountingSnapshotManager(
-                            processor.snapshotManager());
-            Node inlineEvent = event(extended.clone());
-            Node reference =
-                    new Node().blueId(candidateBlueId);
-            Node referenceEvent = event(reference);
-            String patternIdentity =
-                    BlueIdCalculator.calculateBlueId(pattern);
-            String inlineIdentity =
-                    BlueIdCalculator.calculateBlueId(
-                            inlineEvent);
-            String referenceIdentity =
-                    BlueIdCalculator.calculateBlueId(
-                            referenceEvent);
+        // when
+        CandidateMatchObservation observation =
+                observeCandidateMatch(
+                        referenceCandidate,
+                        false);
 
-            ExternalChannelFunctionEvaluation inline =
-                    evaluate(
-                            processor,
-                            manager,
-                            bundle,
-                            "outer",
-                            inlineEvent);
-            assertTrue(inline.accepts());
-            assertEquals(
-                    0,
-                    manager.exactCalls(candidateBlueId));
-            assertEquals(0, providerFetches.get());
-
-            ExternalChannelFunctionEvaluation materialized =
-                    evaluate(
-                            processor,
-                            manager,
-                            bundle,
-                            "outer",
-                            referenceEvent);
-            assertTrue(materialized.accepts());
-            /*
-             * The aggregate reevaluates its selected member from ACCEPTS,
-             * PAYLOAD, and CHECKPOINT_SUBJECT, while the leaf itself asks the
-             * matcher twice. One exact materialization per deterministic pass
-             * proves that all nested calls share that pass's matcher. Two
-             * calls total prove that the two passes do not share matcher
-             * caches.
-             */
-            assertEquals(
-                    2,
-                    manager.exactCalls(candidateBlueId));
-            assertEquals(1, providerFetches.get());
-
-            ExternalChannelFunctionEvaluation repeated =
-                    evaluate(
-                            processor,
-                            manager,
-                            bundle,
-                            "outer",
-                            referenceEvent);
-            assertTrue(repeated.accepts());
-            assertEquals(
-                    4,
-                    manager.exactCalls(candidateBlueId));
-            assertEquals(
-                    1,
-                    providerFetches.get(),
-                    "verified canonical materialization should reuse the "
-                            + "snapshot manager's cache");
-
-            assertEquals(
-                    inline.checkpointDomainBlueId(),
-                    materialized.checkpointDomainBlueId());
-            assertEquals(
-                    inline.dependencies(),
-                    materialized.dependencies());
-            assertEquals(
-                    materialized.dependencies(),
-                    repeated.dependencies());
-            assertEquals(
-                    patternIdentity,
-                    BlueIdCalculator.calculateBlueId(
-                            pattern));
-            assertEquals(
-                    inlineIdentity,
-                    BlueIdCalculator.calculateBlueId(
-                            inlineEvent));
-            assertEquals(
-                    referenceIdentity,
-                    BlueIdCalculator.calculateBlueId(
-                            referenceEvent));
-            assertTrue(reference.isReferenceOnly());
-            assertEquals(
-                    candidateBlueId,
-                    reference.getBlueId());
-            assertEquals(
-                    "retained",
-                    extended.getAsText("/detail"));
-        }
+        // then
+        assertTrue(observation.first.accepts());
+        assertEquals(0, observation.exactCallsAfterFirst);
+        assertEquals(0, observation.providerFetchesAfterFirst);
+        assertEquals(
+                observation.patternIdentity,
+                observation.patternIdentityAfterEvaluation);
+        assertEquals(
+                observation.eventIdentity,
+                observation.eventIdentityAfterEvaluation);
+        assertEquals("retained", observation.retainedDetail);
     }
 
     @Test
-    void nestedCandidateReferenceAndExactCanonicalTypeLineageResolve() {
+    void shouldMatchPureReferenceCandidateWithPassLocalCaches() {
+        // given
+        boolean referenceCandidate = true;
+
+        // when
+        CandidateMatchObservation observation =
+                observeCandidateMatch(
+                        referenceCandidate,
+                        true);
+
+        // then
+        assertTrue(observation.first.accepts());
+        assertTrue(observation.repeated.accepts());
+        /*
+         * The aggregate reevaluates its selected member from ACCEPTS,
+         * PAYLOAD, and CHECKPOINT_SUBJECT, while the leaf itself asks the
+         * matcher twice. One exact materialization per deterministic pass
+         * proves that all nested calls share that pass's matcher. Two calls
+         * per evaluation prove that passes do not share matcher caches.
+         */
+        assertEquals(2, observation.exactCallsAfterFirst);
+        assertEquals(1, observation.providerFetchesAfterFirst);
+        assertEquals(4, observation.exactCallsAfterRepeat);
+        assertEquals(
+                1,
+                observation.providerFetchesAfterRepeat,
+                "verified canonical materialization should reuse the "
+                        + "snapshot manager's cache");
+        assertEquals(
+                observation.first.dependencies(),
+                observation.repeated.dependencies());
+        assertTrue(observation.reference.isReferenceOnly());
+        assertEquals(
+                observation.candidateBlueId,
+                observation.reference.getBlueId());
+        assertEquals(
+                observation.patternIdentity,
+                observation.patternIdentityAfterEvaluation);
+        assertEquals(
+                observation.eventIdentity,
+                observation.eventIdentityAfterEvaluation);
+        assertEquals("retained", observation.retainedDetail);
+    }
+
+    @Test
+    void shouldPreserveEvaluationSemanticsAcrossInlineAndReferenceCandidates() {
+        // given
+        boolean inlineCandidate = false;
+        boolean referenceCandidate = true;
+
+        // when
+        CandidateMatchObservation inline =
+                observeCandidateMatch(
+                        inlineCandidate,
+                        false);
+        CandidateMatchObservation reference =
+                observeCandidateMatch(
+                        referenceCandidate,
+                        false);
+
+        // then
+        assertEquals(
+                inline.first.checkpointDomainBlueId(),
+                reference.first.checkpointDomainBlueId());
+        assertEquals(
+                inline.first.dependencies(),
+                reference.first.dependencies());
+    }
+
+    @Test
+    void shouldResolveNestedCandidateReferenceDuringPatternMatching() {
+        // given
         Node nested = new Node()
                 .properties(
                         "kind",
@@ -187,6 +155,59 @@ final class ExternalChannelPatternMatchingTest {
                         new Node().value("nested-retained"));
         String nestedBlueId =
                 BlueIdCalculator.calculateBlueId(nested);
+        Map<String, Node> supplied =
+                Collections.singletonMap(
+                        nestedBlueId,
+                        nested);
+        NodeProvider provider = provider(supplied);
+        Node nestedPattern = new Node().properties(
+                "nested",
+                new Node().properties(
+                        "kind",
+                        new Node().value(
+                                "coordination")));
+        Node nestedCandidate = new Node()
+                .properties(
+                        "nested",
+                        reference(nestedBlueId))
+                .properties(
+                        "outerDetail",
+                        new Node().value("retained"));
+
+        // when
+        ExternalChannelFunctionEvaluation result;
+        int exactCalls;
+        try (Blue blue = runtime(
+                provider,
+                new PatternLeafProcessor(false),
+                new PatternAggregateProcessor())) {
+            DocumentProcessor processor =
+                    blue.getDocumentProcessor();
+            CountingSnapshotManager manager =
+                    new CountingSnapshotManager(
+                            processor.snapshotManager());
+            result = evaluate(
+                    processor,
+                    manager,
+                    bundle(
+                            processor,
+                            root(leaf(
+                                    "leaf",
+                                    nestedPattern))),
+                    "leaf",
+                    event(nestedCandidate));
+            exactCalls =
+                    manager.exactCalls(nestedBlueId);
+        }
+
+        // then
+        assertTrue(result.accepts());
+        assertEquals(2, exactCalls);
+    }
+
+    @Test
+    void shouldResolveExactCanonicalTypeLineageDuringPatternMatching() {
+        // given
         Node baseType =
                 new Node().name("Pattern Base");
         String baseBlueId =
@@ -206,238 +227,209 @@ final class ExternalChannelPatternMatchingTest {
                 BlueIdCalculator.calculateBlueId(childType);
         Map<String, Node> supplied =
                 new LinkedHashMap<>();
-        supplied.put(nestedBlueId, nested);
         supplied.put(baseBlueId, baseType);
         supplied.put(parentBlueId, parentType);
         supplied.put(childBlueId, childType);
-        NodeProvider provider = blueId -> {
-            Node node = supplied.get(blueId);
-            return node != null
-                    ? Collections.singletonList(node.clone())
-                    : null;
-        };
+        NodeProvider provider = provider(supplied);
+        Node lineagePattern =
+                new Node().type(
+                        reference(baseBlueId));
+        Node lineageCandidate =
+                new Node()
+                        .type(reference(childBlueId))
+                        .properties(
+                                "extended",
+                                new Node().value(true));
 
+        // when
+        ExternalChannelFunctionEvaluation result;
+        int childCalls;
+        int parentCalls;
+        int baseCalls;
         try (Blue blue = runtime(
                 provider,
                 new PatternLeafProcessor(false),
                 new PatternAggregateProcessor())) {
             DocumentProcessor processor =
                     blue.getDocumentProcessor();
-            CountingSnapshotManager nestedManager =
-                    new CountingSnapshotManager(
-                            processor.snapshotManager());
-            Node nestedPattern = new Node().properties(
-                    "nested",
-                    new Node().properties(
-                            "kind",
-                            new Node().value(
-                                    "coordination")));
-            Node nestedCandidate = new Node()
-                    .properties(
-                            "nested",
-                            reference(nestedBlueId))
-                    .properties(
-                            "outerDetail",
-                            new Node().value("retained"));
-            Node nestedDocument = root(
-                    leaf("leaf", nestedPattern));
-            ExternalChannelFunctionEvaluation nestedResult =
-                    evaluate(
-                            processor,
-                            nestedManager,
-                            bundle(
-                                    processor,
-                                    nestedDocument),
-                            "leaf",
-                            event(nestedCandidate));
-            assertTrue(nestedResult.accepts());
-            assertEquals(
-                    2,
-                    nestedManager.exactCalls(
-                            nestedBlueId));
-
             CountingSnapshotManager lineageManager =
                     new CountingSnapshotManager(
                             processor.snapshotManager());
-            Node lineagePattern =
-                    new Node().type(
-                            reference(baseBlueId));
-            Node lineageCandidate =
-                    new Node()
-                            .type(reference(childBlueId))
-                            .properties(
-                                    "extended",
-                                    new Node().value(true));
-            Node lineageDocument = root(
-                    leaf("leaf", lineagePattern));
-            ExternalChannelFunctionEvaluation lineageResult =
-                    evaluate(
+            result = evaluate(
                             processor,
                             lineageManager,
                             bundle(
                                     processor,
-                                    lineageDocument),
+                                    root(leaf(
+                                            "leaf",
+                                            lineagePattern))),
                             "leaf",
                             event(lineageCandidate));
-            assertTrue(
-                    lineageResult.accepts(),
-                    "an exact canonical child definition should follow its "
-                            + "exact parent reference");
-            assertEquals(
-                    2,
-                    lineageManager.exactCalls(
-                            childBlueId));
-            assertEquals(
-                    2,
-                    lineageManager.exactCalls(
-                            parentBlueId));
-            assertEquals(
-                    0,
-                    lineageManager.exactCalls(
-                            baseBlueId),
-                    "the exact parent reference identity is sufficient once "
-                            + "the intermediate definition is materialized");
-            assertTrue(
-                    lineageCandidate.getType()
-                            .isReferenceOnly());
-            assertEquals(
-                    childBlueId,
-                    lineageCandidate.getType()
-                            .getBlueId());
+            childCalls =
+                    lineageManager.exactCalls(childBlueId);
+            parentCalls =
+                    lineageManager.exactCalls(parentBlueId);
+            baseCalls =
+                    lineageManager.exactCalls(baseBlueId);
         }
+
+        // then
+        assertTrue(
+                result.accepts(),
+                "an exact canonical child definition should follow its "
+                        + "exact parent reference");
+        assertEquals(2, childCalls);
+        assertEquals(2, parentCalls);
+        assertEquals(
+                0,
+                baseCalls,
+                "the exact parent reference identity is sufficient once "
+                        + "the intermediate definition is materialized");
+        assertTrue(lineageCandidate.getType()
+                .isReferenceOnly());
+        assertEquals(
+                childBlueId,
+                lineageCandidate.getType()
+                        .getBlueId());
     }
 
     @Test
-    void missingMismatchedAndStillReferenceMaterializationPropagate() {
+    void shouldPropagateMissingReferenceMaterialization() {
+        // given
         Node candidate = extendedCandidate();
         String candidateBlueId =
                 BlueIdCalculator.calculateBlueId(candidate);
-        Node referenceEvent =
-                event(reference(candidateBlueId));
 
-        try (Blue missing = runtime(
-                blueId -> null,
-                new PatternLeafProcessor(false),
-                new PatternAggregateProcessor())) {
-            DocumentProcessor processor =
-                    missing.getDocumentProcessor();
-            ContractBundle bundle = bundle(
-                    processor,
-                    root(leaf("leaf", kindPattern())));
-            RuntimeException failure =
-                    assertThrows(
-                            RuntimeException.class,
-                            () -> evaluate(
-                                    processor,
-                                    processor.snapshotManager(),
-                                    bundle,
-                                    "leaf",
-                                    referenceEvent));
-            assertTrue(
-                    failure.getMessage().contains(
-                            candidateBlueId));
-        }
+        // when
+        RuntimeException failure =
+                captureReferenceFailure(
+                        candidateBlueId,
+                        blueId -> null,
+                        null);
 
-        Node wrong = new Node().value("wrong-content");
-        try (Blue mismatched = runtime(
-                blueId -> candidateBlueId.equals(blueId)
-                        ? Collections.singletonList(
-                        wrong.clone())
-                        : null,
-                new PatternLeafProcessor(false),
-                new PatternAggregateProcessor())) {
-            DocumentProcessor processor =
-                    mismatched.getDocumentProcessor();
-            ContractBundle bundle = bundle(
-                    processor,
-                    root(leaf("leaf", kindPattern())));
-            RuntimeException failure =
-                    assertThrows(
-                            RuntimeException.class,
-                            () -> evaluate(
-                                    processor,
-                                    processor.snapshotManager(),
-                                    bundle,
-                                    "leaf",
-                                    referenceEvent));
-            assertTrue(
-                    failure.getMessage().contains(
-                            candidateBlueId));
-        }
-
-        try (Blue blue = runtime(
-                null,
-                new PatternLeafProcessor(false),
-                new PatternAggregateProcessor())) {
-            DocumentProcessor processor =
-                    blue.getDocumentProcessor();
-            ContractBundle bundle = bundle(
-                    processor,
-                    root(leaf("leaf", kindPattern())));
-
-            IllegalStateException sentinel =
-                    new IllegalStateException(
-                            "verified manager unavailable");
-            RuntimeException propagated =
-                    assertThrows(
-                            RuntimeException.class,
-                            () -> evaluate(
-                                    processor,
-                                    materializer(reference -> {
-                                        throw sentinel;
-                                    }),
-                                    bundle,
-                                    "leaf",
-                                    referenceEvent));
-            assertSame(sentinel, propagated);
-
-            IllegalArgumentException absent =
-                    assertThrows(
-                            IllegalArgumentException.class,
-                            () -> evaluate(
-                                    processor,
-                                    materializer(
-                                            reference -> null),
-                                    bundle,
-                                    "leaf",
-                                    referenceEvent));
-            assertTrue(absent.getMessage().contains(
-                    "returned no content"));
-
-            IllegalArgumentException stillReference =
-                    assertThrows(
-                            IllegalArgumentException.class,
-                            () -> evaluate(
-                                    processor,
-                                    materializer(
-                                            reference -> reference),
-                                    bundle,
-                                    "leaf",
-                                    referenceEvent));
-            assertTrue(stillReference.getMessage().contains(
-                    "retained a pure reference"));
-
-            IllegalArgumentException wrongIdentity =
-                    assertThrows(
-                            IllegalArgumentException.class,
-                            () -> evaluate(
-                                    processor,
-                                    materializer(
-                                            reference -> FrozenNode
-                                                    .fromNode(
-                                                            wrong)),
-                                    bundle,
-                                    "leaf",
-                                    referenceEvent));
-            assertTrue(wrongIdentity.getMessage().contains(
-                    "mismatched content"));
-        }
+        // then
+        assertTrue(failure.getMessage().contains(
+                candidateBlueId));
     }
 
     @Test
-    void headerPatternMatchingFailsBeforeAnyMaterialization() {
+    void shouldPropagateMismatchedProviderMaterialization() {
+        // given
+        Node candidate = extendedCandidate();
+        String candidateBlueId =
+                BlueIdCalculator.calculateBlueId(candidate);
+        Node wrong = new Node().value("wrong-content");
+        NodeProvider provider = blueId ->
+                candidateBlueId.equals(blueId)
+                        ? Collections.singletonList(wrong.clone())
+                        : null;
+
+        // when
+        RuntimeException failure =
+                captureReferenceFailure(
+                        candidateBlueId,
+                        provider,
+                        null);
+
+        // then
+        assertTrue(failure.getMessage().contains(
+                candidateBlueId));
+    }
+
+    @Test
+    void shouldPropagateVerifiedMaterializerFailure() {
+        // given
+        String candidateBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        extendedCandidate());
+        IllegalStateException sentinel =
+                new IllegalStateException(
+                        "verified manager unavailable");
+
+        // when
+        RuntimeException failure =
+                captureReferenceFailure(
+                        candidateBlueId,
+                        null,
+                        reference -> {
+                            throw sentinel;
+                        });
+
+        // then
+        assertSame(sentinel, failure);
+    }
+
+    @Test
+    void shouldRejectVerifiedMaterializerWithoutContent() {
+        // given
+        String candidateBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        extendedCandidate());
+
+        // when
+        RuntimeException failure =
+                captureReferenceFailure(
+                        candidateBlueId,
+                        null,
+                        reference -> null);
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "returned no content"));
+    }
+
+    @Test
+    void shouldRejectVerifiedMaterializerRetainingPureReference() {
+        // given
+        String candidateBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        extendedCandidate());
+
+        // when
+        RuntimeException failure =
+                captureReferenceFailure(
+                        candidateBlueId,
+                        null,
+                        reference -> reference);
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "retained a pure reference"));
+    }
+
+    @Test
+    void shouldRejectVerifiedMaterializerWithMismatchedContent() {
+        // given
+        String candidateBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        extendedCandidate());
+        Node wrong = new Node().value("wrong-content");
+
+        // when
+        RuntimeException failure =
+                captureReferenceFailure(
+                        candidateBlueId,
+                        null,
+                        reference -> FrozenNode.fromNode(wrong));
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "mismatched content"));
+    }
+
+    @Test
+    void shouldVerifyHeaderPatternMatchingFailsBeforeAnyMaterialization() {
+        // given
         PatternLeafProcessor processorFunctions =
                 new PatternLeafProcessor(true);
+        IllegalStateException failure;
+        int exactCalls;
         try (Blue blue = runtime(
                 null,
                 processorFunctions,
@@ -461,9 +453,8 @@ final class ExternalChannelPatternMatchingTest {
                                     manager)
                             .open();
 
-            IllegalStateException failure =
-                    assertThrows(
-                            IllegalStateException.class,
+            // when
+            failure = captureFailure(
                             () -> new ExternalChannelFunctionResolver(
                                     processor.registry(),
                                     processor.contractConverter(),
@@ -471,14 +462,20 @@ final class ExternalChannelPatternMatchingTest {
                                     bundle)
                                     .header(snapshot));
             matcher.close();
-            assertTrue(failure.getMessage().contains(
-                    "available only during event evaluation"));
-            assertEquals(0, manager.totalExactCalls());
+            exactCalls = manager.totalExactCalls();
         }
+
+        // then
+        assertEquals(IllegalStateException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "available only during event evaluation"));
+        assertEquals(0, exactCalls);
     }
 
     @Test
-    void eventEvaluationRecomputesHeadersWithoutMatcherAccess() {
+    void shouldVerifyEventEvaluationRecomputesHeadersWithoutMatcherAccess() {
+        // given
         Node headerCandidate = extendedCandidate();
         String headerCandidateBlueId =
                 BlueIdCalculator.calculateBlueId(
@@ -517,14 +514,21 @@ final class ExternalChannelPatternMatchingTest {
                     new CountingSnapshotManager(
                             processor.snapshotManager());
 
-            assertTrue(
+            // when
+            ExternalChannelFunctionEvaluation evaluation =
                     evaluate(
                             processor,
                             manager,
                             bundle,
                             "leaf",
-                            event(extendedCandidate()))
-                            .accepts());
+                            event(extendedCandidate()));
+            int exactCalls =
+                    manager.exactCalls(
+                            headerCandidateBlueId);
+            int fetched = providerFetches.get();
+
+            // then
+            assertTrue(evaluation.accepts());
             assertEquals(
                     4,
                     functions.headerMatchFailures(),
@@ -535,16 +539,14 @@ final class ExternalChannelPatternMatchingTest {
                     functions.headerMemberEvaluationFailures(),
                     "header contexts must reject indirect event matching "
                             + "through member evaluation");
-            assertEquals(
-                    0,
-                    manager.exactCalls(
-                            headerCandidateBlueId));
-            assertEquals(0, providerFetches.get());
+            assertEquals(0, exactCalls);
+            assertEquals(0, fetched);
         }
     }
 
     @Test
-    void dispatchOverrideDetectionUsesExactErasedSignatures() {
+    void shouldVerifyDispatchOverrideDetectionUsesExactErasedSignatures() {
+        // given
         ExternalChannelSubscriptionFunctions<
                 PatternLeafChannel> unrelatedOverloads =
                 new ExternalChannelSubscriptionFunctions<
@@ -562,22 +564,6 @@ final class ExternalChannelPatternMatchingTest {
                         return false;
                     }
                 };
-        assertFalse(
-                ExternalChannelFunctionResolver
-                        .overridesExact(
-                                unrelatedOverloads,
-                                "preselects",
-                                ChannelContract.class,
-                                Node.class));
-        assertFalse(
-                ExternalChannelFunctionResolver
-                        .overridesExact(
-                                unrelatedOverloads,
-                                "accepts",
-                                ChannelContract.class,
-                                Node.class,
-                                ExternalChannelFunctionContext.class));
-
         ExternalChannelSubscriptionFunctions<
                 PatternLeafChannel> exactOverrides =
                 new ExternalChannelSubscriptionFunctions<
@@ -597,27 +583,57 @@ final class ExternalChannelPatternMatchingTest {
                         return true;
                     }
                 };
-        assertTrue(
+
+        // when
+        boolean unrelatedPreselects =
+                ExternalChannelFunctionResolver
+                        .overridesExact(
+                                unrelatedOverloads,
+                                "preselects",
+                                ChannelContract.class,
+                                Node.class);
+        boolean unrelatedAccepts =
+                ExternalChannelFunctionResolver
+                        .overridesExact(
+                                unrelatedOverloads,
+                                "accepts",
+                                ChannelContract.class,
+                                Node.class,
+                                ExternalChannelFunctionContext.class);
+        boolean exactPreselects =
                 ExternalChannelFunctionResolver
                         .overridesExact(
                                 exactOverrides,
                                 "preselects",
                                 ChannelContract.class,
                                 Node.class,
-                                ExternalChannelFunctionContext.class));
-        assertTrue(
+                                ExternalChannelFunctionContext.class);
+        boolean exactAccepts =
                 ExternalChannelFunctionResolver
                         .overridesExact(
                                 exactOverrides,
                                 "accepts",
                                 ChannelContract.class,
-                                Node.class));
+                                Node.class);
+
+        // then
+        assertFalse(unrelatedPreselects);
+        assertFalse(unrelatedAccepts);
+        assertTrue(
+                exactPreselects);
+        assertTrue(exactAccepts);
     }
 
     @Test
-    void retainedEventContextCannotMatchAfterItsPassCloses() {
+    void shouldVerifyRetainedEventContextCannotMatchAfterItsPassCloses() {
+        // given
         PatternLeafProcessor functions =
                 new PatternLeafProcessor(false);
+        boolean accepted;
+        IllegalStateException closed;
+        IllegalStateException nullPattern;
+        IllegalStateException nullCandidate;
+        IllegalStateException retainedMember;
         try (Blue blue = runtime(
                 null,
                 functions,
@@ -631,67 +647,74 @@ final class ExternalChannelPatternMatchingTest {
                             leaf("leaf", pattern),
                             leaf("peer", pattern)));
 
-            assertTrue(
-                    evaluate(
+            // when
+            accepted = evaluate(
                             processor,
                             processor.snapshotManager(),
                             bundle,
                             "leaf",
                             event(extendedCandidate()))
-                            .accepts());
-            IllegalStateException closed =
-                    assertThrows(
-                            IllegalStateException.class,
+                            .accepts();
+            closed = captureFailure(
                             () -> functions
                                     .lastContext()
                                     .matchesPattern(
                                             extendedCandidate(),
                                             pattern));
-            assertTrue(closed.getMessage().contains(
-                    "no longer active"));
-            assertThrows(
-                    IllegalStateException.class,
+            nullPattern = captureFailure(
                     () -> functions
                             .lastContext()
-                            .matchesPattern(
-                                    extendedCandidate(),
-                                    null));
-            assertThrows(
-                    IllegalStateException.class,
+                                    .matchesPattern(
+                                            extendedCandidate(),
+                                            null));
+            nullCandidate = captureFailure(
                     () -> functions
                             .lastContext()
-                            .matchesPattern(
-                                    null,
-                                    kindPattern()));
-            IllegalStateException retainedMember =
-                    assertThrows(
-                            IllegalStateException.class,
+                                    .matchesPattern(
+                                            null,
+                                            kindPattern()));
+            retainedMember = captureFailure(
                             () -> functions
                                     .lastContext()
                                     .member("peer")
                                     .evaluate(
                                             event(
                                                     extendedCandidate())));
-            assertTrue(retainedMember.getMessage().contains(
-                    "no longer active"));
         }
+
+        // then
+        assertTrue(accepted);
+        assertEquals(IllegalStateException.class,
+                closed.getClass());
+        assertTrue(closed.getMessage().contains(
+                "no longer active"));
+        assertEquals(IllegalStateException.class,
+                nullPattern.getClass());
+        assertEquals(IllegalStateException.class,
+                nullCandidate.getClass());
+        assertEquals(IllegalStateException.class,
+                retainedMember.getClass());
+        assertTrue(retainedMember.getMessage().contains(
+                "no longer active"));
     }
 
     @Test
-    void closedMatcherSessionSeversVerifiedManagerCapture()
+    void shouldVerifyClosedMatcherSessionSeversVerifiedManagerCapture()
             throws Exception {
+        // given
         ExternalChannelFunctionEvaluation.MatcherSession
                 session =
                 ExternalChannelFunctionEvaluation
                         .verifiedMatcherSessions(
                                 materializer(reference -> null))
                         .open();
-        assertTrue(
-                session.matches(
+
+        // when
+        boolean matched = session.matches(
                         FrozenNode.fromResolvedNode(
                                 extendedCandidate()),
                         FrozenNode.fromResolvedNode(
-                                kindPattern())));
+                                kindPattern()));
 
         session.close();
 
@@ -699,6 +722,9 @@ final class ExternalChannelPatternMatchingTest {
                 session.getClass()
                         .getDeclaredField("matcher");
         matcherField.setAccessible(true);
+
+        // then
+        assertTrue(matched);
         assertEquals(
                 FrozenTypeMatcher.class,
                 matcherField.getType());
@@ -718,7 +744,8 @@ final class ExternalChannelPatternMatchingTest {
     }
 
     @Test
-    void absentManagerAllowsInlineMatchingButRejectsReferenceDemand() {
+    void shouldVerifyAbsentManagerAllowsInlineMatchingButRejectsReferenceDemand() {
+        // given
         Node candidate = extendedCandidate();
         String candidateBlueId =
                 BlueIdCalculator.calculateBlueId(candidate);
@@ -732,17 +759,16 @@ final class ExternalChannelPatternMatchingTest {
                     processor,
                     root(leaf("leaf", kindPattern())));
 
-            assertTrue(
+            // when
+            ExternalChannelFunctionEvaluation inlineEvaluation =
                     evaluate(
                             processor,
                             null,
                             bundle,
                             "leaf",
-                            event(candidate))
-                            .accepts());
-            IllegalStateException unavailable =
-                    assertThrows(
-                            IllegalStateException.class,
+                            event(candidate));
+            Throwable unavailable =
+                    captureFailure(
                             () -> evaluate(
                                     processor,
                                     null,
@@ -750,13 +776,18 @@ final class ExternalChannelPatternMatchingTest {
                                     "leaf",
                                     event(reference(
                                             candidateBlueId))));
+
+            // then
+            assertTrue(inlineEvaluation.accepts());
+            assertTrue(unavailable instanceof IllegalStateException);
             assertTrue(unavailable.getMessage().contains(
                     "requires a verified ProcessingSnapshotManager"));
         }
     }
 
     @Test
-    void rootVerifierAndChannelRunnerUseCapturedSnapshotManager() {
+    void shouldVerifyRootVerifierAndChannelRunnerUseCapturedSnapshotManager() {
+        // given
         Node candidate = extendedCandidate();
         String candidateBlueId =
                 BlueIdCalculator.calculateBlueId(candidate);
@@ -863,9 +894,12 @@ final class ExternalChannelPatternMatchingTest {
                             .exactRuntimeState()
                             .build());
 
+            // when
             DocumentProcessingResult result =
                     owner.processDocument(
                             document, event);
+
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
@@ -888,6 +922,126 @@ final class ExternalChannelPatternMatchingTest {
         }
     }
 
+    private static CandidateMatchObservation observeCandidateMatch(
+            boolean referenceCandidate,
+            boolean repeat) {
+        Node extended = extendedCandidate();
+        String candidateBlueId =
+                BlueIdCalculator.calculateBlueId(extended);
+        AtomicInteger providerFetches =
+                new AtomicInteger();
+        NodeProvider provider = blueId -> {
+            if (!candidateBlueId.equals(blueId)) {
+                return null;
+            }
+            providerFetches.incrementAndGet();
+            return Collections.singletonList(
+                    extended.clone());
+        };
+        try (Blue blue = runtime(
+                provider,
+                new PatternLeafProcessor(false),
+                new PatternAggregateProcessor())) {
+            DocumentProcessor processor =
+                    blue.getDocumentProcessor();
+            Node pattern = kindPattern();
+            ContractBundle bundle = bundle(
+                    processor,
+                    root(
+                            aggregate("outer", "leaf"),
+                            leaf("leaf", pattern)));
+            CountingSnapshotManager manager =
+                    new CountingSnapshotManager(
+                            processor.snapshotManager());
+            Node reference = referenceCandidate
+                    ? reference(candidateBlueId)
+                    : null;
+            Node candidate = referenceCandidate
+                    ? reference
+                    : extended.clone();
+            Node candidateEvent = event(candidate);
+            String patternIdentity =
+                    BlueIdCalculator.calculateBlueId(pattern);
+            String eventIdentity =
+                    BlueIdCalculator.calculateBlueId(
+                            candidateEvent);
+            ExternalChannelFunctionEvaluation first =
+                    evaluate(
+                            processor,
+                            manager,
+                            bundle,
+                            "outer",
+                            candidateEvent);
+            int exactCallsAfterFirst =
+                    manager.exactCalls(candidateBlueId);
+            int providerFetchesAfterFirst =
+                    providerFetches.get();
+            ExternalChannelFunctionEvaluation repeated =
+                    repeat
+                            ? evaluate(
+                                    processor,
+                                    manager,
+                                    bundle,
+                                    "outer",
+                                    candidateEvent)
+                            : null;
+            return new CandidateMatchObservation(
+                    candidateBlueId,
+                    reference,
+                    first,
+                    repeated,
+                    exactCallsAfterFirst,
+                    manager.exactCalls(candidateBlueId),
+                    providerFetchesAfterFirst,
+                    providerFetches.get(),
+                    patternIdentity,
+                    BlueIdCalculator.calculateBlueId(pattern),
+                    eventIdentity,
+                    BlueIdCalculator.calculateBlueId(
+                            candidateEvent),
+                    extended.getAsText("/detail"));
+        }
+    }
+
+    private static RuntimeException captureReferenceFailure(
+            String candidateBlueId,
+            NodeProvider provider,
+            Function<FrozenNode, FrozenNode> exactMaterializer) {
+        try (Blue blue = runtime(
+                provider,
+                new PatternLeafProcessor(false),
+                new PatternAggregateProcessor())) {
+            DocumentProcessor processor =
+                    blue.getDocumentProcessor();
+            ContractBundle bundle = bundle(
+                    processor,
+                    root(leaf("leaf", kindPattern())));
+            ProcessingSnapshotManager manager =
+                    exactMaterializer != null
+                            ? materializer(exactMaterializer)
+                            : processor.snapshotManager();
+            Node referenceEvent =
+                    event(reference(candidateBlueId));
+            return captureFailure(
+                    () -> evaluate(
+                            processor,
+                            manager,
+                            bundle,
+                            "leaf",
+                            referenceEvent));
+        }
+    }
+
+    private static NodeProvider provider(
+            Map<String, Node> supplied) {
+        return blueId -> {
+            Node node = supplied.get(blueId);
+            return node != null
+                    ? Collections.singletonList(node.clone())
+                    : null;
+        };
+    }
+
     private static ExternalChannelFunctionEvaluation evaluate(
             DocumentProcessor processor,
             ProcessingSnapshotManager manager,
@@ -902,6 +1056,55 @@ final class ExternalChannelPatternMatchingTest {
                 bundle,
                 bundle.effectiveContractSnapshot(key),
                 event);
+    }
+
+    private static final class CandidateMatchObservation {
+        private final String candidateBlueId;
+        private final Node reference;
+        private final ExternalChannelFunctionEvaluation first;
+        private final ExternalChannelFunctionEvaluation repeated;
+        private final int exactCallsAfterFirst;
+        private final int exactCallsAfterRepeat;
+        private final int providerFetchesAfterFirst;
+        private final int providerFetchesAfterRepeat;
+        private final String patternIdentity;
+        private final String patternIdentityAfterEvaluation;
+        private final String eventIdentity;
+        private final String eventIdentityAfterEvaluation;
+        private final String retainedDetail;
+
+        private CandidateMatchObservation(
+                String candidateBlueId,
+                Node reference,
+                ExternalChannelFunctionEvaluation first,
+                ExternalChannelFunctionEvaluation repeated,
+                int exactCallsAfterFirst,
+                int exactCallsAfterRepeat,
+                int providerFetchesAfterFirst,
+                int providerFetchesAfterRepeat,
+                String patternIdentity,
+                String patternIdentityAfterEvaluation,
+                String eventIdentity,
+                String eventIdentityAfterEvaluation,
+                String retainedDetail) {
+            this.candidateBlueId = candidateBlueId;
+            this.reference = reference;
+            this.first = first;
+            this.repeated = repeated;
+            this.exactCallsAfterFirst = exactCallsAfterFirst;
+            this.exactCallsAfterRepeat = exactCallsAfterRepeat;
+            this.providerFetchesAfterFirst =
+                    providerFetchesAfterFirst;
+            this.providerFetchesAfterRepeat =
+                    providerFetchesAfterRepeat;
+            this.patternIdentity = patternIdentity;
+            this.patternIdentityAfterEvaluation =
+                    patternIdentityAfterEvaluation;
+            this.eventIdentity = eventIdentity;
+            this.eventIdentityAfterEvaluation =
+                    eventIdentityAfterEvaluation;
+            this.retainedDetail = retainedDetail;
+        }
     }
 
     private static ContractBundle bundle(

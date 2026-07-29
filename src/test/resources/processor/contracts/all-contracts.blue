@@ -30,8 +30,9 @@ contracts:
           blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf
   initialized:
     type:
-      blueId: 5qrHeD39ytiuWtKXStznJHTjDfgAtiPAr3jwHibvQKvR
-    documentId: doc-123
+      blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+    document:
+      sample: doc-123
   setProperty:
     type:
       blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts

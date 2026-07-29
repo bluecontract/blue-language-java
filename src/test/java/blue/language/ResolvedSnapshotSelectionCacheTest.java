@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ResolvedSnapshotSelectionCacheTest {
 
     @Test
-    void warmAndFreshResolutionProduceTheSameSnapshotMeaning() {
+    void shouldWarmAndFreshResolutionProduceTheSameSnapshotMeaning() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
         Blue warmBlue = fixture.newBlue(new AtomicInteger());
@@ -25,15 +26,18 @@ class ResolvedSnapshotSelectionCacheTest {
 
         ResolvedSnapshot first = warmBlue.resolveToSnapshot(source);
         ResolvedSnapshot warm = warmBlue.resolveToSnapshot(source.clone());
+        // when
         ResolvedSnapshot fresh =
                 fixture.newBlue(new AtomicInteger()).resolveToSnapshot(source.clone());
 
+        // then
         assertEquivalent(first, warm, warmBlue);
         assertEquivalent(first, fresh, warmBlue);
     }
 
     @Test
-    void inputMutationChangesIdentityWithoutLosingInheritedMeaning() {
+    void shouldChangeIdentityAfterInputMutationWithoutLosingInheritedMeaning() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
@@ -42,8 +46,10 @@ class ResolvedSnapshotSelectionCacheTest {
 
         Node mutated = source.clone();
         mutated.properties("selectedOnly", new Node().value("changed"));
+        // when
         ResolvedSnapshot changed = blue.resolveToSnapshot(mutated);
 
+        // then
         assertNotEquals(original.blueId(), changed.blueId());
         assertEquals("compact", original.resolvedRoot().getAsText("/selectedOnly"));
         assertEquals("changed", changed.resolvedRoot().getAsText("/selectedOnly"));
@@ -52,7 +58,8 @@ class ResolvedSnapshotSelectionCacheTest {
     }
 
     @Test
-    void resolutionOrderCannotMakeRepresentationHistoryObservable() {
+    void shouldPreventResolutionOrderFromMakingRepresentationHistoryObservable() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
         Node compact = fixture.compact();
@@ -67,9 +74,11 @@ class ResolvedSnapshotSelectionCacheTest {
         Blue redundantFirstBlue = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot redundantFirst =
                 redundantFirstBlue.resolveToSnapshot(redundant.clone());
+        // when
         ResolvedSnapshot compactSecond =
                 redundantFirstBlue.resolveToSnapshot(compact.clone());
 
+        // then
         assertEquivalent(compactFirst, redundantSecond, compactFirstBlue);
         assertEquivalent(compactFirst, redundantFirst, compactFirstBlue);
         assertEquivalent(compactFirst, compactSecond, compactFirstBlue);

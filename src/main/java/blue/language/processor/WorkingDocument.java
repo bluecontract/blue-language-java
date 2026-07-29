@@ -131,24 +131,54 @@ public final class WorkingDocument implements AutoCloseable {
                 : null;
     }
 
+    /**
+     * Returns the current immutable authored root.
+     *
+     * @return working canonical root
+     */
     public FrozenNode canonicalRoot() {
         return canonicalRoot;
     }
 
+    /**
+     * Returns the current immutable effective root.
+     *
+     * @return working resolved root
+     */
     public FrozenNode resolvedRoot() {
         return resolvedRoot;
     }
 
+    /**
+     * Reads authored state at an absolute pointer.
+     *
+     * @param absolutePointer pointer normalized before lookup
+     * @return immutable canonical node, or {@code null}
+     */
     public FrozenNode canonicalAt(String absolutePointer) {
         return ImmutablePatchPlanner.forFrozen(canonicalRoot)
                 .read(PointerUtils.normalizePointer(absolutePointer));
     }
 
+    /**
+     * Reads effective state at an absolute pointer.
+     *
+     * @param absolutePointer pointer normalized before lookup
+     * @return immutable resolved node, or {@code null}
+     */
     public FrozenNode resolvedAt(String absolutePointer) {
         return ImmutablePatchPlanner.forFrozen(resolvedRoot)
                 .read(PointerUtils.normalizePointer(absolutePointer));
     }
 
+    /**
+     * Applies one defensively captured mutable patch to this preview.
+     *
+     * @param patch patch to apply; {@code null} is a no-op
+     * @return this working document
+     * @throws IllegalStateException if this working document is closed
+     * @throws RuntimeException if planning or conformance rejects the patch
+     */
     public WorkingDocument applyPatch(JsonPatch patch) {
         if (patch == null) {
             return this;
@@ -156,15 +186,40 @@ public final class WorkingDocument implements AutoCloseable {
         return applyPatches(Collections.singletonList(patch));
     }
 
+    /**
+     * Applies mutable patches sequentially to this preview.
+     *
+     * @param patches ordered patches; {@code null} or empty is a no-op
+     * @return this working document
+     * @throws IllegalStateException if this working document is closed
+     * @throws RuntimeException if any patch fails planning or conformance
+     */
     public WorkingDocument applyPatches(List<JsonPatch> patches) {
         applyPatchInputs(PatchInput.mutableList(patches, mutablePatchSource), false);
         return this;
     }
 
+    /**
+     * Applies mutable patches and returns an independent commit handoff.
+     *
+     * @param patches ordered patches; {@code null} or empty is a no-op
+     * @return closeable preview of the applied sequence
+     * @throws IllegalStateException if this working document is closed
+     * @throws RuntimeException if planning, conformance, or handoff creation
+     *         fails
+     */
     public Preview previewAndApplyPatches(List<JsonPatch> patches) {
         return applyPatchInputs(PatchInput.mutableList(patches, mutablePatchSource), true);
     }
 
+    /**
+     * Applies one immutable authored patch to this preview.
+     *
+     * @param patch frozen patch; {@code null} is a no-op
+     * @return this working document
+     * @throws IllegalStateException if this working document is closed
+     * @throws RuntimeException if planning or conformance rejects the patch
+     */
     public WorkingDocument applyFrozenPatch(FrozenJsonPatch patch) {
         if (patch == null) {
             return this;
@@ -172,11 +227,28 @@ public final class WorkingDocument implements AutoCloseable {
         return applyFrozenPatches(Collections.singletonList(patch));
     }
 
+    /**
+     * Applies frozen patches sequentially to this preview.
+     *
+     * @param patches ordered frozen patches; {@code null} or empty is a no-op
+     * @return this working document
+     * @throws IllegalStateException if this working document is closed
+     * @throws RuntimeException if any patch fails planning or conformance
+     */
     public WorkingDocument applyFrozenPatches(List<FrozenJsonPatch> patches) {
         applyPatchInputs(PatchInput.frozenList(patches), false);
         return this;
     }
 
+    /**
+     * Applies frozen patches and returns an independent commit handoff.
+     *
+     * @param patches ordered frozen patches; {@code null} or empty is a no-op
+     * @return closeable preview of the applied sequence
+     * @throws IllegalStateException if this working document is closed
+     * @throws RuntimeException if planning, conformance, or handoff creation
+     *         fails
+     */
     public Preview previewAndApplyFrozenPatches(List<FrozenJsonPatch> patches) {
         return applyPatchInputs(PatchInput.frozenList(patches), true);
     }
@@ -267,6 +339,11 @@ public final class WorkingDocument implements AutoCloseable {
         return workingSequenceManager;
     }
 
+    /**
+     * Returns an immutable snapshot of the current working roots.
+     *
+     * @return cached or newly created working snapshot
+     */
     public ResolvedSnapshot snapshot() {
         if (snapshot == null) {
             snapshot = resolutionComplete
@@ -282,18 +359,41 @@ public final class WorkingDocument implements AutoCloseable {
         return snapshot;
     }
 
+    /**
+     * Materializes the authored root as a fresh mutable tree.
+     *
+     * @return caller-owned canonical root copy
+     */
     public Node materializeCanonicalRoot() {
         return canonicalRoot.toNode();
     }
 
+    /**
+     * Materializes the effective root as a fresh mutable tree.
+     *
+     * @return caller-owned resolved root copy
+     */
     public Node materializeResolvedRoot() {
         return resolvedRoot.toNode();
     }
 
+    /**
+     * Produces the authored tree for a caller-managed commit.
+     *
+     * @return fresh mutable canonical root
+     */
     public Node commitToNode() {
         return materializeCanonicalRoot();
     }
 
+    /**
+     * Finalizes resolution and publishes a cacheable snapshot when complete.
+     *
+     * @return authoritative immutable working snapshot
+     * @throws IllegalStateException if this working document is closed
+     * @throws RuntimeException if provider resolution or cache publication
+     *         fails
+     */
     public ResolvedSnapshot commitSnapshot() {
         ensureOpen();
         ResolvedSnapshot current = snapshot();
@@ -377,11 +477,19 @@ public final class WorkingDocument implements AutoCloseable {
     /**
      * Returns true when this preview had to freeze a materialized runtime tree
      * because no processor snapshot was available at creation time.
+     *
+     * @return whether materialized fallback was used
      */
     public boolean usedMaterializedFallback() {
         return materializedFallback;
     }
 
+    /**
+     * Closeable patch-sequence handoff independent of its working document.
+     *
+     * <p>Closing releases retained transient snapshot state and discards any
+     * unconsumed patch previews.</p>
+     */
     public static final class Preview implements AutoCloseable {
         private final String originScope;
         private final List<PatchPreview> patches;

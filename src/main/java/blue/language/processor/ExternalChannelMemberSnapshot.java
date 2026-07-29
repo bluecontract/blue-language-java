@@ -23,15 +23,40 @@ import java.util.Objects;
  */
 public final class ExternalChannelMemberSnapshot {
 
+    /** Phase-bound strategy for evaluating an exact event. */
     interface Evaluator {
+
+        /**
+         * Evaluates one defensively copied event.
+         *
+         * @param exactEvent exact event owned by the evaluator
+         * @return immutable member evaluation
+         */
         ExternalChannelMemberEvaluation evaluate(Node exactEvent);
     }
 
+    /** Lazily resolved subscription header for one selected member. */
     interface Header {
+
+        /**
+         * Resolves the member's exact dependencies.
+         *
+         * @return immutable dependency snapshot
+         */
         ExternalChannelDependencySnapshot dependencies();
 
+        /**
+         * Resolves the finite subscription-key set.
+         *
+         * @return immutable keys in runtime-defined order
+         */
         List<String> channelKeys();
 
+        /**
+         * Resolves the member's checkpoint domain.
+         *
+         * @return exact checkpoint-domain BlueId
+         */
         String checkpointDomainBlueId();
     }
 
@@ -72,16 +97,19 @@ public final class ExternalChannelMemberSnapshot {
                 checkpointDomainBlueId,
                 "checkpointDomainBlueId");
         this.header = new Header() {
+            /** {@inheritDoc} */
             @Override
             public ExternalChannelDependencySnapshot dependencies() {
                 return exactDependencies;
             }
 
+            /** {@inheritDoc} */
             @Override
             public List<String> channelKeys() {
                 return exactKeys;
             }
 
+            /** {@inheritDoc} */
             @Override
             public String checkpointDomainBlueId() {
                 return exactDomain;
@@ -117,38 +145,86 @@ public final class ExternalChannelMemberSnapshot {
                 evaluator, "evaluator");
     }
 
+    /**
+     * Returns the member's key within its owning scope.
+     *
+     * @return exact same-scope channel key
+     */
     public String channelKey() {
         return channelKey;
     }
 
+    /**
+     * Returns the member's stable dispatch position.
+     *
+     * @return deterministic channel dispatch order
+     */
     public int order() {
         return order;
     }
 
+    /**
+     * Returns the effective type used to select the registered runtime.
+     *
+     * @return exact effective runtime type BlueId
+     */
     public String effectiveTypeBlueId() {
         return effectiveTypeBlueId;
     }
 
+    /**
+     * Returns identities of the exact nodes contributing to this member.
+     *
+     * @return immutable ancestor-to-descendant contribution identities
+     */
     public List<String> sourceContributionNodeBlueIds() {
         return sourceContributionNodeBlueIds;
     }
 
+    /**
+     * Resolves the exact dependencies captured for this member.
+     *
+     * @return immutable dependency snapshot
+     */
     public ExternalChannelDependencySnapshot dependencies() {
         return header.dependencies();
     }
 
+    /**
+     * Resolves the member's finite subscription-key set.
+     *
+     * @return immutable keys in runtime-defined order
+     */
     public List<String> channelKeys() {
         return header.channelKeys();
     }
 
+    /**
+     * Resolves the member's exact checkpoint domain.
+     *
+     * @return checkpoint-domain BlueId
+     */
     public String checkpointDomainBlueId() {
         return header.checkpointDomainBlueId();
     }
 
+    /**
+     * Returns the immutable effective contract content defensively.
+     *
+     * @return a mutable copy owned by the caller
+     */
     public Node contractNode() {
         return contractNode.clone();
     }
 
+    /**
+     * Evaluates an exact event using this member's registered functions.
+     *
+     * @param exactEvent exact event; cloned before evaluation
+     * @return immutable evaluation result
+     * @throws NullPointerException when {@code exactEvent} is null
+     * @throws IllegalStateException when evaluation is unavailable in this phase
+     */
     public ExternalChannelMemberEvaluation evaluate(
             Node exactEvent) {
         return evaluator.evaluate(

@@ -1,8 +1,8 @@
 # Canonical Language Core And BlueId
 
-This document explains the strict canonical language core implemented in this
-branch: `schema`, reference-only `blueId`, payload-kind exclusivity, deterministic
-numbers, list hashing, and canonical provider ingestion.
+This document explains the strict canonical language core in the final
+implementation: `schema`, reference-only `blueId`, payload-kind exclusivity,
+deterministic numbers, list hashing, and canonical provider ingestion.
 
 ## Canonical Node Shape
 

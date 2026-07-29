@@ -2,8 +2,12 @@ package blue.language.processor;
 
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
@@ -31,6 +35,9 @@ import java.util.Set;
 public final class DirectSubscriptionSurfaceValidator
         implements SubscriptionSurfaceValidator {
 
+    /**
+     * Stateless default validator for callers that need no configured registries.
+     */
     public static final DirectSubscriptionSurfaceValidator INSTANCE =
             new DirectSubscriptionSurfaceValidator();
 
@@ -86,13 +93,15 @@ public final class DirectSubscriptionSurfaceValidator
                             context.inputRoot(),
                             context.inputSnapshot(),
                             context.gasSchedule(),
-                            normalized);
+                            normalized,
+                            context);
             Map<String, SubscriptionDelta.Entry> after =
                     surface(
                             context.tentativeRoot(),
                             context.tentativeSnapshot(),
                             context.gasSchedule(),
-                            normalized);
+                            normalized,
+                            context);
             List<SubscriptionDelta.Entry> removed = new ArrayList<>();
             List<SubscriptionDelta.Entry> added = new ArrayList<>();
             for (Map.Entry<String, SubscriptionDelta.Entry> entry
@@ -118,12 +127,22 @@ public final class DirectSubscriptionSurfaceValidator
             return new SubscriptionDelta(added, removed);
         } catch (SubscriptionSurfaceInvalidException exception) {
             throw exception;
+        } catch (GasLimitExceededException
+                 | PortableLimitExceededException
+                 | ExecutionEvidenceUnavailableException exception) {
+            throw exception;
+        } catch (ProcessorFailureException exception) {
+            throw new SubscriptionSurfaceInvalidException(
+                    exception.getMessage(),
+                    JsonPointer.ROOT,
+                    null,
+                    exception.errorCategory());
         } catch (RuntimeException exception) {
             throw invalid(
                     "Subscription surface derivation failed: "
                             + ProcessorEngine.deterministicMessage(
                             exception, "invalid changed surface"),
-                    "/",
+                    JsonPointer.ROOT,
                     null);
         }
     }
@@ -156,8 +175,8 @@ public final class DirectSubscriptionSurfaceValidator
                 PointerUtils.normalizeScope(interval.scopePath());
         String contractPath = PointerUtils.resolvePointer(
                 scopePath,
-                "/contracts/"
-                        + JsonPointer.escape(interval.channelKey()));
+                ProcessorPointerConstants.relativeContractsEntry(
+                        interval.channelKey()));
         if (dependencyAffected(
                 scopePath, contractPath, changedPaths)) {
             return true;
@@ -179,11 +198,14 @@ public final class DirectSubscriptionSurfaceValidator
         }
         for (String ancestor : ancestorScopes(scopePath)) {
             String typePath = PointerUtils.resolvePointer(
-                    ancestor, "/type");
+                    ancestor,
+                    ProcessorPointerConstants.RELATIVE_TYPE);
             String terminationPath = PointerUtils.resolvePointer(
-                    ancestor, "/contracts/terminated");
+                    ancestor,
+                    ProcessorPointerConstants.RELATIVE_TERMINATED);
             String contractsPath = PointerUtils.resolvePointer(
-                    ancestor, "/contracts");
+                    ancestor,
+                    ProcessorPointerConstants.RELATIVE_CONTRACTS);
             for (String changed : changedPaths) {
                 if (overlaps(changed, typePath)
                         || overlaps(changed, terminationPath)
@@ -205,7 +227,7 @@ public final class DirectSubscriptionSurfaceValidator
 
     private List<String> ancestorScopes(String scopePath) {
         List<String> ancestors = new ArrayList<>();
-        String current = "/";
+        String current = JsonPointer.ROOT;
         ancestors.add(current);
         List<String> segments = JsonPointer.split(scopePath);
         for (int index = 0;
@@ -230,7 +252,8 @@ public final class DirectSubscriptionSurfaceValidator
                 PointerUtils.relativizePointer(
                         contractsPath, changedPath));
         return relative.size() >= 2
-                && "paths".equals(relative.get(1));
+                && ProcessorContractConstants.KEY_PATHS.equals(
+                relative.get(1));
     }
 
     private boolean processEmbeddedContractChanged(
@@ -301,20 +324,26 @@ public final class DirectSubscriptionSurfaceValidator
             Node root,
             ResolvedSnapshot suppliedSnapshot,
             GasSchedule schedule,
-            Set<String> changedPaths) {
+            Set<String> changedPaths,
+            SubscriptionSurfaceValidationContext
+                    validationContext) {
         if (contractLoader != null && registry != null) {
             return effectiveSurface(
-                    root, suppliedSnapshot, schedule, changedPaths);
+                    root,
+                    suppliedSnapshot,
+                    schedule,
+                    changedPaths,
+                    validationContext);
         }
         if (!isConcrete(root)) {
             throw invalid("Root subscription scope must be concrete",
-                    "/", null);
+                    JsonPointer.ROOT, null);
         }
         Map<String, SubscriptionDelta.Entry> result =
                 new LinkedHashMap<>();
         collect(
                 root,
-                "/",
+                JsonPointer.ROOT,
                 result,
                 new LinkedHashSet<String>(),
                 new IdentityHashMap<Node, String>(),
@@ -329,27 +358,31 @@ public final class DirectSubscriptionSurfaceValidator
             Node root,
             ResolvedSnapshot suppliedSnapshot,
             GasSchedule schedule,
-            Set<String> changedPaths) {
+            Set<String> changedPaths,
+            SubscriptionSurfaceValidationContext
+                    validationContext) {
         EffectiveResolution resolution =
                 new EffectiveResolution(root, suppliedSnapshot);
-        ScopeView rootScope = resolution.scopeAt("/");
+        ScopeView rootScope =
+                resolution.scopeAt(JsonPointer.ROOT);
         if (rootScope == null || !isConcrete(rootScope.effective)) {
             throw invalid("Root subscription scope must be concrete",
-                    "/", null);
+                    JsonPointer.ROOT, null);
         }
         Map<String, SubscriptionDelta.Entry> result =
                 new LinkedHashMap<>();
         collectEffective(
                 resolution,
                 rootScope,
-                "/",
+                JsonPointer.ROOT,
                 result,
                 new LinkedHashSet<String>(),
                 new IdentityHashMap<Node, String>(),
                 new LinkedHashMap<String, String>(),
                 schedule,
                 changedPaths,
-                0);
+                0,
+                validationContext);
         return result;
     }
 
@@ -363,11 +396,14 @@ public final class DirectSubscriptionSurfaceValidator
             Map<String, String> activeExactScopes,
             GasSchedule schedule,
             Set<String> changedPaths,
-            int depth) {
+            int depth,
+            SubscriptionSurfaceValidationContext
+                    validationContext) {
         requireLimit(
-                "embeddedDepth",
+                GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH,
                 depth,
-                schedule.portableLimit("embeddedDepth"),
+                schedule.portableLimit(
+                        GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH),
                 scopePath,
                 null);
         if (!visitedPaths.add(scopePath)) {
@@ -412,10 +448,12 @@ public final class DirectSubscriptionSurfaceValidator
             List<EffectiveContractSnapshot> contracts =
                     bundle.effectiveContractSnapshots();
             requireLimit(
-                    "effectiveContractsPerParticipatingScope",
+                    GasScheduleConstants.PortableLimit
+                            .EFFECTIVE_CONTRACTS_PER_SCOPE,
                     contracts.size(),
                     schedule.portableLimit(
-                            "effectiveContractsPerParticipatingScope"),
+                            GasScheduleConstants.PortableLimit
+                                    .EFFECTIVE_CONTRACTS_PER_SCOPE),
                     scopePath,
                     null);
 
@@ -428,15 +466,20 @@ public final class DirectSubscriptionSurfaceValidator
                         contract.key(), schedule, scopePath);
                 String contractPath = PointerUtils.resolvePointer(
                         scopePath,
-                        "/contracts/"
-                                + JsonPointer.escape(contract.key()));
-                if ("external-channel".equals(contract.role())) {
+                        ProcessorPointerConstants
+                                .relativeContractsEntry(
+                                        contract.key()));
+                if (EffectiveContractSnapshotConstants
+                        .Role.EXTERNAL_CHANNEL.equals(
+                        contract.role())) {
                     externalCount++;
                     requireLimit(
-                            "externalChannelsPerScope",
+                            GasScheduleConstants.PortableLimit
+                                    .EXTERNAL_CHANNELS_PER_SCOPE,
                             externalCount,
                             schedule.portableLimit(
-                                    "externalChannelsPerScope"),
+                                    GasScheduleConstants.PortableLimit
+                                            .EXTERNAL_CHANNELS_PER_SCOPE),
                             scopePath,
                             contract.key());
                     if (dependencyAffected(
@@ -448,7 +491,8 @@ public final class DirectSubscriptionSurfaceValidator
                                         bundle,
                                         contract,
                                         scopePath,
-                                        schedule);
+                                        schedule,
+                                        validationContext);
                         if (result.put(
                                 descriptor.occurrenceKey(),
                                 descriptor) != null) {
@@ -458,7 +502,9 @@ public final class DirectSubscriptionSurfaceValidator
                                     contract.key());
                         }
                     }
-                } else if ("process-embedded".equals(contract.role())) {
+                } else if (EffectiveContractSnapshotConstants
+                        .Role.PROCESS_EMBEDDED.equals(
+                        contract.role())) {
                     if (embeddedKey != null) {
                         throw invalid(
                                 "Multiple effective Process Embedded contracts",
@@ -479,10 +525,15 @@ public final class DirectSubscriptionSurfaceValidator
             }
             String embeddedContractPath = PointerUtils.resolvePointer(
                     scopePath,
-                    "/contracts/" + JsonPointer.escape(embeddedKey));
+                    ProcessorPointerConstants
+                            .relativeContractsEntry(embeddedKey));
             boolean routeDependencyChanged = dependencyAffected(
                     scopePath, embeddedContractPath, changedPaths);
             for (EmbeddedRoute route : embeddedRoutes) {
+                ImmutablePatchPlanner
+                        .forMaterialized(resolution.root)
+                        .validateProcessEmbeddedTraversalPath(
+                                route.targetScope);
                 if (!routeDependencyChanged
                         && !branchAffected(
                         route.targetScope, changedPaths)) {
@@ -516,7 +567,8 @@ public final class DirectSubscriptionSurfaceValidator
                         routeDependencyChanged
                                 ? Collections.singleton(route.targetScope)
                                 : changedPaths,
-                        depth + 1);
+                        depth + 1,
+                        validationContext);
             }
         } finally {
             activeScopes.remove(identityNode);
@@ -530,7 +582,9 @@ public final class DirectSubscriptionSurfaceValidator
             ContractBundle bundle,
             EffectiveContractSnapshot contract,
             String scopePath,
-            GasSchedule schedule) {
+            GasSchedule schedule,
+            SubscriptionSurfaceValidationContext
+                    validationContext) {
         FrozenNode frozen = bundle.contractNode(contract.key());
         if (frozen == null) {
             throw invalid(
@@ -541,29 +595,44 @@ public final class DirectSubscriptionSurfaceValidator
         Node channelNode = frozen.toNode();
         requireObjectLimits(
                 channelNode, schedule, scopePath, contract.key());
-        ExternalChannelFunctionResolver.Header first =
-                new ExternalChannelFunctionResolver(
-                        registry,
-                        converter,
-                        bundle)
-                        .header(contract);
-        /*
-         * Invoke the immutable functions against an independent conversion.
-         * This catches stateful function implementations without letting a
-         * mutating function corrupt the ContractLoader's cached binding.
-         */
-        ExternalChannelFunctionResolver.Header second =
-                new ExternalChannelFunctionResolver(
-                        registry,
-                        converter,
-                        bundle)
-                        .header(contract);
-        if (!first.sameResult(second)) {
-            throw invalid(
-                    "External Channel subscription functions are not "
-                            + "deterministic over an immutable snapshot",
-                    scopePath,
-                    contract.key());
+        RuntimeWorkSession authoritative =
+                validationContext
+                        .newRuntimeWorkSession();
+        RuntimeWorkSession comparison =
+                authoritative.diagnosticTwin();
+        final ExternalChannelFunctionResolver.Header first;
+        final ExternalChannelFunctionResolver.Header second;
+        try {
+            first = resolveExternalHeader(
+                    bundle,
+                    contract,
+                    authoritative);
+            second = resolveExternalHeader(
+                    bundle,
+                    contract,
+                    comparison);
+            if (!first.sameResult(second)
+                    || !sameRuntimeTrace(
+                            authoritative.stagedTrace(),
+                            comparison.stagedTrace())) {
+                authoritative.failDeterministically();
+                comparison.suspend();
+                throw invalid(
+                        "External Channel subscription functions are not "
+                                + "deterministic over an immutable snapshot",
+                        scopePath,
+                        contract.key());
+            }
+            authoritative.complete();
+            comparison.suspend();
+        } catch (ExecutionEvidenceUnavailableException unavailable) {
+            suspendIfOpen(authoritative);
+            suspendIfOpen(comparison);
+            throw unavailable;
+        } catch (RuntimeException | Error failure) {
+            failIfOpen(authoritative);
+            suspendIfOpen(comparison);
+            throw failure;
         }
         validateSubscriptionKeys(
                 first.channelKeys(),
@@ -584,6 +653,72 @@ public final class DirectSubscriptionSurfaceValidator
                 null);
     }
 
+    private ExternalChannelFunctionResolver.Header
+    resolveExternalHeader(
+            ContractBundle bundle,
+            EffectiveContractSnapshot contract,
+            RuntimeWorkSession runtimeWorkSession) {
+        ExternalChannelFunctionEvaluation.MatcherSession matcher =
+                ExternalChannelFunctionEvaluation
+                        .verifiedMatcherSessions(snapshotManager)
+                        .open();
+        try {
+            return new ExternalChannelFunctionResolver(
+                    registry,
+                    converter,
+                    matcher,
+                    bundle,
+                    null,
+                    runtimeWorkSession)
+                    .header(contract);
+        } finally {
+            matcher.close();
+        }
+    }
+
+    private static void failIfOpen(
+            RuntimeWorkSession session) {
+        if (session.isOpen()) {
+            session.failDeterministically();
+        }
+    }
+
+    private static void suspendIfOpen(
+            RuntimeWorkSession session) {
+        if (session.isOpen()) {
+            session.suspend();
+        }
+    }
+
+    private static boolean sameRuntimeTrace(
+            List<GasTraceEntry> left,
+            List<GasTraceEntry> right) {
+        if (left.size() != right.size()) {
+            return false;
+        }
+        for (int index = 0; index < left.size(); index++) {
+            GasTraceEntry a = left.get(index);
+            GasTraceEntry b = right.get(index);
+            if (!a.namespace().equals(b.namespace())
+                    || !a.counter().equals(b.counter())
+                    || a.quantity() != b.quantity()
+                    || a.weight() != b.weight()
+                    || !Objects.equals(
+                            a.scopePath(), b.scopePath())
+                    || !Objects.equals(
+                            a.contractKey(),
+                            b.contractKey())
+                    || !Objects.equals(
+                            a.logicalPath(),
+                            b.logicalPath())
+                    || !Objects.equals(
+                            a.reason(), b.reason())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void validateSubscriptionKeys(
             List<String> keys,
             GasSchedule schedule,
@@ -597,9 +732,12 @@ public final class DirectSubscriptionSurfaceValidator
                     key);
         }
         requireLimit(
-                "subscriptionKeysPerChannel",
+                GasScheduleConstants.PortableLimit
+                        .SUBSCRIPTION_KEYS_PER_CHANNEL,
                 keys.size(),
-                schedule.portableLimit("subscriptionKeysPerChannel"),
+                schedule.portableLimit(
+                        GasScheduleConstants.PortableLimit
+                                .SUBSCRIPTION_KEYS_PER_CHANNEL),
                 scopePath,
                 key);
         Set<String> unique = new LinkedHashSet<>();
@@ -632,9 +770,10 @@ public final class DirectSubscriptionSurfaceValidator
                          Set<String> changedPaths,
                          int depth) {
         requireLimit(
-                "embeddedDepth",
+                GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH,
                 depth,
-                schedule.portableLimit("embeddedDepth"),
+                schedule.portableLimit(
+                        GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH),
                 scopePath,
                 null);
         if (!visitedPaths.add(scopePath)) {
@@ -685,10 +824,12 @@ public final class DirectSubscriptionSurfaceValidator
                     ? contracts.getProperties()
                     : Collections.<String, Node>emptyMap();
             requireLimit(
-                    "effectiveContractsPerParticipatingScope",
+                    GasScheduleConstants.PortableLimit
+                            .EFFECTIVE_CONTRACTS_PER_SCOPE,
                     entries.size(),
                     schedule.portableLimit(
-                            "effectiveContractsPerParticipatingScope"),
+                            GasScheduleConstants.PortableLimit
+                                    .EFFECTIVE_CONTRACTS_PER_SCOPE),
                     scopePath,
                     null);
 
@@ -701,15 +842,18 @@ public final class DirectSubscriptionSurfaceValidator
                 String typeBlueId = recognizedType(contract.getValue());
                 String contractPath = PointerUtils.resolvePointer(
                         scopePath,
-                        "/contracts/"
-                                + JsonPointer.escape(contract.getKey()));
+                        ProcessorPointerConstants
+                                .relativeContractsEntry(
+                                        contract.getKey()));
                 if (isKnownExternalType(typeBlueId)) {
                     externalCount++;
                     requireLimit(
-                            "externalChannelsPerScope",
+                            GasScheduleConstants.PortableLimit
+                                    .EXTERNAL_CHANNELS_PER_SCOPE,
                             externalCount,
                             schedule.portableLimit(
-                                    "externalChannelsPerScope"),
+                                    GasScheduleConstants.PortableLimit
+                                            .EXTERNAL_CHANNELS_PER_SCOPE),
                             scopePath,
                             contract.getKey());
                     if (dependencyAffected(
@@ -754,10 +898,18 @@ public final class DirectSubscriptionSurfaceValidator
             }
             String embeddedContractPath = PointerUtils.resolvePointer(
                     scopePath,
-                    "/contracts/" + JsonPointer.escape(embeddedKey));
+                    ProcessorPointerConstants
+                            .relativeContractsEntry(embeddedKey));
             boolean routeDependencyChanged = dependencyAffected(
                     scopePath, embeddedContractPath, changedPaths);
             for (EmbeddedRoute route : embeddedRoutes) {
+                ImmutablePatchPlanner
+                        .forMaterialized(scope)
+                        .validateProcessEmbeddedTraversalPath(
+                                PointerUtils
+                                        .relativizePointer(
+                                                scopePath,
+                                                route.targetScope));
                 if (!routeDependencyChanged
                         && !branchAffected(
                         route.targetScope, changedPaths)) {
@@ -810,9 +962,12 @@ public final class DirectSubscriptionSurfaceValidator
         List<String> keys = subscriptionKeys(
                 channel, scopePath, key);
         requireLimit(
-                "subscriptionKeysPerChannel",
+                GasScheduleConstants.PortableLimit
+                        .SUBSCRIPTION_KEYS_PER_CHANNEL,
                 keys.size(),
-                schedule.portableLimit("subscriptionKeysPerChannel"),
+                schedule.portableLimit(
+                        GasScheduleConstants.PortableLimit
+                                .SUBSCRIPTION_KEYS_PER_CHANNEL),
                 scopePath,
                 key);
         if (keys.isEmpty()) {
@@ -843,7 +998,9 @@ public final class DirectSubscriptionSurfaceValidator
             String scopePath,
             String key,
             GasSchedule schedule) {
-        Node paths = property(embedded, "paths");
+        Node paths = property(
+                embedded,
+                ProcessorContractConstants.KEY_PATHS);
         if (paths == null || paths.getItems() == null) {
             throw invalid(
                     "Process Embedded paths must be a finite List",
@@ -851,10 +1008,12 @@ public final class DirectSubscriptionSurfaceValidator
                     key);
         }
         requireLimit(
-                "processEmbeddedPathsPerScope",
+                GasScheduleConstants.PortableLimit
+                        .PROCESS_EMBEDDED_PATHS_PER_SCOPE,
                 paths.getItems().size(),
                 schedule.portableLimit(
-                        "processEmbeddedPathsPerScope"),
+                        GasScheduleConstants.PortableLimit
+                                .PROCESS_EMBEDDED_PATHS_PER_SCOPE),
                 scopePath,
                 key);
         List<EmbeddedRoute> result = new ArrayList<>();
@@ -915,10 +1074,12 @@ public final class DirectSubscriptionSurfaceValidator
                     key);
         }
         requireLimit(
-                "processEmbeddedPathsPerScope",
+                GasScheduleConstants.PortableLimit
+                        .PROCESS_EMBEDDED_PATHS_PER_SCOPE,
                 paths.size(),
                 schedule.portableLimit(
-                        "processEmbeddedPathsPerScope"),
+                        GasScheduleConstants.PortableLimit
+                                .PROCESS_EMBEDDED_PATHS_PER_SCOPE),
                 scopePath,
                 key);
         List<EmbeddedRoute> result = new ArrayList<>();
@@ -972,7 +1133,9 @@ public final class DirectSubscriptionSurfaceValidator
                 result.add(PointerUtils.assertValidRuntimePointer(path));
             } catch (RuntimeException exception) {
                 throw invalid(
-                        "Invalid changed path: " + path, "/", null);
+                        "Invalid changed path: " + path,
+                        JsonPointer.ROOT,
+                        null);
             }
         }
         return Collections.unmodifiableSet(result);
@@ -981,14 +1144,17 @@ public final class DirectSubscriptionSurfaceValidator
     private boolean dependencyAffected(String scopePath,
                                        String dependencyPath,
                                        Set<String> changes) {
-        String typePath = PointerUtils.resolvePointer(scopePath, "/type");
+        String typePath = PointerUtils.resolvePointer(
+                scopePath,
+                ProcessorPointerConstants.RELATIVE_TYPE);
         String terminationPath = PointerUtils.resolvePointer(
-                scopePath, "/contracts/terminated");
+                scopePath,
+                ProcessorPointerConstants.RELATIVE_TERMINATED);
         for (String changed : changes) {
             if (overlaps(changed, dependencyPath)
                     || overlaps(changed, typePath)
                     || overlaps(changed, terminationPath)
-                    || "/".equals(changed)) {
+                    || JsonPointer.ROOT.equals(changed)) {
                 return true;
             }
         }
@@ -999,7 +1165,8 @@ public final class DirectSubscriptionSurfaceValidator
             String scopePath,
             Set<String> changes) {
         String contractsPath = PointerUtils.resolvePointer(
-                scopePath, "/contracts");
+                scopePath,
+                ProcessorPointerConstants.RELATIVE_CONTRACTS);
         for (String changed : changes) {
             if (PointerUtils.descendantOrEqual(
                     changed, contractsPath)
@@ -1029,7 +1196,9 @@ public final class DirectSubscriptionSurfaceValidator
     private List<String> subscriptionKeys(Node channel,
                                           String scopePath,
                                           String key) {
-        Node plural = property(channel, "subscriptionKeys");
+        Node plural = property(
+                channel,
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEYS);
         List<String> result = new ArrayList<>();
         Set<String> unique = new LinkedHashSet<>();
         if (plural != null) {
@@ -1053,7 +1222,9 @@ public final class DirectSubscriptionSurfaceValidator
             }
             return result;
         }
-        String singular = textField(channel, "subscriptionKey");
+        String singular = textField(
+                channel,
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEY);
         if (singular != null && !singular.isEmpty()) {
             result.add(singular);
         }
@@ -1084,14 +1255,17 @@ public final class DirectSubscriptionSurfaceValidator
     }
 
     private boolean isKnownExternalType(String blueId) {
-        return RuntimeBlueIds.EXTERNAL_CHANNEL.equals(blueId)
-                || RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL.equals(blueId);
+        return BlueRuntimeTypeRegistry.getDefault()
+                .isRegisteredSubtype(
+                        blueId,
+                        RuntimeTypeKey.EXTERNAL_CHANNEL);
     }
 
     private boolean directTerminated(Node scope) {
         Node contracts = scope != null ? scope.getContracts() : null;
         Node marker = contracts != null && contracts.getProperties() != null
-                ? contracts.getProperties().get("terminated")
+                ? contracts.getProperties().get(
+                ProcessorContractConstants.KEY_TERMINATED)
                 : null;
         return marker != null
                 && RuntimeBlueIds.PROCESSING_TERMINATED_MARKER.equals(
@@ -1106,15 +1280,21 @@ public final class DirectSubscriptionSurfaceValidator
                     scopePath, key);
         }
         requireLimit(
-                "contractKeyCodePoints",
+                GasScheduleConstants.PortableLimit
+                        .CONTRACT_KEY_CODE_POINTS,
                 key.codePointCount(0, key.length()),
-                schedule.portableLimit("contractKeyCodePoints"),
+                schedule.portableLimit(
+                        GasScheduleConstants.PortableLimit
+                                .CONTRACT_KEY_CODE_POINTS),
                 scopePath,
                 key);
         requireLimit(
-                "contractKeyUtf8Bytes",
+                GasScheduleConstants.PortableLimit
+                        .CONTRACT_KEY_UTF8_BYTES,
                 key.getBytes(StandardCharsets.UTF_8).length,
-                schedule.portableLimit("contractKeyUtf8Bytes"),
+                schedule.portableLimit(
+                        GasScheduleConstants.PortableLimit
+                                .CONTRACT_KEY_UTF8_BYTES),
                 scopePath,
                 key);
     }
@@ -1129,19 +1309,22 @@ public final class DirectSubscriptionSurfaceValidator
         int entries = node.getProperties() != null
                 ? node.getProperties().size() : 0;
         requireLimit(
-                "directObjectEntriesMaterializedOrRebuilt",
+                GasScheduleConstants.PortableLimit
+                        .DIRECT_OBJECT_ENTRIES,
                 entries,
                 schedule.portableLimit(
-                        "directObjectEntriesMaterializedOrRebuilt"),
+                        GasScheduleConstants.PortableLimit
+                                .DIRECT_OBJECT_ENTRIES),
                 scopePath,
                 key);
         int items = node.getItems() != null
                 ? node.getItems().size() : 0;
         requireLimit(
-                "directListItemsMaterializedOrRebuilt",
+                GasScheduleConstants.PortableLimit.DIRECT_LIST_ITEMS,
                 items,
                 schedule.portableLimit(
-                        "directListItemsMaterializedOrRebuilt"),
+                        GasScheduleConstants.PortableLimit
+                                .DIRECT_LIST_ITEMS),
                 scopePath,
                 key);
     }
@@ -1272,10 +1455,10 @@ public final class DirectSubscriptionSurfaceValidator
             Node selected;
             Node effective;
             if (snapshot != null) {
-                selected = "/".equals(normalized)
+                selected = JsonPointer.ROOT.equals(normalized)
                         ? snapshot.canonicalRoot()
                         : snapshot.canonicalNodeAt(normalized);
-                effective = "/".equals(normalized)
+                effective = JsonPointer.ROOT.equals(normalized)
                         ? snapshot.resolvedRoot()
                         : snapshot.resolvedNodeAt(normalized);
             } else {
@@ -1308,7 +1491,7 @@ public final class DirectSubscriptionSurfaceValidator
     }
 
     private Node nodeAtRoot(Node root, String pointer) {
-        if ("/".equals(pointer)) {
+        if (JsonPointer.ROOT.equals(pointer)) {
             return root;
         }
         Node current = root;

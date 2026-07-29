@@ -29,7 +29,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testXConversion() throws Exception {
+    public void shouldConvertScalarFieldsToJavaTypes() throws Exception {
+        // given
         String xYaml = "type:\n" +
                        "  blueId: X-BlueId\n" +
                        "byteField: 127\n" +
@@ -66,8 +67,10 @@ public class NodeToObjectConverterTest {
                        "enumField: SOME_ENUM_VALUE";
 
         Node xNode = blue.yamlToNode(xYaml);
+        // when
         X x = converter.convert(xNode, X.class);
 
+        // then
         assertNotNull(x);
         assertEquals((byte) 127, x.byteField);
         assertEquals(Byte.valueOf((byte) -128), x.byteObjectField);
@@ -92,7 +95,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testX1Conversion() throws Exception {
+    public void shouldConvertArrayListAndSetFields() throws Exception {
+        // given
         String x1Yaml = "type:\n" +
                         "  blueId: X1-BlueId\n" +
                         "name: X1 Instance\n" +
@@ -121,8 +125,10 @@ public class NodeToObjectConverterTest {
                         "  items: [10, 20, 30, 40, 50]";
 
         Node x1Node = blue.yamlToNode(x1Yaml);
+        // when
         X1 x1 = converter.convert(x1Node, X1.class);
 
+        // then
         assertNotNull(x1);
         assertEquals(42, x1.intField);
         assertEquals("X1 String", x1.stringField);
@@ -132,7 +138,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testX2Conversion() throws Exception {
+    public void shouldConvertMapFields() throws Exception {
+        // given
         String x2Yaml = "name: X2 Instance\n" +
                         "type:\n" +
                         "  blueId: X2-BlueId\n" +
@@ -144,8 +151,10 @@ public class NodeToObjectConverterTest {
                         "  key3: 300";
 
         Node x2Node = blue.yamlToNode(x2Yaml);
+        // when
         X2 x2 = converter.convert(x2Node, X2.class);
 
+        // then
         assertNotNull(x2);
         assertEquals(3.14159, x2.doubleField, 0.00001);
         assertTrue(x2.booleanField);
@@ -156,7 +165,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testX3Conversion() throws Exception {
+    public void shouldConvertAtomicAndConcurrentFields() throws Exception {
+        // given
         String x3Yaml = "name: X3 Instance\n" +
                         "type:\n" +
                         "  blueId: X3-BlueId\n" +
@@ -169,8 +179,10 @@ public class NodeToObjectConverterTest {
                         "  key3: 333";
 
         Node x3Node = blue.yamlToNode(x3Yaml);
+        // when
         X3 x3 = converter.convert(x3Node, X3.class);
 
+        // then
         assertNotNull(x3);
         assertEquals(1234567890L, x3.longField);
         assertEquals(42, x3.atomicIntegerField.get());
@@ -182,7 +194,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testX11Conversion() throws Exception {
+    public void shouldConvertNestedCollectionFields() throws Exception {
+        // given
         String x11Yaml = "name: X11 Instance\n" +
                          "type:\n" +
                          "  blueId: X11-BlueId\n" +
@@ -199,8 +212,10 @@ public class NodeToObjectConverterTest {
                          "  key2: [4, 5, 6]";
 
         Node x11Node = blue.yamlToNode(x11Yaml);
+        // when
         X11 x11 = converter.convert(x11Node, X11.class);
 
+        // then
         assertNotNull(x11);
         assertEquals(11, x11.intField);
         assertEquals("X11 String", x11.stringField);
@@ -218,7 +233,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testX12Conversion() throws Exception {
+    public void shouldConvertInheritedCollectionFields() throws Exception {
+        // given
         String xVariationsYaml =
                 "name: X Variations\n" +
                 "type:\n" +
@@ -233,8 +249,13 @@ public class NodeToObjectConverterTest {
                 "integerDequeField: [1000, 2000, 3000]\n";
 
         Node xVariationsNode = blue.yamlToNode(xVariationsYaml);
+        Deque<Integer> expectedDeque =
+                new ArrayDeque<>(Arrays.asList(1000, 2000, 3000));
+
+        // when
         X12 x12 = converter.convert(xVariationsNode, X12.class);
 
+        // then
         assertNotNull(x12);
 
         assertEquals(100, x12.byteField);
@@ -247,86 +268,18 @@ public class NodeToObjectConverterTest {
 
         assertEquals(Arrays.asList("first", "second", "third"), new ArrayList<>(x12.stringQueueField));
 
-        Deque<Integer> expectedDeque = new ArrayDeque<>(Arrays.asList(1000, 2000, 3000));
         assertIterableEquals(expectedDeque, x12.integerDequeField);
     }
 
     @Test
-    public void testYConversion() throws Exception {
-        String yYaml = "name: Y Instance\n" +
-                       "type:\n" +
-                       "  blueId: Y-BlueId\n" +
-                       "xField:\n" +
-                       "  type:\n" +
-                       "    blueId: X-BlueId\n" +
-                       "  intField: 100\n" +
-                       "  stringField: X in Y\n" +
-                       "x1Field:\n" +
-                       "  type:\n" +
-                       "    blueId: X1-BlueId\n" +
-                       "  intArrayField: [1, 2, 3]\n" +
-                       "  stringListField: [a, b, c]\n" +
-                       "x2Field:\n" +
-                       "  type:\n" +
-                       "    blueId: X2-BlueId\n" +
-                       "  stringIntMapField:\n" +
-                       "    key1: 10\n" +
-                       "    key2: 20\n" +
-                       "xListField:\n" +
-                       "  - type:\n" +
-                       "      blueId: X-BlueId\n" +
-                       "    intField: 1\n" +
-                       "  - type:\n" +
-                       "      blueId: X-BlueId\n" +
-                       "    intField: 2\n" +
-                       "xMapField:\n" +
-                       "  key1:\n" +
-                       "    type:\n" +
-                       "      blueId: X-BlueId\n" +
-                       "    intField: 10\n" +
-                       "  key2:\n" +
-                       "    type:\n" +
-                       "      blueId: X-BlueId\n" +
-                       "    intField: 20\n" +
-                       "x1SetField:\n" +
-                       "  - type:\n" +
-                       "      blueId: X1-BlueId\n" +
-                       "    intArrayField: [4, 5, 6]\n" +
-                       "  - type:\n" +
-                       "      blueId: X1-BlueId\n" +
-                       "    intArrayField: [7, 8, 9]\n" +
-                       "x2MapField:\n" +
-                       "  mapKey1:\n" +
-                       "    type:\n" +
-                       "      blueId: X2-BlueId\n" +
-                       "    stringIntMapField:\n" +
-                       "      innerKey1: 30\n" +
-                       "      innerKey2: 40\n" +
-                       "  mapKey2:\n" +
-                       "    type:\n" +
-                       "      blueId: X2-BlueId\n" +
-                       "    stringIntMapField:\n" +
-                       "      innerKey3: 50\n" +
-                       "      innerKey4: 60\n" +
-                       "xArrayField:\n" +
-                       "  - type:\n" +
-                       "      blueId: X-BlueId\n" +
-                       "    intField: 100\n" +
-                       "  - type:\n" +
-                       "      blueId: X-BlueId\n" +
-                       "    intField: 200\n" +
-                       "wildcardXListField:\n" +
-                       "  - type:\n" +
-                       "      blueId: X1-BlueId\n" +
-                       "    intArrayField: [10, 11, 12]\n" +
-                       "  - type:\n" +
-                       "      blueId: X2-BlueId\n" +
-                       "    stringIntMapField:\n" +
-                       "      wildcardKey: 70";
+    public void shouldConvertNestedObjectFields() throws Exception {
+        // given
+        Node yNode = blue.yamlToNode(yNodeYaml());
 
-        Node yNode = blue.yamlToNode(yYaml);
+        // when
         Y y = converter.convert(yNode, Y.class);
 
+        // then
         assertNotNull(y);
         assertNotNull(y.xField);
         assertEquals(100, y.xField.intField);
@@ -339,7 +292,18 @@ public class NodeToObjectConverterTest {
         assertNotNull(y.x2Field);
         assertEquals(10, y.x2Field.stringIntMapField.get("key1"));
         assertEquals(20, y.x2Field.stringIntMapField.get("key2"));
+    }
 
+    @Test
+    public void shouldConvertConcreteObjectCollections()
+            throws Exception {
+        // given
+        Node yNode = blue.yamlToNode(yNodeYaml());
+
+        // when
+        Y y = converter.convert(yNode, Y.class);
+
+        // then
         assertNotNull(y.xListField);
         assertEquals(2, y.xListField.size());
         assertEquals(1, y.xListField.get(0).intField);
@@ -366,7 +330,18 @@ public class NodeToObjectConverterTest {
         assertEquals(2, y.xArrayField.length);
         assertEquals(100, y.xArrayField[0].intField);
         assertEquals(200, y.xArrayField[1].intField);
+    }
 
+    @Test
+    public void shouldConvertWildcardObjectList()
+            throws Exception {
+        // given
+        Node yNode = blue.yamlToNode(yNodeYaml());
+
+        // when
+        Y y = converter.convert(yNode, Y.class);
+
+        // then
         assertNotNull(y.wildcardXListField);
         assertEquals(2, y.wildcardXListField.size());
         assertTrue(y.wildcardXListField.get(0) instanceof X1);
@@ -375,8 +350,82 @@ public class NodeToObjectConverterTest {
         assertEquals(70, ((X2) y.wildcardXListField.get(1)).stringIntMapField.get("wildcardKey"));
     }
 
+    private static String yNodeYaml() {
+        return "name: Y Instance\n" +
+               "type:\n" +
+               "  blueId: Y-BlueId\n" +
+               "xField:\n" +
+               "  type:\n" +
+               "    blueId: X-BlueId\n" +
+               "  intField: 100\n" +
+               "  stringField: X in Y\n" +
+               "x1Field:\n" +
+               "  type:\n" +
+               "    blueId: X1-BlueId\n" +
+               "  intArrayField: [1, 2, 3]\n" +
+               "  stringListField: [a, b, c]\n" +
+               "x2Field:\n" +
+               "  type:\n" +
+               "    blueId: X2-BlueId\n" +
+               "  stringIntMapField:\n" +
+               "    key1: 10\n" +
+               "    key2: 20\n" +
+               "xListField:\n" +
+               "  - type:\n" +
+               "      blueId: X-BlueId\n" +
+               "    intField: 1\n" +
+               "  - type:\n" +
+               "      blueId: X-BlueId\n" +
+               "    intField: 2\n" +
+               "xMapField:\n" +
+               "  key1:\n" +
+               "    type:\n" +
+               "      blueId: X-BlueId\n" +
+               "    intField: 10\n" +
+               "  key2:\n" +
+               "    type:\n" +
+               "      blueId: X-BlueId\n" +
+               "    intField: 20\n" +
+               "x1SetField:\n" +
+               "  - type:\n" +
+               "      blueId: X1-BlueId\n" +
+               "    intArrayField: [4, 5, 6]\n" +
+               "  - type:\n" +
+               "      blueId: X1-BlueId\n" +
+               "    intArrayField: [7, 8, 9]\n" +
+               "x2MapField:\n" +
+               "  mapKey1:\n" +
+               "    type:\n" +
+               "      blueId: X2-BlueId\n" +
+               "    stringIntMapField:\n" +
+               "      innerKey1: 30\n" +
+               "      innerKey2: 40\n" +
+               "  mapKey2:\n" +
+               "    type:\n" +
+               "      blueId: X2-BlueId\n" +
+               "    stringIntMapField:\n" +
+               "      innerKey3: 50\n" +
+               "      innerKey4: 60\n" +
+               "xArrayField:\n" +
+               "  - type:\n" +
+               "      blueId: X-BlueId\n" +
+               "    intField: 100\n" +
+               "  - type:\n" +
+               "      blueId: X-BlueId\n" +
+               "    intField: 200\n" +
+               "wildcardXListField:\n" +
+               "  - type:\n" +
+               "      blueId: X1-BlueId\n" +
+               "    intArrayField: [10, 11, 12]\n" +
+               "  - type:\n" +
+               "      blueId: X2-BlueId\n" +
+               "    stringIntMapField:\n" +
+               "      wildcardKey: 70";
+    }
+
     @Test
-    public void testY1Conversion() throws Exception {
+    public void shouldConvertInheritedNestedAndCollectionFields() throws Exception {
+        // given
         String y1Yaml = "name: Y1 Instance\n" +
                         "type:\n" +
                         "  blueId: Y1-BlueId\n" +
@@ -405,8 +454,10 @@ public class NodeToObjectConverterTest {
                         "      key2: [4, 5, 6]";
 
         Node y1Node = blue.yamlToNode(y1Yaml);
+        // when
         Y1 y1 = converter.convert(y1Node, Y1.class);
 
+        // then
         assertNotNull(y1);
         assertEquals(100, y1.xField.intField);
         assertEquals(2, y1.x11Field.nestedListField.size());
@@ -419,7 +470,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testObjectVariants() throws Exception {
+    public void shouldConvertObjectVariants() throws Exception {
+        // given
         String personTestDataYaml = "name: Person Testing\n" +
                                     "type:\n" +
                                     "  blueId: PersonTestData-BlueId\n" +
@@ -449,8 +501,11 @@ public class NodeToObjectConverterTest {
 
         Node node = blue.yamlToNode(personTestDataYaml);
 
+        // when
         PersonObjectExample data = converter.convert(node, PersonObjectExample.class);
+        Nurse nurse = (Nurse) data.alice5;
 
+        // then
         assertNotNull(data);
 
         assertNotNull(data.alice1);
@@ -473,7 +528,6 @@ public class NodeToObjectConverterTest {
 
         assertNotNull(data.alice5);
         assertInstanceOf(Nurse.class, data.alice5);
-        Nurse nurse = (Nurse) data.alice5;
         assertEquals("Alice", nurse.getName());
         assertEquals("Smith", nurse.getSurname());
         assertEquals(Integer.valueOf(25), nurse.getAge());
@@ -481,7 +535,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testValueVariants() throws Exception {
+    public void shouldConvertValueVariants() throws Exception {
+        // given
         String personTestDataYaml = "type:\n" +
                                     "  blueId: PersonValue-BlueId\n" +
                                     "age1:\n" +
@@ -505,8 +560,10 @@ public class NodeToObjectConverterTest {
 
         Node node = blue.yamlToNode(personTestDataYaml);
 
+        // when
         PersonValueExample data = converter.convert(node, PersonValueExample.class);
 
+        // then
         assertNotNull(data);
 
         assertEquals(Integer.valueOf(25), data.age1);
@@ -525,7 +582,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testListVariants() throws Exception {
+    public void shouldConvertListVariants() throws Exception {
+        // given
         String personTestDataYaml = "type:\n" +
                                     "  blueId: PersonList-BlueId\n" +
                                     "team1:\n" +
@@ -561,16 +619,22 @@ public class NodeToObjectConverterTest {
 
         Node node = blue.yamlToNode(personTestDataYaml);
 
+        // when
         PersonListExample data = converter.convert(node, PersonListExample.class);
+        Doctor doctor1 = (Doctor) data.team1.get(0);
+        Nurse nurse1 = (Nurse) data.team1.get(1);
+        Doctor doctor2 = (Doctor) data.team2.get(0);
+        Nurse nurse2 = (Nurse) data.team2.get(1);
+        Node doctorNode = data.team3.getItems().get(0);
+        Node nurseNode = data.team3.getItems().get(1);
 
+        // then
         assertNotNull(data);
 
         assertNotNull(data.team1);
         assertEquals(2, data.team1.size());
         assertInstanceOf(Doctor.class, data.team1.get(0));
         assertInstanceOf(Nurse.class, data.team1.get(1));
-        Doctor doctor1 = (Doctor) data.team1.get(0);
-        Nurse nurse1 = (Nurse) data.team1.get(1);
         assertEquals("Adam", doctor1.getName());
         assertEquals("surgeon", doctor1.getSpecialization());
         assertEquals("Betty", nurse1.getName());
@@ -582,8 +646,6 @@ public class NodeToObjectConverterTest {
         assertEquals(2, data.team2.size());
         assertInstanceOf(Doctor.class, data.team2.get(0));
         assertInstanceOf(Nurse.class, data.team2.get(1));
-        Doctor doctor2 = (Doctor) data.team2.get(0);
-        Nurse nurse2 = (Nurse) data.team2.get(1);
         assertEquals("Adam", doctor2.getName());
         assertEquals("surgeon", doctor2.getSpecialization());
         assertEquals("Betty", nurse2.getName());
@@ -591,9 +653,6 @@ public class NodeToObjectConverterTest {
 
         assertNotNull(data.team3);
         assertEquals(2, data.team3.getItems().size());
-        Node doctorNode = data.team3.getItems().get(0);
-        Node nurseNode = data.team3.getItems().get(1);
-
         assertEquals("Adam", doctorNode.getName());
         assertEquals("Doctor-BlueId", doctorNode.getType().getBlueId());
         assertEquals("surgeon", doctorNode.getProperties().get("specialization").getValue());
@@ -606,7 +665,8 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testDictionaryVariants() throws Exception {
+    public void shouldConvertDictionaryVariants() throws Exception {
+        // given
         String personTestDataYaml = "team1:\n" +
                                     "  person1:\n" +
                                     "    type:\n" +
@@ -643,16 +703,22 @@ public class NodeToObjectConverterTest {
 
         Node node = blue.yamlToNode(personTestDataYaml);
 
+        // when
         PersonDictionaryExample data = converter.convert(node, PersonDictionaryExample.class);
+        Doctor doctor1 = (Doctor) data.team1.get("person1");
+        Nurse nurse1 = (Nurse) data.team1.get("person2");
+        Doctor doctor2 = (Doctor) data.team2.get("person1");
+        Nurse nurse2 = (Nurse) data.team2.get("person2");
+        Doctor doctor3 = (Doctor) data.team3.get(1);
+        Nurse nurse3 = (Nurse) data.team3.get(2);
 
+        // then
         assertNotNull(data);
 
         assertNotNull(data.team1);
         assertEquals(2, data.team1.size());
         assertInstanceOf(Doctor.class, data.team1.get("person1"));
         assertInstanceOf(Nurse.class, data.team1.get("person2"));
-        Doctor doctor1 = (Doctor) data.team1.get("person1");
-        Nurse nurse1 = (Nurse) data.team1.get("person2");
         assertEquals("Adam", doctor1.getName());
         assertEquals("surgeon", doctor1.getSpecialization());
         assertEquals("Betty", nurse1.getName());
@@ -662,8 +728,6 @@ public class NodeToObjectConverterTest {
         assertEquals(2, data.team2.size());
         assertInstanceOf(Doctor.class, data.team2.get("person1"));
         assertInstanceOf(Nurse.class, data.team2.get("person2"));
-        Doctor doctor2 = (Doctor) data.team2.get("person1");
-        Nurse nurse2 = (Nurse) data.team2.get("person2");
         assertEquals("Adam", doctor2.getName());
         assertEquals("surgeon", doctor2.getSpecialization());
         assertEquals("Betty", nurse2.getName());
@@ -673,8 +737,6 @@ public class NodeToObjectConverterTest {
         assertEquals(2, data.team3.size());
         assertInstanceOf(Doctor.class, data.team3.get(1));
         assertInstanceOf(Nurse.class, data.team3.get(2));
-        Doctor doctor3 = (Doctor) data.team3.get(1);
-        Nurse nurse3 = (Nurse) data.team3.get(2);
         assertEquals("Adam", doctor3.getName());
         assertEquals("surgeon", doctor3.getSpecialization());
         assertEquals("Betty", nurse3.getName());
@@ -683,27 +745,31 @@ public class NodeToObjectConverterTest {
     }
 
     @Test
-    public void testAbstractClassExtension() throws Exception {
+    public void shouldConvertConcreteSubclassThroughAbstractBase() throws Exception {
+        // given
         String z1Yaml = "type:\n" +
                         "  blueId: Z1-BlueId\n" +
                         "commonField: Common Value\n" +
                         "z1SpecificField: Z1 Specific Value";
 
         Node z1Node = blue.yamlToNode(z1Yaml);
+        // when
         Z1 z1 = converter.convert(z1Node, Z1.class);
+        Z z = z1;
 
+        // then
         assertNotNull(z1);
         assertEquals("Common Value", z1.commonField);
         assertEquals("Z1 Specific Value", z1.z1SpecificField);
         assertEquals("Z1 implementation", z1.getAbstractMethod());
 
-        Z z = z1;
         assertEquals("Common Value", z.commonField);
         assertEquals("Z1 implementation", z.getAbstractMethod());
     }
 
     @Test
-    public void testListOfAbstractClassExtensions() throws Exception {
+    public void shouldConvertListOfConcreteSubclasses() throws Exception {
+        // given
         String zContainerYaml =
                 "type:\n" +
                 "  blueId: ZContainer-BlueId\n" +
@@ -719,30 +785,33 @@ public class NodeToObjectConverterTest {
                 "    z1SpecificField: Z1 Specific Value 2\n";
 
         Node zContainerNode = blue.yamlToNode(zContainerYaml);
+        // when
         ZContainer zContainer = converter.convert(zContainerNode, ZContainer.class);
+        Z firstZ = zContainer.zList.get(0);
+        Z1 firstZ1 = (Z1) firstZ;
+        Z secondZ = zContainer.zList.get(1);
+        Z1 secondZ1 = (Z1) secondZ;
 
+        // then
         assertNotNull(zContainer);
         assertEquals("My Z Container", zContainer.containerName);
         assertNotNull(zContainer.zList);
         assertEquals(2, zContainer.zList.size());
 
-        Z firstZ = zContainer.zList.get(0);
         assertInstanceOf(Z1.class, firstZ);
-        Z1 firstZ1 = (Z1) firstZ;
         assertEquals("Common Value 1", firstZ1.commonField);
         assertEquals("Z1 Specific Value 1", firstZ1.z1SpecificField);
         assertEquals("Z1 implementation", firstZ1.getAbstractMethod());
 
-        Z secondZ = zContainer.zList.get(1);
         assertInstanceOf(Z1.class, secondZ);
-        Z1 secondZ1 = (Z1) secondZ;
         assertEquals("Common Value 2", secondZ1.commonField);
         assertEquals("Z1 Specific Value 2", secondZ1.z1SpecificField);
         assertEquals("Z1 implementation", secondZ1.getAbstractMethod());
     }
 
     @Test
-    public void testXSubscriptionConversion() throws Exception {
+    public void shouldConvertSubscriptionList() throws Exception {
+        // given
         String yaml = "type:\n" +
                       "  blueId: Y-BlueId\n" +
                       "subscriptions:\n" +
@@ -754,21 +823,23 @@ public class NodeToObjectConverterTest {
                       "    subscriptionId: 5";
 
         Node node = blue.yamlToNode(yaml);
+        // when
         Y y = converter.convert(node, Y.class);
+        XSubscription subscription1 = y.subscriptions.get(0);
+        XSubscription subscription2 = y.subscriptions.get(1);
 
+        // then
         assertNotNull(y);
         assertNotNull(y.subscriptions);
         assertEquals(2, y.subscriptions.size());
-
-        XSubscription subscription1 = y.subscriptions.get(0);
-        XSubscription subscription2 = y.subscriptions.get(1);
 
         assertEquals(Integer.valueOf(1), subscription1.getSubscriptionId());
         assertEquals(Integer.valueOf(5), subscription2.getSubscriptionId());
     }
 
     @Test
-    public void testObjectSimple() throws Exception {
+    public void shouldConvertSimpleObject() throws Exception {
+        // given
         String personTestDataYaml = "type:\n" +
                                     "  blueId: Nurse-BlueId\n" +
                                     "name: Alice\n" +
@@ -778,12 +849,14 @@ public class NodeToObjectConverterTest {
 
         Node node = blue.yamlToNode(personTestDataYaml);
 
+        // when
         Person data = converter.convert(node, Person.class);
+        Nurse nurse = (Nurse) data;
 
+        // then
         assertNotNull(data);
 
         assertInstanceOf(Nurse.class, data);
-        Nurse nurse = (Nurse) data;
         assertEquals("Alice", nurse.getName());
         assertEquals("Smith", nurse.getSurname());
         assertEquals(Integer.valueOf(25), nurse.getAge());

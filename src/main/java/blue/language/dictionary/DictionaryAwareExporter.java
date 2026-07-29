@@ -13,16 +13,45 @@ import java.util.Set;
 
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
 
+/**
+ * Exports a defensive copy of a Blue document for a receiver's declared type
+ * dictionary versions.
+ *
+ * <p>Core types are preserved. External types are translated to the requested
+ * dictionary version or, when allowed, replaced by an inline definition.
+ * Unsupported types and inlining cycles fail explicitly.</p>
+ */
 public final class DictionaryAwareExporter {
 
     private final DictionaryRegistry registry;
     private final ExportContext context;
 
+    /**
+     * Creates an exporter, treating null registry/context arguments as empty
+     * defaults.
+     *
+     * <p>The supplied registry is retained rather than copied, so later
+     * registrations are visible to this exporter.</p>
+     *
+     * @param registry dictionary registry, or {@code null}
+     * @param context immutable receiver context, or {@code null}
+     */
     public DictionaryAwareExporter(DictionaryRegistry registry, ExportContext context) {
         this.registry = registry != null ? registry : new DictionaryRegistry();
         this.context = context != null ? context : ExportContext.empty();
     }
 
+    /**
+     * Exports without mutating {@code node}.
+     *
+     * @param node source document, or {@code null}
+     * @return a mutable defensive copy adapted to the receiver, or
+     *         {@code null} when {@code node} is null
+     * @throws IllegalArgumentException when a requested package identity is
+     *                                  unknown, a known type cannot be
+     *                                  represented, an inline definition is
+     *                                  missing, or inlining would form a cycle
+     */
     public Node export(Node node) {
         validateContext();
         if (node == null) {

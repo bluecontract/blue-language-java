@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -27,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class Contracts10KernelInvariantTest {
 
     @Test
-    void resultOwnsDefensiveRootAndEventSnapshots() {
+    void shouldVerifyResultOwnsDefensiveRootAndEventSnapshots() {
+        // given
         Node root = new Node().properties(
                 "value", new Node().value(1));
         Node event = new Node().properties(
@@ -38,6 +40,7 @@ final class Contracts10KernelInvariantTest {
                         Collections.singletonList(event),
                         7L);
 
+        // when
         root.properties("later", new Node().value(true));
         event.properties("later", new Node().value(true));
         Node firstRoot = result.document();
@@ -45,6 +48,7 @@ final class Contracts10KernelInvariantTest {
         firstRoot.properties("consumerMutation", new Node().value(true));
         firstEvent.properties("consumerMutation", new Node().value(true));
 
+        // then
         assertFalse(result.document().getProperties()
                 .containsKey("later"));
         assertFalse(result.document().getProperties()
@@ -58,17 +62,10 @@ final class Contracts10KernelInvariantTest {
     }
 
     @Test
-    void manifestFormulaParametersDriveSemanticQuantities()
+    void shouldVerifyManifestFormulaParametersDriveSemanticQuantities()
             throws Exception {
+        // given
         GasSchedule baseline = GasSchedule.contracts10();
-        assertEquals(
-                GasSchedule.CONTRACTS_1_0_PACKAGE_IDENTITY,
-                baseline.packageIdentity());
-        assertEquals(64L,
-                baseline.formulaParameter("textBlockCodePoints"));
-        assertEquals(9L,
-                baseline.formulaParameter("identityHashDomainBytes"));
-
         Map<String, Object> manifest = loadGasManifest();
         @SuppressWarnings("unchecked")
         Map<String, Object> formulas =
@@ -76,6 +73,8 @@ final class Contracts10KernelInvariantTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> text =
                 (Map<String, Object>) formulas.get("textBlocks");
+
+        // when
         text.put("blockCodePoints", 8);
         manifest.put("packageIdentity", packageIdentity(manifest));
 
@@ -86,24 +85,85 @@ final class Contracts10KernelInvariantTest {
         meter.semantic().textCodePointsExamined(
                 9L, GasChargeContext.reason("test"));
 
+        // then
+        assertEquals(
+                GasSchedule.CONTRACTS_1_0_PACKAGE_IDENTITY,
+                baseline.packageIdentity());
+        assertEquals(64L,
+                baseline.formulaParameter("textBlockCodePoints"));
+        assertEquals(9L,
+                baseline.formulaParameter("identityHashDomainBytes"));
         assertEquals(8L,
                 altered.formulaParameter("textBlockCodePoints"));
         assertEquals(2L, meter.trace().get(0).quantity());
     }
 
     @Test
-    void alteredManifestWithoutRebindingIdentityIsRejected()
+    void shouldVerifyAlteredManifestWithoutRebindingIdentityIsRejected()
             throws Exception {
+        // given
         Map<String, Object> manifest = loadGasManifest();
         manifest.put("maxProcessGas", 99999);
-        assertThrows(IllegalArgumentException.class,
+
+        // when
+        Throwable failure = FailureCapture.captureFailure(
                 () -> GasSchedule.load(new ByteArrayInputStream(
                         UncheckedObjectMapper.YAML_MAPPER
                                 .writeValueAsBytes(manifest))));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void runtimeCountersAreNamedAndChildLedgerMergesOnce() {
+    void shouldRejectZeroWeightGasManifestCounterAfterIdentityRebinding()
+            throws Exception {
+        // given
+        Map<String, Object> manifest = loadGasManifest();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> namespaces =
+                (Map<String, Object>) manifest.get(
+                        GasScheduleConstants.ManifestField
+                                .NAMESPACES);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> processor =
+                (Map<String, Object>) namespaces.get(
+                        GasScheduleConstants.Namespace
+                                .PROCESSOR);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> counters =
+                (Map<String, Object>) processor.get(
+                        GasScheduleConstants.ManifestField
+                                .COUNTERS);
+        counters.put(
+                GasScheduleConstants.ProcessorCounter
+                        .PROCESS_INVOCATION,
+                0L);
+        manifest.put(
+                GasScheduleConstants.ManifestField
+                        .PACKAGE_IDENTITY,
+                packageIdentity(manifest));
+
+        // when
+        IllegalArgumentException failure =
+                captureFailure(
+                        () -> GasSchedule.load(
+                                new ByteArrayInputStream(
+                                        UncheckedObjectMapper
+                                                .YAML_MAPPER
+                                                .writeValueAsBytes(
+                                                        manifest))));
+
+        // then
+        assertTrue(failure != null);
+        assertTrue(
+                failure.getMessage()
+                        .contains("must be positive"));
+    }
+
+    @Test
+    void shouldVerifyRuntimeCountersAreNamedAndChildLedgerMergesOnce() {
+        // given
         GasMeter meter = new GasMeter();
         Map<String, Long> weights = new LinkedHashMap<>();
         weights.put("instruction", 3L);
@@ -113,31 +173,39 @@ final class Contracts10KernelInvariantTest {
                 "instruction",
                 2L,
                 GasChargeContext.reason("before-runtime-work"));
+        // when
         meter.merge(child);
+        Throwable secondMergeFailure = FailureCapture.captureFailure(
+                () -> meter.merge(child));
+        Throwable postMergeChargeFailure =
+                FailureCapture.captureFailure(
+                        () -> child.charge("instruction", 1L));
 
+        // then
         assertEquals(1, meter.trace().size());
         assertEquals("test-runtime",
                 meter.trace().get(0).namespace());
         assertEquals("instruction",
                 meter.trace().get(0).counter());
         assertEquals(6L, meter.totalGas());
-        assertThrows(IllegalStateException.class,
-                () -> meter.merge(child));
-        assertThrows(IllegalStateException.class,
-                () -> child.charge("instruction", 1L));
+        assertTrue(secondMergeFailure instanceof IllegalStateException);
+        assertTrue(postMergeChargeFailure instanceof IllegalStateException);
     }
 
     @Test
-    void patchIdentityWorkIsMetered() {
+    void shouldVerifyPatchIdentityWorkIsMetered() {
+        // given
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
                         new Node().value(0));
 
+        // when
         runtime.applyPatch(
                 "/",
                 JsonPatch.replace(
                         "/value", new Node().value(1)));
 
+        // then
         assertTrue(runtime.conformanceTrace().counterQuantity(
                 "semantic", "nodeIdentityEstablished") > 0L);
         assertTrue(runtime.conformanceTrace().counterQuantity(
@@ -147,7 +215,8 @@ final class Contracts10KernelInvariantTest {
     }
 
     @Test
-    void changedSubscriptionValidationIsLocalAndMissingChildrenAreInactive() {
+    void shouldVerifyChangedSubscriptionValidationIsLocalAndMissingChildrenAreInactive() {
+        // given
         Node rootWithReservedMissingChild = new Node()
                 .properties("value", new Node().value(0))
                 .contracts(new Node().properties(
@@ -165,6 +234,7 @@ final class Contracts10KernelInvariantTest {
         Node afterUnrelatedChange = rootWithReservedMissingChild.clone();
         afterUnrelatedChange.getProperties().get("value").value(1);
 
+        // when
         SubscriptionDelta local =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext.builder(
@@ -173,8 +243,6 @@ final class Contracts10KernelInvariantTest {
                                         Collections.singleton("/value"),
                                         GasSchedule.contracts10())
                                 .build());
-        assertTrue(local.isEmpty());
-
         SubscriptionDelta changedDeclaration =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext.builder(
@@ -184,11 +252,15 @@ final class Contracts10KernelInvariantTest {
                                                 "/contracts/embedded/paths"),
                                         GasSchedule.contracts10())
                                 .build());
+
+        // then
+        assertTrue(local.isEmpty());
         assertTrue(changedDeclaration.isEmpty());
     }
 
     @Test
-    void newlyReachableSubscriptionBranchIsValidatedAsAWhole() {
+    void shouldVerifyNewlyReachableSubscriptionBranchIsValidatedAsAWhole() {
+        // given
         Node before = new Node()
                 .contracts(new Node().properties(
                         "embedded",
@@ -215,8 +287,8 @@ final class Contracts10KernelInvariantTest {
                                 .properties("checkpointDomain",
                                         new Node().value("domain")))));
 
-        SubscriptionSurfaceInvalidException failure = assertThrows(
-                SubscriptionSurfaceInvalidException.class,
+        // when
+        SubscriptionSurfaceInvalidException failure = captureFailure(
                 () -> DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext.builder(
                                         before,
@@ -226,12 +298,16 @@ final class Contracts10KernelInvariantTest {
                                         GasSchedule.contracts10())
                                 .build()));
 
+        // then
+        assertEquals(SubscriptionSurfaceInvalidException.class,
+                failure.getClass());
         assertTrue(failure.getMessage().contains(
                 "finite non-empty subscription key set"));
     }
 
     @Test
-    void processAttemptCompletesInvalidEvidenceBeforeReportingResources() {
+    void shouldVerifyProcessAttemptCompletesInvalidEvidenceBeforeReportingResources() {
+        // given
         Node root = new Node();
         Node event = new Node().value("event");
         VerifiedExecutionEvidence evidence =
@@ -247,10 +323,12 @@ final class Contracts10KernelInvariantTest {
                         .requiredExactNode("missing-exact-node")
                         .build();
 
+        // when
         ProcessAttemptResult attempt =
                 new DocumentProcessor().processAttempt(
                         root, event, evidence);
 
+        // then
         assertTrue(attempt.isComplete());
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,

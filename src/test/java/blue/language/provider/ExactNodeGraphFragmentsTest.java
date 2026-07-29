@@ -1,5 +1,6 @@
 package blue.language.provider;
 
+import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -18,29 +19,37 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExactNodeGraphFragmentsTest {
 
     @Test
-    void recordsEveryInlineNodeAsAnExactShallowFragment() {
+    void shouldRecordEveryInlineNodeAsAnExactShallowFragment() {
+        // given
         Fixture fixture = fixture();
+        Map<String, Node> expectedInlineNodes = new TreeMap<>();
+
+        // when
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(fixture.root);
-
-        Map<String, Node> expectedInlineNodes = new TreeMap<>();
         collectInlineNodes(
                 fixture.root,
                 expectedInlineNodes,
                 Collections.newSetFromMap(
                         new IdentityHashMap<Node, Boolean>()));
+        ExactNodeGraphFragments.RootRepresentation root =
+                graph.roots().get(0);
+        String originalBlueId =
+                BlueIdCalculator.calculateBlueId(fixture.root);
+        Schema directSchema = root.directFragment().getSchema();
 
+        // then
         assertEquals(expectedInlineNodes.keySet(),
                 new TreeSet<>(graph.blueIds()));
         assertEquals(expectedInlineNodes.keySet(),
@@ -57,10 +66,6 @@ class ExactNodeGraphFragmentsTest {
             assertDirectChildrenArePureReferences(fragment);
         }
 
-        ExactNodeGraphFragments.RootRepresentation root =
-                graph.roots().get(0);
-        String originalBlueId =
-                BlueIdCalculator.calculateBlueId(fixture.root);
         assertEquals(originalBlueId, root.blueId());
         assertEquals(originalBlueId,
                 BlueIdCalculator.calculateBlueId(root.original()));
@@ -69,7 +74,6 @@ class ExactNodeGraphFragmentsTest {
         assertEquals(originalBlueId,
                 root.pureReference().getBlueId());
         assertTrue(root.pureReference().isReferenceOnly());
-        Schema directSchema = root.directFragment().getSchema();
         assertFalse(directSchema.getMinLength().isReferenceOnly());
         assertTrue(directSchema.getMinimum().isReferenceOnly());
         assertFalse(directSchema.getEnum().get(0).isReferenceOnly());
@@ -80,17 +84,24 @@ class ExactNodeGraphFragmentsTest {
     }
 
     @Test
-    void ordersFragmentsDeterministicallyAndKeepsRootsIndependent() {
+    void shouldOrderFragmentsDeterministicallyAndKeepRootsIndependent() {
+        // given
         Fixture fixture = fixture();
         Node unrelated = new Node().properties(
                 "unrelated", new Node().value("separate"));
+        // when
         ExactNodeGraphFragments first =
                 new ExactNodeGraphFragments(fixture.root, unrelated);
         ExactNodeGraphFragments reversed =
                 new ExactNodeGraphFragments(unrelated, fixture.root);
-
         List<String> sorted = new ArrayList<>(first.blueIds());
         Collections.sort(sorted);
+        String unrelatedBlueId =
+                BlueIdCalculator.calculateBlueId(unrelated);
+        Node unrelatedFragment =
+                first.fragments().get(unrelatedBlueId);
+
+        // then
         assertEquals(sorted, first.blueIds());
         assertEquals(first.blueIds(), reversed.blueIds());
         assertEquals(first.blueIds(),
@@ -105,10 +116,6 @@ class ExactNodeGraphFragmentsTest {
         assertEquals(BlueIdCalculator.calculateBlueId(fixture.root),
                 reversed.roots().get(1).blueId());
 
-        String unrelatedBlueId =
-                BlueIdCalculator.calculateBlueId(unrelated);
-        Node unrelatedFragment =
-                first.fragments().get(unrelatedBlueId);
         assertEquals(unrelatedBlueId,
                 BlueIdCalculator.calculateBlueId(unrelatedFragment));
         assertFalse(unrelatedFragment.getProperties()
@@ -116,88 +123,215 @@ class ExactNodeGraphFragmentsTest {
     }
 
     @Test
-    void snapshotsAndProviderResultsAreDefensive() {
+    void shouldSplitOnlySelectedCutsAndTheirAncestorSpine() {
+        // given
+        Node root = UncheckedObjectMapper.YAML_MAPPER.readValue(
+                "name: Fragmented Root\n"
+                        + "selected:\n"
+                        + "  a: 1\n"
+                        + "  body:\n"
+                        + "    code: selected\n"
+                        + "    constants: [A, B]\n"
+                        + "archive:\n"
+                        + "  data:\n"
+                        + "    untouched: true\n"
+                        + "sibling:\n"
+                        + "  x: 9\n",
+                Node.class);
+
+        // when
+        ExactNodeGraphFragments graph = ExactNodeGraphFragments.split(
+                root,
+                Arrays.asList(
+                        "/selected/body",
+                        "/archive",
+                        "/sibling"));
+        ExactNodeGraphFragments.RootRepresentation forms =
+                graph.roots().get(0);
+        String rootBlueId = BlueIdCalculator.calculateBlueId(root);
+        Node directRoot = forms.directFragment();
+        Node directSelected = graph.provider().fetchByBlueId(
+                directRoot.getProperties()
+                        .get("selected").getBlueId()).get(0);
+        Node directBody = graph.provider().fetchByBlueId(
+                directSelected.getProperties()
+                        .get("body").getBlueId()).get(0);
+        Node roundTrip = new Blue(graph.provider())
+                .expand(forms.pureReference());
+
+        // then
+        assertEquals(5, graph.fragments().size());
+        assertEquals(rootBlueId, forms.blueId());
+        assertEquals(rootBlueId,
+                BlueIdCalculator.calculateBlueId(
+                        forms.directFragment()));
+        assertEquals(rootBlueId, forms.pureReference().getBlueId());
+
+        assertTrue(directRoot.getProperties()
+                .get("selected").isReferenceOnly());
+        assertTrue(directRoot.getProperties()
+                .get("archive").isReferenceOnly());
+        assertTrue(directRoot.getProperties()
+                .get("sibling").isReferenceOnly());
+
+        assertFalse(directSelected.getProperties()
+                .get("a").isReferenceOnly());
+        assertTrue(directSelected.getProperties()
+                .get("body").isReferenceOnly());
+
+        assertFalse(directBody.getProperties()
+                .get("code").isReferenceOnly());
+        assertFalse(directBody.getProperties()
+                .get("constants").isReferenceOnly());
+
+        assertEquals(
+                UncheckedObjectMapper.JSON_MAPPER.valueToTree(root),
+                UncheckedObjectMapper.JSON_MAPPER.valueToTree(roundTrip));
+    }
+
+    @Test
+    void shouldCanonicalizeSelectedCutOrderAndSupportEscapedAndListSegments() {
+        // given
+        Node root = new Node().properties(
+                "z", new Node().value(3),
+                "a/b", new Node().items(
+                        new Node().value("first"),
+                        new Node().properties(
+                                "deep", new Node().value(true))),
+                "m", new Node().value(2));
+
+        // when
+        ExactNodeGraphFragments authored =
+                ExactNodeGraphFragments.split(
+                        root,
+                        Arrays.asList("/z", "/a~1b/1", "/m"));
+        ExactNodeGraphFragments reversed =
+                ExactNodeGraphFragments.split(
+                        root,
+                        Arrays.asList("/m", "/a~1b/1", "/z"));
+        Node directRoot = authored.roots().get(0).directFragment();
+        Node directList = authored.provider().fetchByBlueId(
+                directRoot.getProperties().get("a/b")
+                        .getBlueId()).get(0);
+        IllegalArgumentException missingFailure = captureFailure(
+                () -> ExactNodeGraphFragments.split(
+                        root, Collections.singletonList("/missing")));
+        IllegalArgumentException nonCanonicalIndexFailure = captureFailure(
+                () -> ExactNodeGraphFragments.split(
+                        root, Collections.singletonList("/a~1b/01")));
+
+        // then
+        assertEquals(authored.blueIds(), reversed.blueIds());
+        assertEquals(authored.fragments().keySet(),
+                reversed.fragments().keySet());
+        for (String blueId : authored.blueIds()) {
+            assertEquals(
+                    UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                            authored.fragments().get(blueId)),
+                    UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                            reversed.fragments().get(blueId)));
+        }
+        assertEquals(5, authored.fragments().size());
+
+        assertFalse(directList.getItems().get(0).isReferenceOnly());
+        assertTrue(directList.getItems().get(1).isReferenceOnly());
+        assertTrue(missingFailure instanceof IllegalArgumentException);
+        assertTrue(nonCanonicalIndexFailure instanceof IllegalArgumentException);
+    }
+
+    @Test
+    void shouldDefensivelyCopySnapshotsAndProviderResults() {
+        // given
         Node child = new Node().value("original");
         Node supplied = new Node().name("retained")
                 .properties("child", child);
+
+        // when
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(supplied);
         String rootBlueId = graph.roots().get(0).blueId();
-
         child.value("mutated-input");
         supplied.name("mutated-input");
-        assertEquals("retained", graph.roots().get(0).original().getName());
-        assertEquals(rootBlueId,
-                BlueIdCalculator.calculateBlueId(
-                        graph.roots().get(0).original()));
-
-        assertThrows(UnsupportedOperationException.class,
+        String retainedOriginalName = graph.roots().get(0).original().getName();
+        String retainedOriginalBlueId =
+                BlueIdCalculator.calculateBlueId(graph.roots().get(0).original());
+        UnsupportedOperationException blueIdsFailure = captureFailure(
                 () -> graph.blueIds().add(rootBlueId));
-        assertThrows(UnsupportedOperationException.class,
+        UnsupportedOperationException fragmentsFailure = captureFailure(
                 () -> graph.fragments().put(
                         rootBlueId, new Node().value("replacement")));
-        assertThrows(UnsupportedOperationException.class,
+        UnsupportedOperationException rootsFailure = captureFailure(
                 () -> graph.roots().add(graph.roots().get(0)));
-
         Node returnedFragment = graph.fragments().get(rootBlueId);
         returnedFragment.name("tampered-copy");
-        assertEquals("retained",
-                graph.fragments().get(rootBlueId).getName());
-
+        String fragmentNameAfterTamper =
+                graph.fragments().get(rootBlueId).getName();
         Node returnedOriginal = graph.roots().get(0).original();
         returnedOriginal.name("tampered-original-copy");
-        assertEquals("retained",
-                graph.roots().get(0).original().getName());
-
+        String originalNameAfterTamper =
+                graph.roots().get(0).original().getName();
         Node returnedDirect = graph.roots().get(0).directFragment();
         returnedDirect.name("tampered-direct-copy");
-        assertEquals("retained",
-                graph.roots().get(0).directFragment().getName());
-
+        String directNameAfterTamper =
+                graph.roots().get(0).directFragment().getName();
         List<Node> firstFetch =
                 graph.provider().fetchByBlueId(rootBlueId);
         firstFetch.get(0).name("tampered-provider-copy");
         List<Node> secondFetch =
                 graph.provider().fetchByBlueId(rootBlueId);
+
+        // then
+        assertEquals("retained", retainedOriginalName);
+        assertEquals(rootBlueId, retainedOriginalBlueId);
+        assertTrue(blueIdsFailure instanceof UnsupportedOperationException);
+        assertTrue(fragmentsFailure instanceof UnsupportedOperationException);
+        assertTrue(rootsFailure instanceof UnsupportedOperationException);
+        assertEquals("retained", fragmentNameAfterTamper);
+        assertEquals("retained", originalNameAfterTamper);
+        assertEquals("retained", directNameAfterTamper);
         assertNotSame(firstFetch.get(0), secondFetch.get(0));
         assertEquals(rootBlueId,
                 BlueIdCalculator.calculateBlueId(secondFetch.get(0)));
     }
 
     @Test
-    void providerReturnsVerifiedFoundAndCanonicalNotFoundOutcomes() {
+    void shouldReturnVerifiedFoundAndCanonicalNotFoundProviderOutcomes() {
+        // given
         Fixture fixture = fixture();
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(fixture.root);
         String rootBlueId = graph.roots().get(0).blueId();
         NodeProvider provider = graph.provider();
 
+        // when
         NodeProviderResult found =
                 provider.fetchResultByBlueId(rootBlueId);
-        assertEquals(NodeProviderOutcome.FOUND, found.outcome());
-        assertEquals(rootBlueId,
-                BlueIdCalculator.calculateBlueId(found.nodes().get(0)));
-
         NodeProviderResult verifiedFound =
                 new VerifyingNodeProvider(provider)
                         .fetchResultByBlueId(rootBlueId);
-        assertEquals(NodeProviderOutcome.FOUND,
-                verifiedFound.outcome());
-
         String missingBlueId = BlueIdCalculator.calculateBlueId(
                 new Node().value("definitely-not-admitted"));
-        assertNotEquals(rootBlueId, missingBlueId);
-        assertEquals(NodeProviderOutcome.NOT_FOUND,
-                provider.fetchResultByBlueId(missingBlueId).outcome());
-        assertNull(provider.fetchByBlueId(missingBlueId));
-        assertEquals(NodeProviderOutcome.NOT_FOUND,
+        NodeProviderOutcome missingOutcome =
+                provider.fetchResultByBlueId(missingBlueId).outcome();
+        List<Node> missing = provider.fetchByBlueId(missingBlueId);
+        NodeProviderOutcome verifiedMissingOutcome =
                 new VerifyingNodeProvider(provider)
-                        .fetchResultByBlueId(missingBlueId)
-                        .outcome());
+                        .fetchResultByBlueId(missingBlueId).outcome();
+
+        // then
+        assertEquals(NodeProviderOutcome.FOUND, found.outcome());
+        assertEquals(rootBlueId,
+                BlueIdCalculator.calculateBlueId(found.nodes().get(0)));
+        assertEquals(NodeProviderOutcome.FOUND, verifiedFound.outcome());
+        assertNotEquals(rootBlueId, missingBlueId);
+        assertEquals(NodeProviderOutcome.NOT_FOUND, missingOutcome);
+        assertNull(missing);
+        assertEquals(NodeProviderOutcome.NOT_FOUND, verifiedMissingOutcome);
     }
 
     @Test
-    void preservesOpaqueFinalCyclicMemberEdgesWithoutClaimingThemLocally() {
+    void shouldPreserveOpaqueFinalCyclicMemberEdgesWithoutClaimingThemLocally() {
+        // given
         CyclicMemberFixture cyclic = cyclicMemberFixture();
         Node root = new Node()
                 .name("root-with-cyclic-edge")
@@ -215,13 +349,20 @@ class ExactNodeGraphFragmentsTest {
         String expectedEventBlueId =
                 BlueIdCalculator.calculateBlueId(event);
 
+        // when
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(root, event);
-
         ExactNodeGraphFragments.RootRepresentation rootForms =
                 graph.roots().get(0);
         ExactNodeGraphFragments.RootRepresentation eventForms =
                 graph.roots().get(1);
+        NodeProviderOutcome cyclicMemberOutcome = graph.provider()
+                .fetchResultByBlueId(cyclic.memberBlueId)
+                .outcome();
+        List<Node> cyclicMemberContent =
+                graph.provider().fetchByBlueId(cyclic.memberBlueId);
+
+        // then
         assertEquals(expectedRootBlueId, rootForms.blueId());
         assertEquals(expectedRootBlueId,
                 BlueIdCalculator.calculateBlueId(
@@ -241,16 +382,13 @@ class ExactNodeGraphFragmentsTest {
         assertFalse(graph.blueIds().contains(cyclic.memberBlueId));
         assertFalse(graph.fragments().containsKey(
                 cyclic.memberBlueId));
-        assertEquals(NodeProviderOutcome.NOT_FOUND,
-                graph.provider()
-                        .fetchResultByBlueId(cyclic.memberBlueId)
-                        .outcome());
-        assertNull(graph.provider().fetchByBlueId(
-                cyclic.memberBlueId));
+        assertEquals(NodeProviderOutcome.NOT_FOUND, cyclicMemberOutcome);
+        assertNull(cyclicMemberContent);
     }
 
     @Test
-    void composedVerifiedProviderResolvesOpaqueCyclicMemberButPlainProviderCannot() {
+    void shouldResolveOpaqueCyclicMemberWithComposedVerifiedProviderButNotPlainProvider() {
+        // given
         CyclicMemberFixture cyclic = cyclicMemberFixture();
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(
@@ -263,14 +401,10 @@ class ExactNodeGraphFragmentsTest {
                         graph.provider(),
                         cyclic.provider));
 
+        // when
         NodeProviderResult found =
                 composed.fetchResultByBlueId(
                         cyclic.memberBlueId);
-
-        assertEquals(NodeProviderOutcome.FOUND,
-                found.outcome());
-        assertFalse(found.nodes().isEmpty());
-
         List<Node> unprovedContent =
                 cyclic.provider.fetchByBlueId(
                         cyclic.memberBlueId);
@@ -282,6 +416,11 @@ class ExactNodeGraphFragmentsTest {
                 new VerifyingNodeProvider(unproved)
                         .fetchResultByBlueId(
                                 cyclic.memberBlueId);
+
+        // then
+        assertEquals(NodeProviderOutcome.FOUND,
+                found.outcome());
+        assertFalse(found.nodes().isEmpty());
         assertEquals(NodeProviderOutcome.INVALID_EVIDENCE,
                 invalid.outcome());
         assertTrue(invalid.diagnostic().orElse("")
@@ -289,7 +428,8 @@ class ExactNodeGraphFragmentsTest {
     }
 
     @Test
-    void supportsOpaqueFinalCyclicMembersInSchemaReferencesAndValues() {
+    void shouldSupportOpaqueFinalCyclicMembersInSchemaReferencesAndValues() {
+        // given
         CyclicMemberFixture cyclic = cyclicMemberFixture();
         Node schemaReferenceRoot = new Node()
                 .schema(new Schema().blueId(
@@ -300,15 +440,17 @@ class ExactNodeGraphFragmentsTest {
                                 new Node().blueId(
                                         cyclic.memberBlueId))));
 
+        // when
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(
                         schemaReferenceRoot,
                         schemaValueRoot);
-
         Node directSchemaReference =
                 graph.roots().get(0).directFragment();
         Node directSchemaValue =
                 graph.roots().get(1).directFragment();
+
+        // then
         assertEquals(cyclic.memberBlueId,
                 directSchemaReference.getSchema()
                         .getBlueId());
@@ -330,39 +472,51 @@ class ExactNodeGraphFragmentsTest {
     }
 
     @Test
-    void rejectsCyclicPlaceholdersPreviousMembersMixedObjectCyclesAndSelfIdentityContent() {
-        String plainBlueId = BlueIdCalculator.calculateBlueId(
-                new Node().value("ordinary-reference-target"));
-        String cyclicMemberBlueId = plainBlueId + "#0";
+    void shouldRejectCyclicPlaceholdersAndMalformedMemberReferences() {
+        // given
+        String plainBlueId = ordinaryReferenceBlueId();
 
-        IllegalArgumentException placeholderFailure =
-                assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable placeholderFailure =
+                captureFailure(
                         () -> new ExactNodeGraphFragments(
                                 new Node().properties(
                                         "member",
                                         new Node().blueId("this#0"))));
-        assertTrue(placeholderFailure.getMessage()
-                .contains("only inside cyclic BlueId calculation"));
-
-        assertThrows(IllegalArgumentException.class,
+        Throwable zeroPlaceholderFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         new Node().properties(
                                 "member",
                                 new Node().blueId(
                                         NodeContentHandler.ZERO_BLUE_ID))));
-        assertThrows(IllegalArgumentException.class,
+        Throwable malformedMemberFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         new Node().properties(
                                 "member",
                                 new Node().blueId(
                                         plainBlueId + "#01"))));
-        assertThrows(IllegalArgumentException.class,
+
+        // then
+        assertTrue(placeholderFailure instanceof IllegalArgumentException);
+        assertTrue(placeholderFailure.getMessage()
+                .contains("only inside cyclic BlueId calculation"));
+        assertTrue(zeroPlaceholderFailure instanceof IllegalArgumentException);
+        assertTrue(malformedMemberFailure instanceof IllegalArgumentException);
+    }
+
+    @Test
+    void shouldRejectCyclicMembersAsPreviousAnchorsOrClaimedContent() {
+        // given
+        String cyclicMemberBlueId = cyclicMemberBlueId();
+
+        // when
+        Throwable previousMemberFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         new Node().items(
                                 new Node().previousBlueId(
                                         cyclicMemberBlueId),
                                 new Node().value("tail"))));
-        assertThrows(IllegalArgumentException.class,
+        Throwable claimedMemberFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         new Node().properties(
                                 "member",
@@ -370,35 +524,80 @@ class ExactNodeGraphFragmentsTest {
                                         .blueId(cyclicMemberBlueId)
                                         .value("claimed member content"))));
 
+        // then
+        assertTrue(previousMemberFailure instanceof IllegalArgumentException);
+        assertTrue(claimedMemberFailure instanceof IllegalArgumentException);
+    }
+
+    @Test
+    void shouldRejectMixedObjectCyclesDuringFragmentCollection() {
+        // given
+        String plainBlueId = ordinaryReferenceBlueId();
         Node mixedCycle = new Node();
         mixedCycle.properties(
                 "external", new Node().blueId(plainBlueId),
                 "objectCycle", mixedCycle);
-        IllegalArgumentException cycleFailure =
-                assertThrows(IllegalArgumentException.class,
-                        () -> new ExactNodeGraphFragments(mixedCycle));
-        assertTrue(cycleFailure.getMessage().contains("cycle"));
 
+        // when
+        Throwable cycleFailure =
+                captureFailure(
+                        () -> new ExactNodeGraphFragments(mixedCycle));
+
+        // then
+        assertTrue(cycleFailure instanceof IllegalArgumentException);
+        assertTrue(cycleFailure.getMessage().contains("cycle"));
+    }
+
+    @Test
+    void shouldRejectRootContentThatClaimsItsOwnBlueId() {
+        // given
+        String plainBlueId = ordinaryReferenceBlueId();
         Node ownIdentityInContent = new Node()
                 .blueId(plainBlueId)
                 .value("content");
-        IllegalArgumentException ownIdentityFailure =
-                assertThrows(IllegalArgumentException.class,
+
+        // when
+        Throwable ownIdentityFailure =
+                captureFailure(
                         () -> new ExactNodeGraphFragments(
                                 ownIdentityInContent));
-        assertTrue(ownIdentityFailure.getMessage()
-                .contains("own BlueId"));
 
-        assertThrows(IllegalArgumentException.class,
+        // then
+        assertTrue(ownIdentityFailure instanceof IllegalArgumentException);
+        assertTrue(ownIdentityFailure.getMessage().contains("own BlueId"));
+    }
+
+    @Test
+    void shouldRejectReferenceOnlyOrEmptyFragmentRoots() {
+        // given
+        String plainBlueId = ordinaryReferenceBlueId();
+        String cyclicMemberBlueId = cyclicMemberBlueId();
+
+        // when
+        Throwable plainReferenceFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         new Node().blueId(plainBlueId)));
-        assertThrows(IllegalArgumentException.class,
+        Throwable cyclicReferenceFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         new Node().blueId(
                                 cyclicMemberBlueId)));
-        assertThrows(IllegalArgumentException.class,
+        Throwable emptyRootsFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         Collections.<Node>emptyList()));
+
+        // then
+        assertTrue(plainReferenceFailure instanceof IllegalArgumentException);
+        assertTrue(cyclicReferenceFailure instanceof IllegalArgumentException);
+        assertTrue(emptyRootsFailure instanceof IllegalArgumentException);
+    }
+
+    private static String ordinaryReferenceBlueId() {
+        return BlueIdCalculator.calculateBlueId(
+                new Node().value("ordinary-reference-target"));
+    }
+
+    private static String cyclicMemberBlueId() {
+        return ordinaryReferenceBlueId() + "#0";
     }
 
     private static CyclicMemberFixture cyclicMemberFixture() {

@@ -14,17 +14,17 @@ import java.util.function.Function;
 import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BlueIdCalculatorTest {
 
         @Test
-        public void testObject() {
+        public void shouldCalculateSameBlueIdAcrossObjectRepresentations() {
 
+                // given
                 String yaml1 = "abc:\n" +
                                 "  def:\n" +
                                 "    value: 1\n" +
@@ -60,7 +60,9 @@ public class BlueIdCalculatorTest {
                 Map<String, Object> map4 = YAML_MAPPER.readValue(yaml4, Map.class);
                 String result4 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map4);
 
+                // when
                 String expectedResult = "hash({abc={blueId=hash({def={blueId=hash({value=1})}, ghi={blueId=hash({jkl={blueId=hash({value=2})}, mno={blueId=hash({value=x})}})}})}, pqr={blueId=hash({value=1})}})";
+                // then
                 assertEquals(expectedResult, result1);
                 assertEquals(expectedResult, result2);
                 assertEquals(expectedResult, result3);
@@ -68,8 +70,9 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
-        public void testList() {
+        public void shouldCalculateBlueIdForListContent() {
 
+                // given
                 String list1 = "abc:\n" +
                                 "  - 1\n" +
                                 "  - 2\n" +
@@ -77,25 +80,31 @@ public class BlueIdCalculatorTest {
                 Map<String, Object> map1 = YAML_MAPPER.readValue(list1, Map.class);
                 String result1 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map1);
 
+                // when
                 String expectedResult = "hash({abc={blueId=" + fakeListHash(
                                 fakeScalarHash(INTEGER_TYPE_BLUE_ID, 1),
                                 fakeScalarHash(INTEGER_TYPE_BLUE_ID, 2),
                                 fakeScalarHash(INTEGER_TYPE_BLUE_ID, 3)) + "}})";
+                // then
                 assertEquals(expectedResult, result1);
         }
 
         @Test
-        public void testEmptyListIsPreserved() {
+        public void shouldPreserveEmptyList() {
+                // given
                 Map<String, Object> map = YAML_MAPPER.readValue("abc: []", Map.class);
 
+                // when
                 String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(map);
 
+                // then
                 assertEquals("hash({abc={blueId=hash({$list=empty})}})", result);
         }
 
         @Test
-        public void testSingletonListIsDifferentFromScalar() {
+        public void shouldDistinguishSingletonListFromScalar() {
 
+                // given
                 String list1 = "abc:\n" +
                                 "  value: x";
                 Map<String, Object> map1 = YAML_MAPPER.readValue(list1, Map.class);
@@ -104,15 +113,18 @@ public class BlueIdCalculatorTest {
                 String list2 = "abc:\n" +
                                 "  - value: x";
                 Map<String, Object> map2 = YAML_MAPPER.readValue(list2, Map.class);
+                // when
                 String result2 = new BlueIdCalculator(fakeHashValueProvider()).calculate(map2);
 
+                // then
                 assertEquals("hash({abc={blueId=hash({value=x})}})", result1);
                 assertEquals("hash({abc={blueId=" + fakeListHash("hash({value=x})") + "}})", result2);
                 assertNotEquals(result1, result2);
         }
 
         @Test
-        public void testNestedListIsDifferentFromFlatList() {
+        public void shouldDistinguishNestedListFromFlatList() {
+                // given
                 String flat = "abc:\n" +
                                 "  - 1\n" +
                                 "  - 2";
@@ -121,8 +133,10 @@ public class BlueIdCalculatorTest {
                                 "  - 2";
 
                 String flatResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(flat, Map.class));
+                // when
                 String nestedResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(nested, Map.class));
 
+                // then
                 assertEquals("hash({abc={blueId=" + fakeListHash(
                                 fakeScalarHash(INTEGER_TYPE_BLUE_ID, 1),
                                 fakeScalarHash(INTEGER_TYPE_BLUE_ID, 2)) + "}})", flatResult);
@@ -133,125 +147,163 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
-        public void testPreviousListAnchorSeedsListHash() {
+        public void shouldSeedListHashFromPreviousListAnchor() {
+                // given
                 String anchored = "abc:\n" +
                                 "  - $previous:\n" +
                                 "      blueId: prevHash\n" +
                                 "  - value: x";
 
+                // when
                 String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(anchored, Map.class));
 
+                // then
                 assertEquals("hash({abc={blueId=hash({$listCons={elem={blueId=hash({value=x})}, prev={blueId=prevHash}}})}})", result);
         }
 
         @Test
-        public void testPreviousListAnchorWithoutAppendsReturnsPreviousBlueId() {
+        public void shouldReturnPreviousBlueIdWhenPreviousListAnchorHasNoAppends() {
+                // given
                 String anchored = "abc:\n" +
                                 "  - $previous:\n" +
                                 "      blueId: prevHash";
 
+                // when
                 String result = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(anchored, Map.class));
 
+                // then
                 assertEquals("hash({abc={blueId=prevHash}})", result);
         }
 
         @Test
-        public void directBlueIdRejectsPosOverlay() {
+        public void shouldRejectPositionOverlayForDirectBlueId() {
+                // given
                 String withPosition = "abc:\n" +
                                 "  - $pos: 0\n" +
                                 "    value: A\n" +
                                 "  - value: B";
 
-                assertThrows(IllegalArgumentException.class,
+                // when
+                IllegalArgumentException failure = captureFailure(
                                 () -> new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(withPosition, Map.class)));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void directBlueIdRejectsReplaceOverlay() {
+        public void shouldRejectReplaceOverlayForDirectBlueId() {
+                // given
                 String withReplace = "abc:\n" +
                                 "  - $replace: true\n" +
                                 "    value: A";
 
-                assertThrows(IllegalArgumentException.class,
+                // when
+                IllegalArgumentException failure = captureFailure(
                                 () -> new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(withReplace, Map.class)));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void testInvalidListControlsAreRejectedDuringHashing() {
+        public void shouldRejectInvalidListControlsDuringHashing() {
+                // given
                 BlueIdCalculator calculator = new BlueIdCalculator(fakeHashValueProvider());
 
-                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                // when
+                IllegalArgumentException[] failures = {
+                        captureFailure(() -> calculator.calculate(YAML_MAPPER.readValue(
                                 "abc:\n" +
                                 "  - value: A\n" +
                                 "  - $previous:\n" +
-                                "      blueId: prevHash", Map.class)));
-
-                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "      blueId: prevHash", Map.class))),
+                        captureFailure(() -> calculator.calculate(YAML_MAPPER.readValue(
                                 "abc:\n" +
                                 "  - $pos: 0\n" +
                                 "    value: A\n" +
                                 "  - $pos: 0\n" +
-                                "    value: B", Map.class)));
-
-                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "    value: B", Map.class))),
+                        captureFailure(() -> calculator.calculate(YAML_MAPPER.readValue(
                                 "abc:\n" +
                                 "  - $pos: 1.5\n" +
-                                "    value: A", Map.class)));
-
-                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "    value: A", Map.class))),
+                        captureFailure(() -> calculator.calculate(YAML_MAPPER.readValue(
                                 "abc:\n" +
                                 "  - $pos: 2147483648\n" +
-                                "    value: A", Map.class)));
-
-                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "    value: A", Map.class))),
+                        captureFailure(() -> calculator.calculate(YAML_MAPPER.readValue(
                                 "abc:\n" +
-                                "  - $pos: 0", Map.class)));
-
-                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "  - $pos: 0", Map.class))),
+                        captureFailure(() -> calculator.calculate(YAML_MAPPER.readValue(
                                 "abc:\n" +
                                 "  - $previous:\n" +
-                                "      blueId: 123", Map.class)));
-
-                assertThrows(IllegalArgumentException.class, () -> calculator.calculate(YAML_MAPPER.readValue(
+                                "      blueId: 123", Map.class))),
+                        captureFailure(() -> calculator.calculate(YAML_MAPPER.readValue(
                                 "abc:\n" +
                                 "  - $previous:\n" +
                                 "      blueId: prevHash\n" +
-                                "      extra: value", Map.class)));
+                                "      extra: value", Map.class)))
+                };
+
+                // then
+                for (IllegalArgumentException failure : failures) {
+                        assertTrue(failure instanceof IllegalArgumentException);
+                }
         }
 
         @Test
-        public void testEmptyPlaceholderHashesAsContent() {
+        public void shouldHashEmptyPlaceholderAsContent() {
+                // given
                 String placeholder = "abc:\n" +
                                 "  - $empty: true";
                 String empty = "abc: []";
 
                 String placeholderResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(placeholder, Map.class));
+                // when
                 String emptyResult = new BlueIdCalculator(fakeHashValueProvider()).calculate(YAML_MAPPER.readValue(empty, Map.class));
 
+                // then
                 assertNotEquals(emptyResult, placeholderResult);
         }
 
         @Test
-        public void testPureReferenceShortCircuit() {
+        public void shouldShortCircuitPureReference() {
+                // given
                 Map<String, Object> pureReference = YAML_MAPPER.readValue("blueId: asserted-id", Map.class);
                 Map<String, Object> mixedNode = YAML_MAPPER.readValue("blueId: asserted-id\nvalue: x", Map.class);
 
+                // when
                 BlueIdCalculator calculator = new BlueIdCalculator(fakeHashValueProvider());
 
+                // then
                 assertEquals("asserted-id", calculator.calculate(pureReference));
                 assertNotEquals("asserted-id", calculator.calculate(mixedNode));
         }
 
         @Test
-        public void testScalarNumbersAndStringsHashAsDifferentJsonTypes() {
+        public void shouldHashScalarNumbersAndStringsAsDifferentJsonTypes() {
+                // given
                 BlueIdCalculator calculator = BlueIdCalculator.INSTANCE;
+                BigInteger integerValue = BigInteger.ONE;
+                String integerText = "1";
+                boolean booleanValue = true;
+                String booleanText = "true";
 
-                assertNotEquals(calculator.calculate(BigInteger.ONE), calculator.calculate("1"));
-                assertNotEquals(calculator.calculate(true), calculator.calculate("true"));
+                // when
+                String integerBlueId = calculator.calculate(integerValue);
+                String integerTextBlueId = calculator.calculate(integerText);
+                String booleanBlueId = calculator.calculate(booleanValue);
+                String booleanTextBlueId = calculator.calculate(booleanText);
+
+                // then
+                assertNotEquals(integerBlueId, integerTextBlueId);
+                assertNotEquals(booleanBlueId, booleanTextBlueId);
         }
 
         @Test
-        public void testSortingOfObjectProperties() {
+        public void shouldSortObjectProperties() {
+                // given
                 String yaml = "€: Euro Sign\n" +
                                 "\\r: Carriage Return\n" +
                                 "\\n: Newline\n" +
@@ -266,14 +318,18 @@ public class BlueIdCalculatorTest {
 
                 String json = "{\"1\":\"One\",\"</script>\":\"Browser Challenge\",\"\\\\n\":\"Newline\",\"\\\\r\":\"Carriage Return\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\",\"€\":\"Euro Sign\",\"\uD83D\uDE02\":\"Smiley\"}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testLexicographicSorting() {
+        public void shouldSortLexicographically() {
+                // given
                 Map map = JSON_MAPPER.readValue("{\"z\":1,\"aa\":65,\"q\":3,\"12\":3.5,\"a\":55,\"ab\":\"sad\"}", Map.class);
+                // when
                 String expectedBlueId = "hash({12={blueId="
                                 + fakeScalarHash(DOUBLE_TYPE_BLUE_ID, new BigDecimal("3.5"))
                                 + "}, a={blueId=" + fakeScalarHash(INTEGER_TYPE_BLUE_ID, 55)
@@ -281,11 +337,13 @@ public class BlueIdCalculatorTest {
                                 + "}, ab={blueId=" + fakeScalarHash(TEXT_TYPE_BLUE_ID, "sad")
                                 + "}, q={blueId=" + fakeScalarHash(INTEGER_TYPE_BLUE_ID, 3)
                                 + "}, z={blueId=" + fakeScalarHash(INTEGER_TYPE_BLUE_ID, 1) + "}})";
+                // then
                 assertEquals(expectedBlueId, new BlueIdCalculator(fakeHashValueProvider()).calculate(map));
         }
 
         @Test
-        public void testInteger() {
+        public void shouldCalculateSameBlueIdForIntegerYamlAndJson() {
+                // given
                 String yaml = "num: 36";
 
                 Node node = YAML_MAPPER.readValue(yaml, Node.class);
@@ -293,13 +351,16 @@ public class BlueIdCalculatorTest {
 
                 String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID + "\"},\"value\":36}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testDecimal() {
+        public void shouldCalculateSameBlueIdForDecimalYamlAndJson() {
+                // given
                 String yaml = "num: 36.55";
 
                 Node node = YAML_MAPPER.readValue(yaml, Node.class);
@@ -307,13 +368,16 @@ public class BlueIdCalculatorTest {
 
                 String json = "{\"num\":{\"type\":{\"blueId\":\"" + DOUBLE_TYPE_BLUE_ID + "\"},\"value\":36.55}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testDoubleIntegerDecimalAndStringFormsHaveSameBlueId() {
+        public void shouldCalculateSameBlueIdForDoubleIntegerDecimalAndStringForms() {
+                // given
                 String integerYaml = "num:\n" +
                                 "  type:\n" +
                                 "    blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
@@ -329,14 +393,17 @@ public class BlueIdCalculatorTest {
 
                 String integerBlueId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(integerYaml, Node.class));
                 String decimalBlueId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(decimalYaml, Node.class));
+                // when
                 String stringBlueId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(stringYaml, Node.class));
 
+                // then
                 assertEquals(integerBlueId, decimalBlueId);
                 assertEquals(integerBlueId, stringBlueId);
         }
 
         @Test
-        public void testDoubleOneThirdCanonicalizesAcrossComputedAndAuthoredForms() {
+        public void shouldCanonicalizeDoubleOneThirdAcrossComputedAndAuthoredForms() {
+                // given
                 Node computed = new Node().properties(
                                 "num", new Node()
                                                 .type(new Node().blueId(DOUBLE_TYPE_BLUE_ID))
@@ -352,26 +419,42 @@ public class BlueIdCalculatorTest {
                                 "  value: \"0.333333333333333333333333333333\"";
                 String inferredDouble = "num: 0.333333333333333333333333333333";
 
+                // when
                 String computedBlueId = BlueIdCalculator.calculateBlueId(computed);
+                String authoredNumberBlueId = BlueIdCalculator.calculateBlueId(
+                                YAML_MAPPER.readValue(authoredNumber, Node.class));
+                String authoredStringBlueId = BlueIdCalculator.calculateBlueId(
+                                YAML_MAPPER.readValue(authoredString, Node.class));
+                String inferredDoubleBlueId = BlueIdCalculator.calculateBlueId(
+                                YAML_MAPPER.readValue(inferredDouble, Node.class));
+                Map<String, Object> serialized =
+                                (Map<String, Object>) NodeToMapListOrValue.get(computed);
+                Map<String, Object> num =
+                                (Map<String, Object>) serialized.get("num");
 
-                assertEquals(computedBlueId, BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(authoredNumber, Node.class)));
-                assertEquals(computedBlueId, BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(authoredString, Node.class)));
-                assertEquals(computedBlueId, BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(inferredDouble, Node.class)));
-
-                Map<String, Object> serialized = (Map<String, Object>) NodeToMapListOrValue.get(computed);
-                Map<String, Object> num = (Map<String, Object>) serialized.get("num");
+                // then
+                assertEquals(computedBlueId, authoredNumberBlueId);
+                assertEquals(computedBlueId, authoredStringBlueId);
+                assertEquals(computedBlueId, inferredDoubleBlueId);
                 assertEquals(new BigDecimal("0.3333333333333333"), num.get("value"));
         }
 
         @Test
-        public void testBigIntegerV1() {
+        public void shouldRejectUnquotedOutOfRangeInteger() {
+                // given
                 String yaml = "num: 36928735469874359687345908673940586739458679548679034857690345876905238476903485769";
 
-                assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(yaml, Node.class));
+                // when
+                RuntimeException failure =
+                        captureFailure(() -> YAML_MAPPER.readValue(yaml, Node.class));
+
+                // then
+                assertTrue(failure instanceof RuntimeException);
         }
 
         @Test
-        public void testBigIntegerV2() {
+        public void shouldCalculateSameBlueIdForQuotedLargeIntegerAcrossYamlAndJson() {
+                // given
                 String yaml = "num:\n" +
                                 "  value: '36928735469874359687345908673940586739458679548679034857690345876905238476903485769'\n"
                                 +
@@ -384,13 +467,16 @@ public class BlueIdCalculatorTest {
                 String json = "{\"num\":{\"type\":{\"blueId\":\"" + INTEGER_TYPE_BLUE_ID
                                 + "\"},\"value\":\"36928735469874359687345908673940586739458679548679034857690345876905238476903485769\"}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testBigIntegerText() {
+        public void shouldCalculateSameBlueIdForLargeNumericTextAcrossYamlAndJson() {
+                // given
                 String yaml = "num:\n" +
                                 "  value: '36928735469874359687345908673940586739458679548679034857690345876905238476903485769'";
 
@@ -400,13 +486,16 @@ public class BlueIdCalculatorTest {
                 String json = "{\"num\":{\"type\":{\"blueId\":\"" + TEXT_TYPE_BLUE_ID
                                 + "\"},\"value\":\"36928735469874359687345908673940586739458679548679034857690345876905238476903485769\"}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testBigDecimal() {
+        public void shouldCalculateSameBlueIdForLargeDecimalAcrossYamlAndJson() {
+                // given
                 String yaml = "num: 36928735469874359687345908673940586739458679548679034857690345876905238476903485769.36928735469874359687345908673940586739458679548679034857690345876905238476903485769";
 
                 Node node = YAML_MAPPER.readValue(yaml, Node.class);
@@ -415,13 +504,16 @@ public class BlueIdCalculatorTest {
                 String json = "{\"num\":{\"type\":{\"blueId\":\"" + DOUBLE_TYPE_BLUE_ID
                                 + "\"},\"value\":3.692873546987436e+82}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testMultilineText1() {
+        public void shouldCalculateSameBlueIdForLiteralMultilineTextAcrossYamlAndJson() {
+                // given
                 String yaml = "text: |\n" +
                                 "  abc\n" +
                                 "  def";
@@ -431,13 +523,16 @@ public class BlueIdCalculatorTest {
 
                 String json = "{\"text\":{\"type\":{\"blueId\":\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"},\"value\":\"abc\\ndef\"}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testMultilineText2() {
+        public void shouldCalculateSameBlueIdForFoldedMultilineTextAcrossYamlAndJson() {
+                // given
                 String yaml = "text: >\n" +
                                 "  abc\n" +
                                 "  def";
@@ -447,13 +542,16 @@ public class BlueIdCalculatorTest {
 
                 String json = "{\"text\":{\"type\":{\"blueId\":\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"},\"value\":\"abc def\"}}\n";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
+                // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
 
+                // then
                 assertEquals(blueId2, blueId);
         }
 
         @Test
-        public void testNullAndEmptyRemoval() {
+        public void shouldRemoveNullAndEmptyValues() {
+                // given
                 String yaml1 = "a: 1\n" +
                                 "b: null";
                 String yaml2 = "a: 1";
@@ -477,8 +575,10 @@ public class BlueIdCalculatorTest {
                 String result2 = BlueIdCalculator.calculateBlueId(node2);
                 String result3 = BlueIdCalculator.calculateBlueId(node3);
                 String result4 = BlueIdCalculator.calculateBlueId(node4);
+                // when
                 String result5 = BlueIdCalculator.calculateBlueId(node5);
 
+                // then
                 assertEquals(result1, result2);
                 assertEquals(result1, result3);
                 assertEquals(result1, result5);
@@ -486,127 +586,214 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
-        public void directBlueIdRejectsBlueDirective() {
+        public void shouldRejectBlueDirectiveForDirectBlueId() {
+                // given
                 Node node = YAML_MAPPER.readValue(
                                 "blue:\n" +
                                 "  items: []\n" +
                                 "value: hello", Node.class);
 
-                IllegalArgumentException exception = assertThrows(
-                                IllegalArgumentException.class,
+                // when
+                IllegalArgumentException exception = captureFailure(
                                 () -> BlueIdCalculator.calculateBlueId(node));
 
+                // then
+                assertTrue(exception instanceof IllegalArgumentException);
                 assertTrue(exception.getMessage().contains("\"blue\" is a preprocessing directive"));
         }
 
         @Test
-        public void blueFacadeDirectBlueIdRejectsBlueDirective() {
+        public void shouldRejectBlueDirectiveForFacadeDirectBlueId() {
+                // given
                 Node node = YAML_MAPPER.readValue(
                                 "blue:\n" +
                                 "  items: []\n" +
                                 "value: hello", Node.class);
 
-                assertThrows(IllegalArgumentException.class, () -> new Blue().calculateBlueId(node));
+                // when
+                IllegalArgumentException failure =
+                        captureFailure(() -> new Blue().calculateBlueId(node));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void explicitBlueIdInputParsingRequiresCanonicalBlueIds() {
+        public void shouldRequireCanonicalBlueIdsDuringExplicitBlueIdInputParsing() {
+                // given
                 Blue blue = new Blue();
                 String validBlueId = BlueIdCalculator.calculateBlueId(new Node().value("x"));
 
-                assertDoesNotThrow(() -> blue.parseBlueIdInputYaml("blueId: " + validBlueId));
-                assertDoesNotThrow(() -> blue.parseBlueIdInputYaml("blueId: " + validBlueId + "#0"));
-
-                assertThrows(RuntimeException.class, () -> blue.parseBlueIdInputYaml("blueId: abc"));
-                assertThrows(RuntimeException.class, () -> blue.parseBlueIdInputYaml("blueId: " + validBlueId + "#01"));
-                assertThrows(RuntimeException.class, () -> blue.parseBlueIdInputYaml("blueId: this#0"));
-                assertThrows(RuntimeException.class, () -> blue.parseBlueIdInputYaml(
+                // when
+                blue.parseBlueIdInputYaml("blueId: " + validBlueId);
+                blue.parseBlueIdInputYaml("blueId: " + validBlueId + "#0");
+                RuntimeException[] failures = {
+                        captureFailure(() -> blue.parseBlueIdInputYaml("blueId: abc")),
+                        captureFailure(() -> blue.parseBlueIdInputYaml(
+                                "blueId: " + validBlueId + "#01")),
+                        captureFailure(() -> blue.parseBlueIdInputYaml("blueId: this#0")),
+                        captureFailure(() -> blue.parseBlueIdInputYaml(
                                 "items:\n" +
                                 "  - $previous:\n" +
                                 "      blueId: prevHash\n" +
-                                "  - value: x"));
+                                "  - value: x"))
+                };
+
+                // then
+                for (RuntimeException failure : failures) {
+                        assertTrue(failure instanceof RuntimeException);
+                }
         }
 
         @Test
-        public void staticCalculatorRejectsInvalidReferenceBlueIds() {
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(new Node().blueId("not-a-real-blueid")));
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(new Node().blueId("this#0")));
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(
-                                                "items:\n" +
-                                                "  - $previous:\n" +
-                                                "      blueId: not-a-real-blueid\n" +
-                                                "  - value: x", Node.class)));
+        public void shouldRejectInvalidReferenceBlueIdsInStaticCalculator() {
+                // given
+                Node malformedPrevious = YAML_MAPPER.readValue(
+                                "items:\n" +
+                                "  - $previous:\n" +
+                                "      blueId: not-a-real-blueid\n" +
+                                "  - value: x", Node.class);
+
+                // when
+                IllegalArgumentException[] failures = {
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(
+                                new Node().blueId("not-a-real-blueid"))),
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(
+                                new Node().blueId("this#0"))),
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(
+                                malformedPrevious))
+                };
+
+                // then
+                for (IllegalArgumentException failure : failures) {
+                        assertTrue(failure instanceof IllegalArgumentException);
+                }
         }
 
         @Test
-        public void directBlueIdRejectsUnresolvedTypeAliases() {
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class)));
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("itemType: Text\nitems: []", Node.class)));
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("keyType: Text\nvalueType: Integer", Node.class)));
-                assertThrows(RuntimeException.class,
-                                () -> new Blue().parseBlueIdInputYaml("type: Integer\nvalue: 1"));
+        public void shouldRejectUnresolvedTypeAliasesForDirectBlueId() {
+                // given
+                Node typeAlias = YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class);
+                Node itemTypeAlias =
+                        YAML_MAPPER.readValue("itemType: Text\nitems: []", Node.class);
+                Node mapTypeAliases =
+                        YAML_MAPPER.readValue("keyType: Text\nvalueType: Integer", Node.class);
+
+                // when
+                RuntimeException[] failures = {
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(typeAlias)),
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(itemTypeAlias)),
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(mapTypeAliases)),
+                        captureFailure(() -> new Blue().parseBlueIdInputYaml(
+                                "type: Integer\nvalue: 1"))
+                };
+
+                // then
+                for (RuntimeException failure : failures) {
+                        assertTrue(failure instanceof RuntimeException);
+                }
         }
 
         @Test
-        public void directBlueIdRejectsTypeAlias() {
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class)));
+        public void shouldRejectTypeAliasForDirectBlueId() {
+                // given
+                Node node = YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class);
+
+                // when
+                IllegalArgumentException failure =
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(node));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void directBlueIdRejectsItemTypeAlias() {
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("itemType: Text\nitems: []", Node.class)));
+        public void shouldRejectItemTypeAliasForDirectBlueId() {
+                // given
+                Node node = YAML_MAPPER.readValue("itemType: Text\nitems: []", Node.class);
+
+                // when
+                IllegalArgumentException failure =
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(node));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void directBlueIdRejectsKeyTypeAlias() {
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("keyType: Text\n", Node.class)));
+        public void shouldRejectKeyTypeAliasForDirectBlueId() {
+                // given
+                Node node = YAML_MAPPER.readValue("keyType: Text\n", Node.class);
+
+                // when
+                IllegalArgumentException failure =
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(node));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void directBlueIdRejectsValueTypeAlias() {
-                assertThrows(IllegalArgumentException.class,
-                                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue("valueType: Integer\n", Node.class)));
+        public void shouldRejectValueTypeAliasForDirectBlueId() {
+                // given
+                Node node = YAML_MAPPER.readValue("valueType: Integer\n", Node.class);
+
+                // when
+                IllegalArgumentException failure =
+                        captureFailure(() -> BlueIdCalculator.calculateBlueId(node));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void parseBlueIdInputRejectsTypeAlias() {
-                assertThrows(RuntimeException.class,
-                                () -> new Blue().parseBlueIdInputYaml("type: Integer\nvalue: 1"));
+        public void shouldRejectTypeAliasWhenParsingBlueIdInput() {
+                // given
+                Blue blue = new Blue();
+
+                // when
+                RuntimeException failure = captureFailure(
+                                () -> blue.parseBlueIdInputYaml("type: Integer\nvalue: 1"));
+
+                // then
+                assertTrue(failure instanceof RuntimeException);
         }
 
         @Test
-        public void semanticBlueIdAcceptsAuthoredBlueDirective() {
+        public void shouldAcceptAuthoredBlueDirectiveForSemanticBlueId() {
+                // given
                 Node node = YAML_MAPPER.readValue(
                                 "blue:\n" +
                                 "  items: []\n" +
                                 "value: hello", Node.class);
 
-                assertDoesNotThrow(() -> new Blue().calculateSemanticBlueId(node));
+                // when
+                String blueId = new Blue().calculateSemanticBlueId(node);
+
+                // then
+                assertTrue(blueId != null);
         }
 
         @Test
-        public void semanticBlueIdAcceptsSourceAliasesAndCanonicalOverlayRemovesThem() {
+        public void shouldAcceptSourceAliasesAndRemoveThemFromCanonicalOverlay() {
+                // given
                 Blue blue = new Blue();
                 Node source = YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class);
 
-                assertDoesNotThrow(() -> blue.calculateSemanticBlueId(source));
+                // when
+                String semanticBlueId = blue.calculateSemanticBlueId(source);
                 Node canonical = blue.canonicalize(source);
+                String directBlueId = BlueIdCalculator.calculateBlueId(canonical);
 
+                // then
+                assertTrue(semanticBlueId != null);
                 assertEquals(INTEGER_TYPE_BLUE_ID, canonical.getType().getBlueId());
-                assertDoesNotThrow(() -> BlueIdCalculator.calculateBlueId(canonical));
+                assertTrue(directBlueId != null);
         }
 
         @Test
-        public void directBlueIdUsesPreviousAsListSeed() {
+        public void shouldUsePreviousAsListSeedForDirectBlueId() {
+                // given
                 String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
                 Node node = YAML_MAPPER.readValue(
                                 "items:\n" +
@@ -614,11 +801,16 @@ public class BlueIdCalculatorTest {
                                 "      blueId: " + previousBlueId + "\n" +
                                 "  - value: C", Node.class);
 
-                assertDoesNotThrow(() -> BlueIdCalculator.calculateBlueId(node));
+                // when
+                String blueId = BlueIdCalculator.calculateBlueId(node);
+
+                // then
+                assertTrue(blueId != null);
         }
 
         @Test
-        public void sourceListNullNormalizesToEmptyPlaceholder() {
+        public void shouldNormalizeNullSourceListToEmptyPlaceholder() {
+                // given
                 Blue blue = new Blue();
                 Node withNull = blue.yamlToNode(
                                 "items:\n" +
@@ -630,17 +822,20 @@ public class BlueIdCalculatorTest {
                                 "  - A\n" +
                                 "  - $empty: true\n" +
                                 "  - B");
+                // when
                 Node compact = blue.yamlToNode(
                                 "items:\n" +
                                 "  - A\n" +
                                 "  - B");
 
+                // then
                 assertEquals(BlueIdCalculator.calculateBlueId(withPlaceholder), BlueIdCalculator.calculateBlueId(withNull));
                 assertNotEquals(BlueIdCalculator.calculateBlueId(compact), BlueIdCalculator.calculateBlueId(withNull));
         }
 
         @Test
-        public void sourceListEmptyObjectNormalizesToEmptyPlaceholder() {
+        public void shouldNormalizeEmptyObjectSourceListToEmptyPlaceholder() {
+                // given
                 Blue blue = new Blue();
                 Node withEmptyObject = blue.yamlToNode(
                                 "items:\n" +
@@ -652,35 +847,50 @@ public class BlueIdCalculatorTest {
                                 "  - A\n" +
                                 "  - $empty: true\n" +
                                 "  - B");
+                // when
                 Node compact = blue.yamlToNode(
                                 "items:\n" +
                                 "  - A\n" +
                                 "  - B");
 
+                // then
                 assertEquals(BlueIdCalculator.calculateBlueId(withPlaceholder), BlueIdCalculator.calculateBlueId(withEmptyObject));
                 assertNotEquals(BlueIdCalculator.calculateBlueId(compact), BlueIdCalculator.calculateBlueId(withEmptyObject));
         }
 
         @Test
-        public void directBlueIdRejectsEmptyObjectListElement() {
+        public void shouldRejectEmptyObjectListElementForDirectBlueId() {
+                // given
                 Node withEmptyObject = YAML_MAPPER.readValue(
                                 "items:\n" +
                                 "  - {}", Node.class);
 
-                assertThrows(IllegalArgumentException.class, () -> BlueIdCalculator.calculateBlueId(withEmptyObject));
+                // when
+                IllegalArgumentException failure = captureFailure(
+                                () -> BlueIdCalculator.calculateBlueId(withEmptyObject));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void directBlueIdRejectsNullListElement() {
+        public void shouldRejectNullListElementForDirectBlueId() {
+                // given
                 Node withNull = YAML_MAPPER.readValue(
                                 "items:\n" +
                                 "  - null", Node.class);
 
-                assertThrows(IllegalArgumentException.class, () -> BlueIdCalculator.calculateBlueId(withNull));
+                // when
+                IllegalArgumentException failure = captureFailure(
+                                () -> BlueIdCalculator.calculateBlueId(withNull));
+
+                // then
+                assertTrue(failure instanceof IllegalArgumentException);
         }
 
         @Test
-        public void nestedBareSchemaScalarUsesTypedScalarIdentity() {
+        public void shouldUseTypedScalarIdentityForNestedBareSchemaScalar() {
+                // given
                 Node withBareSchemaScalar = YAML_MAPPER.readValue(
                                 "schema:\n" +
                                 "  required: true", Node.class);
@@ -691,21 +901,36 @@ public class BlueIdCalculatorTest {
                                                 .value(true));
                 Node withExplicitTypedScalar = new Node().schema(explicitSchema);
 
-                assertEquals(
-                                BlueIdCalculator.calculateBlueId(withExplicitTypedScalar),
-                                BlueIdCalculator.calculateBlueId(withBareSchemaScalar));
+                // when
+                String explicitBlueId =
+                        BlueIdCalculator.calculateBlueId(withExplicitTypedScalar);
+                String bareBlueId =
+                        BlueIdCalculator.calculateBlueId(withBareSchemaScalar);
+
+                // then
+                assertEquals(explicitBlueId, bareBlueId);
         }
 
         @Test
-        public void checkpointEntryMatchesPublishedLanguage10Identity() throws Exception {
+        public void shouldMatchPublishedLanguage10IdentityForCheckpointEntry() throws Exception {
+                // given
+                String expected = "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY";
+
+                // when
+                boolean resourcePresent;
+                String actual = null;
                 try (InputStream input = getClass().getClassLoader().getResourceAsStream(
                                 "registry/blue-contracts-1.0/CheckpointEntry.blue")) {
-                        assertTrue(input != null);
-                        Node checkpointEntry = YAML_MAPPER.readValue(input, Node.class);
-                        assertEquals(
-                                        "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY",
-                                        BlueIdCalculator.calculateBlueId(checkpointEntry));
+                        resourcePresent = input != null;
+                        if (resourcePresent) {
+                                Node checkpointEntry = YAML_MAPPER.readValue(input, Node.class);
+                                actual = BlueIdCalculator.calculateBlueId(checkpointEntry);
+                        }
                 }
+
+                // then
+                assertTrue(resourcePresent);
+                assertEquals(expected, actual);
         }
 
         private static Function<Object, String> fakeHashValueProvider() {

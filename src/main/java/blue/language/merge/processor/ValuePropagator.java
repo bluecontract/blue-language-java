@@ -8,7 +8,20 @@ import blue.language.utils.Types;
 
 import java.math.BigInteger;
 
+/**
+ * Propagates scalar values and rejects conflicting fixed values.
+ *
+ * <p>Canonical decimal text is normalized to an Integer only when inherited
+ * type context requires Integer semantics.</p>
+ */
 public class ValuePropagator implements MergingProcessor {
+
+    /**
+     * Creates a stateless scalar-value propagation stage.
+     */
+    public ValuePropagator() {
+    }
+
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         normalizeQuotedIntegerInInheritedContext(

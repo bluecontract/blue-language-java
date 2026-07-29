@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.BlueCachePolicy;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
@@ -15,6 +17,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.utils.JsonPointer;
 import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 
@@ -31,21 +34,33 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Parses contracts under a scope and produces a {@link ContractBundle}.
+ * Parses one selected/effective scope pair into a {@link ContractBundle}.
+ *
+ * <p>Header recognition is exact and provider-verified. Registered executable
+ * bodies stay collapsed until selected, while effective source-contribution
+ * identities and body provenance remain available as immutable metadata.
+ * Cached bundles never carry invocation-local runtime markers.</p>
  */
 final class ContractLoader {
 
-    private static final String HANDLER_EVENT_MATCHER_FIELD = "event";
+    private static final String LEGACY_CHANNEL_BINDINGS_PROPERTY =
+            "channelBindings";
+    private static final String LEGACY_LAST_EVENTS_PROPERTY =
+            "lastEvents";
+    private static final String HANDLER_EVENT_MATCHER_FIELD =
+            EffectiveContractSnapshotConstants.DispatchField.EVENT;
     private static final Set<String> INVALID_CONTRACT_KEYS = new LinkedHashSet<>();
 
     static {
-        INVALID_CONTRACT_KEYS.add("type");
-        INVALID_CONTRACT_KEYS.add("value");
-        INVALID_CONTRACT_KEYS.add("items");
-        INVALID_CONTRACT_KEYS.add("schema");
-        INVALID_CONTRACT_KEYS.add("contracts");
-        INVALID_CONTRACT_KEYS.add("properties");
-        INVALID_CONTRACT_KEYS.add("constraints");
+        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_TYPE);
+        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_VALUE);
+        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_ITEMS);
+        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_SCHEMA);
+        INVALID_CONTRACT_KEYS.add(ProcessorContractConstants.KEY_CONTRACTS);
+        INVALID_CONTRACT_KEYS.add(
+                Properties.LEGACY_OBJECT_PROPERTIES);
+        INVALID_CONTRACT_KEYS.add(
+                Properties.LEGACY_OBJECT_CONSTRAINTS);
     }
 
     private final ContractProcessorRegistry registry;
@@ -53,6 +68,8 @@ final class ContractLoader {
     private final TypeClassResolver typeResolver;
     private final BundleCache bundleCache;
     private final ContractContributionResolver contributionResolver;
+    private GasSchedule gasSchedule =
+            GasSchedule.contracts10();
 
     ContractLoader(ContractProcessorRegistry registry,
                    NodeToObjectConverter converter,
@@ -81,7 +98,11 @@ final class ContractLoader {
     }
 
     void gasSchedule(GasSchedule gasSchedule) {
-        contributionResolver.gasSchedule(gasSchedule);
+        this.gasSchedule =
+                Objects.requireNonNull(
+                        gasSchedule, "gasSchedule");
+        contributionResolver.gasSchedule(
+                this.gasSchedule);
     }
 
     ContractBundle load(ResolvedSnapshot snapshot, String scopePath) {
@@ -246,7 +267,7 @@ final class ContractLoader {
         if (selectedScopeNode.getType() != null) {
             selectedScope.type(selectedScopeNode.getType().toNode());
         }
-        FrozenNode selectedContracts = property(selectedScopeNode, "contracts");
+        FrozenNode selectedContracts = property(selectedScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (selectedContracts != null) {
             selectedScope.contracts(selectedContracts.toNode());
         }
@@ -256,7 +277,7 @@ final class ContractLoader {
     private void collectProcessEmbeddedKeys(
             FrozenNode scopeNode,
             Set<String> retainedKeys) {
-        FrozenNode contracts = property(scopeNode, "contracts");
+        FrozenNode contracts = property(scopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null
                 || contracts.getProperties() == null) {
             return;
@@ -282,7 +303,7 @@ final class ContractLoader {
         if (scopeNode.getType() != null) {
             filtered.type(scopeNode.getType().toNode());
         }
-        FrozenNode contracts = property(scopeNode, "contracts");
+        FrozenNode contracts = property(scopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null) {
             return filtered;
         }
@@ -406,7 +427,7 @@ final class ContractLoader {
          * canonical registration clears the registry demand.
          */
         FrozenNode contracts =
-                property(effectiveScopeNode, "contracts");
+                property(effectiveScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         Map<String, FrozenNode> entries =
                 contracts != null ? contracts.getProperties() : null;
         if (entries == null) {
@@ -537,7 +558,7 @@ final class ContractLoader {
      * resolution because their header is not directly present.</p>
      */
     void preflightSelectedContractHeaders(FrozenNode selectedScopeNode) {
-        FrozenNode contracts = property(selectedScopeNode, "contracts");
+        FrozenNode contracts = property(selectedScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null) {
             return;
         }
@@ -609,7 +630,7 @@ final class ContractLoader {
         }
 
         FrozenNode effectiveContractsNode =
-                property(effectiveScopeNode, "contracts");
+                property(effectiveScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         Map<String, FrozenNode> effectiveContractNodes = effectiveContractsNode != null
                 && effectiveContractsNode.getProperties() != null
                 ? effectiveContractsNode.getProperties()
@@ -765,16 +786,23 @@ final class ContractLoader {
                 }
                 builder.addChannel(key, channel, entry.getValue());
                 snapshot.role(ProcessorContractConstants.isProcessorManagedChannel(channel)
-                                ? "processor-channel"
-                                : "external-channel")
-                        .dispatchField("order", channel.getOrder());
+                                ? EffectiveContractSnapshotConstants
+                                .Role.PROCESSOR_CHANNEL
+                                : EffectiveContractSnapshotConstants
+                                .Role.EXTERNAL_CHANNEL)
+                        .dispatchField(
+                                EffectiveContractSnapshotConstants
+                                        .DispatchField.ORDER,
+                                channel.getOrder());
                 if (channel instanceof EmbeddedNodeChannel) {
                     EmbeddedNodeChannel embedded =
                             (EmbeddedNodeChannel) channel;
                     String sourcePath =
                             embedded.getSourcePath();
                     snapshot.dispatchField(
-                            "sourcePath", sourcePath);
+                            EffectiveContractSnapshotConstants
+                                    .DispatchField.SOURCE_PATH,
+                            sourcePath);
                     addEventDispatchSnapshot(
                             snapshot, embedded.getEvent());
                 } else if (channel
@@ -797,22 +825,35 @@ final class ContractLoader {
                         handler,
                         processor.get(),
                         contractNodes,
-                        contractTypeBlueIds);
+                        contractTypeBlueIds,
+                        recognitionMeter);
                 handler.setChannelKey(channelKey);
                 if (hasRegisteredSameScopeChannel(channelKey, contractNodes, contractTypeBlueIds)) {
                     builder.addHandler(key, handler,
                             exactExecutableContract,
                             executableBodyFields);
                 }
-                snapshot.role("handler")
-                        .dispatchField("order", handler.getOrder())
-                        .dispatchField("channel", channelKey);
+                snapshot.role(
+                                EffectiveContractSnapshotConstants
+                                        .Role.HANDLER)
+                        .dispatchField(
+                                EffectiveContractSnapshotConstants
+                                        .DispatchField.ORDER,
+                                handler.getOrder())
+                        .dispatchField(
+                                EffectiveContractSnapshotConstants
+                                        .DispatchField.CHANNEL,
+                                channelKey);
                 for (String field : executableBodyFields) {
                     snapshot.executableBodyField(field);
                     addExecutableBody(
                             snapshot,
                             exactExecutableContract,
-                            field);
+                            field,
+                            scopePath,
+                            key,
+                            typeBlueId,
+                            bindingResolution);
                 }
             } else if (contract instanceof ProcessEmbedded) {
                 if (meteredEmbeddedPaths != null) {
@@ -823,16 +864,23 @@ final class ContractLoader {
                             (ProcessEmbedded) contract);
                 }
                 builder.setEmbedded((ProcessEmbedded) contract, entry.getValue());
-                snapshot.role("process-embedded");
-                FrozenNode paths = property(entry.getValue(), "paths");
+                snapshot.role(
+                        EffectiveContractSnapshotConstants
+                                .Role.PROCESS_EMBEDDED);
+                FrozenNode paths = property(
+                        entry.getValue(),
+                        ProcessorContractConstants.KEY_PATHS);
                 if (paths != null) {
                     snapshot.deterministicDependency(paths.blueId());
                 }
             } else if (contract instanceof MarkerContract) {
                 builder.addMarker(key, (MarkerContract) contract, entry.getValue());
-                snapshot.role("marker");
+                snapshot.role(
+                        EffectiveContractSnapshotConstants.Role.MARKER);
             } else {
-                snapshot.role("executable-extension");
+                snapshot.role(
+                        EffectiveContractSnapshotConstants
+                                .Role.EXECUTABLE_EXTENSION);
             }
             builder.addEffectiveContractSnapshot(snapshot.build());
         }
@@ -948,10 +996,48 @@ final class ContractLoader {
 
     private void addExecutableBody(EffectiveContractSnapshot.Builder snapshot,
                                    FrozenNode contract,
-                                   String field) {
+                                   String field,
+                                   String scopePath,
+                                   String contractKey,
+                                   String contractTypeBlueId,
+                                   ContractContributionResolver.BindingResolution
+                                           bindingResolution) {
         FrozenNode body = property(contract, field);
         if (body != null) {
-            snapshot.executableBody(field, body.blueId());
+            String effectiveBodyBlueId =
+                    body.blueId();
+            ContractContributionResolver.ExecutableBodySource
+                    source =
+                    bindingResolution
+                            .executableBodySources()
+                            .get(field);
+            if (source == null) {
+                throw new MustUnderstandFailureException(
+                        "Cannot establish executable-body Source for contract '"
+                                + contractKey
+                                + "' field '"
+                                + field
+                                + "'",
+                        ProcessorErrorCategory
+                                .InvalidContractBinding);
+            }
+            snapshot.executableBody(
+                            field,
+                            effectiveBodyBlueId)
+                    .executableBodySourceDescriptor(
+                            field,
+                            new ExecutableBodySourceDescriptor(
+                                    scopePath,
+                                    contractKey,
+                                    contractTypeBlueId,
+                                    field,
+                                    effectiveBodyBlueId,
+                                    bindingResolution
+                                            .sourceContributions(),
+                                    source
+                                            .owningContributionBlueId(),
+                                    source.sourcePointer(),
+                                    source.pureReference()));
         }
     }
 
@@ -989,7 +1075,10 @@ final class ContractLoader {
         String identity =
                 FrozenNode.fromResolvedNode(
                         eventPattern).blueId();
-        snapshot.dispatchField("event", identity)
+        snapshot.dispatchField(
+                        EffectiveContractSnapshotConstants
+                                .DispatchField.EVENT,
+                        identity)
                 .deterministicDependency(identity);
     }
 
@@ -1019,7 +1108,9 @@ final class ContractLoader {
             String contractKey,
             FrozenNode contractNode,
             ContractRecognitionMeter meter) {
-        FrozenNode pathsNode = property(contractNode, "paths");
+        FrozenNode pathsNode = property(
+                contractNode,
+                ProcessorContractConstants.KEY_PATHS);
         if (pathsNode == null) {
             return Collections.emptyList();
         }
@@ -1072,7 +1163,7 @@ final class ContractLoader {
                         invalidPointer.getMessage(),
                         ProcessorErrorCategory.PatchBoundaryViolation);
             }
-            if ("/".equals(normalized)) {
+            if (JsonPointer.ROOT.equals(normalized)) {
                 throw new MustUnderstandFailureException(
                         "Process Embedded path '/' cannot embed its declaring scope",
                         ProcessorErrorCategory.PatchBoundaryViolation);
@@ -1118,9 +1209,11 @@ final class ContractLoader {
     private BundleCacheKey cacheKey(Node selectedScopeNode,
                                     FrozenNode effectiveScopeNode,
                                     String scopePath) {
-        FrozenNode contractsNode = property(effectiveScopeNode, "contracts");
-        FrozenNode channelBindingsNode = property(effectiveScopeNode, "channelBindings");
-        return new BundleCacheKey(scopePath != null ? scopePath : "/",
+        FrozenNode contractsNode = property(effectiveScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
+        FrozenNode channelBindingsNode = property(
+                effectiveScopeNode,
+                LEGACY_CHANNEL_BINDINGS_PROPERTY);
+        return new BundleCacheKey(scopePath != null ? scopePath : JsonPointer.ROOT,
                 registry.version(),
                 selectedContractKeysSignature(selectedScopeNode, contractsNode),
                 contractsSignature(contractsNode),
@@ -1196,7 +1289,8 @@ final class ContractLoader {
         }
         Node node = checkpointNode.toNode();
         if (node.getProperties() != null) {
-            node.getProperties().remove("lastEvents");
+            node.getProperties().remove(
+                    LEGACY_LAST_EVENTS_PROPERTY);
         }
         return FrozenNode.fromResolvedNode(node).blueId();
     }
@@ -1206,7 +1300,7 @@ final class ContractLoader {
     }
 
     private FrozenNode property(FrozenNode node, String key) {
-        if (node != null && "contracts".equals(key)) {
+        if (node != null && ProcessorContractConstants.KEY_CONTRACTS.equals(key)) {
             return node.getContracts();
         }
         return node != null && node.getProperties() != null ? node.getProperties().get(key) : null;
@@ -1223,7 +1317,7 @@ final class ContractLoader {
                 exactSelectedScope != null
                         ? exactSelectedScope.getContracts()
                         : null;
-        FrozenNode effectiveContractsNode = property(effectiveScopeNode, "contracts");
+        FrozenNode effectiveContractsNode = property(effectiveScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (selectedContractsNode == null
                 || selectedContractsNode.getProperties() == null
                 || effectiveContractsNode == null
@@ -1294,16 +1388,43 @@ final class ContractLoader {
                                          HandlerContract handler,
                                          HandlerProcessor<? extends HandlerContract> processor,
                                          Map<String, FrozenNode> contractNodes,
-                                         Map<String, String> contractTypeBlueIds) {
+                                         Map<String, String> contractTypeBlueIds,
+                                         ContractRecognitionMeter
+                                                 recognitionMeter) {
         String channelKey = trimToNull(handler.getChannelKey());
         if (channelKey == null) {
-            HandlerRegistrationContext context = new HandlerRegistrationContext(scopePath,
-                    handlerKey,
-                    contractNodes,
-                    contractTypeBlueIds,
-                    converter);
-            HandlerProcessor<HandlerContract> typed = (HandlerProcessor<HandlerContract>) processor;
-            channelKey = trimToNull(typed.deriveChannel(handler, context));
+            RuntimeWorkSession work =
+                    recognitionMeter != null
+                            ? recognitionMeter
+                            .newRuntimeWorkSession()
+                            : new RuntimeWorkSession(
+                                    new GasMeter(gasSchedule),
+                                    RuntimeWorkSession.Mode
+                                            .ADMISSION);
+            HandlerRegistrationContext context =
+                    new HandlerRegistrationContext(
+                            scopePath,
+                            handlerKey,
+                            contractNodes,
+                            contractTypeBlueIds,
+                            converter,
+                            work);
+            HandlerProcessor<HandlerContract> typed =
+                    (HandlerProcessor<HandlerContract>) processor;
+            try {
+                channelKey = trimToNull(
+                        typed.deriveChannel(
+                                handler, context));
+                work.complete();
+            } catch (ExecutionEvidenceUnavailableException unavailable) {
+                work.suspend();
+                throw unavailable;
+            } catch (RuntimeException | Error failure) {
+                work.failDeterministically();
+                throw failure;
+            } finally {
+                work.close();
+            }
         }
         if (channelKey == null) {
             throw new IllegalStateException(

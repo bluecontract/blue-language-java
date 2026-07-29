@@ -8,66 +8,108 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class WeightedLruCacheTest {
 
     @Test
-    void evictsLeastRecentlyUsedEntriesByWeightAndCount() {
+    void shouldEvictLeastRecentlyUsedEntriesByWeightAndCount() {
+        // given
         WeightedLruCache<String, String> cache = new WeightedLruCache<>(2, 6L, 6L,
                 value -> value.length());
         cache.put("a", "aa");
-        cache.put("b", "bb");
-        assertEquals("aa", cache.get("a"));
-        cache.put("c", "cccc");
 
-        assertEquals("aa", cache.get("a"));
-        assertNull(cache.get("b"));
-        assertEquals("cccc", cache.get("c"));
-        assertEquals(1L, cache.evictions());
-        assertEquals(6L, cache.currentWeight());
+        // when
+        cache.put("b", "bb");
+        String touchedA = cache.get("a");
+        cache.put("c", "cccc");
+        String retainedA = cache.get("a");
+        String evictedB = cache.get("b");
+        String retainedC = cache.get("c");
+        long evictions = cache.evictions();
+        long weight = cache.currentWeight();
+
+        // then
+        assertEquals("aa", touchedA);
+        assertEquals("aa", retainedA);
+        assertNull(evictedB);
+        assertEquals("cccc", retainedC);
+        assertEquals(1L, evictions);
+        assertEquals(6L, weight);
     }
 
     @Test
-    void rejectsOversizedEntriesWithoutDroppingAnExistingValue() {
+    void shouldRejectOversizedEntriesWithoutDroppingAnExistingValue() {
+        // given
         WeightedLruCache<String, String> cache = new WeightedLruCache<>(2, 8L, 4L,
                 value -> value.length());
         cache.put("a", "old");
-        assertEquals("old", cache.put("a", "oversized"));
-        assertEquals("old", cache.get("a"));
-        assertEquals(1L, cache.oversizedRejections());
+
+        // when
+        String rejectedReplacement = cache.put("a", "oversized");
+        String retained = cache.get("a");
+        long rejections = cache.oversizedRejections();
+
+        // then
+        assertEquals("old", rejectedReplacement);
+        assertEquals("old", retained);
+        assertEquals(1L, rejections);
     }
 
     @Test
-    void zeroBoundsDisableRetentionWithoutThrowing() {
+    void shouldZeroBoundsDisableRetentionWithoutThrowing() {
+        // given
         WeightedLruCache<String, String> cache = new WeightedLruCache<>(0, 0L, 0L,
                 value -> value.length());
 
-        assertNull(cache.put("a", "value"));
+        // when
+        String rejected = cache.put("a", "value");
+        String missing = cache.get("a");
+        int size = cache.size();
+        long weight = cache.currentWeight();
+        long rejections = cache.oversizedRejections();
 
-        assertNull(cache.get("a"));
-        assertEquals(0, cache.size());
-        assertEquals(0L, cache.currentWeight());
-        assertEquals(1L, cache.oversizedRejections());
+        // then
+        assertNull(rejected);
+        assertNull(missing);
+        assertEquals(0, size);
+        assertEquals(0L, weight);
+        assertEquals(1L, rejections);
     }
 
     @Test
-    void clearReportsReleasedWeight() {
+    void shouldClearReportsReleasedWeight() {
+        // given
         WeightedLruCache<String, String> cache = new WeightedLruCache<>(4, 100L, 100L,
                 value -> value.length());
         cache.put("a", "abc");
         cache.put("b", "defg");
-        assertEquals(7L, cache.clear());
-        assertEquals(0L, cache.currentWeight());
-        assertEquals(0, cache.size());
+
+        // when
+        long releasedWeight = cache.clear();
+        long remainingWeight = cache.currentWeight();
+        int remainingEntries = cache.size();
+
+        // then
+        assertEquals(7L, releasedWeight);
+        assertEquals(0L, remainingWeight);
+        assertEquals(0, remainingEntries);
     }
 
     @Test
-    void reportsLookupHitsAndMissesWithoutCountingPeeks() {
+    void shouldReportLookupHitsAndMissesWithoutCountingPeeks() {
+        // given
         WeightedLruCache<String, String> cache = new WeightedLruCache<>(4, 100L, 100L,
                 value -> value.length());
         cache.put("a", "abc");
 
-        assertEquals("abc", cache.get("a"));
-        assertNull(cache.get("missing"));
-        assertEquals("abc", cache.peek("a"));
+        // when
+        String hit = cache.get("a");
+        String miss = cache.get("missing");
+        String peek = cache.peek("a");
+        long hits = cache.hits();
+        long misses = cache.misses();
 
-        assertEquals(1L, cache.hits());
-        assertEquals(1L, cache.misses());
+        // then
+        assertEquals("abc", hit);
+        assertNull(miss);
+        assertEquals("abc", peek);
+        assertEquals(1L, hits);
+        assertEquals(1L, misses);
     }
 }

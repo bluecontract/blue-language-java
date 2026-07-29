@@ -1,5 +1,3 @@
-specVersion: '1.0'
-vectors:
 - id: B1
   fixtures:
   - B_empty_list
@@ -97,6 +95,77 @@ vectors:
 - id: B31
   fixtures:
   - B_direct_child_reference_equivalence
+- id: F1
+  fixtures:
+  - F_all_language_vectors_pass
+- id: F2
+  fixtures:
+  - F_expand_preserves_node_blueid
+  - F_expand_nested_reference_preserves_node_blueid
+- id: F3
+  fixtures:
+  - F_collapse_preserves_node_blueid
+  - F_collapse_does_not_produce_mixed_blueid
+- id: F4
+  fixtures:
+  - F_root_reference_demanded_path_only
+- id: F4a
+  fixtures:
+  - F_root_reference_demanded_path_only
+- id: F4b
+  fixtures:
+  - F_inline_reference_partial_equivalence
+- id: F5
+  fixtures:
+  - F_expand_nested_reference_preserves_node_blueid
+- id: F6
+  fixtures:
+  - F_provider_missing_content_fails
+  - F_expand_missing_nested_content_fails
+- id: F7
+  fixtures:
+  - F_provider_wrong_blueid_rejected
+  - F_expand_wrong_nested_provider_content_fails
+- id: F8
+  fixtures:
+  - F_source_provider_requires_declared_mode
+- id: F9
+  fixtures:
+  - F_cyclic_member_requires_set_context
+  - C_circular_reference_set_ids
+- id: F10
+  fixtures:
+  - F_direct_node_verification_without_descendants
+- id: F11
+  fixtures:
+  - F_direct_list_verification_without_elements
+- id: F11a
+  fixtures:
+  - F_list_prefix_anchor_not_direct_manifest
+- id: F12
+  fixtures:
+  - F_selected_expand_collapse_round_trip
+- id: F13
+  fixtures:
+  - F_root_reference_demanded_path_only
+- id: F14
+  fixtures:
+  - F_prefetch_does_not_change_semantic_result
+- id: F15
+  fixtures:
+  - F_omitted_direct_key_cannot_prove_absence
+- id: F16
+  fixtures:
+  - F_exact_graph_fragments_roundtrip
+- id: F17
+  fixtures:
+  - F_exact_graph_fragments_canonical_order
+- id: F18
+  fixtures:
+  - F_opaque_cyclic_member_fragment
+- id: F19
+  fixtures:
+  - F_opaque_cyclic_member_fragment
 - id: R1
   fixtures:
   - R_blue_imports
@@ -244,62 +313,3 @@ vectors:
   fixtures:
   - R_reference_backed_schema
   - R_reference_backed_contracts
-- id: F1
-  fixtures:
-  - F_all_language_vectors_pass
-- id: F2
-  fixtures:
-  - F_expand_preserves_node_blueid
-  - F_expand_nested_reference_preserves_node_blueid
-- id: F3
-  fixtures:
-  - F_collapse_preserves_node_blueid
-  - F_collapse_does_not_produce_mixed_blueid
-- id: F4
-  fixtures:
-  - F_root_reference_demanded_path_only
-- id: F4a
-  fixtures:
-  - F_root_reference_demanded_path_only
-- id: F4b
-  fixtures:
-  - F_inline_reference_partial_equivalence
-- id: F5
-  fixtures:
-  - F_expand_nested_reference_preserves_node_blueid
-- id: F6
-  fixtures:
-  - F_provider_missing_content_fails
-  - F_expand_missing_nested_content_fails
-- id: F7
-  fixtures:
-  - F_provider_wrong_blueid_rejected
-  - F_expand_wrong_nested_provider_content_fails
-- id: F8
-  fixtures:
-  - F_source_provider_requires_declared_mode
-- id: F9
-  fixtures:
-  - F_cyclic_member_requires_set_context
-  - C_circular_reference_set_ids
-- id: F10
-  fixtures:
-  - F_direct_node_verification_without_descendants
-- id: F11
-  fixtures:
-  - F_direct_list_verification_without_elements
-- id: F11a
-  fixtures:
-  - F_list_prefix_anchor_not_direct_manifest
-- id: F12
-  fixtures:
-  - F_selected_expand_collapse_round_trip
-- id: F13
-  fixtures:
-  - F_root_reference_demanded_path_only
-- id: F14
-  fixtures:
-  - F_prefetch_does_not_change_semantic_result
-- id: F15
-  fixtures:
-  - F_omitted_direct_key_cannot_prove_absence

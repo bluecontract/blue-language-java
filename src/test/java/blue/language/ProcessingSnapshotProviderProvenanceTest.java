@@ -27,60 +27,69 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
 
 class ProcessingSnapshotProviderProvenanceTest {
 
     @Test
-    void directResolutionAcceptsExplicitlyVerifiedExactType() {
+    void shouldAcceptExplicitlyVerifiedExactTypeDuringDirectResolution() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
 
+        // when
         Node resolved = fixture.blue.resolve(fixture.document());
 
+        // then
         assertEquals("verified", resolved.getAsText("/fixed"));
         assertEquals(1, fixture.fetches.get());
     }
 
     @Test
-    void initializationSnapshotAcceptsExplicitlyVerifiedExactType() {
+    void shouldAcceptExplicitlyVerifiedExactTypeInInitializationSnapshot() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         Node directlyResolved = fixture.blue.resolve(fixture.document());
 
+        // when
         DocumentProcessingResult result = fixture.blue.initializeDocument(fixture.document());
+        ResolvedSnapshot resultSnapshot = snapshot(fixture.blue, result);
 
+        // then
         assertEquals("verified", directlyResolved.getAsText("/fixed"));
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
-        ResolvedSnapshot resultSnapshot =
-                snapshot(fixture.blue, result);
         assertNotNull(resultSnapshot);
         assertEquals("verified", resultSnapshot.resolvedRoot().getAsText("/fixed"));
         assertTrue(fixture.fetches.get() > 0);
     }
 
     @Test
-    void coldNodeProcessAcceptsExplicitlyVerifiedExactType() {
+    void shouldAcceptExplicitlyVerifiedExactTypeDuringColdNodeProcessing() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
 
+        // when
         DocumentProcessingResult result = fixture.blue.processDocument(
                 fixture.document(), new Node().properties("kind", new Node().value("process")));
+        ResolvedSnapshot resultSnapshot = snapshot(fixture.blue, result);
 
+        // then
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
-        ResolvedSnapshot resultSnapshot =
-                snapshot(fixture.blue, result);
         assertNotNull(resultSnapshot);
         assertEquals("verified", resultSnapshot.resolvedRoot().getAsText("/fixed"));
     }
 
     @Test
-    void contractRecognitionUsesWinningVerifiedLeafProvenance() {
+    void shouldUseWinningVerifiedLeafProvenanceForContractRecognition() {
+        // given
         Node baseType = new Node().name("Generic Marker");
         String baseBlueId = new Blue().calculateBlueId(baseType);
         Node exactDerivedType = new Node().name("Exact Derived Marker")
@@ -91,37 +100,47 @@ class ProcessingSnapshotProviderProvenanceTest {
                 : null;
         Blue blue = new Blue(trustedLeaf);
         blue.registerExternalContractType(baseBlueId, baseType, new GenericMarkerProcessor());
+
+        // when
         blue.getDocumentProcessor().getContractTypeResolver()
                 .register(requestedBlueId, GenericMarker.class);
-        assertTrue(blue.getDocumentProcessor().getContractRegistry()
-                .processors().containsKey(baseBlueId));
-        assertFalse(blue.getDocumentProcessor().getContractRegistry()
-                .processors().containsKey(requestedBlueId));
         Node document = new Node().contracts(new Node().properties(
                 "derived", new Node().type(reference(requestedBlueId))));
-
         DocumentProcessingResult result = blue.initializeDocument(document);
-
-        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        boolean baseProcessorRegistered = blue.getDocumentProcessor().getContractRegistry()
+                .processors().containsKey(baseBlueId);
+        boolean derivedProcessorRegistered = blue.getDocumentProcessor().getContractRegistry()
+                .processors().containsKey(requestedBlueId);
         ResolvedSnapshot resultSnapshot = snapshot(blue, result);
+
+        // then
+        assertTrue(baseProcessorRegistered);
+        assertFalse(derivedProcessorRegistered);
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertNotNull(resultSnapshot);
         assertNotNull(resultSnapshot.resolvedRoot().getAsNode("/contracts/derived"));
     }
 
     @Test
-    void plainMismatchStillFailsDuringInitialization() {
+    void shouldRejectPlainMismatchDuringInitialization() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         Blue plainBlue = new Blue(fixture::fetchMismatch);
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> plainBlue.initializeDocument(fixture.document()));
+        int referenceCacheSize = plainBlue.resolvedReferenceCacheSize();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertProviderFailure(failure, BlueLanguageErrorCategory.ProviderBlueIdMismatch);
-        assertEquals(0, plainBlue.resolvedReferenceCacheSize());
+        assertEquals(0, referenceCacheSize);
     }
 
     @Test
-    void trustedMissDoesNotTrustPlainSnapshotFallback() {
+    void shouldNotTrustPlainSnapshotFallbackAfterTrustedMiss() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         AtomicInteger trustedFetches = new AtomicInteger();
         AtomicInteger plainFetches = new AtomicInteger();
@@ -136,17 +155,24 @@ class ProcessingSnapshotProviderProvenanceTest {
         Blue blue = new Blue(new SequentialNodeProvider(
                 new VerifyingNodeProvider(trustedMiss), plainMismatch));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.initializeDocument(fixture.document()));
+        int trustedFetchCount = trustedFetches.get();
+        int plainFetchCount = plainFetches.get();
+        int referenceCacheSize = blue.resolvedReferenceCacheSize();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertProviderFailure(failure, BlueLanguageErrorCategory.ProviderBlueIdMismatch);
-        assertEquals(1, trustedFetches.get());
-        assertEquals(1, plainFetches.get());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
+        assertEquals(1, trustedFetchCount);
+        assertEquals(1, plainFetchCount);
+        assertEquals(0, referenceCacheSize);
     }
 
     @Test
-    void plainSnapshotWinnerFailsBeforeTrustedFallback() {
+    void shouldFailPlainSnapshotWinnerBeforeTrustedFallback() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         AtomicInteger plainFetches = new AtomicInteger();
         AtomicInteger trustedFetches = new AtomicInteger();
@@ -161,16 +187,22 @@ class ProcessingSnapshotProviderProvenanceTest {
         Blue blue = new Blue(new SequentialNodeProvider(
                 plainMismatch, trustedFallback));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.initializeDocument(fixture.document()));
+        int plainFetchCount = plainFetches.get();
+        int trustedFetchCount = trustedFetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertProviderFailure(failure, BlueLanguageErrorCategory.ProviderBlueIdMismatch);
-        assertEquals(1, plainFetches.get());
-        assertEquals(0, trustedFetches.get());
+        assertEquals(1, plainFetchCount);
+        assertEquals(0, trustedFetchCount);
     }
 
     @Test
-    void explicitUnavailableSnapshotResultDoesNotConsultFallback() {
+    void shouldNotConsultFallbackAfterExplicitUnavailableSnapshotResult() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         AtomicInteger emptyFetches = new AtomicInteger();
         AtomicInteger fallbackFetches = new AtomicInteger();
@@ -197,17 +229,24 @@ class ProcessingSnapshotProviderProvenanceTest {
                 trustedEmpty,
                 trustedFallback));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.initializeDocument(fixture.document()));
+        int emptyFetchCount = emptyFetches.get();
+        int fallbackFetchCount = fallbackFetches.get();
+        int referenceCacheSize = blue.resolvedReferenceCacheSize();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertProviderFailure(failure, BlueLanguageErrorCategory.ProviderUnavailable);
-        assertEquals(1, emptyFetches.get());
-        assertEquals(0, fallbackFetches.get());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
+        assertEquals(1, emptyFetchCount);
+        assertEquals(0, fallbackFetchCount);
+        assertEquals(0, referenceCacheSize);
     }
 
     @Test
-    void nestedSequentialSnapshotLookupRetainsWinningLeafPolicy() {
+    void shouldRetainWinningVerifiedLeafPolicyInNestedSequentialLookup() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         NodeProvider topLevelTrustedMiss = blueId -> null;
         NodeProvider trustedNested = new SequentialNodeProvider(
@@ -216,12 +255,20 @@ class ProcessingSnapshotProviderProvenanceTest {
                         blueId, fixture.requestedType));
         Blue trustedBlue = new Blue(new SequentialNodeProvider(topLevelTrustedMiss, trustedNested));
 
+        // when
         DocumentProcessingResult trustedResult = trustedBlue.initializeDocument(fixture.document());
+        ResolvedSnapshot trustedSnapshot = snapshot(trustedBlue, trustedResult);
 
+        // then
         assertFalse(isCapabilityFailure(trustedResult), diagnosticMessage(trustedResult));
-        assertEquals("verified", snapshot(trustedBlue, trustedResult)
-                .resolvedRoot().getAsText("/fixed"));
+        assertEquals("verified", trustedSnapshot.resolvedRoot().getAsText("/fixed"));
+    }
 
+    @Test
+    void shouldRejectPlainWinningLeafBeforeNestedFallback() {
+        // given
+        TrustedTypeFixture fixture = new TrustedTypeFixture();
+        NodeProvider topLevelTrustedMiss = blueId -> null;
         AtomicInteger trustedFallbackFetches = new AtomicInteger();
         NodeProvider plainNested = new SequentialNodeProvider(
                 blueId -> fixture.response(blueId, fixture.mismatchedType),
@@ -231,31 +278,48 @@ class ProcessingSnapshotProviderProvenanceTest {
                 });
         Blue plainBlue = new Blue(new SequentialNodeProvider(topLevelTrustedMiss, plainNested));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> plainBlue.initializeDocument(fixture.document()));
+        int trustedFallbackFetchCount = trustedFallbackFetches.get();
+
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertProviderFailure(failure, BlueLanguageErrorCategory.ProviderBlueIdMismatch);
-        assertEquals(0, trustedFallbackFetches.get());
+        assertEquals(0, trustedFallbackFetchCount);
     }
 
     @Test
-    void nonBlueIdFilterDoesNotReachConfiguredProvider() {
+    void shouldNotReachConfiguredProviderForNonBlueIdFilter() {
+        // given
         AtomicInteger fetches = new AtomicInteger();
         PotentialBlueIdNodeProvider provider = new PotentialBlueIdNodeProvider(blueId -> {
             fetches.incrementAndGet();
             return Collections.singletonList(new Node().value("unexpected"));
         });
 
-        assertNull(provider.fetchByBlueId("symbolic-type-name"));
-        assertFalse(provider.acceptsBlueId("symbolic-type-name"));
-        assertEquals(0, fetches.get());
+        // when
+        List<Node> result = provider.fetchByBlueId("symbolic-type-name");
+        boolean accepted = provider.acceptsBlueId("symbolic-type-name");
+        int fetchCount = fetches.get();
+
+        // then
+        assertNull(result);
+        assertFalse(accepted);
+        assertEquals(0, fetchCount);
     }
 
     @Test
-    void cyclicAwareConfiguredProviderRemainsVisibleThroughFilter() {
+    void shouldKeepCyclicAwareConfiguredProviderVisibleThroughFilter() {
+        // given
         Node cyclicSet = UncheckedObjectMapper.YAML_MAPPER.readValue(
                 "- name: Cyclic Member Type\n"
                         + "  fixed: cyclic\n"
-                        + "- name: Cyclic Companion Type\n",
+                        + "  peer:\n"
+                        + "    blueId: this#1\n"
+                        + "- name: Cyclic Companion Type\n"
+                        + "  peer:\n"
+                        + "    blueId: this#0\n",
                 Node.class);
         BasicNodeProvider provider = new BasicNodeProvider(cyclicSet);
         String memberBlueId = provider.getBlueIdByName("Cyclic Member Type");
@@ -263,9 +327,11 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         Node direct = new Blue(provider).resolve(document.clone());
         Blue cyclicBlue = new Blue(provider);
+        // when
         DocumentProcessingResult initialized =
                 cyclicBlue.initializeDocument(document);
 
+        // then
         assertEquals("cyclic", direct.getAsText("/fixed"));
         assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
         assertEquals("cyclic", snapshot(cyclicBlue, initialized)
@@ -274,8 +340,9 @@ class ProcessingSnapshotProviderProvenanceTest {
 
     @ParameterizedTest(name = "explicit verifying wrapper: {0}")
     @ValueSource(booleans = {false, true})
-    void cyclicTypedNodeSurvivesClonedCanonicalSnapshotRebuild(
+    void shouldPreserveCyclicTypedNodeAcrossClonedCanonicalSnapshotRebuild(
             boolean explicitlyWrapped) {
+        // given
         BasicNodeProvider cyclicProvider = new BasicNodeProvider(UncheckedObjectMapper.YAML_MAPPER.readValue(
                 "- name: Cyclic Checkpoint Event\n"
                         + "  fixed: event\n"
@@ -297,9 +364,11 @@ class ProcessingSnapshotProviderProvenanceTest {
         ResolvedSnapshot first = blue.resolveToSnapshot(document);
         ResolvedSnapshot rebuilt = blue.resolveToSnapshot(
                 first.canonicalRoot().clone());
+        // when
         ResolvedSnapshot loaded = blue.loadSnapshot(
                 rebuilt.canonicalRoot().clone());
 
+        // then
         assertEquals("event",
                 first.resolvedRoot().getAsText("/stored/fixed"));
         assertEquals(1,
@@ -309,71 +378,107 @@ class ProcessingSnapshotProviderProvenanceTest {
     }
 
     @Test
-    void processorProvidersPrecedeConfiguredFallback() {
+    void shouldPreferBootstrapProcessorProviderToConfiguredFallback() {
+        // given
         AtomicInteger bootstrapFallbackFetches = new AtomicInteger();
         Blue bootstrapBlue = new Blue(countingMiss(bootstrapFallbackFetches));
+
+        // when
         DocumentProcessingResult bootstrap = bootstrapBlue.initializeDocument(
                 new Node().type(reference(DICTIONARY_TYPE_BLUE_ID)).contracts(new Node()));
-        assertFalse(isCapabilityFailure(bootstrap), diagnosticMessage(bootstrap));
-        assertEquals(0, bootstrapFallbackFetches.get());
+        int fallbackFetchCount = bootstrapFallbackFetches.get();
 
+        // then
+        assertFalse(isCapabilityFailure(bootstrap), diagnosticMessage(bootstrap));
+        assertEquals(0, fallbackFetchCount);
+    }
+
+    @Test
+    void shouldPreferRuntimeProcessorProviderToConfiguredFallback() {
+        // given
         AtomicInteger runtimeFallbackFetches = new AtomicInteger();
         Blue runtimeBlue = new Blue(countingMiss(runtimeFallbackFetches));
-        DocumentProcessingResult runtime = runtimeBlue.initializeDocument(new Node());
-        assertFalse(isCapabilityFailure(runtime), diagnosticMessage(runtime));
-        assertNotNull(snapshot(runtimeBlue, runtime)
-                .resolvedRoot().getAsNode("/contracts/initialized"));
-        assertEquals(0, runtimeFallbackFetches.get());
 
+        // when
+        DocumentProcessingResult runtime = runtimeBlue.initializeDocument(new Node());
+        ResolvedSnapshot runtimeSnapshot = snapshot(runtimeBlue, runtime);
+        int fallbackFetchCount = runtimeFallbackFetches.get();
+        String initializedMarkerBlueId = BlueRuntimeTypeRegistry.getDefault().blueId(
+                RuntimeTypeKey.PROCESSING_INITIALIZED_MARKER);
+
+        // then
+        assertFalse(isCapabilityFailure(runtime), diagnosticMessage(runtime));
+        assertNotNull(runtimeSnapshot.resolvedRoot().getAsNode("/contracts/initialized"));
+        assertEquals(0, fallbackFetchCount);
+        assertTrue(initializedMarkerBlueId.length() > 0);
+    }
+
+    @Test
+    void shouldPreferRegisteredExtensionProviderToConfiguredFallback() {
+        // given
         AtomicInteger extensionFallbackFetches = new AtomicInteger();
         Blue extensionBlue = new Blue(countingMiss(extensionFallbackFetches));
         Node extensionType = new Node().name("Registered Extension Marker");
         String extensionBlueId = extensionBlue.calculateBlueId(extensionType);
+
+        // when
         extensionBlue.registerExternalContractType(
                 extensionBlueId, extensionType, new GenericMarkerProcessor());
         DocumentProcessingResult extension = extensionBlue.initializeDocument(
                 new Node().contracts(new Node().properties(
                         "extension", new Node().type(reference(extensionBlueId)))));
-        assertFalse(isCapabilityFailure(extension), diagnosticMessage(extension));
-        assertEquals(0, extensionFallbackFetches.get());
+        int fallbackFetchCount = extensionFallbackFetches.get();
 
-        assertTrue(BlueRuntimeTypeRegistry.getDefault().blueId(
-                RuntimeTypeKey.PROCESSING_INITIALIZED_MARKER).length() > 0);
+        // then
+        assertFalse(isCapabilityFailure(extension), diagnosticMessage(extension));
+        assertEquals(0, fallbackFetchCount);
     }
 
     @Test
-    void acceptedBlueIdDelegatesExactlyOnceWithoutTransformingResult() {
+    void shouldDelegateAcceptedBlueIdExactlyOnceWithoutTransformingResult() {
+        // given
         String blueId = new Blue().calculateBlueId(new Node().name("Accepted Provider Subject"));
         List<Node> sentinel = Collections.singletonList(new Node().value("sentinel"));
         AtomicInteger fetches = new AtomicInteger();
+        AtomicReference<String> requestedBlueId = new AtomicReference<>();
         PotentialBlueIdNodeProvider provider = new PotentialBlueIdNodeProvider(requested -> {
             fetches.incrementAndGet();
-            assertEquals(blueId, requested);
+            requestedBlueId.set(requested);
             return sentinel;
         });
 
+        // when
         List<Node> result = provider.fetchByBlueId(blueId);
+        boolean accepted = provider.acceptsBlueId(blueId);
+        int fetchCount = fetches.get();
+        String delegatedBlueId = requestedBlueId.get();
 
-        assertTrue(provider.acceptsBlueId(blueId));
+        // then
+        assertEquals(blueId, delegatedBlueId);
+        assertTrue(accepted);
         assertSame(sentinel, result);
-        assertEquals(1, fetches.get());
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void explicitlyVerifyingSnapshotPopulatesTheVerifiedReferenceCache() {
+    void shouldPopulateVerifiedReferenceCacheFromExplicitlyVerifiedSnapshot() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
 
+        // when
         DocumentProcessingResult result = fixture.blue.initializeDocument(fixture.document());
+        int cacheSize = fixture.blue.resolvedReferenceCacheSize();
+        ResolvedSnapshot resultSnapshot = snapshot(fixture.blue, result);
 
-        assertTrue(fixture.blue.resolvedReferenceCacheSize() > 0);
-        ResolvedSnapshot resultSnapshot =
-                snapshot(fixture.blue, result);
+        // then
+        assertTrue(cacheSize > 0);
         assertNotNull(resultSnapshot);
         assertEquals("verified", resultSnapshot.resolvedRoot().getAsText("/fixed"));
     }
 
     @Test
-    void directlyVerifiedProcessingSnapshotStillWarmsSharedCache() {
+    void shouldWarmSharedCacheFromDirectlyVerifiedProcessingSnapshot() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         AtomicInteger fetches = new AtomicInteger();
         NodeProvider exactProvider = blueId -> {
@@ -385,8 +490,10 @@ class ProcessingSnapshotProviderProvenanceTest {
         DocumentProcessingResult first = blue.initializeDocument(fixture.document());
         int cacheSize = blue.resolvedReferenceCacheSize();
         fetches.set(0);
+        // when
         DocumentProcessingResult second = blue.initializeDocument(fixture.document());
 
+        // then
         assertFalse(isCapabilityFailure(first), diagnosticMessage(first));
         assertFalse(isCapabilityFailure(second), diagnosticMessage(second));
         assertTrue(cacheSize >= 1);
@@ -397,7 +504,8 @@ class ProcessingSnapshotProviderProvenanceTest {
     }
 
     @Test
-    void providerReplacementAfterInitializationClearsOldSnapshotPolicy() {
+    void shouldClearOldSnapshotPolicyAfterProviderReplacement() {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
 
         DocumentProcessingResult trusted = fixture.blue.initializeDocument(fixture.document());
@@ -408,8 +516,10 @@ class ProcessingSnapshotProviderProvenanceTest {
             return fixture.response(blueId, fixture.requestedType);
         });
 
+        // when
         DocumentProcessingResult verified = fixture.blue.initializeDocument(fixture.document());
 
+        // then
         assertEquals("verified", snapshot(fixture.blue, trusted)
                 .resolvedRoot().getAsText("/fixed"));
         assertEquals("verified", snapshot(fixture.blue, verified)
@@ -420,7 +530,8 @@ class ProcessingSnapshotProviderProvenanceTest {
     }
 
     @Test
-    void concurrentDirectAndSnapshotLookupsDoNotTransferTrust() throws Exception {
+    void shouldNotTransferTrustBetweenConcurrentDirectAndSnapshotLookups() throws Exception {
+        // given
         TrustedTypeFixture fixture = new TrustedTypeFixture();
         CyclicBarrier lookupBarrier = new CyclicBarrier(2);
         AtomicInteger synchronizedLookups = new AtomicInteger();
@@ -436,26 +547,34 @@ class ProcessingSnapshotProviderProvenanceTest {
         Blue trustedBlue = new Blue(sharedProvider);
         Blue plainBlue = new Blue(sharedProvider);
         ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        // when
+        String trustedFixed;
+        String plainFixed;
         try {
             Future<DocumentProcessingResult> trusted = executor.submit(
                     () -> trustedBlue.initializeDocument(fixture.document()));
             Future<DocumentProcessingResult> plain = executor.submit(
                     () -> plainBlue.initializeDocument(fixture.document()));
-
-            assertEquals("verified", snapshot(
+            trustedFixed = snapshot(
                     trustedBlue,
                     trusted.get(10, TimeUnit.SECONDS))
-                    .resolvedRoot().getAsText("/fixed"));
-            assertEquals("verified", snapshot(
+                    .resolvedRoot().getAsText("/fixed");
+            plainFixed = snapshot(
                     plainBlue,
                     plain.get(10, TimeUnit.SECONDS))
-                    .resolvedRoot().getAsText("/fixed"));
+                    .resolvedRoot().getAsText("/fixed");
         } finally {
             executor.shutdownNow();
         }
+        int trustedCacheSize = trustedBlue.resolvedReferenceCacheSize();
+        int plainCacheSize = plainBlue.resolvedReferenceCacheSize();
 
-        assertTrue(trustedBlue.resolvedReferenceCacheSize() > 0);
-        assertTrue(plainBlue.resolvedReferenceCacheSize() > 0);
+        // then
+        assertEquals("verified", trustedFixed);
+        assertEquals("verified", plainFixed);
+        assertTrue(trustedCacheSize > 0);
+        assertTrue(plainCacheSize > 0);
     }
 
     private static NodeProvider countingMiss(AtomicInteger fetches) {

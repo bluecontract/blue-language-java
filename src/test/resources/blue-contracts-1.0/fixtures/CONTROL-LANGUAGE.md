@@ -145,3 +145,20 @@ A variant name alone has no semantics; every variant object MUST declare the tra
 ## 8. `gas-micro`
 
 A gas microfixture does not execute `PROCESS` unless it explicitly provides Root/event/runtime controls. Its input describes one counter or formula. Its expected trace and total are exact. Unknown counter/formula inputs fail closed.
+
+## 9. Scripted External Channel dependency and routing fields
+
+The conformance-only `Scripted External Channel` registry type implements the generic same-scope Channel dependency and logical-delivery laws from Contracts §3.3.
+
+Its Blue fields have these exact meanings:
+
+| Field | Semantics |
+|---|---|
+| `dependencyMode: none` or absent | Declares no peer Channel dependency. Event-time lookup of another key is forbidden. |
+| `dependencyMode: exact` | Declares exactly `dependentChannelKey`; event-time lookup is permitted only for that raw same-scope key. |
+| `dependencyMode: catalog` | Declares the bounded complete same-scope Channel header catalog. Event-time exact-key lookup is allowed against that frozen catalog. |
+| `handlerChannelKey` | Requested same-scope Channel used for Handler binding after the source accepts. It does not become an external source and receives no source checkpoint. |
+| `logicalDeliveryKey` | Logical grouping key. When absent, the raw source channel key is used. |
+| `fallbackToSourceOnAbsentOrNonChannel` | If true and lookup yields `ABSENT` or `NON_CHANNEL`, the raw source key remains the Handler Channel. If false, the fixture source rejects the delivery. Incomplete or undeclared evidence never falls back. |
+
+The scripted implementation derives payload, checkpoint domain, checkpoint subject, target key, and logical-delivery key from immutable header fields and the exact event. It does not inspect mutable business fields. Several fresh sources in one `(scopePath, logicalDeliveryKey)` group execute Handlers once only when their exact payload and target identities agree. Each fresh source retains its own checkpoint authority.

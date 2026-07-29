@@ -19,7 +19,12 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Direct, domain-bound checkpoint state for one atomic invocation.
+ * Owns domain-bound checkpoint comparison and persistence for one invocation.
+ *
+ * <p>Checkpoint state is processor-managed and therefore uses direct writes
+ * that emit no application Document Update. Subject identity is verified
+ * before the metered write, and the bundle mirror is updated only with the
+ * same exact subject.</p>
  */
 final class CheckpointManager {
 
@@ -53,7 +58,9 @@ final class CheckpointManager {
         if (marker == null) {
             Node markerNode = new Node()
                     .type(new Node().blueId(RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT))
-                    .properties("entries", new Node().properties(new LinkedHashMap<>()));
+                    .properties(
+                            ProcessorContractConstants.KEY_ENTRIES,
+                            new Node().properties(new LinkedHashMap<>()));
             runtime.chargeProcessorMarkerWritten("checkpoint-marker-create");
             runtime.directWrite(pointer, markerNode);
             runtime.recordTrace(ProcessingTraceRecord.Kind.MARKER_WRITE,
@@ -121,9 +128,15 @@ final class CheckpointManager {
                           String subjectBlueId) {
         runtime.chargeCheckpointCompared();
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("domain", record != null ? record.checkpointDomainBlueId : null);
-        details.put("subject", subjectBlueId);
-        details.put("domainMatches", record != null && record.domainMatches);
+        details.put(
+                ProcessingTraceConstants.FIELD_DOMAIN,
+                record != null ? record.checkpointDomainBlueId : null);
+        details.put(
+                ProcessingTraceConstants.FIELD_SUBJECT,
+                subjectBlueId);
+        details.put(
+                ProcessingTraceConstants.FIELD_DOMAIN_MATCHES,
+                record != null && record.domainMatches);
         runtime.recordTrace(ProcessingTraceRecord.Kind.CHECKPOINT_COMPARE,
                 scopePath,
                 record != null ? record.channelKey : null,
@@ -169,9 +182,11 @@ final class CheckpointManager {
                 ? active.checkpointDomainBlueId
                 : subjectBlueId;
         Node entryNode = new Node()
-                .properties("domain",
+                .properties(
+                        ProcessorContractConstants.KEY_DOMAIN,
                         new Node().blueId(domainBlueId))
-                .properties("subject",
+                .properties(
+                        ProcessorContractConstants.KEY_SUBJECT,
                         storedSubject.clone());
         runtime.chargeCheckpointUpdate();
         runtime.directWrite(pointer, entryNode);
@@ -189,8 +204,12 @@ final class CheckpointManager {
                 subjectBlueId);
 
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("domain", domainBlueId);
-        details.put("subject", subjectBlueId);
+        details.put(
+                ProcessingTraceConstants.FIELD_DOMAIN,
+                domainBlueId);
+        details.put(
+                ProcessingTraceConstants.FIELD_SUBJECT,
+                subjectBlueId);
         runtime.recordTrace(ProcessingTraceRecord.Kind.CHECKPOINT_WRITE,
                 scopePath,
                 active.channelKey,
@@ -234,12 +253,18 @@ final class CheckpointManager {
             runtime.directWrite(pointer, null);
             checkpoint.removeEntry(rawKey);
             Map<String, Object> details = new LinkedHashMap<>();
-            details.put("action", "cleanup");
+            details.put(
+                    ProcessingTraceConstants.FIELD_ACTION,
+                    ProcessingTraceConstants.ACTION_CLEANUP);
             if (entry != null) {
-                details.put("oldDomain", entry.domainBlueId());
+                details.put(
+                        ProcessingTraceConstants.FIELD_OLD_DOMAIN,
+                        entry.domainBlueId());
             }
             if (activeDomain != null) {
-                details.put("activeDomain", activeDomain);
+                details.put(
+                        ProcessingTraceConstants.FIELD_ACTIVE_DOMAIN,
+                        activeDomain);
             }
             runtime.recordTrace(
                     ProcessingTraceRecord.Kind.CHECKPOINT_WRITE,

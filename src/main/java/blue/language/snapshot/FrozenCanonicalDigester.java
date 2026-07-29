@@ -18,11 +18,26 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_ELEMENT_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_VALUE;
 import static blue.language.utils.Properties.*;
+import static blue.language.utils.SchemaPropertyConstants.*;
 
 /**
  * Exact frozen-native BlueId calculator. It preserves the existing recursive
  * BlueId protocol while streaming every JCS hash input into SHA-256.
+ *
+ * <p><strong>Parity invariant:</strong> every directly supported node must
+ * produce exactly the same canonical JSON value, field ordering, list-chain
+ * construction, and digest as
+ * {@link FrozenNodeToBlueIdInput} followed by the generic
+ * {@link BlueIdCalculator}. Changes to either canonical projection must be
+ * mirrored here. When parity cannot be proved for a shape, this implementation
+ * must reject the direct path and use the generic projection rather than
+ * introduce a second identity protocol.</p>
  */
 final class FrozenCanonicalDigester {
 
@@ -231,21 +246,21 @@ final class FrozenCanonicalDigester {
 
     private static String calculateSchemaBlueId(Schema schema, Observer observer) {
         List<HashField> fields = new ArrayList<>();
-        addSchemaScalar(fields, "required",
+        addSchemaScalar(fields, KEY_REQUIRED,
                 schema.getRequired() == null ? null : schema.getRequiredValue(), observer);
-        addSchemaScalar(fields, "minLength", schemaValue(schema.getMinLength()), observer);
-        addSchemaScalar(fields, "maxLength", schemaValue(schema.getMaxLength()), observer);
-        addSchemaNumeric(fields, "minimum", schema.getMinimum(), observer);
-        addSchemaNumeric(fields, "maximum", schema.getMaximum(), observer);
-        addSchemaNumeric(fields, "exclusiveMinimum", schema.getExclusiveMinimum(), observer);
-        addSchemaNumeric(fields, "exclusiveMaximum", schema.getExclusiveMaximum(), observer);
-        addSchemaNumeric(fields, "multipleOf", schema.getMultipleOf(), observer);
-        addSchemaScalar(fields, "minItems", schemaValue(schema.getMinItems()), observer);
-        addSchemaScalar(fields, "maxItems", schemaValue(schema.getMaxItems()), observer);
-        addSchemaScalar(fields, "uniqueItems",
+        addSchemaScalar(fields, KEY_MIN_LENGTH, schemaValue(schema.getMinLength()), observer);
+        addSchemaScalar(fields, KEY_MAX_LENGTH, schemaValue(schema.getMaxLength()), observer);
+        addSchemaNumeric(fields, KEY_MINIMUM, schema.getMinimum(), observer);
+        addSchemaNumeric(fields, KEY_MAXIMUM, schema.getMaximum(), observer);
+        addSchemaNumeric(fields, KEY_EXCLUSIVE_MINIMUM, schema.getExclusiveMinimum(), observer);
+        addSchemaNumeric(fields, KEY_EXCLUSIVE_MAXIMUM, schema.getExclusiveMaximum(), observer);
+        addSchemaNumeric(fields, KEY_MULTIPLE_OF, schema.getMultipleOf(), observer);
+        addSchemaScalar(fields, KEY_MIN_ITEMS, schemaValue(schema.getMinItems()), observer);
+        addSchemaScalar(fields, KEY_MAX_ITEMS, schemaValue(schema.getMaxItems()), observer);
+        addSchemaScalar(fields, KEY_UNIQUE_ITEMS,
                 schema.getUniqueItems() == null ? null : schema.getUniqueItemsValue(), observer);
-        addSchemaScalar(fields, "minFields", schemaValue(schema.getMinFields()), observer);
-        addSchemaScalar(fields, "maxFields", schemaValue(schema.getMaxFields()), observer);
+        addSchemaScalar(fields, KEY_MIN_FIELDS, schemaValue(schema.getMinFields()), observer);
+        addSchemaScalar(fields, KEY_MAX_FIELDS, schemaValue(schema.getMaxFields()), observer);
         if (schema.getEnum() != null) {
             String accumulator = hashListEmpty(observer);
             for (Node value : schema.getEnum()) {
@@ -261,7 +276,7 @@ final class FrozenCanonicalDigester {
                 }
                 accumulator = hashListCons(elementBlueId, accumulator, observer);
             }
-            addReference(fields, "enum", accumulator);
+            addReference(fields, KEY_ENUM, accumulator);
         }
         return fields.isEmpty() ? null : hashFields(fields, observer);
     }
@@ -338,8 +353,8 @@ final class FrozenCanonicalDigester {
         BigInteger integer = value instanceof BigInteger
                 ? (BigInteger) value
                 : BigInteger.valueOf(((Number) value).longValue());
-        return integer.compareTo(BigInteger.valueOf(-9007199254740991L)) < 0
-                || integer.compareTo(BigInteger.valueOf(9007199254740991L)) > 0
+        return integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                || integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0
                 ? integer.toString()
                 : integer;
     }
@@ -371,9 +386,9 @@ final class FrozenCanonicalDigester {
             @Override
             public void write(FrozenCanonicalWriter.CanonicalByteSink sink) {
                 sink.writeByte('{');
-                writeString("$list", sink);
+                writeString(LIST_SEED_KEY, sink);
                 sink.writeByte(':');
-                writeString("empty", sink);
+                writeString(LIST_SEED_VALUE, sink);
                 sink.writeByte('}');
             }
         }, observer);
@@ -386,14 +401,14 @@ final class FrozenCanonicalDigester {
             @Override
             public void write(FrozenCanonicalWriter.CanonicalByteSink sink) {
                 sink.writeByte('{');
-                writeString("$listCons", sink);
+                writeString(LIST_CONS_KEY, sink);
                 sink.writeByte(':');
                 sink.writeByte('{');
-                writeString("elem", sink);
+                writeString(LIST_CONS_ELEMENT_KEY, sink);
                 sink.writeByte(':');
                 writeReference(element, sink);
                 sink.writeByte(',');
-                writeString("prev", sink);
+                writeString(LIST_CONS_PREVIOUS_KEY, sink);
                 sink.writeByte(':');
                 writeReference(previous, sink);
                 sink.writeByte('}');
@@ -572,7 +587,8 @@ final class FrozenCanonicalDigester {
             return false;
         }
         if (node.getPreviousBlueId() != null
-                && (node.getPreviousBlueId().indexOf('#') >= 0
+                && (BlueIds.hasCyclicMemberSeparator(
+                        node.getPreviousBlueId())
                 || !BlueIds.isPotentialBlueId(node.getPreviousBlueId()))) {
             return false;
         }
@@ -750,8 +766,8 @@ final class FrozenCanonicalDigester {
         if (DOUBLE_TYPE_BLUE_ID.equals(valueTypeBlueId)) return BlueNumbers.toCanonicalDoubleValue(value);
         if (value instanceof BigInteger) {
             BigInteger integer = (BigInteger) value;
-            if (integer.compareTo(BigInteger.valueOf(-9007199254740991L)) < 0
-                    || integer.compareTo(BigInteger.valueOf(9007199254740991L)) > 0) {
+            if (integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                    || integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
                 return integer.toString();
             }
         }

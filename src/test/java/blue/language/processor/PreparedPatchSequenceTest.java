@@ -23,7 +23,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PreparedPatchSequenceTest {
@@ -32,7 +31,8 @@ class PreparedPatchSequenceTest {
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
-    void preparedSequenceDefersSnapshotAndPlanningUntilPatchZeroApplication() {
+    void shouldVerifyPreparedSequenceDefersSnapshotAndPlanningUntilPatchZeroApplication() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -43,28 +43,44 @@ class PreparedPatchSequenceTest {
                 metrics);
         JsonPatch patch = JsonPatch.add("/first", new Node().value(1));
 
+        // when
+        JsonPatch validationPatch;
+        int fromDocumentBeforeApplication;
+        int applyPatchBeforeApplication;
+        int cacheSnapshotBeforeApplication;
+        long preparedSequencesBeforeApplication;
+        long preparedPatchesBeforeApplication;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", Arrays.asList(patch), null)) {
-            JsonPatch validationPatch = sequence.patchForValidation(0);
-
-            assertEquals("/first", validationPatch.getPath());
-            assertEquals(0, manager.fromDocumentCalls,
-                    "validation must precede snapshot/planning initialization");
-            assertEquals(0, manager.applyPatchCalls);
-            assertEquals(0, manager.cacheSnapshotCalls);
-            assertEquals(0, metrics.patchSequencesPrepared);
-            assertEquals(0, metrics.patchesPrepared);
-
+            validationPatch = sequence.patchForValidation(0);
+            fromDocumentBeforeApplication =
+                    manager.fromDocumentCalls;
+            applyPatchBeforeApplication = manager.applyPatchCalls;
+            cacheSnapshotBeforeApplication =
+                    manager.cacheSnapshotCalls;
+            preparedSequencesBeforeApplication =
+                    metrics.patchSequencesPrepared;
+            preparedPatchesBeforeApplication =
+                    metrics.patchesPrepared;
             sequence.applyNext(0);
-
-            assertTrue(manager.fromDocumentCalls > 0);
-            assertEquals(1, metrics.patchSequencesPrepared);
-            assertEquals(1, metrics.patchesPrepared);
         }
+
+        // then
+        assertEquals("/first", validationPatch.getPath());
+        assertEquals(0, fromDocumentBeforeApplication,
+                "validation must precede snapshot/planning initialization");
+        assertEquals(0, applyPatchBeforeApplication);
+        assertEquals(0, cacheSnapshotBeforeApplication);
+        assertEquals(0L, preparedSequencesBeforeApplication);
+        assertEquals(0L, preparedPatchesBeforeApplication);
+        assertTrue(manager.fromDocumentCalls > 0);
+        assertEquals(1, metrics.patchSequencesPrepared);
+        assertEquals(1, metrics.patchesPrepared);
     }
 
     @Test
-    void forbiddenCyclicMemberTraversalFailsBeforeAnySnapshotProviderDemand() {
+    void shouldVerifyForbiddenCyclicMemberTraversalFailsBeforeAnySnapshotProviderDemand() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 new Node().properties(
@@ -75,6 +91,8 @@ class PreparedPatchSequenceTest {
                 manager,
                 new RecordingMetrics());
 
+        // when
+        ProcessorFailureException failure;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence(
                              "/",
@@ -82,21 +100,23 @@ class PreparedPatchSequenceTest {
                                      "/cyclic/member",
                                      new Node().value(1))),
                              null)) {
-            ProcessorFailureException failure = assertThrows(
-                    ProcessorFailureException.class,
+            failure = FailureCapture.captureFailure(
                     () -> sequence.applyNext(0));
-
-            assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
-                    failure.errorCategory());
         }
 
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                failure.errorCategory());
         assertEquals(0, manager.fromDocumentCalls);
         assertEquals(0, manager.applyPatchCalls);
         assertEquals(0, manager.cacheSnapshotCalls);
     }
 
     @Test
-    void sequentialWholeReferenceReplacementAllowsFollowingDescendantMutation() {
+    void shouldVerifySequentialWholeReferenceReplacementAllowsFollowingDescendantMutation() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = new Node().properties(
                 "cyclic",
@@ -109,38 +129,46 @@ class PreparedPatchSequenceTest {
                         new Node().properties("member", new Node().value("replacement"))),
                 JsonPatch.add("/cyclic/next", new Node().value("allowed")));
 
+        // when
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             sequence.applyNext(1);
         }
 
+        // then
         assertEquals("replacement", document.getAsText("/cyclic/member"));
         assertEquals("allowed", document.getAsText("/cyclic/next"));
     }
 
     @Test
-    void preparedSequenceMembershipIsIndependentOfCallerListMutation() {
+    void shouldVerifyPreparedSequenceMembershipIsIndependentOfCallerListMutation() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node(), null, manager);
         List<JsonPatch> callerPatches = new ArrayList<>(Arrays.asList(
                 JsonPatch.add("/first", new Node().value(1)),
                 JsonPatch.add("/second", new Node().value(2))));
 
+        // when
+        int preparedSize;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", callerPatches, null)) {
             callerPatches.clear();
-            assertEquals(2, sequence.size());
+            preparedSize = sequence.size();
             sequence.applyNext(0);
             sequence.applyNext(1);
         }
 
+        // then
+        assertEquals(2, preparedSize);
         assertEquals(1, runtime.document().getAsInteger("/first"));
         assertEquals(2, runtime.document().getAsInteger("/second"));
     }
 
     @Test
-    void preparedSequenceRecordsEveryCommittedChangedPath() {
+    void shouldVerifyPreparedSequenceRecordsEveryCommittedChangedPath() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(new Node(), null, manager);
@@ -148,30 +176,35 @@ class PreparedPatchSequenceTest {
                 JsonPatch.add("/first", new Node().value(1)),
                 JsonPatch.add("/second", new Node().value(2)));
 
+        // when
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             sequence.applyNext(1);
         }
 
+        // then
         assertEquals(2, runtime.changedPaths().size());
         assertTrue(runtime.changedPaths().contains("/first"));
         assertTrue(runtime.changedPaths().contains("/second"));
     }
 
     @Test
-    void scopeExecutorUsesOneReusableSessionForLongUnpreviewedSequence() {
+    void shouldVerifyScopeExecutorUsesOneReusableSessionForLongUnpreviewedSequence() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         ProcessorEngine.Execution execution = execution(new Node(), manager, metrics);
+        DocumentProcessingRuntime runtime = execution.runtime();
         List<JsonPatch> patches = new ArrayList<>();
         for (int index = 0; index < 9; index++) {
             patches.add(JsonPatch.add("/k" + index, new Node().value(index)));
         }
 
+        // when
         execution.handlePatches("/", ContractBundle.builder().build(), patches, false);
 
-        DocumentProcessingRuntime runtime = execution.runtime();
+        // then
         for (int index = 0; index < 9; index++) {
             assertEquals(index, runtime.document().getAsInteger("/k" + index));
         }
@@ -188,7 +221,8 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void matchingPreviewCommitsWithoutReplanningAndOnlyFinalStepEntersSharedCache() {
+    void shouldVerifyMatchingPreviewCommitsWithoutReplanningAndOnlyFinalStepEntersSharedCache() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         ProcessorEngine.Execution execution = execution(new Node(), manager, metrics);
@@ -197,8 +231,10 @@ class PreparedPatchSequenceTest {
         WorkingDocument.Preview preview = runtime.workingDocument("/")
                 .previewAndApplyPatches(patches);
 
+        // when
         execution.handlePatches("/", ContractBundle.builder().build(), patches, false, preview);
 
+        // then
         assertEquals(0, runtime.batchPatchPlanningNanosForTest());
         assertEquals(0, runtime.batchPatchConformanceNanosForTest());
         assertEquals(0, runtime.sequenceSuffixRebasesForTest());
@@ -214,7 +250,8 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void frozenPreviewWithIdentityEquivalentDifferentRepresentationIsReplanned() {
+    void shouldVerifyFrozenPreviewWithIdentityEquivalentDifferentRepresentationIsReplanned() {
+        // given
         Node materialized = new Node().properties("payload", new Node().value("value"));
         FrozenNode materializedValue = FrozenNode.fromNode(materialized);
         FrozenNode referenceValue = FrozenNode.fromNode(
@@ -227,19 +264,22 @@ class PreparedPatchSequenceTest {
         List<FrozenJsonPatch> requested = Arrays.asList(
                 FrozenJsonPatch.add("/slot", referenceValue));
 
+        // when
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.prepareFrozenPatchSequence("/", requested, preview)) {
             sequence.applyNext(0);
         }
-
         Node committed = runtime.document().getNode("/slot");
+
+        // then
         assertTrue(committed.isReferenceOnly());
         assertEquals(referenceValue.blueId(), committed.getBlueId());
         assertEquals(1, runtime.sequenceStalePreviewFallbacksForTest());
     }
 
     @Test
-    void mutablePreviewWithIdentityEquivalentDifferentRepresentationIsReplanned() {
+    void shouldVerifyMutablePreviewWithIdentityEquivalentDifferentRepresentationIsReplanned() {
+        // given
         Node materialized = new Node().properties("payload", new Node().value("value"));
         String blueId = FrozenNode.fromNode(materialized).blueId();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
@@ -250,19 +290,22 @@ class PreparedPatchSequenceTest {
         List<JsonPatch> requested = Arrays.asList(
                 JsonPatch.add("/slot", new Node().blueId(blueId)));
 
+        // when
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", requested, preview)) {
             sequence.applyNext(0);
         }
-
         Node committed = runtime.document().getNode("/slot");
+
+        // then
         assertTrue(committed.isReferenceOnly());
         assertEquals(blueId, committed.getBlueId());
         assertEquals(1, runtime.sequenceStalePreviewFallbacksForTest());
     }
 
     @Test
-    void mutationBetweenPreparedStepsRebasesSuffixAndUsesActualBeforeState() {
+    void shouldVerifyMutationBetweenPreparedStepsRebasesSuffixAndUsesActualBeforeState() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         Node document = new Node().properties("counter", new Node().value(0));
@@ -273,6 +316,7 @@ class PreparedPatchSequenceTest {
         WorkingDocument.Preview preview = runtime.workingDocument("/")
                 .previewAndApplyPatches(patches);
 
+        // when
         List<DocumentProcessingRuntime.DocumentUpdateData> secondUpdates;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
@@ -281,6 +325,7 @@ class PreparedPatchSequenceTest {
             secondUpdates = sequence.applyNext(1);
         }
 
+        // then
         assertEquals(1, secondUpdates.size());
         assertEquals(41, integerValue(secondUpdates.get(0).before()));
         assertEquals(2, integerValue(secondUpdates.get(0).after()));
@@ -297,7 +342,8 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void repeatedReentryKeepsEveryActualIntermediateStateObservable() {
+    void shouldVerifyRepeatedReentryKeepsEveryActualIntermediateStateObservable() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         Node document = new Node().properties("counter", new Node().value(0));
@@ -310,19 +356,25 @@ class PreparedPatchSequenceTest {
         WorkingDocument.Preview preview = runtime.workingDocument("/")
                 .previewAndApplyPatches(patches);
 
+        // when
+        int secondBefore;
+        int thirdBefore;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
             runtime.applyPatch("/", JsonPatch.replace("/counter", new Node().value(10)));
             List<DocumentProcessingRuntime.DocumentUpdateData> second = sequence.applyNext(1);
-            assertEquals(10, integerValue(second.get(0).before()));
+            secondBefore = integerValue(second.get(0).before());
 
             runtime.applyPatch("/", JsonPatch.replace("/counter", new Node().value(20)));
             List<DocumentProcessingRuntime.DocumentUpdateData> third = sequence.applyNext(2);
-            assertEquals(20, integerValue(third.get(0).before()));
+            thirdBefore = integerValue(third.get(0).before());
             sequence.applyNext(3);
         }
 
+        // then
+        assertEquals(10, secondBefore);
+        assertEquals(20, thirdBefore);
         assertEquals(4, document.getAsInteger("/counter"));
         assertEquals(2, runtime.sequenceSuffixRebasesForTest(),
                 "each actual intervening mutation rebases the same reusable suffix session once");
@@ -332,7 +384,8 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void failureInLaterStepKeepsPrefixAndClosePromotesCurrentSnapshot() {
+    void shouldVerifyFailureInLaterStepKeepsPrefixAndClosePromotesCurrentSnapshot() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         Node document = new Node();
@@ -342,16 +395,23 @@ class PreparedPatchSequenceTest {
                 JsonPatch.remove("/missing"),
                 JsonPatch.add("/tail", new Node().value("not-run")));
 
-        assertThrows(IllegalStateException.class, () -> {
+        // when
+        IllegalStateException sequenceFailure =
+                FailureCapture.captureFailure(() -> {
             try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                          runtime.preparePatchSequence("/", patches, null)) {
                 sequence.applyNext(0);
                 sequence.applyNext(1);
             }
         });
+        IllegalArgumentException tailFailure =
+                FailureCapture.captureFailure(
+                        () -> document.getAsNode("/tail"));
 
+        // then
+        assertNotNull(sequenceFailure);
         assertEquals("committed", document.getAsText("/prefix"));
-        assertThrows(IllegalArgumentException.class, () -> document.getAsNode("/tail"));
+        assertNotNull(tailFailure);
         assertEquals(1, runtime.sequenceIntermediateSnapshotAdvancesForTest());
         assertEquals(1, runtime.sequenceSharedSnapshotCacheInsertsForTest());
         assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
@@ -361,16 +421,27 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void publicAtomicBatchStillRollsBackEveryPatchWhenLaterEntryFails() {
+    void shouldVerifyPublicAtomicBatchStillRollsBackEveryPatchWhenLaterEntryFails() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         Node document = new Node().properties("status", new Node().value("idle"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager, metrics);
 
-        assertThrows(IllegalStateException.class, () -> runtime.applyPatches("/", Arrays.asList(
-                JsonPatch.replace("/status", new Node().value("not-committed")),
-                JsonPatch.remove("/missing"))));
+        // when
+        IllegalStateException failure =
+                FailureCapture.captureFailure(
+                        () -> runtime.applyPatches(
+                                "/",
+                                Arrays.asList(
+                                        JsonPatch.replace(
+                                                "/status",
+                                                new Node().value(
+                                                        "not-committed")),
+                                        JsonPatch.remove("/missing"))));
 
+        // then
+        assertNotNull(failure);
         assertEquals("idle", document.getAsText("/status"));
         assertEquals(0, manager.cacheSnapshotCalls);
         assertEquals(0, runtime.patchSequencesPreparedForTest());
@@ -379,21 +450,30 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void closingPartiallyConsumedPreviewReleasesUnconsumedSuffix() {
+    void shouldVerifyClosingPartiallyConsumedPreviewReleasesUnconsumedSuffix() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node(), null, manager);
         List<JsonPatch> patches = patchesAdding("release", 3);
         WorkingDocument.Preview preview = runtime.workingDocument("/")
                 .previewAndApplyPatches(patches);
 
+        // when
+        WorkingDocument.PatchPreview consumedBeforeClose;
+        WorkingDocument.PatchPreview secondBeforeClose;
+        WorkingDocument.PatchPreview thirdBeforeClose;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
-            assertNull(preview.patch(0));
-            assertNotNull(preview.patch(1));
-            assertNotNull(preview.patch(2));
+            consumedBeforeClose = preview.patch(0);
+            secondBeforeClose = preview.patch(1);
+            thirdBeforeClose = preview.patch(2);
         }
 
+        // then
+        assertNull(consumedBeforeClose);
+        assertNotNull(secondBeforeClose);
+        assertNotNull(thirdBeforeClose);
         assertNull(preview.patch(0));
         assertNull(preview.patch(1));
         assertNull(preview.patch(2));
@@ -402,7 +482,8 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void transientManagerOwnershipReleasesWorkingPreviewAndSequenceScopes() {
+    void shouldReleaseDiscardedWorkingPreviewScope() {
+        // given
         ReleasingSnapshotManager manager = new ReleasingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 new Node(), null, manager);
@@ -412,30 +493,55 @@ class PreparedPatchSequenceTest {
         WorkingDocument firstWorking = runtime.workingDocument("/");
         WorkingDocument.Preview discarded = firstWorking.previewAndApplyPatches(patches);
         firstWorking.close();
-        discarded.close();
-        assertEquals(2, manager.releaseCalls);
 
-        WorkingDocument secondWorking = runtime.workingDocument("/");
-        WorkingDocument.Preview transferred = secondWorking.previewAndApplyPatches(patches);
-        secondWorking.close();
+        // when
+        discarded.close();
+
+        // then
+        assertEquals(2, manager.releaseCalls);
+    }
+
+    @Test
+    void shouldTransferPreviewScopeOwnershipToPreparedSequence() {
+        // given
+        ReleasingSnapshotManager manager =
+                new ReleasingSnapshotManager();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(
+                        new Node(), null, manager);
+        List<JsonPatch> patches = Collections.singletonList(
+                JsonPatch.add("/value", new Node().value(1)));
+        WorkingDocument working = runtime.workingDocument("/");
+        WorkingDocument.Preview transferred =
+                working.previewAndApplyPatches(patches);
+        working.close();
         int beforeTransfer = manager.releaseCalls;
+
+        // when
+        int releasesWhileTransferred;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, transferred)) {
             sequence.applyNext(0);
             transferred.close();
-            assertEquals(beforeTransfer, manager.releaseCalls,
-                    "a transferred preview no longer owns the handoff scope");
+            releasesWhileTransferred = manager.releaseCalls;
         }
+        IllegalStateException closedWorkingFailure =
+                FailureCapture.captureFailure(
+                        () -> working.applyPatch(
+                                JsonPatch.remove("/value")));
 
+        // then
+        assertEquals(beforeTransfer, releasesWhileTransferred,
+                "a transferred preview no longer owns the handoff scope");
         assertEquals(beforeTransfer + 1, manager.releaseCalls,
                 "the prepared sequence releases the transferred scope");
         assertEquals(manager.openCalls, manager.releaseCalls);
-        assertThrows(IllegalStateException.class,
-                () -> secondWorking.applyPatch(JsonPatch.remove("/value")));
+        assertNotNull(closedWorkingFailure);
     }
 
     @Test
-    void sequenceCopiesEveryAuthoredPatchValueBeforeTheFirstStep() {
+    void shouldVerifySequenceCopiesEveryAuthoredPatchValueBeforeTheFirstStep() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
@@ -445,24 +551,31 @@ class PreparedPatchSequenceTest {
                 JsonPatch.add("/first", firstValue),
                 JsonPatch.add("/second", secondValue));
 
+        // when
+        String firstPreparedValue;
+        String secondPreparedValue;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             firstValue.getProperties().get("payload").value("first-after");
             secondValue.getProperties().get("payload").value("second-after");
-            assertEquals("first-before",
-                    sequence.patchForValidation(0).getVal().getAsText("/payload"));
+            firstPreparedValue = sequence.patchForValidation(0)
+                    .getVal().getAsText("/payload");
             sequence.applyNext(0);
-            assertEquals("second-before",
-                    sequence.patchForValidation(1).getVal().getAsText("/payload"));
+            secondPreparedValue = sequence.patchForValidation(1)
+                    .getVal().getAsText("/payload");
             sequence.applyNext(1);
         }
 
+        // then
+        assertEquals("first-before", firstPreparedValue);
+        assertEquals("second-before", secondPreparedValue);
         assertEquals("first-before", document.getAsText("/first/payload"));
         assertEquals("second-before", document.getAsText("/second/payload"));
     }
 
     @Test
-    void invalidLaterValueIsFrozenOnlyAfterTheCommittedPrefix() {
+    void shouldVerifyInvalidLaterValueIsFrozenOnlyAfterTheCommittedPrefix() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
@@ -474,19 +587,29 @@ class PreparedPatchSequenceTest {
                 JsonPatch.add("/invalid", invalidReferenceOverlay),
                 JsonPatch.add("/suffix", new Node().value("not-run")));
 
+        // when
+        IllegalArgumentException invalidPatchFailure;
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
-            assertThrows(IllegalArgumentException.class, () -> sequence.applyNext(1));
+            invalidPatchFailure =
+                    FailureCapture.captureFailure(
+                            () -> sequence.applyNext(1));
         }
+        IllegalArgumentException suffixFailure =
+                FailureCapture.captureFailure(
+                        () -> document.getAsNode("/suffix"));
 
+        // then
+        assertNotNull(invalidPatchFailure);
         assertEquals("committed", document.getAsText("/prefix"));
-        assertThrows(IllegalArgumentException.class, () -> document.getAsNode("/suffix"));
+        assertNotNull(suffixFailure);
         assertEquals(1, manager.cacheSnapshotCalls());
     }
 
     @Test
-    void earlierBoundaryFailureWinsOverMalformedSuffixValue() {
+    void shouldVerifyEarlierBoundaryFailureWinsOverMalformedSuffixValue() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = new Node().properties("scope", new Node());
         ProcessorEngine.Execution execution = execution(document, manager, new RecordingMetrics());
@@ -494,7 +617,9 @@ class PreparedPatchSequenceTest {
                 .blueId("not-a-valid-reference")
                 .properties("forbiddenSibling", new Node().value(true));
 
-        assertThrows(RunTerminationException.class,
+        // when
+        RunTerminationException processingFailure =
+                FailureCapture.captureFailure(
                 () -> execution.handlePatches(
                         "/scope",
                         ContractBundle.builder().build(),
@@ -506,18 +631,28 @@ class PreparedPatchSequenceTest {
                                         "/scope/invalid",
                                         invalidReferenceOverlay)),
                         false));
-
         DocumentProcessingResult result = execution.result();
+        IllegalArgumentException outsideFailure =
+                FailureCapture.captureFailure(
+                        () -> result.document()
+                                .getAsNode("/outside"));
+        IllegalArgumentException invalidSuffixFailure =
+                FailureCapture.captureFailure(
+                        () -> document.getAsNode(
+                                "/scope/invalid"));
+
+        // then
+        assertNotNull(processingFailure);
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
                 diagnosticCategory(result));
-        assertThrows(IllegalArgumentException.class,
-                () -> result.document().getAsNode("/outside"));
-        assertThrows(IllegalArgumentException.class, () -> document.getAsNode("/scope/invalid"));
+        assertNotNull(outsideFailure);
+        assertNotNull(invalidSuffixFailure);
     }
 
     @Test
-    void gasUsesTheAuthoredValueBeforeCanonicalEmptyNodeElision() {
+    void shouldVerifyGasUsesTheAuthoredValueBeforeCanonicalEmptyNodeElision() {
+        // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         ProcessorEngine.Execution execution = execution(new Node(), manager, new RecordingMetrics());
         Map<String, Node> authoredProperties = new LinkedHashMap<>();
@@ -527,15 +662,18 @@ class PreparedPatchSequenceTest {
         Node authoredValue = new Node().properties(authoredProperties);
         long authoredSizeCharge = (NodeCanonicalizer.canonicalSize(authoredValue) + 99L) / 100L;
 
+        // when
         execution.handlePatches("/", ContractBundle.builder().build(),
                 Arrays.asList(JsonPatch.add("/payload", authoredValue)), false);
 
+        // then
         assertEquals(2L + 20L + authoredSizeCharge + 109L,
                 execution.runtime().totalGas());
     }
 
     @Test
-    void failedFinalPromotionKeepsTheCommittedPrefixAndCanBeRetried() {
+    void shouldVerifyFailedFinalPromotionKeepsTheCommittedPrefixAndCanBeRetried() {
+        // given
         FailOnceSnapshotManager manager = new FailOnceSnapshotManager();
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
@@ -545,11 +683,15 @@ class PreparedPatchSequenceTest {
         DocumentProcessingRuntime.PreparedPatchSequence sequence =
                 runtime.preparePatchSequence("/", patches, null);
 
+        // when
         sequence.applyNext(0);
-        assertThrows(IllegalStateException.class, sequence::close);
-        assertEquals("committed", document.getAsText("/prefix"));
+        IllegalStateException firstCloseFailure =
+                FailureCapture.captureFailure(sequence::close);
         sequence.close();
 
+        // then
+        assertNotNull(firstCloseFailure);
+        assertEquals("committed", document.getAsText("/prefix"));
         assertEquals(1, manager.cacheSnapshotCalls());
         assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
     }

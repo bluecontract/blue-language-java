@@ -6,6 +6,7 @@ import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.FrozenTypeMatcher;
 
 import java.util.Collections;
@@ -23,21 +24,38 @@ import java.util.function.Function;
  */
 final class ExternalChannelFunctionEvaluation {
 
+    /**
+     * Pass-local frozen matching boundary backed only by captured verified
+     * processing-snapshot evidence.
+     */
     interface MatcherSession {
+
+        /** Fails when the owning processing-snapshot session is no longer active. */
         void requireActive();
 
+        /** Returns whether the candidate matches the supplied frozen pattern. */
         boolean matches(
                 FrozenNode candidate,
                 FrozenNode pattern);
 
+        /** Returns whether the candidate type is equal to or below the base type. */
+        boolean isAssignableToType(
+                String candidateTypeBlueId,
+                String baseTypeBlueId);
+
+        /** Resolves one exact reference through the captured verified boundary. */
         FrozenNode materializeExactReference(
                 FrozenNode reference);
 
+        /** Releases all pass-local matcher state. */
         void close();
     }
 
+    /** Opens an independent matcher session for one deterministic evaluation pass. */
     @FunctionalInterface
     interface MatcherSessionFactory {
+
+        /** @return a fresh active matcher session */
         MatcherSession open();
     }
 
@@ -47,12 +65,14 @@ final class ExternalChannelFunctionEvaluation {
     private final boolean accepts;
     private final String checkpointDomainBlueId;
     private final FrozenNode payload;
+    private final String payloadBlueId;
     private final FrozenNode checkpointSubject;
     private final String checkpointSubjectBlueId;
     private final String handlerChannelKey;
     private final String logicalDeliveryKey;
     private final ChannelMemberSnapshot handlerChannel;
     private final ExternalChannelDependencySnapshot dependencies;
+    private final List<String> channelLookupResults;
 
     private ExternalChannelFunctionEvaluation(
             List<String> channelKeys,
@@ -61,24 +81,32 @@ final class ExternalChannelFunctionEvaluation {
             boolean accepts,
             String checkpointDomainBlueId,
             FrozenNode payload,
+            String payloadBlueId,
             FrozenNode checkpointSubject,
             String checkpointSubjectBlueId,
             String handlerChannelKey,
             String logicalDeliveryKey,
             ChannelMemberSnapshot handlerChannel,
-            ExternalChannelDependencySnapshot dependencies) {
+            ExternalChannelDependencySnapshot dependencies,
+            List<String> channelLookupResults) {
         this.channelKeys = channelKeys;
         this.eventKeys = eventKeys;
         this.preselects = preselects;
         this.accepts = accepts;
         this.checkpointDomainBlueId = checkpointDomainBlueId;
         this.payload = payload;
+        this.payloadBlueId = payloadBlueId;
         this.checkpointSubject = checkpointSubject;
         this.checkpointSubjectBlueId = checkpointSubjectBlueId;
         this.handlerChannelKey = handlerChannelKey;
         this.logicalDeliveryKey = logicalDeliveryKey;
         this.handlerChannel = handlerChannel;
         this.dependencies = dependencies;
+        this.channelLookupResults =
+                Collections.unmodifiableList(
+                        Objects.requireNonNull(
+                                channelLookupResults,
+                                "channelLookupResults"));
     }
 
     static ExternalChannelFunctionEvaluation evaluate(
@@ -106,6 +134,36 @@ final class ExternalChannelFunctionEvaluation {
             EffectiveContractSnapshot snapshot,
             Node exactEvent,
             List<String> effectiveContractKeys) {
+        RuntimeWorkSession admission =
+                new RuntimeWorkSession(
+                        new GasMeter(),
+                        RuntimeWorkSession.Mode.ADMISSION);
+        try {
+            return evaluate(
+                    registry,
+                    converter,
+                    matcherSessions,
+                    bundle,
+                    snapshot,
+                    exactEvent,
+                    effectiveContractKeys,
+                    admission);
+        } finally {
+            if (admission.isOpen()) {
+                admission.suspend();
+            }
+        }
+    }
+
+    static ExternalChannelFunctionEvaluation evaluate(
+            ContractProcessorRegistry registry,
+            NodeToObjectConverter converter,
+            MatcherSessionFactory matcherSessions,
+            ContractBundle bundle,
+            EffectiveContractSnapshot snapshot,
+            Node exactEvent,
+            List<String> effectiveContractKeys,
+            RuntimeWorkSession runtimeWorkSession) {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(converter, "converter");
         Objects.requireNonNull(
@@ -114,30 +172,66 @@ final class ExternalChannelFunctionEvaluation {
         Objects.requireNonNull(bundle, "bundle");
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(exactEvent, "exactEvent");
+        RuntimeWorkSession authoritative =
+                Objects.requireNonNull(
+                        runtimeWorkSession,
+                        "runtimeWorkSession");
+        RuntimeWorkSession comparison =
+                authoritative.diagnosticTwin();
 
-        ExternalChannelFunctionEvaluation first =
-                evaluateOnce(
+        final ExternalChannelFunctionEvaluation first;
+        try {
+            first = evaluateOnce(
                         registry,
                         converter,
                         matcherSessions,
                         bundle,
                         snapshot,
                         exactEvent,
-                        effectiveContractKeys);
-        ExternalChannelFunctionEvaluation second =
-                evaluateOnce(
+                        effectiveContractKeys,
+                        authoritative);
+        } catch (ExecutionEvidenceUnavailableException unavailable) {
+            suspendIfOpen(authoritative);
+            suspendIfOpen(comparison);
+            throw unavailable;
+        } catch (RuntimeException | Error failure) {
+            failIfOpen(authoritative);
+            suspendIfOpen(comparison);
+            throw failure;
+        }
+
+        final ExternalChannelFunctionEvaluation second;
+        try {
+            second = evaluateOnce(
                         registry,
                         converter,
                         matcherSessions,
                         bundle,
                         snapshot,
                         exactEvent,
-                        effectiveContractKeys);
-        if (!first.sameResult(second)) {
+                        effectiveContractKeys,
+                        comparison);
+        } catch (ExecutionEvidenceUnavailableException unavailable) {
+            suspendIfOpen(authoritative);
+            suspendIfOpen(comparison);
+            throw unavailable;
+        } catch (RuntimeException | Error failure) {
+            failIfOpen(authoritative);
+            suspendIfOpen(comparison);
+            throw failure;
+        }
+        if (!first.sameResult(second)
+                || !sameRuntimeTrace(
+                        authoritative.stagedTrace(),
+                        comparison.stagedTrace())) {
+            failIfOpen(authoritative);
+            suspendIfOpen(comparison);
             throw new IllegalStateException(
                     "External Channel functions are not deterministic at "
                             + snapshot.scopePath() + "/" + snapshot.key());
         }
+        authoritative.complete();
+        comparison.suspend();
         return first;
     }
 
@@ -148,7 +242,8 @@ final class ExternalChannelFunctionEvaluation {
             ContractBundle bundle,
             EffectiveContractSnapshot snapshot,
             Node exactEvent,
-            List<String> effectiveContractKeys) {
+            List<String> effectiveContractKeys,
+            RuntimeWorkSession runtimeWorkSession) {
         MatcherSession matcher = Objects.requireNonNull(
                 matcherSessions.open(),
                 "matcherSession");
@@ -159,14 +254,13 @@ final class ExternalChannelFunctionEvaluation {
                             converter,
                             matcher,
                             bundle,
-                            effectiveContractKeys)
+                            effectiveContractKeys,
+                            runtimeWorkSession)
                             .evaluate(snapshot, exactEvent);
             FrozenNode checkpointSubject =
                     resolved.checkpointSubject();
             String checkpointSubjectBlueId =
-                    checkpointSubject != null
-                            ? checkpointSubject.blueId()
-                            : null;
+                    resolved.checkpointSubjectBlueId();
 
             return new ExternalChannelFunctionEvaluation(
                     resolved.channelKeys(),
@@ -175,15 +269,61 @@ final class ExternalChannelFunctionEvaluation {
                     resolved.accepts(),
                     resolved.checkpointDomainBlueId(),
                     resolved.payload(),
+                    resolved.payloadBlueId(),
                     checkpointSubject,
                     checkpointSubjectBlueId,
                     resolved.handlerChannelKey(),
                     resolved.logicalDeliveryKey(),
                     resolved.handlerChannel(),
-                    resolved.dependencies());
+                    resolved.dependencies(),
+                    resolved.channelLookupResults());
         } finally {
             matcher.close();
         }
+    }
+
+    private static void failIfOpen(
+            RuntimeWorkSession session) {
+        if (session.isOpen()) {
+            session.failDeterministically();
+        }
+    }
+
+    private static void suspendIfOpen(
+            RuntimeWorkSession session) {
+        if (session.isOpen()) {
+            session.suspend();
+        }
+    }
+
+    private static boolean sameRuntimeTrace(
+            List<GasTraceEntry> left,
+            List<GasTraceEntry> right) {
+        if (left.size() != right.size()) {
+            return false;
+        }
+        for (int index = 0; index < left.size(); index++) {
+            GasTraceEntry a = left.get(index);
+            GasTraceEntry b = right.get(index);
+            if (!a.namespace().equals(b.namespace())
+                    || !a.counter().equals(b.counter())
+                    || a.quantity() != b.quantity()
+                    || a.weight() != b.weight()
+                    || a.subtotal() != b.subtotal()
+                    || !Objects.equals(
+                            a.scopePath(), b.scopePath())
+                    || !Objects.equals(
+                            a.contractKey(),
+                            b.contractKey())
+                    || !Objects.equals(
+                            a.logicalPath(),
+                            b.logicalPath())
+                    || !Objects.equals(
+                            a.reason(), b.reason())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -255,6 +395,30 @@ final class ExternalChannelFunctionEvaluation {
         }
 
         @Override
+        public synchronized boolean isAssignableToType(
+                String candidateTypeBlueId,
+                String baseTypeBlueId) {
+            requireActive();
+            if (candidateTypeBlueId == null
+                    || candidateTypeBlueId.isEmpty()
+                    || baseTypeBlueId == null
+                    || baseTypeBlueId.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Subtype comparison requires non-empty exact "
+                                + "type BlueIds");
+            }
+            return matcher.isSubtypeOrSame(
+                    FrozenNode.fromNode(
+                            new Node().blueId(
+                                    candidateTypeBlueId)),
+                    FrozenNode.fromNode(
+                            new Node().blueId(
+                                    baseTypeBlueId)),
+                    GasSchedule.contracts10()
+                            .portableLimit(GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES));
+        }
+
+        @Override
         public synchronized FrozenNode materializeExactReference(
                 FrozenNode reference) {
             requireActive();
@@ -284,6 +448,15 @@ final class ExternalChannelFunctionEvaluation {
                                 + "a reference instead of exact content for "
                                 + exactReference
                                 .getReferenceBlueId());
+            }
+            if (BlueIds.hasCyclicMemberSeparator(
+                    exactReference.getReferenceBlueId())) {
+                /*
+                 * The snapshot manager has established complete cyclic-set
+                 * proof. A member cannot be independently rehashed as an
+                 * ordinary node.
+                 */
+                return materialized;
             }
             Node exact = materialized.toNode();
             final String actualBlueId;
@@ -380,7 +553,9 @@ final class ExternalChannelFunctionEvaluation {
                 && sameCheckpointSubject(
                 checkpointSubject,
                 other.checkpointSubject)
-                && dependencies.equals(other.dependencies);
+                && dependencies.equals(other.dependencies)
+                && channelLookupResults.equals(
+                other.channelLookupResults);
     }
 
     private static boolean sameCheckpointSubject(
@@ -413,7 +588,7 @@ final class ExternalChannelFunctionEvaluation {
     }
 
     private String payloadBlueId() {
-        return payload != null ? payload.blueId() : null;
+        return payloadBlueId;
     }
 
     List<String> channelKeys() {
@@ -462,5 +637,9 @@ final class ExternalChannelFunctionEvaluation {
 
     ExternalChannelDependencySnapshot dependencies() {
         return dependencies;
+    }
+
+    List<String> channelLookupResults() {
+        return channelLookupResults;
     }
 }

@@ -1,0 +1,67 @@
+schema: blue-contracts-fixture/1.0
+id: c-cyc-04
+vectors:
+- C-CYC-04
+category: snd
+description: An ordinary Root may preserve an opaque cyclic-member edge while unrelated selected processing succeeds without opening that member.
+operation: process
+input:
+  root:
+    value: 0
+    cyclic:
+      blueId: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0
+    contracts:
+      in:
+        type:
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+        order: 0
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: fixture
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - fixture
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.cyclic.blueId
+    op: equals
+    expected: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0
+  - actual: demands.semantic
+    op: notContains
+    expected: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0

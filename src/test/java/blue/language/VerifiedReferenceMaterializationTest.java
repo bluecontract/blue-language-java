@@ -6,62 +6,80 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VerifiedReferenceMaterializationTest {
 
     @Test
-    void expandingExactRootReferencePreservesNodeBlueId() {
+    void shouldPreserveNodeBlueIdWhenExpandingExactRootReference() {
+        // given
         Fixture fixture = new Fixture();
         Node reference = reference(fixture.concreteDocumentId);
 
+        // when
         Node expanded = fixture.blue.expand(reference);
+        String referenceBlueId = fixture.blue.calculateBlueId(reference);
+        String expandedBlueId = fixture.blue.calculateBlueId(expanded);
 
-        assertEquals(fixture.concreteDocumentId,
-                fixture.blue.calculateBlueId(reference));
-        assertEquals(fixture.concreteDocumentId,
-                fixture.blue.calculateBlueId(expanded));
+        // then
+        assertEquals(fixture.concreteDocumentId, referenceBlueId);
+        assertEquals(fixture.concreteDocumentId, expandedBlueId);
         assertEquals("present", expanded.getAsText("/instanceValue"));
     }
 
     @Test
-    void recursivelyExpandedDocumentPreservesParentIdentity() {
+    void shouldPreserveParentIdentityWhenRecursivelyExpandingDocument() {
+        // given
         Fixture fixture = new Fixture();
         Node collapsed = fixture.holderInstance();
+        String collapsedBlueId = fixture.blue.calculateBlueId(collapsed);
 
+        // when
         Node expanded = fixture.blue.expand(collapsed);
+        String expandedBlueId = fixture.blue.calculateBlueId(expanded);
 
-        assertEquals(fixture.blue.calculateBlueId(collapsed),
-                fixture.blue.calculateBlueId(expanded));
+        // then
+        assertEquals(collapsedBlueId, expandedBlueId);
         assertEquals("present", expanded.getAsText("/subject/instanceValue"));
         assertEquals("Materialization Compute",
                 expanded.getAsNode("/subject/type/steps/0/type").getName());
     }
 
     @Test
-    void pureReferenceAndEquivalentInlineNodeHaveTheSameIdentity() {
+    void shouldGivePureReferenceAndEquivalentInlineNodeTheSameIdentity() {
+        // given
         Fixture fixture = new Fixture();
         Node referenced = fixture.holderInstance();
         Node inline = fixture.holderWithInlineSubject();
+        Node inlineSubject = fixture.inlineSubject();
 
-        assertEquals(fixture.concreteDocumentId,
-                fixture.blue.calculateBlueId(fixture.inlineSubject()));
-        assertEquals(fixture.blue.calculateBlueId(referenced),
-                fixture.blue.calculateBlueId(inline));
+        // when
+        String inlineSubjectBlueId =
+                fixture.blue.calculateBlueId(inlineSubject);
+        String referencedBlueId = fixture.blue.calculateBlueId(referenced);
+        String inlineBlueId = fixture.blue.calculateBlueId(inline);
+
+        // then
+        assertEquals(fixture.concreteDocumentId, inlineSubjectBlueId);
+        assertEquals(referencedBlueId, inlineBlueId);
     }
 
     @Test
-    void repeatedExpansionDoesNotMakeCacheStateObservable() {
+    void shouldKeepCacheStateUnobservableAcrossRepeatedExpansions() {
+        // given
         Fixture fixture = new Fixture();
+        Blue freshBlue = new Blue(fixture.provider);
 
+        // when
         Node first = fixture.blue.expand(fixture.holderInstance());
         Node second = fixture.blue.expand(fixture.holderInstance());
-        Node fresh = new Blue(fixture.provider)
-                .expand(fixture.holderInstance());
+        Node fresh = freshBlue.expand(fixture.holderInstance());
 
+        // then
         assertEquals(fixture.blue.nodeToJson(first),
                 fixture.blue.nodeToJson(second));
         assertEquals(fixture.blue.nodeToJson(first),
@@ -71,27 +89,34 @@ class VerifiedReferenceMaterializationTest {
     }
 
     @Test
-    void mixedBlueIdMaterializationIsNeverAcceptedAsBlueContent() {
+    void shouldRejectMixedBlueIdMaterializationAsBlueContent() {
+        // given
         Fixture fixture = new Fixture();
         Node mixed = fixture.inlineSubject()
                 .blueId(fixture.concreteDocumentId);
 
-        IllegalArgumentException failure = assertThrows(
-                IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> fixture.blue.calculateBlueId(mixed));
 
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
         assertTrue(messageChain(failure).contains("reference-only"));
     }
 
     @Test
-    void expansionRejectsProviderContentThatDoesNotVerifyRequestedIdentity() {
+    void shouldRejectProviderContentThatDoesNotVerifyRequestedIdentityDuringExpansion() {
+        // given
         Fixture fixture = new Fixture();
         Blue mismatched = new Blue(blueId -> Collections.singletonList(
                 new Node().name("Different provider content")));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> mismatched.expand(reference(fixture.concreteDocumentId)));
 
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
         assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
                 BlueLanguageErrorClassifier.classify(failure));
     }

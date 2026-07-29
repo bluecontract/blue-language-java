@@ -11,7 +11,17 @@ import static blue.language.utils.Types.isSubtype;
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
 import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
 
+/**
+ * Merges List item-type metadata and merge policy while enforcing subtype
+ * compatibility for contributed items.
+ */
 public class ListProcessor implements MergingProcessor {
+
+    /**
+     * Creates a stateless list merge processor.
+     */
+    public ListProcessor() {
+    }
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {

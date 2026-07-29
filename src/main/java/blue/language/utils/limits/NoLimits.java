@@ -2,6 +2,7 @@ package blue.language.utils.limits;
 
 import blue.language.model.Node;
 
+/** Stateless {@link Limits} implementation that permits every operation. */
 class NoLimits implements Limits {
 
     @Override

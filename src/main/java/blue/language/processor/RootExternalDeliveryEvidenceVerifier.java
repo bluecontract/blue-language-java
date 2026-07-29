@@ -7,6 +7,7 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -164,7 +165,7 @@ public final class RootExternalDeliveryEvidenceVerifier
         try (Resolution resolution = resolution(root)) {
             Deque<String> pending = new ArrayDeque<>();
             Set<String> visited = new LinkedHashSet<>();
-            pending.add("/");
+            pending.add(JsonPointer.ROOT);
             while (!pending.isEmpty()) {
                 String scopePath = pending.removeFirst();
                 if (!visited.add(scopePath)) {
@@ -189,7 +190,9 @@ public final class RootExternalDeliveryEvidenceVerifier
                         resolution.subscriptionBundleAt(scopePath);
                 for (EffectiveContractSnapshot snapshot
                         : bundle.effectiveContractSnapshots()) {
-                    if ("external-channel".equals(snapshot.role())) {
+                    if (EffectiveContractSnapshotConstants
+                            .Role.EXTERNAL_CHANNEL.equals(
+                            snapshot.role())) {
                         throw unavailable(
                                 "Exact external delivery subscription and "
                                         + "activation state is unavailable",
@@ -348,7 +351,9 @@ public final class RootExternalDeliveryEvidenceVerifier
                         bundle.effectiveContractSnapshot(
                                 activeInterval.channelKey());
                 if (snapshot == null
-                        || !"external-channel".equals(snapshot.role())) {
+                        || !EffectiveContractSnapshotConstants
+                        .Role.EXTERNAL_CHANNEL.equals(
+                        snapshot.role())) {
                     throw invalid(
                             "Retained active subscription channel is absent "
                                     + "or not external at " + scopePath + "/"
@@ -574,7 +579,8 @@ public final class RootExternalDeliveryEvidenceVerifier
             String scopePath,
             String channelKey) {
         return PointerUtils.normalizeScope(scopePath)
-                + "\u0000" + channelKey;
+                + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                + channelKey;
     }
 
     private Set<String> subscriptionContractKeys(
@@ -629,14 +635,35 @@ public final class RootExternalDeliveryEvidenceVerifier
     private boolean selectsEffectiveType(
             ExternalChannelDependencySnapshot dependencies,
             String effectiveTypeBlueId) {
-        for (ExternalChannelDependencySnapshot.TypeFamily family
-                : dependencies.typeFamilies()) {
-            if (family.effectiveTypeBlueId().equals(
-                    effectiveTypeBlueId)) {
-                return true;
+        ExternalChannelFunctionEvaluation.MatcherSession matcher =
+                null;
+        try {
+            for (ExternalChannelDependencySnapshot.TypeFamily family
+                    : dependencies.typeFamilies()) {
+                if (family.effectiveTypeBlueId().equals(
+                        effectiveTypeBlueId)) {
+                    return true;
+                }
+                if (!family.includesSubtypes()) {
+                    continue;
+                }
+                if (matcher == null) {
+                    matcher = ExternalChannelFunctionEvaluation
+                            .verifiedMatcherSessions(snapshotManager)
+                            .open();
+                }
+                if (matcher.isAssignableToType(
+                        effectiveTypeBlueId,
+                        family.baseTypeBlueId())) {
+                    return true;
+                }
+            }
+            return false;
+        } finally {
+            if (matcher != null) {
+                matcher.close();
             }
         }
-        return false;
     }
 
     private boolean isExternalChannelType(String typeBlueId) {
@@ -743,7 +770,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             }
         }
         Node projected = copySubscriptionSpine(
-                root, "/", subscriptionKeys);
+                root, JsonPointer.ROOT, subscriptionKeys);
         if (projected == null) {
             throw invalid(
                     "Retained active subscription scope is absent");
@@ -760,7 +787,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             Node root,
             Set<String> selectorScopes) {
         Node projected = copySelectorCatalogSpine(
-                root, "/", selectorScopes);
+                root, JsonPointer.ROOT, selectorScopes);
         if (projected == null) {
             throw invalid(
                     "Enumeration-selector scope is absent");
@@ -887,7 +914,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             for (Map.Entry<String, String> entry
                     : types.entrySet()) {
                 if (requested.contains(entry.getKey())
-                        || isDirectProcessorStateKey(
+                        || isSubscriptionProcessorStateKey(
                         entry.getKey())
                         || includeRouting
                         && RuntimeBlueIds.PROCESS_EMBEDDED.equals(
@@ -904,9 +931,9 @@ public final class RootExternalDeliveryEvidenceVerifier
     private Set<String> openedScopeAncestors(
             Iterable<String> scopes) {
         Set<String> opened = new LinkedHashSet<>();
-        opened.add("/");
+        opened.add(JsonPointer.ROOT);
         for (String scope : scopes) {
-            String current = "/";
+            String current = JsonPointer.ROOT;
             for (String segment : JsonPointer.split(scope)) {
                 current = PointerUtils.appendPointer(
                         current, segment);
@@ -922,7 +949,7 @@ public final class RootExternalDeliveryEvidenceVerifier
         List<String> segments =
                 new ArrayList<>(
                         JsonPointer.split(scopePath));
-        segments.add("contracts");
+        segments.add(ProcessorContractConstants.KEY_CONTRACTS);
         segments.add(contractKey);
         return JsonPointer.toPointer(segments);
     }
@@ -1044,7 +1071,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             return;
         }
         long limit = GasSchedule.contracts10()
-                .portableLimit("typeChainEdges");
+                .portableLimit(GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES);
         if (depth > limit) {
             throw invalid(
                     "Enumeration-selector type hierarchy exceeds "
@@ -1289,7 +1316,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             for (Map.Entry<String, Node> entry
                     : sourceContracts.getProperties().entrySet()) {
                 if (requestedKeys.contains(entry.getKey())
-                        || isDirectProcessorStateKey(entry.getKey())
+                        || isSubscriptionProcessorStateKey(entry.getKey())
                         || includeProcessEmbedded
                         && isDirectProcessEmbeddedContract(
                         entry.getValue())) {
@@ -1450,7 +1477,7 @@ public final class RootExternalDeliveryEvidenceVerifier
         if (contracts != null
                 && contracts.getProperties() != null) {
             contracts.getProperties().entrySet().removeIf(entry ->
-                    !isDirectProcessorStateKey(entry.getKey())
+                    !isSubscriptionProcessorStateKey(entry.getKey())
                             && !(retainedChannelKeys != null
                             ? retainedChannelKeys.contains(entry.getKey())
                             : isSubscriptionContract(entry.getValue()))
@@ -1509,10 +1536,15 @@ public final class RootExternalDeliveryEvidenceVerifier
         return false;
     }
 
-    private boolean isDirectProcessorStateKey(String key) {
-        return ProcessorContractConstants.KEY_INITIALIZED
-                .equals(key)
-                || ProcessorContractConstants.KEY_TERMINATED
+    private boolean isSubscriptionProcessorStateKey(String key) {
+        /*
+         * Initialization state does not affect feeder preselection. Keeping
+         * its exact document payload in this sparse projection would resolve
+         * unrelated content and make inline/collapsed marker forms observably
+         * different. Termination and checkpoint state are the only direct
+         * processor state needed by this phase.
+         */
+        return ProcessorContractConstants.KEY_TERMINATED
                 .equals(key)
                 || ProcessorContractConstants.KEY_CHECKPOINT
                 .equals(key);
@@ -1541,7 +1573,8 @@ public final class RootExternalDeliveryEvidenceVerifier
                         "External delivery snapshot is not in canonical order");
             }
             String occurrence = delivery.scopePath()
-                    + "\u0000" + delivery.channelKey();
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                    + delivery.channelKey();
             if (!occurrences.add(occurrence)) {
                 throw invalid(
                         "Duplicate External Channel occurrence at "
@@ -1618,7 +1651,9 @@ public final class RootExternalDeliveryEvidenceVerifier
                 bundle.effectiveContractSnapshot(
                         delivery.channelKey());
         if (contract == null
-                || !"external-channel".equals(contract.role())) {
+                || !EffectiveContractSnapshotConstants
+                .Role.EXTERNAL_CHANNEL.equals(
+                contract.role())) {
             throw invalid(
                     "External delivery channel is absent or not external at "
                             + delivery.scopePath() + "/"
@@ -1657,7 +1692,7 @@ public final class RootExternalDeliveryEvidenceVerifier
     private boolean reachableScope(Resolution resolution,
                                    String targetPath) {
         String target = PointerUtils.normalizeScope(targetPath);
-        String current = "/";
+        String current = JsonPointer.ROOT;
         Set<String> visited = new LinkedHashSet<>();
         while (!current.equals(target)) {
             if (!visited.add(current)) {
@@ -1702,7 +1737,8 @@ public final class RootExternalDeliveryEvidenceVerifier
         Node contracts = scope != null ? scope.getContracts() : null;
         Node marker = contracts != null
                 && contracts.getProperties() != null
-                ? contracts.getProperties().get("terminated")
+                ? contracts.getProperties().get(
+                ProcessorContractConstants.KEY_TERMINATED)
                 : null;
         if (marker == null) {
             return false;
@@ -1711,7 +1747,8 @@ public final class RootExternalDeliveryEvidenceVerifier
             ProcessorEngine.validateTerminationMarker(
                     marker,
                     PointerUtils.resolvePointer(
-                            "/", "/contracts/terminated"));
+                            JsonPointer.ROOT,
+                            ProcessorPointerConstants.RELATIVE_TERMINATED));
             return true;
         } catch (RuntimeException exception) {
             throw invalid(
@@ -1720,7 +1757,7 @@ public final class RootExternalDeliveryEvidenceVerifier
     }
 
     private Node nodeAt(Node root, String pointer) {
-        if ("/".equals(pointer)) {
+        if (JsonPointer.ROOT.equals(pointer)) {
             return root;
         }
         Node current = root;
@@ -1738,7 +1775,7 @@ public final class RootExternalDeliveryEvidenceVerifier
         if (node == null || node.isReferenceOnly()) {
             return false;
         }
-        if ("/".equals(PointerUtils.normalizeScope(
+        if (JsonPointer.ROOT.equals(PointerUtils.normalizeScope(
                 scopePath))) {
             return true;
         }
@@ -2021,7 +2058,8 @@ public final class RootExternalDeliveryEvidenceVerifier
 
         private Node selectedNodeAt(String scopePath) {
             if (snapshot != null) {
-                if ("/".equals(PointerUtils.normalizeScope(
+                if (JsonPointer.ROOT.equals(
+                        PointerUtils.normalizeScope(
                         scopePath))) {
                     return snapshot.canonicalRoot();
                 }
@@ -2033,7 +2071,8 @@ public final class RootExternalDeliveryEvidenceVerifier
 
         private Node effectiveNodeAt(String scopePath) {
             if (snapshot != null) {
-                if ("/".equals(PointerUtils.normalizeScope(
+                if (JsonPointer.ROOT.equals(
+                        PointerUtils.normalizeScope(
                         scopePath))) {
                     return snapshot.resolvedRoot();
                 }

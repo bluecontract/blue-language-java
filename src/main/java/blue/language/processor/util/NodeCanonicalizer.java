@@ -18,6 +18,12 @@ public final class NodeCanonicalizer {
     private NodeCanonicalizer() {
     }
 
+    /**
+     * Returns the JCS byte length of a mutable node's authored wire value.
+     *
+     * @param node authored node, or {@code null}
+     * @return zero when {@code node} is {@code null}
+     */
     public static long canonicalSize(Node node) {
         if (node == null) {
             return 0L;
@@ -25,7 +31,13 @@ public final class NodeCanonicalizer {
         return canonicalSize(NodeToMapListOrValue.get(node));
     }
 
-    /** Calculates the exact authored canonical size without materializing a mutable node. */
+    /**
+     * Calculates exact authored canonical size without materializing a mutable node.
+     *
+     * @param node strict canonical frozen node, or {@code null}
+     * @return canonical authored byte length
+     * @throws IllegalArgumentException when the frozen value is a resolved view
+     */
     public static long canonicalFrozenSize(FrozenNode node) {
         if (node == null) {
             return 0L;
@@ -39,6 +51,9 @@ public final class NodeCanonicalizer {
     /**
      * Returns the exact canonical byte size of this node's direct BlueId
      * helper map. Child content is represented by its bounded BlueId.
+     *
+     * @param node source node, or {@code null}
+     * @return direct identity-input byte length, or zero for a reference
      */
     public static long directIdentityCanonicalSize(Node node) {
         if (node == null || node.isReferenceOnly()) {

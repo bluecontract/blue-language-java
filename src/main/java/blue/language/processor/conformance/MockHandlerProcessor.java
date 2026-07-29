@@ -14,10 +14,17 @@ public final class MockHandlerProcessor implements HandlerProcessor<MockHandler>
 
     private final ScriptedContractsRuntime runtime;
 
+    /** Creates a processor backed by the empty scripted runtime. */
     public MockHandlerProcessor() {
         this(ScriptedContractsRuntime.empty());
     }
 
+    /**
+     * Creates a processor backed by fixture controls.
+     *
+     * @param runtime scripted runtime, or {@code null} to use the empty
+     *        runtime
+     */
     public MockHandlerProcessor(ScriptedContractsRuntime runtime) {
         this.runtime = runtime != null ? runtime : ScriptedContractsRuntime.empty();
     }
@@ -29,7 +36,7 @@ public final class MockHandlerProcessor implements HandlerProcessor<MockHandler>
 
     @Override
     public List<String> executableBodyFields() {
-        return Collections.singletonList("result");
+        return Collections.singletonList(ContractsFixtureConstants.Field.RESULT);
     }
 
     @Override

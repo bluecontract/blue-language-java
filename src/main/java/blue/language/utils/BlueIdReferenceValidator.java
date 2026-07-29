@@ -10,13 +10,23 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.utils.SchemaPropertyConstants.*;
+
 /**
  * Validates the syntax of every BlueId reference in a complete input graph.
  */
 public final class BlueIdReferenceValidator {
 
-    private static final String BLUE_ID_PATH = "/blueId";
-    private static final String PREVIOUS_BLUE_ID_PATH = "/$previous/blueId";
+    /** Direct node-valued metadata edges visited before list/map payloads. */
+    private static final int FIXED_NODE_CHILD_COUNT = 6;
+    /** Node-valued schema constraints visited before schema enum entries. */
+    private static final int FIXED_SCHEMA_CHILD_COUNT = 13;
+
+    private static final String BLUE_ID_PATH = "/" + Properties.OBJECT_BLUE_ID;
+    private static final String PREVIOUS_BLUE_ID_PATH =
+            "/" + Properties.LIST_CONTROL_PREVIOUS + BLUE_ID_PATH;
+    private static final String SCHEMA_BLUE_ID_PATH =
+            "/" + Properties.OBJECT_SCHEMA + BLUE_ID_PATH;
 
     private BlueIdReferenceValidator() {
     }
@@ -33,6 +43,14 @@ public final class BlueIdReferenceValidator {
         try {
             validateFast(root);
         } catch (IllegalArgumentException malformedReference) {
+            /*
+             * The allocation-light pass deliberately omits concrete paths.
+             * Replay the same child graph in the same semantic order to
+             * reconstruct the precise RFC 6901 path, then preserve the
+             * original failure if replay unexpectedly finds no finer error.
+             * FastTraversalFrame and appendChildrenInOrder must therefore
+             * remain in lockstep whenever a node-valued edge is added.
+             */
             validateDetailed(root);
             throw malformedReference;
         }
@@ -50,7 +68,7 @@ public final class BlueIdReferenceValidator {
                 if (!isReferenceFreeLeaf(node)
                         && visited.put(node, Boolean.TRUE) == null) {
                     validateReferences(node, BLUE_ID_PATH, PREVIOUS_BLUE_ID_PATH);
-                    validateSchemaReference(node.getSchema(), "/schema/blueId");
+                    validateSchemaReference(node.getSchema(), SCHEMA_BLUE_ID_PATH);
                     if (hasChildren(node)) {
                         pending.push(new FastTraversalFrame(node));
                     }
@@ -125,7 +143,7 @@ public final class BlueIdReferenceValidator {
             try {
                 validateBlueId(frame.node.getBlueId(), BLUE_ID_PATH);
             } catch (IllegalArgumentException malformedReference) {
-                validateBlueId(frame.node.getBlueId(), pointer(frame.path, "blueId"));
+                validateBlueId(frame.node.getBlueId(), pointer(frame.path, Properties.OBJECT_BLUE_ID));
                 throw malformedReference;
             }
         }
@@ -134,17 +152,20 @@ public final class BlueIdReferenceValidator {
                 BlueIds.requirePlainBlueId(frame.node.getPreviousBlueId(), PREVIOUS_BLUE_ID_PATH);
             } catch (IllegalArgumentException malformedReference) {
                 BlueIds.requirePlainBlueId(frame.node.getPreviousBlueId(),
-                        pointer(frame.path, "$previous", "blueId"));
+                        pointer(
+                                frame.path,
+                                Properties.LIST_CONTROL_PREVIOUS,
+                                Properties.OBJECT_BLUE_ID));
                 throw malformedReference;
             }
         }
         Schema schema = frame.node.getSchema();
         if (schema != null && schema.getBlueId() != null) {
             try {
-                validateBlueId(schema.getBlueId(), "/schema/blueId");
+                validateBlueId(schema.getBlueId(), SCHEMA_BLUE_ID_PATH);
             } catch (IllegalArgumentException malformedReference) {
                 validateBlueId(schema.getBlueId(),
-                        pointer(frame.path, "schema", "blueId"));
+                        pointer(frame.path, Properties.OBJECT_SCHEMA, Properties.OBJECT_BLUE_ID));
                 throw malformedReference;
             }
         }
@@ -163,12 +184,12 @@ public final class BlueIdReferenceValidator {
 
     private static void appendChildrenInOrder(TraversalFrame frame,
                                               Deque<TraversalFrame> children) {
-        add(children, frame.node.getType(), frame.path, "type");
-        add(children, frame.node.getItemType(), frame.path, "itemType");
-        add(children, frame.node.getKeyType(), frame.path, "keyType");
-        add(children, frame.node.getValueType(), frame.path, "valueType");
-        add(children, frame.node.getBlue(), frame.path, "blue");
-        add(children, frame.node.getContracts(), frame.path, "contracts");
+        add(children, frame.node.getType(), frame.path, Properties.OBJECT_TYPE);
+        add(children, frame.node.getItemType(), frame.path, Properties.OBJECT_ITEM_TYPE);
+        add(children, frame.node.getKeyType(), frame.path, Properties.OBJECT_KEY_TYPE);
+        add(children, frame.node.getValueType(), frame.path, Properties.OBJECT_VALUE_TYPE);
+        add(children, frame.node.getBlue(), frame.path, Properties.OBJECT_BLUE);
+        add(children, frame.node.getContracts(), frame.path, Properties.OBJECT_CONTRACTS);
 
         List<Node> items = frame.node.getItems();
         if (items != null) {
@@ -191,22 +212,22 @@ public final class BlueIdReferenceValidator {
         if (schema == null) {
             return;
         }
-        PathSegment schemaPath = new PathSegment(parent, "schema");
-        add(children, schema.getRequired(), schemaPath, "required");
-        add(children, schema.getMinLength(), schemaPath, "minLength");
-        add(children, schema.getMaxLength(), schemaPath, "maxLength");
-        add(children, schema.getMinimum(), schemaPath, "minimum");
-        add(children, schema.getMaximum(), schemaPath, "maximum");
-        add(children, schema.getExclusiveMinimum(), schemaPath, "exclusiveMinimum");
-        add(children, schema.getExclusiveMaximum(), schemaPath, "exclusiveMaximum");
-        add(children, schema.getMultipleOf(), schemaPath, "multipleOf");
-        add(children, schema.getMinItems(), schemaPath, "minItems");
-        add(children, schema.getMaxItems(), schemaPath, "maxItems");
-        add(children, schema.getUniqueItems(), schemaPath, "uniqueItems");
-        add(children, schema.getMinFields(), schemaPath, "minFields");
-        add(children, schema.getMaxFields(), schemaPath, "maxFields");
+        PathSegment schemaPath = new PathSegment(parent, Properties.OBJECT_SCHEMA);
+        add(children, schema.getRequired(), schemaPath, KEY_REQUIRED);
+        add(children, schema.getMinLength(), schemaPath, KEY_MIN_LENGTH);
+        add(children, schema.getMaxLength(), schemaPath, KEY_MAX_LENGTH);
+        add(children, schema.getMinimum(), schemaPath, KEY_MINIMUM);
+        add(children, schema.getMaximum(), schemaPath, KEY_MAXIMUM);
+        add(children, schema.getExclusiveMinimum(), schemaPath, KEY_EXCLUSIVE_MINIMUM);
+        add(children, schema.getExclusiveMaximum(), schemaPath, KEY_EXCLUSIVE_MAXIMUM);
+        add(children, schema.getMultipleOf(), schemaPath, KEY_MULTIPLE_OF);
+        add(children, schema.getMinItems(), schemaPath, KEY_MIN_ITEMS);
+        add(children, schema.getMaxItems(), schemaPath, KEY_MAX_ITEMS);
+        add(children, schema.getUniqueItems(), schemaPath, KEY_UNIQUE_ITEMS);
+        add(children, schema.getMinFields(), schemaPath, KEY_MIN_FIELDS);
+        add(children, schema.getMaxFields(), schemaPath, KEY_MAX_FIELDS);
         if (schema.getEnum() != null) {
-            PathSegment enumPath = new PathSegment(schemaPath, "enum");
+            PathSegment enumPath = new PathSegment(schemaPath, KEY_ENUM);
             for (int index = 0; index < schema.getEnum().size(); index++) {
                 add(children, schema.getEnum().get(index), enumPath, Integer.toString(index));
             }
@@ -264,7 +285,7 @@ public final class BlueIdReferenceValidator {
 
         private Node nextChild() {
             Node child;
-            while (fixedIndex < 6) {
+            while (fixedIndex < FIXED_NODE_CHILD_COUNT) {
                 child = fixedChild(fixedIndex++);
                 if (child != null) {
                     return child;
@@ -293,7 +314,8 @@ public final class BlueIdReferenceValidator {
             }
 
             Schema schema = node.getSchema();
-            while (schema != null && schemaIndex < 13) {
+            while (schema != null
+                    && schemaIndex < FIXED_SCHEMA_CHILD_COUNT) {
                 child = schemaChild(schema, schemaIndex++);
                 if (child != null) {
                     return child;

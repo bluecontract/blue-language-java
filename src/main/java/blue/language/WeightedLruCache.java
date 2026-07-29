@@ -3,10 +3,24 @@ package blue.language;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Small synchronized weighted LRU for reloadable derived state. */
+/**
+ * Small synchronized, access-ordered cache for reloadable derived state.
+ *
+ * <p>Entries are bounded by count, aggregate weight, and individual weight.
+ * Values rejected by a disabled or undersized policy remain usable by their
+ * caller but are not retained.</p>
+ */
 final class WeightedLruCache<K, V> {
 
+    /** Calculates the approximate retained weight of a cache value. */
     public interface Weigher<V> {
+
+        /**
+         * Returns the approximate retained weight of {@code value}.
+         *
+         * @param value non-null candidate value
+         * @return retained weight; values below one are normalized to one
+         */
         long weightOf(V value);
     }
 
@@ -23,10 +37,21 @@ final class WeightedLruCache<K, V> {
     private long hits;
     private long misses;
 
-    public WeightedLruCache(int maximumEntries,
-                            long maximumWeight,
-                            long maximumEntryWeight,
-                            Weigher<V> weigher) {
+    /**
+     * Creates an empty cache with simultaneous entry and weight bounds.
+     *
+     * @param maximumEntries maximum retained entry count
+     * @param maximumWeight maximum aggregate retained weight
+     * @param maximumEntryWeight maximum retained weight of one entry
+     * @param weigher value-weight calculator
+     * @throws IllegalArgumentException if a bound is negative or the weigher
+     *         is {@code null}
+     */
+    public WeightedLruCache(
+            int maximumEntries,
+            long maximumWeight,
+            long maximumEntryWeight,
+            Weigher<V> weigher) {
         if (maximumEntries < 0 || maximumWeight < 0L || maximumEntryWeight < 0L) {
             throw new IllegalArgumentException("Cache bounds must not be negative");
         }
@@ -39,6 +64,12 @@ final class WeightedLruCache<K, V> {
         this.weigher = weigher;
     }
 
+    /**
+     * Returns the cached value and records a hit or miss.
+     *
+     * @param key lookup key
+     * @return retained value, or {@code null} when absent
+     */
     public synchronized V get(K key) {
         Entry<V> entry = entries.get(key);
         if (entry == null) {
@@ -49,12 +80,29 @@ final class WeightedLruCache<K, V> {
         return entry != null ? entry.value : null;
     }
 
-    /** Returns a value without changing hit/miss counters. */
+    /**
+     * Returns a value without changing hit/miss counters.
+     *
+     * @param key lookup key
+     * @return retained value, or {@code null} when absent
+     */
     public synchronized V peek(K key) {
         Entry<V> entry = entries.get(key);
         return entry != null ? entry.value : null;
     }
 
+    /**
+     * Retains a value when it fits every configured bound.
+     *
+     * <p>An oversized rejection leaves an existing value for the same key
+     * untouched. A successful replacement updates access order before the
+     * least-recently-used entries are evicted to restore the bounds.</p>
+     *
+     * @param key non-null cache key
+     * @param value non-null candidate value
+     * @return previously retained value for {@code key}, or {@code null}
+     * @throws IllegalArgumentException if the key or value is {@code null}
+     */
     public synchronized V put(K key, V value) {
         if (key == null || value == null) {
             throw new IllegalArgumentException("Cache keys and values must not be null");
@@ -83,6 +131,12 @@ final class WeightedLruCache<K, V> {
         return previous != null ? previous.value : null;
     }
 
+    /**
+     * Removes one retained entry.
+     *
+     * @param key key to remove
+     * @return removed value, or {@code null} when absent
+     */
     public synchronized V remove(K key) {
         Entry<V> removed = entries.remove(key);
         if (removed != null) {
@@ -92,6 +146,11 @@ final class WeightedLruCache<K, V> {
         return null;
     }
 
+    /**
+     * Removes every retained entry without resetting lifetime counters.
+     *
+     * @return aggregate weight released by the clear
+     */
     public synchronized long clear() {
         long released = currentWeight;
         entries.clear();
@@ -99,34 +158,42 @@ final class WeightedLruCache<K, V> {
         return released;
     }
 
+    /** @return current retained entry count */
     public synchronized int size() {
         return entries.size();
     }
 
+    /** @return current aggregate retained weight */
     public synchronized long currentWeight() {
         return currentWeight;
     }
 
+    /** @return highest aggregate retained weight observed */
     public synchronized long highWaterWeight() {
         return highWaterWeight;
     }
 
+    /** @return lifetime count of entries evicted to restore cache bounds */
     public synchronized long evictions() {
         return evictions;
     }
 
+    /** @return lifetime count of candidates rejected by cache bounds */
     public synchronized long oversizedRejections() {
         return oversizedRejections;
     }
 
+    /** @return lifetime count of successful {@link #get(Object)} lookups */
     public synchronized long hits() {
         return hits;
     }
 
+    /** @return lifetime count of unsuccessful {@link #get(Object)} lookups */
     public synchronized long misses() {
         return misses;
     }
 
+    /** Evicts least-recently-used entries until both live bounds are met. */
     private void evictToBounds() {
         while (entries.size() > maximumEntries || currentWeight > maximumWeight) {
             Map.Entry<K, Entry<V>> eldest = entries.entrySet().iterator().next();
@@ -136,6 +203,7 @@ final class WeightedLruCache<K, V> {
         }
     }
 
+    /** Retained value paired with its normalized approximate weight. */
     private static final class Entry<V> {
         private final V value;
         private final long weight;

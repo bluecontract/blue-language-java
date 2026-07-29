@@ -3,11 +3,38 @@ package blue.language.utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+/**
+ * Numeric normalization and exact binary64 constraint helpers.
+ *
+ * <p>Blue Double identity follows the finite IEEE-754 binary64 value, not the
+ * arbitrary precision or lexical form supplied by a caller.</p>
+ */
 public final class BlueNumbers {
+
+    /**
+     * Smallest integer that all compliant JSON/IEEE-754 integrations can
+     * exchange without losing precision.
+     */
+    public static final BigInteger MIN_INTEROPERABLE_INTEGER =
+            BigInteger.valueOf(-9_007_199_254_740_991L);
+
+    /**
+     * Largest integer that all compliant JSON/IEEE-754 integrations can
+     * exchange without losing precision.
+     */
+    public static final BigInteger MAX_INTEROPERABLE_INTEGER =
+            BigInteger.valueOf(9_007_199_254_740_991L);
 
     private BlueNumbers() {
     }
 
+    /**
+     * Converts a numeric value or numeric string to the canonical finite
+     * binary64-backed {@link BigDecimal} representation.
+     *
+     * @param value supported numeric value
+     * @return canonical decimal representation
+     */
     public static BigDecimal toCanonicalDoubleValue(Object value) {
         double doubleValue;
         if (value instanceof BigDecimal) {
@@ -28,6 +55,14 @@ public final class BlueNumbers {
         return BigDecimal.valueOf(doubleValue);
     }
 
+    /**
+     * Tests {@code value / multipleOf} for exact integrality in binary64
+     * space.
+     *
+     * @param value dividend value
+     * @param multipleOf divisor, or {@code null}
+     * @return whether the value is an exact multiple
+     */
     public static boolean isExactBinary64Multiple(Object value, BigDecimal multipleOf) {
         if (multipleOf == null) {
             return true;

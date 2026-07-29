@@ -13,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 final class SelectedExecutableBodyDemandGasTest {
 
     @Test
-    void inlineAndPureReferenceFormsHaveExactDemandAndGasParity() {
+    void shouldGiveInlineAndPureReferenceFormsExactDemandAndGasParity() {
+        // given
         Node authoredBody = executableBodyNode();
         String exactBodyBlueId =
                 BlueIdCalculator.calculateBlueId(authoredBody);
@@ -26,15 +27,17 @@ final class SelectedExecutableBodyDemandGasTest {
         DocumentProcessingRuntime referenceRuntime =
                 new DocumentProcessingRuntime(new Node());
 
+        // when
         inlineRuntime.recordSelectedExecutableBodyDemand(
                 inline, "/child", "handler", "/contracts/handler/result");
         referenceRuntime.recordSelectedExecutableBodyDemand(
                 reference, "/child", "handler", "/contracts/handler/result");
-
         ProcessingConformanceTrace inlineTrace =
                 inlineRuntime.conformanceTrace();
         ProcessingConformanceTrace referenceTrace =
                 referenceRuntime.conformanceTrace();
+
+        // then
         assertEquals(
                 Arrays.asList(exactBodyBlueId),
                 inlineTrace.semanticDemands());
@@ -54,17 +57,20 @@ final class SelectedExecutableBodyDemandGasTest {
     }
 
     @Test
-    void repeatedSelectionCarriesThePreAdmittedExactBodyWithoutKernelGas() {
+    void shouldCarryPreAdmittedExactBodyAcrossRepeatedSelectionWithoutKernelGas() {
+        // given
         FrozenNode body = executableBody();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(new Node());
 
+        // when
         runtime.recordSelectedExecutableBodyDemand(
                 body, "/", "first", "/contracts/first/result");
         runtime.recordSelectedExecutableBodyDemand(
                 body, "/", "second", "/contracts/second/result");
-
         ProcessingConformanceTrace trace = runtime.conformanceTrace();
+
+        // then
         assertEquals(
                 Arrays.asList(
                         BlueIdCalculator.calculateBlueId(
@@ -74,13 +80,16 @@ final class SelectedExecutableBodyDemandGasTest {
     }
 
     @Test
-    void absentExecutableFieldHasNoDemandOrGas() {
+    void shouldProduceNoDemandOrGasForAbsentExecutableField() {
+        // given
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(new Node());
 
+        // when
         runtime.recordSelectedExecutableBodyDemand(
                 null, "/", "handler", "/contracts/handler/result");
 
+        // then
         assertEquals(
                 java.util.Collections.emptyList(),
                 runtime.conformanceTrace().semanticDemands());

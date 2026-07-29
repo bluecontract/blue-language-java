@@ -46,15 +46,18 @@ final class FragmentedProcessingFailureMatrixTest {
                     9191, "failure-matrix", 1));
 
     @Test
-    void exactRootAndEventNotFoundAreDeterministicPreGasFailures() {
+    void shouldRejectMissingRootBeforePortableGasAdmission() {
+        // given
         try (Fixture rootMissing = Fixture.create()) {
             rootMissing.provider.outcome(
                     rootMissing.rootBlueId,
                     NodeProviderResult.notFound());
 
+            // when
             ProcessAttemptResult attempt =
                     rootMissing.attempt();
 
+            // then
             assertPreGasInvalid(
                     attempt,
                     rootMissing.rootReference(),
@@ -64,15 +67,21 @@ final class FragmentedProcessingFailureMatrixTest {
                             rootMissing.rootBlueId),
                     rootMissing.provider.requests());
         }
+    }
 
+    @Test
+    void shouldRejectMissingEventBeforePortableGasAdmission() {
+        // given
         try (Fixture eventMissing = Fixture.create()) {
             eventMissing.provider.outcome(
                     eventMissing.eventBlueId,
                     NodeProviderResult.notFound());
 
+            // when
             ProcessAttemptResult attempt =
                     eventMissing.attempt();
 
+            // then
             assertPreGasInvalid(
                     attempt,
                     eventMissing.rootReference(),
@@ -86,15 +95,18 @@ final class FragmentedProcessingFailureMatrixTest {
     }
 
     @Test
-    void invalidRootAndEventEvidenceRollBackBeforeSemanticAdmission() {
+    void shouldRejectInvalidRootEvidenceBeforeSemanticAdmission() {
+        // given
         try (Fixture invalidRoot = Fixture.create()) {
             invalidRoot.provider.forged(
                     invalidRoot.rootBlueId,
                     new Node().value("forged Root"));
 
+            // when
             ProcessAttemptResult attempt =
                     invalidRoot.attempt();
 
+            // then
             assertPreGasInvalid(
                     attempt,
                     invalidRoot.rootReference(),
@@ -105,15 +117,21 @@ final class FragmentedProcessingFailureMatrixTest {
                             .message()
                             .contains("BlueId"));
         }
+    }
 
+    @Test
+    void shouldRejectInvalidEventEvidenceBeforeSemanticAdmission() {
+        // given
         try (Fixture invalidEvent = Fixture.create()) {
             invalidEvent.provider.forged(
                     invalidEvent.eventBlueId,
                     new Node().value("forged Event"));
 
+            // when
             ProcessAttemptResult attempt =
                     invalidEvent.attempt();
 
+            // then
             assertPreGasInvalid(
                     attempt,
                     invalidEvent.rootReference(),
@@ -127,15 +145,18 @@ final class FragmentedProcessingFailureMatrixTest {
     }
 
     @Test
-    void selectedBodyNotFoundAndInvalidEvidenceRollBackEverything() {
+    void shouldRollBackWhenSelectedBodyIsMissing() {
+        // given
         try (Fixture bodyMissing = Fixture.create()) {
             bodyMissing.provider.outcome(
                     bodyMissing.selectedBodyBlueId,
                     NodeProviderResult.notFound());
 
+            // when
             ProcessAttemptResult missingAttempt =
                     bodyMissing.attempt();
 
+            // then
             assertSelectedBodyFailure(
                     missingAttempt,
                     bodyMissing,
@@ -149,15 +170,21 @@ final class FragmentedProcessingFailureMatrixTest {
                                     bodyMissing
                                             .selectedBodyBlueId));
         }
+    }
 
+    @Test
+    void shouldRollBackWhenSelectedBodyEvidenceIsInvalid() {
+        // given
         try (Fixture bodyInvalid = Fixture.create()) {
             bodyInvalid.provider.forged(
                     bodyInvalid.selectedBodyBlueId,
                     new Node().value("forged selected body"));
 
+            // when
             ProcessAttemptResult invalidAttempt =
                     bodyInvalid.attempt();
 
+            // then
             assertSelectedBodyFailure(
                     invalidAttempt,
                     bodyInvalid,
@@ -172,7 +199,8 @@ final class FragmentedProcessingFailureMatrixTest {
     }
 
     @Test
-    void selectedBodyUnavailableSuspendsWithoutPortableGasAndRetryMatches() {
+    void shouldVerifySelectedBodyUnavailableSuspendsWithoutPortableGasAndRetryMatches() {
+        // given
         DocumentProcessingResult available;
         try (Fixture baseline = Fixture.create()) {
             available = requireSuccess(
@@ -185,9 +213,22 @@ final class FragmentedProcessingFailureMatrixTest {
                     NodeProviderResult.unavailable(
                             "selected body transport is transiently unavailable"));
 
+            // when
             ProcessAttemptResult unavailable =
                     suspended.attempt();
+            suspended.provider.clearOutcome(
+                    suspended.selectedBodyBlueId);
+            suspended.provider.clearRequests();
+            DocumentProcessingResult retried =
+                    requireSuccess(
+                            suspended.attempt(),
+                            suspended);
+            int selectedBodyRequestCount =
+                    Collections.frequency(
+                            suspended.provider.requests(),
+                            suspended.selectedBodyBlueId);
 
+            // then
             assertEquals(
                     ProcessAttemptResult.Kind
                             .NEEDS_RESOURCES,
@@ -202,27 +243,15 @@ final class FragmentedProcessingFailureMatrixTest {
                     suspended.rootBlueId,
                     BlueIdCalculator.calculateBlueId(
                             suspended.rootReference()));
-
-            suspended.provider.clearOutcome(
-                    suspended.selectedBodyBlueId);
-            suspended.provider.clearRequests();
-            DocumentProcessingResult retried =
-                    requireSuccess(
-                            suspended.attempt(),
-                            suspended);
-
             assertEquivalentSuccess(
                     available, retried);
-            assertEquals(
-                    1,
-                    Collections.frequency(
-                            suspended.provider.requests(),
-                            suspended.selectedBodyBlueId));
+            assertEquals(1, selectedBodyRequestCount);
         }
     }
 
     @Test
-    void unavailableUnselectedBodyDoesNotAffectSuccess() {
+    void shouldVerifyUnavailableUnselectedBodyDoesNotAffectSuccess() {
+        // given
         DocumentProcessingResult available;
         try (Fixture baseline = Fixture.create()) {
             available = requireSuccess(
@@ -237,11 +266,13 @@ final class FragmentedProcessingFailureMatrixTest {
                     NodeProviderResult.unavailable(
                             "unselected body must stay cold"));
 
+            // when
             DocumentProcessingResult actual =
                     requireSuccess(
                             unselectedUnavailable.attempt(),
                             unselectedUnavailable);
 
+            // then
             assertEquivalentSuccess(available, actual);
             assertFalse(
                     unselectedUnavailable
@@ -254,36 +285,45 @@ final class FragmentedProcessingFailureMatrixTest {
     }
 
     @Test
-    void partialDirectManifestCannotEstablishAbsentField() {
+    void shouldVerifyPartialDirectManifestCannotEstablishAbsentField() {
+        // given
         Node knownDirectContent = new Node()
                 .properties(
                         "known",
                         new Node().value("present"));
-
-        assertEquals(
-                BlueOperationOutcome.INCOMPLETE,
-                DirectNodeManifest
-                        .partial(knownDirectContent)
-                        .semanticSelect("/missing")
-                        .outcome());
-        assertEquals(
-                BlueOperationOutcome.ABSENT,
-                DirectNodeManifest
-                        .complete(knownDirectContent)
-                        .semanticSelect("/missing")
-                        .outcome());
-
         Node referenced = new Node().properties(
                 "child",
                 new Node().blueId(
                         BlueIdCalculator.calculateBlueId(
                                 new Node().value("child"))));
-        assertEquals(
-                BlueOperationOutcome.ABSENT,
+
+        // when
+        BlueOperationOutcome partialOutcome =
+                DirectNodeManifest
+                        .partial(knownDirectContent)
+                        .semanticSelect("/missing")
+                        .outcome();
+        BlueOperationOutcome completeOutcome =
+                DirectNodeManifest
+                        .complete(knownDirectContent)
+                        .semanticSelect("/missing")
+                        .outcome();
+        BlueOperationOutcome referenceWrapperOutcome =
                 DirectNodeManifest
                         .complete(referenced)
                         .semanticSelect("/child/blueId")
-                        .outcome(),
+                        .outcome();
+
+        // then
+        assertEquals(
+                BlueOperationOutcome.INCOMPLETE,
+                partialOutcome);
+        assertEquals(
+                BlueOperationOutcome.ABSENT,
+                completeOutcome);
+        assertEquals(
+                BlueOperationOutcome.ABSENT,
+                referenceWrapperOutcome,
                 "a pure reference wrapper's blueId is not "
                         + "a semantic child");
     }
@@ -571,7 +611,7 @@ final class FragmentedProcessingFailureMatrixTest {
                                             RuntimeBlueIds
                                                     .PROCESSING_INITIALIZED_MARKER))
                                     .properties(
-                                            "documentId",
+                                            "document",
                                             new Node().value(
                                                     "failure-matrix")))
                     .properties(CHANNEL, channel)

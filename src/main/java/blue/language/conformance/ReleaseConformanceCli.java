@@ -33,6 +33,12 @@ public final class ReleaseConformanceCli {
     private ReleaseConformanceCli() {
     }
 
+    /**
+     * Runs both release conformance suites and writes their JSON and text reports.
+     *
+     * @param args optional JSON-report and text-report output paths
+     * @throws IOException if either report cannot be written
+     */
     public static void main(String[] args) throws IOException {
         if (args.length > 2) {
             throw new IllegalArgumentException(

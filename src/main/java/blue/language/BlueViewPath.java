@@ -1,5 +1,7 @@
 package blue.language;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.Node;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.SchemaToMapListOrValue;
@@ -9,11 +11,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Resolves RFC 6901 pointers against the semantic fields of a mutable
+ * {@link Node}.
+ *
+ * <p>Pure-reference {@code blueId} wrappers are representation details and are
+ * intentionally not exposed as selectable semantic children.</p>
+ */
 public final class BlueViewPath {
 
     private BlueViewPath() {
     }
 
+    /**
+     * Parses and unescapes an absolute JSON Pointer.
+     *
+     * @param path pointer to parse
+     * @return decoded segments
+     * @throws IllegalArgumentException for null, relative, or malformed paths
+     */
     public static List<String> split(String path) {
         if (path == null) {
             throw new IllegalArgumentException("Blue Language view path must not be null.");
@@ -32,6 +48,16 @@ public final class BlueViewPath {
         return segments;
     }
 
+    /**
+     * Selects a semantic node, returning {@code null} when the path is valid
+     * but absent.
+     *
+     * @param root selection root
+     * @param path RFC 6901 pointer
+     * @return selected node, or {@code null} when absent
+     * @throws IllegalArgumentException when the pointer or a list index is not
+     *                                  canonical
+     */
     public static Node select(Node root, String path) {
         Node current = root;
         List<String> segments = split(path);
@@ -40,7 +66,7 @@ public final class BlueViewPath {
             if (current == null) {
                 return null;
             }
-            if ("items".equals(segments.get(i))) {
+            if (Properties.OBJECT_ITEMS.equals(segments.get(i))) {
                 i++;
             }
         }
@@ -53,37 +79,37 @@ public final class BlueViewPath {
         }
         String segment = segments.get(index);
         switch (segment) {
-            case "name":
+            case Properties.OBJECT_NAME:
                 return node.getName() == null
                         ? null : new Node().value(node.getName());
-            case "description":
+            case Properties.OBJECT_DESCRIPTION:
                 return node.getDescription() == null
                         ? null : new Node().value(node.getDescription());
-            case "type":
+            case Properties.OBJECT_TYPE:
                 return node.getType();
-            case "itemType":
+            case Properties.OBJECT_ITEM_TYPE:
                 return node.getItemType();
-            case "keyType":
+            case Properties.OBJECT_KEY_TYPE:
                 return node.getKeyType();
-            case "valueType":
+            case Properties.OBJECT_VALUE_TYPE:
                 return node.getValueType();
-            case "value":
+            case Properties.OBJECT_VALUE:
                 return node.getRawValue() == null
                         ? null : new Node().value(node.getRawValue());
-            case "blueId":
+            case Properties.OBJECT_BLUE_ID:
                 // A pure-reference wrapper is representation, not a semantic
-                // child named "blueId".
+                // A property child named blueId is distinct from the field.
                 return null;
-            case "contracts":
+            case Properties.OBJECT_CONTRACTS:
                 return node.getContracts();
-            case "schema":
+            case Properties.OBJECT_SCHEMA:
                 return node.getSchema() == null
                         ? null
                         : UncheckedObjectMapper.JSON_MAPPER.convertValue(
                         SchemaToMapListOrValue.get(
                                 node.getSchema(), NodeToMapListOrValue::get),
                         Node.class);
-            case "items":
+            case Properties.OBJECT_ITEMS:
                 if (node.getItems() == null) {
                     return null;
                 }

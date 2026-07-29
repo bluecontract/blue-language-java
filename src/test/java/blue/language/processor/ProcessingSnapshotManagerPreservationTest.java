@@ -10,45 +10,57 @@ import java.util.Collection;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ProcessingSnapshotManagerPreservationTest {
 
     @Test
-    void defaultFailsClosedForNonemptyPreservationRequest() {
+    void shouldVerifyDefaultFailsClosedForNonemptyPreservationRequest() {
+        // given
         CountingManager manager = new CountingManager();
 
-        assertThrows(UnsupportedOperationException.class,
+        // when
+        UnsupportedOperationException failure =
+                FailureCapture.captureFailure(
                 () -> manager.fromDocumentPreservingPaths(
                         new Node(),
                         Collections.singleton("/contracts/h/result")));
+
+        // then
+        assertNotNull(failure);
         assertEquals(0, manager.fromDocumentCalls);
     }
 
     @Test
-    void emptyPreservationRequestUsesOrdinaryResolution() {
+    void shouldVerifyEmptyPreservationRequestUsesOrdinaryResolution() {
+        // given
         CountingManager manager = new CountingManager();
         Node document = new Node().value("ordinary");
 
+        // when
         ResolvedSnapshot result =
                 manager.fromDocumentPreservingPaths(
                         document, Collections.emptyList());
 
+        // then
         assertEquals(1, manager.fromDocumentCalls);
         assertEquals("ordinary", result.resolvedRoot().getValue());
     }
 
     @Test
-    void transientPreservationDelegatesToSingleAwareOverride() {
+    void shouldVerifyTransientPreservationDelegatesToSingleAwareOverride() {
+        // given
         PreservationAwareManager manager =
                 new PreservationAwareManager();
         Node document = new Node().value("deferred");
 
+        // when
         ResolvedSnapshot result =
                 manager.fromDocumentTransientPreservingPaths(
                         document, Collections.singleton("/body"));
 
+        // then
         assertSame(manager.preservedSnapshot, result);
         assertEquals(1, manager.preservationCalls);
         assertEquals(0, manager.transientCalls);

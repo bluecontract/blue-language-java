@@ -15,10 +15,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class EffectiveSubscriptionSurfaceValidatorTest {
@@ -27,7 +27,8 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
             "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
 
     @Test
-    void inheritedReferencedCustomChannelUsesOrderedSourceAndAttemptInterval() {
+    void shouldVerifyInheritedReferencedCustomChannelUsesOrderedSourceAndAttemptInterval() {
+        // given
         EffectiveTypes types = effectiveTypes("old-topic", "new-topic");
         try (Blue blue = blue(types, new PortableExternalProcessor())) {
             Node before = new Node().type(reference(types.beforeTypeBlueId));
@@ -39,6 +40,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
             ExternalOrderKey order = ExternalOrderKey.of(
                     Arrays.asList(2000, "timeline", 7));
 
+            // when
             SubscriptionDelta delta =
                     blue.getDocumentProcessor()
                             .subscriptionSurfaceValidator()
@@ -55,11 +57,14 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                     afterSnapshot)
                                             .committingInterval(order, 9L)
                                             .build());
+            SubscriptionDelta.Entry removed =
+                    delta.removed().get(0);
+            SubscriptionDelta.Entry added =
+                    delta.added().get(0);
 
+            // then
             assertEquals(1, delta.removed().size());
             assertEquals(1, delta.added().size());
-            SubscriptionDelta.Entry removed = delta.removed().get(0);
-            SubscriptionDelta.Entry added = delta.added().get(0);
             assertEquals(
                     Collections.singletonList(
                             types.beforeChannelBlueId),
@@ -86,14 +91,17 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
     }
 
     @Test
-    void changedCustomExternalTypeWithoutSurfaceFunctionsFailsClosed() {
+    void shouldVerifyChangedCustomExternalTypeWithoutSurfaceFunctionsFailsClosed() {
+        // given
         EffectiveTypes types = effectiveTypes("old-topic", "new-topic");
+
+        // when
+        SubscriptionSurfaceInvalidException failure;
         try (Blue blue = blue(types, new UnindexableExternalProcessor())) {
             Node before = new Node().type(reference(types.beforeTypeBlueId));
             Node after = new Node().type(reference(types.afterTypeBlueId));
 
-            SubscriptionSurfaceInvalidException failure = assertThrows(
-                    SubscriptionSurfaceInvalidException.class,
+            failure = captureFailure(
                     () -> blue.getDocumentProcessor()
                             .subscriptionSurfaceValidator()
                             .validate(
@@ -111,13 +119,18 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                             after))
                                             .build()));
 
-            assertTrue(failure.getMessage().contains(
-                    "does not expose supported immutable subscription functions"));
         }
+
+        // then
+        assertEquals(SubscriptionSurfaceInvalidException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "does not expose supported immutable subscription functions"));
     }
 
     @Test
-    void addingDirectTerminationRetiresPreviouslyActiveSurface() {
+    void shouldVerifyAddingDirectTerminationRetiresPreviouslyActiveSurface() {
+        // given
         Node channel = new Node()
                 .type(reference(
                         RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL))
@@ -135,6 +148,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         ExternalOrderKey order = ExternalOrderKey.of(
                 Arrays.asList(10, "timeline", 2));
 
+        // when
         SubscriptionDelta delta =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext
@@ -147,6 +161,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                 .committingInterval(order, 4L)
                                 .build());
 
+        // then
         assertEquals(1, delta.removed().size());
         assertTrue(delta.added().isEmpty());
         assertEquals(Long.valueOf(4L),
@@ -154,7 +169,8 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
     }
 
     @Test
-    void retainedIntervalIdentityIsClosedExactlyAndReplacementStartsAfterEvent() {
+    void shouldVerifyRetainedIntervalIdentityIsClosedExactlyAndReplacementStartsAfterEvent() {
+        // given
         Node beforeChannel = scriptedChannel("old-topic");
         Node afterChannel = scriptedChannel("new-topic");
         Node before = new Node().contracts(
@@ -176,6 +192,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                         2L,
                         originalStart);
 
+        // when
         SubscriptionDelta delta =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext
@@ -190,19 +207,20 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                 retained))
                                 .committingInterval(current, 7L)
                                 .build());
-
-        assertEquals(1, delta.removed().size());
-        assertEquals(1, delta.added().size());
         SubscriptionDelta.Entry retired =
                 delta.removed().get(0);
+        SubscriptionDelta.Entry activated =
+                delta.added().get(0);
+
+        // then
+        assertEquals(1, delta.removed().size());
+        assertEquals(1, delta.added().size());
         assertEquals(Long.valueOf(2L),
                 retired.activationRootRevision());
         assertEquals(originalStart,
                 retired.startAfterExternalOrderKey());
         assertEquals(Long.valueOf(7L),
                 retired.endAtRootRevision());
-        SubscriptionDelta.Entry activated =
-                delta.added().get(0);
         assertEquals(Long.valueOf(7L),
                 activated.activationRootRevision());
         assertEquals(current,
@@ -211,7 +229,8 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
     }
 
     @Test
-    void exactRetainedIntervalIsRetiredWhenOccurrenceIsRemoved() {
+    void shouldVerifyExactRetainedIntervalIsRetiredWhenOccurrenceIsRemoved() {
+        // given
         Node channel = scriptedChannel("topic");
         Node before = new Node().contracts(
                 new Node().properties("incoming", channel));
@@ -222,6 +241,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         SubscriptionDelta.Entry retained =
                 descriptor(channel, "topic", 1L, originalStart);
 
+        // when
         SubscriptionDelta delta =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext
@@ -243,6 +263,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                         6L)
                                 .build());
 
+        // then
         assertTrue(delta.added().isEmpty());
         assertEquals(1, delta.removed().size());
         assertEquals(Long.valueOf(1L),
@@ -257,7 +278,8 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
     }
 
     @Test
-    void removingEmbeddedDeclarationRetiresRetainedDescendantWithoutOldScan() {
+    void shouldVerifyRemovingEmbeddedDeclarationRetiresRetainedDescendantWithoutOldScan() {
+        // given
         Node channel = scriptedChannel("topic");
         Node embedded = new Node()
                 .type(reference(RuntimeBlueIds.PROCESS_EMBEDDED))
@@ -295,6 +317,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                         1, "timeline", 0)),
                         null);
 
+        // when
         SubscriptionDelta delta =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext
@@ -316,6 +339,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                         2L)
                                 .build());
 
+        // then
         assertTrue(delta.added().isEmpty());
         assertEquals(1, delta.removed().size());
         assertEquals("/child",
@@ -326,7 +350,8 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
     }
 
     @Test
-    void unrelatedDeepBranchIsNeitherTraversedNorDemanded() {
+    void shouldVerifyUnrelatedDeepBranchIsNeitherTraversedNorDemanded() {
+        // given
         Node beforeChannel = scriptedChannel("old-topic");
         Node afterChannel = scriptedChannel("new-topic");
         Node before = new Node()
@@ -341,6 +366,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                 ExternalOrderKey.of(
                         Arrays.asList(1, "timeline", 0));
 
+        // when
         SubscriptionDelta delta =
                 DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext
@@ -367,11 +393,13 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                         2L)
                                 .build());
 
+        // then
         assertFalse(delta.isEmpty());
     }
 
     @Test
-    void exactScopeIdentityCannotRecurInEmbeddedAncestry() {
+    void shouldVerifyExactScopeIdentityCannotRecurInEmbeddedAncestry() {
+        // given
         Node child = new Node()
                 .blueId("same-exact-scope")
                 .contracts(new Node());
@@ -389,8 +417,8 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                 new Node().value(
                                                         "/child")))));
 
-        SubscriptionSurfaceInvalidException failure = assertThrows(
-                SubscriptionSurfaceInvalidException.class,
+        // when
+        SubscriptionSurfaceInvalidException failure = captureFailure(
                 () -> DirectSubscriptionSurfaceValidator.INSTANCE.validate(
                         SubscriptionSurfaceValidationContext.builder(
                                         root,
@@ -400,6 +428,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                         GasSchedule.contracts10())
                                 .build()));
 
+        // then
+        assertEquals(SubscriptionSurfaceInvalidException.class,
+                failure.getClass());
         assertTrue(failure.getMessage().contains(
                 "revisits exact node same-exact-scope"));
     }

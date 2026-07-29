@@ -7,7 +7,12 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.utils.FrozenTypeMatcher;
 
 /**
- * Shared matcher facade for contract-level event patterns.
+ * Shared, bounded matcher facade for contract-level event patterns.
+ *
+ * <p>Structural matching and verified declared-type lineage use separate
+ * caches under one {@link BlueCachePolicy}. A service without a {@link Blue}
+ * context can match exact inline values but fails closed when provider-backed
+ * ancestry is required.</p>
  */
 public final class ContractMatchingService {
 
@@ -16,10 +21,18 @@ public final class ContractMatchingService {
     private final FrozenTypeMatcher matcher;
     private final DeclaredTypeLineageMatcher declaredTypeLineageMatcher;
 
+    /**
+     * Creates a bounded matcher with no provider-backed type ancestry.
+     */
     public ContractMatchingService() {
         this(null);
     }
 
+    /**
+     * Creates a bounded matcher using the supplied Blue resolution context.
+     *
+     * @param blue resolution context, or {@code null} to disable provider-backed ancestry
+     */
     public ContractMatchingService(Blue blue) {
         this.blue = blue;
         this.cachePolicy = blue != null
@@ -69,6 +82,13 @@ public final class ContractMatchingService {
         declaredTypeLineageMatcher.clearCaches();
     }
 
+    /**
+     * Matches immutable values; a null pattern is the unconditional pattern.
+     *
+     * @param event frozen event value, possibly {@code null}
+     * @param pattern frozen pattern, or {@code null} for an unconditional match
+     * @return whether the event satisfies the pattern
+     */
     public boolean matches(FrozenNode event, FrozenNode pattern) {
         if (pattern == null) {
             return true;
@@ -76,6 +96,14 @@ public final class ContractMatchingService {
         return matcher.matchesType(event, pattern);
     }
 
+    /**
+     * Defensively freezes mutable values before matching. A non-null pattern
+     * never matches a null event.
+     *
+     * @param event mutable event value, possibly {@code null}
+     * @param pattern mutable pattern, or {@code null} for an unconditional match
+     * @return whether the event satisfies the pattern
+     */
     public boolean matches(Node event, Node pattern) {
         if (pattern == null) {
             return true;

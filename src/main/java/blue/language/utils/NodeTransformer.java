@@ -9,7 +9,28 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Applies a transformation recursively to a defensive clone of every node in
+ * a graph, including schema constraint nodes.
+ */
 public class NodeTransformer {
+
+    /**
+     * Creates a recursive node transformation helper.
+     */
+    public NodeTransformer() {
+    }
+
+    /**
+     * Returns a transformed deep graph, or {@code null} for a null root.
+     *
+     * <p>The callback receives a clone of each source node, so the input graph
+     * is never modified.</p>
+     *
+     * @param node source graph root, or {@code null}
+     * @param nodeTransformer transformation applied to each cloned node
+     * @return transformed deep graph, or {@code null} for a null root
+     */
     public static Node transform(Node node, Function<Node, Node> nodeTransformer) {
         if (node == null) {
             return null;

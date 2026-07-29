@@ -14,9 +14,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -29,7 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TrustedProviderResolutionTest {
 
     @Test
-    void deprecatedUnverifiedWrapperStillRejectsNonDirectContent() {
+    void shouldRejectNonDirectContentThroughDeprecatedUnverifiedWrapper() {
+        // given
         Fixture fixture = new Fixture();
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(NodeProviderWrapper.wrap(blueId -> {
@@ -39,9 +41,12 @@ class TrustedProviderResolutionTest {
                     : null;
         }));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> blue.resolve(fixture.instance()));
 
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
         assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
                 BlueLanguageErrorClassifier.classify(failure));
         assertTrue(messageChain(failure).contains(fixture.requestedBlueId));
@@ -49,19 +54,23 @@ class TrustedProviderResolutionTest {
     }
 
     @Test
-    void exactDirectProviderContentResolvesNormally() {
+    void shouldResolveExactDirectProviderContentNormally() {
+        // given
         Fixture fixture = new Fixture();
         Blue blue = new Blue(blueId -> fixture.requestedBlueId.equals(blueId)
                 ? Collections.singletonList(fixture.requestedType.clone())
                 : null);
 
+        // when
         Node resolved = blue.resolve(fixture.instance());
 
+        // then
         assertEquals("verified", resolved.getAsText("/fixed"));
     }
 
     @Test
-    void nullMissFallsThroughToExactFallback() {
+    void shouldFallThroughToExactFallbackAfterNullMiss() {
+        // given
         Fixture fixture = new Fixture();
         AtomicInteger fallbackFetches = new AtomicInteger();
         Blue blue = new Blue(new SequentialNodeProvider(
@@ -73,14 +82,17 @@ class TrustedProviderResolutionTest {
                             : null;
                 }));
 
+        // when
         Node resolved = blue.resolve(fixture.instance());
 
+        // then
         assertEquals("verified", resolved.getAsText("/fixed"));
         assertEquals(1, fallbackFetches.get());
     }
 
     @Test
-    void emptyLegacyResultIsNotFoundAndFallsThrough() {
+    void shouldTreatEmptyLegacyResultAsNotFoundAndFallThrough() {
+        // given
         Fixture fixture = new Fixture();
         AtomicInteger fallbackFetches = new AtomicInteger();
         Blue blue = new Blue(new SequentialNodeProvider(
@@ -92,14 +104,17 @@ class TrustedProviderResolutionTest {
                             : null;
                 }));
 
+        // when
         Node resolved = blue.resolve(fixture.instance());
 
+        // then
         assertEquals("verified", resolved.getAsText("/fixed"));
         assertEquals(1, fallbackFetches.get());
     }
 
     @Test
-    void invalidEvidenceIsTerminalAndCannotReachFallback() {
+    void shouldStopBeforeFallbackWhenEvidenceIsInvalid() {
+        // given
         Fixture fixture = new Fixture();
         AtomicInteger fallbackFetches = new AtomicInteger();
         Blue blue = new Blue(new SequentialNodeProvider(
@@ -109,16 +124,20 @@ class TrustedProviderResolutionTest {
                     return Collections.singletonList(fixture.requestedType.clone());
                 }));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> blue.resolve(fixture.instance()));
 
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
         assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
                 BlueLanguageErrorClassifier.classify(failure));
         assertEquals(0, fallbackFetches.get());
     }
 
     @Test
-    void unavailableOutcomeIsTerminalAndDistinctFromNotFound() {
+    void shouldTreatUnavailableOutcomeAsTerminalAndDistinctFromNotFound() {
+        // given
         Fixture fixture = new Fixture();
         AtomicInteger fallbackFetches = new AtomicInteger();
         NodeProvider unavailable = new NodeProvider() {
@@ -139,20 +158,23 @@ class TrustedProviderResolutionTest {
                     return Collections.singletonList(fixture.requestedType.clone());
                 }));
 
-        assertEquals(NodeProviderOutcome.UNAVAILABLE,
-                blue.getNodeProvider()
-                        .fetchResultByBlueId(
-                                fixture.requestedBlueId)
-                        .outcome());
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> blue.resolve(fixture.instance()));
+        NodeProviderOutcome outcome = blue.getNodeProvider()
+                .fetchResultByBlueId(fixture.requestedBlueId)
+                .outcome();
 
+        // then
+        assertEquals(NodeProviderOutcome.UNAVAILABLE, outcome);
+        assertInstanceOf(RuntimeException.class, failure);
         assertTrue(messageChain(failure).contains("temporary source outage"));
         assertEquals(0, fallbackFetches.get());
     }
 
     @Test
-    void sourceDocumentContentRequiresExactEnvironmentBinding() {
+    void shouldRequireExactEnvironmentBindingForSourceDocumentContent() {
+        // given
         Blue blue = new Blue();
         Node source = new Node()
                 .blue(new Node().properties("imports", new Node()))
@@ -164,24 +186,34 @@ class TrustedProviderResolutionTest {
                 ProviderEvidenceVerifier.preprocessingEnvironmentIdentity(blue),
                 BlueCoreTypeRegistry.INSTANCE.packageIdentity(),
                 ProviderEvidenceVerifier.sourceEvidenceIdentity(source));
+        SourceProviderEnvironment mismatched = new SourceProviderEnvironment(
+                blue.languageVersion(),
+                SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY,
+                ProviderEvidenceVerifier.preprocessingEnvironmentIdentity(blue),
+                BlueCoreTypeRegistry.INSTANCE.packageIdentity(),
+                ProviderEvidenceVerifier.sourceEvidenceIdentity(source)
+                        + "-different");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable directInputFailure = captureFailure(
                 () -> ProviderEvidenceVerifier.verify(
                         requestedBlueId, source, ProviderMode.BLUE_ID_INPUT,
                         blue, null));
-        assertDoesNotThrow(() -> ProviderEvidenceVerifier.verify(
-                requestedBlueId, source, ProviderMode.SOURCE_DOCUMENT,
-                blue, exact));
-        assertThrows(IllegalArgumentException.class,
+        Throwable sourceDocumentFailure = captureFailure(
                 () -> ProviderEvidenceVerifier.verify(
                         requestedBlueId, source, ProviderMode.SOURCE_DOCUMENT,
-                        blue, new SourceProviderEnvironment(
-                                blue.languageVersion(),
-                                SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY,
-                                ProviderEvidenceVerifier.preprocessingEnvironmentIdentity(blue),
-                                BlueCoreTypeRegistry.INSTANCE.packageIdentity(),
-                                ProviderEvidenceVerifier.sourceEvidenceIdentity(source)
-                                        + "-different")));
+                        blue, exact));
+        Throwable mismatchedEnvironmentFailure = captureFailure(
+                () -> ProviderEvidenceVerifier.verify(
+                        requestedBlueId, source, ProviderMode.SOURCE_DOCUMENT,
+                        blue, mismatched));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, directInputFailure);
+        assertNull(sourceDocumentFailure);
+        assertInstanceOf(
+                IllegalArgumentException.class,
+                mismatchedEnvironmentFailure);
     }
 
     private static String messageChain(Throwable failure) {

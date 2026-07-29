@@ -17,14 +17,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ResolvedProcessingSelectionCorrectnessTest {
 
     @Test
-    void snapshotKeepsCanonicalIdentityAndResolvedMeaningDistinct() {
+    void shouldKeepCanonicalIdentityAndResolvedMeaningDistinctInSnapshot() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
         Node source = fixture.compact();
 
+        // when
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(source);
 
+        // then
         assertEquals(snapshot.blueId(), blue.calculateSemanticBlueId(source));
         assertFalse(hasContract(snapshot.canonicalRoot(), "audit"));
         assertTrue(hasContract(snapshot.resolvedRoot(), "audit"));
@@ -33,15 +36,18 @@ class ResolvedProcessingSelectionCorrectnessTest {
     }
 
     @Test
-    void redundantInlineTypeContributionsDoNotCreateAnotherSelectionForm() {
+    void shouldNotCreateAnotherSelectionFormForRedundantInlineTypeContributions() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
 
         ResolvedSnapshot compact = blue.resolveToSnapshot(fixture.compact());
+        // when
         ResolvedSnapshot redundant =
                 blue.resolveToSnapshot(fixture.materializedSource());
 
+        // then
         assertEquals(compact.blueId(), redundant.blueId());
         assertEquals(blue.nodeToJson(compact.canonicalRoot()),
                 blue.nodeToJson(redundant.canonicalRoot()));

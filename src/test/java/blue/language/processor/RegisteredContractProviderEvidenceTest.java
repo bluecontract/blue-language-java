@@ -14,18 +14,19 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RegisteredContractProviderEvidenceTest {
 
     @Test
-    void exactCanonicalRegistrationMatchesFullProviderBackedRuntime() {
+    void shouldVerifyExactCanonicalRegistrationMatchesFullProviderBackedRuntime() {
+        // given
         TypeFixture fixture = new TypeFixture();
         Node suppliedCanonicalType = fixture.canonicalType.clone();
         DocumentProcessor standalone = DocumentProcessor.builder()
@@ -36,6 +37,7 @@ class RegisteredContractProviderEvidenceTest {
         // Registration owns an immutable copy of the provider evidence.
         suppliedCanonicalType.name("mutated after registration");
 
+        // when
         DocumentProcessingResult standaloneResult = standalone.initializeDocument(
                 fixture.document());
         DocumentProcessingResult fullRuntimeResult;
@@ -45,6 +47,7 @@ class RegisteredContractProviderEvidenceTest {
             fullRuntimeResult = fullRuntime.initializeDocument(fixture.document());
         }
 
+        // then
         assertEquals(ProcessorStatus.SUCCESS, standaloneResult.status(),
                 diagnosticMessage(standaloneResult));
         assertEquals(ProcessorStatus.SUCCESS, fullRuntimeResult.status(),
@@ -60,10 +63,12 @@ class RegisteredContractProviderEvidenceTest {
     }
 
     @Test
-    void runtimeExactCanonicalRegistrationInitializesStandaloneProcessor() {
+    void shouldVerifyRuntimeExactCanonicalRegistrationInitializesStandaloneProcessor() {
+        // given
         TypeFixture fixture = new TypeFixture();
         DocumentProcessor standalone = new DocumentProcessor();
 
+        // when
         standalone.registerContractProcessor(
                 fixture.blueId,
                 fixture.canonicalType,
@@ -71,22 +76,26 @@ class RegisteredContractProviderEvidenceTest {
         DocumentProcessingResult result = standalone.initializeDocument(
                 fixture.document());
 
+        // then
         assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertNotNull(initializationDocumentId(result));
     }
 
     @Test
-    void registryBuilderEvidenceSeedsStandaloneProcessorTypeResolver() {
+    void shouldVerifyRegistryBuilderEvidenceSeedsStandaloneProcessorTypeResolver() {
+        // given
         TypeFixture fixture = new TypeFixture();
         EvidenceChannelProcessor registered = new EvidenceChannelProcessor();
         ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
                 .register(fixture.blueId, fixture.canonicalType, registered)
                 .build();
 
+        // when
         DocumentProcessor standalone = new DocumentProcessor(registry);
         DocumentProcessingResult result = standalone.initializeDocument(
                 fixture.document());
 
+        // then
         assertEquals(EvidenceChannel.class,
                 standalone.getContractTypeResolver().resolveClass(fixture.blueId));
         assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
@@ -94,17 +103,20 @@ class RegisteredContractProviderEvidenceTest {
     }
 
     @Test
-    void legacyExplicitBlueIdRegistrationDoesNotInventProviderContent() {
+    void shouldVerifyLegacyExplicitBlueIdRegistrationDoesNotInventProviderContent() {
+        // given
         TypeFixture fixture = new TypeFixture();
         DocumentProcessor standalone = DocumentProcessor.builder()
                 .registerContractProcessor(fixture.blueId, new EvidenceChannelProcessor())
                 .build();
         Node document = fixture.document();
 
-        IllegalArgumentException failure = assertThrows(
-                IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> standalone.initializeDocument(document));
 
+        // then
+        assertNotNull(failure);
         assertEquals(
                 BlueLanguageErrorCategory.ProviderUnavailable,
                 BlueLanguageErrorClassifier.classify(failure));
@@ -113,7 +125,8 @@ class RegisteredContractProviderEvidenceTest {
     }
 
     @Test
-    void activeScopePreflightDemandsLegacyExplicitProviderEvidence() {
+    void shouldVerifyActiveScopePreflightDemandsLegacyExplicitProviderEvidence() {
+        // given
         TypeFixture fixture = new TypeFixture();
         DocumentProcessor standalone = DocumentProcessor.builder()
                 .registerContractProcessor(
@@ -125,33 +138,48 @@ class RegisteredContractProviderEvidenceTest {
                         standalone,
                         fixture.document());
 
-        IllegalArgumentException failure = assertThrows(
-                IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> execution.preflightScope("/"));
 
+        // then
+        assertNotNull(failure);
         assertEquals(
                 BlueLanguageErrorCategory.ProviderUnavailable,
                 BlueLanguageErrorClassifier.classify(failure));
     }
 
     @Test
-    void mismatchingCanonicalRegistrationIsRejectedAtomically() {
+    void shouldVerifyMismatchingCanonicalRegistrationIsRejectedAtomically() {
+        // given
         TypeFixture fixture = new TypeFixture();
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         Node wrongContent = fixture.canonicalType.clone().description("different identity");
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> registry.register(
-                        fixture.blueId, wrongContent, new EvidenceChannelProcessor()));
+                        fixture.blueId,
+                        wrongContent,
+                        new EvidenceChannelProcessor()));
+        long version = registry.version();
+        boolean processorRegistered =
+                registry.processors().containsKey(fixture.blueId);
+        Node registeredCanonicalType =
+                registry.canonicalTypeNode(fixture.blueId);
 
+        // then
+        assertNotNull(failure);
         assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
                 BlueLanguageErrorClassifier.classify(failure));
-        assertFalse(registry.processors().containsKey(fixture.blueId));
-        assertNull(registry.canonicalTypeNode(fixture.blueId));
+        assertEquals(0L, version);
+        assertFalse(processorRegistered);
+        assertNull(registeredCanonicalType);
     }
 
     @Test
-    void conflictingRuntimeTypeRegistrationLeavesRegistryAndResolverUnchanged() {
+    void shouldVerifyConflictingRuntimeTypeRegistrationLeavesRegistryAndResolverUnchanged() {
+        // given
         TypeFixture fixture = new TypeFixture();
         EvidenceChannelProcessor original = new EvidenceChannelProcessor();
         DocumentProcessor standalone = DocumentProcessor.builder()
@@ -163,58 +191,91 @@ class RegisteredContractProviderEvidenceTest {
         String evidenceBefore = BlueIdCalculator.calculateBlueId(
                 registry.canonicalTypeNode(fixture.blueId));
 
-        assertThrows(IllegalStateException.class,
+        // when
+        IllegalStateException failure = captureFailure(
                 () -> standalone.registerContractProcessor(
                         fixture.blueId,
                         fixture.canonicalType,
                         new ConflictingEvidenceChannelProcessor()));
+        long versionAfter = registry.version();
+        ContractProcessor<?> processorAfter =
+                registry.processors().get(fixture.blueId);
+        Class<?> resolvedClassAfter =
+                standalone.getContractTypeResolver()
+                        .resolveClass(fixture.blueId);
+        String evidenceAfter = BlueIdCalculator.calculateBlueId(
+                registry.canonicalTypeNode(fixture.blueId));
 
-        assertEquals(versionBefore, registry.version());
-        assertSame(original, registry.processors().get(fixture.blueId));
-        assertEquals(EvidenceChannel.class,
-                standalone.getContractTypeResolver().resolveClass(fixture.blueId));
-        assertEquals(evidenceBefore, BlueIdCalculator.calculateBlueId(
-                registry.canonicalTypeNode(fixture.blueId)));
+        // then
+        assertNotNull(failure);
+        assertEquals(versionBefore, versionAfter);
+        assertSame(original, processorAfter);
+        assertEquals(EvidenceChannel.class, resolvedClassAfter);
+        assertEquals(evidenceBefore, evidenceAfter);
     }
 
     @Test
-    void conflictingBuilderTypeRegistrationLeavesFirstRegistrationUsable() {
+    void shouldVerifyConflictingBuilderTypeRegistrationLeavesFirstRegistrationUsable() {
+        // given
         TypeFixture fixture = new TypeFixture();
         EvidenceChannelProcessor original = new EvidenceChannelProcessor();
         DocumentProcessor.Builder builder = DocumentProcessor.builder()
                 .registerContractProcessor(
                         fixture.blueId, fixture.canonicalType, original);
 
-        assertThrows(IllegalStateException.class,
+        // when
+        IllegalStateException failure = captureFailure(
                 () -> builder.registerContractProcessor(
                         fixture.blueId,
                         fixture.canonicalType,
                         new ConflictingEvidenceChannelProcessor()));
-
         DocumentProcessor standalone = builder.build();
-        assertSame(original,
-                standalone.getContractRegistry().processors().get(fixture.blueId));
-        assertEquals(EvidenceChannel.class,
-                standalone.getContractTypeResolver().resolveClass(fixture.blueId));
+        ContractProcessor<?> processor =
+                standalone.getContractRegistry()
+                        .processors()
+                        .get(fixture.blueId);
+        Class<?> resolvedClass =
+                standalone.getContractTypeResolver()
+                        .resolveClass(fixture.blueId);
+
+        // then
+        assertNotNull(failure);
+        assertSame(original, processor);
+        assertEquals(EvidenceChannel.class, resolvedClass);
     }
 
     @Test
-    void unsupportedProcessorRegistrationDoesNotPartiallyMutateRegistry() {
+    void shouldVerifyUnsupportedProcessorRegistrationDoesNotPartiallyMutateRegistry() {
+        // given
         TypeFixture fixture = new TypeFixture();
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         ContractProcessor<Contract> unsupported = () -> Contract.class;
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> registry.register(
-                        fixture.blueId, fixture.canonicalType, unsupported));
+                        fixture.blueId,
+                        fixture.canonicalType,
+                        unsupported));
+        long version = registry.version();
+        boolean processorRegistered =
+                registry.processors().containsKey(fixture.blueId);
+        Node registeredCanonicalType =
+                registry.canonicalTypeNode(fixture.blueId);
 
-        assertEquals(0L, registry.version());
-        assertFalse(registry.processors().containsKey(fixture.blueId));
-        assertNull(registry.canonicalTypeNode(fixture.blueId));
+        // then
+        assertNotNull(failure);
+        assertEquals(0L, version);
+        assertFalse(processorRegistered);
+        assertNull(registeredCanonicalType);
     }
 
     private static String initializationDocumentId(DocumentProcessingResult result) {
-        return result.document().getAsText("/contracts/initialized/documentId");
+        Node document = result.document().getAsNode(
+                "/contracts/initialized/document");
+        return document != null
+                ? BlueIdCalculator.calculateBlueId(document)
+                : null;
     }
 
     private static final class TypeFixture {

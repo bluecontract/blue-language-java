@@ -1,5 +1,7 @@
 package blue.language.snapshot;
 
+import blue.language.utils.Properties;
+
 import blue.language.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.merge.Merger.VerifiedReferenceResolution;
@@ -42,25 +44,18 @@ public final class ResolvedReferenceCache
     private volatile long observedGeneration;
     private volatile boolean locallyClosed;
     private final ConcurrentMap<String, VerifiedReferenceEntry> entriesByBlueId = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, FrozenNode> transientTrustedCanonicalByBlueId =
-            new ConcurrentHashMap<>();
     private final ConcurrentMap<FrozenNode.ResolvedStructuralKey, FrozenNode> resolvedGraphNodesByStructure =
             new ConcurrentHashMap<>();
     private final FrozenNode.ResolvedStructuralInterner resolvedGraphInterner;
     private final FrozenNode.ResolvedStructuralInterner existingResolvedGraphInterner;
     private final Set<String> pinnedVerifiedBlueIds = new HashSet<>();
     private final LinkedHashSet<String> verifiedInsertionOrder = new LinkedHashSet<>();
-    private final LinkedHashSet<String> trustedInsertionOrder = new LinkedHashSet<>();
     private final LinkedHashSet<FrozenNode.ResolvedStructuralKey> structuralInsertionOrder =
             new LinkedHashSet<>();
     private long verifiedCurrentWeight;
     private long verifiedHighWaterWeight;
     private long verifiedEvictions;
     private long verifiedOversizedRejections;
-    private long trustedCurrentWeight;
-    private long trustedHighWaterWeight;
-    private long trustedEvictions;
-    private long trustedOversizedRejections;
     private long structuralCurrentWeight;
     private long structuralHighWaterWeight;
     private long structuralEvictions;
@@ -68,10 +63,16 @@ public final class ResolvedReferenceCache
     private static volatile Consumer<String> canonicalLoadObserver;
     private static volatile Consumer<String> canonicalLoadWaitObserver;
 
+    /** Creates an independent root cache with the standard bounded policy. */
     public ResolvedReferenceCache() {
         this(BlueCachePolicy.boundedDefaults());
     }
 
+    /**
+     * Creates an independent root cache governed by {@code cachePolicy}.
+     *
+     * @param cachePolicy bounds and admission policy for retained cache entries
+     */
     public ResolvedReferenceCache(BlueCachePolicy cachePolicy) {
         this.readThroughParent = null;
         this.cachePolicy = Objects.requireNonNull(cachePolicy, "cachePolicy");
@@ -144,6 +145,8 @@ public final class ResolvedReferenceCache
      * Returns a cache that can reuse this cache's published entries but retains
      * all newly resolved references and graph nodes locally. Discarding the
      * child therefore discards every transient working-state cache insertion.
+     *
+     * @return a new transient child cache
      */
     public ResolvedReferenceCache transientChild() {
         synchronized (cacheGeneration.mutationLock) {
@@ -152,7 +155,11 @@ public final class ResolvedReferenceCache
         }
     }
 
-    /** Returns an independent transient cache with the same parent and local retained entries. */
+    /**
+     * Returns an independent transient cache with the same parent and local retained entries.
+     *
+     * @return a new transient cache containing this scope's retained entries
+     */
     public ResolvedReferenceCache forkTransient() {
         synchronized (cacheGeneration.mutationLock) {
             ensureCurrentGeneration();
@@ -164,8 +171,6 @@ public final class ResolvedReferenceCache
                     forkGeneration);
             if (readThroughParent != null) {
                 fork.entriesByBlueId.putAll(entriesByBlueId);
-                fork.transientTrustedCanonicalByBlueId.putAll(
-                        transientTrustedCanonicalByBlueId);
                 fork.resolvedGraphNodesByStructure.putAll(resolvedGraphNodesByStructure);
                 fork.rebuildLocalWeightAccounting();
             }
@@ -177,11 +182,13 @@ public final class ResolvedReferenceCache
      * Creates an independent root cache containing only the caller-pinned
      * verified entries visible at the time of this call. The returned cache
      * shares immutable frozen graphs, but it has its own generation, mutation
-     * state, and bounded storage for entries discovered later. Reloadable,
-     * transient-trusted, and structural-interner entries are not copied.
+     * state, and bounded storage for entries discovered later. Reloadable and
+     * structural-interner entries are not copied.
      *
      * <p>The caller owns the returned cache and should close it when the
      * retained snapshot is no longer needed.</p>
+     *
+     * @return an independent root cache containing visible pinned evidence
      */
     public ResolvedReferenceCache isolatedCopyOfPinnedVerifiedEntries() {
         Map<String, VerifiedReferenceEntry> retainedPinned = new HashMap<>();
@@ -208,45 +215,55 @@ public final class ResolvedReferenceCache
     }
 
     /**
-     * Returns non-certifying host-trusted content retained only by this
-     * transient sequence. Such content is never read from or promoted to the
-     * shared root cache.
+     * Binary-compatible fail-closed view of the removed transient-trust cache.
+     * Only independently verified canonical entries are reusable.
+     *
+     * @param blueId requested content identity
+     * @return an empty result because transient-trust reuse is disabled
      */
-    public Optional<FrozenNode> getTransientTrustedCanonical(String blueId) {
+    public Optional<FrozenNode> getTransientTrustedCanonical(
+            String blueId) {
+        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
         ensureCurrentGeneration();
-        FrozenNode local = transientTrustedCanonicalByBlueId.get(blueId);
-        if (local != null) {
-            return Optional.of(local);
-        }
-        return readThroughParent != null && readThroughParent.readThroughParent != null
-                ? readThroughParent.getTransientTrustedCanonical(blueId)
-                : Optional.empty();
+        return Optional.empty();
     }
 
-    /** Retains non-certifying host-trusted content in a transient scope only. */
-    public FrozenNode putTransientTrustedCanonical(String blueId, FrozenNode canonicalContent) {
-        Objects.requireNonNull(blueId, "blueId");
-        Objects.requireNonNull(canonicalContent, "canonicalContent");
-        if (readThroughParent == null) {
-            return canonicalContent;
-        }
-        synchronized (cacheGeneration.mutationLock) {
-            ensureCurrentGeneration();
-            FrozenNode existing = transientTrustedCanonicalByBlueId.putIfAbsent(
-                    blueId, canonicalContent);
-            if (existing == null) {
-                recordTrustedInsertion(blueId, canonicalContent);
-            }
-            return existing != null ? existing : canonicalContent;
-        }
+    /**
+     * Binary-compatible fail-closed bridge. The supplied value is returned to
+     * its caller but is deliberately not retained as verified evidence.
+     *
+     * @param blueId claimed content identity
+     * @param canonicalContent content that must remain outside verified storage
+     * @return {@code canonicalContent} unchanged
+     */
+    public FrozenNode putTransientTrustedCanonical(
+            String blueId,
+            FrozenNode canonicalContent) {
+        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
+        Objects.requireNonNull(
+                canonicalContent, "canonicalContent");
+        ensureCurrentGeneration();
+        return canonicalContent;
     }
 
+    /**
+     * Returns verified materialized canonical content visible to this scope.
+     *
+     * @param blueId content identity to look up
+     * @return the visible canonical content, or an empty result when absent
+     */
     public Optional<FrozenNode> getVerifiedCanonical(String blueId) {
         ensureCurrentGeneration();
         VerifiedReferenceEntry entry = findEntry(blueId);
         return Optional.ofNullable(entry != null ? entry.canonicalContent : null);
     }
 
+    /**
+     * Returns completed resolved content paired with verified canonical evidence.
+     *
+     * @param blueId content identity to look up
+     * @return the visible resolved content, or an empty result when absent
+     */
     public Optional<FrozenNode> getVerifiedResolved(String blueId) {
         ensureCurrentGeneration();
         VerifiedReferenceEntry local = entriesByBlueId.get(blueId);
@@ -260,8 +277,16 @@ public final class ResolvedReferenceCache
         return Optional.ofNullable(resolved);
     }
 
+    /**
+     * Retains strict, materialized canonical content only after its calculated
+     * identity matches the key.
+     *
+     * @param blueId expected Content BlueId
+     * @param canonicalContent strict materialized canonical content
+     * @return the canonical instance retained for {@code blueId}
+     */
     public FrozenNode putVerifiedCanonical(String blueId, FrozenNode canonicalContent) {
-        Objects.requireNonNull(blueId, "blueId");
+        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
         requireCanonical(blueId, canonicalContent);
         synchronized (cacheGeneration.mutationLock) {
             ensureCurrentGeneration();
@@ -283,9 +308,18 @@ public final class ResolvedReferenceCache
         }
     }
 
+    /**
+     * Returns visible verified canonical content or loads and verifies it once
+     * for the current cache generation. Concurrent requests for the same
+     * identity share one in-flight load.
+     *
+     * @param blueId expected Content BlueId
+     * @param canonicalLoader provider invoked when verified content is absent
+     * @return the verified canonical instance retained for {@code blueId}
+     */
     public FrozenNode getOrLoadVerifiedCanonical(String blueId,
                                                  Supplier<FrozenNode> canonicalLoader) {
-        Objects.requireNonNull(blueId, "blueId");
+        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
         Objects.requireNonNull(canonicalLoader, "canonicalLoader");
         while (true) {
             long loadingGeneration;
@@ -465,6 +499,12 @@ public final class ResolvedReferenceCache
         }
     }
 
+    /**
+     * Retains a completed resolution backed by verified canonical evidence.
+     *
+     * @param verification verified canonical and resolved roots for one reference
+     * @return the resolved instance retained for the requested BlueId
+     */
     public FrozenNode putVerifiedResolved(VerifiedReferenceResolution verification) {
         Objects.requireNonNull(verification, "verification");
         return retainVerifiedResolved(verification.requestedBlueId(),
@@ -475,6 +515,9 @@ public final class ResolvedReferenceCache
     /**
      * Retains caller-registered authoritative content until explicit clear.
      * Derived entries remain subject to this cache's configured weight bounds.
+     *
+     * @param verification verified authoritative content to pin
+     * @return the resolved instance retained for the requested BlueId
      */
     public FrozenNode putPinnedVerifiedResolved(VerifiedReferenceResolution verification) {
         Objects.requireNonNull(verification, "verification");
@@ -505,7 +548,7 @@ public final class ResolvedReferenceCache
     private FrozenNode retainVerifiedResolved(String blueId,
                                               FrozenNode canonicalContent,
                                               FrozenNode fullyResolvedContent) {
-        Objects.requireNonNull(blueId, "blueId");
+        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
         requireCanonical(blueId, canonicalContent);
         requireResolved(blueId, fullyResolvedContent);
         synchronized (cacheGeneration.mutationLock) {
@@ -532,6 +575,12 @@ public final class ResolvedReferenceCache
         }
     }
 
+    /**
+     * Freezes a resolved graph and interns new structural representations in this cache.
+     *
+     * @param node mutable resolved graph to freeze
+     * @return an immutable resolved graph with reusable subtrees
+     */
     public FrozenNode freezeResolved(Node node) {
         ensureCurrentGeneration();
         return FrozenNode.fromResolvedNode(node, resolvedGraphInterner);
@@ -540,6 +589,9 @@ public final class ResolvedReferenceCache
     /**
      * Freezes a transient resolved graph while reusing already-published
      * subtrees, without retaining any new intermediate subtree in this cache.
+     *
+     * @param node mutable resolved graph to freeze
+     * @return an immutable graph reusing any previously retained subtrees
      */
     public FrozenNode freezeResolvedWithoutRemembering(Node node) {
         ensureCurrentGeneration();
@@ -549,6 +601,8 @@ public final class ResolvedReferenceCache
     /**
      * Seeds structural sharing from a completed immutable graph without
      * promoting any node to verified provider content.
+     *
+     * @param node completed resolved graph whose structure should be remembered
      */
     public void rememberResolvedGraph(FrozenNode node) {
         ensureCurrentGeneration();
@@ -559,6 +613,8 @@ public final class ResolvedReferenceCache
      * Promotes only verified references that remain reachable from a completed
      * canonical graph. Entries discovered solely in discarded intermediate
      * states remain local to this transient child.
+     *
+     * @param canonicalRoot completed canonical graph defining reachability
      */
     public void promoteReferencesReachableFrom(FrozenNode canonicalRoot) {
         synchronized (cacheGeneration.mutationLock) {
@@ -610,6 +666,9 @@ public final class ResolvedReferenceCache
      * Drops transient entries that are not reachable from the current working
      * graph. This bounds a reusable WorkingDocument cache by current state,
      * rather than by the number of edits performed over its lifetime.
+     *
+     * @param canonicalRoot canonical graph defining reachable reference entries
+     * @param resolvedRoot resolved graph defining reachable structural entries
      */
     public void retainOnlyReachableFrom(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
         synchronized (cacheGeneration.mutationLock) {
@@ -623,9 +682,7 @@ public final class ResolvedReferenceCache
             while (!pending.isEmpty()) {
                 String blueId = pending.removeFirst();
                 VerifiedReferenceEntry local = entriesByBlueId.get(blueId);
-                FrozenNode retainedCanonical = local != null
-                        ? local.canonicalContent
-                        : transientTrustedCanonicalByBlueId.get(blueId);
+                FrozenNode retainedCanonical = local != null ? local.canonicalContent : null;
                 if (retainedCanonical == null) {
                     continue;
                 }
@@ -640,11 +697,6 @@ public final class ResolvedReferenceCache
             for (String blueId : new HashSet<>(entriesByBlueId.keySet())) {
                 if (!reachableReferences.contains(blueId)) {
                     removeVerifiedEntry(blueId);
-                }
-            }
-            for (String blueId : new HashSet<>(transientTrustedCanonicalByBlueId.keySet())) {
-                if (!reachableReferences.contains(blueId)) {
-                    removeTrustedEntry(blueId);
                 }
             }
 
@@ -778,34 +830,6 @@ public final class ResolvedReferenceCache
         }
     }
 
-    private void recordTrustedInsertion(String blueId, FrozenNode node) {
-        long weight = trustedWeight(blueId, node);
-        if (cachePolicy.transientReferenceMaxEntries() <= 0
-                || weight > cachePolicy.maximumDerivedEntryWeightBytes()
-                || weight > cachePolicy.transientReferenceMaxWeightBytes()) {
-            transientTrustedCanonicalByBlueId.remove(blueId, node);
-            trustedOversizedRejections++;
-            return;
-        }
-        trustedInsertionOrder.remove(blueId);
-        trustedInsertionOrder.add(blueId);
-        trustedCurrentWeight = saturatedAdd(trustedCurrentWeight, weight);
-        trustedHighWaterWeight = Math.max(trustedHighWaterWeight, trustedCurrentWeight);
-        evictTrustedToBounds();
-    }
-
-    private void evictTrustedToBounds() {
-        while (transientTrustedCanonicalByBlueId.size() > cachePolicy.transientReferenceMaxEntries()
-                || trustedCurrentWeight > cachePolicy.transientReferenceMaxWeightBytes()) {
-            if (trustedInsertionOrder.isEmpty()) {
-                return;
-            }
-            String victim = trustedInsertionOrder.iterator().next();
-            removeTrustedEntry(victim);
-            trustedEvictions++;
-        }
-    }
-
     private void recordStructuralInsertion(FrozenNode.ResolvedStructuralKey key,
                                            FrozenNode node) {
         long weight = structuralWeight(node);
@@ -848,15 +872,6 @@ public final class ResolvedReferenceCache
         }
     }
 
-    private void removeTrustedEntry(String blueId) {
-        FrozenNode removed = transientTrustedCanonicalByBlueId.remove(blueId);
-        trustedInsertionOrder.remove(blueId);
-        if (removed != null) {
-            trustedCurrentWeight = subtractFloorZero(
-                    trustedCurrentWeight, trustedWeight(blueId, removed));
-        }
-    }
-
     private void removeStructuralEntry(FrozenNode.ResolvedStructuralKey key) {
         FrozenNode removed = resolvedGraphNodesByStructure.remove(key);
         structuralInsertionOrder.remove(key);
@@ -878,12 +893,6 @@ public final class ResolvedReferenceCache
             verifiedCurrentWeight = saturatedAdd(verifiedCurrentWeight,
                     verifiedWeight(entry.getKey(), entry.getValue()));
         }
-        for (java.util.Map.Entry<String, FrozenNode> entry
-                : transientTrustedCanonicalByBlueId.entrySet()) {
-            trustedInsertionOrder.add(entry.getKey());
-            trustedCurrentWeight = saturatedAdd(trustedCurrentWeight,
-                    trustedWeight(entry.getKey(), entry.getValue()));
-        }
         for (java.util.Map.Entry<FrozenNode.ResolvedStructuralKey, FrozenNode> entry
                 : resolvedGraphNodesByStructure.entrySet()) {
             structuralInsertionOrder.add(entry.getKey());
@@ -891,17 +900,14 @@ public final class ResolvedReferenceCache
                     structuralWeight(entry.getValue()));
         }
         verifiedHighWaterWeight = Math.max(verifiedHighWaterWeight, verifiedCurrentWeight);
-        trustedHighWaterWeight = Math.max(trustedHighWaterWeight, trustedCurrentWeight);
         structuralHighWaterWeight = Math.max(structuralHighWaterWeight, structuralCurrentWeight);
     }
 
     private void clearLocalWeightAccounting() {
         pinnedVerifiedBlueIds.clear();
         verifiedInsertionOrder.clear();
-        trustedInsertionOrder.clear();
         structuralInsertionOrder.clear();
         verifiedCurrentWeight = 0L;
-        trustedCurrentWeight = 0L;
         structuralCurrentWeight = 0L;
     }
 
@@ -909,11 +915,6 @@ public final class ResolvedReferenceCache
         return saturatedAdd(128L + 2L * blueId.length(),
                 FrozenNode.approximateRetainedWeightBytesOf(
                         entry.canonicalContent, entry.fullyResolvedContent));
-    }
-
-    private long trustedWeight(String blueId, FrozenNode node) {
-        return saturatedAdd(96L + 2L * blueId.length(),
-                node.approximateRetainedWeightBytes());
     }
 
     private long structuralWeight(FrozenNode node) {
@@ -932,7 +933,11 @@ public final class ResolvedReferenceCache
         return right >= left ? 0L : left - right;
     }
 
-    /** Immutable approximate cache accounting for integration and lifecycle reports. */
+    /**
+     * Captures immutable approximate cache accounting for integration and lifecycle reports.
+     *
+     * @return current entries, weights, high-water marks, and eviction counts
+     */
     public CacheStats cacheStats() {
         synchronized (cacheGeneration.mutationLock) {
             if (readThroughParent != null) {
@@ -966,19 +971,6 @@ public final class ResolvedReferenceCache
                 verifiedEvictions = saturatedAdd(verifiedEvictions, local.verifiedEvictions());
                 verifiedOversizedRejections = saturatedAdd(
                         verifiedOversizedRejections, local.verifiedOversizedRejections());
-                transientTrustedEntries = saturatedAdd(
-                        transientTrustedEntries, local.transientTrustedEntries());
-                transientTrustedCurrentWeightBytes = saturatedAdd(
-                        transientTrustedCurrentWeightBytes,
-                        local.transientTrustedCurrentWeightBytes());
-                transientTrustedHighWaterWeightBytes = saturatedAdd(
-                        transientTrustedHighWaterWeightBytes,
-                        local.transientTrustedHighWaterWeightBytes());
-                transientTrustedEvictions = saturatedAdd(
-                        transientTrustedEvictions, local.transientTrustedEvictions());
-                transientTrustedOversizedRejections = saturatedAdd(
-                        transientTrustedOversizedRejections,
-                        local.transientTrustedOversizedRejections());
                 structuralEntries = saturatedAdd(structuralEntries, local.structuralEntries());
                 structuralCurrentWeightBytes = saturatedAdd(
                         structuralCurrentWeightBytes, local.structuralCurrentWeightBytes());
@@ -991,8 +983,6 @@ public final class ResolvedReferenceCache
             }
             cacheGeneration.verifiedHighWaterWeight = Math.max(
                     cacheGeneration.verifiedHighWaterWeight, verifiedHighWaterWeightBytes);
-            cacheGeneration.trustedHighWaterWeight = Math.max(
-                    cacheGeneration.trustedHighWaterWeight, transientTrustedHighWaterWeightBytes);
             cacheGeneration.structuralHighWaterWeight = Math.max(
                     cacheGeneration.structuralHighWaterWeight, structuralHighWaterWeightBytes);
             return new CacheStats(
@@ -1004,7 +994,7 @@ public final class ResolvedReferenceCache
                     verifiedOversizedRejections,
                     transientTrustedEntries,
                     transientTrustedCurrentWeightBytes,
-                    cacheGeneration.trustedHighWaterWeight,
+                    transientTrustedHighWaterWeightBytes,
                     transientTrustedEvictions,
                     transientTrustedOversizedRejections,
                     structuralEntries,
@@ -1023,11 +1013,11 @@ public final class ResolvedReferenceCache
                 verifiedHighWaterWeight,
                 verifiedEvictions,
                 verifiedOversizedRejections,
-                transientTrustedCanonicalByBlueId.size(),
-                trustedCurrentWeight,
-                trustedHighWaterWeight,
-                trustedEvictions,
-                trustedOversizedRejections,
+                0,
+                0L,
+                0L,
+                0L,
+                0L,
                 resolvedGraphNodesByStructure.size(),
                 structuralCurrentWeight,
                 structuralHighWaterWeight,
@@ -1035,12 +1025,22 @@ public final class ResolvedReferenceCache
                 structuralOversizedRejections);
     }
 
+    /**
+     * Returns the number of verified entries retained directly by this cache.
+     *
+     * @return the local verified-entry count
+     */
     public int size() {
         ensureCurrentGeneration();
         return entriesByBlueId.size();
     }
 
-    /** Approximate weight of caller-pinned verified entries retained across configuration refresh. */
+    /**
+     * Returns the approximate weight of caller-pinned verified entries retained
+     * across configuration refresh.
+     *
+     * @return estimated pinned verified weight in bytes
+     */
     public long pinnedVerifiedWeightBytes() {
         synchronized (cacheGeneration.mutationLock) {
             ensureCurrentGeneration();
@@ -1107,12 +1107,21 @@ public final class ResolvedReferenceCache
         }
     }
 
+    /**
+     * Returns the number of resolved structural representations retained directly by this cache.
+     *
+     * @return the local structural-entry count
+     */
     public int resolvedGraphSize() {
         ensureCurrentGeneration();
         return resolvedGraphNodesByStructure.size();
     }
 
-    /** Returns false when the parent cache has been invalidated since this child was opened. */
+    /**
+     * Reports whether this handle still belongs to the active cache generation.
+     *
+     * @return {@code false} when this cache is closed or its parent generation was invalidated
+     */
     public boolean isCurrentGeneration() {
         return !locallyClosed && !hasClosedAncestor() && !cacheGeneration.closed
                 && (readThroughParent == null
@@ -1133,7 +1142,6 @@ public final class ResolvedReferenceCache
                 return;
             }
             entriesByBlueId.clear();
-            transientTrustedCanonicalByBlueId.clear();
             resolvedGraphNodesByStructure.clear();
             clearLocalWeightAccounting();
             observedGeneration = current;
@@ -1184,7 +1192,6 @@ public final class ResolvedReferenceCache
 
     private void clearLocalState() {
         entriesByBlueId.clear();
-        transientTrustedCanonicalByBlueId.clear();
         resolvedGraphNodesByStructure.clear();
         clearLocalWeightAccounting();
     }
@@ -1192,17 +1199,13 @@ public final class ResolvedReferenceCache
     /** Preserves aggregate lifetime peaks before a live scope is cleared or unregistered. */
     private void retainLiveHighWaterMarks() {
         long verified = 0L;
-        long trusted = 0L;
         long structural = 0L;
         for (ResolvedReferenceCache cache : cacheGeneration.liveCaches()) {
             verified = saturatedAdd(verified, cache.verifiedHighWaterWeight);
-            trusted = saturatedAdd(trusted, cache.trustedHighWaterWeight);
             structural = saturatedAdd(structural, cache.structuralHighWaterWeight);
         }
         cacheGeneration.verifiedHighWaterWeight = Math.max(
                 cacheGeneration.verifiedHighWaterWeight, verified);
-        cacheGeneration.trustedHighWaterWeight = Math.max(
-                cacheGeneration.trustedHighWaterWeight, trusted);
         cacheGeneration.structuralHighWaterWeight = Math.max(
                 cacheGeneration.structuralHighWaterWeight, structural);
     }
@@ -1273,6 +1276,7 @@ public final class ResolvedReferenceCache
         }
     }
 
+    /** Immutable snapshot of verified-evidence and structural-interner metrics. */
     public static final class CacheStats {
         private final int verifiedEntries;
         private final int pinnedVerifiedEntries;
@@ -1325,36 +1329,116 @@ public final class ResolvedReferenceCache
             this.structuralOversizedRejections = structuralOversizedRejections;
         }
 
+        /**
+         * Returns the number of verified evidence entries.
+         *
+         * @return verified-entry count
+         */
         public int verifiedEntries() { return verifiedEntries; }
 
+        /**
+         * Returns the number of caller-pinned verified entries.
+         *
+         * @return pinned verified-entry count
+         */
         public int pinnedVerifiedEntries() { return pinnedVerifiedEntries; }
 
+        /**
+         * Returns the current approximate verified-entry weight.
+         *
+         * @return current verified weight in bytes
+         */
         public long verifiedCurrentWeightBytes() { return verifiedCurrentWeightBytes; }
 
+        /**
+         * Returns the largest observed approximate verified-entry weight.
+         *
+         * @return verified high-water weight in bytes
+         */
         public long verifiedHighWaterWeightBytes() { return verifiedHighWaterWeightBytes; }
 
+        /**
+         * Returns the number of verified entries evicted by the bounded policy.
+         *
+         * @return verified eviction count
+         */
         public long verifiedEvictions() { return verifiedEvictions; }
 
+        /**
+         * Returns the number of verified entries rejected because each exceeded its bound.
+         *
+         * @return oversized verified rejection count
+         */
         public long verifiedOversizedRejections() { return verifiedOversizedRejections; }
 
+        /**
+         * Returns the legacy transient-trust entry count, which is zero in fail-closed mode.
+         *
+         * @return transient-trust entry count
+         */
         public int transientTrustedEntries() { return transientTrustedEntries; }
 
+        /**
+         * Returns the legacy transient-trust current weight.
+         *
+         * @return transient-trust current weight in bytes
+         */
         public long transientTrustedCurrentWeightBytes() { return transientTrustedCurrentWeightBytes; }
 
+        /**
+         * Returns the legacy transient-trust high-water weight.
+         *
+         * @return transient-trust high-water weight in bytes
+         */
         public long transientTrustedHighWaterWeightBytes() { return transientTrustedHighWaterWeightBytes; }
 
+        /**
+         * Returns the legacy transient-trust eviction count.
+         *
+         * @return transient-trust eviction count
+         */
         public long transientTrustedEvictions() { return transientTrustedEvictions; }
 
+        /**
+         * Returns the legacy transient-trust oversized-rejection count.
+         *
+         * @return transient-trust oversized rejection count
+         */
         public long transientTrustedOversizedRejections() { return transientTrustedOversizedRejections; }
 
+        /**
+         * Returns the number of retained structural-interner entries.
+         *
+         * @return structural-entry count
+         */
         public int structuralEntries() { return structuralEntries; }
 
+        /**
+         * Returns the current approximate structural-interner weight.
+         *
+         * @return current structural weight in bytes
+         */
         public long structuralCurrentWeightBytes() { return structuralCurrentWeightBytes; }
 
+        /**
+         * Returns the largest observed approximate structural-interner weight.
+         *
+         * @return structural high-water weight in bytes
+         */
         public long structuralHighWaterWeightBytes() { return structuralHighWaterWeightBytes; }
 
+        /**
+         * Returns the number of structural entries evicted by the bounded policy.
+         *
+         * @return structural eviction count
+         */
         public long structuralEvictions() { return structuralEvictions; }
 
+        /**
+         * Returns the number of structural entries rejected because each exceeded its bound.
+         *
+         * @return oversized structural rejection count
+         */
         public long structuralOversizedRejections() { return structuralOversizedRejections; }
     }
 
@@ -1418,7 +1502,6 @@ public final class ResolvedReferenceCache
         private final Set<ResolvedReferenceCache> caches = Collections.newSetFromMap(
                 new WeakHashMap<ResolvedReferenceCache, Boolean>());
         private long verifiedHighWaterWeight;
-        private long trustedHighWaterWeight;
         private long structuralHighWaterWeight;
 
         private void register(ResolvedReferenceCache cache) {

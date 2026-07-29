@@ -15,7 +15,11 @@ import java.util.Objects;
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
 
 /**
- * Matches declared type identity and explicit declared ancestry only.
+ * Verifies same-or-descendant relationships from exact declared type edges.
+ *
+ * <p>No structural inference is permitted. Direct-parent facts are admitted
+ * only from provider-verified content and held in a bounded weighted LRU;
+ * unavailable or cyclic evidence never becomes a positive cache fact.</p>
  */
 final class DeclaredTypeLineageMatcher {
 

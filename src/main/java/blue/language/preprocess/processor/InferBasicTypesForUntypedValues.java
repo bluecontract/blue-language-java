@@ -9,7 +9,18 @@ import java.math.BigInteger;
 
 import static blue.language.utils.Properties.*;
 
+/**
+ * Assigns canonical core type references to untyped scalar values according to
+ * their parsed Java value class.
+ */
 public class InferBasicTypesForUntypedValues implements TransformationProcessor {
+
+    /**
+     * Creates a stateless basic-type inference transformation.
+     */
+    public InferBasicTypesForUntypedValues() {
+    }
+
     @Override
     public Node process(Node document) {
         return NodeTransformer.transform(document, this::inferType);

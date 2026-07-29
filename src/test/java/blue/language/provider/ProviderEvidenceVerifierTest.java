@@ -6,13 +6,14 @@ import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static blue.language.processor.FailureCapture.captureFailure;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProviderEvidenceVerifierTest {
 
     @Test
-    void sourceModeRequiresExactReleaseRegistryEnvironmentAndSnapshotBindings() {
+    void shouldRequireExactReleaseRegistryEnvironmentAndSnapshotBindingsInSourceMode() {
+        // given
         Node source = UncheckedObjectMapper.YAML_MAPPER.readValue(
                 "blue:\n"
                         + "  imports: {}\n"
@@ -28,29 +29,30 @@ class ProviderEvidenceVerifierTest {
         SourceProviderEnvironment exact = environment(
                 blue, preprocessing, registry, evidence);
 
-        assertDoesNotThrow(() -> ProviderEvidenceVerifier.verify(
-                requested, source, ProviderMode.SOURCE_DOCUMENT, blue, exact));
-        assertThrows(IllegalArgumentException.class,
+        // when
+        ProviderEvidenceVerifier.verify(
+                requested, source, ProviderMode.SOURCE_DOCUMENT, blue, exact);
+        IllegalArgumentException evidenceFailure = captureFailure(
                 () -> ProviderEvidenceVerifier.verify(
                         requested, source, ProviderMode.SOURCE_DOCUMENT, blue,
                         environment(blue, preprocessing, registry,
                                 evidence + "-tampered")));
         Node alteredSource = source.clone().value("altered");
-        assertThrows(IllegalArgumentException.class,
+        IllegalArgumentException sourceFailure = captureFailure(
                 () -> ProviderEvidenceVerifier.verify(
                         requested, alteredSource, ProviderMode.SOURCE_DOCUMENT,
                         blue, exact));
-        assertThrows(IllegalArgumentException.class,
+        IllegalArgumentException registryFailure = captureFailure(
                 () -> ProviderEvidenceVerifier.verify(
                         requested, source, ProviderMode.SOURCE_DOCUMENT, blue,
                         environment(blue, preprocessing,
                                 registry + "-tampered", evidence)));
-        assertThrows(IllegalArgumentException.class,
+        IllegalArgumentException preprocessingFailure = captureFailure(
                 () -> ProviderEvidenceVerifier.verify(
                         requested, source, ProviderMode.SOURCE_DOCUMENT, blue,
                         environment(blue, preprocessing + "-tampered",
                                 registry, evidence)));
-        assertThrows(IllegalArgumentException.class,
+        IllegalArgumentException releaseFailure = captureFailure(
                 () -> ProviderEvidenceVerifier.verify(
                         requested, source, ProviderMode.SOURCE_DOCUMENT, blue,
                         new SourceProviderEnvironment(
@@ -60,6 +62,13 @@ class ProviderEvidenceVerifierTest {
                                 preprocessing,
                                 registry,
                                 evidence)));
+
+        // then
+        assertTrue(evidenceFailure instanceof IllegalArgumentException);
+        assertTrue(sourceFailure instanceof IllegalArgumentException);
+        assertTrue(registryFailure instanceof IllegalArgumentException);
+        assertTrue(preprocessingFailure instanceof IllegalArgumentException);
+        assertTrue(releaseFailure instanceof IllegalArgumentException);
     }
 
     private SourceProviderEnvironment environment(Blue blue,

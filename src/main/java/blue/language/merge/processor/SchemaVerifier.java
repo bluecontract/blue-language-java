@@ -8,6 +8,7 @@ import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueNumbers;
 import blue.language.utils.NodeToMapListOrValue;
+import blue.language.utils.ScalarNodeIdentity;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -20,10 +21,24 @@ import java.util.stream.Collectors;
 
 import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.DICTIONARY_TYPE;
+import static blue.language.utils.SchemaPropertyConstants.*;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.lang.Boolean.TRUE;
 
+/**
+ * Validates schema vocabulary during merging and validates payload-dependent
+ * constraints against the completed resolved value.
+ *
+ * <p>Completed validation is deferred so inherited and authored contributions
+ * are judged as one semantic value rather than as partial intermediates.</p>
+ */
 public class SchemaVerifier implements MergingProcessor {
+
+    /**
+     * Creates a stateless schema validation stage.
+     */
+    public SchemaVerifier() {
+    }
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
@@ -114,17 +129,29 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     private void verifyWellFormed(Schema schema) {
-        verifyNonNegative("minLength", schema.getMinLengthExact());
-        verifyNonNegative("maxLength", schema.getMaxLengthExact());
-        verifyMinLessThanOrEqualMax("minLength", schema.getMinLengthExact(), "maxLength", schema.getMaxLengthExact());
+        verifyNonNegative(KEY_MIN_LENGTH, schema.getMinLengthExact());
+        verifyNonNegative(KEY_MAX_LENGTH, schema.getMaxLengthExact());
+        verifyMinLessThanOrEqualMax(
+                KEY_MIN_LENGTH,
+                schema.getMinLengthExact(),
+                KEY_MAX_LENGTH,
+                schema.getMaxLengthExact());
 
-        verifyNonNegative("minItems", schema.getMinItemsExact());
-        verifyNonNegative("maxItems", schema.getMaxItemsExact());
-        verifyMinLessThanOrEqualMax("minItems", schema.getMinItemsExact(), "maxItems", schema.getMaxItemsExact());
+        verifyNonNegative(KEY_MIN_ITEMS, schema.getMinItemsExact());
+        verifyNonNegative(KEY_MAX_ITEMS, schema.getMaxItemsExact());
+        verifyMinLessThanOrEqualMax(
+                KEY_MIN_ITEMS,
+                schema.getMinItemsExact(),
+                KEY_MAX_ITEMS,
+                schema.getMaxItemsExact());
 
-        verifyNonNegative("minFields", schema.getMinFieldsExact());
-        verifyNonNegative("maxFields", schema.getMaxFieldsExact());
-        verifyMinLessThanOrEqualMax("minFields", schema.getMinFieldsExact(), "maxFields", schema.getMaxFieldsExact());
+        verifyNonNegative(KEY_MIN_FIELDS, schema.getMinFieldsExact());
+        verifyNonNegative(KEY_MAX_FIELDS, schema.getMaxFieldsExact());
+        verifyMinLessThanOrEqualMax(
+                KEY_MIN_FIELDS,
+                schema.getMinFieldsExact(),
+                KEY_MAX_FIELDS,
+                schema.getMaxFieldsExact());
 
         verifyMinimumLessThanOrEqualMaximum(schema.getMinimumValue(), schema.getMaximumValue());
         verifyExclusiveMinimumLessThanExclusiveMaximum(schema.getExclusiveMinimumValue(), schema.getExclusiveMaximumValue());
@@ -170,7 +197,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (minLength == null) {
             return;
         }
-        Object value = requireScalarPayload("minLength", node, String.class, "Text scalar");
+        Object value = requireScalarPayload(KEY_MIN_LENGTH, node, String.class, "Text scalar");
         if (value == null) {
             return;
         }
@@ -183,7 +210,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (maxLength == null) {
             return;
         }
-        Object value = requireScalarPayload("maxLength", node, String.class, "Text scalar");
+        Object value = requireScalarPayload(KEY_MAX_LENGTH, node, String.class, "Text scalar");
         if (value == null) {
             return;
         }
@@ -200,7 +227,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (minimum == null) {
             return;
         }
-        Object value = requireScalarPayload("minimum", node, Number.class, "numeric scalar");
+        Object value = requireScalarPayload(KEY_MINIMUM, node, Number.class, "numeric scalar");
         if (value == null) {
             return;
         }
@@ -214,7 +241,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (maximum == null) {
             return;
         }
-        Object value = requireScalarPayload("maximum", node, Number.class, "numeric scalar");
+        Object value = requireScalarPayload(KEY_MAXIMUM, node, Number.class, "numeric scalar");
         if (value == null) {
             return;
         }
@@ -228,7 +255,8 @@ public class SchemaVerifier implements MergingProcessor {
         if (exclusiveMinimum == null) {
             return;
         }
-        Object value = requireScalarPayload("exclusiveMinimum", node, Number.class, "numeric scalar");
+        Object value = requireScalarPayload(
+                KEY_EXCLUSIVE_MINIMUM, node, Number.class, "numeric scalar");
         if (value == null) {
             return;
         }
@@ -242,7 +270,8 @@ public class SchemaVerifier implements MergingProcessor {
         if (exclusiveMaximum == null) {
             return;
         }
-        Object value = requireScalarPayload("exclusiveMaximum", node, Number.class, "numeric scalar");
+        Object value = requireScalarPayload(
+                KEY_EXCLUSIVE_MAXIMUM, node, Number.class, "numeric scalar");
         if (value == null) {
             return;
         }
@@ -256,7 +285,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (multipleOf == null) {
             return;
         }
-        Object value = requireScalarPayload("multipleOf", node, Number.class, "numeric scalar");
+        Object value = requireScalarPayload(KEY_MULTIPLE_OF, node, Number.class, "numeric scalar");
         if (value == null) {
             return;
         }
@@ -269,7 +298,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (minItems == null) {
             return;
         }
-        requireListPayload("minItems", node);
+        requireListPayload(KEY_MIN_ITEMS, node);
         List<Node> items = node.getItems();
         int size = items != null ? items.size() : 0;
         if (BigInteger.valueOf(size).compareTo(minItems) < 0) {
@@ -281,7 +310,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (maxItems == null) {
             return;
         }
-        requireListPayload("maxItems", node);
+        requireListPayload(KEY_MAX_ITEMS, node);
         List<Node> items = node.getItems();
         if (items != null && BigInteger.valueOf(items.size()).compareTo(maxItems) > 0) {
             throw new IllegalArgumentException("Number of items " + items.size() + " is greater than the maximum allowed items of " + maxItems + ".");
@@ -292,7 +321,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (!Boolean.TRUE.equals(uniqueItems)) {
             return;
         }
-        requireListPayload("uniqueItems", node);
+        requireListPayload(KEY_UNIQUE_ITEMS, node);
         List<Node> items = node.getItems();
         if (items != null) {
             int uniqueItemsCount = items.stream()
@@ -310,7 +339,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (minFields == null) {
             return;
         }
-        requireObjectPayload("minFields", node);
+        requireObjectPayload(KEY_MIN_FIELDS, node);
         Map<String, Node> properties = node.getProperties();
         int fieldCount = properties == null ? 0 : properties.size();
         if (BigInteger.valueOf(fieldCount).compareTo(minFields) < 0) {
@@ -322,7 +351,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (maxFields == null) {
             return;
         }
-        requireObjectPayload("maxFields", node);
+        requireObjectPayload(KEY_MAX_FIELDS, node);
         Map<String, Node> properties = node.getProperties();
         int fieldCount = properties == null ? 0 : properties.size();
         if (BigInteger.valueOf(fieldCount).compareTo(maxFields) > 0) {
@@ -335,22 +364,16 @@ public class SchemaVerifier implements MergingProcessor {
             return;
         }
         if (node.getValue() == null) {
-            throw wrongKind("enum", "scalar", node);
+            throw wrongKind(KEY_ENUM, "scalar", node);
         }
 
-        String nodeBlueId = comparableBlueId(node);
+        String nodeBlueId = ScalarNodeIdentity.blueId(node);
         boolean matched = enumValues.stream()
-                .map(this::comparableBlueId)
+                .map(ScalarNodeIdentity::blueId)
                 .anyMatch(nodeBlueId::equals);
         if (!matched) {
             throw new IllegalArgumentException("Node value is not one of the allowed enum values.");
         }
-    }
-
-    private String comparableBlueId(Node node) {
-        Node comparable = node.clone();
-        comparable.schema(null);
-        return BlueIdCalculator.calculateBlueId(comparable);
     }
 
     private Object requireScalarPayload(String keyword, Node node, Class<?> expectedClass, String expected) {

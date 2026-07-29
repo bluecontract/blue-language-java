@@ -29,6 +29,11 @@ import java.util.Set;
  */
 final class ProcessingInputAdmission {
 
+    /** Stable diagnostic label for the top-level Processing Root. */
+    static final String PROCESSING_ROOT_LABEL = "Processing Root";
+    /** Stable diagnostic label for the top-level Processing Event. */
+    static final String PROCESSING_EVENT_LABEL = "Processing Event";
+
     private final ProcessingSnapshotManager snapshotManager;
 
     ProcessingInputAdmission(ProcessingSnapshotManager snapshotManager) {
@@ -49,12 +54,30 @@ final class ProcessingInputAdmission {
     void requireProcessableTopLevel(Node input, String label) {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(label, "label");
-        if (isFinalCyclicMemberReference(input)) {
+        final boolean cyclicMember;
+        try {
+            cyclicMember = hasFinalCyclicMemberIdentity(input);
+        } catch (IllegalArgumentException exception) {
+            throw invalid(
+                    label + " has invalid BlueId syntax",
+                    exception,
+                    PROCESSING_EVENT_LABEL.equals(label)
+                            ? ProcessorErrorCategory
+                            .InvalidProcessingEvent
+                            : ProcessorErrorCategory
+                            .InvalidProcessingDocument);
+        }
+        if (cyclicMember) {
             throw invalid(
                     label + " cannot be an independently processed "
                             + "cyclic-set member; process the owning ordinary "
                             + "Root or Event instead",
-                    null);
+                    null,
+                    PROCESSING_EVENT_LABEL.equals(label)
+                            ? ProcessorErrorCategory
+                            .CyclicMemberProcessingEventUnsupported
+                            : ProcessorErrorCategory
+                            .CyclicMemberProcessingRootUnsupported);
         }
     }
 
@@ -85,15 +108,17 @@ final class ProcessingInputAdmission {
                 if (selected == null) {
                     break;
                 }
-                if (!selected.isReferenceOnly()) {
-                    continue;
-                }
-                if (isFinalCyclicMemberReference(selected)) {
+                if (hasFinalCyclicMemberIdentity(selected)) {
                     throw invalid(
                             "Process Embedded traversal cannot cross opaque "
                                     + "cyclic-set member boundary at "
                                     + prefix,
-                            null);
+                            null,
+                            ProcessorErrorCategory
+                                    .CyclicSetEmbeddedBoundaryUnsupported);
+                }
+                if (!selected.isReferenceOnly()) {
+                    continue;
                 }
                 if (!copied) {
                     working = working.clone();
@@ -103,7 +128,7 @@ final class ProcessingInputAdmission {
                 }
                 Node exact = exactContent(
                         selected,
-                        "Processing Root scope " + prefix);
+                        PROCESSING_ROOT_LABEL + " scope " + prefix);
                 NodePathEditor.put(working, prefix, exact);
                 materialized = true;
             }
@@ -115,23 +140,30 @@ final class ProcessingInputAdmission {
         requirePreservedIdentity(
                 expectedRootBlueId,
                 working,
-                "Processing Root");
+                PROCESSING_ROOT_LABEL);
         return new AdmittedNode(working, materialized);
     }
 
-    private boolean isFinalCyclicMemberReference(Node node) {
-        if (node == null || !node.isReferenceOnly()) {
+    /**
+     * Validates every explicit top-level/reference identity before any
+     * processing shortcut and recognizes finalized cyclic-member identities
+     * independently of representation. A cyclic-aware provider may return a
+     * materialized node that still carries {@code MASTER#index} provenance;
+     * that does not make the member independently admissible to PROCESS.
+     */
+    private boolean hasFinalCyclicMemberIdentity(Node node) {
+        if (node == null) {
             return false;
         }
         String blueId = node.getBlueId();
-        if (blueId == null || blueId.indexOf('#') < 0) {
+        if (blueId == null) {
             return false;
         }
         BlueIds.requireNoThisPlaceholderOutsideCyclicApi(
                 blueId, "processing input");
         BlueIds.requireBlueIdOrCyclicMember(
                 blueId, "processing input");
-        return true;
+        return BlueIds.hasCyclicMemberSeparator(blueId);
     }
 
     ResolvedSnapshot deferredSnapshot(AdmittedNode admittedRoot) {
@@ -234,13 +266,25 @@ final class ProcessingInputAdmission {
     private InvalidExecutionEvidenceException invalid(
             String message,
             RuntimeException cause) {
+        return invalid(
+                message,
+                cause,
+                ProcessorErrorCategory
+                        .InvalidExternalChannelSnapshot);
+    }
+
+    private InvalidExecutionEvidenceException invalid(
+            String message,
+            RuntimeException cause,
+            ProcessorErrorCategory category) {
         String deterministic = cause != null
                 && cause.getMessage() != null
                 && !cause.getMessage().isEmpty()
                 ? message + ": " + cause.getMessage()
                 : message;
         return new InvalidExecutionEvidenceException(
-                deterministic);
+                deterministic,
+                category);
     }
 
     private List<String> orderedScopePaths(

@@ -29,59 +29,59 @@ import static org.junit.jupiter.api.Assertions.*;
 class ContractMappingIntegrationTest {
 
     @Test
-    void loadsAllContractsFromBlueYaml() throws Exception {
+    void shouldLoadAllContractsFromBlueYaml() throws Exception {
+        // given
         String yaml = new String(
                 Files.readAllBytes(Paths.get("src/test/resources/processor/contracts/all-contracts.blue")),
                 StandardCharsets.UTF_8
         );
 
         Blue blue = ProcessorTestSupport.blue();
+        NodeToObjectConverter converter =
+                new NodeToObjectConverter(
+                        new TypeClassResolver(
+                                "blue.language.processor.model"));
+
+        // when
         Node document = blue.yamlToNode(yaml);
-        assertNotNull(document);
         Node contractsNode = document.getContracts();
-        assertNotNull(contractsNode, "contracts node should be present");
-
         Map<String, Node> contractEntries = contractsNode.getProperties();
-        assertNotNull(contractEntries);
-
-        NodeToObjectConverter converter = new NodeToObjectConverter(new TypeClassResolver("blue.language.processor.model"));
-
         Contract embeddedContract = converter.convertWithType(contractEntries.get("embedded"), Contract.class, false);
+        Contract updateContract = converter.convertWithType(contractEntries.get("documentUpdate"), Contract.class, false);
+        Contract triggeredContract = converter.convertWithType(contractEntries.get("triggered"), Contract.class, false);
+        Contract lifecycleContract = converter.convertWithType(contractEntries.get("lifecycleChannel"), Contract.class, false);
+        Contract embeddedNodeContract = converter.convertWithType(contractEntries.get("embeddedNode"), Contract.class, false);
+        Contract checkpointContract = converter.convertWithType(contractEntries.get("checkpoint"), Contract.class, false);
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) checkpointContract;
+        Contract initializedContract = converter.convertWithType(contractEntries.get("initialized"), Contract.class, false);
+        Contract setPropertyContract = converter.convertWithType(contractEntries.get("setProperty"), Contract.class, false);
+        SetProperty setProperty = (SetProperty) setPropertyContract;
+
+        // then
+        assertNotNull(document);
+        assertNotNull(contractsNode, "contracts node should be present");
+        assertNotNull(contractEntries);
         assertTrue(embeddedContract instanceof ProcessEmbedded);
         assertEquals(2, ((ProcessEmbedded) embeddedContract).getPaths().size());
-
-        Contract updateContract = converter.convertWithType(contractEntries.get("documentUpdate"), Contract.class, false);
         assertNotNull(updateContract);
         assertEquals(DocumentUpdateChannel.class, updateContract.getClass());
         assertEquals("/", ((DocumentUpdateChannel) updateContract).getPath());
-
-        Contract triggeredContract = converter.convertWithType(contractEntries.get("triggered"), Contract.class, false);
         assertTrue(triggeredContract instanceof TriggeredEventChannel);
-
-        Contract lifecycleContract = converter.convertWithType(contractEntries.get("lifecycleChannel"), Contract.class, false);
         assertTrue(lifecycleContract instanceof LifecycleChannel);
-
-        Contract embeddedNodeContract = converter.convertWithType(contractEntries.get("embeddedNode"), Contract.class, false);
         assertTrue(embeddedNodeContract instanceof EmbeddedNodeChannel);
         assertEquals("/payment", ((EmbeddedNodeChannel) embeddedNodeContract).getSourcePath());
-
-        Contract checkpointContract = converter.convertWithType(contractEntries.get("checkpoint"), Contract.class, false);
         assertTrue(checkpointContract instanceof ChannelEventCheckpoint);
-        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) checkpointContract;
         assertNotNull(checkpoint.entry("external"));
         assertEquals("BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L",
                 checkpoint.entry("external").domainBlueId());
         assertEquals("Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf",
                 checkpoint.entry("external").subjectBlueId());
-
-        Contract initializedContract = converter.convertWithType(contractEntries.get("initialized"), Contract.class, false);
         assertTrue(initializedContract instanceof InitializationMarker);
-        assertEquals("doc-123", ((InitializationMarker) initializedContract).getDocumentId());
-
-        Contract setPropertyContract = converter.convertWithType(contractEntries.get("setProperty"), Contract.class, false);
+        assertEquals("doc-123",
+                ((InitializationMarker) initializedContract)
+                        .getDocument().getAsText("/sample"));
         assertNotNull(setPropertyContract);
         assertEquals(SetProperty.class, setPropertyContract.getClass());
-        SetProperty setProperty = (SetProperty) setPropertyContract;
         assertEquals("lifecycleChannel", setProperty.getChannelKey());
         assertEquals("/x", setProperty.getPropertyKey());
         assertEquals(7, setProperty.getPropertyValue());
@@ -89,7 +89,8 @@ class ContractMappingIntegrationTest {
     }
 
     @Test
-    void contractLoaderLoadsBundleFromResolvedSnapshotWithoutScopeNodeTraversal() throws Exception {
+    void shouldVerifyContractLoaderLoadsBundleFromResolvedSnapshotWithoutScopeNodeTraversal() throws Exception {
+        // given
         String yaml = new String(
                 Files.readAllBytes(Paths.get("src/test/resources/processor/contracts/all-contracts.blue")),
                 StandardCharsets.UTF_8
@@ -109,8 +110,13 @@ class ContractMappingIntegrationTest {
                 new NodeToObjectConverter(resolver),
                 resolver);
 
+        // when
         ContractBundle bundle = loader.load(snapshot, "/");
+        SetProperty setProperty =
+                (SetProperty) bundle.handlersFor("lifecycleChannel")
+                        .get(0).contract();
 
+        // then
         assertEquals(Arrays.asList("/payment", "/shipping"), bundle.embeddedPaths());
         assertTrue(bundle.hasCheckpoint());
         assertTrue(bundle.marker("initialized") instanceof InitializationMarker);
@@ -121,14 +127,14 @@ class ContractMappingIntegrationTest {
         assertTrue(bundle.contractNodes().containsKey("setProperty"));
         assertEquals(1, bundle.channelsOfType(LifecycleChannel.class).size());
         assertEquals(1, bundle.handlersFor("lifecycleChannel").size());
-        SetProperty setProperty = (SetProperty) bundle.handlersFor("lifecycleChannel").get(0).contract();
         assertEquals("/x", setProperty.getPropertyKey());
         assertEquals(7, setProperty.getPropertyValue());
         assertEquals("/custom/path/", setProperty.getPath());
     }
 
     @Test
-    void processorContractLoaderStillFindsContracts() {
+    void shouldVerifyProcessorContractLoaderStillFindsContracts() {
+        // given
         Node document = ProcessorTestSupport.blue().yamlToNode(
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
@@ -148,8 +154,10 @@ class ContractMappingIntegrationTest {
                 new NodeToObjectConverter(resolver),
                 resolver);
 
+        // when
         ContractBundle bundle = loader.load(FrozenNode.fromResolvedNode(document), "/");
 
+        // then
         assertNotNull(bundle.contractNode("setProperty"));
         assertTrue(bundle.contractNodes().containsKey("setProperty"));
     }

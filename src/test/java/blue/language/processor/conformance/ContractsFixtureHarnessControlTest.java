@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,8 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ContractsFixtureHarnessControlTest {
 
     @Test
-    void correctedLifecycleFixtureReplacesChildBeforeItsMarkerWrite()
+    void shouldReplaceChildBeforeMarkerWriteInCorrectedLifecycleFixture()
             throws IOException {
+        // given
         ObjectNode fixture = copy("life/c-life-03.yaml");
         ArrayNode assertions = (ArrayNode) fixture.path("expected")
                 .path("assertions");
@@ -32,8 +34,10 @@ class ContractsFixtureHarnessControlTest {
         status.put("op", "equals");
         status.put("expected", "success");
 
+        // when
         ContractsConformanceProjection projection = execute(fixture);
 
+        // then
         assertTrue(
                 projection.project(
                         "result.document.child.replacement").isPresent(),
@@ -47,8 +51,10 @@ class ContractsFixtureHarnessControlTest {
     }
 
     @Test
-    void correctedAssignedFixturesPassTheirPublishedAssertions()
+    void shouldPassPublishedAssertionsForCorrectedAssignedFixtures()
             throws IOException {
+        // given
+        // when
         for (String fixture : Arrays.asList(
                 "disc/c-disc-04.yaml",
                 "e2e/c-e2e-02.yaml",
@@ -57,40 +63,50 @@ class ContractsFixtureHarnessControlTest {
                 "prot/c-prot-02.yaml")) {
             execute(resource(fixture));
         }
+    // then
     }
 
     @Test
-    void publishedNestedScopeControlsUseDeclaredEmbeddedScopes()
+    void shouldUseDeclaredEmbeddedScopesForPublishedNestedScopeControls()
             throws IOException {
+        // given
+        // when
         for (String fixture : Arrays.asList(
                 "evt/c-evt-03.yaml",
                 "life/c-life-03.yaml",
                 "upd/c-upd-03.yaml")) {
             execute(resource(fixture));
         }
+    // then
     }
 
     @Test
-    void rootForwardAllMayBeInstalledWithoutReceivingADescendant()
+    void shouldAllowInstallingRootForwardAllWithoutReceivingDescendant()
             throws IOException {
+        // given
         ContractsConformanceProjection projection =
                 execute(resource("evt/c-evt-04.yaml"));
 
+        // when
         @SuppressWarnings("unchecked")
         List<Object> events = (List<Object>) projection
                 .project("result.events").getValue();
+        // then
         assertEquals(2, events.size());
         assertEquals(events.get(0), events.get(1));
     }
 
     @Test
-    void selectedChildEmissionsRemainNonPublicWithoutRootForward()
+    void shouldKeepSelectedChildEmissionsNonPublicWithoutRootForward()
             throws IOException {
+        // given
         ContractsConformanceProjection projection =
                 execute(resource("evt/c-evt-03.yaml"));
+        // when
         @SuppressWarnings("unchecked")
         List<Object> events = (List<Object>) projection
                 .project("result.events").getValue();
+        // then
         assertTrue(events.isEmpty());
         assertEquals(
                 1L,
@@ -100,8 +116,9 @@ class ContractsFixtureHarnessControlTest {
     }
 
     @Test
-    void channelLawCasesEvaluateBothImplications()
+    void shouldEvaluateBothImplicationsForChannelLawCases()
             throws IOException {
+        // given
         ObjectNode fixture = copy("feed/c-feed-02.yaml");
         ArrayNode laws = (ArrayNode) fixture.path("input")
                 .path("feeder").path("channelLawCases");
@@ -116,12 +133,18 @@ class ContractsFixtureHarnessControlTest {
         expected.add(true);
         expected.add(false);
 
-        execute(fixture);
+        // when
+        ContractsConformanceProjection projection =
+                execute(fixture);
+
+        // then
+        assertTrue(projection != null);
     }
 
     @Test
-    void rawIndexOmissionIsFeederNonconformance()
+    void shouldTreatRawIndexOmissionAsFeederNonconformance()
             throws IOException {
+        // given
         ObjectNode fixture = copy("feed/c-feed-04.yaml");
         ArrayNode candidates = (ArrayNode) fixture.path("input")
                 .path("feeder").path("rawIndexCandidates");
@@ -131,60 +154,110 @@ class ContractsFixtureHarnessControlTest {
         assertion.put("op", "equals");
         assertion.put("expected", "feeder-nonconformance");
 
-        execute(fixture);
+        // when
+        ContractsConformanceProjection projection =
+                execute(fixture);
+
+        // then
+        assertTrue(projection != null);
     }
 
     @Test
-    void acceptanceVariantsApplyOnlyMutableBusinessState()
+    void shouldApplyOnlyMutableBusinessStateForAcceptanceVariants()
             throws IOException {
+        // given
+        JsonNode fixture =
+                resource("feed/c-feed-03.yaml");
+
+        // when
         ContractsConformanceProjection projection =
-                execute(resource("feed/c-feed-03.yaml"));
+                execute(fixture);
+        boolean firstAccepted =
+                (Boolean) projection.variants().get("state-0")
+                        .project("feeder.acceptanceResult")
+                        .getValue();
+        boolean secondAccepted =
+                (Boolean) projection.variants().get("state-1")
+                        .project("feeder.acceptanceResult")
+                        .getValue();
 
-        assertTrue((Boolean) projection.variants().get("state-0")
-                .project("feeder.acceptanceResult").getValue());
-        assertTrue((Boolean) projection.variants().get("state-1")
-                .project("feeder.acceptanceResult").getValue());
+        // then
+        assertTrue(firstAccepted);
+        assertTrue(secondAccepted);
+    }
 
+    @Test
+    void shouldRejectAcceptanceVariantThatMutatesContracts()
+            throws IOException {
+        // given
         ObjectNode invalid = copy("feed/c-feed-03.yaml");
         ObjectNode firstState = (ObjectNode) invalid.path("input")
                 .path("feeder").path("acceptanceStateVariants").get(0);
         firstState.putObject("contracts");
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+
+        // when
+        IllegalArgumentException exception = captureFailure(
                 () -> execute(invalid));
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                exception.getClass());
         assertTrue(exception.getMessage().contains(
                 "mutable business state"));
     }
 
     @Test
-    void eventQueueRequiresAnExactRetainedSnapshotPerEvent()
+    void shouldRequireExactRetainedSnapshotPerEventInEventQueue()
             throws IOException {
+        // given
+        JsonNode fixture =
+                resource("feed/c-feed-08.yaml");
+
+        // when
         ContractsConformanceProjection projection =
-                execute(resource("feed/c-feed-08.yaml"));
+                execute(fixture);
+        Object callOrder =
+                projection.project("feeder.callOrder")
+                        .getValue();
+
+        // then
         assertEquals(
                 Arrays.asList("E1:/child", "E1:/", "E2:/"),
-                projection.project("feeder.callOrder").getValue());
+                callOrder);
+    }
 
+    @Test
+    void shouldRejectEventQueueWithoutExactRetainedSnapshot()
+            throws IOException {
+        // given
         ObjectNode missing = copy("feed/c-feed-08.yaml");
         ((ObjectNode) missing.path("input").path("feeder")
                 .path("targetsByEvent")).remove("E2");
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+
+        // when
+        IllegalArgumentException exception = captureFailure(
                 () -> execute(missing));
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                exception.getClass());
         assertTrue(exception.getMessage().contains(
                 "no retained snapshot for E2"));
     }
 
     @Test
-    void listOperationVariantsTraverseProcessAndPatchPipeline()
+    void shouldTraverseProcessAndPatchPipelineForListOperationVariants()
             throws IOException {
+        // given
         ContractsConformanceProjection projection =
                 execute(resource("rep/c-rep-07.yaml"));
         ContractsConformanceProjection append =
                 projection.variants().get("append");
+        // when
         ContractsConformanceProjection replace =
                 projection.variants().get("replace-head");
 
+        // then
         assertEquals(
                 "success",
                 append.project("result.status").getValue());
@@ -212,15 +285,18 @@ class ContractsFixtureHarnessControlTest {
     }
 
     @Test
-    void pureReferenceVariantUsesTheCanonicalRootContent()
+    void shouldUseCanonicalRootContentForPureReferenceVariant()
             throws IOException {
+        // given
         ContractsConformanceProjection projection =
                 execute(resource("rep/c-rep-01.yaml"));
 
         ContractsConformanceProjection inline =
                 projection.variants().get("inline");
+        // when
         ContractsConformanceProjection reference =
                 projection.variants().get("reference");
+        // then
         assertEquals(
                 inline.project("result").getValue(),
                 reference.project("result").getValue());
@@ -240,16 +316,26 @@ class ContractsFixtureHarnessControlTest {
     }
 
     @Test
-    void subscriptionProjectionUsesTheExactValidatorProducedDelta()
+    void shouldUseExactValidatorProducedDeltaForSubscriptionProjection()
             throws IOException {
-        ContractsConformanceProjection projection =
-                execute(resource("idx/c-idx-02.yaml"));
+        // given
+        JsonNode fixture =
+                resource("idx/c-idx-02.yaml");
 
-        assertEquals(
-                "incremental",
-                projection.project(
-                        "commit.subscriptionDelta.mode")
-                        .getValue());
+        // when
+        ContractsConformanceProjection projection =
+                execute(fixture);
+        Object mode = projection.project(
+                "commit.subscriptionDelta.mode")
+                .getValue();
+        @SuppressWarnings("unchecked")
+        List<Object> startAfter =
+                (List<Object>) projection.project(
+                        "commit.newIntervals.0.startAfterExternalOrderKey")
+                .getValue();
+
+        // then
+        assertEquals("incremental", mode);
         assertEquals(
                 "new",
                 projection.project(
@@ -260,11 +346,6 @@ class ContractsFixtureHarnessControlTest {
                 ((Number) projection.project(
                         "commit.newIntervals.0.activationRootRevision")
                         .getValue()).longValue());
-        @SuppressWarnings("unchecked")
-        List<Object> startAfter =
-                (List<Object>) projection.project(
-                        "commit.newIntervals.0.startAfterExternalOrderKey")
-                        .getValue();
         assertEquals(3, startAfter.size());
         assertEquals(
                 1000L,

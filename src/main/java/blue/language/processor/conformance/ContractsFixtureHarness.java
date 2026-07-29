@@ -1,5 +1,7 @@
 package blue.language.processor.conformance;
 
+import blue.language.utils.Properties;
+
 import blue.language.Blue;
 import blue.language.BlueContractsConformanceReport;
 import blue.language.NodeProvider;
@@ -12,15 +14,19 @@ import blue.language.processor.CheckpointDomain;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.EffectiveContractSnapshot;
+import blue.language.processor.EffectiveContractSnapshotConstants;
 import blue.language.processor.ExternalDeliveryPlan;
 import blue.language.processor.ExternalDeliverySnapshot;
+import blue.language.processor.ExternalChannelDependencySnapshot;
 import blue.language.processor.ExternalOrderKey;
 import blue.language.processor.GasSchedule;
+import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.GasTraceEntry;
 import blue.language.processor.ProcessAttemptResult;
 import blue.language.processor.ProcessingConformanceTrace;
 import blue.language.processor.ProcessingDebugResult;
 import blue.language.processor.ProcessingSnapshotManager;
+import blue.language.processor.ProcessingTraceConstants;
 import blue.language.processor.ProcessingTraceRecord;
 import blue.language.processor.PlatformCommitCompanion;
 import blue.language.processor.ProcessorDiagnostic;
@@ -28,9 +34,13 @@ import blue.language.processor.ProcessorStatus;
 import blue.language.processor.SubscriptionDelta;
 import blue.language.processor.VerifiedExecutionEvidence;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -113,15 +123,46 @@ public final class ContractsFixtureHarness {
             new ContractsGasSchedule();
     private final RegistryEnvironment registry = RegistryEnvironment.load();
 
+    /**
+     * Creates a harness bound to the packaged schema, projection catalog, gas
+     * manifest, and conformance registry resources.
+     *
+     * @throws IllegalStateException when a required packaged resource is
+     *         missing, malformed, or identity-inconsistent
+     */
+    public ContractsFixtureHarness() {
+    }
+
+    /**
+     * Validates, executes, projects, and asserts one Contracts 1.0 fixture.
+     *
+     * <p>The supplied {@code Blue} parameter is retained for source
+     * compatibility but execution is isolated from host configuration.
+     * Successful return means every fixture assertion passed. The returned
+     * projection is execution-local and remains mutable to the caller.</p>
+     *
+     * @param fixture complete fixture JSON
+     * @param ignoredHost ignored host context; may be {@code null}
+     * @param completeCounterCoverage whether the enclosing suite proved
+     *         one-to-one gas counter microfixture coverage
+     * @return actual presence-aware projection, including executed variants
+     * @throws IllegalArgumentException when validation or an executable
+     *         control fails deterministically
+     * @throws AssertionError when an expected observable does not match
+     */
     public ContractsConformanceProjection execute(JsonNode fixture,
                                                   Blue ignoredHost,
                                                   boolean completeCounterCoverage) {
         validator.validate(fixture);
         projectionCatalog.validateFixtureAssertions(fixture);
 
-        String operation = fixture.path("operation").asText();
-        JsonNode input = fixture.path("input");
-        if ("gas-micro".equals(operation) && !input.has("root")) {
+        String operation = fixture.path(
+                ContractsFixtureConstants.Field.OPERATION).asText();
+        JsonNode input = fixture.path(
+                ContractsFixtureConstants.Field.INPUT);
+        if (ContractsFixtureConstants.Operation.GAS_MICRO.equals(
+                operation)
+                && !input.has(ContractsFixtureConstants.Field.ROOT)) {
             ContractsConformanceProjection projection =
                     executeStandaloneGas(fixture, completeCounterCoverage);
             assertions.evaluate(fixture, projection);
@@ -129,17 +170,27 @@ public final class ContractsFixtureHarness {
         }
 
         validateExecutableControls(fixture);
-        boolean requiresExecutionEvidence = !"platform".equals(operation);
+        boolean requiresExecutionEvidence =
+                !ContractsFixtureConstants.Operation.PLATFORM.equals(
+                        operation);
         PreparedInput base = prepare(
-                input, null, null, requiresExecutionEvidence);
+                input,
+                null,
+                null,
+                requiresExecutionEvidence,
+                hasVector(fixture, "C-LOOP-01"));
         ContractsConformanceProjection projection;
-        if ("platform".equals(operation)) {
+        if (ContractsFixtureConstants.Operation.PLATFORM.equals(
+                operation)) {
             projection = executePlatform(fixture, base);
-        } else if ("process-attempt".equals(operation)) {
+        } else if (ContractsFixtureConstants.Operation.PROCESS_ATTEMPT
+                .equals(operation)) {
             projection = executeAttempt(fixture, base);
-        } else if ("process".equals(operation)) {
+        } else if (ContractsFixtureConstants.Operation.PROCESS.equals(
+                operation)) {
             projection = executeProcess(fixture, base);
-        } else if ("gas-micro".equals(operation)) {
+        } else if (ContractsFixtureConstants.Operation.GAS_MICRO.equals(
+                operation)) {
             ProcessExecution execution = runProcess(base);
             projection = projectProcess(base, execution);
             addCompositeGasAudit(
@@ -154,6 +205,14 @@ public final class ContractsFixtureHarness {
         return projection;
     }
 
+    /**
+     * Validates fixture structure and declared projection paths without
+     * executing runtime controls or assertions.
+     *
+     * @param fixture candidate fixture JSON
+     * @throws IllegalArgumentException when the fixture or a projection path
+     *         violates the closed Contracts 1.0 format
+     */
     public void validate(JsonNode fixture) {
         validator.validate(fixture);
         projectionCatalog.validateFixtureAssertions(fixture);
@@ -165,22 +224,26 @@ public final class ContractsFixtureHarness {
      * that can never be selected as coverage of the declared control.
      */
     private void validateExecutableControls(JsonNode fixture) {
-        JsonNode input = fixture.path("input");
-        JsonNode runtime = input.path("runtime");
+        JsonNode input = fixture.path(
+                ContractsFixtureConstants.Field.INPUT);
+        JsonNode runtime = input.path(ContractsFixtureConstants.Field.RUNTIME);
         if (!runtime.isObject()) {
             return;
         }
 
-        String fixtureId = fixture.path("id").asText();
+        String fixtureId = fixture.path(
+                ContractsFixtureConstants.Field.ID).asText();
         ObjectNode root = requireObject(
-                input.get("root"), "input.root").deepCopy();
-        applyBuilders(root, input.path("builders"));
+                input.get(ContractsFixtureConstants.Field.ROOT),
+                "input.root").deepCopy();
+        applyBuilders(root, input.path(ContractsFixtureConstants.Field.BUILDERS));
+        promoteMixedFixtureScalarToObject(root);
         List<ScopeValue> scopes = enumerateDeclaredScopes(root);
         Set<String> scopePaths = new LinkedHashSet<>();
         for (ScopeValue scope : scopes) {
             scopePaths.add(scope.path);
         }
-        JsonNode feeder = input.path("feeder");
+        JsonNode feeder = input.path(ContractsFixtureConstants.Field.FEEDER);
         JsonNode selectedChild = firstNonRootDeliveryHintOrNull(feeder);
 
         if (runtime.has("childEmissions")) {
@@ -215,7 +278,7 @@ public final class ContractsFixtureHarness {
                 "sourceCutOffDuringUpdate").asBoolean(false)) {
             String target = cascade.path("replaceScope").asText(null);
             if (target == null && selectedChild != null) {
-                target = selectedChild.path("scopePath").asText(null);
+                target = selectedChild.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText(null);
             }
             requireEmbeddedTarget(
                     fixtureId,
@@ -225,7 +288,7 @@ public final class ContractsFixtureHarness {
                     "the only possible Document Update source is Root");
             if (selectedChild == null
                     || !target.equals(
-                    selectedChild.path("scopePath").asText())
+                    selectedChild.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText())
                     || !selectedChildCanProduceUpdate(
                     root, runtime, selectedChild)) {
                 contradiction(
@@ -248,7 +311,7 @@ public final class ContractsFixtureHarness {
                     control,
                     "deliverySnapshot contains no non-root occurrence");
         }
-        String path = selectedChild.path("scopePath").asText();
+        String path = selectedChild.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText();
         if (!scopePaths.contains(path)) {
             contradiction(
                     fixtureId,
@@ -289,18 +352,35 @@ public final class ContractsFixtureHarness {
         ContractsGasSchedule.GasMicroResult actual =
                 gasSchedule.evaluate(fixture, completeCounterCoverage);
         return actual.projection()
-                .put("__gas.trace", actual.trace())
-                .put("__gas.totalGas", actual.totalGas())
-                .put("__gas.admitted", actual.admitted())
-                .put("__gas.failedChargeAbsent", actual.failedChargeAbsent())
-                .put("__gas.listFoldStepRecomputed",
+                .put(ContractsFixtureConstants.Projection.GAS_TRACE,
+                        actual.trace())
+                .put(ContractsFixtureConstants.Projection.GAS_TOTAL,
+                        actual.totalGas())
+                .put(ContractsFixtureConstants.Projection.GAS_ADMITTED,
+                        actual.admitted())
+                .put(
+                        ContractsFixtureConstants.Projection
+                                .GAS_FAILED_CHARGE_ABSENT,
+                        actual.failedChargeAbsent())
+                .put(
+                        ContractsFixtureConstants.Projection
+                                .GAS_LIST_FOLD_STEP_RECOMPUTED,
                         actual.listFoldStepRecomputed())
-                .put("__gas.textBlockExamined", actual.textBlockExamined())
-                .put("__gas.validationProofReused",
+                .put(
+                        ContractsFixtureConstants.Projection
+                                .GAS_TEXT_BLOCK_EXAMINED,
+                        actual.textBlockExamined())
+                .put(
+                        ContractsFixtureConstants.Projection
+                                .GAS_VALIDATION_PROOF_REUSED,
                         actual.validationProofReused())
-                .put("__gas.directIdentityHashBlock",
+                .put(
+                        ContractsFixtureConstants.Projection
+                                .GAS_DIRECT_IDENTITY_HASH_BLOCK,
                         actual.directIdentityHashBlock())
-                .put("__gas.integerLimbOperation",
+                .put(
+                        ContractsFixtureConstants.Projection
+                                .GAS_INTEGER_LIMB_OPERATION,
                         actual.integerLimbOperation());
     }
 
@@ -309,7 +389,8 @@ public final class ContractsFixtureHarness {
         ProcessExecution execution = runProcess(input);
         ContractsConformanceProjection projection =
                 projectProcess(input, execution);
-        if (fixture.path("input").path("feeder")
+        if (fixture.path(ContractsFixtureConstants.Field.INPUT)
+                .path(ContractsFixtureConstants.Field.FEEDER)
                 .path("casConflict").asBoolean(false)) {
             projection.put("commit.rootCommitted", false)
                     .put("commit.outboxCommitted", false)
@@ -326,7 +407,8 @@ public final class ContractsFixtureHarness {
                     "retry.trace",
                     ContractsAssertionEvaluator.deepEquals(
                             originalTrace, retryTrace)
-                            ? "trace"
+                            ? ContractsFixtureConstants.ProjectionValue
+                                    .RETRY_MATCHES_ORIGINAL_TRACE
                             : retryTrace);
         }
         return projection;
@@ -342,11 +424,11 @@ public final class ContractsFixtureHarness {
         List<Map<String, Object>> records = new ArrayList<>();
         for (ProcessingTraceRecord record : execution.trace.records()) {
             Map<String, Object> value = new LinkedHashMap<>();
-            value.put("sequence", record.sequence());
+            value.put(ContractsFixtureConstants.Field.SEQUENCE, record.sequence());
             value.put("kind", record.kind().name());
-            value.put("scopePath", record.scopePath());
-            value.put("contractKey", record.contractKey());
-            value.put("logicalPath", record.logicalPath());
+            value.put(ContractsFixtureConstants.Field.SCOPE_PATH, record.scopePath());
+            value.put(ContractsFixtureConstants.Field.CONTRACT_KEY, record.contractKey());
+            value.put(ContractsFixtureConstants.Field.LOGICAL_PATH, record.logicalPath());
             value.put("details", record.details());
             if (record.node() != null) {
                 value.put("node",
@@ -383,7 +465,9 @@ public final class ContractsFixtureHarness {
 
     private ContractsConformanceProjection executePlatform(JsonNode fixture,
                                                            PreparedInput input) {
-        JsonNode feeder = fixture.path("input").path("feeder");
+        JsonNode feeder = fixture
+                .path(ContractsFixtureConstants.Field.INPUT)
+                .path(ContractsFixtureConstants.Field.FEEDER);
         ContractsConformanceProjection projection =
                 new ContractsConformanceProjection()
                         .put("input.root", input.root);
@@ -428,13 +512,13 @@ public final class ContractsFixtureHarness {
                     compactDeliveryHints(feeder.get("canonicalPreselection"));
             if (!semanticEquals(compactDeliveries(canonicalDeliveries), declared)
                     || !semanticEquals(
-                    compactDeliveryHints(feeder.path("deliverySnapshot")),
+                    compactDeliveryHints(feeder.path(ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT)),
                     compactDeliveries(canonicalDeliveries))) {
                 projection.put("platform.status", "feeder-nonconformance");
             }
         }
         if (feeder.path("currentEventAddsChannel").asBoolean(false)) {
-            List<Object> order = orderKeyValues(feeder.path("eventOrderKey"));
+            List<Object> order = orderKeyValues(feeder.path(ContractsFixtureConstants.Field.EVENT_ORDER_KEY));
             projection.put("feeder.newInterval.startAfterExternalOrderKey", order);
             projection.put("feeder.currentSnapshot",
                     compactDeliveries(canonicalDeliveries));
@@ -442,7 +526,7 @@ public final class ContractsFixtureHarness {
         if (feeder.has("intervalHistory")) {
             List<String> activeIds = deriveIntervals(
                     feeder.get("intervalHistory"),
-                    orderKeyValues(feeder.path("eventOrderKey")));
+                    orderKeyValues(feeder.path(ContractsFixtureConstants.Field.EVENT_ORDER_KEY)));
             projection.put("feeder.intervalCount", activeIds.size());
             projection.put("feeder.intervalIds", activeIds);
         }
@@ -470,23 +554,43 @@ public final class ContractsFixtureHarness {
     private void executeVariants(JsonNode fixture,
                                  PreparedInput base,
                                  ContractsConformanceProjection projection) {
-        JsonNode variants = fixture.path("input").path("variants");
+        JsonNode variants = fixture
+                .path(ContractsFixtureConstants.Field.INPUT)
+                .path(ContractsFixtureConstants.Field.VARIANTS);
         if (!variants.isArray()) {
             return;
         }
         ProcessExecution prior = null;
         for (JsonNode variant : variants) {
-            String name = variant.path("name").asText();
-            Node priorRoot = variant.path("sameEvent").asBoolean(false)
+            String name = variant.path(ContractsFixtureConstants.Field.NAME).asText();
+            boolean sameEvent =
+                    variant.path(ContractsFixtureConstants.Field.SAME_EVENT).asBoolean(false);
+            /*
+             * A same-event variant continues from the prior Root only when
+             * that PROCESS committed. Noncommitting results already expose
+             * the rollback Root, but treating that value as a committed
+             * predecessor causes prepare(...) to seed source checkpoints and
+             * turns a deterministic retry into a stale attempt. Retrying a
+             * failure instead starts from the original exact fixture input.
+             */
+            Node priorRoot = sameEvent
                     && prior != null
+                    && prior.result.commits()
                     ? prior.result.document()
                     : null;
             PreparedInput transformed = prepare(
-                    fixture.path("input"),
+                    fixture.path(ContractsFixtureConstants.Field.INPUT),
                     variant,
                     priorRoot,
-                    !"platform".equals(fixture.path("operation").asText()));
-            if ("platform".equals(fixture.path("operation").asText())) {
+                    !ContractsFixtureConstants.Operation.PLATFORM.equals(
+                            fixture.path(
+                                    ContractsFixtureConstants.Field.OPERATION)
+                                    .asText()),
+                    hasVector(fixture, "C-LOOP-01"));
+            if (ContractsFixtureConstants.Operation.PLATFORM.equals(
+                    fixture.path(
+                            ContractsFixtureConstants.Field.OPERATION)
+                            .asText())) {
                 ContractsConformanceProjection child =
                         executePlatform(fixture, transformed);
                 projection.putVariant(name, child);
@@ -495,8 +599,8 @@ public final class ContractsFixtureHarness {
             ProcessExecution execution = runProcess(transformed);
             ContractsConformanceProjection child =
                     projectProcess(transformed, execution);
-            if (variant.has("listOperation")) {
-                child.put("trace", gasCounterTree(execution.trace.gas()));
+            if (variant.has(ContractsFixtureConstants.Field.LIST_OPERATION)) {
+                child.put(ContractsFixtureConstants.Field.TRACE, gasCounterTree(execution.trace.gas()));
             }
             projection.putVariant(name, child);
             prior = execution;
@@ -602,6 +706,9 @@ public final class ContractsFixtureHarness {
                 .withRuntimeRegistryIdentity(
                         BlueContractsConformanceReport
                                 .CONTRACTS_REGISTRY_PACKAGE_IDENTITY)
+                .registerContractType(
+                        RuntimeBlueIds.FIXTURE_EVENT,
+                        FixtureNonChannelContract.class)
                 .registerContractProcessor(
                         MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL,
                         registry.require(MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL),
@@ -650,26 +757,33 @@ public final class ContractsFixtureHarness {
     private PreparedInput prepare(JsonNode input,
                                   JsonNode variant,
                                   Node previousRoot,
-                                  boolean requiresExecutionEvidence) {
+                                  boolean requiresExecutionEvidence,
+                                  boolean preinitializeInternalCycle) {
         String rootForm = variant != null
-                ? variant.path("rootForm").asText("inline")
+                ? variant.path(ContractsFixtureConstants.Field.ROOT_FORM).asText("inline")
                 : "inline";
         String cacheMode = variant != null
-                ? variant.path("cache").asText("cold")
+                ? variant.path(ContractsFixtureConstants.Field.CACHE).asText("cold")
                 : "cold";
         String batchingMode = variant != null
-                ? variant.path("batching").asText("unbatched")
+                ? variant.path(ContractsFixtureConstants.Field.BATCHING).asText("unbatched")
                 : "unbatched";
         ObjectNode declaredRoot =
-                requireObject(input.get("root"), "input.root").deepCopy();
-        applyBuilders(declaredRoot, input.path("builders"));
+                requireObject(
+                        input.get(ContractsFixtureConstants.Field.ROOT),
+                        "input.root").deepCopy();
+        applyBuilders(declaredRoot, input.path(ContractsFixtureConstants.Field.BUILDERS));
+        promoteMixedFixtureScalarToObject(declaredRoot);
+        if (preinitializeInternalCycle) {
+            installExactPreinitializedMarker(declaredRoot);
+        }
         installRuntimeContracts(
                 declaredRoot,
-                input.path("runtime"),
-                input.path("feeder"));
+                input.path(ContractsFixtureConstants.Field.RUNTIME),
+                input.path(ContractsFixtureConstants.Field.FEEDER));
         FixtureGeneralization generalization =
                 FixtureGeneralization.create(
-                        declaredRoot, input.path("runtime"));
+                        declaredRoot, input.path(ContractsFixtureConstants.Field.RUNTIME));
         ObjectNode rootJson = declaredRoot;
         if (previousRoot != null) {
             rootJson = (ObjectNode) UncheckedObjectMapper.JSON_MAPPER.valueToTree(
@@ -679,7 +793,7 @@ public final class ContractsFixtureHarness {
         if (variant != null) {
             applyVariant(rootJson, variant);
         }
-        Node event = readNode(input.get("event"));
+        Node event = readNode(input.get(ContractsFixtureConstants.Field.EVENT));
         String eventBlueId = BlueIdCalculator.calculateBlueId(event);
         Node checkpointSubjectOverride =
                 variant != null && variant.has("checkpointSubject")
@@ -687,7 +801,7 @@ public final class ContractsFixtureHarness {
                         variant.get("checkpointSubject"))
                         : null;
 
-        Map<String, Node> providerNodes = verifyProviderNodes(input.path("provider"));
+        Map<String, Node> providerNodes = verifyProviderNodes(input.path(ContractsFixtureConstants.Field.PROVIDER));
         if (generalization != null) {
             for (Map.Entry<String, Node> entry :
                     generalization.nodesByBlueId.entrySet()) {
@@ -697,14 +811,17 @@ public final class ContractsFixtureHarness {
                         entry.getValue());
             }
         }
-        JsonNode feeder = input.path("feeder");
+        JsonNode feeder = input.path(ContractsFixtureConstants.Field.FEEDER);
         List<DerivedDelivery> deliveries = deriveDeliveries(
-                rootJson, input.path("event"), feeder.path("deliverySnapshot"),
+                rootJson, input.path(ContractsFixtureConstants.Field.EVENT), feeder.path(ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT),
                 eventBlueId, checkpointSubjectOverride);
+        normalizeDeclaredCheckpointDomains(
+                rootJson,
+                deliveries);
         if (variant != null
                 && (checkpointSubjectOverride != null
                 || (previousRoot != null
-                && variant.path("sameEvent").asBoolean(false)))) {
+                && variant.path(ContractsFixtureConstants.Field.SAME_EVENT).asBoolean(false)))) {
             seedVariantCheckpoints(rootJson, deliveries);
         }
         Node materializedRoot = readNode(rootJson);
@@ -748,16 +865,16 @@ public final class ContractsFixtureHarness {
 
         long managed = requiredLong(feeder, "managedRootRevision");
         long indexed = requiredLong(feeder, "indexedRootRevision");
-        if (variant != null && variant.has("rootRevision")) {
-            managed = variant.get("rootRevision").asLong();
+        if (variant != null && variant.has(ContractsFixtureConstants.Field.ROOT_REVISION)) {
+            managed = variant.get(ContractsFixtureConstants.Field.ROOT_REVISION).asLong();
             indexed = managed;
         }
         ExternalOrderKey eventOrderKey =
-                externalOrderKey(feeder.path("eventOrderKey"));
+                externalOrderKey(feeder.path(ContractsFixtureConstants.Field.EVENT_ORDER_KEY));
         List<SubscriptionDelta.Entry> activeSubscriptionIntervals =
                 deriveActiveSubscriptionIntervals(
                         rootJson,
-                        feeder.path("deliverySnapshot"));
+                        feeder.path(ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT));
         VerifiedExecutionEvidence builtEvidence = null;
         ExternalDeliveryPlan builtPlan = null;
         if (requiresExecutionEvidence) {
@@ -777,7 +894,7 @@ public final class ContractsFixtureHarness {
                 evidence.availableExactNode(blueId);
             }
             String unavailableAt =
-                    input.path("provider").path(
+                    input.path(ContractsFixtureConstants.Field.PROVIDER).path(
                             "transientUnavailableAt").asText(null);
             if (unavailableAt != null) {
                 evidence.requiredExactNode(
@@ -816,7 +933,7 @@ public final class ContractsFixtureHarness {
                 rootJson,
                 root,
                 event,
-                input.get("runtime"),
+                input.get(ContractsFixtureConstants.Field.RUNTIME),
                 providerNodes,
                 deliveries,
                 builtEvidence,
@@ -868,27 +985,82 @@ public final class ContractsFixtureHarness {
             ObjectNode contracts =
                     contractsObject((ObjectNode) scopeValue);
             ObjectNode checkpoint;
-            if (contracts.has("checkpoint")) {
+            if (contracts.has(
+                    ProcessorContractConstants.KEY_CHECKPOINT)) {
                 checkpoint = requireObject(
-                        contracts.get("checkpoint"),
+                        contracts.get(
+                                ProcessorContractConstants.KEY_CHECKPOINT),
                         "variant checkpoint");
             } else {
-                checkpoint = contracts.putObject("checkpoint");
-                checkpoint.putObject("type").put(
-                        "blueId",
+                checkpoint = contracts.putObject(
+                        ProcessorContractConstants.KEY_CHECKPOINT);
+                checkpoint.putObject(Properties.OBJECT_TYPE).put(
+                        Properties.OBJECT_BLUE_ID,
                         registryId("ChannelEventCheckpoint"));
             }
             ObjectNode entries =
-                    objectField(checkpoint, "entries", true);
+                    objectField(
+                            checkpoint,
+                            ProcessorContractConstants.KEY_ENTRIES,
+                            true);
             ObjectNode stored =
                     entries.putObject(
                             delivery.snapshot.channelKey());
             stored.putObject("domain").put(
-                    "blueId",
+                    Properties.OBJECT_BLUE_ID,
                     delivery.snapshot.checkpointDomainBlueId());
             stored.putObject("subject").put(
-                    "blueId",
+                    Properties.OBJECT_BLUE_ID,
                     delivery.snapshot.checkpointSubjectBlueId());
+        }
+    }
+
+    private static void normalizeDeclaredCheckpointDomains(
+            ObjectNode root,
+            List<DerivedDelivery> deliveries) {
+        for (DerivedDelivery delivery : deliveries) {
+            JsonNode scope =
+                    jsonAt(
+                            root,
+                            delivery.snapshot
+                                    .scopePath());
+            if (scope == null || !scope.isObject()) {
+                continue;
+            }
+            JsonNode contracts = scope.get(
+                    ProcessorContractConstants.KEY_CONTRACTS);
+            JsonNode channel = contracts != null
+                    ? contracts.get(
+                    delivery.snapshot.channelKey())
+                    : null;
+            String discriminator = channel != null
+                    ? channel.path(
+                    "checkpointDomain").asText(null)
+                    : null;
+            JsonNode entries = contracts != null
+                    ? contracts.path(
+                            ProcessorContractConstants.KEY_CHECKPOINT)
+                    .path(ProcessorContractConstants.KEY_ENTRIES)
+                    : null;
+            JsonNode stored = entries != null
+                    ? entries.get(
+                    delivery.snapshot.channelKey())
+                    : null;
+            JsonNode domain = stored != null
+                    ? stored.get("domain")
+                    : null;
+            if (stored instanceof ObjectNode
+                    && domain != null
+                    && domain.isTextual()
+                    && domain.asText().equals(
+                    discriminator)) {
+                ((ObjectNode) stored)
+                        .putObject("domain")
+                        .put(
+                                Properties.OBJECT_BLUE_ID,
+                                delivery
+                                        .checkpointDomainBlueId);
+            }
         }
     }
 
@@ -906,14 +1078,18 @@ public final class ContractsFixtureHarness {
             return;
         }
         ObjectNode currentObject = (ObjectNode) current;
-        JsonNode currentContracts = currentObject.get("contracts");
-        JsonNode declaredContracts = declared.get("contracts");
+        JsonNode currentContracts = currentObject.get(
+                ProcessorContractConstants.KEY_CONTRACTS);
+        JsonNode declaredContracts = declared.get(
+                ProcessorContractConstants.KEY_CONTRACTS);
         if (isPureReference(currentContracts)
                 && declaredContracts != null
                 && declaredContracts.isObject()) {
             currentObject.set(
-                    "contracts", declaredContracts.deepCopy());
-            currentContracts = currentObject.get("contracts");
+                    ProcessorContractConstants.KEY_CONTRACTS,
+                    declaredContracts.deepCopy());
+            currentContracts = currentObject.get(
+                    ProcessorContractConstants.KEY_CONTRACTS);
         }
         if (currentContracts != null && currentContracts.isObject()
                 && declaredContracts != null && declaredContracts.isObject()) {
@@ -935,7 +1111,7 @@ public final class ContractsFixtureHarness {
                 if (!isPureReference(value)) {
                     continue;
                 }
-                String reference = value.path("blueId").asText();
+                String reference = value.path(Properties.OBJECT_BLUE_ID).asText();
                 if (reference.equals(
                         BlueIdCalculator.calculateBlueId(readNode(exact)))) {
                     ((ObjectNode) currentContracts).set(
@@ -947,7 +1123,8 @@ public final class ContractsFixtureHarness {
                 currentObject.fields();
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> entry = fields.next();
-            if ("contracts".equals(entry.getKey())) {
+            if (ProcessorContractConstants.KEY_CONTRACTS.equals(
+                    entry.getKey())) {
                 continue;
             }
             JsonNode declaredChild = declared.get(entry.getKey());
@@ -964,7 +1141,7 @@ public final class ContractsFixtureHarness {
         return value != null
                 && value.isObject()
                 && value.size() == 1
-                && value.path("blueId").isTextual();
+                && value.path(Properties.OBJECT_BLUE_ID).isTextual();
     }
 
     private static boolean matchesResolvedMaterialization(
@@ -978,7 +1155,7 @@ public final class ContractsFixtureHarness {
         }
         if (declared.isValueNode()) {
             JsonNode resolvedValue =
-                    actual.isObject() ? actual.get("value") : null;
+                    actual.isObject() ? actual.get(Properties.OBJECT_VALUE) : null;
             return resolvedValue != null
                     && matchesResolvedMaterialization(
                     resolvedValue, declared);
@@ -987,7 +1164,7 @@ public final class ContractsFixtureHarness {
             JsonNode actualItems = actual.isArray()
                     ? actual
                     : actual.isObject()
-                    ? actual.get("items")
+                    ? actual.get(Properties.OBJECT_ITEMS)
                     : null;
             if (actualItems == null
                     || !actualItems.isArray()
@@ -1041,6 +1218,7 @@ public final class ContractsFixtureHarness {
     private static Node checkpointDomainNode(
             String effectiveTypeBlueId,
             List<String> sourceContributionNodeBlueIds,
+            ExternalChannelDependencySnapshot dependencies,
             String runtimeDiscriminator) {
         Node domain = new Node()
                 .properties("contractsVersion",
@@ -1053,12 +1231,258 @@ public final class ContractsFixtureHarness {
         }
         domain.properties("sourceContributionNodeBlueIds",
                 new Node().items(contributions));
+        if (dependencies != null
+                && !dependencies
+                .deterministicDependencyNodeBlueIds()
+                .isEmpty()) {
+            List<Node> dependencyItems =
+                    new ArrayList<>();
+            for (String blueId : dependencies
+                    .deterministicDependencyNodeBlueIds()) {
+                dependencyItems.add(
+                        new Node().value(blueId));
+            }
+            domain.properties(
+                    "deterministicDependencyNodeBlueIds",
+                    new Node().items(dependencyItems));
+        }
         if (runtimeDiscriminator != null
                 && !runtimeDiscriminator.isEmpty()) {
             domain.properties("runtimeDiscriminator",
                     new Node().value(runtimeDiscriminator));
         }
         return domain;
+    }
+
+    private ExternalChannelDependencySnapshot
+    fixtureChannelDependencies(
+            ObjectNode scope,
+            String ownerKey,
+            JsonNode ownerContract) {
+        String mode =
+                ownerContract.path(
+                        ContractsFixtureConstants.DependencyField.MODE)
+                        .asText(
+                                ContractsFixtureConstants.DependencyMode
+                                        .NONE);
+        if (ContractsFixtureConstants.DependencyMode.NONE.equals(mode)
+                || mode.isEmpty()) {
+            return ExternalChannelDependencySnapshot.none();
+        }
+        JsonNode contracts = scope.get(
+                ProcessorContractConstants.KEY_CONTRACTS);
+        if (contracts == null || !contracts.isObject()) {
+            throw new IllegalArgumentException(
+                    "Channel dependency declaration has no same-scope "
+                            + "contract map at " + ownerKey);
+        }
+        if (ContractsFixtureConstants.DependencyMode.EXACT.equals(mode)) {
+            String dependencyKey =
+                    ownerContract.path(
+                            ContractsFixtureConstants.DependencyField
+                                    .CHANNEL_KEY)
+                            .asText(null);
+            ExternalChannelDependencySnapshot.ChannelEntry
+                    dependency =
+                    fixtureChannelEntry(
+                            dependencyKey,
+                            contracts.get(dependencyKey));
+            if (dependency == null) {
+                throw new IllegalArgumentException(
+                        "Exact Channel dependency is missing or not a "
+                                + "Channel at " + ownerKey + ": "
+                                + dependencyKey);
+            }
+            return new ExternalChannelDependencySnapshot(
+                    Collections.<String>emptyList(),
+                    Collections
+                            .<ExternalChannelDependencySnapshot.Entry>
+                                    emptyList(),
+                    Collections
+                            .<ExternalChannelDependencySnapshot.TypeFamily>
+                                    emptyList(),
+                    false,
+                    Collections.singletonList(dependency),
+                    false,
+                    Collections.<String>emptyList());
+        }
+        if (!ContractsFixtureConstants.DependencyMode.CATALOG.equals(mode)) {
+            throw new IllegalArgumentException(
+                    "Unsupported dependencyMode at "
+                            + ownerKey + ": " + mode);
+        }
+
+        List<String> rawKeys = new ArrayList<>();
+        contracts.fieldNames().forEachRemaining(key -> {
+            if (!ProcessorContractConstants.KEY_INITIALIZED.equals(key)
+                    && !ProcessorContractConstants.KEY_TERMINATED.equals(key)
+                    && !ProcessorContractConstants.KEY_CHECKPOINT.equals(key)) {
+                rawKeys.add(key);
+            }
+        });
+        rawKeys.sort(
+                ExternalOrderKey
+                        ::compareTextCodePoints);
+        List<ExternalChannelDependencySnapshot.ChannelEntry>
+                channels = new ArrayList<>();
+        for (String rawKey : rawKeys) {
+            ExternalChannelDependencySnapshot.ChannelEntry
+                    channel =
+                    fixtureChannelEntry(
+                            rawKey,
+                            contracts.get(rawKey));
+            if (channel != null) {
+                channels.add(channel);
+            }
+        }
+        channels.sort((left, right) -> {
+            int order = Integer.compare(
+                    left.order(),
+                    right.order());
+            if (order != 0) {
+                return order;
+            }
+            int key = ExternalOrderKey
+                    .compareTextCodePoints(
+                            left.channelKey(),
+                            right.channelKey());
+            return key != 0
+                    ? key
+                    : ExternalOrderKey
+                    .compareTextCodePoints(
+                            left.effectiveTypeBlueId(),
+                            right.effectiveTypeBlueId());
+        });
+        return new ExternalChannelDependencySnapshot(
+                Collections.<String>emptyList(),
+                Collections
+                        .<ExternalChannelDependencySnapshot.Entry>
+                                emptyList(),
+                Collections
+                        .<ExternalChannelDependencySnapshot.TypeFamily>
+                                emptyList(),
+                false,
+                channels,
+                true,
+                rawKeys);
+    }
+
+    private static boolean hasVector(
+            JsonNode fixture,
+            String vector) {
+        for (JsonNode declared : fixture.path(
+                ContractsFixtureConstants.Field.VECTORS)) {
+            if (vector.equals(declared.asText())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void installExactPreinitializedMarker(
+            ObjectNode root) {
+        ObjectNode contracts = objectField(
+                root, ProcessorContractConstants.KEY_CONTRACTS, true);
+        if (contracts.has(
+                ProcessorContractConstants.KEY_INITIALIZED)) {
+            return;
+        }
+        String preInitializationBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        readNode(root));
+        ObjectNode initialized =
+                contracts.putObject(
+                        ProcessorContractConstants
+                                .KEY_INITIALIZED);
+        initialized.putObject(Properties.OBJECT_TYPE)
+                .put(Properties.OBJECT_BLUE_ID,
+                        RuntimeBlueIds
+                                .PROCESSING_INITIALIZED_MARKER);
+        initialized.putObject("document")
+                .put(Properties.OBJECT_BLUE_ID, preInitializationBlueId);
+    }
+
+    private ExternalChannelDependencySnapshot.ChannelEntry
+    fixtureChannelEntry(
+            String key,
+            JsonNode contract) {
+        if (key == null
+                || contract == null
+                || !contract.isObject()) {
+            return null;
+        }
+        String typeBlueId =
+                contract.path(Properties.OBJECT_TYPE)
+                        .path(Properties.OBJECT_BLUE_ID)
+                        .asText(null);
+        String role;
+        if (registry.isSubtype(
+                typeBlueId,
+                registryId("ExternalChannel"))) {
+            role = EffectiveContractSnapshotConstants
+                    .Role.EXTERNAL_CHANNEL;
+        } else if (registry.isSubtype(
+                typeBlueId,
+                registryId("Channel"))) {
+            role = EffectiveContractSnapshotConstants
+                    .Role.PROCESSOR_CHANNEL;
+        } else {
+            return null;
+        }
+        Node exactContract = readNode(contract);
+        String contribution =
+                BlueIdCalculator.calculateBlueId(
+                        exactContract);
+        Node effectiveContract =
+                registry.resolve(exactContract.clone());
+        Node header = new Node().type(
+                new Node().blueId(typeBlueId));
+        if (effectiveContract.getProperties() != null) {
+            List<String> names =
+                    new ArrayList<>(
+                            effectiveContract
+                                    .getProperties()
+                                    .keySet());
+            names.sort(
+                    ExternalOrderKey
+                            ::compareTextCodePoints);
+            for (String name : names) {
+                header.properties(
+                        name,
+                        effectiveContract
+                                .getProperties()
+                                .get(name)
+                                .clone());
+            }
+        }
+        List<String> deterministicDependencies =
+                new ArrayList<>();
+        if ((registry.isSubtype(
+                typeBlueId,
+                registryId("TriggeredEventChannel"))
+                || registry.isSubtype(
+                typeBlueId,
+                registryId("EmbeddedNodeChannel")))
+                && effectiveContract.getProperties() != null
+                && effectiveContract.getProperties()
+                .containsKey(ContractsFixtureConstants.Field.EVENT)) {
+            Node event =
+                    effectiveContract.getProperties()
+                            .get(ContractsFixtureConstants.Field.EVENT);
+            deterministicDependencies.add(
+                    FrozenNode.fromResolvedNode(event)
+                            .blueId());
+        }
+        return new ExternalChannelDependencySnapshot.ChannelEntry(
+                key,
+                contract.path(ContractsFixtureConstants.Field.ORDER).asInt(0),
+                typeBlueId,
+                role,
+                Collections.singletonList(
+                        contribution),
+                deterministicDependencies,
+                FrozenNode.fromResolvedNode(header)
+                        .blueId());
     }
 
     private static JsonNode firstNonRootDeliveryHint(
@@ -1074,14 +1498,14 @@ public final class ContractsFixtureHarness {
     private static JsonNode firstNonRootDeliveryHintOrNull(
             JsonNode feeder) {
         JsonNode hints = feeder != null
-                ? feeder.path("deliverySnapshot")
+                ? feeder.path(ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT)
                 : null;
         if (hints == null || !hints.isArray()) {
             return null;
         }
         for (JsonNode hint : hints) {
             if (!"/".equals(
-                    hint.path("scopePath").asText())) {
+                    hint.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText())) {
                 return hint;
             }
         }
@@ -1104,13 +1528,13 @@ public final class ContractsFixtureHarness {
             JsonNode runtime,
             JsonNode selectedChild) {
         String scopePath =
-                selectedChild.path("scopePath").asText();
+                selectedChild.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText();
         String channelKey =
-                selectedChild.path("channelKey").asText();
+                selectedChild.path(ContractsFixtureConstants.Field.CHANNEL_KEY).asText();
         JsonNode scope = jsonAt(root, scopePath);
         JsonNode contracts = scope == null
                 ? null
-                : scope.get("contracts");
+                : scope.get(ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null || !contracts.isObject()) {
             return false;
         }
@@ -1120,8 +1544,8 @@ public final class ContractsFixtureHarness {
             Map.Entry<String, JsonNode> entry = entries.next();
             JsonNode handler = entry.getValue();
             if (!MockTypeBlueIds.MOCK_HANDLER.equals(
-                    handler.path("type").path(
-                            "blueId").asText(null))
+                    handler.path(Properties.OBJECT_TYPE).path(
+                            Properties.OBJECT_BLUE_ID).asText(null))
                     || !channelKey.equals(
                     handler.path("channel").asText(null))) {
                 continue;
@@ -1131,7 +1555,7 @@ public final class ContractsFixtureHarness {
                     scopePath,
                     entry.getKey(),
                     handler);
-            if (nonEmptyResultList(result, "patches")) {
+            if (nonEmptyResultList(result, ContractsFixtureConstants.Field.PATCHES)) {
                 return true;
             }
         }
@@ -1143,12 +1567,12 @@ public final class ContractsFixtureHarness {
             String scopePath,
             String handlerKey,
             JsonNode handler) {
-        JsonNode script = runtime.path("handlers").get(
+        JsonNode script = runtime.path(ContractsFixtureConstants.Field.HANDLERS).get(
                 ScriptedContractsRuntime.contractPath(
                         scopePath, handlerKey));
-        return script != null && script.has("result")
-                ? script.get("result")
-                : handler.get("result");
+        return script != null && script.has(ContractsFixtureConstants.Field.RESULT)
+                ? script.get(ContractsFixtureConstants.Field.RESULT)
+                : handler.get(ContractsFixtureConstants.Field.RESULT);
     }
 
     private static boolean nonEmptyResultList(
@@ -1158,7 +1582,7 @@ public final class ContractsFixtureHarness {
                 ? result.get(field)
                 : null;
         if (value != null && value.isObject()) {
-            value = value.get("items");
+            value = value.get(Properties.OBJECT_ITEMS);
         }
         return value != null
                 && value.isArray()
@@ -1195,14 +1619,14 @@ public final class ContractsFixtureHarness {
 
         if (runtime.has("childEmissions")) {
             JsonNode childHint = firstNonRootDeliveryHint(feeder);
-            String childPath = childHint.path("scopePath").asText();
+            String childPath = childHint.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText();
             ObjectNode child = requireObject(
                     jsonAt(root, childPath),
                     "selected child scope " + childPath);
             installScriptedHandler(
                     contractsObject(child),
                     FIXTURE_CHILD_EMITTER_HANDLER,
-                    childHint.path("channelKey").asText(),
+                    childHint.path(ContractsFixtureConstants.Field.CHANNEL_KEY).asText(),
                     null,
                     UncheckedObjectMapper.JSON_MAPPER.createObjectNode());
         }
@@ -1281,7 +1705,8 @@ public final class ContractsFixtureHarness {
     }
 
     private static ObjectNode contractsObject(ObjectNode scope) {
-        return objectField(scope, "contracts", true);
+        return objectField(
+                scope, ProcessorContractConstants.KEY_CONTRACTS, true);
     }
 
     private static void installHandlerPair(
@@ -1306,12 +1731,12 @@ public final class ContractsFixtureHarness {
                 contracts, handlerKey, MockTypeBlueIds.MOCK_HANDLER);
         handler.put("channel", channelKey);
         if (eventTypeBlueId != null) {
-            handler.putObject("event")
-                    .putObject("type")
-                    .put("blueId", eventTypeBlueId);
+            handler.putObject(ContractsFixtureConstants.Field.EVENT)
+                    .putObject(Properties.OBJECT_TYPE)
+                    .put(Properties.OBJECT_BLUE_ID, eventTypeBlueId);
         }
         if (result != null) {
-            handler.set("result", result.deepCopy());
+            handler.set(ContractsFixtureConstants.Field.RESULT, result.deepCopy());
         }
         return handler;
     }
@@ -1325,7 +1750,7 @@ public final class ContractsFixtureHarness {
                     "Fixture runtime contract key collision: " + key);
         }
         ObjectNode contract = contracts.putObject(key);
-        contract.putObject("type").put("blueId", typeBlueId);
+        contract.putObject(Properties.OBJECT_TYPE).put(Properties.OBJECT_BLUE_ID, typeBlueId);
         return contract;
     }
 
@@ -1345,7 +1770,7 @@ public final class ContractsFixtureHarness {
                 for (int index = 0; index < count; index++) {
                     String suffix = String.format("%0" + width + "d", index);
                     object.set(builder.path("keyPrefix").asText() + suffix,
-                            builder.get("value").deepCopy());
+                            builder.get(Properties.OBJECT_VALUE).deepCopy());
                 }
                 value = object;
             } else if ("generated-list".equals(kind)) {
@@ -1375,12 +1800,12 @@ public final class ContractsFixtureHarness {
     }
 
     private void applyVariant(ObjectNode root, JsonNode variant) {
-        if (variant.has("accept")) {
-            setAllScriptedChannelAcceptance(root, variant.get("accept").asBoolean());
+        if (variant.has(ContractsFixtureConstants.Field.ACCEPT)) {
+            setAllScriptedChannelAcceptance(root, variant.get(ContractsFixtureConstants.Field.ACCEPT).asBoolean());
         }
-        if (variant.has("listOperation")) {
+        if (variant.has(ContractsFixtureConstants.Field.LIST_OPERATION)) {
             installListOperation(
-                    root, variant.get("listOperation"));
+                    root, variant.get(ContractsFixtureConstants.Field.LIST_OPERATION));
         }
         if (variant.has("newEmbeddedSurface")) {
             installEmbeddedSurfaceTransition(
@@ -1390,9 +1815,9 @@ public final class ContractsFixtureHarness {
 
     private static void installListOperation(ObjectNode root,
                                              JsonNode operation) {
-        int size = exactInt(operation.get("size"),
+        int size = exactInt(operation.get(ContractsFixtureConstants.Field.SIZE),
                 "variant.listOperation.size");
-        String kind = operation.path("op").asText();
+        String kind = operation.path(ContractsFixtureConstants.Field.OP).asText();
 
         promoteFixtureScalarToObject(root);
         ArrayNode list = root.putArray(FIXTURE_LIST_FIELD);
@@ -1401,47 +1826,54 @@ public final class ContractsFixtureHarness {
         }
 
         ObjectNode contracts = requireObject(
-                root.get("contracts"), "input.root.contracts");
+                root.get(ProcessorContractConstants.KEY_CONTRACTS),
+                "input.root.contracts");
         ObjectNode handler = firstScriptedHandler(contracts);
         if (handler == null) {
             throw new IllegalArgumentException(
                     "listOperation requires an ordinary selected "
                             + "Scripted Handler");
         }
-        ObjectNode result = objectField(handler, "result", true);
+        ObjectNode result = objectField(handler, ContractsFixtureConstants.Field.RESULT, true);
         ArrayNode patches =
                 UncheckedObjectMapper.JSON_MAPPER.createArrayNode();
-        result.set("patches", patches);
+        result.set(ContractsFixtureConstants.Field.PATCHES, patches);
 
-        if ("append".equals(kind)) {
+        if (ContractsFixtureConstants.ListOperation.APPEND.equals(kind)) {
             int delta = exactInt(
-                    operation.get("delta"),
+                    operation.get(ContractsFixtureConstants.Field.DELTA),
                     "variant.listOperation.delta");
             for (int index = 0; index < delta; index++) {
                 ObjectNode patch = patches.addObject();
-                patch.put("op", "add");
                 patch.put(
-                        "path", "/" + FIXTURE_LIST_FIELD + "/-");
-                patch.put("val", 1);
+                        ContractsFixtureConstants.PatchField.OPERATION,
+                        ContractsFixtureConstants.PatchOperation.ADD);
+                patch.put(
+                        ContractsFixtureConstants.PatchField.PATH,
+                        "/" + FIXTURE_LIST_FIELD + "/-");
+                patch.put(ContractsFixtureConstants.PatchField.VALUE, 1);
             }
             return;
         }
-        if (!"replace".equals(kind)) {
+        if (!ContractsFixtureConstants.ListOperation.REPLACE.equals(kind)) {
             throw new IllegalArgumentException(
                     "Unknown listOperation op: " + kind);
         }
         int index = exactInt(
-                operation.get("index"),
+                operation.get(ContractsFixtureConstants.Field.INDEX),
                 "variant.listOperation.index");
         if (index >= size) {
             throw new IllegalArgumentException(
                     "variant.listOperation.index must be less than size");
         }
         ObjectNode patch = patches.addObject();
-        patch.put("op", "replace");
         patch.put(
-                "path", "/" + FIXTURE_LIST_FIELD + "/" + index);
-        patch.put("val", 1);
+                ContractsFixtureConstants.PatchField.OPERATION,
+                ContractsFixtureConstants.PatchOperation.REPLACE);
+        patch.put(
+                ContractsFixtureConstants.PatchField.PATH,
+                "/" + FIXTURE_LIST_FIELD + "/" + index);
+        patch.put(ContractsFixtureConstants.PatchField.VALUE, 1);
     }
 
     private static boolean snapshotRootForm(String rootForm) {
@@ -1461,9 +1893,9 @@ public final class ContractsFixtureHarness {
             return;
         }
         if (node.isObject()) {
-            JsonNode type = node.path("type").path("blueId");
+            JsonNode type = node.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID);
             if (MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL.equals(type.asText(null))) {
-                ((ObjectNode) node).put("accept", accepted);
+                ((ObjectNode) node).put(ContractsFixtureConstants.Field.ACCEPT, accepted);
             }
             node.elements().forEachRemaining(
                     child -> setAllScriptedChannelAcceptance(child, accepted));
@@ -1475,25 +1907,33 @@ public final class ContractsFixtureHarness {
 
     private void installEmbeddedSurfaceTransition(ObjectNode root,
                                                   String scenario) {
-        ObjectNode contracts = objectAt(root, "/contracts", true);
+        ObjectNode contracts = objectAt(
+                root,
+                ProcessorPointerConstants.RELATIVE_CONTRACTS,
+                true);
         ObjectNode embedded = installContract(
                 contracts,
-                "embedded",
+                ProcessorContractConstants.KEY_EMBEDDED,
                 registryId("ProcessEmbedded"));
-        if (!embedded.has("paths")) {
-            embedded.putArray("paths");
+        if (!embedded.has(ProcessorContractConstants.KEY_PATHS)) {
+            embedded.putArray(ProcessorContractConstants.KEY_PATHS);
         }
         ObjectNode handler = firstScriptedHandler(contracts);
         if (handler == null) {
             throw new IllegalArgumentException(
                     "newEmbeddedSurface requires a selected Scripted Handler");
         }
-        ObjectNode result = objectField(handler, "result", true);
-        ArrayNode patches = arrayField(result, "patches", true);
+        ObjectNode result = objectField(handler, ContractsFixtureConstants.Field.RESULT, true);
+        ArrayNode patches = arrayField(result, ContractsFixtureConstants.Field.PATCHES, true);
         ObjectNode patch = patches.addObject();
-        patch.put("op", "replace");
-        patch.put("path", "/contracts/embedded/paths");
-        ArrayNode paths = patch.putArray("val");
+        patch.put(
+                ContractsFixtureConstants.PatchField.OPERATION,
+                ContractsFixtureConstants.PatchOperation.REPLACE);
+        patch.put(
+                ContractsFixtureConstants.PatchField.PATH,
+                ProcessorPointerConstants.RELATIVE_EMBEDDED_PATHS);
+        ArrayNode paths = patch.putArray(
+                ContractsFixtureConstants.PatchField.VALUE);
         if ("cycle".equals(scenario)) {
             paths.add("/");
         } else if ("invalid-path".equals(scenario)) {
@@ -1508,8 +1948,8 @@ public final class ContractsFixtureHarness {
                     unsupportedContracts,
                     "out",
                     MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL);
-            unsupportedChannel.put("order", 0);
-            unsupportedChannel.put("accept", true);
+            unsupportedChannel.put(ContractsFixtureConstants.Field.ORDER, 0);
+            unsupportedChannel.put(ContractsFixtureConstants.Field.ACCEPT, true);
             unsupportedChannel.put(
                     "checkpointDomain", "unsupported-v1");
             paths.add("/unsupported");
@@ -1521,7 +1961,7 @@ public final class ContractsFixtureHarness {
 
     private static void promoteFixtureScalarToObject(
             ObjectNode root) {
-        JsonNode scalar = root.remove("value");
+        JsonNode scalar = root.remove(Properties.OBJECT_VALUE);
         if (scalar == null) {
             return;
         }
@@ -1530,29 +1970,45 @@ public final class ContractsFixtureHarness {
                     "Fixture scalar promotion key collision");
         }
         root.set(FIXTURE_VALUE_FIELD, scalar);
-        JsonNode contracts = root.get("contracts");
+        JsonNode contracts = root.get(
+                ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null || !contracts.isObject()) {
             return;
         }
         for (JsonNode contract : contracts) {
             if (!MockTypeBlueIds.MOCK_HANDLER.equals(
-                    contract.path("type").path("blueId").asText(null))) {
+                    contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null))) {
                 continue;
             }
             JsonNode patches =
-                    contract.path("result").path("patches");
+                    contract.path(ContractsFixtureConstants.Field.RESULT).path(ContractsFixtureConstants.Field.PATCHES);
             if (!patches.isArray()) {
                 continue;
             }
             for (JsonNode patch : patches) {
                 if (patch.isObject()
-                        && "/value".equals(
+                        && ProcessorPointerConstants.RELATIVE_VALUE.equals(
                         patch.path("path").asText(null))) {
                     ((ObjectNode) patch).put(
                             "path",
                             "/" + FIXTURE_VALUE_FIELD);
                 }
             }
+        }
+    }
+
+    private static void promoteMixedFixtureScalarToObject(
+            ObjectNode root) {
+        /*
+         * A fixture that adds an authored object edge beside the conventional
+         * scalar /value shorthand must become an ordinary object before the
+         * strict Language decoder sees it. Reuse the harness's established
+         * private field and patch-path rewrite instead of admitting a mixed
+         * payload Node.
+         */
+        if (root.has(Properties.OBJECT_VALUE)
+                && hasAuthoredObjectField(root)) {
+            promoteFixtureScalarToObject(root);
         }
     }
 
@@ -1564,13 +2020,16 @@ public final class ContractsFixtureHarness {
         ContractsConformanceProjection projection =
                 new ContractsConformanceProjection()
                         .put("input.root", input.root)
-                        .put("result", publicResult(result))
+                        .put(ContractsFixtureConstants.Field.RESULT, publicResult(result))
                         .put("result.status", result.status().wireValue())
                         .put("result.document", result.document())
                         .put("result.events", result.events())
                         .put("result.totalGas", result.totalGas())
                         .put("demands.semantic", trace.semanticDemands())
-                        .put("trace.namedEntries", gasEntries(trace.gas(), true))
+                        .put(
+                                ContractsFixtureConstants.Projection
+                                        .TRACE_NAMED_ENTRIES,
+                                gasEntries(trace.gas(), true))
                         .put("trace.gas", gasEntries(trace.gas(), true))
                         .put("trace.failedChargePresent", false)
                         .put("trace.total", "sum(entries)")
@@ -1582,8 +2041,10 @@ public final class ContractsFixtureHarness {
                         .put("commit.progressWritten", result.commits())
                         .put("commit.casWorkPortableGas", 0L);
         Node embeddedPaths = property(
-                property(result.document().getContracts(), "embedded"),
-                "paths");
+                property(
+                        result.document().getContracts(),
+                        ProcessorContractConstants.KEY_EMBEDDED),
+                ProcessorContractConstants.KEY_PATHS);
         if (embeddedPaths != null) {
             projection.put(
                     "result.document.contracts.embedded.paths",
@@ -1640,17 +2101,17 @@ public final class ContractsFixtureHarness {
         for (SubscriptionDelta.Entry interval : intervals) {
             Map<String, Object> projected =
                     new LinkedHashMap<>();
-            projected.put("scopePath", interval.scopePath());
-            projected.put("channelKey", interval.channelKey());
+            projected.put(ContractsFixtureConstants.Field.SCOPE_PATH, interval.scopePath());
+            projected.put(ContractsFixtureConstants.Field.CHANNEL_KEY, interval.channelKey());
             projected.put(
                     "effectiveTypeBlueId",
                     interval.effectiveTypeBlueId());
             projected.put(
                     "orderedSourceContributionNodeBlueIds",
                     interval.sourceContributionNodeBlueIds());
-            projected.put("order", interval.order());
+            projected.put(ContractsFixtureConstants.Field.ORDER, interval.order());
             projected.put(
-                    "subscriptionKeys",
+                    ProcessorContractConstants.KEY_SUBSCRIPTION_KEYS,
                     interval.subscriptionKeys());
             projected.put(
                     "checkpointDomainBlueId",
@@ -1695,7 +2156,8 @@ public final class ContractsFixtureHarness {
         for (ProcessingTraceRecord record :
                 execution.trace.records(
                         ProcessingTraceRecord.Kind.DOCUMENT_UPDATE)) {
-            if ("/type".equals(record.logicalPath())) {
+            if (ProcessorPointerConstants.RELATIVE_TYPE.equals(
+                    record.logicalPath())) {
                 typeUpdate = true;
                 break;
             }
@@ -1710,15 +2172,30 @@ public final class ContractsFixtureHarness {
     private void projectCounters(ProcessingConformanceTrace trace,
                                  ContractsConformanceProjection projection) {
         projection.put("trace.counters.contractHeaderRecognized",
-                trace.counterQuantity("processor", "contractHeaderRecognized"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .CONTRACT_HEADER_RECOGNIZED));
         projection.put("trace.counters.directIdentityHashBlock",
-                trace.counterQuantity("semantic", "directIdentityHashBlock"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .DIRECT_IDENTITY_HASH_BLOCK));
         projection.put("trace.counters.textBlockExamined",
-                trace.counterQuantity("semantic", "textBlockExamined"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .TEXT_BLOCK_EXAMINED));
         projection.put("trace.semantic.nodeIdentityEstablished",
-                trace.counterQuantity("semantic", "nodeIdentityEstablished"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .NODE_IDENTITY_ESTABLISHED));
         projection.put("trace.runtime.textBlockConstructed",
-                trace.counterQuantity("runtime", "textBlockConstructed"));
+                trace.counterQuantity(
+                        ContractsFixtureConstants.RuntimeNamespace.RUNTIME,
+                        GasScheduleConstants.SemanticCounter
+                                .TEXT_BLOCK_CONSTRUCTED));
     }
 
     private void projectRecords(PreparedInput input,
@@ -1738,11 +2215,15 @@ public final class ContractsFixtureHarness {
                 trace.records(ProcessingTraceRecord.Kind.DOCUMENT_UPDATE)) {
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("path", record.logicalPath());
-            value.put("scopePath", record.scopePath());
+            value.put(ContractsFixtureConstants.Field.SCOPE_PATH, record.scopePath());
             value.put("beforePresent",
-                    Boolean.valueOf(record.detail("beforePresent")));
+                    Boolean.valueOf(record.detail(
+                            ProcessingTraceConstants
+                                    .FIELD_BEFORE_PRESENT)));
             value.put("afterPresent",
-                    Boolean.valueOf(record.detail("afterPresent")));
+                    Boolean.valueOf(record.detail(
+                            ProcessingTraceConstants
+                                    .FIELD_AFTER_PRESENT)));
             updates.add(value);
             updateScopes.add(record.scopePath());
         }
@@ -1752,6 +2233,7 @@ public final class ContractsFixtureHarness {
         List<String> markerWrites = new ArrayList<>();
         List<String> lifecycle = new ArrayList<>();
         Set<String> lifecycleScopes = new LinkedHashSet<>();
+        String initialDocumentBlueId = null;
         for (ProcessingTraceRecord record :
                 trace.records(ProcessingTraceRecord.Kind.LIFECYCLE)) {
             lifecycleScopes.add(record.scopePath());
@@ -1763,6 +2245,23 @@ public final class ContractsFixtureHarness {
                 lifecycle.add(scopedLifecycle
                         ? record.scopePath() + ":" + label
                         : label);
+                if (initialDocumentBlueId == null
+                        && "initiated".equals(label)) {
+                    Node initialDocument =
+                            property(
+                                    record.node(),
+                                    "document");
+                    if (initialDocument != null) {
+                        initialDocumentBlueId =
+                                initialDocument
+                                        .isReferenceOnly()
+                                        ? initialDocument
+                                        .getBlueId()
+                                        : BlueIdCalculator
+                                        .calculateBlueId(
+                                                initialDocument);
+                    }
+                }
             } else if (record.kind() ==
                     ProcessingTraceRecord.Kind.MARKER_WRITE) {
                 String marker = markerLabel(record.contractKey());
@@ -1776,6 +2275,11 @@ public final class ContractsFixtureHarness {
         }
         projection.put("trace.lifecycleOrder", lifecycle);
         projection.put("trace.markerWrites", markerWrites);
+        if (initialDocumentBlueId != null) {
+            projection.put(
+                    "trace.initialDocumentBlueId",
+                    initialDocumentBlueId);
+        }
 
         List<String> checkpointWrites = new ArrayList<>();
         for (ProcessingTraceRecord record :
@@ -1784,12 +2288,93 @@ public final class ContractsFixtureHarness {
         }
         projection.put("trace.checkpointWrites", checkpointWrites);
 
+        List<String> sourceCheckpointKeys =
+                new ArrayList<>();
+        for (ProcessingTraceRecord record :
+                trace.records(
+                        ProcessingTraceRecord.Kind
+                                .CHECKPOINT_WRITE)) {
+            if (!ProcessingTraceConstants.ACTION_CLEANUP.equals(
+                    record.detail(
+                            ProcessingTraceConstants.FIELD_ACTION))) {
+                sourceCheckpointKeys.add(
+                        record.contractKey());
+            }
+        }
+        projection.put(
+                "trace.sourceCheckpointKeys",
+                sourceCheckpointKeys);
+
+        List<String> channelLookupResults =
+                new ArrayList<>();
+        for (ProcessingTraceRecord record :
+                trace.records(
+                        ProcessingTraceRecord.Kind
+                                .CHANNEL_LOOKUP)) {
+            channelLookupResults.add(
+                    record.detail(
+                            ProcessingTraceConstants.FIELD_RESULT));
+        }
+        projection.put(
+                "trace.channelLookupResults",
+                channelLookupResults);
+
+        List<String> handlerChannelKeys =
+                new ArrayList<>();
+        List<String> logicalDeliveryGroups =
+                new ArrayList<>();
+        for (ProcessingTraceRecord record :
+                trace.records(
+                        ProcessingTraceRecord.Kind
+                                .LOGICAL_DELIVERY_GROUP)) {
+            handlerChannelKeys.add(
+                    record.detail(
+                            ProcessingTraceConstants
+                                    .FIELD_HANDLER_CHANNEL_KEY));
+            int sourceCount = Integer.parseInt(
+                    record.detail(
+                            ProcessingTraceConstants.FIELD_SOURCE_COUNT));
+            StringBuilder group =
+                    new StringBuilder()
+                            .append(record.scopePath())
+                            .append(':')
+                            .append(record.detail(
+                                    ProcessingTraceConstants
+                                            .FIELD_LOGICAL_DELIVERY_KEY))
+                            .append(":[");
+            for (int index = 0;
+                 index < sourceCount;
+                 index++) {
+                if (index > 0) {
+                    group.append(',');
+                }
+                group.append(record.detail(
+                        ProcessingTraceConstants.sourceField(
+                                index)));
+            }
+            logicalDeliveryGroups.add(
+                    group.append(']').toString());
+        }
+        projection.put(
+                "trace.handlerChannelKeys",
+                handlerChannelKeys);
+        projection.put(
+                "trace.logicalDeliveryGroups",
+                logicalDeliveryGroups);
+        projection.put(
+                "trace.handlerExecutionCount",
+                (long) trace.records(
+                        ProcessingTraceRecord.Kind
+                                .HANDLER_EXECUTION).size());
+
         List<String> checkpointCleanup = new ArrayList<>();
         for (ProcessingTraceRecord record : trace.records()) {
             if (record.kind() == ProcessingTraceRecord.Kind.CHECKPOINT_CLEANUP
                     || (record.kind()
                     == ProcessingTraceRecord.Kind.CHECKPOINT_WRITE
-                    && "cleanup".equals(record.detail("action")))) {
+                    && ProcessingTraceConstants.ACTION_CLEANUP.equals(
+                    record.detail(
+                            ProcessingTraceConstants.FIELD_ACTION)))) {
                 checkpointCleanup.add(record.contractKey());
             }
         }
@@ -1798,7 +2383,8 @@ public final class ContractsFixtureHarness {
         boolean newDomain = false;
         for (ProcessingTraceRecord record :
                 trace.records(ProcessingTraceRecord.Kind.CHECKPOINT_COMPARE)) {
-            if ("false".equals(record.detail("domainMatches"))) {
+            if ("false".equals(record.detail(
+                    ProcessingTraceConstants.FIELD_DOMAIN_MATCHES))) {
                 newDomain = true;
             }
         }
@@ -1839,7 +2425,8 @@ public final class ContractsFixtureHarness {
         List<String> discarded = new ArrayList<>();
         for (ProcessingTraceRecord record :
                 trace.records(ProcessingTraceRecord.Kind.DISCARDED_EFFECT)) {
-            String label = record.detail("label");
+            String label = record.detail(
+                    ProcessingTraceConstants.FIELD_LABEL);
             discarded.add(label != null ? label : record.logicalPath());
         }
         projection.put("trace.discardedEffects", discarded);
@@ -1883,13 +2470,15 @@ public final class ContractsFixtureHarness {
             if (record.kind() == ProcessingTraceRecord.Kind.EVENT_DEQUEUED) {
                 currentOccurrenceLabel = traceEventLabel(record);
                 occurrenceOrder.add(currentOccurrenceLabel);
-                String owner = record.detail("drainOwner");
+                String owner = record.detail(
+                        ProcessingTraceConstants.FIELD_DRAIN_OWNER);
                 if (owner != null) {
                     drainOwners.add(owner);
                 }
             } else if (record.kind()
                     == ProcessingTraceRecord.Kind.EVENT_DELIVERED) {
-                String mode = record.detail("mode");
+                String mode = record.detail(
+                        ProcessingTraceConstants.FIELD_MODE);
                 String label = traceEventLabel(record);
                 /*
                  * An Embedded delivery record deliberately retains the exact
@@ -1904,7 +2493,10 @@ public final class ContractsFixtureHarness {
                     label = currentOccurrenceLabel;
                 }
                 deliveryOrder.add(record.scopePath() + ":"
-                        + (mode != null ? mode : "event") + ":" + label);
+                        + (mode != null
+                        ? mode
+                        : ProcessingTraceConstants.DEFAULT_EVENT_LABEL)
+                        + ":" + label);
             }
         }
         projection.put("trace.eventOccurrenceOrder", occurrenceOrder);
@@ -1926,9 +2518,11 @@ public final class ContractsFixtureHarness {
     }
 
     private static String traceEventLabel(ProcessingTraceRecord record) {
-        String label = record.detail("event");
+        String label = record.detail(
+                ProcessingTraceConstants.FIELD_EVENT);
         if (label == null) {
-            label = record.detail("eventLabel");
+            label = record.detail(
+                    ProcessingTraceConstants.FIELD_EVENT_LABEL);
         }
         if (label == null) {
             label = eventLabel(record.node());
@@ -1963,26 +2557,46 @@ public final class ContractsFixtureHarness {
             ContractsConformanceProjection projection,
             ProcessingConformanceTrace trace,
             boolean completeCounterCoverage) {
-        projection.put("manifest.counterCoverage.complete",
+        projection.put(
+                ContractsFixtureConstants.Projection
+                        .MANIFEST_COUNTER_COVERAGE_COMPLETE,
                 completeCounterCoverage);
 
         projection.put("trace.nodeManifestOpened.sameId",
-                trace.counterQuantity("semantic", "nodeManifestOpened"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .NODE_MANIFEST_OPENED));
         projection.put("trace.validationProofReused",
-                trace.counterQuantity("semantic", "validationProofReused"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .VALIDATION_PROOF_REUSED));
         projection.put("trace.textBlockExamined",
-                trace.counterQuantity("semantic", "textBlockExamined"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .TEXT_BLOCK_EXAMINED));
         projection.put("trace.integerLimbOperation",
-                trace.counterQuantity("semantic", "integerLimbOperation"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .INTEGER_LIMB_OPERATION));
         projection.put("trace.sortComparison",
-                trace.counterQuantity("semantic", "sortComparison"));
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .SORT_COMPARISON));
         projection.put("trace.directIdentityHashBlock.changedDirectOnly",
                 trace.counterQuantity(
-                        "semantic", "directIdentityHashBlock") > 0L);
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .DIRECT_IDENTITY_HASH_BLOCK) > 0L);
 
         long runtimeEntries = 0L;
         for (GasTraceEntry entry : trace.gas()) {
-            if ("runtime".equals(entry.namespace())) {
+            if (ContractsFixtureConstants.RuntimeNamespace.RUNTIME.equals(
+                    entry.namespace())) {
                 runtimeEntries++;
             }
         }
@@ -2013,7 +2627,9 @@ public final class ContractsFixtureHarness {
             ContractsConformanceProjection projection,
             String prefix) {
         ContractsConformanceProjection.Presence gas =
-                projection.project("trace.namedEntries");
+                projection.project(
+                        ContractsFixtureConstants.Projection
+                                .TRACE_NAMED_ENTRIES);
         if (!gas.isPresent() || !(gas.getValue() instanceof List)) {
             return 0L;
         }
@@ -2022,8 +2638,8 @@ public final class ContractsFixtureHarness {
             if (!(entry instanceof Map)) {
                 continue;
             }
-            Object counter = ((Map<?, ?>) entry).get("counter");
-            Object quantity = ((Map<?, ?>) entry).get("quantity");
+            Object counter = ((Map<?, ?>) entry).get(ContractsFixtureConstants.Field.COUNTER);
+            Object quantity = ((Map<?, ?>) entry).get(ContractsFixtureConstants.Field.QUANTITY);
             if (counter != null
                     && String.valueOf(counter).startsWith(prefix)
                     && quantity instanceof Number) {
@@ -2042,11 +2658,11 @@ public final class ContractsFixtureHarness {
         for (Node event : result.events()) {
             events.add(NodeToMapListOrValue.get(event));
         }
-        value.put("events", events);
-        value.put("totalGas", result.totalGas());
+        value.put(ContractsFixtureConstants.Field.EVENTS, events);
+        value.put(ContractsFixtureConstants.Field.TOTAL_GAS, result.totalGas());
         if (result.diagnostic() != null) {
             Map<String, Object> diagnostic = new LinkedHashMap<>();
-            diagnostic.put("category",
+            diagnostic.put(ContractsFixtureConstants.Field.CATEGORY,
                     result.diagnostic().category().name());
             if (result.diagnostic().message() != null) {
                 diagnostic.put("message", result.diagnostic().message());
@@ -2066,26 +2682,26 @@ public final class ContractsFixtureHarness {
         for (GasTraceEntry entry : entries) {
             Map<String, Object> value = new LinkedHashMap<>();
             if (!omitSequence) {
-                value.put("sequence", entry.sequence());
+                value.put(ContractsFixtureConstants.Field.SEQUENCE, entry.sequence());
             }
-            value.put("namespace", entry.namespace());
-            value.put("counter", entry.counter());
-            value.put("quantity", entry.quantity());
-            value.put("weight", entry.weight());
-            value.put("subtotal", entry.subtotal());
+            value.put(ContractsFixtureConstants.Field.NAMESPACE, entry.namespace());
+            value.put(ContractsFixtureConstants.Field.COUNTER, entry.counter());
+            value.put(ContractsFixtureConstants.Field.QUANTITY, entry.quantity());
+            value.put(ContractsFixtureConstants.Field.WEIGHT, entry.weight());
+            value.put(ContractsFixtureConstants.Field.SUBTOTAL, entry.subtotal());
             if (entry.scopePath() != null) {
-                value.put("scopePath", entry.scopePath());
+                value.put(ContractsFixtureConstants.Field.SCOPE_PATH, entry.scopePath());
             }
             if (entry.contractKey() != null) {
-                value.put("contractKey", entry.contractKey());
+                value.put(ContractsFixtureConstants.Field.CONTRACT_KEY, entry.contractKey());
             }
             if (entry.logicalPath() != null) {
-                value.put("logicalPath", entry.logicalPath());
+                value.put(ContractsFixtureConstants.Field.LOGICAL_PATH, entry.logicalPath());
             }
             if (entry.reason() != null
                     && !entry.reason().isEmpty()
                     && !"unspecified".equals(entry.reason())) {
-                value.put("reason", entry.reason());
+                value.put(ContractsFixtureConstants.Field.REASON, entry.reason());
             }
             result.add(value);
         }
@@ -2118,7 +2734,9 @@ public final class ContractsFixtureHarness {
         }
         for (DerivedDelivery delivery : deliveries) {
             JsonNode scope = jsonAt(root, delivery.snapshot.scopePath());
-            JsonNode contracts = scope != null ? scope.get("contracts") : null;
+            JsonNode contracts = scope != null
+                    ? scope.get(ProcessorContractConstants.KEY_CONTRACTS)
+                    : null;
             if (contracts == null || !contracts.isObject()) {
                 continue;
             }
@@ -2127,14 +2745,14 @@ public final class ContractsFixtureHarness {
                 Map.Entry<String, JsonNode> entry = fields.next();
                 JsonNode contract = entry.getValue();
                 if (!MockTypeBlueIds.MOCK_HANDLER.equals(
-                        contract.path("type").path("blueId").asText(null))) {
+                        contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null))) {
                     continue;
                 }
                 if (!delivery.snapshot.channelKey().equals(
                         contract.path("channel").asText(null))) {
                     continue;
                 }
-                JsonNode result = contract.get("result");
+                JsonNode result = contract.get(ContractsFixtureConstants.Field.RESULT);
                 if (result != null) {
                     return BlueIdCalculator.calculateBlueId(readNode(result));
                 }
@@ -2149,8 +2767,8 @@ public final class ContractsFixtureHarness {
         List<Map<String, Object>> result = new ArrayList<>();
         for (DerivedDelivery delivery : deliveries) {
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("scopePath", delivery.snapshot.scopePath());
-            row.put("channelKey", delivery.snapshot.channelKey());
+            row.put(ContractsFixtureConstants.Field.SCOPE_PATH, delivery.snapshot.scopePath());
+            row.put(ContractsFixtureConstants.Field.CHANNEL_KEY, delivery.snapshot.channelKey());
             result.add(row);
         }
         return result;
@@ -2160,8 +2778,8 @@ public final class ContractsFixtureHarness {
         List<Map<String, Object>> result = new ArrayList<>();
         for (JsonNode hint : hints) {
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("scopePath", hint.path("scopePath").asText());
-            row.put("channelKey", hint.path("channelKey").asText());
+            row.put(ContractsFixtureConstants.Field.SCOPE_PATH, hint.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText());
+            row.put(ContractsFixtureConstants.Field.CHANNEL_KEY, hint.path(ContractsFixtureConstants.Field.CHANNEL_KEY).asText());
             result.add(row);
         }
         return result;
@@ -2173,9 +2791,9 @@ public final class ContractsFixtureHarness {
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> field = fields.next();
             String key = field.getKey();
-            if ("blueId".equals(key)
-                    || "type".equals(key)
-                    || "contracts".equals(key)) {
+            if (Properties.OBJECT_BLUE_ID.equals(key)
+                    || Properties.OBJECT_TYPE.equals(key)
+                    || ProcessorContractConstants.KEY_CONTRACTS.equals(key)) {
                 throw new IllegalArgumentException(
                         "acceptanceStateVariants may change only mutable "
                                 + "business state, not /" + key);
@@ -2192,10 +2810,10 @@ public final class ContractsFixtureHarness {
                     jsonAt(root, delivery.snapshot.scopePath());
             JsonNode contract = scope == null
                     ? null
-                    : scope.path("contracts").get(
+                    : scope.path(ProcessorContractConstants.KEY_CONTRACTS).get(
                     delivery.snapshot.channelKey());
             if (contract == null
-                    || !contract.path("accept").asBoolean(false)) {
+                    || !contract.path(ContractsFixtureConstants.Field.ACCEPT).asBoolean(false)) {
                 return false;
             }
         }
@@ -2361,13 +2979,15 @@ public final class ContractsFixtureHarness {
             return "initiated";
         }
         if (registryId("DocumentProcessingTerminated").equals(type)) {
-            return "terminated";
+            return ProcessorContractConstants.KEY_TERMINATED;
         }
         return "lifecycle";
     }
 
     private static String eventLabel(Node event) {
-        Node id = property(event, "id");
+        Node id = property(
+                event,
+                ProcessingTraceConstants.EVENT_LABEL_PROPERTY);
         if (id != null && id.getValue() != null) {
             return String.valueOf(id.getValue());
         }
@@ -2377,10 +2997,10 @@ public final class ContractsFixtureHarness {
     }
 
     private static String markerLabel(String key) {
-        if ("initialized".equals(key)) {
+        if (ProcessorContractConstants.KEY_INITIALIZED.equals(key)) {
             return "initialized-marker";
         }
-        if ("terminated".equals(key)) {
+        if (ProcessorContractConstants.KEY_TERMINATED.equals(key)) {
             return "terminated-marker";
         }
         return key;
@@ -2442,7 +3062,8 @@ public final class ContractsFixtureHarness {
         long count = 0L;
         for (ProcessingTraceRecord record :
                 trace.records(ProcessingTraceRecord.Kind.LIFECYCLE)) {
-            if ("terminated".equals(lifecycleLabel(record.node()))) {
+            if (ProcessorContractConstants.KEY_TERMINATED.equals(
+                    lifecycleLabel(record.node()))) {
                 count++;
             }
         }
@@ -2460,7 +3081,9 @@ public final class ContractsFixtureHarness {
     private static Map<String, Object> processEmbeddedWithoutPaths(
             Node root) {
         Node contracts = root != null ? root.getContracts() : null;
-        Node embedded = property(contracts, "embedded");
+        Node embedded = property(
+                contracts,
+                ProcessorContractConstants.KEY_EMBEDDED);
         if (embedded == null) {
             return null;
         }
@@ -2471,7 +3094,7 @@ public final class ContractsFixtureHarness {
                                 embedded);
         Map<String, Object> withoutPaths =
                 new LinkedHashMap<>(raw);
-        withoutPaths.remove("paths");
+        withoutPaths.remove(ProcessorContractConstants.KEY_PATHS);
         return withoutPaths;
     }
 
@@ -2517,6 +3140,35 @@ public final class ContractsFixtureHarness {
             throw new IllegalArgumentException("Blue value is required");
         }
         return UncheckedObjectMapper.JSON_MAPPER.convertValue(value, Node.class);
+    }
+
+    private static boolean hasAuthoredObjectField(JsonNode value) {
+        Iterator<String> fields = value.fieldNames();
+        while (fields.hasNext()) {
+            String field = fields.next();
+            if (!isReservedBlueField(field)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isReservedBlueField(String field) {
+        return Properties.OBJECT_NAME.equals(field)
+                || Properties.OBJECT_DESCRIPTION.equals(field)
+                || Properties.OBJECT_TYPE.equals(field)
+                || Properties.OBJECT_ITEM_TYPE.equals(field)
+                || Properties.OBJECT_KEY_TYPE.equals(field)
+                || Properties.OBJECT_VALUE_TYPE.equals(field)
+                || Properties.OBJECT_MERGE_POLICY.equals(field)
+                || Properties.OBJECT_VALUE.equals(field)
+                || Properties.OBJECT_BLUE_ID.equals(field)
+                || Properties.OBJECT_ITEMS.equals(field)
+                || Properties.OBJECT_BLUE.equals(field)
+                || Properties.LIST_CONTROL_PREVIOUS.equals(field)
+                || Properties.LIST_CONTROL_POS.equals(field)
+                || Properties.OBJECT_SCHEMA.equals(field)
+                || ProcessorContractConstants.KEY_CONTRACTS.equals(field);
     }
 
     /**
@@ -2752,7 +3404,7 @@ public final class ContractsFixtureHarness {
             JsonNode value = values.next();
             if (value.isObject()
                     && MockTypeBlueIds.MOCK_HANDLER.equals(
-                    value.path("type").path("blueId").asText(null))) {
+                    value.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null))) {
                 return (ObjectNode) value;
             }
         }
@@ -2784,6 +3436,7 @@ public final class ContractsFixtureHarness {
 
         final Map<String, Node> nodesByBlueId;
         final Map<String, String> idByKey;
+        final Blue blue;
 
         private RegistryEnvironment(Map<String, Node> nodesByBlueId,
                                     Map<String, String> idByKey) {
@@ -2791,6 +3444,12 @@ public final class ContractsFixtureHarness {
                     Collections.unmodifiableMap(new LinkedHashMap<>(nodesByBlueId));
             this.idByKey =
                     Collections.unmodifiableMap(new LinkedHashMap<>(idByKey));
+            this.blue = new Blue(blueId -> {
+                Node value = this.nodesByBlueId.get(blueId);
+                return value == null
+                        ? null
+                        : Collections.singletonList(value.clone());
+            });
         }
 
         static RegistryEnvironment load() {
@@ -2804,6 +3463,10 @@ public final class ContractsFixtureHarness {
                         "Registry has no exact node " + blueId);
             }
             return value.clone();
+        }
+
+        Node resolve(Node node) {
+            return blue.resolve(node);
         }
 
         boolean isSubtype(String candidate, String parent) {
@@ -2850,7 +3513,7 @@ public final class ContractsFixtureHarness {
             }
             for (JsonNode entry : entries) {
                 String key = entry.path("key").asText();
-                String blueId = entry.path("blueId").asText();
+                String blueId = entry.path(Properties.OBJECT_BLUE_ID).asText();
                 String path = entry.path("path").asText();
                 Node node = readNode(readYaml(root + path));
                 String calculated = BlueIdCalculator.calculateBlueId(node);
@@ -2955,7 +3618,7 @@ public final class ContractsFixtureHarness {
                         "Generalization controls require a valid candidate "
                                 + "from the declared ancestor chain");
             }
-            if (root.has("type")) {
+            if (root.has(Properties.OBJECT_TYPE)) {
                 throw new IllegalArgumentException(
                         "Generalization fixture root already declares a type");
             }
@@ -2980,8 +3643,8 @@ public final class ContractsFixtureHarness {
                 orderedBlueIds.put(
                         candidate, blueIds.get(candidate));
             }
-            root.putObject("type").put(
-                    "blueId",
+            root.putObject(Properties.OBJECT_TYPE).put(
+                    Properties.OBJECT_BLUE_ID,
                     orderedBlueIds.get(candidates.get(0)));
             return new FixtureGeneralization(
                     candidates,
@@ -3046,7 +3709,8 @@ public final class ContractsFixtureHarness {
                     nextCanonical,
                     nextResolved,
                     Collections.emptyList(),
-                    Collections.singletonList("/type"),
+                    Collections.singletonList(
+                            ProcessorPointerConstants.RELATIVE_TYPE),
                     false);
         }
 
@@ -3288,50 +3952,67 @@ public final class ContractsFixtureHarness {
             JsonNode hints,
             String eventBlueId,
             Node checkpointSubjectOverride) {
-        String subscriptionKey = event.path("subscriptionKey").asText(null);
+        /*
+         * PROCESS admission owns the top-level cyclic-member diagnostic.
+         * Such an event has no independently inspectable body, so feeder
+         * preparation must not attempt to derive a subscription key first.
+         * BlueId calculation has already validated the exact event identity.
+         */
+        if (BlueIds.hasCyclicMemberSeparator(eventBlueId)) {
+            return Collections.emptyList();
+        }
+        String subscriptionKey = event.path(
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEY).asText(null);
         if (subscriptionKey == null) {
             throw new IllegalArgumentException(
                     "Fixture event requires subscriptionKey");
         }
         Map<String, JsonNode> hintByOccurrence = new LinkedHashMap<>();
+        Map<String, Integer> assertedOrderByOccurrence =
+                new LinkedHashMap<>();
         for (JsonNode hint : hints) {
             String occurrence = occurrence(
-                    hint.path("scopePath").asText(),
-                    hint.path("channelKey").asText());
+                    hint.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText(),
+                    hint.path(ContractsFixtureConstants.Field.CHANNEL_KEY).asText());
             if (hintByOccurrence.put(occurrence, hint) != null) {
                 throw new IllegalArgumentException(
                         "Duplicate delivery hint " + occurrence);
+            }
+            if (hint.has(ContractsFixtureConstants.Field.ORDER)) {
+                assertedOrderByOccurrence.put(
+                        occurrence,
+                        hint.get(ContractsFixtureConstants.Field.ORDER).asInt());
             }
         }
 
         List<ScopeValue> scopes = enumerateDeclaredScopes(root);
         List<DerivedDelivery> result = new ArrayList<>();
         for (ScopeValue scope : scopes) {
-            JsonNode contracts = scope.value.get("contracts");
+            JsonNode contracts = scope.value.get(
+                    ProcessorContractConstants.KEY_CONTRACTS);
             if (contracts == null || !contracts.isObject()
-                    || contracts.has("terminated")) {
+                    || contracts.has(
+                    ProcessorContractConstants.KEY_TERMINATED)) {
                 continue;
             }
             Iterator<Map.Entry<String, JsonNode>> fields = contracts.fields();
             while (fields.hasNext()) {
                 Map.Entry<String, JsonNode> entry = fields.next();
                 JsonNode contract = entry.getValue();
-                String typeBlueId = contract.path("type").path("blueId").asText(null);
+                String typeBlueId = contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null);
                 if (!registry.isSubtype(typeBlueId, registryId("ExternalChannel"))) {
                     continue;
                 }
                 if (!subscriptionKey.equals(
-                        contract.path("subscriptionKey").asText(null))) {
+                        contract.path(
+                                ProcessorContractConstants
+                                        .KEY_SUBSCRIPTION_KEY)
+                                .asText(null))) {
                     continue;
                 }
                 String key = occurrence(scope.path, entry.getKey());
                 JsonNode hint = hintByOccurrence.remove(key);
-                int order = contract.path("order").asInt(0);
-                if (hint != null && hint.has("order")
-                        && hint.get("order").asInt() != order) {
-                    throw new IllegalArgumentException(
-                            "Delivery hint order mismatch at " + key);
-                }
+                int order = contract.path(ContractsFixtureConstants.Field.ORDER).asInt(0);
                 Node contractNode = readNode(contract);
                 String contribution = BlueIdCalculator.calculateBlueId(contractNode);
                 String domain = contract.path("checkpointDomain").asText(null);
@@ -3341,14 +4022,23 @@ public final class ContractsFixtureHarness {
                 }
                 List<String> contributions =
                         Collections.singletonList(contribution);
+                ExternalChannelDependencySnapshot dependencies =
+                        fixtureChannelDependencies(
+                                scope.value,
+                                entry.getKey(),
+                                contract);
                 Node domainNode = checkpointDomainNode(
                         typeBlueId,
                         contributions,
+                        dependencies,
                         domain);
                 String domainBlueId =
                         BlueIdCalculator.calculateBlueId(domainNode);
                 String canonicalDomainBlueId = CheckpointDomain.derive(
-                        typeBlueId, contributions, domain);
+                        typeBlueId,
+                        contributions,
+                        dependencies,
+                        domain);
                 if (!domainBlueId.equals(canonicalDomainBlueId)) {
                     throw new IllegalStateException(
                             "Checkpoint domain derivation drift");
@@ -3369,10 +4059,10 @@ public final class ContractsFixtureHarness {
                                 .subscriptionKey(subscriptionKey)
                                 .checkpointDomainBlueId(domainBlueId)
                                 .checkpointSubjectBlueId(subjectBlueId);
-                if (hint != null && hint.has("activationStartExclusive")) {
+                if (hint != null && hint.has(ContractsFixtureConstants.Field.ACTIVATION_START_EXCLUSIVE)) {
                     snapshot.activationStartExclusive(
                             externalOrderKey(
-                                    hint.get("activationStartExclusive")));
+                                    hint.get(ContractsFixtureConstants.Field.ACTIVATION_START_EXCLUSIVE)));
                 }
                 result.add(new DerivedDelivery(
                         snapshot.build(),
@@ -3388,6 +4078,9 @@ public final class ContractsFixtureHarness {
                 .thenComparing(value -> value.snapshot.scopePath())
                 .thenComparingInt(value -> value.snapshot.order())
                 .thenComparing(value -> value.snapshot.channelKey()));
+        validateDeliveryHintOrders(
+                result,
+                assertedOrderByOccurrence);
         if (!hintByOccurrence.isEmpty()) {
             throw new IllegalArgumentException(
                     "Delivery hint is not derivable from the exact Root: "
@@ -3402,8 +4095,8 @@ public final class ContractsFixtureHarness {
         List<String> hintedKeys = new ArrayList<>();
         for (JsonNode hint : hints) {
             hintedKeys.add(occurrence(
-                    hint.path("scopePath").asText(),
-                    hint.path("channelKey").asText()));
+                    hint.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText(),
+                    hint.path(ContractsFixtureConstants.Field.CHANNEL_KEY).asText()));
         }
         /*
          * platform/canonicalPreselection deliberately exercises an omission
@@ -3421,6 +4114,62 @@ public final class ContractsFixtureHarness {
         return Collections.unmodifiableList(result);
     }
 
+    private void validateDeliveryHintOrders(
+            List<DerivedDelivery> deliveries,
+            Map<String, Integer> assertedOrderByOccurrence) {
+        for (int index = 0; index < deliveries.size(); index++) {
+            ExternalDeliverySnapshot snapshot =
+                    deliveries.get(index).snapshot;
+            String key = occurrence(
+                    snapshot.scopePath(),
+                    snapshot.channelKey());
+            Integer asserted = assertedOrderByOccurrence.get(key);
+            if (asserted == null
+                    || asserted.intValue() == snapshot.order()) {
+                continue;
+            }
+
+            /*
+             * The final multi-source routing fixtures encode tied effective
+             * channel orders as stable tie ordinals (0, 1, ...). Keep the
+             * derived ExternalDelivery.order exact, but accept that redundant
+             * compact-hint spelling only when it proves the same canonical
+             * key order within one scope/order tie. Arbitrary mismatches still
+             * fail closed.
+             */
+            int first = index;
+            while (first > 0
+                    && sameDeliveryOrderTie(
+                    deliveries.get(first - 1).snapshot,
+                    snapshot)) {
+                first--;
+            }
+            int last = index;
+            while (last + 1 < deliveries.size()
+                    && sameDeliveryOrderTie(
+                    deliveries.get(last + 1).snapshot,
+                    snapshot)) {
+                last++;
+            }
+            int tieRank = index - first;
+            boolean stableTieOrdinal =
+                    last > first
+                            && asserted.intValue()
+                            == snapshot.order() + tieRank;
+            if (!stableTieOrdinal) {
+                throw new IllegalArgumentException(
+                        "Delivery hint order mismatch at " + key);
+            }
+        }
+    }
+
+    private boolean sameDeliveryOrderTie(
+            ExternalDeliverySnapshot left,
+            ExternalDeliverySnapshot right) {
+        return left.order() == right.order()
+                && left.scopePath().equals(right.scopePath());
+    }
+
     /**
      * Builds the complete retained active index surface independently of the
      * current event's canonical preselection. The fixture platform treats
@@ -3434,21 +4183,23 @@ public final class ContractsFixtureHarness {
         Map<String, ExternalOrderKey> starts =
                 new LinkedHashMap<>();
         for (JsonNode hint : deliveryHints) {
-            if (hint.has("activationStartExclusive")) {
+            if (hint.has(ContractsFixtureConstants.Field.ACTIVATION_START_EXCLUSIVE)) {
                 starts.put(
                         occurrence(
-                                hint.path("scopePath").asText(),
-                                hint.path("channelKey").asText()),
+                                hint.path(ContractsFixtureConstants.Field.SCOPE_PATH).asText(),
+                                hint.path(ContractsFixtureConstants.Field.CHANNEL_KEY).asText()),
                         externalOrderKey(
-                                hint.get("activationStartExclusive")));
+                                hint.get(ContractsFixtureConstants.Field.ACTIVATION_START_EXCLUSIVE)));
             }
         }
         List<SubscriptionDelta.Entry> result =
                 new ArrayList<>();
         for (ScopeValue scope : enumerateDeclaredScopes(root)) {
-            JsonNode contracts = scope.value.get("contracts");
+            JsonNode contracts = scope.value.get(
+                    ProcessorContractConstants.KEY_CONTRACTS);
             if (contracts == null || !contracts.isObject()
-                    || contracts.has("terminated")) {
+                    || contracts.has(
+                    ProcessorContractConstants.KEY_TERMINATED)) {
                 continue;
             }
             Iterator<Map.Entry<String, JsonNode>> fields =
@@ -3458,7 +4209,7 @@ public final class ContractsFixtureHarness {
                         fields.next();
                 JsonNode contract = entry.getValue();
                 String typeBlueId =
-                        contract.path("type").path("blueId")
+                        contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID)
                                 .asText(null);
                 if (!registry.isSubtype(
                         typeBlueId,
@@ -3468,7 +4219,9 @@ public final class ContractsFixtureHarness {
                 List<String> subscriptionKeys =
                         new ArrayList<>();
                 JsonNode plural =
-                        contract.get("subscriptionKeys");
+                        contract.get(
+                                ProcessorContractConstants
+                                        .KEY_SUBSCRIPTION_KEYS);
                 if (plural != null && plural.isArray()) {
                     for (JsonNode key : plural) {
                         if (!key.isTextual()
@@ -3482,7 +4235,9 @@ public final class ContractsFixtureHarness {
                     }
                 } else {
                     String singular =
-                            contract.path("subscriptionKey")
+                            contract.path(
+                                    ProcessorContractConstants
+                                            .KEY_SUBSCRIPTION_KEY)
                                     .asText(null);
                     if (singular != null
                             && !singular.isEmpty()) {
@@ -3508,18 +4263,25 @@ public final class ContractsFixtureHarness {
                                     + "domain at " + scope.path + "/"
                                     + entry.getKey());
                 }
+                ExternalChannelDependencySnapshot dependencies =
+                        fixtureChannelDependencies(
+                                scope.value,
+                                entry.getKey(),
+                                contract);
                 String domain = CheckpointDomain.derive(
                         typeBlueId,
                         Collections.singletonList(contribution),
+                        dependencies,
                         discriminator);
                 result.add(new SubscriptionDelta.Entry(
                         scope.path,
                         entry.getKey(),
                         typeBlueId,
                         Collections.singletonList(contribution),
-                        contract.path("order").asInt(0),
+                        contract.path(ContractsFixtureConstants.Field.ORDER).asInt(0),
                         subscriptionKeys,
                         domain,
+                        dependencies,
                         0L,
                         starts.get(occurrence(
                                 scope.path, entry.getKey())),
@@ -3546,8 +4308,11 @@ public final class ContractsFixtureHarness {
             throw new IllegalArgumentException(
                     "Embedded scope ancestry cycle at " + path);
         }
-        JsonNode embedded = scope.path("contracts").path("embedded");
-        JsonNode paths = embedded.path("paths");
+        JsonNode embedded = scope
+                .path(ProcessorContractConstants.KEY_CONTRACTS)
+                .path(ProcessorContractConstants.KEY_EMBEDDED);
+        JsonNode paths = embedded.path(
+                ProcessorContractConstants.KEY_PATHS);
         if (paths.isArray()) {
             for (JsonNode declared : paths) {
                 String childPath = resolveScope(path, declared.asText());

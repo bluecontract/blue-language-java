@@ -47,6 +47,8 @@ public final class EffectiveFragmentationCatalog {
 
     /**
      * Exact identity of the inspected canonical Root.
+     *
+     * @return canonical Root BlueId
      */
     public String rootBlueId() {
         return rootBlueId;
@@ -58,6 +60,8 @@ public final class EffectiveFragmentationCatalog {
      * <p>Scope keys are root-first and deterministic. Path list order remains
      * the effective Process Embedded list order because list order is semantic
      * Blue content.</p>
+     *
+     * @return deeply unmodifiable scope-to-path mapping
      */
     public Map<String, List<String>>
     effectiveProcessEmbeddedPathsByScope() {
@@ -70,6 +74,8 @@ public final class EffectiveFragmentationCatalog {
      * <p>Entries are ordered by raw contract-key Unicode code points. Each
      * snapshot retains its exact ancestor-to-descendant contribution
      * identities and exact registered executable-body boundaries.</p>
+     *
+     * @return deeply unmodifiable scope-to-snapshot mapping
      */
     public Map<String, List<EffectiveContractSnapshot>>
     effectiveContractsByScope() {

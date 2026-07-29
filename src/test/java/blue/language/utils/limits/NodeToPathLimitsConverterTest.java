@@ -13,89 +13,149 @@ class NodeToPathLimitsConverterTest {
     private final Node mockNode = new Node();
 
     @Test
-    void testEmptyNode() {
+    void shouldConvertEmptyNodeToPathLimits() {
+        // given
         Node node = new Node();
-        assertAllows(node, "/");
-        assertRejects(node, "/anyOtherPath");
+
+        // when
+        boolean rootAllowed = allows(node, "/");
+        boolean arbitraryPathAllowed = allows(node, "/anyOtherPath");
+
+        // then
+        assertTrue(rootAllowed, "/");
+        assertFalse(arbitraryPathAllowed, "/anyOtherPath");
     }
 
     @Test
-    void testNodeWithSingleProperty() {
+    void shouldAllowOnlySingleDeclaredPropertyPath() {
+        // given
         Node node = new Node().properties("prop", new Node());
-        assertAllows(node, "/prop");
-        assertRejects(node, "/anyOtherPath");
+
+        // when
+        boolean propertyAllowed = allows(node, "/prop");
+        boolean arbitraryPathAllowed = allows(node, "/anyOtherPath");
+
+        // then
+        assertTrue(propertyAllowed, "/prop");
+        assertFalse(arbitraryPathAllowed, "/anyOtherPath");
     }
 
     @Test
-    void testNodeWithNestedProperties() {
+    void shouldAllowDeclaredNestedPropertyPaths() {
+        // given
         Node node = new Node().properties(
                 "prop1", new Node().properties("nested", new Node()),
                 "prop2", new Node()
         );
-        assertAllows(node, "/prop1");
-        assertAllows(node, "/prop1/nested");
-        assertAllows(node, "/prop2");
-        assertRejects(node, "/prop1/nonexistent");
+
+        // when
+        boolean firstPropertyAllowed = allows(node, "/prop1");
+        boolean nestedPropertyAllowed = allows(node, "/prop1/nested");
+        boolean secondPropertyAllowed = allows(node, "/prop2");
+        boolean nonexistentPropertyAllowed = allows(node, "/prop1/nonexistent");
+
+        // then
+        assertTrue(firstPropertyAllowed, "/prop1");
+        assertTrue(nestedPropertyAllowed, "/prop1/nested");
+        assertTrue(secondPropertyAllowed, "/prop2");
+        assertFalse(nonexistentPropertyAllowed, "/prop1/nonexistent");
     }
 
     @Test
-    void testNodeWithItems() {
+    void shouldConvertNodeItemsToPathLimits() {
+        // given
         Node node = new Node().items(new Node(), new Node().properties("itemProp", new Node()));
-        assertAllows(node, "/0");
-        assertAllows(node, "/1");
-        assertAllows(node, "/1/itemProp");
-        assertRejects(node, "/2");
+
+        // when
+        boolean firstItemAllowed = allows(node, "/0");
+        boolean secondItemAllowed = allows(node, "/1");
+        boolean itemPropertyAllowed = allows(node, "/1/itemProp");
+        boolean missingItemAllowed = allows(node, "/2");
+
+        // then
+        assertTrue(firstItemAllowed, "/0");
+        assertTrue(secondItemAllowed, "/1");
+        assertTrue(itemPropertyAllowed, "/1/itemProp");
+        assertFalse(missingItemAllowed, "/2");
     }
 
     @Test
-    void testComplexNode() {
+    void shouldConvertComplexNodeToPathLimits() {
+        // given
         Node node = new Node().properties(
                 "prop1", new Node().items(new Node(), new Node().properties("nestedItemProp", new Node())),
                 "prop2", new Node().properties("nestedProp", new Node())
         );
-        assertAllows(node, "/prop1");
-        assertAllows(node, "/prop1/0");
-        assertAllows(node, "/prop1/1");
-        assertAllows(node, "/prop1/1/nestedItemProp");
-        assertAllows(node, "/prop2");
-        assertAllows(node, "/prop2/nestedProp");
-        assertRejects(node, "/prop2/nestedProp/xyz");
-        assertRejects(node, "/nonexistent");
+
+        // when
+        boolean firstPropertyAllowed = allows(node, "/prop1");
+        boolean firstItemAllowed = allows(node, "/prop1/0");
+        boolean secondItemAllowed = allows(node, "/prop1/1");
+        boolean nestedItemPropertyAllowed = allows(node, "/prop1/1/nestedItemProp");
+        boolean secondPropertyAllowed = allows(node, "/prop2");
+        boolean nestedPropertyAllowed = allows(node, "/prop2/nestedProp");
+        boolean nestedDescendantAllowed = allows(node, "/prop2/nestedProp/xyz");
+        boolean nonexistentPropertyAllowed = allows(node, "/nonexistent");
+
+        // then
+        assertTrue(firstPropertyAllowed, "/prop1");
+        assertTrue(firstItemAllowed, "/prop1/0");
+        assertTrue(secondItemAllowed, "/prop1/1");
+        assertTrue(nestedItemPropertyAllowed, "/prop1/1/nestedItemProp");
+        assertTrue(secondPropertyAllowed, "/prop2");
+        assertTrue(nestedPropertyAllowed, "/prop2/nestedProp");
+        assertFalse(nestedDescendantAllowed, "/prop2/nestedProp/xyz");
+        assertFalse(nonexistentPropertyAllowed, "/nonexistent");
     }
 
     @Test
-    void testEscapedPropertyNames() {
+    void shouldAllowJsonPointerEscapesInPropertyNames() {
+        // given
         Node node = new Node().properties(
                 "a/b", new Node().properties("c~d", new Node())
         );
 
-        assertAllows(node, "/a~1b");
-        assertAllows(node, "/a~1b/c~0d");
-        assertRejects(node, "/a/b");
+        // when
+        boolean escapedSlashAllowed = allows(node, "/a~1b");
+        boolean escapedTildeAllowed = allows(node, "/a~1b/c~0d");
+        boolean unescapedSlashAllowed = allows(node, "/a/b");
+
+        // then
+        assertTrue(escapedSlashAllowed, "/a~1b");
+        assertTrue(escapedTildeAllowed, "/a~1b/c~0d");
+        assertFalse(unescapedSlashAllowed, "/a/b");
     }
 
     @Test
-    void testContractsReservedField() {
+    void shouldIncludeReservedContractsFieldPaths() {
+        // given
         Node node = new Node().contracts(new Node().properties("audit", new Node().properties("enabled", new Node())));
 
-        assertAllows(node, "/contracts");
-        assertAllows(node, "/contracts/audit");
-        assertAllows(node, "/contracts/audit/enabled");
-        assertRejects(node, "/audit");
+        // when
+        boolean contractsAllowed = allows(node, "/contracts");
+        boolean auditAllowed = allows(node, "/contracts/audit");
+        boolean enabledAllowed = allows(node, "/contracts/audit/enabled");
+        boolean unqualifiedAuditAllowed = allows(node, "/audit");
+
+        // then
+        assertTrue(contractsAllowed, "/contracts");
+        assertTrue(auditAllowed, "/contracts/audit");
+        assertTrue(enabledAllowed, "/contracts/audit/enabled");
+        assertFalse(unqualifiedAuditAllowed, "/audit");
     }
 
     @Test
-    void testNullNode() {
-        assertRejects(null, "/");
-        assertRejects(null, "/anyPath");
-    }
+    void shouldConvertNullNodeToNoLimits() {
+        // given
+        Node node = null;
 
-    private void assertAllows(Node node, String pointer) {
-        assertTrue(allows(node, pointer), pointer);
-    }
+        // when
+        boolean rootAllowed = allows(node, "/");
+        boolean arbitraryPathAllowed = allows(node, "/anyPath");
 
-    private void assertRejects(Node node, String pointer) {
-        assertFalse(allows(node, pointer), pointer);
+        // then
+        assertFalse(rootAllowed, "/");
+        assertFalse(arbitraryPathAllowed, "/anyPath");
     }
 
     private boolean allows(Node node, String pointer) {

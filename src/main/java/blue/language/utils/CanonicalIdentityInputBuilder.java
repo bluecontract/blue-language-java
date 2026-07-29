@@ -14,6 +14,18 @@ import java.util.Objects;
  */
 public final class CanonicalIdentityInputBuilder {
 
+    /** Creates a canonical identity projection builder. */
+    public CanonicalIdentityInputBuilder() {
+    }
+
+    /**
+     * Reconstructs canonical identity input without mutating either source.
+     *
+     * @param resolvedNode resolved semantic node
+     * @param preprocessedSource exact preprocessed source representation
+     * @return canonical identity input
+     * @throws NullPointerException if either argument is {@code null}
+     */
     public Node build(Node resolvedNode, Node preprocessedSource) {
         Objects.requireNonNull(resolvedNode, "resolvedNode");
         Objects.requireNonNull(preprocessedSource, "preprocessedSource");

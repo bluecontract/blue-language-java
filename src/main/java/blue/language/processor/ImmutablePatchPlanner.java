@@ -1,8 +1,11 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -310,7 +313,11 @@ final class ImmutablePatchPlanner {
             if (isCyclicSetMemberReference(current)) {
                 String boundary = JsonPointer.toPointer(segments.subList(0, index));
                 throw new ProcessorFailureException(
-                        ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                        rejectCyclicEndpoint
+                                ? ProcessorErrorCategory
+                                .CyclicSetEmbeddedBoundaryUnsupported
+                                : ProcessorErrorCategory
+                                .CyclicSetMutationUnsupported,
                         operation
                                 + " below cyclic-set member reference is "
                                 + "unsupported at "
@@ -337,7 +344,8 @@ final class ImmutablePatchPlanner {
         if (rejectCyclicEndpoint
                 && isCyclicSetMemberReference(current)) {
             throw new ProcessorFailureException(
-                    ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                    ProcessorErrorCategory
+                            .CyclicSetEmbeddedBoundaryUnsupported,
                     operation
                             + " into cyclic-set member reference is "
                             + "unsupported at " + path.pointer());
@@ -353,22 +361,22 @@ final class ImmutablePatchPlanner {
      */
     private static FrozenNode intrinsicMutationPathChild(FrozenNode node,
                                                          String segment) {
-        if ("type".equals(segment)) {
+        if (Properties.OBJECT_TYPE.equals(segment)) {
             return node.getType();
         }
-        if ("itemType".equals(segment)) {
+        if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
             return node.getItemType();
         }
-        if ("keyType".equals(segment)) {
+        if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
             return node.getKeyType();
         }
-        if ("valueType".equals(segment)) {
+        if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
             return node.getValueType();
         }
-        if ("blue".equals(segment)) {
+        if (Properties.OBJECT_BLUE.equals(segment)) {
             return node.getBlue();
         }
-        if ("contracts".equals(segment)) {
+        if (ProcessorContractConstants.KEY_CONTRACTS.equals(segment)) {
             return node.getContracts();
         }
         throw new IllegalArgumentException(
@@ -376,12 +384,12 @@ final class ImmutablePatchPlanner {
     }
 
     private static boolean isIntrinsicMutationPathChild(String segment) {
-        return "type".equals(segment)
-                || "itemType".equals(segment)
-                || "keyType".equals(segment)
-                || "valueType".equals(segment)
-                || "blue".equals(segment)
-                || "contracts".equals(segment);
+        return Properties.OBJECT_TYPE.equals(segment)
+                || Properties.OBJECT_ITEM_TYPE.equals(segment)
+                || Properties.OBJECT_KEY_TYPE.equals(segment)
+                || Properties.OBJECT_VALUE_TYPE.equals(segment)
+                || Properties.OBJECT_BLUE.equals(segment)
+                || ProcessorContractConstants.KEY_CONTRACTS.equals(segment);
     }
 
     FrozenNode applyMutationPreflight(JsonPatch.Op op,
@@ -393,7 +401,7 @@ final class ImmutablePatchPlanner {
         validateMutationPath(path);
         if (path.isRoot()
                 && (op == JsonPatch.Op.ADD || op == JsonPatch.Op.REPLACE)) {
-            return Objects.requireNonNull(value, "value");
+            return Objects.requireNonNull(value, Properties.OBJECT_VALUE);
         }
         CanonicalOverlayPatchEngine engine =
                 new CanonicalOverlayPatchEngine(root);
@@ -420,7 +428,7 @@ final class ImmutablePatchPlanner {
             return false;
         }
         String blueId = node.getReferenceBlueId();
-        if (blueId == null || blueId.indexOf('#') < 0) {
+        if (!BlueIds.hasCyclicMemberSeparator(blueId)) {
             return false;
         }
         try {

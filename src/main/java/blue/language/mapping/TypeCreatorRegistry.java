@@ -4,6 +4,13 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Process-wide registry of factories and default concrete implementations used
+ * by Java object mapping.
+ *
+ * <p>Registrations affect subsequent conversions globally. Callers should
+ * register custom mappings during application setup.</p>
+ */
 public class TypeCreatorRegistry {
     private static final Map<Class<?>, TypeCreator<?>> creators = new HashMap<>();
     private static final Map<Class<?>, Class<?>> interfaceImplementations = new HashMap<>();
@@ -11,6 +18,12 @@ public class TypeCreatorRegistry {
     static {
         registerDefaultCreators();
         registerDefaultInterfaceImplementations();
+    }
+
+    /**
+     * Creates a compatibility facade over the process-wide static registry.
+     */
+    public TypeCreatorRegistry() {
     }
 
     private static void registerDefaultCreators() {
@@ -33,14 +46,37 @@ public class TypeCreatorRegistry {
         registerInterfaceImplementation(Deque.class, ArrayDeque.class);
     }
 
+    /**
+     * Registers or replaces the factory for an exact concrete type.
+     *
+     * @param type exact type to construct
+     * @param creator factory for fresh instances
+     * @param <T> registered Java type
+     */
     public static <T> void register(Class<T> type, TypeCreator<T> creator) {
         creators.put(type, creator);
     }
 
+    /**
+     * Registers the default concrete implementation for an interface.
+     *
+     * @param interfaceType interface requested by callers
+     * @param implementationType concrete assignable implementation
+     * @param <T> interface value type
+     */
     public static <T> void registerInterfaceImplementation(Class<T> interfaceType, Class<? extends T> implementationType) {
         interfaceImplementations.put(interfaceType, implementationType);
     }
 
+    /**
+     * Creates an instance through a registered creator, interface mapping, or
+     * no-argument constructor.
+     *
+     * @param type requested Java type
+     * @param <T> requested Java value type
+     * @return fresh instance
+     * @throws IllegalArgumentException when the type cannot be instantiated
+     */
     @SuppressWarnings("unchecked")
     public static <T> T createInstance(Class<T> type) {
         TypeCreator<T> creator = (TypeCreator<T>) creators.get(type);

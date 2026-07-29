@@ -4,6 +4,7 @@ import blue.language.BlueLanguageErrorCategory;
 import blue.language.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.JsonPointer;
 
@@ -98,6 +99,16 @@ final class ChannelRunner {
             SubscriptionDelta.Entry activeInterval =
                     execution.activeSubscriptionInterval(
                             scopePath, channel.key());
+            RuntimeWorkSession functionWork =
+                    runtime.newRuntimeWorkSession(
+                            execution.blue());
+            if (functionWork
+                    .hasSemanticOutputBoundary()) {
+                functionWork.carryExactInput(
+                        event,
+                        checkpointManager.eventIdentity(
+                                event));
+            }
             ExternalChannelFunctionEvaluation evaluation =
                     ExternalChannelFunctionEvaluation.evaluate(
                             owner.registry(),
@@ -111,7 +122,8 @@ final class ChannelRunner {
                                     .wholeSameScopeChannelCatalog()
                                     ? activeInterval.dependencies()
                                     .channelCatalogContractKeys()
-                                    : null);
+                                    : null,
+                            functionWork);
             matches = evaluation.accepts();
             frozenPayload = evaluation.payload();
             frozenCheckpointSubject =
@@ -124,6 +136,21 @@ final class ChannelRunner {
                     evaluation.logicalDeliveryKey();
             handlerChannel =
                     evaluation.handlerChannel();
+            for (String lookup
+                    : evaluation.channelLookupResults()) {
+                Map<String, Object> details =
+                        new LinkedHashMap<>();
+                details.put(
+                        ProcessingTraceConstants.FIELD_RESULT,
+                        lookup);
+                runtime.recordTrace(
+                        ProcessingTraceRecord.Kind.CHANNEL_LOOKUP,
+                        scopePath,
+                        channel.key(),
+                        null,
+                        details,
+                        null);
+            }
             if (activeInterval != null
                     && !activeInterval.dependencies().equals(
                     evaluation.dependencies())) {
@@ -142,7 +169,10 @@ final class ChannelRunner {
             }
             channelProcessor = registeredProcessor(contract);
         } catch (RuntimeException ex) {
-            if (ex instanceof ExecutionEvidenceUnavailableException
+            if (ex instanceof GasLimitExceededException
+                    || ex instanceof PortableLimitExceededException
+                    || ex instanceof SubscriptionSurfaceInvalidException
+                    || ex instanceof ExecutionEvidenceUnavailableException
                     || ex instanceof InvalidExecutionEvidenceException
                     || BlueLanguageErrorClassifier.classify(ex)
                     == BlueLanguageErrorCategory.ProviderUnavailable) {
@@ -195,6 +225,11 @@ final class ChannelRunner {
             metrics.addCheckpointCurrentIdentityNanos(System.nanoTime() - identityStart);
         } catch (RuntimeException ex) {
             metrics.addCheckpointUpdateNanos(System.nanoTime() - checkpointStart);
+            if (ex instanceof GasLimitExceededException
+                    || ex instanceof PortableLimitExceededException
+                    || ex instanceof ExecutionEvidenceUnavailableException) {
+                throw ex;
+            }
             execution.abortRuntimeFailure(scopePath,
                     bundle,
                     execution.fatalCategory(ex, ProcessorErrorCategory.CheckpointPolicyError),
@@ -228,9 +263,24 @@ final class ChannelRunner {
                             checkpointSubject,
                             previousSubject,
                             previousSubjectBlueId,
-                            bundle);
-            newer = channelProcessor.isNewerEvent(
-                    contract, checkpointContext);
+                            bundle,
+                            runtime.newRuntimeWorkSession(
+                                    execution.blue()));
+            RuntimeWorkSession checkpointWork =
+                    checkpointContext.runtimeWorkSession();
+            try {
+                newer = channelProcessor.isNewerEvent(
+                        contract, checkpointContext);
+                checkpointWork.complete();
+            } catch (ExecutionEvidenceUnavailableException unavailable) {
+                checkpointWork.suspend();
+                throw unavailable;
+            } catch (RuntimeException | Error failure) {
+                checkpointWork.failDeterministically();
+                throw failure;
+            } finally {
+                checkpointWork.close();
+            }
         } finally {
             metrics.addCheckpointIsNewerNanos(System.nanoTime() - isNewerStart);
         }
@@ -275,10 +325,11 @@ final class ChannelRunner {
             Node currentSubject,
             Node previousSubject,
             String previousSubjectBlueId,
-            ContractBundle bundle) {
+            ContractBundle bundle,
+            RuntimeWorkSession runtimeWorkSession) {
         if (previousSubject == null
                 || !previousSubject.isReferenceOnly()) {
-            return new ChannelCheckpointContext(
+            return ChannelCheckpointContext.withRuntimeWorkSession(
                     scopePath,
                     channelKey,
                     event,
@@ -286,18 +337,22 @@ final class ChannelRunner {
                     currentSubject,
                     previousSubject,
                     previousSubjectBlueId,
-                    bundle.markers());
+                    bundle.markers(),
+                    null,
+                    runtimeWorkSession);
         }
-        return ChannelCheckpointContext.withLazyLastEvent(
+        return ChannelCheckpointContext.withRuntimeWorkSession(
                 scopePath,
                 channelKey,
                 event,
                 eventSignature,
                 currentSubject,
+                null,
                 previousSubjectBlueId,
                 bundle.markers(),
                 runtime.checkpointSubjectMaterializer(
-                        previousSubject));
+                        previousSubject),
+                runtimeWorkSession);
     }
 
     @SuppressWarnings("unchecked")
@@ -490,10 +545,17 @@ final class ChannelRunner {
             if (scope != null && scope.isCutOff()) {
                 for (PendingCheckpoint checkpoint : pending) {
                     Map<String, Object> details = new LinkedHashMap<>();
-                    details.put("effect", "checkpoint");
-                    details.put("reason", "scope-cut-off");
-                    details.put("label",
-                            "checkpoint:" + checkpoint.record.channelKey);
+                    details.put(
+                            ProcessingTraceConstants.FIELD_EFFECT,
+                            ProcessingTraceConstants.EFFECT_CHECKPOINT);
+                    details.put(
+                            ProcessingTraceConstants.FIELD_REASON,
+                            ProcessingTraceConstants.REASON_SCOPE_CUT_OFF);
+                    details.put(
+                            ProcessingTraceConstants.FIELD_LABEL,
+                            ProcessingTraceConstants
+                                    .LABEL_PREFIX_CHECKPOINT
+                                    + checkpoint.record.channelKey);
                     runtime.recordTrace(
                             ProcessingTraceRecord.Kind.DISCARDED_EFFECT,
                             normalized,
@@ -514,6 +576,10 @@ final class ChannelRunner {
                         checkpoint.record,
                         checkpoint.eventSignature,
                         checkpoint.subject);
+            } catch (GasLimitExceededException
+                     | PortableLimitExceededException
+                     | SubscriptionSurfaceInvalidException ex) {
+                throw ex;
             } catch (RuntimeException ex) {
                 execution.abortRuntimeFailure(normalized,
                         checkpoint.bundle,
@@ -530,6 +596,10 @@ final class ChannelRunner {
         }
     }
 
+    /**
+     * Deferred checkpoint write captured during external-channel
+     * classification and committed only after delivery succeeds.
+     */
     private static final class PendingCheckpoint {
         private final ContractBundle bundle;
         private final CheckpointManager.CheckpointRecord record;
@@ -549,6 +619,13 @@ final class ChannelRunner {
         }
     }
 
+    /**
+     * Complete immutable outcome of classifying one external channel.
+     *
+     * <p>The state distinguishes skipped, rejected, stale, and newly accepted
+     * sources while retaining the exact routing, payload, and checkpoint
+     * evidence needed by the later delivery phase.</p>
+     */
     static final class ExternalClassification {
         private enum State {
             SKIPPED,
@@ -731,19 +808,31 @@ final class ChannelRunner {
                     && !execution.isScopeActive(scopePath))) {
                 return false;
             }
+            RuntimeWorkSession matchWork =
+                    runtime.newRuntimeWorkSession(
+                            execution.blue());
             HandlerMatchContext matchContext = new HandlerMatchContext(scopePath,
                     handler.key(),
                     channelKey,
                     event,
                     bundle.markers(),
-                    owner.matchingService());
+                    owner.matchingService(),
+                    matchWork);
             metrics.incrementHandlerMatchAttempts();
             runtime.chargeHandlerCandidateTested(scopePath, handler.key());
             long matchStart = System.nanoTime();
             boolean matches;
             try {
                 matches = ProcessorEngine.matchesHandler(owner, handler.contract(), matchContext);
+                matchWork.complete();
+            } catch (ExecutionEvidenceUnavailableException unavailable) {
+                matchWork.suspend();
+                throw unavailable;
+            } catch (RuntimeException | Error failure) {
+                matchWork.failDeterministically();
+                throw failure;
             } finally {
+                matchWork.close();
                 metrics.addHandlerMatchNanos(System.nanoTime() - matchStart);
             }
             if (!matches) {
@@ -761,7 +850,9 @@ final class ChannelRunner {
                                         runtime
                                                 ::materializeSelectedExecutableReference);
             } catch (RuntimeException ex) {
-                if (ex instanceof ExecutionEvidenceUnavailableException
+                if (ex instanceof GasLimitExceededException
+                        || ex instanceof PortableLimitExceededException
+                        || ex instanceof ExecutionEvidenceUnavailableException
                         || ScopeIdentityErrorMapper
                         .isProviderIdentityFailure(ex)) {
                     throw ex;
@@ -785,14 +876,40 @@ final class ChannelRunner {
                     executableHandler.key(),
                     executableHandler.node(),
                     false);
+            context.bindSelectedExecutableBodies(
+                    executableHandler.executableBodyFields(),
+                    selectedExecutableBodyBlueIds(
+                            handler));
             metrics.incrementHandlersExecuted();
             long executionStart = System.nanoTime();
             try (ProcessorExecutionContext ownedContext = context) {
-                ProcessorEngine.executeHandler(
-                        owner,
-                        executableHandler.contract(),
-                        ownedContext);
-                ownedContext.applyBufferedEffects();
+                try {
+                    Map<String, Object> details =
+                            new LinkedHashMap<>();
+                    details.put(
+                            ProcessingTraceConstants.FIELD_CHANNEL_KEY,
+                            channelKey);
+                    runtime.recordTrace(
+                            ProcessingTraceRecord.Kind.HANDLER_EXECUTION,
+                            scopePath,
+                            executableHandler.key(),
+                            null,
+                            details,
+                            event);
+                    ProcessorEngine.executeHandler(
+                            owner,
+                            executableHandler.contract(),
+                            ownedContext);
+                    ownedContext.applyBufferedEffects();
+                } catch (ExecutionEvidenceUnavailableException unavailable) {
+                    /*
+                     * This attempt did not establish portable execution work.
+                     * Discard staged child ledgers before try-with-resources
+                     * closes the context.
+                     */
+                    ownedContext.suspendRuntimeWork();
+                    throw unavailable;
+                }
             } catch (GasLimitExceededException
                      | PortableLimitExceededException
                      | SubscriptionSurfaceInvalidException ex) {
@@ -835,7 +952,7 @@ final class ChannelRunner {
             List<String> path =
                     new ArrayList<>(
                             JsonPointer.split(scopePath));
-            path.add("contracts");
+            path.add(ProcessorContractConstants.KEY_CONTRACTS);
             path.add(handler.key());
             path.add(field);
             runtime.recordSelectedExecutableBodyDemand(
@@ -844,6 +961,35 @@ final class ChannelRunner {
                     handler.key(),
                     JsonPointer.toPointer(path));
         }
+    }
+
+    private Map<String, String>
+    selectedExecutableBodyBlueIds(
+            ContractBundle.HandlerBinding binding) {
+        Map<String, String> identities =
+                new LinkedHashMap<>();
+        FrozenNode contract =
+                binding != null ? binding.node() : null;
+        Map<String, FrozenNode> properties =
+                contract != null
+                        ? contract.getProperties()
+                        : null;
+        if (properties == null) {
+            return identities;
+        }
+        for (String field :
+                binding.executableBodyFields()) {
+            FrozenNode body =
+                    properties.get(field);
+            if (body != null) {
+                identities.put(
+                        field,
+                        body.isReferenceOnly()
+                                ? body.getReferenceBlueId()
+                                : body.blueId());
+            }
+        }
+        return identities;
     }
 
     void cleanupInactiveCheckpoints(String scopePath, ContractBundle bundle) {

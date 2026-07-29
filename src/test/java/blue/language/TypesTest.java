@@ -15,15 +15,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TypesTest {
 
     @Test
-    public void testBasic() throws Exception {
+    public void shouldResolveBasicTypeInheritance() throws Exception {
 
+        // given
         Node a = new Node().name("A");
         Node b = new Node().name("B").type(a);
         Node c = new Node().name("C").type(b);
 
         List<Node> nodes = Arrays.asList(a, b, c);
+        // when
         NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
 
+        // then
         assertTrue(isSubtype(b, a, nodeProvider));
         assertTrue(isSubtype(c, a, nodeProvider));
         assertTrue(isSubtype(a, a, nodeProvider));
@@ -33,7 +36,8 @@ public class TypesTest {
     }
 
     @Test
-    public void subtypeCompatibilityIgnoresNameAndDescriptionButNotStructure() {
+    public void shouldIgnoreNameAndDescriptionButNotStructureForSubtypeCompatibility() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);
         Node left = blue.yamlToNode(
@@ -46,20 +50,23 @@ public class TypesTest {
                 "description: Right description\n" +
                 "x:\n" +
                 "  type: Integer");
+        // when
         Node differentStructure = blue.yamlToNode(
                 "name: Left label\n" +
                 "description: Left description\n" +
                 "x:\n" +
                 "  type: Text");
 
+        // then
         assertTrue(isSubtype(left, right, nodeProvider));
         assertTrue(isSubtype(right, left, nodeProvider));
         assertFalse(isSubtype(left, differentStructure, nodeProvider));
     }
 
     @Test
-    public void testDifferentSubtypeVariations() throws Exception {
+    public void shouldRecognizeEquivalentInlineAndReferencedSubtypeVariations() throws Exception {
 
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String person = "name: Person\n" +
@@ -88,8 +95,10 @@ public class TypesTest {
                         "    type: Text\n" +
                         "  age:\n" +
                         "    type: Integer";
+        // when
         nodeProvider.addSingleDocs(alice, alice2, alice3);
 
+        // then
         assertTrue(isSubtype(nodeProvider.getNodeByName("Alice"), nodeProvider.getNodeByName("Alice"), nodeProvider));
         assertFalse(isSubtype(nodeProvider.getNodeByName("Person"), nodeProvider.getNodeByName("Alice"), nodeProvider));
 
@@ -99,14 +108,17 @@ public class TypesTest {
     }
 
     @Test
-    public void referenceOnlyCustomSubtypeTraversesFetchedTypeHierarchy() {
+    public void shouldTraverseFetchedTypeHierarchyForReferenceOnlyCustomSubtype() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: A");
+        // when
         nodeProvider.addSingleDocs(
                 "name: B\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("A"));
 
+        // then
         assertTrue(isSubtype(
                 new Node().blueId(nodeProvider.getBlueIdByName("B")),
                 nodeProvider.getNodeByName("A"),

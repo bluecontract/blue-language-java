@@ -10,7 +10,7 @@ input:
     contracts:
       in:
         type:
-          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
         order: 0
         subscriptionKey: timeline
         eventKey: timeline
@@ -35,7 +35,7 @@ input:
       contracts:
         in:
           type:
-            blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+            blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
           order: 0
           subscriptionKey: timeline
           eventKey: timeline

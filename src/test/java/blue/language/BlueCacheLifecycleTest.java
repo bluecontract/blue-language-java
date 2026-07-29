@@ -4,13 +4,13 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
+import blue.language.processor.ContractProcessor;
+import blue.language.processor.DocumentProcessingResult;
+import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ProcessingMetricsSnapshot;
 import blue.language.processor.ProcessingMetricsSink;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.RecordingProcessingMetricsSink;
-import blue.language.processor.ContractProcessor;
-import blue.language.processor.DocumentProcessor;
-import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.provider.BasicNodeProvider;
@@ -20,202 +20,281 @@ import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
-import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueCacheLifecycleTest {
 
     @Test
-    void derivedSnapshotsAreWeightAndEntryBoundedWithoutChangingReloadIdentity() {
+    void shouldBoundDerivedSnapshotsWithoutChangingReloadIdentity() {
+        // given
         BlueCachePolicy policy = BlueCachePolicy.builder()
                 .derivedSnapshots(2, 1024L * 1024L)
                 .canonicalAliases(2, 1024L)
                 .maximumDerivedEntryWeightBytes(1024L * 1024L)
                 .build();
         Blue blue = Blue.withCachePolicy(policy);
-        ResolvedSnapshot first = null;
 
+        // when
+        ResolvedSnapshot first = null;
         for (int index = 0; index < 6; index++) {
             ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(index));
             if (index == 0) {
                 first = snapshot;
             }
         }
-
         BlueCacheStats.Region derived = blue.cacheStats().region("derivedResolvedSnapshots");
+        ResolvedSnapshot reloaded = blue.resolveToSnapshot(first.canonicalRoot());
+
+        // then
         assertTrue(derived.entries() <= 2);
         assertTrue(derived.evictions() >= 4L);
-        ResolvedSnapshot reloaded = blue.resolveToSnapshot(first.canonicalRoot());
         assertEquals(first.blueId(), reloaded.blueId());
         assertEquals(blue.nodeToJson(first.resolvedRoot()), blue.nodeToJson(reloaded.resolvedRoot()));
     }
 
     @Test
-    void publicAuthoritativeSnapshotRegistrationRemainsPinnedAcrossDerivedEviction() {
+    void shouldKeepPublicAuthoritativeSnapshotPinnedAcrossDerivedEviction() {
+        // given
         BlueCachePolicy policy = BlueCachePolicy.builder()
                 .derivedSnapshots(1, 1024L * 1024L)
                 .canonicalAliases(1, 1024L)
                 .maximumDerivedEntryWeightBytes(1024L * 1024L)
                 .build();
         Blue blue = Blue.withCachePolicy(policy);
+
+        // when
         ResolvedSnapshot authoritative = blue.resolveToSnapshot(document(10));
         blue.clearResolvedSnapshotCache();
         blue.cacheResolvedSnapshot(authoritative);
-
         for (int index = 0; index < 5; index++) {
             blue.resolveToSnapshot(document(100 + index));
         }
-
         ResolvedSnapshot loaded = blue.loadSnapshot(authoritative.canonicalRoot());
+        int pinnedEntries =
+                blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries();
+        int derivedEntries =
+                blue.cacheStats().region("derivedResolvedSnapshots").entries();
+
+        // then
         assertSame(authoritative, loaded);
-        assertEquals(1, blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries());
-        assertTrue(blue.cacheStats().region("derivedResolvedSnapshots").entries() <= 1);
+        assertEquals(1, pinnedEntries);
+        assertTrue(derivedEntries <= 1);
     }
 
     @Test
-    void disabledPolicySkipsReloadableRetentionButKeepsExplicitPins() {
+    void shouldSkipReloadableRetentionWhenCachingIsDisabled() {
+        // given
         Blue blue = Blue.withCachePolicy(BlueCachePolicy.disabled());
-        ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(20));
 
-        assertEquals(0, blue.cacheStats().region("derivedResolvedSnapshots").entries());
-        assertEquals(0, blue.cacheStats().region("canonicalAliases").entries());
-        assertEquals(0, blue.cacheStats().region("recentProcessingSnapshots").entries());
-        assertEquals(0, blue.cacheStats().region("verifiedReferences").entries());
+        // when
+        blue.resolveToSnapshot(document(20));
+        BlueCacheStats stats = blue.cacheStats();
 
-        blue.cacheResolvedSnapshot(snapshot);
-
-        assertSame(snapshot, blue.cachedResolvedSnapshot(snapshot.blueId())
-                .orElseThrow(AssertionError::new));
-        assertEquals(1, blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries());
-        assertTrue(blue.cacheStats().region("derivedResolvedSnapshots")
-                .oversizedRejections() > 0L);
+        // then
+        assertEquals(0, stats.region("derivedResolvedSnapshots").entries());
+        assertEquals(0, stats.region("canonicalAliases").entries());
+        assertEquals(0, stats.region("recentProcessingSnapshots").entries());
+        assertEquals(0, stats.region("verifiedReferences").entries());
+        assertTrue(stats.region("derivedResolvedSnapshots").oversizedRejections() > 0L);
     }
 
     @Test
-    void configurationRefreshPreservesCallerPinnedAuthoritativeContent() {
+    void shouldKeepExplicitPinsWhenCachingIsDisabled() {
+        // given
+        Blue blue = Blue.withCachePolicy(BlueCachePolicy.disabled());
+
+        // when
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(20));
+        blue.cacheResolvedSnapshot(snapshot);
+        ResolvedSnapshot cached = blue.cachedResolvedSnapshot(snapshot.blueId())
+                .orElseThrow(AssertionError::new);
+        int pinnedEntries =
+                blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries();
+
+        // then
+        assertSame(snapshot, cached);
+        assertEquals(1, pinnedEntries);
+    }
+
+    @Test
+    void shouldPreserveCallerPinnedAuthoritativeContentAcrossConfigurationRefresh() {
+        // given
         Blue blue = new Blue(node -> null);
         ResolvedSnapshot authoritative = blue.resolveToSnapshot(document(17));
         blue.cacheResolvedSnapshot(authoritative);
 
+        // when
         blue.preprocessingAliases(Collections.singletonMap("alias", authoritative.blueId()));
         blue.setGlobalLimits(Limits.NO_LIMITS);
         blue.nodeProvider(node -> null);
-
         ResolvedSnapshot loaded = blue.loadSnapshot(authoritative.blueId());
+        int pinnedEntries =
+                blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries();
+
+        // then
         assertEquals(authoritative.blueId(), loaded.blueId());
         assertEquals(blue.nodeToJson(authoritative.resolvedRoot()),
                 blue.nodeToJson(loaded.resolvedRoot()));
-        assertTrue(blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries() > 0);
+        assertTrue(pinnedEntries > 0);
     }
 
     @Test
-    void refreshedProcessorRetainsSharedBorrowedRegistryAndTypeMappingsSafely() {
+    void shouldRetainSharedBorrowedRegistryAndTypeResolverAfterRefresh() {
+        // given
+        DocumentProcessor shared = new DocumentProcessor();
+        Blue first = new Blue().documentProcessor(shared);
+
+        // when
+        first.nodeProvider(node -> null);
+        DocumentProcessor refreshed = first.getDocumentProcessor();
+
+        // then
+        assertSame(shared.getContractRegistry(), refreshed.getContractRegistry());
+        assertSame(shared.getContractTypeResolver(), refreshed.getContractTypeResolver());
+    }
+
+    @Test
+    void shouldExposeRegistrationAcrossRuntimesSharingBorrowedProcessor() {
+        // given
         DocumentProcessor shared = new DocumentProcessor();
         Blue first = new Blue().documentProcessor(shared);
         Blue second = new Blue().documentProcessor(shared);
+        RegistrationMarkerProcessor processor = new RegistrationMarkerProcessor();
 
+        // when
         first.nodeProvider(node -> null);
         DocumentProcessor refreshed = first.getDocumentProcessor();
-        assertSame(shared.getContractRegistry(), refreshed.getContractRegistry());
-        assertSame(shared.getContractTypeResolver(), refreshed.getContractTypeResolver());
-
-        RegistrationMarkerProcessor processor = new RegistrationMarkerProcessor();
         second.registerContractProcessor("shared-registration", processor);
+        ContractProcessor<?> registered =
+                refreshed.getContractRegistry().processors().get("shared-registration");
+        Class<?> registeredType =
+                refreshed.getContractTypeResolver().resolveClass("shared-registration");
 
-        assertSame(processor,
-                refreshed.getContractRegistry().processors().get("shared-registration"));
-        assertSame(RegistrationMarker.class,
-                refreshed.getContractTypeResolver().resolveClass("shared-registration"));
+        // then
+        assertSame(processor, registered);
+        assertSame(RegistrationMarker.class, registeredType);
     }
 
     @Test
-    void ordinaryCacheClearKeepsOwnedProcessorUsable() {
+    void shouldKeepOwnedProcessorUsableAfterOrdinaryCacheClear() {
+        // given
         Blue blue = new Blue();
         DocumentProcessor processor = blue.getDocumentProcessor();
 
+        // when
         blue.clearResolvedSnapshotCache();
+        boolean processorClosed = processor.isClosed();
+        Node initializedDocument = blue.initializeDocument(new Node()).document();
 
-        assertFalse(processor.isClosed());
-        assertTrue(blue.initializeDocument(new Node()).document() != null);
+        // then
+        assertFalse(processorClosed);
+        assertTrue(initializedDocument != null);
     }
 
     @Test
-    void injectedProcessorRemainsBorrowedAcrossRuntimeClose() {
+    void shouldKeepInjectedProcessorBorrowedAcrossRuntimeClose() {
+        // given
         DocumentProcessor shared = new DocumentProcessor();
         Blue first = new Blue().documentProcessor(shared);
         Blue second = new Blue().documentProcessor(shared);
 
+        // when
         first.close();
-
-        assertFalse(shared.isClosed());
-        assertSame(shared, second.getDocumentProcessor());
-        second.initializeDocument(new Node());
+        boolean closedAfterFirstClose = shared.isClosed();
+        DocumentProcessor secondProcessor = second.getDocumentProcessor();
+        DocumentProcessingResult initialized = second.initializeDocument(new Node());
         second.close();
-        assertFalse(shared.isClosed());
+        boolean closedAfterSecondClose = shared.isClosed();
+
+        // then
+        assertFalse(closedAfterFirstClose);
+        assertSame(shared, secondProcessor);
+        assertTrue(initialized.document() != null);
+        assertFalse(closedAfterSecondClose);
     }
 
     @Test
-    void injectingBorrowedProcessorClosesOnlyDisplacedOwnedProcessor() {
+    void shouldCloseOnlyDisplacedOwnedProcessorWhenInjectingBorrowedProcessor() {
+        // given
         Blue blue = new Blue();
         DocumentProcessor owned = blue.getDocumentProcessor();
         owned.markersFor(new Node(), "/");
         DocumentProcessor borrowed = new DocumentProcessor();
 
+        // when
         blue.documentProcessor(borrowed);
-
-        assertTrue(owned.isClosed());
-        assertEquals(0, owned.cacheEntryCount());
-        assertFalse(borrowed.isClosed());
+        boolean ownedClosed = owned.isClosed();
+        int ownedEntries = owned.cacheEntryCount();
+        boolean borrowedClosedAfterInjection = borrowed.isClosed();
         blue.close();
-        assertFalse(borrowed.isClosed());
+        boolean borrowedClosedAfterRuntimeClose = borrowed.isClosed();
+
+        // then
+        assertTrue(ownedClosed);
+        assertEquals(0, ownedEntries);
+        assertFalse(borrowedClosedAfterInjection);
+        assertFalse(borrowedClosedAfterRuntimeClose);
     }
 
     @Test
-    void reinjectingSameOwnedProcessorDoesNotLaunderOwnership() {
+    void shouldNotLaunderOwnershipWhenReinjectingSameOwnedProcessor() {
+        // given
         Blue blue = new Blue();
         DocumentProcessor owned = blue.getDocumentProcessor();
 
         blue.documentProcessor(owned);
+        // when
         blue.close();
+        boolean ownedClosed = owned.isClosed();
+        Throwable useAfterCloseFailure =
+                captureFailure(() -> owned.markersFor(new Node(), "/"));
 
-        assertTrue(owned.isClosed());
-        assertThrows(IllegalStateException.class,
-                () -> owned.markersFor(new Node(), "/"));
+        // then
+        assertTrue(ownedClosed);
+        assertTrue(useAfterCloseFailure instanceof IllegalStateException);
     }
 
     @Test
-    void aliasAndLimitChangesPreserveBorrowedProcessorOwnership() {
+    void shouldPreserveBorrowedProcessorOwnershipAcrossAliasAndLimitChanges() {
+        // given
         DocumentProcessor borrowed = new DocumentProcessor();
         Blue blue = new Blue().documentProcessor(borrowed);
 
+        // when
         blue.addPreprocessingAliases(Collections.singletonMap("one", "value"));
-        assertSame(borrowed, blue.getDocumentProcessor());
+        DocumentProcessor afterAliasAddition = blue.getDocumentProcessor();
         blue.preprocessingAliases(Collections.singletonMap("two", "value"));
-        assertSame(borrowed, blue.getDocumentProcessor());
+        DocumentProcessor afterAliasReplacement = blue.getDocumentProcessor();
         blue.setGlobalLimits(Limits.NO_LIMITS);
-        assertSame(borrowed, blue.getDocumentProcessor());
-
+        DocumentProcessor afterLimitReplacement = blue.getDocumentProcessor();
         blue.close();
-        assertFalse(borrowed.isClosed());
+        boolean borrowedClosed = borrowed.isClosed();
+
+        // then
+        assertSame(borrowed, afterAliasAddition);
+        assertSame(borrowed, afterAliasReplacement);
+        assertSame(borrowed, afterLimitReplacement);
+        assertFalse(borrowedClosed);
     }
 
     @Test
-    void reentrantMetricsCloseIsRejectedWithoutDeadlockOrImplicitShutdown() {
+    void shouldRejectReentrantMetricsCloseWithoutDeadlockOrImplicitShutdown() {
+        // given
         Blue blue = new Blue();
         AtomicBoolean closeOnce = new AtomicBoolean();
         blue.getDocumentProcessor().processingMetricsSink(new ProcessingMetricsSink() {
@@ -227,20 +306,26 @@ class BlueCacheLifecycleTest {
             }
         });
 
-        IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> blue.resolveToSnapshot(document(1)));
+        // when
+        Throwable failure = captureFailure(() -> blue.resolveToSnapshot(document(1)));
+        boolean closedAfterRejectedClose = blue.isClosed();
+        blue.close();
+        boolean closedAfterExplicitClose = blue.isClosed();
+        BlueCacheStats closedStats = blue.cacheStats();
 
+        // then
+        assertTrue(failure instanceof IllegalStateException);
         assertEquals("Blue runtime cannot close from active runtime work",
                 failure.getMessage());
-        assertFalse(blue.isClosed());
-        blue.close();
-        assertTrue(blue.isClosed());
-        assertEquals(0, blue.cacheStats().entries());
-        assertEquals(0L, blue.cacheStats().currentWeightBytes());
+        assertFalse(closedAfterRejectedClose);
+        assertTrue(closedAfterExplicitClose);
+        assertEquals(0, closedStats.entries());
+        assertEquals(0L, closedStats.currentWeightBytes());
     }
 
     @Test
-    void closeTimeMetricsMayReenterCloseWithoutRecursion() {
+    void shouldAllowCloseTimeMetricsToReenterCloseWithoutRecursion() {
+        // given
         Blue blue = new Blue();
         AtomicInteger callbacks = new AtomicInteger();
         blue.getDocumentProcessor().processingMetricsSink(new ProcessingMetricsSink() {
@@ -251,15 +336,21 @@ class BlueCacheLifecycleTest {
             }
         });
 
+        // when
         blue.close();
+        boolean closed = blue.isClosed();
+        int callbackCount = callbacks.get();
+        int retainedEntries = blue.cacheStats().entries();
 
-        assertTrue(blue.isClosed());
-        assertEquals(1, callbacks.get());
-        assertEquals(0, blue.cacheStats().entries());
+        // then
+        assertTrue(closed);
+        assertEquals(1, callbackCount);
+        assertEquals(0, retainedEntries);
     }
 
     @Test
-    void concurrentCloseWaitsForOwnedProcessorRelease() throws Exception {
+    void shouldWaitForOwnedProcessorReleaseDuringConcurrentClose() throws Exception {
+        // given
         BlockingCloseDocumentProcessor processor = new BlockingCloseDocumentProcessor();
         Blue blue = new Blue().documentProcessor(processor);
         Field ownership = Blue.class.getDeclaredField("documentProcessorOwned");
@@ -274,8 +365,10 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         first.start();
-        assertTrue(processor.closeEntered.await(5L, TimeUnit.SECONDS));
+        boolean firstEnteredClose = processor.closeEntered.await(5L, TimeUnit.SECONDS);
         Thread second = new Thread(() -> {
             try {
                 blue.close();
@@ -286,21 +379,31 @@ class BlueCacheLifecycleTest {
             }
         });
         second.start();
-
-        assertFalse(secondReturned.await(200L, TimeUnit.MILLISECONDS));
-        assertFalse(processor.isClosed());
+        boolean secondReturnedBeforeRelease =
+                secondReturned.await(200L, TimeUnit.MILLISECONDS);
+        boolean closedBeforeRelease = processor.isClosed();
         processor.allowClose.countDown();
         first.join(TimeUnit.SECONDS.toMillis(5L));
         second.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean firstAlive = first.isAlive();
+        boolean secondAlive = second.isAlive();
+        Throwable closeFailure = failure.get();
+        boolean processorClosed = processor.isClosed();
 
-        assertFalse(first.isAlive());
-        assertFalse(second.isAlive());
-        assertNull(failure.get());
-        assertTrue(processor.isClosed());
+        // then
+        assertTrue(firstEnteredClose);
+        assertFalse(secondReturnedBeforeRelease);
+        assertFalse(closedBeforeRelease);
+        assertFalse(firstAlive);
+        assertFalse(secondAlive);
+        assertNull(closeFailure);
+        assertTrue(processorClosed);
     }
 
     @Test
-    void concurrentClosersQueuedBehindInvalidationShareOneCloseCompletion() throws Exception {
+    void shouldShareOneCompletionAmongConcurrentClosersQueuedBehindInvalidation()
+            throws Exception {
+        // given
         BlockingCloseDocumentProcessor processor = new BlockingCloseDocumentProcessor();
         Blue blue = new Blue().documentProcessor(processor);
         Field ownership = Blue.class.getDeclaredField("documentProcessorOwned");
@@ -315,8 +418,10 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         clearing.start();
-        assertTrue(processor.clearEntered.await(5L, TimeUnit.SECONDS));
+        boolean clearEntered = processor.clearEntered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch closersStarted = new CountDownLatch(2);
         CountDownLatch anyCloserReturned = new CountDownLatch(1);
@@ -324,24 +429,37 @@ class BlueCacheLifecycleTest {
         Thread second = closingThread(blue, failure, closersStarted, anyCloserReturned);
         first.start();
         second.start();
-        assertTrue(closersStarted.await(5L, TimeUnit.SECONDS));
-        assertFalse(anyCloserReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean bothClosersStarted = closersStarted.await(5L, TimeUnit.SECONDS);
+        boolean closerReturnedDuringClear =
+                anyCloserReturned.await(200L, TimeUnit.MILLISECONDS);
 
         processor.allowClear.countDown();
-        assertTrue(processor.closeEntered.await(5L, TimeUnit.SECONDS));
-        assertFalse(anyCloserReturned.await(200L, TimeUnit.MILLISECONDS),
-                "all concurrent close callers must await the owned close cleanup");
+        boolean closeEntered = processor.closeEntered.await(5L, TimeUnit.SECONDS);
+        boolean closerReturnedDuringClose =
+                anyCloserReturned.await(200L, TimeUnit.MILLISECONDS);
 
         processor.allowClose.countDown();
         clearing.join(TimeUnit.SECONDS.toMillis(5L));
         first.join(TimeUnit.SECONDS.toMillis(5L));
         second.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean clearingAlive = clearing.isAlive();
+        boolean firstAlive = first.isAlive();
+        boolean secondAlive = second.isAlive();
+        Throwable concurrentFailure = failure.get();
+        boolean processorClosed = processor.isClosed();
 
-        assertFalse(clearing.isAlive());
-        assertFalse(first.isAlive());
-        assertFalse(second.isAlive());
-        assertNull(failure.get());
-        assertTrue(processor.isClosed());
+        // then
+        assertTrue(clearEntered);
+        assertTrue(bothClosersStarted);
+        assertFalse(closerReturnedDuringClear);
+        assertTrue(closeEntered);
+        assertFalse(closerReturnedDuringClose,
+                "all concurrent close callers must await the owned close cleanup");
+        assertFalse(clearingAlive);
+        assertFalse(firstAlive);
+        assertFalse(secondAlive);
+        assertNull(concurrentFailure);
+        assertTrue(processorClosed);
     }
 
     private static Thread closingThread(Blue blue,
@@ -361,103 +479,153 @@ class BlueCacheLifecycleTest {
     }
 
     @Test
-    void oversizedDerivedSnapshotIsUsableButNotRetainedAndCanStillBePinned() {
+    void shouldUseButNotRetainOversizedDerivedSnapshotAndStillAllowPinning() {
+        // given
         BlueCachePolicy policy = BlueCachePolicy.builder()
                 .derivedSnapshots(4, 4096L)
                 .maximumDerivedEntryWeightBytes(64L)
                 .build();
         Blue blue = Blue.withCachePolicy(policy);
 
+        // when
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(1));
-
-        assertEquals(0, blue.cacheStats().region("derivedResolvedSnapshots").entries());
-        assertEquals(1L,
-                blue.cacheStats().region("derivedResolvedSnapshots").oversizedRejections());
+        BlueCacheStats.Region derivedBeforePin =
+                blue.cacheStats().region("derivedResolvedSnapshots");
         blue.cacheResolvedSnapshot(snapshot);
-        assertEquals(1, blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries());
+        int pinnedEntries =
+                blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries();
+
+        // then
+        assertEquals(0, derivedBeforePin.entries());
+        assertEquals(1L, derivedBeforePin.oversizedRejections());
+        assertEquals(1, pinnedEntries);
     }
 
     @Test
-    void closeIsIdempotentReleasesOwnedStateAndRejectsRuntimeWork() {
+    void shouldReleaseOwnedStateIdempotentlyAndRecordCloseMetrics() {
+        // given
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         Blue blue = Blue.withCachePolicy(BlueCachePolicy.boundedDefaults());
-        DocumentProcessor leakedProcessor = blue.getDocumentProcessor();
-        leakedProcessor.processingMetricsSink(metrics);
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(1));
         blue.cacheResolvedSnapshot(snapshot);
-        assertTrue(blue.cacheStats().currentWeightBytes() > 0L);
+        long retainedBeforeClose = blue.cacheStats().currentWeightBytes();
 
+        // when
         blue.close();
         blue.close();
-
-        assertTrue(blue.isClosed());
-        assertEquals(0L, blue.cacheStats().currentWeightBytes());
-        assertEquals(0, blue.cacheStats().entries());
-        assertThrows(IllegalStateException.class,
-                () -> blue.resolveToSnapshot(document(2)));
-        assertThrows(IllegalStateException.class,
-                () -> blue.cacheResolvedSnapshot(snapshot));
-        assertThrows(IllegalStateException.class,
-                () -> blue.cacheResolvedSnapshots(Collections.emptyList()));
-        assertThrows(IllegalStateException.class, blue::clearResolvedSnapshotCache);
-        assertThrows(IllegalStateException.class,
-                () -> blue.registerTypeDictionaries(Collections.emptyList()));
-        assertThrows(IllegalStateException.class,
-                () -> blue.registerExternalContractType("closed", null, null));
-        assertThrows(IllegalStateException.class,
-                () -> blue.isInitialized(document(2)));
-        assertThrows(IllegalStateException.class,
-                () -> blue.isInitialized(snapshot));
-        assertThrows(IllegalStateException.class,
-                () -> blue.resolvePreservingPaths(document(2),
-                        Limits.NO_LIMITS,
-                        Collections.singletonList("/")));
-        assertThrows(IllegalStateException.class,
-                () -> blue.nodeMatchesType(new Node(), new Node()));
-        assertThrows(IllegalStateException.class,
-                () -> blue.nodeMatchesType(
-                        snapshot.frozenResolvedRoot(), snapshot.frozenResolvedRoot()));
-        assertThrows(IllegalStateException.class,
-                () -> blue.nodeMatchesType(
-                        snapshot, "/", snapshot.frozenResolvedRoot()));
-        assertThrows(IllegalStateException.class,
-                () -> blue.extend(document(2), Limits.NO_LIMITS));
-        assertThrows(IllegalStateException.class,
-                () -> blue.preprocess(document(2)));
-        assertThrows(IllegalStateException.class,
-                () -> blue.yamlToNode("value: 2"));
-        assertThrows(IllegalStateException.class,
-                () -> blue.jsonToNode("{\"value\":2}"));
-        assertThrows(IllegalStateException.class,
-                () -> blue.determineClass(document(2)));
-        assertThrows(IllegalStateException.class,
-                () -> blue.nodeToObject(document(2), Node.class));
-        assertThrows(IllegalStateException.class,
-                () -> blue.isNodeSubtypeOf(document(2), document(3)));
-        assertThrows(IllegalStateException.class,
-                () -> blue.cachedResolvedSnapshot(snapshot.blueId()));
-        assertThrows(IllegalStateException.class, blue::conformanceEngine);
-        assertThrows(IllegalStateException.class,
-                () -> leakedProcessor.initializeDocument(document(4)),
-                "a processor handle obtained before close must observe cache invalidation");
-        assertThrows(IllegalStateException.class,
-                () -> leakedProcessor.markersFor(new Node(), "/"),
-                "a leaked processor handle must not repopulate owned caches after runtime close");
-        assertTrue(leakedProcessor.isClosed());
-        assertFalse(leakedProcessor.supportsSnapshotProcessing(),
-                "closed leaked handles must detach the runtime snapshot collaborator");
-        assertEquals(0, leakedProcessor.cacheEntryCount());
-        assertTrue(blue.nodeToJson(document(3)).contains("value"),
-                "pure serialization remains available after close");
-        assertEquals("3", blue.parseSourceJson("{\"value\":3}").getValue().toString());
-
+        BlueCacheStats closedStats = blue.cacheStats();
         ProcessingMetricsSnapshot recorded = metrics.snapshot();
+
+        // then
+        assertTrue(retainedBeforeClose > 0L);
+        assertTrue(blue.isClosed());
+        assertEquals(0L, closedStats.currentWeightBytes());
+        assertEquals(0, closedStats.entries());
         assertEquals(2L, recorded.counter("runtimeCloseCalls"));
         assertTrue(recorded.counter("runtimeCloseReleasedWeightBytes") > 0L);
     }
 
     @Test
-    void closeDoesNotDeadlockWithConcurrentCacheReaders() throws Exception {
+    void shouldRejectEveryStatefulOperationAfterRuntimeClose() {
+        // given
+        Blue blue = Blue.withCachePolicy(BlueCachePolicy.boundedDefaults());
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(1));
+        List<Runnable> operations = java.util.Arrays.asList(
+                () -> blue.resolveToSnapshot(document(2)),
+                () -> blue.cacheResolvedSnapshot(snapshot),
+                () -> blue.cacheResolvedSnapshots(Collections.emptyList()),
+                blue::clearResolvedSnapshotCache,
+                () -> blue.registerTypeDictionaries(Collections.emptyList()),
+                () -> blue.registerExternalContractType("closed", null, null),
+                () -> blue.isInitialized(document(2)),
+                () -> blue.isInitialized(snapshot),
+                () -> blue.resolvePreservingPaths(document(2),
+                        Limits.NO_LIMITS,
+                        Collections.singletonList("/")),
+                () -> blue.nodeMatchesType(new Node(), new Node()),
+                () -> blue.nodeMatchesType(
+                        snapshot.frozenResolvedRoot(),
+                        snapshot.frozenResolvedRoot()),
+                () -> blue.nodeMatchesType(
+                        snapshot, "/", snapshot.frozenResolvedRoot()),
+                () -> blue.extend(document(2), Limits.NO_LIMITS),
+                () -> blue.preprocess(document(2)),
+                () -> blue.yamlToNode("value: 2"),
+                () -> blue.jsonToNode("{\"value\":2}"),
+                () -> blue.determineClass(document(2)),
+                () -> blue.nodeToObject(document(2), Node.class),
+                () -> blue.isNodeSubtypeOf(document(2), document(3)),
+                () -> blue.cachedResolvedSnapshot(snapshot.blueId()),
+                blue::conformanceEngine);
+
+        // when
+        blue.close();
+        List<Throwable> failures = new ArrayList<>();
+        for (Runnable operation : operations) {
+            failures.add(captureFailure(operation));
+        }
+
+        // then
+        assertEquals(operations.size(), failures.size());
+        assertTrue(failures.stream()
+                .allMatch(IllegalStateException.class::isInstance));
+    }
+
+    @Test
+    void shouldInvalidateProcessorHandleObtainedBeforeClose() {
+        // given
+        Blue blue = Blue.withCachePolicy(BlueCachePolicy.boundedDefaults());
+        DocumentProcessor leakedProcessor = blue.getDocumentProcessor();
+
+        // when
+        blue.close();
+        Throwable initializationFailure = captureFailure(
+                () -> leakedProcessor.initializeDocument(document(4)));
+        Throwable markerFailure = captureFailure(
+                () -> leakedProcessor.markersFor(new Node(), "/"));
+        boolean closed = leakedProcessor.isClosed();
+        boolean supportsSnapshots = leakedProcessor.supportsSnapshotProcessing();
+        int retainedEntries = leakedProcessor.cacheEntryCount();
+
+        // then
+        assertTrue(initializationFailure instanceof IllegalStateException,
+                "a processor handle obtained before close must observe cache invalidation");
+        assertTrue(markerFailure instanceof IllegalStateException,
+                "a leaked processor handle must not repopulate owned caches after runtime close");
+        assertTrue(closed);
+        assertFalse(supportsSnapshots,
+                "closed leaked handles must detach the runtime snapshot collaborator");
+        assertEquals(0, retainedEntries);
+    }
+
+    @Test
+    void shouldKeepPureSerializationAvailableAfterClose() {
+        // given
+        Blue blue = Blue.withCachePolicy(BlueCachePolicy.boundedDefaults());
+
+        // when
+        blue.close();
+        String json = blue.nodeToJson(document(3));
+        Node parsed = blue.parseSourceJson("{\"value\":3}");
+
+        // then
+        assertTrue(json.contains("value"));
+        assertEquals("3", parsed.getValue().toString());
+    }
+
+    private static Throwable captureFailure(Runnable operation) {
+        try {
+            operation.run();
+            return null;
+        } catch (Throwable failure) {
+            return failure;
+        }
+    }
+
+    @Test
+    void shouldNotDeadlockWhenClosingWithConcurrentCacheReaders() throws Exception {
+        // given
         Blue blue = Blue.withCachePolicy(BlueCachePolicy.boundedDefaults());
         blue.resolveToSnapshot(document(1));
         Thread reader = new Thread(() -> {
@@ -465,36 +633,47 @@ class BlueCacheLifecycleTest {
                 blue.cacheStats();
             }
         });
-        reader.start();
 
+        // when
+        reader.start();
         blue.close();
         reader.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean readerAlive = reader.isAlive();
 
-        assertTrue(!reader.isAlive(), "cache reader must finish when close completes");
+        // then
+        assertFalse(readerAlive, "cache reader must finish when close completes");
     }
 
     @Test
-    void closeFromPreservedPathPredicateIsRejectedForTheWholeCompositeOperation() {
+    void shouldRejectCloseFromPreservedPathPredicateForWholeCompositeOperation() {
+        // given
         Blue blue = new Blue();
-        AtomicReference<IllegalStateException> closeFailure = new AtomicReference<>();
+        AtomicReference<Throwable> closeFailure = new AtomicReference<>();
 
+        // when
         Node resolved = blue.resolvePreservingMatchingPaths(
                 document(5),
                 Collections.singletonList("/value"),
                 node -> {
-                    closeFailure.set(assertThrows(IllegalStateException.class, blue::close));
+                    closeFailure.set(captureFailure(blue::close));
                     return true;
                 });
+        boolean closedAfterCompositeOperation = blue.isClosed();
+        blue.close();
+        boolean closedAfterCleanup = blue.isClosed();
 
+        // then
+        assertTrue(closeFailure.get() instanceof IllegalStateException);
         assertEquals("Blue runtime cannot close from active runtime work",
                 closeFailure.get().getMessage());
-        assertFalse(blue.isClosed());
+        assertFalse(closedAfterCompositeOperation);
         assertTrue(resolved != null);
-        blue.close();
+        assertTrue(closedAfterCleanup);
     }
 
     @Test
-    void closeWaitsForLazyProcessorPublicationAndReleasesThePublishedProcessor() throws Exception {
+    void shouldWaitForLazyProcessorPublicationAndReleaseItWhenClosing() throws Exception {
+        // given
         BlockingProviderBlue blue = new BlockingProviderBlue();
         Field processorField = Blue.class.getDeclaredField("documentProcessor");
         processorField.setAccessible(true);
@@ -508,8 +687,10 @@ class BlueCacheLifecycleTest {
                 failure.set(throwable);
             }
         });
+
+        // when
         getter.start();
-        assertTrue(blue.providerEntered.await(5L, TimeUnit.SECONDS));
+        boolean providerEntered = blue.providerEntered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch closeStarted = new CountDownLatch(1);
         CountDownLatch closeReturned = new CountDownLatch(1);
@@ -519,25 +700,38 @@ class BlueCacheLifecycleTest {
             closeReturned.countDown();
         });
         closer.start();
-        assertTrue(closeStarted.await(5L, TimeUnit.SECONDS));
-        assertFalse(closeReturned.await(200L, TimeUnit.MILLISECONDS),
-                "close must serialize with an in-flight lazy processor publication");
+        boolean closeStartedObserved = closeStarted.await(5L, TimeUnit.SECONDS);
+        boolean closeReturnedBeforePublication =
+                closeReturned.await(200L, TimeUnit.MILLISECONDS);
 
         blue.releaseProvider.countDown();
         getter.join(TimeUnit.SECONDS.toMillis(5L));
         closer.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean getterAlive = getter.isAlive();
+        boolean closerAlive = closer.isAlive();
+        Throwable publicationFailure = failure.get();
+        boolean closed = blue.isClosed();
+        Object publishedProcessor = processorField.get(blue);
+        BlueCacheStats closedStats = blue.cacheStats();
 
-        assertFalse(getter.isAlive());
-        assertFalse(closer.isAlive());
-        assertNull(failure.get());
-        assertTrue(blue.isClosed());
-        assertNull(processorField.get(blue));
-        assertEquals(0, blue.cacheStats().entries());
-        assertEquals(0L, blue.cacheStats().currentWeightBytes());
+        // then
+        assertTrue(providerEntered);
+        assertTrue(closeStartedObserved);
+        assertFalse(closeReturnedBeforePublication,
+                "close must serialize with an in-flight lazy processor publication");
+        assertFalse(getterAlive);
+        assertFalse(closerAlive);
+        assertNull(publicationFailure);
+        assertTrue(closed);
+        assertNull(publishedProcessor);
+        assertEquals(0, closedStats.entries());
+        assertEquals(0L, closedStats.currentWeightBytes());
     }
 
     @Test
-    void closeWaitsForAdmittedOwnedProcessingThenReleasesItsPublication() throws Exception {
+    void shouldWaitForAdmittedOwnedProcessingAndReleaseItsPublicationWhenClosing()
+            throws Exception {
+        // given
         Node completedDocument = document(42);
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
@@ -556,8 +750,10 @@ class BlueCacheLifecycleTest {
                 failure.set(throwable);
             }
         });
+
+        // when
         processing.start();
-        assertTrue(processor.entered.await(5L, TimeUnit.SECONDS));
+        boolean processingEntered = processor.entered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch closeReturned = new CountDownLatch(1);
         Thread closing = new Thread(() -> {
@@ -570,23 +766,35 @@ class BlueCacheLifecycleTest {
             }
         });
         closing.start();
-        assertFalse(closeReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean closeReturnedBeforeProcessing =
+                closeReturned.await(200L, TimeUnit.MILLISECONDS);
         processor.release.countDown();
         processing.join(TimeUnit.SECONDS.toMillis(5L));
         closing.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean processingAlive = processing.isAlive();
+        boolean closingAlive = closing.isAlive();
+        Throwable processingFailure = failure.get();
+        boolean blueClosed = blue.isClosed();
+        boolean processorClosed = processor.isClosed();
+        BlueCacheStats.Region recentSnapshots =
+                blue.cacheStats().region("recentProcessingSnapshots");
 
-        assertFalse(processing.isAlive());
-        assertFalse(closing.isAlive());
-        assertNull(failure.get());
-        assertTrue(blue.isClosed());
-        assertTrue(processor.isClosed());
-        assertEquals(0, blue.cacheStats().region("recentProcessingSnapshots").entries());
-        assertEquals(0L,
-                blue.cacheStats().region("recentProcessingSnapshots").currentWeightBytes());
+        // then
+        assertTrue(processingEntered);
+        assertFalse(closeReturnedBeforeProcessing);
+        assertFalse(processingAlive);
+        assertFalse(closingAlive);
+        assertNull(processingFailure);
+        assertTrue(blueClosed);
+        assertTrue(processorClosed);
+        assertEquals(0, recentSnapshots.entries());
+        assertEquals(0L, recentSnapshots.currentWeightBytes());
     }
 
     @Test
-    void closeWaitsForAdmittedDirectResolutionBeforeReleasingCaches() throws Exception {
+    void shouldWaitForAdmittedDirectResolutionBeforeReleasingCachesWhenClosing()
+            throws Exception {
+        // given
         Node canonical = document(52);
         String blueId = BlueIdCalculator.calculateBlueId(canonical);
         CountDownLatch providerEntered = new CountDownLatch(1);
@@ -612,8 +820,10 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         resolving.start();
-        assertTrue(providerEntered.await(5L, TimeUnit.SECONDS));
+        boolean providerEnteredObserved = providerEntered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch closeReturned = new CountDownLatch(1);
         Thread closing = new Thread(() -> {
@@ -626,24 +836,38 @@ class BlueCacheLifecycleTest {
             }
         });
         closing.start();
-        assertFalse(closeReturned.await(200L, TimeUnit.MILLISECONDS));
-        assertThrows(IllegalStateException.class, () -> blue.loadSnapshot(blueId),
-                "close must reject new work while draining the admitted resolution");
+        boolean closeReturnedBeforeResolution =
+                closeReturned.await(200L, TimeUnit.MILLISECONDS);
+        Throwable newWorkFailure =
+                captureFailure(() -> blue.loadSnapshot(blueId));
 
         releaseProvider.countDown();
         resolving.join(TimeUnit.SECONDS.toMillis(5L));
         closing.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean resolvingAlive = resolving.isAlive();
+        boolean closingAlive = closing.isAlive();
+        Throwable resolutionFailure = failure.get();
+        ResolvedSnapshot resolved = result.get();
+        boolean closed = blue.isClosed();
+        int retainedEntries = blue.cacheStats().entries();
 
-        assertFalse(resolving.isAlive());
-        assertFalse(closing.isAlive());
-        assertNull(failure.get());
-        assertEquals(blueId, result.get().blueId());
-        assertTrue(blue.isClosed());
-        assertEquals(0, blue.cacheStats().entries());
+        // then
+        assertTrue(providerEnteredObserved);
+        assertFalse(closeReturnedBeforeResolution);
+        assertTrue(newWorkFailure instanceof IllegalStateException,
+                "close must reject new work while draining the admitted resolution");
+        assertFalse(resolvingAlive);
+        assertFalse(closingAlive);
+        assertNull(resolutionFailure);
+        assertEquals(blueId, resolved.blueId());
+        assertTrue(closed);
+        assertEquals(0, retainedEntries);
     }
 
     @Test
-    void closeWaitsAcrossCompositeObjectConversionAndRuntimePhase() throws Exception {
+    void shouldWaitAcrossCompositeObjectConversionAndRuntimePhaseWhenClosing()
+            throws Exception {
+        // given
         BlockingObjectConversionBlue blue = new BlockingObjectConversionBlue();
         Map<String, Object> source = new HashMap<>();
         source.put("payload", "composite-operation");
@@ -656,8 +880,11 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         resolving.start();
-        assertTrue(blue.conversionCompleted.await(5L, TimeUnit.SECONDS));
+        boolean conversionCompleted =
+                blue.conversionCompleted.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch closeReturned = new CountDownLatch(1);
         Thread closing = new Thread(() -> {
@@ -670,22 +897,33 @@ class BlueCacheLifecycleTest {
             }
         });
         closing.start();
-        assertFalse(closeReturned.await(200L, TimeUnit.MILLISECONDS),
-                "close must wait across conversion and the runtime-backed second phase");
+        boolean closeReturnedBeforeConversion =
+                closeReturned.await(200L, TimeUnit.MILLISECONDS);
 
         blue.releaseConversion.countDown();
         resolving.join(TimeUnit.SECONDS.toMillis(5L));
         closing.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean resolvingAlive = resolving.isAlive();
+        boolean closingAlive = closing.isAlive();
+        Throwable conversionFailure = failure.get();
+        ResolvedSnapshot resolved = result.get();
+        boolean closed = blue.isClosed();
 
-        assertFalse(resolving.isAlive());
-        assertFalse(closing.isAlive());
-        assertNull(failure.get());
-        assertTrue(result.get() != null);
-        assertTrue(blue.isClosed());
+        // then
+        assertTrue(conversionCompleted);
+        assertFalse(closeReturnedBeforeConversion,
+                "close must wait across conversion and the runtime-backed second phase");
+        assertFalse(resolvingAlive);
+        assertFalse(closingAlive);
+        assertNull(conversionFailure);
+        assertTrue(resolved != null);
+        assertTrue(closed);
     }
 
     @Test
-    void providerReplacementWaitsForRecursiveExpandAndCannotMixProviders() throws Exception {
+    void shouldWaitForRecursiveExpandBeforeReplacingProviderWithoutMixingProviders()
+            throws Exception {
+        // given
         CountDownLatch rootFetchEntered = new CountDownLatch(1);
         CountDownLatch releaseRootFetch = new CountDownLatch(1);
         Node originalLeaf = new Node().value("original");
@@ -722,8 +960,11 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         expanding.start();
-        assertTrue(rootFetchEntered.await(5L, TimeUnit.SECONDS));
+        boolean rootFetchEnteredObserved =
+                rootFetchEntered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch replacementReturned = new CountDownLatch(1);
         Thread replacement = new Thread(() -> {
@@ -738,22 +979,34 @@ class BlueCacheLifecycleTest {
             }
         });
         replacement.start();
-        assertFalse(replacementReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean replacementReturnedBeforeExpansion =
+                replacementReturned.await(200L, TimeUnit.MILLISECONDS);
 
         releaseRootFetch.countDown();
         expanding.join(TimeUnit.SECONDS.toMillis(5L));
         replacement.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean expandingAlive = expanding.isAlive();
+        boolean replacementAlive = replacement.isAlive();
+        Throwable expansionFailure = failure.get();
+        Object originalValue =
+                expanded.get().getProperties().get("child").getValue();
+        Object replacementValue =
+                blue.expand(new Node().blueId(replacementLeafBlueId)).getValue();
 
-        assertFalse(expanding.isAlive());
-        assertFalse(replacement.isAlive());
-        assertNull(failure.get());
-        assertEquals("original", expanded.get().getProperties().get("child").getValue());
-        assertEquals("replacement",
-                blue.expand(new Node().blueId(replacementLeafBlueId)).getValue());
+        // then
+        assertTrue(rootFetchEnteredObserved);
+        assertFalse(replacementReturnedBeforeExpansion);
+        assertFalse(expandingAlive);
+        assertFalse(replacementAlive);
+        assertNull(expansionFailure);
+        assertEquals("original", originalValue);
+        assertEquals("replacement", replacementValue);
     }
 
     @Test
-    void providerReplacementWaitsForSubtypeTraversalAndCannotMixProviders() throws Exception {
+    void shouldWaitForSubtypeTraversalBeforeReplacingProviderWithoutMixingProviders()
+            throws Exception {
+        // given
         Node superType = new Node().name("Subtype gate supertype");
         String superTypeBlueId = BlueIdCalculator.calculateBlueId(superType);
         Node candidateType = new Node()
@@ -792,8 +1045,11 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         matching.start();
-        assertTrue(candidateFetchEntered.await(5L, TimeUnit.SECONDS));
+        boolean candidateFetchEnteredObserved =
+                candidateFetchEntered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch replacementReturned = new CountDownLatch(1);
         Thread replacement = new Thread(() -> {
@@ -806,23 +1062,33 @@ class BlueCacheLifecycleTest {
             }
         });
         replacement.start();
-        assertFalse(replacementReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean replacementReturnedBeforeTraversal =
+                replacementReturned.await(200L, TimeUnit.MILLISECONDS);
 
         releaseCandidateFetch.countDown();
         matching.join(TimeUnit.SECONDS.toMillis(5L));
         replacement.join(TimeUnit.SECONDS.toMillis(5L));
-
-        assertFalse(matching.isAlive());
-        assertFalse(replacement.isAlive());
-        assertNull(failure.get());
-        assertEquals(Boolean.TRUE, result.get());
-        assertFalse(blue.isNodeSubtypeOf(
+        boolean matchingAlive = matching.isAlive();
+        boolean replacementAlive = replacement.isAlive();
+        Throwable traversalFailure = failure.get();
+        Boolean originalProviderResult = result.get();
+        boolean replacementProviderResult = blue.isNodeSubtypeOf(
                 new Node().blueId(candidateTypeBlueId),
-                new Node().blueId(superTypeBlueId)));
+                new Node().blueId(superTypeBlueId));
+
+        // then
+        assertTrue(candidateFetchEnteredObserved);
+        assertFalse(replacementReturnedBeforeTraversal);
+        assertFalse(matchingAlive);
+        assertFalse(replacementAlive);
+        assertNull(traversalFailure);
+        assertEquals(Boolean.TRUE, originalProviderResult);
+        assertFalse(replacementProviderResult);
     }
 
     @Test
-    void retainedConformanceEngineCannotPublishStaleMergerEvidenceAfterRefresh() {
+    void shouldPreventRetainedConformanceEngineFromPublishingStaleEvidenceAfterRefresh() {
+        // given
         Node type = new Node().properties("typeMarker", new Node().value(true));
         String typeBlueId = BlueIdCalculator.calculateBlueId(type);
         NodeProvider oldProvider = blueId -> typeBlueId.equals(blueId)
@@ -831,27 +1097,40 @@ class BlueCacheLifecycleTest {
                 ? Collections.singletonList(type.clone()) : null;
         Blue blue = new Blue(oldProvider, new EvidenceMergingProcessor("oldEvidence"));
         ConformanceEngine staleEngine = blue.conformanceEngine();
+
+        // when
+        int referencesAfterRefresh;
+        boolean staleConforms;
+        int referencesAfterStaleUse;
+        boolean hasNewEvidence;
+        boolean hasOldEvidence;
         try {
             blue.nodeProvider(newProvider);
             blue.mergingProcessor(new EvidenceMergingProcessor("newEvidence"));
-            assertEquals(0, blue.resolvedReferenceCacheSize());
-
-            assertTrue(staleEngine.conforms(
-                    new Node().type(new Node().blueId(typeBlueId))));
-            assertEquals(0, blue.resolvedReferenceCacheSize(),
-                    "a retained engine must not publish into Blue's current cache generation");
-
+            referencesAfterRefresh = blue.resolvedReferenceCacheSize();
+            staleConforms = staleEngine.conforms(
+                    new Node().type(new Node().blueId(typeBlueId)));
+            referencesAfterStaleUse = blue.resolvedReferenceCacheSize();
             Node resolved = blue.resolve(new Node().type(new Node().blueId(typeBlueId)));
-            assertTrue(resolved.getProperties().get("newEvidence") != null);
-            assertTrue(resolved.getProperties().get("oldEvidence") == null,
-                    "current resolution must not consume stale merger output");
+            hasNewEvidence = resolved.getProperties().get("newEvidence") != null;
+            hasOldEvidence = resolved.getProperties().get("oldEvidence") != null;
         } finally {
             staleEngine.close();
         }
+
+        // then
+        assertEquals(0, referencesAfterRefresh);
+        assertTrue(staleConforms);
+        assertEquals(0, referencesAfterStaleUse,
+                "a retained engine must not publish into Blue's current cache generation");
+        assertTrue(hasNewEvidence);
+        assertFalse(hasOldEvidence,
+                "current resolution must not consume stale merger output");
     }
 
     @Test
-    void conformanceEngineRetainsVisibilityOfCallerPinnedVerifiedSnapshots() {
+    void shouldRetainCallerPinnedVerifiedSnapshotVisibilityInConformanceEngine() {
+        // given
         Node type = new Node().properties("pinnedMarker", new Node().value(true));
         String typeBlueId = BlueIdCalculator.calculateBlueId(type);
         BasicNodeProvider provider = new BasicNodeProvider();
@@ -859,18 +1138,20 @@ class BlueCacheLifecycleTest {
         Blue source = new Blue(provider);
         Blue target = new Blue(blueId -> null);
         ConformanceEngine engine = null;
+
+        // when
+        boolean conformsBeforeClear;
+        boolean conformsAfterClear;
         try {
             ResolvedSnapshot verifiedType = source.loadSnapshot(typeBlueId);
             target.cacheResolvedSnapshot(verifiedType);
 
             engine = target.conformanceEngine();
-            assertTrue(engine.conforms(
-                    new Node().type(new Node().blueId(typeBlueId))));
-
+            conformsBeforeClear = engine.conforms(
+                    new Node().type(new Node().blueId(typeBlueId)));
             target.clearResolvedSnapshotCache();
-            assertTrue(engine.conforms(
-                    new Node().type(new Node().blueId(typeBlueId))),
-                    "the retained handle must own its pinned-evidence snapshot");
+            conformsAfterClear = engine.conforms(
+                    new Node().type(new Node().blueId(typeBlueId)));
         } finally {
             if (engine != null) {
                 engine.close();
@@ -878,10 +1159,17 @@ class BlueCacheLifecycleTest {
             target.close();
             source.close();
         }
+
+        // then
+        assertTrue(conformsBeforeClear);
+        assertTrue(conformsAfterClear,
+                "the retained handle must own its pinned-evidence snapshot");
     }
 
     @Test
-    void displacedProcessorCannotPublishOldSnapshotAfterProviderReplacement() throws Exception {
+    void shouldPreventDisplacedProcessorFromPublishingSnapshotAfterProviderReplacement()
+            throws Exception {
+        // given
         Node completedDocument = document(77);
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
@@ -897,8 +1185,10 @@ class BlueCacheLifecycleTest {
                 failure.set(throwable);
             }
         });
+
+        // when
         processing.start();
-        assertTrue(processor.entered.await(5L, TimeUnit.SECONDS));
+        boolean processingEntered = processor.entered.await(5L, TimeUnit.SECONDS);
 
         AtomicReference<Throwable> replacementFailure = new AtomicReference<>();
         CountDownLatch replacementReturned = new CountDownLatch(1);
@@ -914,22 +1204,32 @@ class BlueCacheLifecycleTest {
         replacement.start();
         // Configuration replacement is a cache-generation barrier: it must
         // wait until the old processor can no longer publish its result.
-        assertFalse(replacementReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean replacementReturnedBeforeProcessing =
+                replacementReturned.await(200L, TimeUnit.MILLISECONDS);
         processor.release.countDown();
         processing.join(TimeUnit.SECONDS.toMillis(5L));
         replacement.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean processingAlive = processing.isAlive();
+        boolean replacementAlive = replacement.isAlive();
+        Throwable processingFailure = failure.get();
+        Throwable providerReplacementFailure = replacementFailure.get();
+        BlueCacheStats stats = blue.cacheStats();
 
-        assertFalse(processing.isAlive());
-        assertFalse(replacement.isAlive());
-        assertNull(failure.get());
-        assertNull(replacementFailure.get());
-        assertEquals(0, blue.cacheStats().region("recentProcessingSnapshots").entries());
-        assertEquals(0, blue.cacheStats().region("derivedResolvedSnapshots").entries());
+        // then
+        assertTrue(processingEntered);
+        assertFalse(replacementReturnedBeforeProcessing);
+        assertFalse(processingAlive);
+        assertFalse(replacementAlive);
+        assertNull(processingFailure);
+        assertNull(providerReplacementFailure);
+        assertEquals(0, stats.region("recentProcessingSnapshots").entries());
+        assertEquals(0, stats.region("derivedResolvedSnapshots").entries());
     }
 
     @Test
-    void processorRegistrationWaitsForConfigurationRefreshAndTargetsPublishedProcessor()
+    void shouldWaitForConfigurationRefreshBeforeRegisteringWithPublishedProcessor()
             throws Exception {
+        // given
         Node completedDocument = document(78);
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
@@ -945,8 +1245,10 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         processing.start();
-        assertTrue(displaced.entered.await(5L, TimeUnit.SECONDS));
+        boolean processingEntered = displaced.entered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch replacementReturned = new CountDownLatch(1);
         Thread replacement = new Thread(() -> {
@@ -959,7 +1261,8 @@ class BlueCacheLifecycleTest {
             }
         });
         replacement.start();
-        assertFalse(replacementReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean replacementReturnedBeforeProcessing =
+                replacementReturned.await(200L, TimeUnit.MILLISECONDS);
 
         RegistrationMarkerProcessor processor = new RegistrationMarkerProcessor();
         CountDownLatch registrationReturned = new CountDownLatch(1);
@@ -973,25 +1276,38 @@ class BlueCacheLifecycleTest {
             }
         });
         registration.start();
-        assertFalse(displaced.registrationEntered.await(200L, TimeUnit.MILLISECONDS),
-                "registration must not mutate the displaced processor during refresh");
-        assertFalse(registrationReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean displacedRegistrationEntered =
+                displaced.registrationEntered.await(200L, TimeUnit.MILLISECONDS);
+        boolean registrationReturnedBeforeRefresh =
+                registrationReturned.await(200L, TimeUnit.MILLISECONDS);
 
         displaced.release.countDown();
         processing.join(TimeUnit.SECONDS.toMillis(5L));
         replacement.join(TimeUnit.SECONDS.toMillis(5L));
         registration.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean processingAlive = processing.isAlive();
+        boolean replacementAlive = replacement.isAlive();
+        boolean registrationAlive = registration.isAlive();
+        Throwable concurrentFailure = failure.get();
+        ContractProcessor<?> registered = blue.getDocumentProcessor().getContractRegistry()
+                .processors().get("registration-race");
 
-        assertFalse(processing.isAlive());
-        assertFalse(replacement.isAlive());
-        assertFalse(registration.isAlive());
-        assertNull(failure.get());
-        assertSame(processor, blue.getDocumentProcessor().getContractRegistry()
-                .processors().get("registration-race"));
+        // then
+        assertTrue(processingEntered);
+        assertFalse(replacementReturnedBeforeProcessing);
+        assertFalse(displacedRegistrationEntered,
+                "registration must not mutate the displaced processor during refresh");
+        assertFalse(registrationReturnedBeforeRefresh);
+        assertFalse(processingAlive);
+        assertFalse(replacementAlive);
+        assertFalse(registrationAlive);
+        assertNull(concurrentFailure);
+        assertSame(processor, registered);
     }
 
     @Test
-    void explicitClearRejectsLateBorrowedProcessorPublication() throws Exception {
+    void shouldRejectLateBorrowedProcessorPublicationAfterExplicitClear() throws Exception {
+        // given
         Node completedDocument = document(88);
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
@@ -1007,8 +1323,10 @@ class BlueCacheLifecycleTest {
                 failure.set(throwable);
             }
         });
+
+        // when
         processing.start();
-        assertTrue(processor.entered.await(5L, TimeUnit.SECONDS));
+        boolean processingEntered = processor.entered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch clearReturned = new CountDownLatch(1);
         Thread clearing = new Thread(() -> {
@@ -1021,20 +1339,30 @@ class BlueCacheLifecycleTest {
             }
         });
         clearing.start();
-        assertFalse(clearReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean clearReturnedBeforeProcessing =
+                clearReturned.await(200L, TimeUnit.MILLISECONDS);
         processor.release.countDown();
         processing.join(TimeUnit.SECONDS.toMillis(5L));
         clearing.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean processingAlive = processing.isAlive();
+        boolean clearingAlive = clearing.isAlive();
+        Throwable processingFailure = failure.get();
+        BlueCacheStats stats = blue.cacheStats();
 
-        assertFalse(processing.isAlive());
-        assertFalse(clearing.isAlive());
-        assertNull(failure.get());
-        assertEquals(0, blue.cacheStats().region("recentProcessingSnapshots").entries());
-        assertEquals(0, blue.cacheStats().region("derivedResolvedSnapshots").entries());
+        // then
+        assertTrue(processingEntered);
+        assertFalse(clearReturnedBeforeProcessing);
+        assertFalse(processingAlive);
+        assertFalse(clearingAlive);
+        assertNull(processingFailure);
+        assertEquals(0, stats.region("recentProcessingSnapshots").entries());
+        assertEquals(0, stats.region("derivedResolvedSnapshots").entries());
     }
 
     @Test
-    void concurrentCloseWaitsForInProgressInvalidationWithoutStrandingGate() throws Exception {
+    void shouldWaitForInProgressInvalidationWithoutStrandingConcurrentCloseGate()
+            throws Exception {
+        // given
         Node completedDocument = document(89);
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
@@ -1050,8 +1378,10 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         processing.start();
-        assertTrue(processor.entered.await(5L, TimeUnit.SECONDS));
+        boolean processingEntered = processor.entered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch clearReturned = new CountDownLatch(1);
         Thread clearing = new Thread(() -> {
@@ -1064,7 +1394,8 @@ class BlueCacheLifecycleTest {
             }
         });
         clearing.start();
-        assertFalse(clearReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean clearReturnedBeforeProcessing =
+                clearReturned.await(200L, TimeUnit.MILLISECONDS);
 
         CountDownLatch closeReturned = new CountDownLatch(1);
         Thread closing = new Thread(() -> {
@@ -1077,25 +1408,47 @@ class BlueCacheLifecycleTest {
             }
         });
         closing.start();
-        assertFalse(closeReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean closeReturnedBeforeProcessing =
+                closeReturned.await(200L, TimeUnit.MILLISECONDS);
 
         processor.release.countDown();
         processing.join(TimeUnit.SECONDS.toMillis(5L));
         clearing.join(TimeUnit.SECONDS.toMillis(5L));
         closing.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean processingAlive = processing.isAlive();
+        boolean clearingAlive = clearing.isAlive();
+        boolean closingAlive = closing.isAlive();
+        Throwable concurrentFailure = failure.get();
+        boolean closed = blue.isClosed();
+        AtomicReference<Throwable> postCloseFailure = new AtomicReference<>();
+        Thread rejectedWork = new Thread(() -> postCloseFailure.set(
+                captureFailure(() -> blue.processDocument(document(2), new Node()))));
+        rejectedWork.setDaemon(true);
+        rejectedWork.start();
+        rejectedWork.join(TimeUnit.SECONDS.toMillis(2L));
+        boolean rejectedWorkAlive = rejectedWork.isAlive();
+        if (rejectedWorkAlive) {
+            rejectedWork.interrupt();
+        }
 
-        assertFalse(processing.isAlive());
-        assertFalse(clearing.isAlive());
-        assertFalse(closing.isAlive());
-        assertNull(failure.get());
-        assertTrue(blue.isClosed());
-        assertTimeoutPreemptively(Duration.ofSeconds(2L), () ->
-                assertThrows(IllegalStateException.class,
-                        () -> blue.processDocument(document(2), new Node())));
+        // then
+        assertTrue(processingEntered);
+        assertFalse(clearReturnedBeforeProcessing);
+        assertFalse(closeReturnedBeforeProcessing);
+        assertFalse(processingAlive);
+        assertFalse(clearingAlive);
+        assertFalse(closingAlive);
+        assertNull(concurrentFailure);
+        assertTrue(closed);
+        assertFalse(rejectedWorkAlive,
+                "closed runtime rejection must not strand the lifecycle gate");
+        assertTrue(postCloseFailure.get() instanceof IllegalStateException);
     }
 
     @Test
-    void mergerReplacementWaitsForDirectSnapshotResolutionThenClearsItsResult() throws Exception {
+    void shouldWaitForDirectResolutionAndClearItsResultWhenReplacingMerger()
+            throws Exception {
+        // given
         BlockingMergingProcessor blocking = new BlockingMergingProcessor();
         Blue blue = new Blue(node -> null, blocking);
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -1106,8 +1459,10 @@ class BlueCacheLifecycleTest {
                 failure.compareAndSet(null, throwable);
             }
         });
+
+        // when
         resolving.start();
-        assertTrue(blocking.entered.await(5L, TimeUnit.SECONDS));
+        boolean resolutionEntered = blocking.entered.await(5L, TimeUnit.SECONDS);
 
         CountDownLatch replacementReturned = new CountDownLatch(1);
         Thread replacement = new Thread(() -> {
@@ -1120,21 +1475,32 @@ class BlueCacheLifecycleTest {
             }
         });
         replacement.start();
-        assertFalse(replacementReturned.await(200L, TimeUnit.MILLISECONDS));
+        boolean replacementReturnedBeforeResolution =
+                replacementReturned.await(200L, TimeUnit.MILLISECONDS);
 
         blocking.release.countDown();
         resolving.join(TimeUnit.SECONDS.toMillis(5L));
         replacement.join(TimeUnit.SECONDS.toMillis(5L));
+        boolean resolvingAlive = resolving.isAlive();
+        boolean replacementAlive = replacement.isAlive();
+        Throwable resolutionFailure = failure.get();
+        int derivedEntries =
+                blue.cacheStats().region("derivedResolvedSnapshots").entries();
+        int referenceEntries = blue.resolvedReferenceCacheSize();
 
-        assertFalse(resolving.isAlive());
-        assertFalse(replacement.isAlive());
-        assertNull(failure.get());
-        assertEquals(0, blue.cacheStats().region("derivedResolvedSnapshots").entries());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
+        // then
+        assertTrue(resolutionEntered);
+        assertFalse(replacementReturnedBeforeResolution);
+        assertFalse(resolvingAlive);
+        assertFalse(replacementAlive);
+        assertNull(resolutionFailure);
+        assertEquals(0, derivedEntries);
+        assertEquals(0, referenceEntries);
     }
 
     @Test
-    void aliasReplacementRefreshesTheEagerProcessorAndOwnsCallerMap() throws Exception {
+    void shouldRefreshEagerProcessorAndOwnCallerMapWhenReplacingAliases() throws Exception {
+        // given
         Node aliasTarget = new Node()
                 .name("Alias Target")
                 .properties("provided", new Node().value(true));
@@ -1144,6 +1510,7 @@ class BlueCacheLifecycleTest {
         Map<String, String> aliases = new HashMap<>();
         aliases.put("friendly", targetBlueId);
 
+        // when
         blue.preprocessingAliases(aliases);
         aliases.put("friendly", "invalid-after-registration");
         Field managerField = DocumentProcessor.class.getDeclaredField("snapshotManager");
@@ -1155,15 +1522,19 @@ class BlueCacheLifecycleTest {
         @SuppressWarnings("unchecked")
         Map<String, String> capturedAliases =
                 (Map<String, String>) aliasesField.get(manager);
-
-        assertEquals(targetBlueId, capturedAliases.get("friendly"));
-        assertEquals(targetBlueId, blue.getPreprocessingAliases().get("friendly"));
-        assertThrows(UnsupportedOperationException.class,
+        String publishedAlias = blue.getPreprocessingAliases().get("friendly");
+        Throwable mutationFailure = captureFailure(
                 () -> blue.getPreprocessingAliases().put("other", targetBlueId));
+
+        // then
+        assertEquals(targetBlueId, capturedAliases.get("friendly"));
+        assertEquals(targetBlueId, publishedAlias);
+        assertTrue(mutationFailure instanceof UnsupportedOperationException);
     }
 
     @Test
-    void verifiedReferenceAccelerationIsBoundedWhileExplicitRegistrationPinsContent() {
+    void shouldBoundVerifiedReferenceAccelerationWhilePinningExplicitRegistration() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         for (int index = 0; index < 6; index++) {
             provider.addSingleNodes(new Node()
@@ -1176,6 +1547,8 @@ class BlueCacheLifecycleTest {
                 .maximumDerivedEntryWeightBytes(1024L * 1024L)
                 .build();
         Blue blue = new Blue(provider, null, null, policy);
+
+        // when
         ResolvedSnapshot authoritative = blue.loadSnapshot(
                 provider.getBlueIdByName("Reference Type 0"));
         blue.clearResolvedSnapshotCache();
@@ -1184,18 +1557,20 @@ class BlueCacheLifecycleTest {
         for (int index = 1; index < 6; index++) {
             blue.loadSnapshot(provider.getBlueIdByName("Reference Type " + index));
         }
-
         BlueCacheStats.Region references = blue.cacheStats().region("verifiedReferences");
+        ResolvedSnapshot cached = blue.cachedResolvedSnapshot(authoritative.blueId())
+                .orElseThrow(AssertionError::new);
+
+        // then
         assertTrue(references.entries() <= 2,
                 "one pinned entry plus bounded derived reference evidence");
         assertTrue(references.evictions() > 0L);
-        assertSame(authoritative,
-                blue.cachedResolvedSnapshot(authoritative.blueId()).orElseThrow(
-                        AssertionError::new));
+        assertSame(authoritative, cached);
     }
 
     @Test
-    void verifiedReplacementOfPinnedSnapshotPromotesItsReferenceEvidence() {
+    void shouldPromoteReferenceEvidenceWhenReplacingPinnedSnapshotWithVerifiedSnapshot() {
+        // given
         BlueCachePolicy policy = BlueCachePolicy.builder()
                 .transientReferences(1, 1024L * 1024L)
                 .maximumDerivedEntryWeightBytes(1024L * 1024L)
@@ -1206,13 +1581,20 @@ class BlueCacheLifecycleTest {
         ResolvedSnapshot unverified = new ResolvedSnapshot(
                 canonical, canonical.clone(), blueId);
 
+        // when
         blue.cacheResolvedSnapshot(unverified);
         ResolvedSnapshot verified = blue.loadSnapshot(canonical);
+        boolean verifiedReferencePresent =
+                verified.verifiedReferenceResolution() != null;
+        boolean verifiedReferencePinned =
+                blue.cacheStats().region("verifiedReferences").isPinned();
+        ResolvedSnapshot cached = blue.cachedResolvedSnapshot(blueId)
+                .orElseThrow(AssertionError::new);
 
-        assertTrue(verified.verifiedReferenceResolution() != null);
-        assertTrue(blue.cacheStats().region("verifiedReferences").isPinned());
-        assertSame(verified,
-                blue.cachedResolvedSnapshot(blueId).orElseThrow(AssertionError::new));
+        // then
+        assertTrue(verifiedReferencePresent);
+        assertTrue(verifiedReferencePinned);
+        assertSame(verified, cached);
     }
 
     private Node document(int value) {

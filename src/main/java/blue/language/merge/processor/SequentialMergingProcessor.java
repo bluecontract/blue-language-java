@@ -8,10 +8,20 @@ import blue.language.merge.NodeResolver;
 
 import java.util.List;
 
+/**
+ * Applies an ordered set of stateless merge stages and forwards completed-value
+ * validation to every interested stage.
+ */
 public class SequentialMergingProcessor implements MergingProcessor, IncrementalMergingProcessorCapability {
 
     private final List<MergingProcessor> mergingProcessors;
 
+    /**
+     * Creates a sequence in the exact supplied order. The list must remain
+     * stable for the lifetime of this processor.
+     *
+     * @param mergingProcessors processors to invoke in deterministic order
+     */
     public SequentialMergingProcessor(List<MergingProcessor> mergingProcessors) {
         this.mergingProcessors = mergingProcessors;
     }

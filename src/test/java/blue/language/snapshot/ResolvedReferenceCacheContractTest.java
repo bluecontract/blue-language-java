@@ -1,7 +1,6 @@
 package blue.language.snapshot;
 
 import blue.language.Blue;
-import blue.language.BlueCachePolicy;
 import blue.language.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.Merger.SnapshotResolution;
@@ -27,9 +26,12 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -40,15 +42,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ResolvedReferenceCacheContractTest {
 
     @Test
-    void frozenCanonicalTracksNestedCyclicSetReferencesWithoutChangingIdentity() {
+    void shouldTrackNestedCyclicSetReferencesInFrozenCanonicalWithoutChangingIdentity() {
+        // given
         String cyclicMemberId = "ENCwyUPUcBhZSYt7ho4Hyjm6iPGC1JrqdBhvJRFPgwFz#0";
         Node ordinary = new Node().properties("nested", new Node().value("value"));
         Node recursive = ordinary.clone().properties("typed",
                 new Node().type(new Node().blueId(cyclicMemberId)));
 
         FrozenNode frozenOrdinary = FrozenNode.fromNode(ordinary);
+        // when
         FrozenNode frozenRecursive = FrozenNode.fromNode(recursive);
 
+        // then
         assertFalse(frozenOrdinary.containsCyclicSetReference());
         assertTrue(frozenRecursive.containsCyclicSetReference());
         assertEquals(new Blue().calculateBlueId(recursive), frozenRecursive.blueId());
@@ -58,36 +63,50 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void frozenNodeDistinguishesNestedTypedObjectsFromSafeTypeRoots() {
+    void shouldDistinguishNestedTypedObjectsFromSafeTypeRootsInFrozenNode() {
+        // given
         FrozenNode nestedTypedObject = FrozenNode.fromResolvedNode(new Node()
                 .properties("branch", new Node().type(reference("branch-type"))
                         .properties("declared", new Node().type("Text"))));
         FrozenNode typedRoot = FrozenNode.fromResolvedNode(new Node()
                 .type(reference("parent-type"))
                 .properties("declared", new Node().schema(new Schema().required(true))));
+        // when
         FrozenNode untypedFixedObject = FrozenNode.fromResolvedNode(new Node()
                 .properties("branch", new Node()
                         .properties("fixed", new Node().value("value"))));
 
+        // then
         assertTrue(nestedTypedObject.containsNestedTypedObjectPayload());
         assertFalse(typedRoot.containsNestedTypedObjectPayload());
         assertFalse(untypedFixedObject.containsNestedTypedObjectPayload());
     }
 
     @Test
-    void verifiedEvidenceValueRemainsOpaqueWhenMergerIsFinal()
+    void shouldKeepVerifiedEvidenceValueOpaqueWhenMergerIsFinal()
             throws NoSuchMethodException {
-        assertTrue(Modifier.isFinal(Merger.class.getModifiers()),
+        // given
+        Class<?> mergerType = Merger.class;
+        Class<?> evidenceType = VerifiedReferenceResolution.class;
+
+        // when
+        int mergerModifiers = mergerType.getModifiers();
+        int evidenceModifiers = evidenceType.getModifiers();
+        int evidenceConstructorModifiers = evidenceType
+                .getDeclaredConstructor(String.class, FrozenNode.class, FrozenNode.class)
+                .getModifiers();
+
+        // then
+        assertTrue(Modifier.isFinal(mergerModifiers),
                 "Merger is a concrete engine; MergingProcessor is the supported extension point");
-        assertTrue(Modifier.isFinal(VerifiedReferenceResolution.class.getModifiers()));
-        assertTrue(Modifier.isPrivate(VerifiedReferenceResolution.class
-                        .getDeclaredConstructor(String.class, FrozenNode.class, FrozenNode.class)
-                        .getModifiers()),
+        assertTrue(Modifier.isFinal(evidenceModifiers));
+        assertTrue(Modifier.isPrivate(evidenceConstructorModifiers),
                 "subclasses must not be able to fabricate verification evidence");
     }
 
     @Test
-    void identityEquivalentCanonicalRepresentationsDoNotConflict() {
+    void shouldNotConflictForIdentityEquivalentCanonicalRepresentations() {
+        // given
         Node materializedSubject = new Node().name("Scenario Subject")
                 .type(reference("vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m"))
                 .properties("identifier", new Node().value("subject-1"));
@@ -98,8 +117,10 @@ class ResolvedReferenceCacheContractTest {
         FrozenNode referenced = FrozenNode.fromNode(referenceHolder);
         FrozenNode materialized = FrozenNode.fromNode(materializedHolder);
         ResolvedReferenceCache referenceFirst = new ResolvedReferenceCache();
+        // when
         ResolvedReferenceCache materializedFirst = new ResolvedReferenceCache();
 
+        // then
         assertEquals(holderId, new Blue().calculateBlueId(materializedHolder));
         assertEquals(holderId, referenced.blueId());
         assertEquals(holderId, materialized.blueId());
@@ -119,23 +140,39 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void transientChildReadsParentButKeepsNewEntriesAndGraphNodesLocal() {
+    void shouldReadParentFromTransientChildWhileKeepingNewEntriesAndGraphNodesLocal() {
+        // given
         ResolvedReferenceCache parent = new ResolvedReferenceCache();
         ResolvedReferenceCache child = parent.transientChild();
         ResolvedReferenceCache sibling = parent.transientChild();
         FrozenNode published = parent.freezeResolved(new Node().value("published"));
-        FrozenNode local = child.freezeResolved(new Node().value("local"));
 
-        assertSame(published, child.freezeResolved(new Node().value("published")));
-        assertSame(local, child.freezeResolved(new Node().value("local")));
-        assertEquals(1, parent.resolvedGraphSize());
-        assertEquals(1, child.resolvedGraphSize());
-        assertNotEquals(local, sibling.freezeResolved(new Node().value("local")));
-        assertEquals(1, parent.resolvedGraphSize());
+        // when
+        FrozenNode local = child.freezeResolved(new Node().value("local"));
+        FrozenNode inheritedPublished =
+                child.freezeResolved(new Node().value("published"));
+        FrozenNode retainedLocal =
+                child.freezeResolved(new Node().value("local"));
+        int parentSizeBeforeSiblingWrite =
+                parent.resolvedGraphSize();
+        int childSize = child.resolvedGraphSize();
+        FrozenNode siblingLocal =
+                sibling.freezeResolved(new Node().value("local"));
+        int parentSizeAfterSiblingWrite =
+                parent.resolvedGraphSize();
+
+        // then
+        assertSame(published, inheritedPublished);
+        assertSame(local, retainedLocal);
+        assertEquals(1, parentSizeBeforeSiblingWrite);
+        assertEquals(1, childSize);
+        assertNotEquals(local, siblingLocal);
+        assertEquals(1, parentSizeAfterSiblingWrite);
     }
 
     @Test
-    void transientChildKeepsLocalFirstWinsIdentityAfterParentPublishesEquivalentContent() {
+    void shouldKeepLocalFirstWinsIdentityAfterParentPublishesEquivalentContent() {
+        // given
         Node materializedSubject = new Node().name("Scenario Subject")
                 .type(reference("vWaf5a4SM9DLWTVhuqLrj9uihL5TFZfEJUxPu8bRC5m"))
                 .properties("identifier", new Node().value("subject-1"));
@@ -146,21 +183,34 @@ class ResolvedReferenceCacheContractTest {
                 "subject", materializedSubject));
         String holderId = referenced.blueId();
         ResolvedReferenceCache parent = new ResolvedReferenceCache();
+
+        // when
         ResolvedReferenceCache child = parent.transientChild();
-
-        assertSame(referenced, child.putVerifiedCanonical(holderId, referenced));
-        assertSame(materialized, parent.putVerifiedCanonical(holderId, materialized));
-        assertSame(referenced, child.putVerifiedCanonical(holderId, materialized));
-        assertSame(referenced,
-                child.getVerifiedCanonical(holderId).orElseThrow(AssertionError::new));
-
-        FrozenNode localGraph = child.freezeResolved(new Node().value("same graph"));
+        FrozenNode childFirst =
+                child.putVerifiedCanonical(holderId, referenced);
+        FrozenNode parentFirst =
+                parent.putVerifiedCanonical(holderId, materialized);
+        FrozenNode childAfterParent =
+                child.putVerifiedCanonical(holderId, materialized);
+        FrozenNode childRetained = child.getVerifiedCanonical(holderId)
+                .orElseThrow(AssertionError::new);
+        FrozenNode localGraph =
+                child.freezeResolved(new Node().value("same graph"));
         parent.freezeResolved(new Node().value("same graph"));
-        assertSame(localGraph, child.freezeResolved(new Node().value("same graph")));
+        FrozenNode retainedLocalGraph =
+                child.freezeResolved(new Node().value("same graph"));
+
+        // then
+        assertSame(referenced, childFirst);
+        assertSame(materialized, parentFirst);
+        assertSame(referenced, childAfterParent);
+        assertSame(referenced, childRetained);
+        assertSame(localGraph, retainedLocalGraph);
     }
 
     @Test
-    void promotionTraversesInheritedCanonicalEntriesToReachLocalDependencies() {
+    void shouldTraverseInheritedCanonicalEntriesDuringPromotionToReachLocalDependencies() {
+        // given
         Node nestedContent = new Node().value("nested");
         ResolvedSnapshot nestedSnapshot = new Blue().resolveToSnapshot(nestedContent);
         String nestedId = nestedSnapshot.blueId();
@@ -173,8 +223,10 @@ class ResolvedReferenceCacheContractTest {
         parent.putVerifiedCanonical(holderId, holderCanonical);
         child.putVerifiedResolved(nestedSnapshot.verifiedReferenceResolution());
 
+        // when
         child.promoteReferencesReachableFrom(FrozenNode.fromNode(reference(holderId)));
 
+        // then
         assertSame(nestedSnapshot.frozenCanonicalRoot(),
                 parent.getVerifiedCanonical(nestedId).orElseThrow(AssertionError::new));
         assertSame(nestedSnapshot.frozenResolvedRoot(),
@@ -182,7 +234,8 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void concurrentCanonicalMissesShareOneProviderLoad() throws Exception {
+    void shouldShareOneProviderLoadAcrossConcurrentCanonicalMisses() throws Exception {
+        // given
         FrozenNode canonical = FrozenNode.fromNode(new Node().value("single-flight"));
         String blueId = canonical.blueId();
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
@@ -190,6 +243,11 @@ class ResolvedReferenceCacheContractTest {
         CountDownLatch loaderEntered = new CountDownLatch(1);
         CountDownLatch releaseLoader = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(8);
+
+        // when
+        boolean loaderStarted = false;
+        List<FrozenNode> results = new ArrayList<>();
+        int loadCount = -1;
         try {
             List<Future<FrozenNode>> lookups = new ArrayList<>();
             for (int index = 0; index < 8; index++) {
@@ -203,21 +261,31 @@ class ResolvedReferenceCacheContractTest {
                         })));
             }
 
-            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            loaderStarted =
+                    loaderEntered.await(5, TimeUnit.SECONDS);
             releaseLoader.countDown();
 
             for (Future<FrozenNode> lookup : lookups) {
-                assertSame(canonical, lookup.get(5, TimeUnit.SECONDS));
+                results.add(
+                        lookup.get(5, TimeUnit.SECONDS));
             }
-            assertEquals(1, loads.get());
+            loadCount = loads.get();
         } finally {
             releaseLoader.countDown();
             executor.shutdownNow();
         }
+
+        // then
+        assertTrue(loaderStarted);
+        for (FrozenNode result : results) {
+            assertSame(canonical, result);
+        }
+        assertEquals(1, loadCount);
     }
 
     @Test
-    void publishedEntryAfterOwnedFlightInstallCompletesWaitingLookupWithoutProviderLoad() throws Exception {
+    void shouldCompleteWaitingLookupFromPublishedEntryWithoutProviderLoad() throws Exception {
+        // given
         FrozenNode canonical = FrozenNode.fromNode(new Node().value("published-during-flight"));
         String blueId = canonical.blueId();
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
@@ -238,36 +306,58 @@ class ResolvedReferenceCacheContractTest {
                 waiterAwaiting.countDown();
             }
         });
+
+        // when
+        boolean ownerWasInstalled = false;
+        boolean waiterStartedWaiting = false;
+        FrozenNode published = null;
+        FrozenNode ownerResult = null;
+        FrozenNode waiterResult = null;
+        int loadCount = -1;
         try {
             Future<FrozenNode> owner = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(blueId, () -> {
                         loads.incrementAndGet();
                         return canonical;
                     }));
-            assertTrue(ownerInstalled.await(5, TimeUnit.SECONDS));
+            ownerWasInstalled =
+                    ownerInstalled.await(5, TimeUnit.SECONDS);
             Future<FrozenNode> waiter = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(blueId, () -> {
                         loads.incrementAndGet();
                         return canonical;
                     }));
-            assertTrue(waiterAwaiting.await(5, TimeUnit.SECONDS));
+            waiterStartedWaiting =
+                    waiterAwaiting.await(5, TimeUnit.SECONDS);
 
-            assertSame(canonical, cache.putVerifiedCanonical(blueId, canonical));
+            published =
+                    cache.putVerifiedCanonical(blueId, canonical);
             releaseOwner.countDown();
 
-            assertSame(canonical, owner.get(5, TimeUnit.SECONDS));
-            assertSame(canonical, waiter.get(5, TimeUnit.SECONDS));
-            assertEquals(0, loads.get());
+            ownerResult =
+                    owner.get(5, TimeUnit.SECONDS);
+            waiterResult =
+                    waiter.get(5, TimeUnit.SECONDS);
+            loadCount = loads.get();
         } finally {
             ResolvedReferenceCache.setCanonicalLoadWaitObserverForTesting(null);
             ResolvedReferenceCache.setCanonicalLoadObserverForTesting(null);
             releaseOwner.countDown();
             executor.shutdownNow();
         }
+
+        // then
+        assertTrue(ownerWasInstalled);
+        assertTrue(waiterStartedWaiting);
+        assertSame(canonical, published);
+        assertSame(canonical, ownerResult);
+        assertSame(canonical, waiterResult);
+        assertEquals(0, loadCount);
     }
 
     @Test
-    void generationChangeAfterOwnedFlightInstallReleasesWaitingLookup() throws Exception {
+    void shouldReleaseWaitingLookupAfterGenerationChange() throws Exception {
+        // given
         FrozenNode canonical = FrozenNode.fromNode(new Node().value("generation-during-flight"));
         String blueId = canonical.blueId();
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
@@ -288,43 +378,70 @@ class ResolvedReferenceCacheContractTest {
                 waiterAwaiting.countDown();
             }
         });
+
+        // when
+        boolean ownerWasInstalled = false;
+        boolean waiterStartedWaiting = false;
+        FrozenNode ownerResult = null;
+        FrozenNode waiterResult = null;
+        FrozenNode cachedResult = null;
+        int loadCount = -1;
         try {
             Future<FrozenNode> owner = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(blueId, () -> {
                         loads.incrementAndGet();
                         return canonical;
                     }));
-            assertTrue(ownerInstalled.await(5, TimeUnit.SECONDS));
+            ownerWasInstalled =
+                    ownerInstalled.await(5, TimeUnit.SECONDS);
             Future<FrozenNode> waiter = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(blueId, () -> {
                         loads.incrementAndGet();
                         return canonical;
                     }));
-            assertTrue(waiterAwaiting.await(5, TimeUnit.SECONDS));
+            waiterStartedWaiting =
+                    waiterAwaiting.await(5, TimeUnit.SECONDS);
 
             cache.clear();
             releaseOwner.countDown();
 
-            assertSame(canonical, owner.get(5, TimeUnit.SECONDS));
-            assertSame(canonical, waiter.get(5, TimeUnit.SECONDS));
-            assertSame(canonical,
-                    cache.getVerifiedCanonical(blueId).orElseThrow(AssertionError::new));
-            assertTrue(loads.get() >= 1);
+            ownerResult =
+                    owner.get(5, TimeUnit.SECONDS);
+            waiterResult =
+                    waiter.get(5, TimeUnit.SECONDS);
+            cachedResult = cache.getVerifiedCanonical(blueId)
+                    .orElseThrow(AssertionError::new);
+            loadCount = loads.get();
         } finally {
             ResolvedReferenceCache.setCanonicalLoadWaitObserverForTesting(null);
             ResolvedReferenceCache.setCanonicalLoadObserverForTesting(null);
             releaseOwner.countDown();
             executor.shutdownNow();
         }
+
+        // then
+        assertTrue(ownerWasInstalled);
+        assertTrue(waiterStartedWaiting);
+        assertSame(canonical, ownerResult);
+        assertSame(canonical, waiterResult);
+        assertSame(canonical, cachedResult);
+        assertTrue(loadCount >= 1);
     }
 
     @Test
-    void providerLoadDoesNotHoldTheLegacyCollisionStripe() throws Exception {
+    void shouldNotHoldLegacyCollisionStripeDuringProviderLoad() throws Exception {
+        // given
         FrozenNode[] collision = canonicalNodesWhoseBlueIdsSharedLegacyStripe();
         FrozenNode first = collision[0];
         FrozenNode second = collision[1];
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         ExecutorService executor = Executors.newFixedThreadPool(2);
+        AtomicReference<FrozenNode> nestedResult =
+                new AtomicReference<>();
+
+        // when
+        FrozenNode firstResult = null;
+        FrozenNode cachedSecond = null;
         try {
             Future<FrozenNode> firstLookup = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(first.blueId(), () -> {
@@ -332,7 +449,8 @@ class ResolvedReferenceCacheContractTest {
                                 cache.getOrLoadVerifiedCanonical(
                                         second.blueId(), () -> second));
                         try {
-                            assertSame(second, nested.get(2, TimeUnit.SECONDS));
+                            nestedResult.set(
+                                    nested.get(2, TimeUnit.SECONDS));
                         } catch (Exception failure) {
                             throw new IllegalStateException(
                                     "colliding provider lookup could not complete", failure);
@@ -340,23 +458,36 @@ class ResolvedReferenceCacheContractTest {
                         return first;
                     }));
 
-            assertSame(first, firstLookup.get(5, TimeUnit.SECONDS));
-            assertSame(second,
-                    cache.getVerifiedCanonical(second.blueId())
-                            .orElseThrow(AssertionError::new));
+            firstResult =
+                    firstLookup.get(5, TimeUnit.SECONDS);
+            cachedSecond = cache.getVerifiedCanonical(
+                    second.blueId())
+                    .orElseThrow(AssertionError::new);
         } finally {
             executor.shutdownNow();
         }
+
+        // then
+        assertSame(second, nestedResult.get());
+        assertSame(first, firstResult);
+        assertSame(second, cachedSecond);
     }
 
     @Test
-    void clearStartsANewGenerationLoadWithoutWaitingForTheOldProvider() throws Exception {
+    void shouldClearStartsANewGenerationLoadWithoutWaitingForTheOldProvider() throws Exception {
+        // given
         FrozenNode canonical = FrozenNode.fromNode(new Node().value("generation-flight"));
         String blueId = canonical.blueId();
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         CountDownLatch oldLoaderEntered = new CountDownLatch(1);
         CountDownLatch releaseOldLoader = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        // when
+        boolean oldLoaderStarted = false;
+        FrozenNode newResult = null;
+        FrozenNode oldResult = null;
+        FrozenNode cachedResult = null;
         try {
             Future<FrozenNode> oldLookup = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(blueId, () -> {
@@ -364,61 +495,84 @@ class ResolvedReferenceCacheContractTest {
                         awaitUnchecked(releaseOldLoader);
                         return canonical;
                     }));
-            assertTrue(oldLoaderEntered.await(5, TimeUnit.SECONDS));
+            oldLoaderStarted =
+                    oldLoaderEntered.await(5, TimeUnit.SECONDS);
 
             cache.clear();
             Future<FrozenNode> newLookup = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(blueId, () -> canonical));
 
-            assertSame(canonical, newLookup.get(2, TimeUnit.SECONDS));
+            newResult =
+                    newLookup.get(2, TimeUnit.SECONDS);
             releaseOldLoader.countDown();
-            assertSame(canonical, oldLookup.get(5, TimeUnit.SECONDS));
-            assertSame(canonical,
-                    cache.getVerifiedCanonical(blueId).orElseThrow(AssertionError::new));
+            oldResult =
+                    oldLookup.get(5, TimeUnit.SECONDS);
+            cachedResult = cache.getVerifiedCanonical(blueId)
+                    .orElseThrow(AssertionError::new);
         } finally {
             releaseOldLoader.countDown();
             executor.shutdownNow();
         }
+
+        // then
+        assertTrue(oldLoaderStarted);
+        assertSame(canonical, newResult);
+        assertSame(canonical, oldResult);
+        assertSame(canonical, cachedResult);
     }
 
     @Test
-    void recursiveCanonicalLoadsFailDeterministicallyAndRemainRetryable() {
+    void shouldFailRecursiveCanonicalLoadsDeterministicallyAndRemainRetryable() {
+        // given
         FrozenNode first = FrozenNode.fromNode(new Node().value("recursive-first"));
         FrozenNode second = FrozenNode.fromNode(new Node().value("recursive-second"));
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
 
-        IllegalStateException direct = assertThrows(IllegalStateException.class,
+        // when
+        Throwable direct = captureFailure(
                 () -> cache.getOrLoadVerifiedCanonical(first.blueId(), () ->
                         cache.getOrLoadVerifiedCanonical(first.blueId(), () -> first)));
-        assertEquals("Recursive verified reference load: " + first.blueId(),
-                direct.getMessage());
-
-        IllegalStateException indirect = assertThrows(IllegalStateException.class,
+        Throwable indirect = captureFailure(
                 () -> cache.getOrLoadVerifiedCanonical(first.blueId(), () ->
                         cache.getOrLoadVerifiedCanonical(second.blueId(), () ->
                                 cache.getOrLoadVerifiedCanonical(
                                         first.blueId(), () -> first))));
-        assertEquals("Recursive verified reference load: " + first.blueId(),
-                indirect.getMessage());
-
-        IllegalStateException acrossClear = assertThrows(IllegalStateException.class,
+        Throwable acrossClear = captureFailure(
                 () -> cache.getOrLoadVerifiedCanonical(first.blueId(), () -> {
                     cache.clear();
                     return cache.getOrLoadVerifiedCanonical(first.blueId(), () -> first);
                 }));
+        FrozenNode retry =
+                cache.getOrLoadVerifiedCanonical(
+                        first.blueId(), () -> first);
+
+        // then
+        assertInstanceOf(IllegalStateException.class, direct);
+        assertEquals("Recursive verified reference load: " + first.blueId(),
+                direct.getMessage());
+        assertInstanceOf(IllegalStateException.class, indirect);
+        assertEquals("Recursive verified reference load: " + first.blueId(),
+                indirect.getMessage());
+        assertInstanceOf(IllegalStateException.class, acrossClear);
         assertEquals("Recursive verified reference load: " + first.blueId(),
                 acrossClear.getMessage());
-        assertSame(first,
-                cache.getOrLoadVerifiedCanonical(first.blueId(), () -> first));
+        assertSame(first, retry);
     }
 
     @Test
-    void closeDuringProviderLoadDoesNotDeadlockOrPublishLateContent() throws Exception {
+    void shouldNotDeadlockOrPublishLateContentWhenClosingDuringProviderLoad() throws Exception {
+        // given
         FrozenNode canonical = FrozenNode.fromNode(new Node().value("closing-flight"));
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         CountDownLatch loaderEntered = new CountDownLatch(1);
         CountDownLatch releaseLoader = new CountDownLatch(1);
         ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        // when
+        boolean loaderStarted = false;
+        Throwable lookupFailure = null;
+        Throwable lookupCause = null;
+        int verifiedEntries = -1;
         try {
             Future<FrozenNode> lookup = executor.submit(() ->
                     cache.getOrLoadVerifiedCanonical(canonical.blueId(), () -> {
@@ -426,162 +580,256 @@ class ResolvedReferenceCacheContractTest {
                         awaitUnchecked(releaseLoader);
                         return canonical;
                     }));
-            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            loaderStarted =
+                    loaderEntered.await(5, TimeUnit.SECONDS);
 
             cache.close();
             releaseLoader.countDown();
 
-            ExecutionException failure = assertThrows(
-                    ExecutionException.class,
+            lookupFailure = captureFailure(
                     () -> lookup.get(5, TimeUnit.SECONDS));
-            assertTrue(failure.getCause() instanceof IllegalStateException);
-            assertEquals("Resolved reference cache is closed",
-                    failure.getCause().getMessage());
-            assertEquals(0, cache.cacheStats().verifiedEntries());
+            lookupCause = lookupFailure == null
+                    ? null : lookupFailure.getCause();
+            verifiedEntries =
+                    cache.cacheStats().verifiedEntries();
         } finally {
             releaseLoader.countDown();
             executor.shutdownNow();
         }
+
+        // then
+        assertTrue(loaderStarted);
+        assertInstanceOf(ExecutionException.class, lookupFailure);
+        assertInstanceOf(IllegalStateException.class, lookupCause);
+        assertEquals("Resolved reference cache is closed",
+                lookupCause.getMessage());
+        assertEquals(0, verifiedEntries);
     }
 
     @Test
-    void parentInvalidationClearsAStaleChildAndPreventsOldEvidencePromotion() {
+    void shouldClearStaleChildAndPreventOldEvidencePromotionDuringParentInvalidation() {
+        // given
         ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
         VerifiedReferenceResolution evidence = verified.verifiedReferenceResolution();
         ResolvedReferenceCache parent = new ResolvedReferenceCache();
         ResolvedReferenceCache child = parent.transientChild();
 
         child.putVerifiedResolved(evidence);
+
+        // when
         child.freezeResolved(new Node().value("local graph"));
-        assertEquals(1, child.size());
-        assertEquals(1, child.resolvedGraphSize());
-
+        int initialVerifiedSize = child.size();
+        int initialGraphSize = child.resolvedGraphSize();
         parent.clear();
-
-        assertFalse(child.isCurrentGeneration());
+        boolean childCurrentAfterClear =
+                child.isCurrentGeneration();
         ResolvedReferenceCache staleFork = child.forkTransient();
-        assertFalse(staleFork.isCurrentGeneration(),
+        boolean staleForkCurrent =
+                staleFork.isCurrentGeneration();
+        boolean canonicalStillPresent =
+                child.getVerifiedCanonical(
+                        evidence.requestedBlueId())
+                        .isPresent();
+        boolean resolvedStillPresent =
+                child.getVerifiedResolved(
+                        evidence.requestedBlueId())
+                        .isPresent();
+        int graphSizeAfterClear =
+                child.resolvedGraphSize();
+        boolean childCurrentAfterTouch =
+                child.isCurrentGeneration();
+        child.promoteReferencesReachableFrom(
+                FrozenNode.fromNode(new Node()
+                        .type(reference(
+                                evidence.requestedBlueId()))));
+        int parentSizeAfterPromotion = parent.size();
+
+        // then
+        assertEquals(1, initialVerifiedSize);
+        assertEquals(1, initialGraphSize);
+        assertFalse(childCurrentAfterClear);
+        assertFalse(staleForkCurrent,
                 "forking must preserve the source scope's generation witness");
-        assertFalse(child.getVerifiedCanonical(evidence.requestedBlueId()).isPresent());
-        assertFalse(child.getVerifiedResolved(evidence.requestedBlueId()).isPresent());
-        assertEquals(0, child.resolvedGraphSize());
-        assertFalse(child.isCurrentGeneration(),
+        assertFalse(canonicalStillPresent);
+        assertFalse(resolvedStillPresent);
+        assertEquals(0, graphSizeAfterClear);
+        assertFalse(childCurrentAfterTouch,
                 "touching a stale scope must not certify previews from its old generation");
-        child.promoteReferencesReachableFrom(FrozenNode.fromNode(new Node()
-                .type(reference(evidence.requestedBlueId()))));
-        assertEquals(0, parent.size(),
+        assertEquals(0, parentSizeAfterPromotion,
                 "evidence retained before invalidation must never be re-promoted");
     }
 
     @Test
-    void closingParentReleasesLeakedTransientChildState() {
+    void shouldReleaseLeakedTransientChildStateWhenClosingParent() {
+        // given
         ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
         ResolvedReferenceCache parent = new ResolvedReferenceCache();
         ResolvedReferenceCache leakedChild = parent.transientChild();
 
         leakedChild.putVerifiedResolved(verified.verifiedReferenceResolution());
-        leakedChild.putTransientTrustedCanonical(
-                verified.blueId(), verified.frozenCanonicalRoot());
+
+        // when
         leakedChild.freezeResolved(new Node().value("local graph"));
-        assertTrue(leakedChild.cacheStats().verifiedCurrentWeightBytes() > 0L);
-        assertTrue(leakedChild.cacheStats().transientTrustedCurrentWeightBytes() > 0L);
-        assertTrue(leakedChild.cacheStats().structuralCurrentWeightBytes() > 0L);
-
+        ResolvedReferenceCache.CacheStats beforeClose =
+                leakedChild.cacheStats();
         parent.close();
+        ResolvedReferenceCache.CacheStats afterClose =
+                leakedChild.cacheStats();
+        Throwable closedReadFailure = captureFailure(
+                () -> leakedChild.getVerifiedCanonical(
+                        verified.blueId()));
 
-        assertEquals(0, leakedChild.cacheStats().verifiedEntries());
-        assertEquals(0, leakedChild.cacheStats().transientTrustedEntries());
-        assertEquals(0, leakedChild.cacheStats().structuralEntries());
-        assertEquals(0L, leakedChild.cacheStats().verifiedCurrentWeightBytes());
-        assertEquals(0L, leakedChild.cacheStats().transientTrustedCurrentWeightBytes());
-        assertEquals(0L, leakedChild.cacheStats().structuralCurrentWeightBytes());
-        assertThrows(IllegalStateException.class,
-                () -> leakedChild.getVerifiedCanonical(verified.blueId()));
+        // then
+        assertTrue(beforeClose.verifiedCurrentWeightBytes() > 0L);
+        assertTrue(beforeClose.structuralCurrentWeightBytes() > 0L);
+        assertEquals(0, afterClose.verifiedEntries());
+        assertEquals(0, afterClose.transientTrustedEntries());
+        assertEquals(0, afterClose.structuralEntries());
+        assertEquals(0L, afterClose.verifiedCurrentWeightBytes());
+        assertEquals(0L,
+                afterClose.transientTrustedCurrentWeightBytes());
+        assertEquals(0L,
+                afterClose.structuralCurrentWeightBytes());
+        assertInstanceOf(IllegalStateException.class,
+                closedReadFailure);
     }
 
     @Test
-    void closingTransientChildDoesNotInvalidateParentOrSibling() {
+    void shouldNotInvalidateParentOrSiblingWhenClosingTransientChild() {
+        // given
         ResolvedReferenceCache parent = new ResolvedReferenceCache();
         ResolvedReferenceCache child = parent.transientChild();
         ResolvedReferenceCache sibling = parent.transientChild();
         child.freezeResolved(new Node().value("child-local"));
 
+        // when
         child.close();
         child.close();
+        Throwable closedWriteFailure = captureFailure(
+                () -> child.freezeResolved(
+                        new Node().value("closed")));
+        int childStructuralEntries =
+                child.cacheStats().structuralEntries();
+        boolean parentCurrent =
+                parent.isCurrentGeneration();
+        boolean siblingCurrent =
+                sibling.isCurrentGeneration();
+        FrozenNode parentWrite = parent.freezeResolved(
+                new Node().value("parent-still-open"));
+        FrozenNode siblingWrite = sibling.freezeResolved(
+                new Node().value("sibling-still-open"));
 
-        assertThrows(IllegalStateException.class,
-                () -> child.freezeResolved(new Node().value("closed")));
-        assertEquals(0, child.cacheStats().structuralEntries());
-        assertTrue(parent.isCurrentGeneration());
-        assertTrue(sibling.isCurrentGeneration());
-        parent.freezeResolved(new Node().value("parent-still-open"));
-        sibling.freezeResolved(new Node().value("sibling-still-open"));
+        // then
+        assertInstanceOf(IllegalStateException.class,
+                closedWriteFailure);
+        assertEquals(0, childStructuralEntries);
+        assertTrue(parentCurrent);
+        assertTrue(siblingCurrent);
+        assertNotNull(parentWrite);
+        assertNotNull(siblingWrite);
     }
 
     @Test
-    void closingTransientChildRetainsAggregateLifetimeHighWaterMarks() {
+    void shouldRetainAggregateLifetimeHighWaterMarksWhenClosingTransientChild() {
+        // given
         ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
         ResolvedReferenceCache parent = new ResolvedReferenceCache();
         ResolvedReferenceCache child = parent.transientChild();
         child.putVerifiedResolved(verified.verifiedReferenceResolution());
-        child.putTransientTrustedCanonical(
-                verified.blueId(), verified.frozenCanonicalRoot());
         child.freezeResolved(new Node().value("local graph"));
 
         child.close();
 
+        // when
         ResolvedReferenceCache.CacheStats stats = parent.cacheStats();
+        // then
         assertEquals(0, stats.verifiedEntries());
         assertEquals(0, stats.transientTrustedEntries());
         assertEquals(0, stats.structuralEntries());
         assertTrue(stats.verifiedHighWaterWeightBytes() > 0L);
-        assertTrue(stats.transientTrustedHighWaterWeightBytes() > 0L);
+        assertEquals(0L, stats.transientTrustedHighWaterWeightBytes());
         assertTrue(stats.structuralHighWaterWeightBytes() > 0L);
     }
 
     @Test
-    void transientTrustedReferencesRespectPolicyBoundsAndDisabledMode() {
-        Blue blue = new Blue();
-        ResolvedSnapshot first = blue.resolveToSnapshot(new Node().value("trusted-1"));
-        ResolvedSnapshot second = blue.resolveToSnapshot(new Node().value("trusted-2"));
-        BlueCachePolicy oneEntryPolicy = BlueCachePolicy.builder()
-                .transientReferences(1, 1024L * 1024L)
-                .maximumDerivedEntryWeightBytes(1024L * 1024L)
-                .build();
-        ResolvedReferenceCache parent = new ResolvedReferenceCache(oneEntryPolicy);
-        ResolvedReferenceCache child = parent.transientChild();
+    void shouldPreventPublicCanonicalCacheBypassFromSeedingMismatchedContent() {
+        // given
+        FrozenNode requested = FrozenNode.fromNode(new Node().value("requested"));
+        FrozenNode mismatched = FrozenNode.fromNode(new Node().value("mismatched"));
+        ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        int directCanonicalInsertionMethods = 0;
+        List<String> unexpectedInsertionMethods =
+                new ArrayList<>();
 
-        child.putTransientTrustedCanonical(first.blueId(), first.frozenCanonicalRoot());
-        child.putTransientTrustedCanonical(second.blueId(), second.frozenCanonicalRoot());
+        // when
+        for (Method method : ResolvedReferenceCache.class.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
+            Class<?>[] parameters = method.getParameterTypes();
+            if (parameters.length == 2
+                    && parameters[0] == String.class
+                    && parameters[1] == FrozenNode.class) {
+                directCanonicalInsertionMethods++;
+                if (!"putVerifiedCanonical".equals(
+                        method.getName())
+                        && !"putTransientTrustedCanonical".equals(
+                        method.getName())) {
+                    unexpectedInsertionMethods.add(
+                            method.getName());
+                }
+            }
+        }
+        Throwable directInsertionFailure = captureFailure(
+                () -> cache.putVerifiedCanonical(requested.blueId(), mismatched));
+        FrozenNode compatibilityResult =
+                cache.putTransientTrustedCanonical(
+                        requested.blueId(), mismatched);
+        boolean compatibilityEntryPresent =
+                cache.getTransientTrustedCanonical(
+                        requested.blueId()).isPresent();
+        Throwable loadFailure = captureFailure(
+                () -> cache.getOrLoadVerifiedCanonical(
+                        requested.blueId(),
+                        () -> mismatched));
+        boolean rejectedLoadRetained =
+                cache.getVerifiedCanonical(
+                        requested.blueId()).isPresent();
+        FrozenNode validResult =
+                cache.getOrLoadVerifiedCanonical(
+                        requested.blueId(),
+                        () -> requested);
 
-        ResolvedReferenceCache.CacheStats boundedStats = child.cacheStats();
-        assertEquals(1, boundedStats.transientTrustedEntries());
-        assertEquals(1L, boundedStats.transientTrustedEvictions());
-        assertFalse(child.getTransientTrustedCanonical(first.blueId()).isPresent());
-        assertTrue(child.getTransientTrustedCanonical(second.blueId()).isPresent());
-
-        ResolvedReferenceCache disabledParent =
-                new ResolvedReferenceCache(BlueCachePolicy.disabled());
-        ResolvedReferenceCache disabledChild = disabledParent.transientChild();
-        assertSame(first.frozenCanonicalRoot(), disabledChild.putTransientTrustedCanonical(
-                first.blueId(), first.frozenCanonicalRoot()));
-
-        ResolvedReferenceCache.CacheStats disabledStats = disabledChild.cacheStats();
-        assertEquals(0, disabledStats.transientTrustedEntries());
-        assertEquals(0L, disabledStats.transientTrustedCurrentWeightBytes());
-        assertEquals(1L, disabledStats.transientTrustedOversizedRejections());
-        assertFalse(disabledChild.getTransientTrustedCanonical(first.blueId()).isPresent());
+        // then
+        assertEquals(2, directCanonicalInsertionMethods);
+        assertTrue(unexpectedInsertionMethods.isEmpty(),
+                "only the verifying insertion and its fail-closed "
+                        + "binary compatibility bridge may exist: "
+                        + unexpectedInsertionMethods);
+        assertInstanceOf(IllegalArgumentException.class,
+                directInsertionFailure);
+        assertSame(mismatched, compatibilityResult);
+        assertFalse(compatibilityEntryPresent,
+                "the compatibility bridge must not retain trusted content");
+        assertInstanceOf(IllegalArgumentException.class,
+                loadFailure);
+        assertFalse(rejectedLoadRetained,
+                "mismatched content must not survive a rejected load");
+        assertSame(requested, validResult);
     }
 
     @Test
-    void closingIntermediateTransientScopeInvalidatesAndReleasesDescendants() {
+    void shouldInvalidateAndReleaseDescendantsWhenClosingIntermediateTransientScope() {
+        // given
         ResolvedReferenceCache root = new ResolvedReferenceCache();
         ResolvedReferenceCache child = root.transientChild();
         ResolvedReferenceCache grandchild = child.transientChild();
         grandchild.freezeResolved(new Node().value("local"));
 
+        // when
         child.close();
 
+        // then
         assertFalse(child.isCurrentGeneration());
         assertFalse(grandchild.isCurrentGeneration());
         assertEquals(0, grandchild.cacheStats().structuralEntries());
@@ -595,13 +843,16 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void pinningThroughTransientChildDelegatesOwnershipToRoot() {
+    void shouldDelegateOwnershipToRootWhenPinningThroughTransientChild() {
+        // given
         ResolvedSnapshot verified = new Blue().resolveToSnapshot(new Node().value("verified"));
         ResolvedReferenceCache parent = new ResolvedReferenceCache();
         ResolvedReferenceCache child = parent.transientChild();
 
+        // when
         child.putPinnedVerifiedResolved(verified.verifiedReferenceResolution());
 
+        // then
         assertEquals(1, parent.cacheStats().pinnedVerifiedEntries());
         assertEquals(1, parent.cacheStats().verifiedEntries());
         assertEquals(0, child.cacheStats().pinnedVerifiedEntries());
@@ -610,114 +861,178 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void isolatedPinnedCopyExcludesDerivedEntriesAndHasIndependentLifecycle() {
+    void shouldExcludeDerivedEntriesAndKeepIndependentLifecycleInIsolatedPinnedCopy() {
+        // given
         ResolvedSnapshot pinned = new Blue().resolveToSnapshot(new Node().value("pinned"));
         ResolvedSnapshot derived = new Blue().resolveToSnapshot(new Node().value("derived"));
         ResolvedReferenceCache source = new ResolvedReferenceCache();
         source.putPinnedVerifiedResolved(pinned.verifiedReferenceResolution());
         source.putVerifiedResolved(derived.verifiedReferenceResolution());
 
+        // when
         ResolvedReferenceCache firstCopy = source.isolatedCopyOfPinnedVerifiedEntries();
-        assertSame(pinned.frozenResolvedRoot(),
-                firstCopy.getVerifiedResolved(pinned.blueId()).orElseThrow(AssertionError::new));
-        assertFalse(firstCopy.getVerifiedResolved(derived.blueId()).isPresent());
-
+        FrozenNode firstCopyPinned =
+                firstCopy.getVerifiedResolved(pinned.blueId())
+                        .orElseThrow(AssertionError::new);
+        boolean firstCopyContainsDerived =
+                firstCopy.getVerifiedResolved(derived.blueId())
+                        .isPresent();
         firstCopy.close();
-        assertSame(pinned.frozenResolvedRoot(),
-                source.getVerifiedResolved(pinned.blueId()).orElseThrow(AssertionError::new));
-
+        FrozenNode sourcePinnedAfterFirstCopyClose =
+                source.getVerifiedResolved(pinned.blueId())
+                        .orElseThrow(AssertionError::new);
         ResolvedReferenceCache retainedCopy = source.isolatedCopyOfPinnedVerifiedEntries();
         source.close();
-        assertSame(pinned.frozenResolvedRoot(),
-                retainedCopy.getVerifiedResolved(pinned.blueId()).orElseThrow(AssertionError::new));
+        FrozenNode retainedPinnedAfterSourceClose =
+                retainedCopy.getVerifiedResolved(pinned.blueId())
+                        .orElseThrow(AssertionError::new);
         retainedCopy.close();
+
+        // then
+        assertSame(pinned.frozenResolvedRoot(),
+                firstCopyPinned);
+        assertFalse(firstCopyContainsDerived);
+        assertSame(pinned.frozenResolvedRoot(),
+                sourcePinnedAfterFirstCopyClose);
+        assertSame(pinned.frozenResolvedRoot(),
+                retainedPinnedAfterSourceClose);
     }
 
     @Test
-    void staleOrClosedTransientChildCannotPublishPinnedEvidenceToRoot() {
+    void shouldPreventStaleOrClosedTransientChildFromPublishingPinnedEvidenceToRoot() {
+        // given
         VerifiedReferenceResolution evidence = new Blue()
                 .resolveToSnapshot(new Node().value("verified"))
                 .verifiedReferenceResolution();
         ResolvedReferenceCache root = new ResolvedReferenceCache();
         ResolvedReferenceCache stale = root.transientChild();
 
+        // when
         root.clear();
-
-        assertFalse(stale.isCurrentGeneration());
-        assertThrows(IllegalStateException.class,
+        boolean staleCurrent =
+                stale.isCurrentGeneration();
+        Throwable stalePublicationFailure = captureFailure(
                 () -> stale.putPinnedVerifiedResolved(evidence));
-        assertEquals(0, root.cacheStats().verifiedEntries());
-        assertEquals(0, root.cacheStats().pinnedVerifiedEntries());
-
+        ResolvedReferenceCache.CacheStats afterStaleAttempt =
+                root.cacheStats();
         ResolvedReferenceCache closed = root.transientChild();
         closed.close();
-        assertThrows(IllegalStateException.class,
+        Throwable closedPublicationFailure = captureFailure(
                 () -> closed.putPinnedVerifiedResolved(evidence));
-        assertEquals(0, root.cacheStats().verifiedEntries());
-        assertEquals(0, root.cacheStats().pinnedVerifiedEntries());
+        ResolvedReferenceCache.CacheStats afterClosedAttempt =
+                root.cacheStats();
+
+        // then
+        assertFalse(staleCurrent);
+        assertInstanceOf(IllegalStateException.class,
+                stalePublicationFailure);
+        assertEquals(0, afterStaleAttempt.verifiedEntries());
+        assertEquals(0,
+                afterStaleAttempt.pinnedVerifiedEntries());
+        assertInstanceOf(IllegalStateException.class,
+                closedPublicationFailure);
+        assertEquals(0, afterClosedAttempt.verifiedEntries());
+        assertEquals(0,
+                afterClosedAttempt.pinnedVerifiedEntries());
     }
 
     @Test
-    void unrelatedResolvedContentCannotBeCertified() throws Exception {
-        assertArbitrarySnapshotCannotCertifyContent(false);
-        assertValidEvidenceWinsConcurrentRaceWithArbitrarySnapshots();
+    void shouldNotCertifyUnrelatedResolvedContent() throws Exception {
+        // given
+        boolean warmStructuralInterner = false;
+
+        // when
+        ArbitraryCertificationObservation arbitraryObservation =
+                observeArbitrarySnapshotCertification(warmStructuralInterner);
+        List<ConcurrentRaceObservation> concurrentObservations =
+                observeValidEvidenceRacingArbitrarySnapshots();
+
+        // then
+        assertArbitrarySnapshotCannotCertifyContent(arbitraryObservation);
+        assertValidEvidenceWinsConcurrentRace(concurrentObservations);
     }
 
     @Test
-    void structuralWarmupCannotChangeVerifiedCacheEligibility() {
-        assertArbitrarySnapshotCannotCertifyContent(false);
-        assertArbitrarySnapshotCannotCertifyContent(true);
+    void shouldPreventStructuralWarmupFromChangingVerifiedCacheEligibility() {
+        // given
+        boolean withoutWarmup = false;
+        boolean withWarmup = true;
+
+        // when
+        ArbitraryCertificationObservation coldObservation =
+                observeArbitrarySnapshotCertification(withoutWarmup);
+        ArbitraryCertificationObservation warmObservation =
+                observeArbitrarySnapshotCertification(withWarmup);
+
+        // then
+        assertArbitrarySnapshotCannotCertifyContent(coldObservation);
+        assertArbitrarySnapshotCannotCertifyContent(warmObservation);
     }
 
     @Test
-    void putVerifiedCanonicalRejectsReferenceOnlyNode() {
+    void shouldRejectReferenceOnlyNodeWhenPuttingVerifiedCanonical() {
+        // given
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         String referenceId = new Blue().calculateBlueId(new Node().value("referenced"));
+        // when
         FrozenNode reference = FrozenNode.fromNode(new Node().blueId(referenceId));
 
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> cache.putVerifiedCanonical(referenceId, reference));
     }
 
     @Test
-    void referenceOnlyCanonicalCannotProduceVerificationEvidence() {
+    void shouldNotProduceVerificationEvidenceFromReferenceOnlyCanonical() {
+        // given
         Node content = new Node().value("value");
         String referenceId = new Blue().calculateBlueId(content);
         Blue blue = new Blue();
 
+        // when
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(reference(referenceId));
 
+        // then
         assertNull(snapshot.verifiedReferenceResolution());
         assertEquals(0, blue.resolvedReferenceCacheSize());
     }
 
     @Test
-    void referenceOnlyResolvedCannotProduceVerificationEvidence() {
+    void shouldNotProduceVerificationEvidenceFromReferenceOnlyResolvedNode() {
+        // given
         Node canonicalNode = new Node().value("value");
         String blueId = new Blue().calculateBlueId(canonicalNode);
         ResolvedSnapshot arbitrary = new ResolvedSnapshot(
                 canonicalNode, reference(blueId), blueId);
+        // when
         Blue blue = new Blue().cacheResolvedSnapshot(arbitrary);
 
+        // then
         assertNull(arbitrary.verifiedReferenceResolution());
         assertFalse(blue.cachedResolvedSnapshot(blueId).isPresent());
         assertEquals(0, blue.resolvedReferenceCacheSize());
     }
 
     @Test
-    void putVerifiedCanonicalRejectsMismatchedBlueId() {
+    void shouldRejectMismatchedBlueIdWhenPuttingVerifiedCanonical() {
+        // given
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
+        // when
         FrozenNode canonical = FrozenNode.fromNode(new Node().value("value"));
 
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> cache.putVerifiedCanonical("wrong-id", canonical));
     }
 
     @Test
-    void resolverEvidenceCannotCarryMismatchedBlueId() {
+    void shouldPreventResolverEvidenceFromCarryingMismatchedBlueId() {
+        // given
         ResolvedSnapshot snapshot = new Blue().resolveToSnapshot(new Node().value("value"));
+        // when
         VerifiedReferenceResolution verification = snapshot.verifiedReferenceResolution();
 
+        // then
         assertNotNull(verification);
         assertEquals(snapshot.blueId(), verification.requestedBlueId());
         assertEquals(verification.canonicalRoot().blueId(), verification.requestedBlueId());
@@ -731,50 +1046,62 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void canonicalEntryWhoseComputedBlueIdDiffersFailsDeterministically() {
+    void shouldFailDeterministicallyWhenCanonicalEntryComputedBlueIdDiffers() {
+        // given
         Node canonicalNode = new Node().value("value");
         String blueId = new Blue().calculateBlueId(canonicalNode);
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         FrozenNode canonical = FrozenNode.fromNode(canonicalNode);
         FrozenNode forgedConflict = FrozenNode.fromUncheckedCanonicalNode(new Node().value("different"));
 
+        // when
         cache.putVerifiedCanonical(blueId, canonical);
 
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> cache.putVerifiedCanonical(blueId, forgedConflict));
     }
 
     @Test
-    void uncheckedCanonicalNodeCannotEnterVerifiedCache() {
+    void shouldPreventUncheckedCanonicalNodeFromEnteringVerifiedCache() {
+        // given
         Node canonicalNode = new Node().value("value");
         String blueId = new Blue().calculateBlueId(canonicalNode);
+        // when
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> cache.putVerifiedCanonical(
                 blueId, FrozenNode.fromUncheckedCanonicalNode(canonicalNode)));
         assertFalse(cache.getVerifiedCanonical(blueId).isPresent());
     }
 
     @Test
-    void contextualResolvedNodeCannotProduceVerificationEvidence() {
+    void shouldNotProduceVerificationEvidenceFromContextualResolvedNode() {
+        // given
         Node canonicalNode = new Node().value("value");
         String blueId = new Blue().calculateBlueId(canonicalNode);
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         FrozenNode contextual = cache.freezeResolved(canonicalNode);
+        // when
         ResolvedSnapshot arbitrary = new ResolvedSnapshot(
                 FrozenNode.fromNode(canonicalNode), contextual, blueId);
 
+        // then
         assertNull(arbitrary.verifiedReferenceResolution());
         assertFalse(cache.getVerifiedResolved(blueId).isPresent());
         assertEquals(0, cache.size());
     }
 
     @Test
-    void validVerifiedCanonicalAndResolvedContentAreReused() {
+    void shouldReuseValidVerifiedCanonicalAndResolvedContent() {
+        // given
         ResolvedSnapshot snapshot = new Blue().resolveToSnapshot(new Node().value("value"));
         VerifiedReferenceResolution verification = snapshot.verifiedReferenceResolution();
+        // when
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
 
+        // then
         assertNotNull(verification);
         assertSame(verification.canonicalRoot(), cache.putVerifiedCanonical(
                 verification.requestedBlueId(), verification.canonicalRoot()));
@@ -787,27 +1114,37 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void providerOrProcessorChangeClearsVerifiedEntries() {
+    void shouldClearVerifiedEntriesAfterProviderOrProcessorChange() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(new Node().name("Type"));
         String typeId = provider.getBlueIdByName("Type");
         Blue blue = new Blue(provider);
 
+        // when
         blue.resolve(new Node().type(new Node().blueId(typeId)));
-        assertTrue(blue.resolvedReferenceCacheSize() > 0);
-
+        int populatedBeforeProviderChange =
+                blue.resolvedReferenceCacheSize();
         blue.nodeProvider(new BasicNodeProvider());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
-
+        int sizeAfterProviderChange =
+                blue.resolvedReferenceCacheSize();
         blue.nodeProvider(provider);
         blue.resolve(new Node().type(new Node().blueId(typeId)));
-        assertTrue(blue.resolvedReferenceCacheSize() > 0);
-
+        int populatedBeforeProcessorChange =
+                blue.resolvedReferenceCacheSize();
         blue.mergingProcessor(blue.getMergingProcessor());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
+        int sizeAfterProcessorChange =
+                blue.resolvedReferenceCacheSize();
+
+        // then
+        assertTrue(populatedBeforeProviderChange > 0);
+        assertEquals(0, sizeAfterProviderChange);
+        assertTrue(populatedBeforeProcessorChange > 0);
+        assertEquals(0, sizeAfterProcessorChange);
     }
 
-    private void assertArbitrarySnapshotCannotCertifyContent(boolean warmStructuralInterner) {
+    private ArbitraryCertificationObservation observeArbitrarySnapshotCertification(
+            boolean warmStructuralInterner) {
         Node canonicalNode = new Node().name("Canonical A");
         Node unrelatedNode = new Node().name("Resolved B");
         String blueId = new Blue().calculateBlueId(canonicalNode);
@@ -826,21 +1163,26 @@ class ResolvedReferenceCacheContractTest {
 
         ResolvedSnapshot arbitrary = new ResolvedSnapshot(canonicalNode, unrelatedNode, blueId);
         blue.cacheResolvedSnapshot(arbitrary);
-
-        assertNull(arbitrary.verifiedReferenceResolution());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
+        VerifiedReferenceResolution arbitraryEvidence =
+                arbitrary.verifiedReferenceResolution();
+        int cacheSizeBeforeLoad = blue.resolvedReferenceCacheSize();
         ResolvedSnapshot loaded = blue.loadSnapshot(blueId);
-        assertEquals("Canonical A", loaded.resolvedRoot().getName());
-        assertEquals(1, fetches.get());
-        assertEquals(1, blue.resolvedReferenceCacheSize());
+        return new ArbitraryCertificationObservation(
+                arbitraryEvidence,
+                cacheSizeBeforeLoad,
+                loaded.resolvedRoot().getName(),
+                fetches.get(),
+                blue.resolvedReferenceCacheSize());
     }
 
-    private void assertValidEvidenceWinsConcurrentRaceWithArbitrarySnapshots() throws Exception {
+    private List<ConcurrentRaceObservation> observeValidEvidenceRacingArbitrarySnapshots()
+            throws Exception {
         Node canonicalNode = new Node().name("Concurrent Canonical");
         String blueId = new Blue().calculateBlueId(canonicalNode);
         ResolvedSnapshot valid = new Blue().resolveToSnapshot(canonicalNode);
         ResolvedSnapshot invalid = new ResolvedSnapshot(
                 canonicalNode, new Node().name("Concurrent Invalid"), blueId);
+        List<ConcurrentRaceObservation> observations = new ArrayList<>();
         ExecutorService executor = Executors.newFixedThreadPool(12);
         try {
             for (int round = 0; round < 16; round++) {
@@ -865,14 +1207,83 @@ class ResolvedReferenceCacheContractTest {
 
                 ResolvedSnapshot retained = target.cachedResolvedSnapshot(blueId)
                         .orElseThrow(AssertionError::new);
-                assertSame(valid, retained);
-                assertSame(valid, target.resolveToSnapshot(canonicalNode));
-                assertEquals("Concurrent Canonical", retained.resolvedRoot().getName());
-                assertEquals(1, target.resolvedSnapshotCacheSize());
-                assertEquals(1, target.resolvedReferenceCacheSize());
+                ResolvedSnapshot resolvedAgain = target.resolveToSnapshot(canonicalNode);
+                observations.add(new ConcurrentRaceObservation(
+                        valid,
+                        retained,
+                        resolvedAgain,
+                        retained.resolvedRoot().getName(),
+                        target.resolvedSnapshotCacheSize(),
+                        target.resolvedReferenceCacheSize()));
             }
         } finally {
             executor.shutdownNow();
+        }
+        return observations;
+    }
+
+    private void assertArbitrarySnapshotCannotCertifyContent(
+            ArbitraryCertificationObservation observation) {
+        assertNull(observation.arbitraryEvidence);
+        assertEquals(0, observation.cacheSizeBeforeLoad);
+        assertEquals("Canonical A", observation.loadedName);
+        assertEquals(1, observation.fetches);
+        assertEquals(1, observation.cacheSizeAfterLoad);
+    }
+
+    private void assertValidEvidenceWinsConcurrentRace(
+            List<ConcurrentRaceObservation> observations) {
+        for (ConcurrentRaceObservation observation : observations) {
+            assertSame(observation.valid, observation.retained);
+            assertSame(observation.valid, observation.resolvedAgain);
+            assertEquals("Concurrent Canonical", observation.retainedName);
+            assertEquals(1, observation.snapshotCacheSize);
+            assertEquals(1, observation.referenceCacheSize);
+        }
+    }
+
+    private static final class ArbitraryCertificationObservation {
+        private final VerifiedReferenceResolution arbitraryEvidence;
+        private final int cacheSizeBeforeLoad;
+        private final String loadedName;
+        private final int fetches;
+        private final int cacheSizeAfterLoad;
+
+        private ArbitraryCertificationObservation(
+                VerifiedReferenceResolution arbitraryEvidence,
+                int cacheSizeBeforeLoad,
+                String loadedName,
+                int fetches,
+                int cacheSizeAfterLoad) {
+            this.arbitraryEvidence = arbitraryEvidence;
+            this.cacheSizeBeforeLoad = cacheSizeBeforeLoad;
+            this.loadedName = loadedName;
+            this.fetches = fetches;
+            this.cacheSizeAfterLoad = cacheSizeAfterLoad;
+        }
+    }
+
+    private static final class ConcurrentRaceObservation {
+        private final ResolvedSnapshot valid;
+        private final ResolvedSnapshot retained;
+        private final ResolvedSnapshot resolvedAgain;
+        private final String retainedName;
+        private final int snapshotCacheSize;
+        private final int referenceCacheSize;
+
+        private ConcurrentRaceObservation(
+                ResolvedSnapshot valid,
+                ResolvedSnapshot retained,
+                ResolvedSnapshot resolvedAgain,
+                String retainedName,
+                int snapshotCacheSize,
+                int referenceCacheSize) {
+            this.valid = valid;
+            this.retained = retained;
+            this.resolvedAgain = resolvedAgain;
+            this.retainedName = retainedName;
+            this.snapshotCacheSize = snapshotCacheSize;
+            this.referenceCacheSize = referenceCacheSize;
         }
     }
 

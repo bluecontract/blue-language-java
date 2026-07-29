@@ -33,11 +33,31 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BlueRuntimeTypeRegistryTest {
 
     @Test
-    void providerReturnsCanonicalNodesForRuntimeTypes() {
+    void shouldVerifyProviderReturnsCanonicalNodesForRuntimeTypes() {
+        // given
         BlueRuntimeTypeRegistry registry = BlueRuntimeTypeRegistry.getDefault();
 
+        // when
+        Map<RuntimeTypeKey, List<Node>> providerNodesByType =
+                new HashMap<>();
+        Map<RuntimeTypeKey, List<Node>>
+                processorNodesByType = new HashMap<>();
         for (Map.Entry<RuntimeTypeKey, String> entry : registry.blueIds().entrySet()) {
-            List<Node> nodes = registry.asProvider().fetchByBlueId(entry.getValue());
+            providerNodesByType.put(
+                    entry.getKey(),
+                    registry.asProvider()
+                            .fetchByBlueId(entry.getValue()));
+            processorNodesByType.put(
+                    entry.getKey(),
+                    registry.asProcessorSnapshotProvider()
+                            .fetchByBlueId(entry.getValue()));
+        }
+
+        // then
+        for (Map.Entry<RuntimeTypeKey, String> entry :
+                registry.blueIds().entrySet()) {
+            List<Node> nodes =
+                    providerNodesByType.get(entry.getKey());
             assertNotNull(nodes, entry.getKey().name());
             assertEquals(1, nodes.size(), entry.getKey().name());
             assertNotNull(nodes.get(0).getName(), entry.getKey().name());
@@ -45,8 +65,8 @@ class BlueRuntimeTypeRegistryTest {
                     BlueIdCalculator.calculateBlueId(nodes.get(0)),
                     entry.getKey().name());
 
-            List<Node> processorNodes = registry.asProcessorSnapshotProvider()
-                    .fetchByBlueId(entry.getValue());
+            List<Node> processorNodes =
+                    processorNodesByType.get(entry.getKey());
             assertNotNull(processorNodes, entry.getKey().name());
             assertEquals(1, processorNodes.size(), entry.getKey().name());
             assertEquals(entry.getValue(),
@@ -62,13 +82,16 @@ class BlueRuntimeTypeRegistryTest {
     }
 
     @Test
-    void blueInstancesResolveRuntimeTypeDefinitionsByDefault() {
+    void shouldVerifyBlueInstancesResolveRuntimeTypeDefinitionsByDefault() {
+        // given
         Blue blue = new Blue();
 
+        // when
         Node resolved = blue.resolve(blue.yamlToNode(
                 "type: Document Update Channel\n" +
                 "path: /orders"));
 
+        // then
         assertEquals(RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL, resolved.getType().getBlueId());
         assertEquals("Document Update Channel", resolved.getType().getName());
         assertNotNull(resolved.getProperties().get("order"), "Contract field should be inherited");
@@ -77,10 +100,13 @@ class BlueRuntimeTypeRegistryTest {
     }
 
     @Test
-    void processorManagedTypeIdsAreCalculatedBlueIds() {
+    void shouldVerifyProcessorManagedTypeIdsAreCalculatedBlueIds() {
+        // given
         BlueRuntimeTypeRegistry registry = BlueRuntimeTypeRegistry.getDefault();
+        // when
         Set<String> managed = registry.processorManagedTypeBlueIds();
 
+        // then
         assertEquals(RuntimeTypeKey.values().length, managed.size());
         assertTrue(managed.contains(RuntimeBlueIds.DOCUMENT_UPDATE));
         assertTrue(managed.contains(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER));
@@ -91,7 +117,39 @@ class BlueRuntimeTypeRegistryTest {
     }
 
     @Test
-    void annotatedProcessorModelTypesUseRuntimeRegistryBlueIds() {
+    void shouldVerifyRegisteredSubtypeRecognitionDerivesRolesFromCanonicalAncestry() {
+        // given
+        BlueRuntimeTypeRegistry registry =
+                BlueRuntimeTypeRegistry.getDefault();
+
+        // when
+        boolean externalChannel =
+                registry.isRegisteredSubtype(
+                        RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL,
+                        RuntimeTypeKey.EXTERNAL_CHANNEL);
+        boolean channel =
+                registry.isRegisteredSubtype(
+                        RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL,
+                        RuntimeTypeKey.CHANNEL);
+        boolean handlerAsExternal =
+                registry.isRegisteredSubtype(
+                        RuntimeBlueIds.SCRIPTED_HANDLER,
+                        RuntimeTypeKey.EXTERNAL_CHANNEL);
+        boolean unknownAsExternal =
+                registry.isRegisteredSubtype(
+                        "not-a-registered-runtime-type",
+                        RuntimeTypeKey.EXTERNAL_CHANNEL);
+
+        // then
+        assertTrue(externalChannel);
+        assertTrue(channel);
+        assertFalse(handlerAsExternal);
+        assertFalse(unknownAsExternal);
+    }
+
+    @Test
+    void shouldVerifyAnnotatedProcessorModelTypesUseRuntimeRegistryBlueIds() {
+        // given
         BlueRuntimeTypeRegistry registry = BlueRuntimeTypeRegistry.getDefault();
         Map<Class<?>, RuntimeTypeKey> expected = new HashMap<>();
         expected.put(ChannelEventCheckpoint.class, RuntimeTypeKey.CHANNEL_EVENT_CHECKPOINT);
@@ -106,8 +164,10 @@ class BlueRuntimeTypeRegistryTest {
         expected.put(ProcessingTerminatedMarker.class, RuntimeTypeKey.PROCESSING_TERMINATED_MARKER);
         expected.put(TriggeredEventChannel.class, RuntimeTypeKey.TRIGGERED_EVENT_CHANNEL);
         expected.put(TypeGeneralizationPolicy.class, RuntimeTypeKey.TYPE_GENERALIZATION_POLICY);
+        // when
         expected.put(TypeGeneralizationRule.class, RuntimeTypeKey.TYPE_GENERALIZATION_RULE);
 
+        // then
         for (Map.Entry<Class<?>, RuntimeTypeKey> entry : expected.entrySet()) {
             TypeBlueId annotation = entry.getKey().getAnnotation(TypeBlueId.class);
             assertNotNull(annotation, entry.getKey().getSimpleName());

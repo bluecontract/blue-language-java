@@ -36,7 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProcessingDocumentStateInvariantFailFirstTest {
 
     @Test
-    void snapshotConstructionPreservesSelectedStateBeforeAnyWrite() {
+    void shouldPreserveSelectedStateBeforeAnyWriteDuringSnapshotConstruction() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
         Node callerInput = fixture.materializedSource();
@@ -56,8 +57,10 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         };
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(runtimeOwnedSelection, null, manager);
 
+        // when
         ResolvedSnapshot snapshot = runtime.snapshot();
 
+        // then
         assertEquals(callerBefore, blue.nodeToJson(callerInput));
         assertTrue(hasSelectedContract(callerInput, "audit"));
         assertEquals("materialized", callerInput.getAsText("/materializedField"));
@@ -70,12 +73,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
     }
 
     @Test
-    void initializationMarkerInsertionSatisfiesThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterInitializationMarkerInsertion() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node before = fixture.materializedSource();
         Node expected = expectedInitializedSelected(fixture, before);
         Blue executionBlue = fixture.newBlue(new AtomicInteger());
 
+        // when
         Observation observation = observe(fixture,
                 "initialization marker",
                 executionBlue,
@@ -83,11 +88,13 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.initializeDocument(before));
 
+        // then
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void checkpointDirectWritesWithoutHandlerPatchSatisfyThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterCheckpointDirectWritesWithoutHandlerPatch() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
         Node before = expectedInitializedSelected(fixture, fixture.materializedSource());
@@ -95,6 +102,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         AtomicInteger executions = new AtomicInteger();
         Blue executionBlue = fixture.newBlueWithoutHandlerPatch(executions);
 
+        // when
         Observation observation = observe(fixture,
                 "checkpoint Direct Writes without handler patch",
                 executionBlue,
@@ -102,12 +110,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.processDocument(before, eventA));
 
+        // then
         assertEquals(1, executions.get());
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void ordinaryHandlerPatchAndCheckpointDirectWritesSatisfyThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterOrdinaryHandlerPatchAndCheckpointDirectWrites() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
         Node before = expectedInitializedSelected(fixture, fixture.materializedSource());
@@ -115,6 +125,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         AtomicInteger executions = new AtomicInteger();
         Blue executionBlue = fixture.newBlue(executions);
 
+        // when
         Observation observation = observe(fixture,
                 "ordinary handler patch and checkpoint Direct Writes",
                 executionBlue,
@@ -122,12 +133,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.processDocument(before, eventA));
 
+        // then
         assertEquals(1, executions.get());
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void combinedInitializationHandlerPatchAndCheckpointSatisfyThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterCombinedInitializationHandlerPatchAndCheckpoint() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
         Node before = fixture.materializedSource();
@@ -136,6 +149,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         AtomicInteger executions = new AtomicInteger();
         Blue executionBlue = fixture.newBlue(executions);
 
+        // when
         Observation observation = observe(fixture,
                 "combined initialization, handler patch, and checkpoint",
                 executionBlue,
@@ -143,36 +157,38 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.processDocument(before, eventA));
 
+        // then
         assertEquals(1, executions.get());
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void completedProcessingResultMinimizesAndReloadsWithSameIdentity() {
+    void shouldMinimizeCompletedProcessingResultAndReloadWithSameIdentity() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
         String eventBlueId = BlueIdCalculator.calculateBlueId(eventA);
         AtomicInteger executions = new AtomicInteger();
         Blue processor = fixture.newBlue(executions);
+        // when
         DocumentProcessingResult completed = processor.processDocument(
                 fixture.materializedSource(), eventA);
-
-        assertEquals(ProcessorStatus.SUCCESS, completed.status(), diagnosticMessage(completed));
-        assertEquals(1, executions.get());
-        assertFalse(hasSelectedContract(completed.document(), "audit"),
-                "the committed Root is Canonical, not a fifth materialized selection form");
         ResolvedSnapshot completedSnapshot =
                 snapshot(processor, completed);
-        assertTrue(hasSelectedContract(
-                completedSnapshot.resolvedRoot(), "audit"));
-        assertEquals(Boolean.TRUE, completed.document().get("/auditRan"));
-
         Node minimized = new MinimizedOverlayBuilder().build(
                 completedSnapshot.resolvedRoot());
         Node transported = processor.jsonToNode(processor.nodeToJson(minimized));
         Blue reloader = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot reloaded = reloader.resolveToSnapshot(transported);
 
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, completed.status(), diagnosticMessage(completed));
+        assertEquals(1, executions.get());
+        assertFalse(hasSelectedContract(completed.document(), "audit"),
+                "the committed Root is Canonical, not a fifth materialized selection form");
+        assertTrue(hasSelectedContract(
+                completedSnapshot.resolvedRoot(), "audit"));
+        assertEquals(Boolean.TRUE, completed.document().get("/auditRan"));
         assertEquals(completedSnapshot.blueId(), reloaded.blueId());
         assertNull(firstDifference(
                 completedSnapshot.resolvedRoot(),
@@ -210,12 +226,13 @@ class ProcessingDocumentStateInvariantFailFirstTest {
     private static Node expectedInitializedSelected(AuditFixture fixture, Node selectedBefore) {
         Node expected = selectedBefore.clone();
         Blue identityBlue = fixture.newBlue(new AtomicInteger());
-        String preInitializationIdentity = identityBlue.resolveToSnapshot(selectedBefore.clone())
-                .frozenCanonicalRoot()
-                .blueId();
+        ResolvedSnapshot preInitialization = identityBlue
+                .resolveToSnapshot(selectedBefore.clone());
         Node marker = new Node()
                 .type(reference(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
-                .properties("documentId", text(preInitializationIdentity));
+                .properties(
+                        "document",
+                        reference(preInitialization.blueId()));
         expected.getContracts().properties("initialized", marker);
         return expected;
     }

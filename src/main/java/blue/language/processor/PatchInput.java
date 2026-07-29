@@ -9,7 +9,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** One defensively captured mutable or already-frozen authored patch. */
+/**
+ * One defensively captured mutable or already-frozen authored patch.
+ *
+ * <p>The source label remains attached for trace attribution. Conversion to
+ * {@link ImmutableJsonPatch} snapshots mutable input exactly once and can then
+ * be reused by preview and commit planning.</p>
+ */
 final class PatchInput {
 
     private final JsonPatch mutablePatch;

@@ -11,6 +11,14 @@ import java.util.function.Function;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
+/**
+ * Calculates a Base58-encoded SHA-256 digest of JSON Canonicalization Scheme
+ * output.
+ *
+ * <p>The implementation preserves the historic scalar-wrapping behavior used
+ * by BlueId calculation. Digest instances are thread-local and reset between
+ * invocations.</p>
+ */
 public class Base58Sha256Provider implements Function<Object, String> {
 
     private static final ThreadLocal<MessageDigest> SHA_256 = new ThreadLocal<MessageDigest>() {
@@ -24,6 +32,17 @@ public class Base58Sha256Provider implements Function<Object, String> {
         }
     };
 
+    /** Creates a stateless canonical-JSON digest function. */
+    public Base58Sha256Provider() {
+    }
+
+    /**
+     * Returns the compatibility canonical-JSON digest for an object.
+     *
+     * @param object value to canonicalize and digest
+     * @return Base58-encoded SHA-256 digest
+     * @throws IllegalArgumentException when the value cannot be serialized
+     */
     @Override
     public String apply(Object object) {
         return compatibilityHash(object);
@@ -57,6 +76,12 @@ public class Base58Sha256Provider implements Function<Object, String> {
         }
     }
 
+    /**
+     * Returns the raw SHA-256 digest of a UTF-8 string.
+     *
+     * @param input text to digest
+     * @return 32-byte SHA-256 digest
+     */
     public static byte[] sha256(String input) {
         return sha256Bytes(input.getBytes(StandardCharsets.UTF_8));
     }

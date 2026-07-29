@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class MinimizedOverlayInlineTypeTest {
 
     @Test
-    void anonymousAppendOnlyTypeRoundTripsAcrossIndependentBlueInstances() {
+    void shouldRoundTripAnonymousAppendOnlyTypeAcrossIndependentBlueInstances() {
+        // given
         Blue writer = new Blue();
         String inheritedItemsBlueId = inheritedAbBlueId(writer);
         Node source = writer.yamlToNode(
@@ -30,8 +31,11 @@ class MinimizedOverlayInlineTypeTest {
                 "  - B\n" +
                 "  - C");
 
-        RoundTrip roundTrip = assertIndependentRoundTrip(writer, source);
+        // when
+        RoundTrip roundTrip = independentRoundTrip(writer, source);
 
+        // then
+        assertIndependentRoundTrip(roundTrip);
         assertAnonymousListType(roundTrip.minimized.getType(), 2);
         assertEquals(inheritedItemsBlueId,
                 roundTrip.minimized.getItems().get(0).getPreviousBlueId());
@@ -39,7 +43,8 @@ class MinimizedOverlayInlineTypeTest {
     }
 
     @Test
-    void existingPreviousAnchorRoundTripsWithoutRuntimeLocalTypeStorage() {
+    void shouldRoundTripExistingPreviousAnchorWithoutRuntimeLocalTypeStorage() {
+        // given
         Blue writer = new Blue();
         String inheritedItemsBlueId = inheritedAbBlueId(writer);
         Node source = writer.yamlToNode(
@@ -54,15 +59,19 @@ class MinimizedOverlayInlineTypeTest {
                 "      blueId: " + inheritedItemsBlueId + "\n" +
                 "  - C");
 
-        RoundTrip roundTrip = assertIndependentRoundTrip(writer, source);
+        // when
+        RoundTrip roundTrip = independentRoundTrip(writer, source);
 
+        // then
+        assertIndependentRoundTrip(roundTrip);
         assertAnonymousListType(roundTrip.minimized.getType(), 2);
         assertEquals(inheritedItemsBlueId,
                 roundTrip.minimized.getItems().get(0).getPreviousBlueId());
     }
 
     @Test
-    void anonymousItemTypeRoundTripsAcrossIndependentBlueInstances() {
+    void shouldRoundTripAnonymousItemTypeAcrossIndependentBlueInstances() {
+        // given
         Blue writer = new Blue();
         Node source = writer.yamlToNode(
                 "type: List\n" +
@@ -73,8 +82,11 @@ class MinimizedOverlayInlineTypeTest {
                 "items:\n" +
                 "  - A");
 
-        RoundTrip roundTrip = assertIndependentRoundTrip(writer, source);
+        // when
+        RoundTrip roundTrip = independentRoundTrip(writer, source);
 
+        // then
+        assertIndependentRoundTrip(roundTrip);
         assertNotNull(roundTrip.minimized.getItemType());
         assertNull(roundTrip.minimized.getItemType().getBlueId());
         assertNotNull(roundTrip.minimized.getItemType().getType());
@@ -82,7 +94,8 @@ class MinimizedOverlayInlineTypeTest {
     }
 
     @Test
-    void anonymousDictionaryKeyAndValueTypesRoundTripAcrossIndependentBlueInstances() {
+    void shouldRoundTripAnonymousDictionaryTypesAcrossIndependentBlueInstances() {
+        // given
         Blue writer = new Blue();
         Node source = writer.yamlToNode(
                 "type: Dictionary\n" +
@@ -96,15 +109,20 @@ class MinimizedOverlayInlineTypeTest {
                 "    required: true\n" +
                 "answer: 42");
 
-        RoundTrip roundTrip = assertIndependentRoundTrip(writer, source);
+        // when
+        RoundTrip roundTrip = independentRoundTrip(writer, source);
 
+        // then
+        assertIndependentRoundTrip(roundTrip);
         assertInlineType(roundTrip.minimized.getKeyType());
         assertInlineType(roundTrip.minimized.getValueType());
     }
 
     @Test
-    void nestedAnonymousAppendOnlyTypeRoundTripsAcrossIndependentBlueInstances() {
+    void shouldRoundTripNestedAnonymousAppendOnlyTypeAcrossIndependentBlueInstances() {
+        // given
         Blue writer = new Blue();
+        String inheritedItemsBlueId = inheritedAbBlueId(writer);
         Node source = writer.yamlToNode(
                 "nested:\n" +
                 "  type:\n" +
@@ -118,17 +136,21 @@ class MinimizedOverlayInlineTypeTest {
                 "    - B\n" +
                 "    - C");
 
-        RoundTrip roundTrip = assertIndependentRoundTrip(writer, source);
+        // when
+        RoundTrip roundTrip = independentRoundTrip(writer, source);
 
+        // then
+        assertIndependentRoundTrip(roundTrip);
         assertAnonymousListType(roundTrip.minimized.getAsNode("/nested/type"), 2);
         assertEquals(2, roundTrip.minimized.getAsNode("/nested").getItems().size());
-        assertEquals(inheritedAbBlueId(writer),
+        assertEquals(inheritedItemsBlueId,
                 roundTrip.minimized.getAsNode("/nested").getItems().get(0).getPreviousBlueId());
         assertEquals("C", roundTrip.minimized.getAsNode("/nested").getItems().get(1).getValue());
     }
 
     @Test
-    void namedTypeRemainsAReferenceInTheMinimizedOverlay() {
+    void shouldKeepNamedTypeAsReferenceInMinimizedOverlay() {
+        // given
         BasicNodeProvider writerProvider = providerWithNamedAppendOnlyType();
         BasicNodeProvider readerProvider = providerWithNamedAppendOnlyType();
         String typeBlueId = writerProvider.getBlueIdByName("Named Append Only List");
@@ -139,25 +161,25 @@ class MinimizedOverlayInlineTypeTest {
                 "items:\n" +
                 "  - A\n" +
                 "  - B");
+        Blue reader = new Blue(readerProvider);
 
+        // when
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
         Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
-        Blue reader = new Blue(readerProvider);
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(reader.jsonToNode(writer.nodeToJson(minimized)));
 
+        // then
         assertEquals(typeBlueId, minimized.getType().getBlueId());
         assertEquals(original.blueId(), reloaded.blueId());
         assertEquals(writer.nodeToJson(original.resolvedRoot()), reader.nodeToJson(reloaded.resolvedRoot()));
     }
 
-    private static RoundTrip assertIndependentRoundTrip(Blue writer, Node source) {
+    private static RoundTrip independentRoundTrip(Blue writer, Node source) {
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
         String resolvedBefore = writer.nodeToJson(original.resolvedRoot());
 
         Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
-
-        assertEquals(resolvedBefore, writer.nodeToJson(original.resolvedRoot()),
-                "Minimization must not mutate the resolved snapshot.");
+        String resolvedAfter = writer.nodeToJson(original.resolvedRoot());
 
         Blue jsonReader = new Blue();
         ResolvedSnapshot fromJson = jsonReader.resolveToSnapshot(
@@ -166,11 +188,26 @@ class MinimizedOverlayInlineTypeTest {
         ResolvedSnapshot fromYaml = yamlReader.resolveToSnapshot(
                 yamlReader.yamlToNode(writer.nodeToYaml(minimized)));
 
-        assertEquals(original.blueId(), fromJson.blueId());
-        assertEquals(original.blueId(), fromYaml.blueId());
-        assertEquals(resolvedBefore, jsonReader.nodeToJson(fromJson.resolvedRoot()));
-        assertEquals(resolvedBefore, yamlReader.nodeToJson(fromYaml.resolvedRoot()));
-        return new RoundTrip(minimized);
+        return new RoundTrip(
+                minimized,
+                original.blueId(),
+                fromJson.blueId(),
+                fromYaml.blueId(),
+                resolvedBefore,
+                resolvedAfter,
+                jsonReader.nodeToJson(fromJson.resolvedRoot()),
+                yamlReader.nodeToJson(fromYaml.resolvedRoot()));
+    }
+
+    private static void assertIndependentRoundTrip(RoundTrip roundTrip) {
+        assertEquals(
+                roundTrip.resolvedBefore,
+                roundTrip.resolvedAfter,
+                "Minimization must not mutate the resolved snapshot.");
+        assertEquals(roundTrip.originalBlueId, roundTrip.fromJsonBlueId);
+        assertEquals(roundTrip.originalBlueId, roundTrip.fromYamlBlueId);
+        assertEquals(roundTrip.resolvedBefore, roundTrip.fromJsonResolved);
+        assertEquals(roundTrip.resolvedBefore, roundTrip.fromYamlResolved);
     }
 
     private static void assertAnonymousListType(Node type, int inheritedItems) {
@@ -209,9 +246,31 @@ class MinimizedOverlayInlineTypeTest {
 
     private static final class RoundTrip {
         private final Node minimized;
+        private final String originalBlueId;
+        private final String fromJsonBlueId;
+        private final String fromYamlBlueId;
+        private final String resolvedBefore;
+        private final String resolvedAfter;
+        private final String fromJsonResolved;
+        private final String fromYamlResolved;
 
-        private RoundTrip(Node minimized) {
+        private RoundTrip(
+                Node minimized,
+                String originalBlueId,
+                String fromJsonBlueId,
+                String fromYamlBlueId,
+                String resolvedBefore,
+                String resolvedAfter,
+                String fromJsonResolved,
+                String fromYamlResolved) {
             this.minimized = minimized;
+            this.originalBlueId = originalBlueId;
+            this.fromJsonBlueId = fromJsonBlueId;
+            this.fromYamlBlueId = fromYamlBlueId;
+            this.resolvedBefore = resolvedBefore;
+            this.resolvedAfter = resolvedAfter;
+            this.fromJsonResolved = fromJsonResolved;
+            this.fromYamlResolved = fromYamlResolved;
         }
     }
 }

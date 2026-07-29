@@ -969,7 +969,7 @@ Implemented and covered by tests:
 - strict canonical language core;
 - RFC 8785-style canonical BlueId hashing for supported scalar/list/object
   cases;
-- exact Blue Language 1.0 registry and closed 125-fixture conformance package;
+- exact Blue Language 1.0 registry and closed 128-fixture conformance package;
 - deterministic integer and typed-Double handling;
 - reference-only `blueId` semantics;
 - payload-kind exclusivity;
@@ -982,7 +982,15 @@ Implemented and covered by tests:
 - fast frozen type/pattern matching;
 - snapshot-backed document processing runtime;
 - exact generic Blue Contracts and Processor 1.0 registry, manifest-driven gas
-  schedule, and closed 127-fixture conformance package;
+  schedule, and closed 140-fixture conformance package;
+- processor-owned `RuntimeWorkSession` with live-bounded, namespaced runtime
+  ledgers across deterministic processor phases and invocation-owned
+  `RuntimeWorkBudget` caps shared by independently named ledgers;
+- processor-owned `SemanticOutputBoundary` for exact hosted-runtime output
+  identity and semantic construction gas;
+- bounded subtype-compatible same-scope member catalogs;
+- exact executable-body source descriptors and selected-body reference
+  materialization capabilities;
 - external channel/handler/marker processor SPI with explicit canonical type
   registration.
 
@@ -990,11 +998,16 @@ Known boundaries:
 
 - provider ingestion stores strict canonical/preprocessed content and does not
   default to semantic resolve/minimize storage;
-- the published `blue.repo:blue-repo-java:3.0.0-rc.10`
-  `BlueRepository.configure()` descriptor remains binary-linkable:
-  `NodeProviderWrapper.unverified(NodeProvider)` delegates to the verified
-  `wrap(...)` boundary, and `isExplicitlyHostTrusted(...)` always returns
-  `false`;
+- provider integration is repository-independent: applications supply the
+  generic `NodeProvider` contract, without a catalog implementation, artifact
+  coordinate, or manifest assumption. `NodeProviderWrapper.wrap(...)`
+  performs strict direct-node verification, and the legacy
+  `NodeProviderWrapper.unverified(...)` signature delegates to that same
+  verified path. Explicit source-document verification uses
+  `ProviderEvidenceVerifier` with a fully bound `SourceProviderEnvironment`;
+  no path is a trust bypass. Cyclic providers return a typed
+  `CyclicSetProofResult`, so a definitive proof miss, temporary proof
+  unavailability, and invalid evidence remain distinct;
 - conformance/generalization is snapshot-safe at the boundary but still bridges
   through mutable resolver internals in some checks;
 - concrete business contracts are supplied by applications through explicitly
@@ -1009,28 +1022,49 @@ Known boundaries:
   projects referenced `subscriptionKey` and `subscriptionKeys` fragments;
   application-specific registry projections remain downstream, and
   header-time materialization remains fail-closed;
-- the generic named child-ledger API is present, but downstream BEX 1.1 does
-  not yet expose the required named live counter stream. A coordinated BEX
-  update is required before that runtime can supply Contracts 1.0 child-ledger
-  traces;
+- the generic named child-ledger API is the Language boundary used by BEX 2.0
+  integrations. Runtimes that need a stricter local invocation cap create one
+  `RuntimeWorkBudget` and attach each participating ledger to it. Release
+  validation must bind a compatible downstream runtime before claiming
+  Contracts 1.0 child-ledger traces;
 - canonical-plus-bundle transport/webhook export is not part of this module yet.
 
-For deeper design notes, see:
+## Documentation
 
-- [Canonical Language Core](docs/canonical-language-core.md)
-- [Frozen Type Matching](docs/frozen-type-matching.md)
-- [Processor Contract Matching](docs/processor-contract-matching.md)
-- [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md)
-- [Fragmented PROCESS inputs and logical delivery](docs/fragmented-processing-and-logical-delivery.md)
-- [Language 1.0 and Contracts Kernel 1.0 migration](docs/language-1.0-contracts-kernel-1.0-migration.md)
-- [Language 1.0 and Contracts Kernel 1.0 final JVM API report](docs/language-1.0-contracts-kernel-1.0-api-report.md)
+Start with the
+[developer process](docs/developer-process.md) before changing production
+code, tests, fixtures, specifications, or release metadata. It describes local
+setup, repository navigation, comment and constants conventions, the required
+Given–When–Then test style, generic `NodeProvider` integration, and the
+verification and release-evidence workflow.
+
+The retained documents describe distinct parts of the final implementation:
+
+| Document | Purpose |
+| --- | --- |
+| [Developer process](docs/developer-process.md) | Step-by-step setup, implementation, test, fixture, verification, review, and contribution workflow |
+| [Canonical Language Core](docs/canonical-language-core.md) | Canonical node rules, BlueId calculation, strict references, schemas, and provider ingestion |
+| [List Controls And Circular BlueIds](docs/list-controls-and-circular-references.md) | List merge controls and single/multi-document cyclic reference behavior |
+| [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md) | Immutable snapshots, patch planning, minimization, and type generalization |
+| [Frozen Type Matching](docs/frozen-type-matching.md) | Mutable/frozen matching paths, limits, references, schemas, and performance boundaries |
+| [Processor Contract Matching](docs/processor-contract-matching.md) | External evidence, channel and handler SPI, execution order, checkpointing, and atomic failure |
+| [Fragmented PROCESS Inputs And Logical Delivery](docs/fragmented-processing-and-logical-delivery.md) | Exact fragments, locality, selected bodies, Phase-B dependencies, and coalesced logical delivery |
+| [`Blue` Facade Method Reference](docs/blue-facade-method-reference.md) | Complete facade inventory, operational distinctions, caching, and lifecycle behavior |
+| [Language 1.0 And Contracts Kernel 1.0 Migration](docs/language-1.0-contracts-kernel-1.0-migration.md) | Migration from preview APIs to the final generic hosted-runtime boundary |
+| [Language 1.0 And Contracts Kernel 1.0 JVM API Report](docs/language-1.0-contracts-kernel-1.0-api-report.md) | Historical cleanup ledger and current binary-compatibility evidence |
+
+The migration and API report intentionally retain historical decisions needed
+by downstream maintainers. Generated files under `build/reports/` are evidence
+for the exact current source input and should not replace these maintained
+design documents.
 
 ## Build And Test
 
-The project publishes Java 8-compatible bytecode, runs the checksum-pinned
-Gradle 9.6.0 wrapper on JDK 25, and executes tests on a Java 8 toolchain. If
-Java 8 is not installed locally, Gradle can provision it through the configured
-Foojay toolchain resolver.
+The project publishes Java 8-compatible bytecode, uses the checksum-pinned
+Gradle 9.6.0 wrapper, and executes tests on a Java 8 toolchain. The JVM that
+runs Gradle is recorded in generated release evidence rather than fixed by
+repository policy. If Java 8 is not installed locally, Gradle can provision it
+through the configured Foojay toolchain resolver.
 
 Run the full CI-style verification command:
 
@@ -1062,9 +1096,9 @@ fixture IDs, and fixture categories. `new Blue().runConformanceSuite()` executes
 the manifest-driven fixture suite and returns passed fixture IDs plus detailed
 failures with fixture ID, category, operation, exception class, and message.
 The fixture package under `src/test/resources/blue-language-1.0/fixtures` is an
-exact vendored copy of the canonical Blue Language 1.0 package. It contains 125
+exact vendored copy of the canonical Blue Language 1.0 package. It contains 128
 fixtures and has identity
-`sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb`.
+`sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5`.
 The registry package identity is
 `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e`.
 Verify the fixture contents with
@@ -1076,20 +1110,30 @@ IDs, fixture IDs, categories, and coverage checks.
 `new Blue().runContractsConformanceSuite()` executes the separate contracts
 fixture suite. The contracts fixture package under
 `src/test/resources/blue-contracts-1.0/fixtures` is an exact vendored copy of
-the release package. It contains 69 behavior and 58 gas fixtures and has
+the release package. It contains 82 behavior and 58 gas fixtures and has
 identity
-`sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5`.
+`sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca`.
 The runtime registry package identity is
-`sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366`,
+`sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8`,
 and the gas manifest package identity is
 `sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5`.
 Verify fixture content with
 `BlueContractsConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`
 and `contractsConformanceReport().isOfficialContracts10FixturePackage()`.
 `new Blue().runReleaseConformanceSuites()` emits one machine-readable record
-for each of the 252 manifest-listed fixtures and has no skip outcome. The exact
-bound release records 125/125 Language passes and 127/127 Contracts passes:
-252 pass, zero fail, and zero skipped overall.
+for each of the 268 manifest-listed fixtures and has no skip outcome. The exact
+bound release records 128/128 Language passes and 140/140 Contracts passes:
+268 pass, zero fail, and zero skipped overall.
+
+The bound final implementation baseline is
+`blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline`,
+with release package identity
+`sha256:1059e8250bce470febfe281bade2ebc4a0b2da5ce9bb297a50283eebe70ab747`.
+The vendored Language and Contracts specifications have SHA-256 digests
+`ac1ac47e10c91be82ebe45e2406f33ad5073cc3f3684bc1651704117b5008852`
+and
+`75e8d212a3818ad756bd8227d8bda877fb27df9192cff312e347d7742daaed0f`,
+respectively.
 
 Run the hard release gate:
 
@@ -1097,14 +1141,55 @@ Run the hard release gate:
 ./gradlew releaseConformanceTest
 ```
 
-The task runs the repository tests, rejects deprecated or ambiguous preview API
-surface, validates every manifest/package identity, executes all 252 fixtures,
+The task runs the project tests, rejects deprecated or ambiguous preview API
+surface, validates every manifest/package identity, executes all 268 fixtures,
 and writes:
 
 ```text
 build/reports/conformance/release-conformance.json
 build/reports/conformance/release-conformance.txt
 ```
+
+Run the complete project-owned release checks from a clean output directory:
+
+```bash
+BLUE_RELEASE_EPOCH="$(git show -s --format=%ct HEAD)"
+SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew clean build
+SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew rcVerify
+```
+
+The first invocation records successful clean-build evidence only after
+`build` completes over the same source fingerprint and `SOURCE_DATE_EPOCH`
+recorded by `clean`. Task exclusions such as `-x test` deliberately suppress
+that evidence.
+Keep `clean build` separate from `rcVerify`: deleting outputs in the task graph
+that consumes them is unsafe. The RC gate covers the
+project tests, all 268 fixtures, binary-API verification, independently
+repeated archive assembly, source-release verification, and the observed
+runtime-trace and fragmented-processing scenarios. It writes JAR repeatability evidence to
+`build/reports/reproducibility/jar-repeatability.json`, and independently
+assembled source-JAR/source-release evidence to
+`build/reports/reproducibility/source-archive-repeatability.json`. The focused
+runtime report is:
+
+```text
+build/reports/runtime-trace/runtime-work-session.json
+```
+
+The runtime report records the observed eight-scenario result, including the
+exact retained or discarded prefixes and the maximum actual ordered trace
+size. The bounded 1,024-member scenario currently observes 4,096 entries; this
+value is read from the completed runtime trace rather than copied from a test
+expectation. Provider behavior is covered through generic `NodeProvider`
+contract tests: found content must verify against the requested identity,
+absence and temporary unavailability stay distinct, and invalid evidence
+fails closed. No project-owned release check requires a particular external
+repository implementation or catalog.
+
+Production archives use reproducible entry ordering and fixed entry
+timestamps. `blue/language/build.properties` uses `SOURCE_DATE_EPOCH`; when
+that variable is absent, local builds use Unix epoch zero as an explicit
+deterministic fallback.
 
 Build jars:
 
@@ -1148,11 +1233,25 @@ src/main/java/blue/language
   utils/                            BlueId, matching, JSON pointer, helpers
 
 docs/
-  canonical-language-core.md
+  developer-process.md              contribution and release workflow
+  canonical-language-core.md        identity and canonical language rules
+  list-controls-and-circular-references.md
+  snapshots-patching-and-generalization.md
   frozen-type-matching.md
   processor-contract-matching.md
-  snapshots-patching-and-generalization.md
-  specification-implementation-gaps.md
+  fragmented-processing-and-logical-delivery.md
+  blue-facade-method-reference.md
+  language-1.0-contracts-kernel-1.0-migration.md
+  language-1.0-contracts-kernel-1.0-api-report.md
+
+src/main/resources/
+  registry/                         Language and Contracts registries
+  specifications/                   vendored normative specifications
+  release/                          identity-bound release manifest
+
+src/test/resources/
+  blue-language-1.0/fixtures/       closed Language conformance package
+  blue-contracts-1.0/fixtures/      closed Contracts and gas package
 ```
 
 ## Links

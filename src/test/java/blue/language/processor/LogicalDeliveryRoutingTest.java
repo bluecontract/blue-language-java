@@ -19,11 +19,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -57,7 +58,8 @@ final class LogicalDeliveryRoutingTest {
                             41, "logical-delivery", 1));
 
     @Test
-    void defaultFunctionsPreserveRawSourceDispatchAndCheckpoint() {
+    void shouldVerifyDefaultFunctionsPreserveRawSourceDispatchAndCheckpoint() {
+        // given
         Node event = event("topic", "event-default");
         try (Fixture fixture = new Fixture(event)) {
             Node document = fixture.initialize(root(
@@ -74,20 +76,21 @@ final class LogicalDeliveryRoutingTest {
             PreparedRun prepared = fixture.prepare(
                     document, event, "source");
 
+            // when
             ExternalChannelFunctionEvaluation evaluation =
                     fixture.evaluate(
                             document, event, "source");
+            ProcessingDebugResult debug =
+                    fixture.process(
+                            document, event, prepared);
+
+            // then
             assertEquals(
                     "source",
                     evaluation.handlerChannelKey());
             assertEquals(
                     "source",
                     evaluation.logicalDeliveryKey());
-
-            ProcessingDebugResult debug =
-                    fixture.process(
-                            document, event, prepared);
-
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     debug.processResult().status());
@@ -102,7 +105,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void twoFreshSourcesDispatchOnceAndAdvanceBothRawCheckpoints() {
+    void shouldVerifyTwoFreshSourcesDispatchOnceAndAdvanceBothRawCheckpoints() {
+        // given
         Node event = event("topic", "event-group");
         try (Fixture fixture = new Fixture(event)) {
             Node document = fixture.initialize(
@@ -116,10 +120,12 @@ final class LogicalDeliveryRoutingTest {
                     "source-a",
                     "source-b");
 
+            // when
             ProcessingDebugResult debug =
                     fixture.process(
                             document, event, prepared);
 
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     debug.processResult().status());
@@ -140,7 +146,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void staleMemberIsExcludedAndOnlyFreshSourceAdvances() {
+    void shouldVerifyStaleMemberIsExcludedAndOnlyFreshSourceAdvances() {
+        // given
         Node event = event("topic", "event-stale");
         try (Fixture fixture = new Fixture(event)) {
             Node initialized = fixture.initialize(
@@ -155,13 +162,11 @@ final class LogicalDeliveryRoutingTest {
                             initialized,
                             event,
                             "source-b"));
-            assertEquals(
-                    ProcessorStatus.SUCCESS,
-                    seed.processResult().status());
             fixture.handlers.reset();
             Node withStaleSource =
                     seed.processResult().document();
 
+            // when
             ProcessingDebugResult debug = fixture.process(
                     withStaleSource,
                     event,
@@ -171,6 +176,10 @@ final class LogicalDeliveryRoutingTest {
                             "source-a",
                             "source-b"));
 
+            // then
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    seed.processResult().status());
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     debug.processResult().status());
@@ -188,7 +197,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void allStaleSourcesExecuteNothingAndWriteNoCheckpoint() {
+    void shouldVerifyAllStaleSourcesExecuteNothingAndWriteNoCheckpoint() {
+        // given
         Node event = event("topic", "event-all-stale");
         try (Fixture fixture = new Fixture(event)) {
             Node initialized = fixture.initialize(
@@ -204,13 +214,11 @@ final class LogicalDeliveryRoutingTest {
                             event,
                             "source-a",
                             "source-b"));
-            assertEquals(
-                    ProcessorStatus.SUCCESS,
-                    seed.processResult().status());
             fixture.handlers.reset();
             Node checkpointed =
                     seed.processResult().document();
 
+            // when
             ProcessingDebugResult replay = fixture.process(
                     checkpointed,
                     event,
@@ -220,6 +228,10 @@ final class LogicalDeliveryRoutingTest {
                             "source-a",
                             "source-b"));
 
+            // then
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    seed.processResult().status());
             assertEquals(
                     ProcessorStatus.STALE,
                     replay.processResult().status());
@@ -235,7 +247,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void handlerFailureCommitsNoParticipatingCheckpoint() {
+    void shouldVerifyHandlerFailureCommitsNoParticipatingCheckpoint() {
+        // given
         Node event = event("topic", "event-failure");
         try (Fixture fixture = new Fixture(event)) {
             Node document = fixture.initialize(
@@ -243,8 +256,9 @@ final class LogicalDeliveryRoutingTest {
                             fixture,
                             "shared-payload",
                             "shared-payload"));
-            fixture.handlers.fail(true);
+            fixture.handlers.setFailureEnabled(true);
 
+            // when
             ProcessingDebugResult debug = fixture.process(
                     document,
                     event,
@@ -254,6 +268,7 @@ final class LogicalDeliveryRoutingTest {
                             "source-a",
                             "source-b"));
 
+            // then
             assertEquals(
                     ProcessorStatus.RUNTIME_FATAL,
                     debug.processResult().status());
@@ -274,7 +289,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void handlerTargetIsNeitherEvaluatedNorCheckpointedAsSource() {
+    void shouldVerifyHandlerTargetIsNeitherEvaluatedNorCheckpointedAsSource() {
+        // given
         Node event = event("topic", "event-target");
         try (Fixture fixture = new Fixture(event)) {
             Node document = fixture.initialize(
@@ -284,6 +300,7 @@ final class LogicalDeliveryRoutingTest {
                             "shared-payload"));
             fixture.routing.resetEventEvaluations();
 
+            // when
             ProcessingDebugResult debug = fixture.process(
                     document,
                     event,
@@ -293,6 +310,7 @@ final class LogicalDeliveryRoutingTest {
                             "source-a",
                             "source-b"));
 
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     debug.processResult().status());
@@ -310,7 +328,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void phaseBRehydratesDeclaredCatalogForExternalAndManagedTargets() {
+    void shouldVerifyPhaseBRehydratesDeclaredCatalogForExternalAndManagedTargets() {
+        // given
         Node event = event("topic", "event-phase-b-catalog");
         for (boolean managedTarget : Arrays.asList(
                 false, true)) {
@@ -347,6 +366,7 @@ final class LogicalDeliveryRoutingTest {
                                                 .selectedBodyBlueId)));
                 fixture.routing.resetEventEvaluations();
 
+                // when
                 ProcessingDebugResult debug =
                         fixture.process(
                                 document,
@@ -356,6 +376,7 @@ final class LogicalDeliveryRoutingTest {
                                         event,
                                         "source"));
 
+                // then
                 assertEquals(
                         ProcessorStatus.SUCCESS,
                         debug.processResult().status());
@@ -380,7 +401,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void phaseBRehydratesAnInheritedExactTargetKey() {
+    void shouldVerifyPhaseBRehydratesAnInheritedExactTargetKey() {
+        // given
         Node event = event(
                 "topic",
                 "event-inherited-phase-b-target");
@@ -429,6 +451,7 @@ final class LogicalDeliveryRoutingTest {
                             .type(reference(
                                     scopeTypeBlueId)));
 
+            // when
             ProcessingDebugResult debug =
                     fixture.process(
                             document,
@@ -438,6 +461,7 @@ final class LogicalDeliveryRoutingTest {
                                     event,
                                     "source"));
 
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     debug.processResult().status());
@@ -454,53 +478,102 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void invalidRouteOrDisagreementFailsBeforeMutation() {
+    void shouldRejectDisagreeingHandlerTargetsBeforeMutation() {
+        // given
         Node event = event("topic", "event-invalid");
-        assertInvalidBeforeMutation(
-                event,
-                routingChannel(
-                        "source-a", 0, "topic", "domain-a",
-                        "target-a", "logical", "payload"),
-                routingChannel(
-                        "source-b", 1, "topic", "domain-b",
-                        "target-b", "logical", "payload"),
-                routingChannel(
-                        "target-a", 2, "other", "domain-ta",
-                        "target-a", "target-a", "target-a"),
-                routingChannel(
-                        "target-b", 3, "other", "domain-tb",
-                        "target-b", "target-b", "target-b"));
-        assertInvalidBeforeMutation(
-                event,
-                routingChannel(
-                        "source-a", 0, "topic", "domain-a",
-                        "target-a", "logical", "payload-a"),
-                routingChannel(
-                        "source-b", 1, "topic", "domain-b",
-                        "target-a", "logical", "payload-b"),
-                routingChannel(
-                        "target-a", 2, "other", "domain-ta",
-                        "target-a", "target-a", "target-a"));
-        assertInvalidBeforeMutation(
-                event,
-                routingChannel(
-                        "source-a", 0, "topic", "domain-a",
-                        "missing", "logical", "payload"),
-                routingChannel(
-                        "source-b", 1, "topic", "domain-b",
-                        "missing", "logical", "payload"));
-        assertInvalidKeyBeforeMutation(
-                event,
-                routingChannel(
-                        "source-a", 0, "topic", "domain-a",
-                        "target-a", "", "payload"),
-                routingChannel(
-                        "target-a", 1, "other", "domain-ta",
-                        "target-a", "target-a", "target-a"));
+
+        // when
+        InvalidRoutingObservation observation =
+                observeInvalidBeforeMutation(
+                    event,
+                    routingChannel(
+                            "source-a", 0, "topic", "domain-a",
+                            "target-a", "logical", "payload"),
+                    routingChannel(
+                            "source-b", 1, "topic", "domain-b",
+                            "target-b", "logical", "payload"),
+                    routingChannel(
+                            "target-a", 2, "other", "domain-ta",
+                            "target-a", "target-a", "target-a"),
+                    routingChannel(
+                            "target-b", 3, "other", "domain-tb",
+                            "target-b", "target-b", "target-b"));
+
+        // then
+        assertInvalidBeforeMutation(observation);
     }
 
     @Test
-    void exactFragmentEventHasSamePlanResultGasAndTraceAsInlineEvent() {
+    void shouldRejectDisagreeingLogicalPayloadsBeforeMutation() {
+        // given
+        Node event = event("topic", "event-invalid-payload");
+
+        // when
+        InvalidRoutingObservation observation =
+                observeInvalidBeforeMutation(
+                    event,
+                    routingChannel(
+                            "source-a", 0, "topic", "domain-a",
+                            "target-a", "logical", "payload-a"),
+                    routingChannel(
+                            "source-b", 1, "topic", "domain-b",
+                            "target-a", "logical", "payload-b"),
+                    routingChannel(
+                            "target-a", 2, "other", "domain-ta",
+                            "target-a", "target-a", "target-a"));
+
+        // then
+        assertInvalidBeforeMutation(observation);
+    }
+
+    @Test
+    void shouldRejectMissingHandlerTargetBeforeMutation() {
+        // given
+        Node event = event("topic", "event-invalid-missing-target");
+
+        // when
+        InvalidRoutingObservation observation =
+                observeInvalidBeforeMutation(
+                    event,
+                    routingChannel(
+                            "source-a", 0, "topic", "domain-a",
+                            "missing", "logical", "payload"),
+                    routingChannel(
+                            "source-b", 1, "topic", "domain-b",
+                            "missing", "logical", "payload"));
+
+        // then
+        assertInvalidBeforeMutation(observation);
+    }
+
+    @Test
+    void shouldRejectEmptyLogicalDeliveryKeyBeforeMutation() {
+        // given
+        Node event = event("topic", "event-invalid-empty-key");
+
+        // when
+        InvalidKeyObservation observation =
+                observeInvalidKeyBeforeMutation(
+                    event,
+                    routingChannel(
+                            "source-a", 0, "topic", "domain-a",
+                            "target-a", "", "payload"),
+                    routingChannel(
+                            "target-a", 1, "other", "domain-ta",
+                            "target-a", "target-a", "target-a"));
+
+        // then
+        assertInstanceOf(
+                IllegalStateException.class,
+                observation.failure);
+        assertTrue(observation.failure.getMessage().contains(
+                "must be non-empty Text"));
+        assertEquals(0, observation.handlerExecutions);
+    }
+
+    @Test
+    void shouldVerifyExactFragmentEventHasSamePlanResultGasAndTraceAsInlineEvent() {
+        // given
         Node inlineEvent =
                 new Node()
                         .properties(
@@ -521,16 +594,14 @@ final class LogicalDeliveryRoutingTest {
         Node fragmentEvent =
                 eventFragments.roots().get(0)
                         .directFragment();
-        assertEquals(
-                BlueIdCalculator.calculateBlueId(
-                        inlineEvent),
-                BlueIdCalculator.calculateBlueId(
-                        fragmentEvent));
-
         ProcessingDebugResult inlineDebug;
         ProcessingDebugResult fragmentDebug;
         List<String> inlinePlan;
         List<String> fragmentPlan;
+        String inlineDocumentBlueId;
+        String fragmentDocumentBlueId;
+
+        // when
         try (Fixture inline =
                      new Fixture(inlineEvent);
              Fixture fragmented =
@@ -546,19 +617,17 @@ final class LogicalDeliveryRoutingTest {
                                     fragmented,
                                     "shared-payload",
                                     "shared-payload"));
-            assertEquals(
+            inlineDocumentBlueId =
                     BlueIdCalculator.calculateBlueId(
-                            inlineDocument),
-                    BlueIdCalculator.calculateBlueId(
-                            fragmentDocument));
-            String fragmentRootBlueId =
+                            inlineDocument);
+            fragmentDocumentBlueId =
                     BlueIdCalculator.calculateBlueId(
                             fragmentDocument);
             fragmented.provider.put(
-                    fragmentRootBlueId,
+                    fragmentDocumentBlueId,
                     fragmentDocument);
             Node fragmentRoot =
-                    reference(fragmentRootBlueId);
+                    reference(fragmentDocumentBlueId);
 
             PreparedRun inlinePrepared =
                     inline.prepare(
@@ -586,6 +655,15 @@ final class LogicalDeliveryRoutingTest {
                     fragmentPrepared);
         }
 
+        // then
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        inlineEvent),
+                BlueIdCalculator.calculateBlueId(
+                        fragmentEvent));
+        assertEquals(
+                inlineDocumentBlueId,
+                fragmentDocumentBlueId);
         assertEquals(inlinePlan, fragmentPlan);
         assertEquals(
                 inlineDebug.processResult().status(),
@@ -609,7 +687,8 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
-    void unavailableEventFragmentSuspendsProcessAttempt() {
+    void shouldVerifyUnavailableEventFragmentSuspendsProcessAttempt() {
+        // given
         Node inlineEvent = event(
                 "topic", "event-suspension");
         Node keyFragment = new Node().value("topic");
@@ -621,12 +700,10 @@ final class LogicalDeliveryRoutingTest {
                         .properties(
                                 "subscriptionKey",
                                 reference(keyBlueId));
-        assertEquals(
-                BlueIdCalculator.calculateBlueId(
-                        inlineEvent),
-                BlueIdCalculator.calculateBlueId(
-                        fragmentedEvent));
+        ProcessAttemptResult attempt;
+        int handlerExecutions;
 
+        // when
         try (Fixture fixture = new Fixture(inlineEvent)) {
             Node document = fixture.initialize(
                     root(
@@ -647,35 +724,44 @@ final class LogicalDeliveryRoutingTest {
                     "source");
             fixture.provider.unavailable(keyBlueId);
 
-            ProcessAttemptResult attempt =
+            attempt =
                     fixture.processAttempt(
                             document,
                             fragmentedEvent,
                             prepared);
-
-            assertEquals(
-                    ProcessAttemptResult.Kind
-                            .NEEDS_RESOURCES,
-                    attempt.kind(),
-                    attempt.processResult() != null
-                            ? attempt.processResult().status()
-                            + "|"
-                            + attempt.processResult()
-                            .diagnostic().category()
-                            + "|"
-                            + attempt.processResult()
-                            .diagnostic().message()
-                            : "no completed result");
-            assertEquals(
-                    Collections.singletonList(
-                            keyBlueId),
-                    attempt.requiredExactBlueIds());
-            assertEquals(0, fixture.handlers.executions());
+            handlerExecutions =
+                    fixture.handlers.executions();
         }
+
+        // then
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        inlineEvent),
+                BlueIdCalculator.calculateBlueId(
+                        fragmentedEvent));
+        assertEquals(
+                ProcessAttemptResult.Kind
+                        .NEEDS_RESOURCES,
+                attempt.kind(),
+                attempt.processResult() != null
+                        ? attempt.processResult().status()
+                        + "|"
+                        + attempt.processResult()
+                        .diagnostic().category()
+                        + "|"
+                        + attempt.processResult()
+                        .diagnostic().message()
+                        : "no completed result");
+        assertEquals(
+                Collections.singletonList(
+                        keyBlueId),
+                attempt.requiredExactBlueIds());
+        assertEquals(0, handlerExecutions);
     }
 
     @Test
-    void selectedHandlerBodyIsAdmittedLazilyAndUnselectedBodyIsNotDemanded() {
+    void shouldVerifySelectedHandlerBodyIsAdmittedLazilyAndUnselectedBodyIsNotDemanded() {
+        // given
         Node event = event("topic", "event-body");
         try (Fixture fixture = new Fixture(event)) {
             fixture.provider.forbid(
@@ -699,21 +785,25 @@ final class LogicalDeliveryRoutingTest {
                             "source-a",
                             fixture.missingBodyBlueId)));
             fixture.provider.reset();
+
+            // when
             PreparedRun prepared = fixture.prepare(
                     document,
                     event,
                     "source-a",
                     "source-b");
-            assertEquals(
-                    0,
-                    fixture.provider
-                            .requests(
-                                    fixture.missingBodyBlueId));
-
+            int requestsBeforeExecution =
+                    fixture.provider.requests(
+                            fixture.missingBodyBlueId);
             ProcessingDebugResult debug =
                     fixture.process(
                             document, event, prepared);
+            int requestsAfterExecution =
+                    fixture.provider.requests(
+                            fixture.missingBodyBlueId);
 
+            // then
+            assertEquals(0, requestsBeforeExecution);
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     debug.processResult().status());
@@ -722,16 +812,13 @@ final class LogicalDeliveryRoutingTest {
             assertFalse(
                     fixture.handlers
                             .bodyRequestedBeforeMatch());
-            assertEquals(
-                    0,
-                    fixture.provider
-                            .requests(
-                                    fixture.missingBodyBlueId));
+            assertEquals(0, requestsAfterExecution);
         }
     }
 
     @Test
-    void exactMaterializationFailsDuringHeaderAndAfterEventSession() {
+    void shouldRejectExactMaterializationDuringHeaderEvaluation() {
+        // given
         Node event = event("topic", "event-context");
         try (Fixture fixture = new Fixture(event)) {
             Node document = root(
@@ -749,18 +836,29 @@ final class LogicalDeliveryRoutingTest {
                     bundle.effectiveContractSnapshot(
                             "probe");
 
-            IllegalStateException headerFailure =
-                    assertThrows(
-                            IllegalStateException.class,
-                            () -> new ExternalChannelFunctionResolver(
-                                    fixture.processor.registry(),
-                                    fixture.processor
-                                            .contractConverter(),
-                                    bundle)
-                                    .header(probe));
+            // when
+            Throwable headerFailure = captureFailure(
+                    () -> new ExternalChannelFunctionResolver(
+                            fixture.processor.registry(),
+                            fixture.processor
+                                    .contractConverter(),
+                            bundle)
+                            .header(probe));
+
+            // then
+            assertInstanceOf(
+                    IllegalStateException.class,
+                    headerFailure);
             assertTrue(headerFailure.getMessage().contains(
                     "available only during event evaluation"));
+        }
+    }
 
+    @Test
+    void shouldRejectExactMaterializationAfterEventSessionCloses() {
+        // given
+        Node event = event("topic", "event-context-closed");
+        try (Fixture fixture = new Fixture(event)) {
             Node routed = fixture.initialize(
                     routedDocument(
                             fixture,
@@ -770,22 +868,26 @@ final class LogicalDeliveryRoutingTest {
                     routed, event, "source-a");
             ExternalChannelFunctionContext retained =
                     fixture.routing.lastContext();
-            assertNotNull(retained);
             Node exactReference =
                     new Node().blueId(
                             fixture.selectedBodyBlueId);
-            IllegalStateException closedFailure =
-                    assertThrows(
-                            IllegalStateException.class,
-                            () -> retained
-                                    .materializeExactReference(
-                                            exactReference));
+
+            // when
+            Throwable closedFailure = captureFailure(
+                    () -> retained.materializeExactReference(
+                            exactReference));
+
+            // then
+            assertNotNull(retained);
+            assertInstanceOf(
+                    IllegalStateException.class,
+                    closedFailure);
             assertTrue(closedFailure.getMessage().contains(
                     "no longer active"));
         }
     }
 
-    private static void assertInvalidBeforeMutation(
+    private static InvalidRoutingObservation observeInvalidBeforeMutation(
             Node event,
             Node... contracts) {
         try (Fixture fixture = new Fixture(event)) {
@@ -811,32 +913,49 @@ final class LogicalDeliveryRoutingTest {
                                 ? "source-b"
                                 : "source-a");
             } catch (IllegalStateException invalidDependency) {
-                assertTrue(
-                        invalidDependency.getMessage().contains(
-                                "Missing required same-scope Channel"));
-                assertEquals(0, fixture.handlers.executions());
-                return;
+                return InvalidRoutingObservation.preparationFailure(
+                        invalidDependency,
+                        fixture.handlers.executions());
             }
             ProcessingDebugResult debug =
                     fixture.process(
                             document, event, prepared);
 
-            assertEquals(
-                    ProcessorStatus.RUNTIME_FATAL,
-                    debug.processResult().status());
-            assertEquals(0, fixture.handlers.executions());
-            assertEquals(
+            return InvalidRoutingObservation.processingFailure(
+                    debug.processResult().status(),
+                    fixture.handlers.executions(),
                     BlueIdCalculator.calculateBlueId(
                             document),
                     BlueIdCalculator.calculateBlueId(
                             debug.processResult()
-                                    .document()));
-            assertTrue(checkpointWrites(
-                    debug.trace()).isEmpty());
+                                    .document()),
+                    checkpointWrites(
+                            debug.trace()).isEmpty());
         }
     }
 
-    private static void assertInvalidKeyBeforeMutation(
+    private static void assertInvalidBeforeMutation(
+            InvalidRoutingObservation observation) {
+        if (observation.preparationFailure != null) {
+            assertTrue(
+                    observation.preparationFailure
+                            .getMessage()
+                            .contains(
+                                    "Missing required same-scope Channel"));
+            assertEquals(0, observation.handlerExecutions);
+            return;
+        }
+        assertEquals(
+                ProcessorStatus.RUNTIME_FATAL,
+                observation.status);
+        assertEquals(0, observation.handlerExecutions);
+        assertEquals(
+                observation.documentBlueIdBefore,
+                observation.documentBlueIdAfter);
+        assertTrue(observation.checkpointWritesEmpty);
+    }
+
+    private static InvalidKeyObservation observeInvalidKeyBeforeMutation(
             Node event,
             Node... contracts) {
         try (Fixture fixture = new Fixture(event)) {
@@ -851,16 +970,14 @@ final class LogicalDeliveryRoutingTest {
                     root(all.toArray(
                             new Node[all.size()])));
 
-            IllegalStateException failure =
-                    assertThrows(
-                            IllegalStateException.class,
-                            () -> fixture.prepare(
-                                    document,
-                                    event,
-                                    "source-a"));
-            assertTrue(failure.getMessage().contains(
-                    "must be non-empty Text"));
-            assertEquals(0, fixture.handlers.executions());
+            Throwable failure = captureFailure(
+                    () -> fixture.prepare(
+                            document,
+                            event,
+                            "source-a"));
+            return new InvalidKeyObservation(
+                    failure,
+                    fixture.handlers.executions());
         }
     }
 
@@ -1491,7 +1608,7 @@ final class LogicalDeliveryRoutingTest {
                             matchedChannels));
         }
 
-        private void fail(boolean fail) {
+        private void setFailureEnabled(boolean fail) {
             this.fail = fail;
         }
 
@@ -1552,6 +1669,69 @@ final class LogicalDeliveryRoutingTest {
                     return "probe-domain";
                 }
             };
+        }
+    }
+
+    private static final class InvalidRoutingObservation {
+        private final IllegalStateException preparationFailure;
+        private final ProcessorStatus status;
+        private final int handlerExecutions;
+        private final String documentBlueIdBefore;
+        private final String documentBlueIdAfter;
+        private final boolean checkpointWritesEmpty;
+
+        private InvalidRoutingObservation(
+                IllegalStateException preparationFailure,
+                ProcessorStatus status,
+                int handlerExecutions,
+                String documentBlueIdBefore,
+                String documentBlueIdAfter,
+                boolean checkpointWritesEmpty) {
+            this.preparationFailure = preparationFailure;
+            this.status = status;
+            this.handlerExecutions = handlerExecutions;
+            this.documentBlueIdBefore = documentBlueIdBefore;
+            this.documentBlueIdAfter = documentBlueIdAfter;
+            this.checkpointWritesEmpty = checkpointWritesEmpty;
+        }
+
+        private static InvalidRoutingObservation preparationFailure(
+                IllegalStateException failure,
+                int handlerExecutions) {
+            return new InvalidRoutingObservation(
+                    failure,
+                    null,
+                    handlerExecutions,
+                    null,
+                    null,
+                    true);
+        }
+
+        private static InvalidRoutingObservation processingFailure(
+                ProcessorStatus status,
+                int handlerExecutions,
+                String documentBlueIdBefore,
+                String documentBlueIdAfter,
+                boolean checkpointWritesEmpty) {
+            return new InvalidRoutingObservation(
+                    null,
+                    status,
+                    handlerExecutions,
+                    documentBlueIdBefore,
+                    documentBlueIdAfter,
+                    checkpointWritesEmpty);
+        }
+    }
+
+    private static final class InvalidKeyObservation {
+        private final Throwable failure;
+        private final int handlerExecutions;
+
+        private InvalidKeyObservation(
+                Throwable failure,
+                int handlerExecutions) {
+            this.failure = failure;
+            this.handlerExecutions = handlerExecutions;
         }
     }
 

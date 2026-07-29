@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
@@ -17,16 +19,26 @@ import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.erdtman.jcs.JsonCanonicalizer;
 
+/**
+ * Internal orchestration kernel for one initialization or PROCESS invocation.
+ *
+ * <p>The engine owns phase ordering, scope traversal, gas, checkpoints,
+ * buffered effects, and rollback. Public entry points retain the supplied
+ * document on deterministic pre-execution failures and publish state only
+ * through a completed {@link Execution}.</p>
+ */
 final class ProcessorEngine {
 
     private ProcessorEngine() {
@@ -44,7 +56,7 @@ final class ProcessorEngine {
         Execution execution = null;
         try {
             execution = new Execution(owner, document.clone());
-            execution.initializeScope("/", true);
+            execution.initializeScope(JsonPointer.ROOT, true);
         } catch (RunTerminationException ignored) {
             // Initialization run terminated early (e.g., graceful root termination).
             if (execution == null) {
@@ -80,7 +92,7 @@ final class ProcessorEngine {
         Execution execution = null;
         try {
             execution = new Execution(owner, snapshot);
-            execution.initializeScope("/", true);
+            execution.initializeScope(JsonPointer.ROOT, true);
         } catch (RunTerminationException ignored) {
             // Initialization run terminated early (e.g., graceful root termination).
             if (execution == null) {
@@ -131,6 +143,7 @@ final class ProcessorEngine {
                 return new ProcessingDebugResult(invalid, ProcessingConformanceTrace.empty());
             }
             Node cloned = document.clone();
+            collapseInitializationDocuments(cloned);
             execution = new Execution(owner, cloned, event, evidence);
             execution.runtime().chargeProcessInvocation();
             if (execution.admitDirectRootState()) {
@@ -144,6 +157,7 @@ final class ProcessorEngine {
                 throw new InvalidExecutionEvidenceException(
                         "PROCESS requires a complete external delivery plan");
             }
+            execution.preflightOpaqueProcessEmbeddedBoundaries();
             execution.processEvidenceDeliveries(event);
             execution.finalizeSuccessfulRun();
             return execution.debugResult();
@@ -189,8 +203,7 @@ final class ProcessorEngine {
                                 0L,
                                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                                 ProcessorDiagnostic.of(
-                                        ProcessorErrorCategory
-                                                .InvalidExternalChannelSnapshot,
+                                        ex.errorCategory(),
                                         deterministicMessage(
                                                 ex,
                                                 "Invalid external delivery evidence")));
@@ -200,8 +213,7 @@ final class ProcessorEngine {
             execution.fail(
                     ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                     ProcessorDiagnostic.of(
-                            ProcessorErrorCategory
-                                    .InvalidExternalChannelSnapshot,
+                            ex.errorCategory(),
                             deterministicMessage(
                                     ex,
                                     "Invalid external delivery evidence")));
@@ -299,6 +311,7 @@ final class ProcessorEngine {
                 throw new InvalidExecutionEvidenceException(
                         "PROCESS requires a complete external delivery plan");
             }
+            execution.preflightOpaqueProcessEmbeddedBoundaries();
             execution.processEvidenceDeliveries(event);
             execution.finalizeSuccessfulRun();
         } catch (RunTerminationException ignored) {
@@ -350,8 +363,7 @@ final class ProcessorEngine {
                                 0L,
                                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                                 ProcessorDiagnostic.of(
-                                        ProcessorErrorCategory
-                                                .InvalidExternalChannelSnapshot,
+                                        ex.errorCategory(),
                                         deterministicMessage(
                                                 ex,
                                                 "Invalid external delivery evidence"))),
@@ -360,8 +372,7 @@ final class ProcessorEngine {
             execution.fail(
                     ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                     ProcessorDiagnostic.of(
-                            ProcessorErrorCategory
-                                    .InvalidExternalChannelSnapshot,
+                            ex.errorCategory(),
                             deterministicMessage(
                                     ex,
                                     "Invalid external delivery evidence")));
@@ -446,7 +457,9 @@ final class ProcessorEngine {
 
     static boolean isInitialized(DocumentProcessor owner, Node document) {
         Objects.requireNonNull(document, "document");
-        String pointer = resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        String pointer = resolvePointer(
+                JsonPointer.ROOT,
+                ProcessorPointerConstants.RELATIVE_INITIALIZED);
         Node marker = null;
         try {
             marker = nodeAt(document, pointer);
@@ -509,7 +522,9 @@ final class ProcessorEngine {
 
     static boolean isInitialized(DocumentProcessor owner, ResolvedSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        String pointer = resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        String pointer = resolvePointer(
+                JsonPointer.ROOT,
+                ProcessorPointerConstants.RELATIVE_INITIALIZED);
         Node marker = snapshot.canonicalNodeAt(pointer);
         if (marker == null) {
             return false;
@@ -542,9 +557,12 @@ final class ProcessorEngine {
         return PointerUtils.stripSlashes(value);
     }
 
-    static Node createLifecycleInitiatedEvent(String documentId) {
+    static Node createLifecycleInitiatedEvent(FrozenNode document) {
+        Objects.requireNonNull(document, "document");
         Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED));
-        event.properties("documentId", new Node().value(documentId));
+        event.properties(
+                ProcessorContractConstants.KEY_DOCUMENT,
+                ProcessorMarkerFactory.exactReference(document));
         return event;
     }
 
@@ -590,10 +608,10 @@ final class ProcessorEngine {
     }
 
     private static boolean isTypeReferenceKey(String key) {
-        return "type".equals(key)
-                || "itemType".equals(key)
-                || "keyType".equals(key)
-                || "valueType".equals(key);
+        return Properties.OBJECT_TYPE.equals(key)
+                || Properties.OBJECT_ITEM_TYPE.equals(key)
+                || Properties.OBJECT_KEY_TYPE.equals(key)
+                || Properties.OBJECT_VALUE_TYPE.equals(key);
     }
 
     private static Node normalizeSignatureReference(Node reference) {
@@ -616,18 +634,30 @@ final class ProcessorEngine {
                 relativizePointer(
                         scopePath, data.originScope());
         Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_UPDATE));
-        event.properties("op", new Node().value(data.op().name().toLowerCase()));
-        event.properties("path", new Node().value(relativePath));
-        event.properties("beforePresent", new Node().value(data.beforePresent()));
+        event.properties(
+                ProcessorContractConstants.KEY_OPERATION,
+                new Node().value(data.op().name().toLowerCase()));
+        event.properties(
+                ProcessorContractConstants.KEY_PATH,
+                new Node().value(relativePath));
+        event.properties(
+                ProcessorContractConstants.KEY_BEFORE_PRESENT,
+                new Node().value(data.beforePresent()));
         if (data.beforePresent()) {
-            event.properties("before", data.before().clone());
-        }
-        event.properties("afterPresent", new Node().value(data.afterPresent()));
-        if (data.afterPresent()) {
-            event.properties("after", data.after().clone());
+            event.properties(
+                    ProcessorContractConstants.KEY_BEFORE,
+                    data.before().clone());
         }
         event.properties(
-                "sourceScopePath",
+                ProcessorContractConstants.KEY_AFTER_PRESENT,
+                new Node().value(data.afterPresent()));
+        if (data.afterPresent()) {
+            event.properties(
+                    ProcessorContractConstants.KEY_AFTER,
+                    data.after().clone());
+        }
+        event.properties(
+                ProcessorContractConstants.KEY_SOURCE_SCOPE_PATH,
                 new Node().value(
                         relativeSourceScopePath));
         return event;
@@ -643,7 +673,7 @@ final class ProcessorEngine {
     }
 
     static Node nodeAt(Node root, String pointer) {
-        if (pointer.equals("/")) {
+        if (pointer.equals(JsonPointer.ROOT)) {
             return root;
         }
         Node current = root;
@@ -651,7 +681,7 @@ final class ProcessorEngine {
             if (segment.isEmpty()) {
                 continue;
             }
-            if ("contracts".equals(segment)) {
+            if (ProcessorContractConstants.KEY_CONTRACTS.equals(segment)) {
                 current = current.getContracts();
                 if (current == null) {
                     return null;
@@ -718,6 +748,105 @@ final class ProcessorEngine {
             throw new IllegalStateException(
                     "Reserved key 'initialized' must contain a Processing Initialized Marker at " + pointer);
         }
+        Node document = marker.getProperties() != null
+                ? marker.getProperties().get(
+                        ProcessorContractConstants.KEY_DOCUMENT)
+                : null;
+        if (document == null
+                || marker.getProperties().containsKey(
+                ProcessorContractConstants.LEGACY_KEY_DOCUMENT_ID)) {
+            throw new IllegalStateException(
+                    "Processing Initialized Marker must contain the exact "
+                            + "pre-initialization document at " + pointer);
+        }
+        try {
+            BlueIdReferenceValidator.validate(document);
+        } catch (IllegalArgumentException invalid) {
+            throw new IllegalStateException(
+                    "Processing Initialized Marker contains an invalid exact "
+                            + "document at " + pointer,
+                    invalid);
+        }
+    }
+
+    /**
+     * Normalizes direct initialized state to the collapsed representation
+     * before any Language resolution. The marker's document is an already
+     * exact Blue node, not an overlay to resolve; Language 1.0 defines this
+     * collapse as identity- and semantics-preserving.
+     */
+    private static void collapseInitializationDocuments(Node root) {
+        collapseInitializationDocuments(
+                root,
+                JsonPointer.ROOT,
+                Collections.newSetFromMap(
+                        new java.util.IdentityHashMap<Node, Boolean>()));
+    }
+
+    private static void collapseInitializationDocuments(
+            Node node,
+            String path,
+            Set<Node> visited) {
+        if (node == null
+                || node.isReferenceOnly()
+                || !visited.add(node)) {
+            return;
+        }
+        Node contracts = node.getContracts();
+        Node marker = contracts != null
+                && contracts.getProperties() != null
+                ? contracts.getProperties().get(
+                ProcessorContractConstants.KEY_INITIALIZED)
+                : null;
+        if (marker != null) {
+            String markerPath = resolvePointer(
+                    path,
+                    ProcessorPointerConstants.RELATIVE_INITIALIZED);
+            try {
+                validateInitializationMarker(marker, markerPath);
+            } catch (IllegalStateException ignored) {
+                /*
+                 * This pass only normalizes an already-valid exact marker.
+                 * Recognition and must-understand validation remain scoped to
+                 * the participating closure, so an incompatible reserved key
+                 * in an otherwise inert document cannot change NO_MATCH.
+                 */
+                marker = null;
+            }
+        }
+        if (marker != null) {
+            Node exactDocument =
+                    marker.getProperties().get(
+                            ProcessorContractConstants.KEY_DOCUMENT);
+            if (!exactDocument.isReferenceOnly()) {
+                marker.getProperties().put(
+                        ProcessorContractConstants.KEY_DOCUMENT,
+                        new Node().blueId(
+                                BlueIdCalculator.calculateBlueId(
+                                        exactDocument)));
+            }
+        }
+        if (node.getItems() != null) {
+            for (int index = 0;
+                 index < node.getItems().size();
+                 index++) {
+                collapseInitializationDocuments(
+                        node.getItems().get(index),
+                        JsonPointer.append(
+                                path,
+                                String.valueOf(index)),
+                        visited);
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Map.Entry<String, Node> entry
+                    : node.getProperties().entrySet()) {
+                collapseInitializationDocuments(
+                        entry.getValue(),
+                        JsonPointer.append(path, entry.getKey()),
+                        visited);
+            }
+        }
     }
 
     static TerminationMarker validateTerminationMarker(Node marker, String pointer) {
@@ -729,14 +858,18 @@ final class ProcessorEngine {
             throw new IllegalStateException(
                     "Reserved key 'terminated' must contain a Processing Terminated Marker at " + pointer);
         }
-        String cause = stringProperty(marker, "cause");
+        String cause = stringProperty(
+                marker,
+                ProcessorContractConstants.KEY_CAUSE);
         if (cause == null || cause.isEmpty()) {
             throw new IllegalStateException(
                     "Processing Terminated Marker cause must be non-empty Text at " + pointer);
         }
         return new TerminationMarker(
                 cause,
-                stringProperty(marker, "reason"));
+                stringProperty(
+                        marker,
+                        ProcessorContractConstants.KEY_REASON));
     }
 
     private static String runtimeTypeBlueId(Node type) {
@@ -762,6 +895,10 @@ final class ProcessorEngine {
         return raw instanceof String ? (String) raw : null;
     }
 
+    /**
+     * First graceful-termination request retained for deterministic replay and
+     * marker publication.
+     */
     static final class TerminationMarker {
         final String cause;
         final String reason;
@@ -773,6 +910,14 @@ final class ProcessorEngine {
         }
     }
 
+    /**
+     * Mutable state of one processor invocation.
+     *
+     * <p>The execution owns all phase-local services, queues, snapshots,
+     * diagnostics, and commit evidence. It is never shared between
+     * invocations; synchronized/volatile members protect only lazy event
+     * snapshot publication to concurrent observers within this invocation.</p>
+     */
     static final class Execution {
         private final DocumentProcessor owner;
         private final DocumentProcessingRuntime runtime;
@@ -922,14 +1067,18 @@ final class ProcessorEngine {
                                 owner.gasSchedule())
                                 .snapshots(
                                         inputSnapshot,
-                                        runtime.snapshot());
+                                        runtime.snapshot())
+                                .runtimeWorkSessions(
+                                        () -> runtime
+                                                .newRuntimeWorkSession(
+                                                        blue()));
                 if (executionEvidence != null) {
                     long revision =
                             executionEvidence.managedRootRevision();
                     if (revision == Long.MAX_VALUE) {
                         throw new SubscriptionSurfaceInvalidException(
                                 "Committing Root revision overflows",
-                                "/",
+                                JsonPointer.ROOT,
                                 null);
                     }
                     validation.committingInterval(
@@ -946,11 +1095,15 @@ final class ProcessorEngine {
                         owner.subscriptionSurfaceValidator().validate(
                                 validation.build());
                 Map<String, Object> details = new LinkedHashMap<>();
-                details.put("added", subscriptionDelta.added().size());
-                details.put("removed", subscriptionDelta.removed().size());
+                details.put(
+                        ProcessingTraceConstants.FIELD_ADDED,
+                        subscriptionDelta.added().size());
+                details.put(
+                        ProcessingTraceConstants.FIELD_REMOVED,
+                        subscriptionDelta.removed().size());
                 runtime.recordTrace(
                         ProcessingTraceRecord.Kind.SUBSCRIPTION_DELTA,
-                        "/",
+                        JsonPointer.ROOT,
                         null,
                         null,
                         details,
@@ -972,11 +1125,13 @@ final class ProcessorEngine {
                  * application type before this reserved direct state.
                  */
                 TerminationMarker marker =
-                        ProcessorEngine.terminationMarker(inputDocument, "/");
+                        ProcessorEngine.terminationMarker(
+                                inputDocument, JsonPointer.ROOT);
                 if (marker == null) {
                     return false;
                 }
-                runtime.scope("/").finalizeTermination(marker.reason);
+                runtime.scope(JsonPointer.ROOT)
+                        .finalizeTermination(marker.reason);
                 directRootTerminated = true;
                 return true;
             } catch (RuntimeException exception) {
@@ -997,10 +1152,20 @@ final class ProcessorEngine {
                 runtime.chargeDeliverySnapshotEntry(
                         delivery.scopePath(), delivery.channelKey());
                 Map<String, Object> details = new LinkedHashMap<>();
-                details.put("order", delivery.order());
-                details.put("effectiveTypeBlueId", delivery.effectiveTypeBlueId());
-                details.put("checkpointDomainBlueId", delivery.checkpointDomainBlueId());
-                details.put("checkpointSubjectBlueId", delivery.checkpointSubjectBlueId());
+                details.put(
+                        ProcessingTraceConstants.FIELD_ORDER,
+                        delivery.order());
+                details.put(
+                        ProcessingTraceConstants.FIELD_EFFECTIVE_TYPE_BLUE_ID,
+                        delivery.effectiveTypeBlueId());
+                details.put(
+                        ProcessingTraceConstants
+                                .FIELD_CHECKPOINT_DOMAIN_BLUE_ID,
+                        delivery.checkpointDomainBlueId());
+                details.put(
+                        ProcessingTraceConstants
+                                .FIELD_CHECKPOINT_SUBJECT_BLUE_ID,
+                        delivery.checkpointSubjectBlueId());
                 runtime.recordTrace(ProcessingTraceRecord.Kind.EXTERNAL_DELIVERY,
                         delivery.scopePath(),
                         delivery.channelKey(),
@@ -1012,6 +1177,100 @@ final class ProcessorEngine {
 
         boolean hasExecutionEvidence() {
             return executionEvidence != null;
+        }
+
+        /**
+         * Validates the exact, directly declared Process Embedded closure
+         * before the no-match shortcut can end PROCESS. This is a structural
+         * boundary check only: it neither resolves an opaque member nor opens
+         * unrelated contract bodies.
+         */
+        void preflightOpaqueProcessEmbeddedBoundaries() {
+            Deque<String> pending = new ArrayDeque<>();
+            Set<String> visited = new LinkedHashSet<>();
+            pending.add(JsonPointer.ROOT);
+            while (!pending.isEmpty()) {
+                String scopePath =
+                        normalizeScope(pending.removeFirst());
+                if (!visited.add(scopePath)) {
+                    continue;
+                }
+                Node scope = nodeAt(inputDocument, scopePath);
+                if (scope == null || scope.isReferenceOnly()) {
+                    continue;
+                }
+                Node contracts = scope.getContracts();
+                Map<String, Node> entries =
+                        contracts != null
+                                ? contracts.getProperties()
+                                : null;
+                if (entries == null) {
+                    continue;
+                }
+                for (Map.Entry<String, Node> entry
+                        : entries.entrySet()) {
+                    Node contract = entry.getValue();
+                    Node type = contract != null
+                            ? contract.getType()
+                            : null;
+                    if (type == null
+                            || !type.isReferenceOnly()
+                            || !RuntimeBlueIds.PROCESS_EMBEDDED.equals(
+                            type.getBlueId())) {
+                        continue;
+                    }
+                    Node paths = directProperty(
+                            contract,
+                            ProcessorContractConstants.KEY_PATHS);
+                    if (paths == null || paths.getItems() == null) {
+                        continue;
+                    }
+                    for (Node declared : paths.getItems()) {
+                        Object raw = declared != null
+                                ? declared.getValue()
+                                : null;
+                        if (!(raw instanceof String)) {
+                            continue;
+                        }
+                        String target;
+                        try {
+                            target = resolvePointer(
+                                    scopePath,
+                                    PointerUtils
+                                            .assertValidRuntimePointer(
+                                                    (String) raw));
+                            runtime
+                                    .validateProcessEmbeddedTraversalWithoutResolution(
+                                            target);
+                        } catch (ProcessorFailureException exception) {
+                            if (exception.errorCategory()
+                                    != ProcessorErrorCategory
+                                    .CyclicSetEmbeddedBoundaryUnsupported) {
+                                throw exception;
+                            }
+                            throw new SubscriptionSurfaceInvalidException(
+                                    exception.getMessage(),
+                                    scopePath,
+                                    entry.getKey(),
+                                    exception.errorCategory());
+                        } catch (IllegalArgumentException ignored) {
+                            /*
+                             * Existing contract recognition owns malformed
+                             * path diagnostics and their precedence. This
+                             * pass is deliberately limited to opaque cyclic
+                             * boundaries.
+                             */
+                            continue;
+                        }
+                        Node targetNode =
+                                nodeAt(inputDocument, target);
+                        if (targetNode != null
+                                && !targetNode.isReferenceOnly()) {
+                            pending.addLast(target);
+                        }
+                    }
+                }
+            }
         }
 
         FrozenNode classificationSelectedAt(String scopePath) {
@@ -1114,7 +1373,7 @@ final class ProcessorEngine {
                 }
             }
             pruneClassificationContracts(
-                    projected, "/", selectedKeys);
+                    projected, JsonPointer.ROOT, selectedKeys);
             ProcessingSnapshotManager manager =
                     owner.snapshotManager();
             if (manager != null) {
@@ -1159,7 +1418,9 @@ final class ProcessorEngine {
                     recordClassificationType(
                             retainedTypes,
                             member.channelKey(),
-                            family.effectiveTypeBlueId());
+                            member.effectiveTypeBlueId() != null
+                                    ? member.effectiveTypeBlueId()
+                                    : family.effectiveTypeBlueId());
                 }
             }
             for (ExternalChannelDependencySnapshot.ChannelEntry channel
@@ -1276,7 +1537,7 @@ final class ProcessorEngine {
                 contracts.getProperties().entrySet()
                         .removeIf(entry ->
                                 !selected.contains(entry.getKey())
-                                        && !isDirectProcessorStateKey(
+                                        && !isClassificationProcessorStateKey(
                                         entry.getKey())
                                         && !owner.contractLoader()
                                         .isProcessEmbeddedContract(
@@ -1324,10 +1585,13 @@ final class ProcessorEngine {
             return false;
         }
 
-        private boolean isDirectProcessorStateKey(String key) {
-            return ProcessorContractConstants.KEY_INITIALIZED
-                    .equals(key)
-                    || ProcessorContractConstants.KEY_TERMINATED
+        private boolean isClassificationProcessorStateKey(String key) {
+            /*
+             * Phase-B classification needs direct termination and checkpoint
+             * state, but initialization state cannot affect acceptance. Do
+             * not resolve its exact document merely to classify a Channel.
+             */
+            return ProcessorContractConstants.KEY_TERMINATED
                     .equals(key)
                     || ProcessorContractConstants.KEY_CHECKPOINT
                     .equals(key);
@@ -1341,7 +1605,7 @@ final class ProcessorEngine {
             if (executionEvidence == null) {
                 throw new IllegalStateException("No execution evidence admitted");
             }
-            runtime.recordSemanticDemand("/");
+            runtime.recordSemanticDemand(JsonPointer.ROOT);
 
             /*
              * Phase B is read-only.  Classify every feeder candidate from a
@@ -1401,12 +1665,14 @@ final class ProcessorEngine {
                             delivery,
                             classificationBundle,
                             "classification");
-                    if ("/".equals(delivery.scopePath())
+                    if (JsonPointer.ROOT.equals(
+                            delivery.scopePath())
                             && route.isEmpty()) {
                         runtime.recordSemanticDemand(
-                                "/contracts");
+                                ProcessorPointerConstants
+                                        .RELATIVE_CONTRACTS);
                     }
-                    if (!"/".equals(
+                    if (!JsonPointer.ROOT.equals(
                             delivery.scopePath())) {
                         runtime.recordSemanticDemand(
                                 delivery.scopePath());
@@ -1418,9 +1684,11 @@ final class ProcessorEngine {
                     if (event != null
                             && event.getProperties() != null
                             && event.getProperties().containsKey(
-                            "subscriptionKey")) {
+                            ProcessorContractConstants
+                                    .KEY_SUBSCRIPTION_KEY)) {
                         runtime.recordSemanticDemand(
-                                "/event/subscriptionKey");
+                                ProcessorPointerConstants
+                                        .PROCESS_EVENT_SUBSCRIPTION_KEY);
                     }
 
                     int newlyOpened =
@@ -1465,7 +1733,7 @@ final class ProcessorEngine {
 
             Set<String> participatingScopes =
                     new LinkedHashSet<>();
-            participatingScopes.add("/");
+            participatingScopes.add(JsonPointer.ROOT);
             for (ChannelRunner.ExternalClassification classification
                     : acceptedNew) {
                 String occurrence = occurrenceKey(
@@ -1477,7 +1745,7 @@ final class ProcessorEngine {
                                 Collections.emptyList());
                 List<String> initializationPath =
                         new ArrayList<>();
-                initializationPath.add("/");
+                initializationPath.add(JsonPointer.ROOT);
                 for (EvidenceRouteStep step : route) {
                     participatingScopes.add(
                             step.targetScope);
@@ -1521,6 +1789,8 @@ final class ProcessorEngine {
                     logicalDeliveryGroups =
                     logicalDeliveryGroups(acceptedNew);
             validateLogicalDeliveryGroups(
+                    logicalDeliveryGroups);
+            recordLogicalDeliveryGroups(
                     logicalDeliveryGroups);
 
             for (List<ChannelRunner.ExternalClassification> group
@@ -1631,7 +1901,9 @@ final class ProcessorEngine {
                             || !Objects.equals(
                             payloadBlueId,
                             classification.payloadBlueId())) {
-                        throw new IllegalStateException(
+                        throw new ProcessorFailureException(
+                                ProcessorErrorCategory
+                                        .InconsistentLogicalDelivery,
                                 "Accepted External Channels disagree on "
                                         + "logical delivery at "
                                         + scopePath + "/"
@@ -1672,6 +1944,46 @@ final class ProcessorEngine {
                                     finalTarget)
                                     + ")");
                 }
+            }
+        }
+
+        private void recordLogicalDeliveryGroups(
+                List<List<ChannelRunner.ExternalClassification>>
+                        groups) {
+            for (List<ChannelRunner.ExternalClassification> group
+                    : groups) {
+                ChannelRunner.ExternalClassification first =
+                        group.get(0);
+                Map<String, Object> details =
+                        new LinkedHashMap<>();
+                details.put(
+                        ProcessingTraceConstants
+                                .FIELD_HANDLER_CHANNEL_KEY,
+                        first.handlerChannelKey());
+                details.put(
+                        ProcessingTraceConstants
+                                .FIELD_LOGICAL_DELIVERY_KEY,
+                        first.logicalDeliveryKey());
+                details.put(
+                        ProcessingTraceConstants.FIELD_SOURCE_COUNT,
+                        group.size());
+                for (int index = 0;
+                     index < group.size();
+                     index++) {
+                    details.put(
+                            ProcessingTraceConstants.sourceField(
+                                    index),
+                            group.get(index)
+                                    .sourceChannelKey());
+                }
+                runtime.recordTrace(
+                        ProcessingTraceRecord.Kind
+                                .LOGICAL_DELIVERY_GROUP,
+                        first.scopePath(),
+                        first.handlerChannelKey(),
+                        first.logicalDeliveryKey(),
+                        details,
+                        null);
             }
         }
 
@@ -1748,18 +2060,19 @@ final class ProcessorEngine {
                 String scopePath,
                 String channelKey) {
             return normalizeScope(scopePath)
-                    + "\u0000" + channelKey;
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                    + channelKey;
         }
 
         private List<EvidenceRouteStep> routeTo(
                 String targetScope,
                 Set<String> openedScopes) {
             String target = normalizeScope(targetScope);
-            if ("/".equals(target)) {
+            if (JsonPointer.ROOT.equals(target)) {
                 return Collections.emptyList();
             }
             List<EvidenceRouteStep> result = new ArrayList<>();
-            String currentScope = "/";
+            String currentScope = JsonPointer.ROOT;
             Set<String> visited = new LinkedHashSet<>();
             while (!currentScope.equals(target)) {
                 if (!visited.add(currentScope)) {
@@ -1776,7 +2089,9 @@ final class ProcessorEngine {
                 EffectiveContractSnapshot embeddedSnapshot = null;
                 for (EffectiveContractSnapshot snapshot
                         : bundle.effectiveContractSnapshots()) {
-                    if ("process-embedded".equals(snapshot.role())) {
+                    if (EffectiveContractSnapshotConstants
+                            .Role.PROCESS_EMBEDDED.equals(
+                            snapshot.role())) {
                         embeddedSnapshot = snapshot;
                         break;
                     }
@@ -2083,7 +2398,8 @@ final class ProcessorEngine {
                     deliveryEvidence(scopePath, channel.key());
             if (evidence != null) {
                 String occurrence = normalizeScope(scopePath)
-                        + "\u0000" + channel.key();
+                        + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                        + channel.key();
                 if (consumedCheckpointDomainProofs.add(occurrence)) {
                     useExternalContributionProof(
                             evidence, "checkpoint-domain");
@@ -2302,7 +2618,8 @@ final class ProcessorEngine {
         }
 
         boolean rootIsTerminated() {
-            ScopeRuntimeContext root = runtime.existingScope("/");
+            ScopeRuntimeContext root =
+                    runtime.existingScope(JsonPointer.ROOT);
             return root != null && root.isTerminated();
         }
 
@@ -2346,14 +2663,17 @@ final class ProcessorEngine {
             fail(ProcessorStatus.RUNTIME_FATAL,
                     ProcessorDiagnostic.builder(category)
                             .message(reason)
-                            .detail("scopePath", normalizeScope(scopePath))
+                            .detail(
+                                    ProcessorDiagnosticConstants
+                                            .FIELD_SCOPE_PATH,
+                                    normalizeScope(scopePath))
                             .build());
             /*
              * Contracts 1.0 has no committed fatal termination mode. Abort the
              * atomic invocation immediately; do not write a terminated marker
              * and do not emit a lifecycle/fatal event.
              */
-            throw new RunTerminationException();
+            throw new RunTerminationException(reason);
         }
 
         private void terminate(String scopePath,
@@ -2481,7 +2801,7 @@ final class ProcessorEngine {
                     null,
                     Collections.emptyMap(),
                     event);
-            if ("/".equals(normalized)) {
+            if (JsonPointer.ROOT.equals(normalized)) {
                 runtime.chargeRootEventRecorded();
                 runtime.recordTrace(
                         ProcessingTraceRecord.Kind.ROOT_EVENT,
@@ -2512,8 +2832,16 @@ final class ProcessorEngine {
 
     }
 
+    /** Freezes one process-event source at the runtime's evidence boundary. */
     @FunctionalInterface
     interface ProcessEventSnapshotFactory {
+
+        /**
+         * Returns the immutable process-event snapshot used for one attempt.
+         *
+         * @param processEventSource mutable event source
+         * @return immutable frozen event snapshot
+         */
         FrozenNode freeze(Node processEventSource);
     }
 
@@ -2547,15 +2875,23 @@ final class ProcessorEngine {
         }
 
         private String occurrenceKey() {
-            return declaringScope + "\u0000" + contractKey + "\u0000"
+            return declaringScope
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                    + contractKey
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
                     + targetScope;
         }
 
         private String headerOccurrenceKey() {
             StringBuilder key = new StringBuilder(
-                    declaringScope + "\u0000" + contractKey);
+                    declaringScope
+                            + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                            + contractKey);
             for (String blueId : orderedContributionBlueIds) {
-                key.append('\u0000').append(blueId);
+                key.append(
+                                ProcessorIdentityConstants
+                                        .SELECTOR_COMPONENT_DELIMITER)
+                        .append(blueId);
             }
             return key.toString();
         }

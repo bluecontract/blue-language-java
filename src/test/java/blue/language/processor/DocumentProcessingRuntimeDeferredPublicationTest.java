@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class DocumentProcessingRuntimeDeferredPublicationTest {
 
     @Test
-    void eagerSnapshotAdmissionRestoresOnlyDeclaredExecutableBody() {
+    void shouldVerifyEagerSnapshotAdmissionRestoresOnlyDeclaredExecutableBody() {
+        // given
         Node patchEntry = new Node()
                 .properties("op",
                         new Node().value("replace"))
@@ -95,6 +96,7 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
         RecordingManager manager =
                 new RecordingManager(false);
 
+        // when
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
                         eagerSnapshot,
@@ -107,42 +109,48 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
                                 handlerTypeBlueId,
                                 Collections.singletonList(
                                         "result")));
+        ResolvedSnapshot runtimeSnapshot = runtime.snapshot();
+        Node resolvedRootBody =
+                runtime.resolvedNodeAt(
+                        "/contracts/handler/result");
+        Node resolvedRootPatch =
+                runtime.resolvedNodeAt(
+                        "/contracts/handler/result/patches/0");
+        Node resolvedChildPatch =
+                runtime.resolvedNodeAt(
+                        "/child/contracts/handler/result/patches/0");
+        Node resolvedOrdinary =
+                runtime.resolvedNodeAt("/ordinary");
 
-        assertFalse(runtime.snapshot()
-                .isResolutionComplete());
+        // then
+        assertFalse(runtimeSnapshot.isResolutionComplete());
+        assertEquals(canonicalBlueId, runtimeSnapshot.blueId());
         assertEquals(canonicalBlueId,
-                runtime.snapshot().blueId());
-        assertEquals(canonicalBlueId,
-                runtime.snapshot()
+                runtimeSnapshot
                         .frozenCanonicalRoot()
                         .blueId());
         assertEquals(
                 BlueIdCalculator.calculateBlueId(
                         canonicalBody),
                 BlueIdCalculator.calculateBlueId(
-                        runtime.resolvedNodeAt(
-                                "/contracts/handler/result")));
-        assertNull(runtime.resolvedNodeAt(
-                        "/contracts/handler/result/patches/0")
-                .getType());
-        assertNull(runtime.resolvedNodeAt(
-                        "/child/contracts/handler/result/patches/0")
-                .getType());
-        assertEquals(
-                "resolved-only",
-                runtime.resolvedNodeAt(
-                        "/ordinary").getName());
+                        resolvedRootBody));
+        assertNull(resolvedRootPatch.getType());
+        assertNull(resolvedChildPatch.getType());
+        assertEquals("resolved-only", resolvedOrdinary.getName());
         assertEquals(0, manager.resolutionCalls,
                 "admission must reuse the supplied verified resolved lane");
     }
 
     @Test
-    void selectedDirectWriteKeepsDeferredSnapshotInvocationLocal() {
+    void shouldVerifySelectedDirectWriteKeepsDeferredSnapshotInvocationLocal() {
+        // given
         Fixture fixture = new Fixture(true);
 
+        // when
         fixture.runtime.directWrite(
                 "/counter", new Node().value(2));
 
+        // then
         assertEquals(2, ((Number) fixture.runtime
                 .document().getProperties()
                 .get("counter")
@@ -154,12 +162,15 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
     }
 
     @Test
-    void completeReturningPreservationOverrideIsForcedInvocationLocal() {
+    void shouldVerifyCompleteReturningPreservationOverrideIsForcedInvocationLocal() {
+        // given
         Fixture fixture = new Fixture(false);
 
+        // when
         fixture.runtime.directWrite(
                 "/counter", new Node().value(2));
 
+        // then
         assertFalse(fixture.runtime.snapshot()
                 .isResolutionComplete());
         assertEquals(0, fixture.manager.cacheCalls,

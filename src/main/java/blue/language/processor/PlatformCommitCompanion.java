@@ -61,26 +61,57 @@ public final class PlatformCommitCompanion {
                 subscriptionDelta);
     }
 
+    /**
+     * Returns the Root identity used for compare-and-swap.
+     *
+     * @return expected pre-commit Root BlueId
+     */
     public String expectedRootBlueId() {
         return expectedRootBlueId;
     }
 
+    /**
+     * Returns the exact event identity advanced by the transaction.
+     *
+     * @return event BlueId
+     */
     public String eventBlueId() {
         return eventBlueId;
     }
 
+    /**
+     * Returns the Root revision expected before the transaction.
+     *
+     * @return expected Root revision
+     */
     public long expectedRootRevision() {
         return expectedRootRevision;
     }
 
+    /**
+     * Returns the Root revision after the transaction.
+     *
+     * @return incremented revision for a Root commit, otherwise the expected
+     *         revision
+     */
     public long resultingRootRevision() {
         return resultingRootRevision;
     }
 
+    /**
+     * Returns the total-order event position committed as progress.
+     *
+     * @return immutable event order key
+     */
     public ExternalOrderKey eventOrderKey() {
         return eventOrderKey;
     }
 
+    /**
+     * Returns the exact subscription-index transition.
+     *
+     * @return immutable subscription delta
+     */
     public SubscriptionDelta subscriptionDelta() {
         return subscriptionDelta;
     }
@@ -89,6 +120,8 @@ public final class PlatformCommitCompanion {
      * Whether the transaction installs the returned Root/outbox as well as
      * terminal delivery progress. Otherwise it is a revision-bound
      * progress-only transaction.
+     *
+     * @return {@code true} when Root and outbox are committed
      */
     public boolean commitsRootAndOutbox() {
         return rootAndOutboxCommit;

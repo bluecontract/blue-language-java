@@ -12,9 +12,19 @@ package blue.language.processor.conformance;
 public final class FixturePackageContradictionException
         extends IllegalArgumentException {
 
+    /** Published fixture identifier serialized with the contradiction. */
     private final String fixtureId;
+    /** Closed-package control that could not be exercised. */
     private final String control;
 
+    /**
+     * Creates a contradiction for one published fixture control.
+     *
+     * @param fixtureId non-empty fixture identifier
+     * @param control non-empty control name
+     * @param reason non-empty contradiction reason
+     * @throws IllegalArgumentException if any argument is blank
+     */
     public FixturePackageContradictionException(String fixtureId,
                                                 String control,
                                                 String reason) {
@@ -24,10 +34,20 @@ public final class FixturePackageContradictionException
         require(reason, "reason");
     }
 
+    /**
+     * Returns the contradictory fixture identifier.
+     *
+     * @return non-empty fixture identifier
+     */
     public String fixtureId() {
         return fixtureId;
     }
 
+    /**
+     * Returns the control that could not be exercised.
+     *
+     * @return non-empty control name
+     */
     public String control() {
         return control;
     }

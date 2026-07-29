@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -32,20 +33,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ResolvedSnapshotTest {
 
     @Test
-    void deferredSnapshotIdentityMatchesTheValidatedConstructor() {
+    void shouldMatchDeferredSnapshotIdentityWithValidatedConstructor() {
+        // given
         FrozenNode canonical = FrozenNode.fromNode(
                 new Node().properties("value", new Node().value("stable")));
         FrozenNode resolved = FrozenNode.fromResolvedNode(canonical.toNode());
 
         ResolvedSnapshot deferred = new ResolvedSnapshot(canonical, resolved);
+        // when
         ResolvedSnapshot validated = new ResolvedSnapshot(canonical, resolved, canonical.blueId());
 
+        // then
         assertEquals(validated.blueId(), deferred.blueId());
         assertSame(deferred.blueId(), deferred.blueId());
     }
 
     @Test
-    void resolveToSnapshotExposesCanonicalResolvedAndBlueIdAsImmutableViews() {
+    void shouldExposeCanonicalResolvedAndBlueIdAsImmutableViewsAfterResolution() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Product\n" +
@@ -58,23 +63,34 @@ class ResolvedSnapshotTest {
                 "label: inherited\n" +
                 "local: local-value", Node.class);
 
+        // when
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(noisy);
         Node canonical = snapshot.canonicalRoot();
         Node resolved = snapshot.resolvedRoot();
-
-        assertEquals(snapshot.blueId(), BlueIdCalculator.calculateBlueId(canonical));
-        assertFalse(canonical.getProperties().containsKey("label"));
-        assertEquals("inherited", resolved.getAsText("/label"));
-
+        String snapshotBlueId = snapshot.blueId();
+        String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        boolean inheritedLabelWasMinimized =
+                !canonical.getProperties().containsKey("label");
+        String resolvedLabel = resolved.getAsText("/label");
         canonical.properties("mutated", new Node().value(true));
         resolved.properties("label", new Node().value("changed"));
+        boolean snapshotContainsCallerMutation =
+                snapshot.canonicalRoot().getProperties()
+                        .containsKey("mutated");
+        String snapshotLabelAfterCallerMutation =
+                snapshot.resolvedRoot().getAsText("/label");
 
-        assertFalse(snapshot.canonicalRoot().getProperties().containsKey("mutated"));
-        assertEquals("inherited", snapshot.resolvedRoot().getAsText("/label"));
+        // then
+        assertEquals(snapshotBlueId, canonicalBlueId);
+        assertTrue(inheritedLabelWasMinimized);
+        assertEquals("inherited", resolvedLabel);
+        assertFalse(snapshotContainsCallerMutation);
+        assertEquals("inherited", snapshotLabelAfterCallerMutation);
     }
 
     @Test
-    void loadSnapshotTrustsCanonicalBlueIdButStillBuildsResolvedView() {
+    void shouldTrustCanonicalBlueIdAndBuildResolvedViewWhenLoadingSnapshot() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Product\n" +
@@ -88,15 +104,18 @@ class ResolvedSnapshotTest {
 
         String expectedBlueId = BlueIdCalculator.calculateBlueId(canonical);
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
+        // when
         canonical.properties("local", new Node().value("changed"));
 
+        // then
         assertEquals(expectedBlueId, snapshot.blueId());
         assertEquals("inherited", snapshot.resolvedRoot().getAsText("/label"));
         assertEquals("local-value", snapshot.resolvedRoot().getAsText("/local"));
     }
 
     @Test
-    void exposesFrozenCanonicalRootAndPatchEngine() {
+    void shouldExposeFrozenCanonicalRootAndPatchEngine() {
+        // given
         Node canonical = YAML_MAPPER.readValue(
                 "left:\n" +
                 "  child: keep\n" +
@@ -104,16 +123,19 @@ class ResolvedSnapshotTest {
                 "  child: old", Node.class);
         ResolvedSnapshot snapshot = new Blue().loadSnapshot(canonical);
 
+        // when
         CanonicalPatchResult result = snapshot.applyCanonicalPatch(
                 JsonPatch.replace("/right/child", new Node().value("new")));
 
+        // then
         assertSame(snapshot.frozenCanonicalRoot().property("left"), result.root().property("left"));
         assertEquals("new", result.after().getValue());
         assertEquals(BlueIdCalculator.calculateBlueId(result.root().toNode()), result.blueId());
     }
 
     @Test
-    void exposesCanonicalAndResolvedPathIndexes() {
+    void shouldExposeCanonicalAndResolvedPathIndexes() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Product\n" +
@@ -128,8 +150,10 @@ class ResolvedSnapshotTest {
                 "rows:\n" +
                 "  - a", Node.class);
 
+        // when
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
 
+        // then
         assertEquals("value", snapshot.canonicalNodeAt("/local/nested").getValue());
         assertEquals("value", snapshot.resolvedNodeAt("/local/nested").getValue());
         assertEquals("inherited-value", snapshot.resolvedNodeAt("/inherited").getValue());
@@ -139,27 +163,48 @@ class ResolvedSnapshotTest {
     }
 
     @Test
-    void resolvedSnapshotResolvedAtUsesIndex() {
-        ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue(
+    void shouldUseResolvedPathIndexForResolvedAt() {
+        // given
+        Blue blue = new Blue();
+        Node source = YAML_MAPPER.readValue(
                 "deep:\n" +
                 "  nested:\n" +
-                "    value: ok", Node.class));
+                "    value: ok", Node.class);
 
-        assertSame(snapshot.resolvedIndex().get("/deep/nested"), snapshot.resolvedAt("/deep/nested"));
+        // when
+        ResolvedSnapshot snapshot = blue.loadSnapshot(source);
+        FrozenNode indexedNode =
+                snapshot.resolvedIndex().get("/deep/nested");
+        FrozenNode resolvedNode =
+                snapshot.resolvedAt("/deep/nested");
+
+        // then
+        assertSame(indexedNode, resolvedNode);
     }
 
     @Test
-    void resolvedSnapshotCanonicalAtUsesIndex() {
-        ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue(
+    void shouldUseCanonicalPathIndexForCanonicalAt() {
+        // given
+        Blue blue = new Blue();
+        Node source = YAML_MAPPER.readValue(
                 "deep:\n" +
                 "  nested:\n" +
-                "    value: ok", Node.class));
+                "    value: ok", Node.class);
 
-        assertSame(snapshot.canonicalIndex().get("/deep/nested"), snapshot.canonicalAt("/deep/nested"));
+        // when
+        ResolvedSnapshot snapshot = blue.loadSnapshot(source);
+        FrozenNode indexedNode =
+                snapshot.canonicalIndex().get("/deep/nested");
+        FrozenNode canonicalNode =
+                snapshot.canonicalAt("/deep/nested");
+
+        // then
+        assertSame(indexedNode, canonicalNode);
     }
 
     @Test
-    void pathIndexesAreBuiltLazilyIndependentlyAndPublishedOnce() throws Exception {
+    void shouldBuildPathIndexesLazilyAndIndependentlyAndPublishEachOnce() throws Exception {
+        // given
         ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue(
                 "deep:\n" +
                 "  nested:\n" +
@@ -169,57 +214,90 @@ class ResolvedSnapshotTest {
         canonicalIndexField.setAccessible(true);
         resolvedIndexField.setAccessible(true);
 
-        assertNull(canonicalIndexField.get(snapshot));
-        assertNull(resolvedIndexField.get(snapshot));
-        assertEquals(snapshot.frozenCanonicalRoot().blueId(), snapshot.blueId());
-        assertNull(canonicalIndexField.get(snapshot));
-        assertNull(resolvedIndexField.get(snapshot));
-
-        assertEquals("ok", snapshot.canonicalAt("/deep/nested").getValue());
+        // when
+        Object canonicalIndexBeforeIdentity = canonicalIndexField.get(snapshot);
+        Object resolvedIndexBeforeIdentity = resolvedIndexField.get(snapshot);
+        String canonicalBlueId = snapshot.frozenCanonicalRoot().blueId();
+        String snapshotBlueId = snapshot.blueId();
+        Object canonicalIndexAfterIdentity = canonicalIndexField.get(snapshot);
+        Object resolvedIndexAfterIdentity = resolvedIndexField.get(snapshot);
+        Object nestedValue = snapshot.canonicalAt("/deep/nested").getValue();
         Map<String, FrozenNode> canonicalIndex = snapshot.canonicalIndex();
-        assertSame(canonicalIndex, canonicalIndexField.get(snapshot));
-        assertNull(resolvedIndexField.get(snapshot));
-
+        Object publishedCanonicalIndex = canonicalIndexField.get(snapshot);
+        Object resolvedIndexBeforePublication = resolvedIndexField.get(snapshot);
         ExecutorService executor = Executors.newFixedThreadPool(8);
+        Map<String, FrozenNode> resolvedIndex;
+        Object publishedResolvedIndex;
+        boolean allResolvedIndexesSame = true;
         try {
             List<Callable<Map<String, FrozenNode>>> calls = new ArrayList<>();
             for (int index = 0; index < 64; index++) {
                 calls.add(snapshot::resolvedIndex);
             }
             List<Future<Map<String, FrozenNode>>> futures = executor.invokeAll(calls);
-            Map<String, FrozenNode> resolvedIndex = futures.get(0).get(10, TimeUnit.SECONDS);
-            assertNotNull(resolvedIndexField.get(snapshot));
+            resolvedIndex = futures.get(0).get(10, TimeUnit.SECONDS);
+            publishedResolvedIndex = resolvedIndexField.get(snapshot);
             for (Future<Map<String, FrozenNode>> future : futures) {
-                assertSame(resolvedIndex, future.get(10, TimeUnit.SECONDS));
+                allResolvedIndexesSame &=
+                        resolvedIndex
+                                == future.get(
+                                10,
+                                TimeUnit.SECONDS);
             }
         } finally {
             executor.shutdownNow();
         }
+
+        // then
+        assertNull(canonicalIndexBeforeIdentity);
+        assertNull(resolvedIndexBeforeIdentity);
+        assertEquals(canonicalBlueId, snapshotBlueId);
+        assertNull(canonicalIndexAfterIdentity);
+        assertNull(resolvedIndexAfterIdentity);
+        assertEquals("ok", nestedValue);
+        assertSame(canonicalIndex, publishedCanonicalIndex);
+        assertNull(resolvedIndexBeforePublication);
+        assertNotNull(publishedResolvedIndex);
+        assertTrue(allResolvedIndexesSame);
     }
 
     @Test
-    void resolvedSnapshotBlueIdEqualsCanonicalRootBlueId() {
-        ResolvedSnapshot snapshot = new Blue().loadSnapshot(YAML_MAPPER.readValue("value: ok", Node.class));
+    void shouldUseCanonicalRootBlueIdForResolvedSnapshotBlueId() {
+        // given
+        Blue blue = new Blue();
+        Node canonical =
+                YAML_MAPPER.readValue("value: ok", Node.class);
 
-        assertEquals(snapshot.frozenCanonicalRoot().blueId(), snapshot.blueId());
+        // when
+        ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
+        String canonicalBlueId =
+                snapshot.frozenCanonicalRoot().blueId();
+        String snapshotBlueId = snapshot.blueId();
+
+        // then
+        assertEquals(canonicalBlueId, snapshotBlueId);
     }
 
     @Test
-    void resolvedRootHashNotUsedAsContentBlueId() {
+    void shouldNotUseResolvedRootHashAsContentBlueId() {
+        // given
         BasicNodeProvider nodeProvider = productProvider();
         Blue blue = new Blue(nodeProvider);
         Node canonical = YAML_MAPPER.readValue(
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Product"), Node.class);
 
+        // when
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
 
+        // then
         assertEquals(snapshot.frozenCanonicalRoot().blueId(), snapshot.blueId());
         assertFalse(snapshot.frozenResolvedRoot().blueId().equals(snapshot.blueId()));
     }
 
     @Test
-    void blueCanApplyCanonicalPatchAndReturnNextResolvedSnapshot() {
+    void shouldAllowBlueToApplyCanonicalPatchAndReturnNextResolvedSnapshot() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Product\n" +
@@ -232,16 +310,19 @@ class ResolvedSnapshotTest {
                 "local: old", Node.class);
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
 
+        // when
         ResolvedSnapshot next = blue.applyCanonicalPatch(snapshot,
                 JsonPatch.replace("/local", new Node().value("new")));
 
+        // then
         assertEquals("new", next.canonicalRoot().getAsText("/local/value"));
         assertEquals("inherited", next.resolvedRoot().getAsText("/label"));
         assertEquals(next.frozenCanonicalRoot().blueId(), next.blueId());
     }
 
     @Test
-    void canonicalPatchRemovesRedundantOverrideWhenValueMatchesInheritedResolvedState() {
+    void shouldRemoveRedundantOverrideWhenCanonicalPatchMatchesInheritedResolvedState() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Money\n" +
@@ -253,16 +334,19 @@ class ResolvedSnapshotTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Money"), Node.class);
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
 
+        // when
         ResolvedSnapshot next = blue.applyCanonicalPatch(snapshot,
                 JsonPatch.add("/currency", new Node().value("USD")));
 
+        // then
         assertEquals(snapshot.blueId(), next.blueId());
         assertEquals(null, next.canonicalAt("/currency"));
         assertEquals("USD", next.resolvedNodeAt("/currency").getValue());
     }
 
     @Test
-    void canonicalReplaceRemovesExistingRedundantOverrideWhenItMatchesInheritedResolvedState() {
+    void shouldRemoveExistingRedundantOverrideWhenCanonicalReplaceMatchesInheritedResolvedState() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Money\n" +
@@ -275,16 +359,19 @@ class ResolvedSnapshotTest {
                 "currency: USD", Node.class);
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
 
+        // when
         ResolvedSnapshot next = blue.applyCanonicalPatch(snapshot,
                 JsonPatch.replace("/currency", new Node().value("USD")));
 
+        // then
         assertFalse(snapshot.blueId().equals(next.blueId()));
         assertEquals(null, next.canonicalAt("/currency"));
         assertEquals("USD", next.resolvedNodeAt("/currency").getValue());
     }
 
     @Test
-    void canonicalPatchKeepsOverrideWhenValueDiffersFromInheritedResolvedState() {
+    void shouldKeepOverrideWhenCanonicalPatchDiffersFromInheritedResolvedState() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Money\n" +
@@ -297,34 +384,50 @@ class ResolvedSnapshotTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Money"), Node.class);
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
 
+        // when
         ResolvedSnapshot next = blue.applyCanonicalPatch(snapshot,
                 JsonPatch.add("/currency", new Node().value("EUR")));
 
+        // then
         assertFalse(snapshot.blueId().equals(next.blueId()));
         assertEquals("EUR", next.canonicalNodeAt("/currency").getValue());
         assertEquals("EUR", next.resolvedNodeAt("/currency").getValue());
     }
 
     @Test
-    void rejectsSnapshotBlueIdThatDoesNotMatchCanonicalRoot() {
+    void shouldRejectSnapshotBlueIdThatDoesNotMatchCanonicalRoot() {
+        // given
         FrozenNode root = FrozenNode.fromNode(new Node().value("x"));
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> new ResolvedSnapshot(root, root, "wrong"));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void rejectsLenientResolvedNodeAsCanonicalRoot() {
+    void shouldRejectLenientResolvedNodeAsCanonicalRoot() {
+        // given
         FrozenNode resolvedOnly = FrozenNode.fromResolvedNode(new Node()
                 .blueId("ReferenceMetadata")
                 .name("Expanded node"));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new ResolvedSnapshot(resolvedOnly, resolvedOnly, resolvedOnly.blueId()));
+        // when
+        Throwable failure = captureFailure(
+                () -> new ResolvedSnapshot(
+                        resolvedOnly,
+                        resolvedOnly,
+                        resolvedOnly.blueId()));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void loadSnapshotCachesResolvedSnapshotByBlueIdAndReusesFrozenRoots() {
+    void shouldCacheResolvedSnapshotByBlueIdAndReuseFrozenRootsWhenLoadingSnapshot() {
+        // given
         BasicNodeProvider delegate = productProvider();
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider);
@@ -332,8 +435,10 @@ class ResolvedSnapshotTest {
 
         ResolvedSnapshot first = blue.loadSnapshot(canonical);
         int fetchesAfterFirstLoad = countingProvider.fetchCount();
+        // when
         ResolvedSnapshot second = blue.loadSnapshot(canonical.clone());
 
+        // then
         assertTrue(fetchesAfterFirstLoad > 0);
         assertSame(first, second);
         assertSame(first.frozenCanonicalRoot(), second.frozenCanonicalRoot());
@@ -344,22 +449,26 @@ class ResolvedSnapshotTest {
     }
 
     @Test
-    void preloadedResolvedSnapshotCanBeLoadedByBlueIdAtStartupWithoutProviderFetchOrFrozenClone() {
+    void shouldLoadPreloadedResolvedSnapshotByBlueIdWithoutProviderFetchOrFrozenClone() {
+        // given
         BasicNodeProvider delegate = productProvider();
         Node canonical = productInstance(delegate, "old");
         ResolvedSnapshot precomputed = new Blue(delegate).loadSnapshot(canonical);
 
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider).cacheResolvedSnapshot(precomputed);
+        // when
         ResolvedSnapshot loaded = blue.loadSnapshot(precomputed.blueId());
 
+        // then
         assertSame(precomputed, loaded);
         assertSame(precomputed.frozenResolvedRoot(), loaded.frozenResolvedRoot());
         assertEquals(0, countingProvider.fetchCount());
     }
 
     @Test
-    void loadSnapshotByBlueIdStripsProviderRootIdentityOnCacheMiss() {
+    void shouldStripProviderRootIdentityWhenLoadingSnapshotByBlueIdOnCacheMiss() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Product\n" +
@@ -368,8 +477,10 @@ class ResolvedSnapshotTest {
         Blue blue = new Blue(nodeProvider);
         blue.clearResolvedSnapshotCache();
 
+        // when
         ResolvedSnapshot snapshot = blue.loadSnapshot(blueId);
 
+        // then
         assertEquals(blueId, snapshot.blueId());
         assertEquals("Product", snapshot.canonicalRoot().getName());
         assertNull(snapshot.canonicalRoot().getBlueId());
@@ -377,7 +488,8 @@ class ResolvedSnapshotTest {
     }
 
     @Test
-    void canonicalPatchReturnsCachedTargetSnapshotWhenPatchReachesKnownBlueId() {
+    void shouldReturnCachedTargetSnapshotWhenCanonicalPatchReachesKnownBlueId() {
+        // given
         BasicNodeProvider delegate = productProvider();
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider);
@@ -387,37 +499,48 @@ class ResolvedSnapshotTest {
         ResolvedSnapshot expectedTarget = blue.loadSnapshot(exactPatchedTarget);
         int fetchesAfterPreloadingTarget = countingProvider.fetchCount();
 
+        // when
         ResolvedSnapshot patched = blue.applyCanonicalPatch(original,
                 JsonPatch.replace("/local", new Node().value("new")));
 
+        // then
         assertSame(expectedTarget, patched);
         assertSame(expectedTarget.frozenResolvedRoot(), patched.frozenResolvedRoot());
         assertEquals(fetchesAfterPreloadingTarget, countingProvider.fetchCount());
     }
 
     @Test
-    void changingNodeProviderClearsResolvedSnapshotCache() {
+    void shouldClearResolvedSnapshotCacheWhenNodeProviderChanges() {
+        // given
         BasicNodeProvider delegate = productProvider();
         Blue blue = new Blue(delegate);
+
+        // when
         blue.loadSnapshot(productInstance(delegate, "old"));
-
-        assertEquals(1, blue.resolvedSnapshotCacheSize());
-
+        int cacheSizeBeforeProviderChange =
+                blue.resolvedSnapshotCacheSize();
         blue.nodeProvider(productProvider());
+        int cacheSizeAfterProviderChange =
+                blue.resolvedSnapshotCacheSize();
 
-        assertEquals(0, blue.resolvedSnapshotCacheSize());
+        // then
+        assertEquals(1, cacheSizeBeforeProviderChange);
+        assertEquals(0, cacheSizeAfterProviderChange);
     }
 
     @Test
-    void differentSnapshotsReuseSameResolvedTypeFrozenNodeAndAvoidRefetchingTypeGraph() {
+    void shouldReuseResolvedTypeFrozenNodeAcrossSnapshotsAndAvoidRefetchingTypeGraph() {
+        // given
         BasicNodeProvider delegate = inheritedProductProvider();
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider);
 
         ResolvedSnapshot first = blue.loadSnapshot(productInstance(delegate, "first"));
         int fetchesAfterFirst = countingProvider.fetchCount();
+        // when
         ResolvedSnapshot second = blue.loadSnapshot(productInstance(delegate, "second"));
 
+        // then
         assertTrue(fetchesAfterFirst > 0);
         assertEquals(fetchesAfterFirst, countingProvider.fetchCount());
         assertSame(first.frozenResolvedRoot().getType(), second.frozenResolvedRoot().getType());
@@ -427,21 +550,25 @@ class ResolvedSnapshotTest {
     }
 
     @Test
-    void providerFetchCountDoesNotIncreaseForCachedResolvedTypes() {
+    void shouldNotIncreaseProviderFetchCountForCachedResolvedTypes() {
+        // given
         BasicNodeProvider delegate = inheritedProductProvider();
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider);
 
         blue.loadSnapshot(productInstance(delegate, "first"));
         int fetchesAfterFirst = countingProvider.fetchCount();
+        // when
         blue.loadSnapshot(productInstance(delegate, "second"));
 
+        // then
         assertTrue(fetchesAfterFirst > 0);
         assertEquals(fetchesAfterFirst, countingProvider.fetchCount());
     }
 
     @Test
-    void preloadedResolvedTypeSnapshotIsUsedToResolveInstancesWithoutProviderFetches() {
+    void shouldUsePreloadedResolvedTypeSnapshotToResolveInstancesWithoutProviderFetches() {
+        // given
         BasicNodeProvider delegate = inheritedProductProvider();
         Node productCanonical = YAML_MAPPER.readValue(
                 "name: Product\n" +
@@ -452,8 +579,10 @@ class ResolvedSnapshotTest {
 
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider).cacheResolvedSnapshot(precomputedType);
+        // when
         ResolvedSnapshot instance = blue.loadSnapshot(productInstance(delegate, "from-preloaded-type"));
 
+        // then
         assertEquals(0, countingProvider.fetchCount());
         assertNotSame(precomputedType.frozenResolvedRoot(), instance.frozenResolvedRoot().getType());
         assertNull(precomputedType.frozenResolvedRoot().getReferenceBlueId());
@@ -463,41 +592,58 @@ class ResolvedSnapshotTest {
     }
 
     @Test
-    void complexResolveMinimizeThenResolveAgainReusesSnapshotAndResolvedTypeGraph() {
+    void shouldReuseSnapshotAndResolvedTypeGraphAcrossResolveMinimizeResolveCycle() {
+        // given
         BasicNodeProvider delegate = complexCommerceProvider();
         CountingNodeProvider countingProvider = new CountingNodeProvider(delegate);
         Blue blue = new Blue(countingProvider);
         Node noisyOrder = complexOrder(delegate, "Order 1001");
 
+        // when
         ResolvedSnapshot first = blue.resolveToSnapshot(noisyOrder);
         int fetchesAfterFirstResolve = countingProvider.fetchCount();
         Node canonical = first.canonicalRoot();
+        int commerceOrderFetches = countingProvider.fetchCount(
+                delegate.getBlueIdByName("Commerce Order"));
+        int auditedEntityFetches = countingProvider.fetchCount(
+                delegate.getBlueIdByName("Audited Entity"));
+        int postalAddressFetches = countingProvider.fetchCount(
+                delegate.getBlueIdByName("Postal Address"));
+        int moneyFetches = countingProvider.fetchCount(
+                delegate.getBlueIdByName("Money"));
+        int lineItemFetches = countingProvider.fetchCount(
+                delegate.getBlueIdByName("Line Item"));
+        int deliveryWindowFetches = countingProvider.fetchCount(
+                delegate.getBlueIdByName("Delivery Window"));
+        ResolvedSnapshot fromMinimizedCanonical = blue.loadSnapshot(canonical);
+        int fetchesAfterMinimizedReload = countingProvider.fetchCount();
+        Node nextCanonicalOrder = canonical.clone().name("Order 1002");
+        ResolvedSnapshot secondOrder = blue.loadSnapshot(nextCanonicalOrder);
+        int fetchesAfterSecondOrder = countingProvider.fetchCount();
 
-        assertEquals(1, countingProvider.fetchCount(delegate.getBlueIdByName("Commerce Order")));
-        assertEquals(1, countingProvider.fetchCount(delegate.getBlueIdByName("Audited Entity")));
-        assertEquals(1, countingProvider.fetchCount(delegate.getBlueIdByName("Postal Address")));
-        assertEquals(1, countingProvider.fetchCount(delegate.getBlueIdByName("Money")));
-        assertEquals(1, countingProvider.fetchCount(delegate.getBlueIdByName("Line Item")));
-        assertEquals(1, countingProvider.fetchCount(delegate.getBlueIdByName("Delivery Window")));
-
+        // then
+        assertEquals(1, commerceOrderFetches);
+        assertEquals(1, auditedEntityFetches);
+        assertEquals(1, postalAddressFetches);
+        assertEquals(1, moneyFetches);
+        assertEquals(1, lineItemFetches);
+        assertEquals(1, deliveryWindowFetches);
         assertFalse(canonical.getProperties().containsKey("auditLevel"));
         assertFalse(canonical.getProperties().containsKey("metadata"));
         assertFalse(canonical.getProperties().containsKey("status"));
-        assertFalse(canonical.getProperties().get("billingAddress").getProperties().containsKey("country"));
-        assertFalse(canonical.getProperties().get("billingAddress").getProperties().containsKey("city"));
-        assertFalse(canonical.getProperties().get("summary").getProperties().containsKey("currency"));
-        assertFalse(canonical.getProperties().get("deliveryWindow").getProperties().containsKey("timezone"));
-
-        ResolvedSnapshot fromMinimizedCanonical = blue.loadSnapshot(canonical);
-
+        assertFalse(canonical.getProperties().get("billingAddress")
+                .getProperties().containsKey("country"));
+        assertFalse(canonical.getProperties().get("billingAddress")
+                .getProperties().containsKey("city"));
+        assertFalse(canonical.getProperties().get("summary")
+                .getProperties().containsKey("currency"));
+        assertFalse(canonical.getProperties().get("deliveryWindow")
+                .getProperties().containsKey("timezone"));
         assertSame(first, fromMinimizedCanonical);
-        assertEquals(fetchesAfterFirstResolve, countingProvider.fetchCount());
-
-        Node nextCanonicalOrder = canonical.clone().name("Order 1002");
-        ResolvedSnapshot secondOrder = blue.loadSnapshot(nextCanonicalOrder);
-
+        assertEquals(fetchesAfterFirstResolve,
+                fetchesAfterMinimizedReload);
         assertNotSame(first, secondOrder);
-        assertEquals(fetchesAfterFirstResolve, countingProvider.fetchCount());
+        assertEquals(fetchesAfterFirstResolve, fetchesAfterSecondOrder);
         assertSame(first.frozenResolvedRoot().getType(), secondOrder.frozenResolvedRoot().getType());
         assertSame(first.frozenResolvedRoot().property("billingAddress").getType(),
                 secondOrder.frozenResolvedRoot().property("billingAddress").getType());

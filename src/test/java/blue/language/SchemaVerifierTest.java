@@ -12,11 +12,16 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collections;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class SchemaVerifierTest {
 
@@ -43,159 +48,296 @@ public class SchemaVerifierTest {
     }
 
     @Test
-    public void testRequiredPositive() throws Exception {
+    public void shouldAcceptRequired() throws Exception {
+        // given
         schema.required(true);
-        node.value("xyz"); 
-        merger.resolve(node);
-        // nothing should be thrown
+        node.value("xyz");
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testRequiredNegative() throws Exception {
+    public void shouldUseTypedScalarIdentityForEnumAndIgnoreDeclarationMetadata() {
+        // given
+        Node describedText = new Node()
+                .description("Declaration metadata is not scalar identity.")
+                .type(new Node().blueId(TEXT_TYPE_BLUE_ID))
+                .schema(new Schema().enumValues(Collections.singletonList(
+                        new Node().value("catalog"))))
+                .value("catalog");
+        Node wrongEffectiveType = describedText.clone()
+                .type(new Node().blueId(DOUBLE_TYPE_BLUE_ID))
+                .value(BigDecimal.ONE);
+        SchemaVerifier verifier = new SchemaVerifier();
+
+        // when
+        Throwable acceptedFailure = captureFailure(
+                () -> verifier.validateCompleted(describedText, true, "/mode"));
+        Throwable rejectedFailure = captureFailure(
+                () -> verifier.validateCompleted(wrongEffectiveType, true, "/mode"));
+
+        // then
+        assertNull(acceptedFailure);
+        assertInstanceOf(IllegalArgumentException.class, rejectedFailure);
+    }
+
+    @Test
+    public void shouldRejectRequired() throws Exception {
+        // given
         Node type = new Node().properties("required", new Node()
                 .schema(new Schema().required(true)));
         BasicNodeProvider provider = new BasicNodeProvider(type);
         String typeBlueId = calculateBlueId(type);
         Merger completedValueMerger = new Merger(mergingProcessor, provider);
+        Node missingRequiredValue = new Node().type(new Node().blueId(typeBlueId));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> completedValueMerger.resolve(new Node().type(new Node().blueId(typeBlueId))));
+        // when
+        Throwable failure = captureFailure(() -> completedValueMerger.resolve(missingRequiredValue));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMultipleItemsAllowedWithoutMaxItems() throws Exception {
+    public void shouldAllowMultipleItemsWithoutMaxItems() throws Exception {
+        // given
         node.items(Arrays.asList(new Node().name("item 1"), new Node().name("item 2")));
-        assertDoesNotThrow(() -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertNull(failure);
     }
 
     @Test
-    public void testMaxItemsControlsSingleItemCardinality() throws Exception {
+    public void shouldUseMaxItemsToControlSingleItemCardinality() throws Exception {
+        // given
         schema.maxItems(1);
         node.items(new Node().name("item 1"), new Node().name("item 2"));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMinLengthPositive() throws Exception {
+    public void shouldAcceptMinLength() throws Exception {
+        // given
         schema.minLength(3);
         node.value("xyz");
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMinLengthNegative() throws Exception {
+    public void shouldRejectMinLength() throws Exception {
+        // given
         schema.minLength(4);
         node.value("xyz");
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMinLengthCountsUnicodeCodePoints() throws Exception {
+    public void shouldCountUnicodeCodePointsForMinLength() throws Exception {
+        // given
         schema.minLength(2);
         node.value("\uD83D\uDE00");
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMaxLengthPositive() throws Exception {
+    public void shouldAcceptMaxLength() throws Exception {
+        // given
         schema.maxLength(3);
         node.value("xyz");
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMaxLengthNegative() throws Exception {
+    public void shouldRejectMaxLength() throws Exception {
+        // given
         schema.maxLength(2);
         node.value("xyz");
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMaxLengthCountsUnicodeCodePoints() throws Exception {
+    public void shouldCountUnicodeCodePointsForMaxLength() throws Exception {
+        // given
         schema.maxLength(1);
         node.value("\uD83D\uDE00");
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
-    public void testMinimumPositive() throws Exception {
+    @Test
+    public void shouldAcceptMinimum() throws Exception {
+        // given
         schema.minimum(new BigDecimal("1.0"));
         node.value(new BigDecimal("1.5"));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMinimumNegative() throws Exception {
+    public void shouldRejectMinimum() throws Exception {
+        // given
         schema.minimum(new BigDecimal("2.0"));
         node.value(new BigDecimal("1.5"));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMaximumPositive() throws Exception {
+    public void shouldAcceptMaximum() throws Exception {
+        // given
         schema.maximum(new BigDecimal("5.0"));
         node.value(new BigDecimal("4.5"));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMaximumNegative() throws Exception {
+    public void shouldRejectMaximum() throws Exception {
+        // given
         schema.maximum(new BigDecimal("3.0"));
         node.value(new BigDecimal("3.5"));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testExclusiveMinimumPositive() throws Exception {
+    public void shouldAcceptExclusiveMinimum() throws Exception {
+        // given
         schema.exclusiveMinimum(new BigDecimal("1.0"));
         node.value(new BigDecimal("1.1"));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testExclusiveMinimumNegative() throws Exception {
+    public void shouldRejectExclusiveMinimum() throws Exception {
+        // given
         schema.exclusiveMinimum(new BigDecimal("2.0"));
         node.value(new BigDecimal("2.0"));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testExclusiveMaximumPositive() throws Exception {
+    public void shouldAcceptExclusiveMaximum() throws Exception {
+        // given
         schema.exclusiveMaximum(new BigDecimal("5.0"));
         node.value(new BigDecimal("4.9"));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testExclusiveMaximumNegative() throws Exception {
+    public void shouldRejectExclusiveMaximum() throws Exception {
+        // given
         schema.exclusiveMaximum(new BigDecimal("3.0"));
         node.value(new BigDecimal("3.0"));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMultipleOfPositive() throws Exception {
+    public void shouldAcceptMultipleOf() throws Exception {
+        // given
         schema.multipleOf(new BigDecimal("2.0"));
         node.value(new BigDecimal("4.0"));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMultipleOfNegative() throws Exception {
+    public void shouldRejectMultipleOf() throws Exception {
+        // given
         schema.multipleOf(new BigDecimal("3.0"));
         node.value(new BigDecimal("5.0"));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void doubleMultipleOfUsesExactBinary64RationalArithmetic() {
+    public void shouldUseExactBinary64RationalArithmeticForDoubleMultipleOf() {
+        // given
         Node passing = new Node()
                 .schema(new Schema().multipleOf(new BigDecimal("0.5")))
                 .value(new BigDecimal("1.5"));
@@ -203,159 +345,256 @@ public class SchemaVerifierTest {
                 .schema(new Schema().multipleOf(new BigDecimal("0.1")))
                 .value(new BigDecimal("0.3"));
 
-        assertDoesNotThrow(() -> merger.resolve(passing));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(failing));
+        // when
+        Throwable passingFailure = captureFailure(() -> merger.resolve(passing));
+        Throwable failingFailure = captureFailure(() -> merger.resolve(failing));
+
+        // then
+        assertNull(passingFailure);
+        assertInstanceOf(IllegalArgumentException.class, failingFailure);
     }
 
     @Test
-    public void schemaKeywordsRejectWrongPayloadKinds() {
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+    public void shouldRejectWrongPayloadKindsForSchemaKeywords() {
+        // given
+        Node numericMinLengthValue = new Node()
                 .schema(new Schema().minLength(1))
-                .value(BigInteger.ONE)));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .value(BigInteger.ONE);
+        Node textualMinimumValue = new Node()
                 .schema(new Schema().minimum(BigDecimal.ONE))
-                .value("one")));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .value("one");
+        Node scalarMinItemsValue = new Node()
                 .schema(new Schema().minItems(1))
-                .value("not a list")));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .value("not a list");
+        Node objectMinItemsValue = new Node()
                 .schema(new Schema().minItems(1))
-                .properties("field", new Node().value("not a list"))));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .properties("field", new Node().value("not a list"));
+        Node scalarMinFieldsValue = new Node()
                 .schema(new Schema().minFields(1))
-                .value("not an object")));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .value("not an object");
+        Node listMinFieldsValue = new Node()
                 .schema(new Schema().minFields(1))
-                .items(new Node().value("not an object"))));
+                .items(new Node().value("not an object"));
+
+        // when
+        Throwable numericMinLengthFailure = captureFailure(() -> merger.resolve(numericMinLengthValue));
+        Throwable textualMinimumFailure = captureFailure(() -> merger.resolve(textualMinimumValue));
+        Throwable scalarMinItemsFailure = captureFailure(() -> merger.resolve(scalarMinItemsValue));
+        Throwable objectMinItemsFailure = captureFailure(() -> merger.resolve(objectMinItemsValue));
+        Throwable scalarMinFieldsFailure = captureFailure(() -> merger.resolve(scalarMinFieldsValue));
+        Throwable listMinFieldsFailure = captureFailure(() -> merger.resolve(listMinFieldsValue));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, numericMinLengthFailure);
+        assertInstanceOf(IllegalArgumentException.class, textualMinimumFailure);
+        assertInstanceOf(IllegalArgumentException.class, scalarMinItemsFailure);
+        assertInstanceOf(IllegalArgumentException.class, objectMinItemsFailure);
+        assertInstanceOf(IllegalArgumentException.class, scalarMinFieldsFailure);
+        assertInstanceOf(IllegalArgumentException.class, listMinFieldsFailure);
     }
 
     @Test
-    public void testMinItemsPositive() throws Exception {
+    public void shouldAcceptMinItems() throws Exception {
+        // given
         schema.minItems(2);
         node.items(Arrays.asList(new Node(), new Node()));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMinItemsNegative() throws Exception {
+    public void shouldRejectMinItems() throws Exception {
+        // given
         schema.minItems(3);
         node.items(Arrays.asList(new Node(), new Node()));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMaxItemsPositive() throws Exception {
+    public void shouldAcceptMaxItems() throws Exception {
+        // given
         schema.maxItems(3);
         node.items(Arrays.asList(new Node(), new Node()));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMaxItemsNegative() throws Exception {
+    public void shouldRejectMaxItems() throws Exception {
+        // given
         schema.maxItems(1);
         node.items(Arrays.asList(new Node(), new Node()));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testUniqueItemsPositive() throws Exception {
+    public void shouldAcceptUniqueItems() throws Exception {
+        // given
         schema.uniqueItems(true);
         node.items(Arrays.asList(new Node().name("Name 1"), new Node().name("Name 2")));
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testUniqueItemsNegative() throws Exception {
+    public void shouldRejectUniqueItems() throws Exception {
+        // given
         schema.uniqueItems(true);
         node.items(Arrays.asList(new Node().name("Name 1"), new Node().name("Name 1")));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMinFieldsPositive() throws Exception {
+    public void shouldAcceptMinFields() throws Exception {
+        // given
         schema.minFields(2);
         node.properties(
                 "a", new Node().value("A"),
                 "b", new Node().value("B"));
 
-        merger.resolve(node);
-        // nothing should be thrown
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMinFieldsNegative() throws Exception {
+    public void shouldRejectMinFields() throws Exception {
+        // given
         schema.minFields(2);
         node.properties("a", new Node().value("A"));
 
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMaxFieldsPositive() throws Exception {
+    public void shouldAcceptMaxFields() throws Exception {
+        // given
         schema.maxFields(2);
         node.properties(
                 "a", new Node().value("A"),
                 "b", new Node().value("B"));
 
-        merger.resolve(node);
-        // nothing should be thrown
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMaxFieldsNegative() throws Exception {
+    public void shouldRejectMaxFields() throws Exception {
+        // given
         schema.maxFields(1);
         node.properties(
                 "a", new Node().value("A"),
                 "b", new Node().value("B"));
 
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testEnumPositive() throws Exception {
+    public void shouldAcceptEnum() throws Exception {
+        // given
         schema.enumValues(Arrays.asList(new Node().value("red"), new Node().value("blue")));
         node.value("red");
 
-        merger.resolve(node);
-        // nothing should be thrown
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testEnumNegative() throws Exception {
+    public void shouldRejectEnum() throws Exception {
+        // given
         schema.enumValues(Arrays.asList(new Node().value("red"), new Node().value("blue")));
         node.value("green");
 
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testEnumIgnoresPropagatedSchemaMetadata() throws Exception {
+    public void shouldIgnorePropagatedSchemaMetadataForEnum() throws Exception {
+        // given
         schema.enumValues(Arrays.asList(new Node().value("red")));
         node.value("red");
 
+        // when
         Node resolved = merger.resolve(node);
 
+        // then
         assertEquals("red", resolved.getValue());
     }
 
     @Test
-    public void testSchemaWellFormedness() throws Exception {
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+    public void shouldRejectMalformedSchemaConstraints() throws Exception {
+        // given
+        Node negativeMinLength = new Node()
                 .schema(new Schema().minLength(-1))
-                .value("abc")));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .value("abc");
+        Node invertedItemBounds = new Node()
                 .schema(new Schema().minItems(2).maxItems(1))
-                .items(new Node().value("A"))));
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(new Node()
+                .items(new Node().value("A"));
+        Node zeroMultipleOf = new Node()
                 .schema(new Schema().multipleOf(BigDecimal.ZERO))
-                .value(BigDecimal.ONE)));
+                .value(BigDecimal.ONE);
+
+        // when
+        Throwable negativeMinLengthFailure = captureFailure(() -> merger.resolve(negativeMinLength));
+        Throwable invertedItemBoundsFailure = captureFailure(() -> merger.resolve(invertedItemBounds));
+        Throwable zeroMultipleOfFailure = captureFailure(() -> merger.resolve(zeroMultipleOf));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, negativeMinLengthFailure);
+        assertInstanceOf(IllegalArgumentException.class, invertedItemBoundsFailure);
+        assertInstanceOf(IllegalArgumentException.class, zeroMultipleOfFailure);
     }
 
     @Test
-    public void enumIntersectionPreservesEffectiveScalarType() {
+    public void shouldPreserveEffectiveScalarTypeWhenIntersectingEnums() {
+        // given
         Node source = new Node().schema(new Schema().enumValues(Arrays.asList(
                 new Node().value(BigInteger.ONE),
                 new Node().value(new BigDecimal("1.0")),
@@ -364,57 +603,80 @@ public class SchemaVerifierTest {
                 new Node().value(new BigDecimal("1.0")),
                 new Node().value("1"))));
 
+        // when
         new SchemaPropagator().process(target, source, blueId -> null, null);
 
+        // then
         assertEquals(2, target.getSchema().getEnum().size());
         assertEquals(new BigDecimal("1.0"), target.getSchema().getEnum().get(0).getValue());
         assertEquals("1", target.getSchema().getEnum().get(1).getValue());
     }
 
     @Test
-    public void minimumAndExclusiveMinimumMergeToExclusive() {
+    public void shouldMergeMinimumAndExclusiveMinimumAsExclusive() {
+        // given
         Node source = new Node().schema(new Schema().minimum(new BigDecimal("5")));
         Node targetAtBound = new Node().schema(new Schema().exclusiveMinimum(new BigDecimal("5"))).value(new BigDecimal("5"));
         Node targetAboveBound = new Node().schema(new Schema().exclusiveMinimum(new BigDecimal("5"))).value(new BigDecimal("6"));
 
-        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(targetAtBound, source));
+        // when
+        Throwable boundFailure = captureFailure(
+                () -> propagateAndVerify(targetAtBound, source));
         propagateAndVerify(targetAboveBound, source);
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, boundFailure);
         assertEquals(0, new BigDecimal("5").compareTo(targetAboveBound.getSchema().getMinimumValue()));
         assertEquals(0, new BigDecimal("5").compareTo(targetAboveBound.getSchema().getExclusiveMinimumValue()));
     }
 
     @Test
-    public void maximumAndExclusiveMaximumMergeToExclusive() {
+    public void shouldMergeMaximumAndExclusiveMaximumAsExclusive() {
+        // given
         Node source = new Node().schema(new Schema().maximum(new BigDecimal("5")));
         Node targetAtBound = new Node().schema(new Schema().exclusiveMaximum(new BigDecimal("5"))).value(new BigDecimal("5"));
         Node targetBelowBound = new Node().schema(new Schema().exclusiveMaximum(new BigDecimal("5"))).value(new BigDecimal("4"));
 
-        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(targetAtBound, source));
+        // when
+        Throwable boundFailure = captureFailure(
+                () -> propagateAndVerify(targetAtBound, source));
         propagateAndVerify(targetBelowBound, source);
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, boundFailure);
         assertEquals(0, new BigDecimal("5").compareTo(targetBelowBound.getSchema().getMaximumValue()));
         assertEquals(0, new BigDecimal("5").compareTo(targetBelowBound.getSchema().getExclusiveMaximumValue()));
     }
 
     @Test
-    public void minMaxItemsConflictFails() {
+    public void shouldFailWhenMinItemsExceedsMaxItems() {
+        // given
         Node source = new Node().schema(new Schema().minItems(3));
         Node target = new Node()
                 .schema(new Schema().maxItems(2))
                 .items(new Node().value("A"), new Node().value("B"));
 
-        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(target, source));
+        // when
+        Throwable failure = captureFailure(() -> propagateAndVerify(target, source));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void integerMultipleOfMergeUsesLcmOrEquivalentAllConstraints() {
+    public void shouldUseLcmOrEquivalentWhenMergingIntegerMultipleOfConstraints() {
+        // given
         Node source = new Node().schema(new Schema().multipleOf(new BigDecimal("4")));
         Node target = new Node().schema(new Schema().multipleOf(new BigDecimal("6"))).value(new BigDecimal("24"));
         Node failingTarget = new Node().schema(new Schema().multipleOf(new BigDecimal("6"))).value(new BigDecimal("18"));
 
+        // when
         propagateAndVerify(target, source);
+        Throwable failure = captureFailure(() -> propagateAndVerify(failingTarget, source));
 
+        // then
         assertEquals(0, new BigDecimal("12").compareTo(target.getSchema().getMultipleOfValue()));
-        assertThrows(IllegalArgumentException.class, () -> propagateAndVerify(failingTarget, source));
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     private void propagateAndVerify(Node target, Node source) {
@@ -423,39 +685,5 @@ public class SchemaVerifierTest {
         verifier.postProcess(target, source, blueId -> null, null);
         verifier.validateCompleted(target, true, "/");
     }
-
-//
-//    @Test
-//    public void testSchemaAndBlueIdSimpler() throws Exception {
-//
-//        BasicNodeProvider nodeProvider = new BasicNodeProvider();
-//
-//        String a = "name: A\n" +
-//                   "x:\n" +
-//                   "  schema:\n" +
-//                   "    maxLength: 4\n" +
-//                   "y:\n" +
-//                   "  schema:\n" +
-//                   "    maxLength: 4";
-//        Node aNode = YAML_MAPPER.readValue(a, Node.class);
-//        nodeProvider.addSingleNodes(aNode);
-//
-//        String b = "name: B\n" +
-//                   "type:\n" +
-//                   "  blueId: " + calculateBlueId(aNode) + "\n" +
-//                   "x: asdf\n" +
-//                   "y: abcd";
-//        Node bNode = YAML_MAPPER.readValue(b, Node.class);
-//        nodeProvider.addSingleNodes(bNode);
-//
-//        Blue blue = new Blue(nodeProvider);
-//
-////        System.out.println(blue.nodeToYaml(bNode));
-//
-//
-//        Node result = blue.resolve(bNode);
-//        System.out.println(blue.nodeToYaml(result));
-//
-//    }
 
 }

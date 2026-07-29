@@ -12,8 +12,11 @@ import java.util.Set;
  */
 public final class BlueContractsFixtureResult {
 
+    /** Exhaustive fixture execution outcome. */
     public enum Status {
+        /** Fixture passed. */
         PASS,
+        /** Fixture failed. */
         FAIL
     }
 
@@ -26,6 +29,19 @@ public final class BlueContractsFixtureResult {
     private final Status status;
     private final BlueContractsConformanceFailure failure;
 
+    /**
+     * Creates one validated fixture result.
+     *
+     * @param fixtureId stable fixture identity
+     * @param path fixture resource path
+     * @param role manifest file role
+     * @param category fixture category
+     * @param operation exercised operation
+     * @param vectors normative vector identifiers
+     * @param status pass/fail outcome
+     * @param failure failure details, required exactly when status is FAIL
+     * @throws IllegalArgumentException when required evidence is inconsistent
+     */
     public BlueContractsFixtureResult(String fixtureId,
                                       String path,
                                       String role,
@@ -86,34 +102,106 @@ public final class BlueContractsFixtureResult {
         this.failure = failure;
     }
 
+    /**
+
+     * Returns the fixture identity.
+
+     *
+
+     * @return fixture identity
+
+     */
     public String getFixtureId() {
         return fixtureId;
     }
 
+    /**
+
+     * Returns the fixture path.
+
+     *
+
+     * @return resource path
+
+     */
     public String getPath() {
         return path;
     }
 
+    /**
+
+     * Returns the manifest role.
+
+     *
+
+     * @return file role
+
+     */
     public String getRole() {
         return role;
     }
 
+    /**
+
+     * Returns the fixture category.
+
+     *
+
+     * @return fixture category
+
+     */
     public BlueContractsFixtureCategory getCategory() {
         return category;
     }
 
+    /**
+
+     * Returns the exercised operation.
+
+     *
+
+     * @return operation name
+
+     */
     public String getOperation() {
         return operation;
     }
 
+    /**
+
+     * Returns normative vectors.
+
+     *
+
+     * @return immutable vector list
+
+     */
     public List<String> getVectors() {
         return vectors;
     }
 
+    /**
+
+     * Returns the execution outcome.
+
+     *
+
+     * @return pass/fail status
+
+     */
     public Status getStatus() {
         return status;
     }
 
+    /**
+
+     * Returns failure details.
+
+     *
+
+     * @return failure or {@code null} for PASS
+
+     */
     public BlueContractsConformanceFailure getFailure() {
         return failure;
     }

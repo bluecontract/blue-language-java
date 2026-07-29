@@ -1,5 +1,7 @@
 package blue.language.registry;
 
+import blue.language.utils.Properties;
+
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.provider.VerifyingNodeProvider;
@@ -23,12 +25,29 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
+/**
+ * Eager, identity-verified registry of the six Blue Language 1.0 core types.
+ *
+ * <p>Initialization validates the manifest package identity, exact entry set,
+ * resource digests, names, and calculated BlueIds. Returned nodes are
+ * defensive copies and provider lookup is independently verified.</p>
+ */
 public final class BlueCoreTypeRegistry {
 
+    /** Classpath root containing the canonical registry manifest and definitions. */
     public static final String RESOURCE_ROOT = "registry/blue-language-1.0";
+    private static final String MANIFEST_RESOURCE = "manifest.yaml";
+    private static final String SHA_256_ALGORITHM = "SHA-256";
+    private static final String SHA_256_PREFIX = "sha256:";
     private static final Set<String> REQUIRED_KEYS = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(
-                    "Text", "Integer", "Double", "Boolean", "Dictionary", "List")));
+                    Properties.TEXT_TYPE,
+                    Properties.INTEGER_TYPE,
+                    Properties.DOUBLE_TYPE,
+                    Properties.BOOLEAN_TYPE,
+                    Properties.DICTIONARY_TYPE,
+                    Properties.LIST_TYPE)));
+    /** Shared immutable verified core registry. */
     public static final BlueCoreTypeRegistry INSTANCE = new BlueCoreTypeRegistry();
 
     private final Map<String, RegistryEntry> entries;
@@ -43,20 +62,39 @@ public final class BlueCoreTypeRegistry {
         this.fixturePackageIdentity = manifest.fixturePackageIdentity;
         NodeProvider verifiedProvider = new VerifyingNodeProvider(new RegistryNodeProvider(entries));
         this.provider = blueId -> blueId != null
-                && blueId.indexOf('#') < 0
+                && !BlueIds.hasCyclicMemberSeparator(blueId)
                 && BlueIds.isPotentialBlueId(blueId)
                 ? verifiedProvider.fetchByBlueId(blueId)
                 : null;
     }
 
+    /**
+     * Returns a defensive mutable copy of a core type definition.
+     *
+     * @param name canonical core type name
+     * @return mutable definition copy
+     * @throws IllegalArgumentException when the name is unknown
+     */
     public Node node(String name) {
         return entry(name).node.clone();
     }
 
+    /**
+     * Returns the exact identity of a core type.
+     *
+     * @param name canonical core type name
+     * @return core type BlueId
+     * @throws IllegalArgumentException when the name is unknown
+     */
     public String blueId(String name) {
         return entry(name).blueId;
     }
 
+    /**
+     * Returns the insertion-ordered core identity catalog.
+     *
+     * @return unmodifiable name-to-BlueId map
+     */
     public Map<String, String> blueIdsByName() {
         Map<String, String> result = new LinkedHashMap<>();
         for (Map.Entry<String, RegistryEntry> entry : entries.entrySet()) {
@@ -65,14 +103,29 @@ public final class BlueCoreTypeRegistry {
         return Collections.unmodifiableMap(result);
     }
 
+    /**
+     * Returns the exact registry package identity.
+     *
+     * @return registry package identity
+     */
     public String packageIdentity() {
         return packageIdentity;
     }
 
+    /**
+     * Returns the exact fixture package identity bound by the registry.
+     *
+     * @return fixture package identity
+     */
     public String fixturePackageIdentity() {
         return fixturePackageIdentity;
     }
 
+    /**
+     * Returns the registry's read-only identity-verifying provider.
+     *
+     * @return verified core registry provider
+     */
     public NodeProvider verifiedProvider() {
         return provider;
     }
@@ -87,23 +140,40 @@ public final class BlueCoreTypeRegistry {
     }
 
     private Manifest loadManifest() {
-        try (InputStream input = resource("manifest.yaml")) {
+        try (InputStream input = resource(MANIFEST_RESOURCE)) {
             Map<String, Object> raw = UncheckedObjectMapper.YAML_MAPPER.readValue(input,
                     new TypeReference<Map<String, Object>>() {
                     });
             Manifest manifest = new Manifest();
-            Object specVersion = raw.get("specificationVersion");
-            if (!"1.0".equals(specVersion)) {
+            Object specVersion = raw.get(
+                    RegistryManifestConstants
+                            .FIELD_SPECIFICATION_VERSION);
+            if (!RegistryManifestConstants.VERSION_1_0.equals(
+                    specVersion)) {
                 throw new IllegalStateException("Unsupported Blue Language core registry version: " + specVersion);
             }
-            if (!"blue-language-core".equals(raw.get("registry"))
-                    || !"core-type".equals(raw.get("registryKind"))) {
+            if (!RegistryManifestConstants
+                    .REGISTRY_LANGUAGE_CORE
+                    .equals(raw.get(
+                            RegistryManifestConstants
+                                    .FIELD_REGISTRY))
+                    || !RegistryManifestConstants.KIND_CORE_TYPE
+                    .equals(raw.get(
+                            RegistryManifestConstants
+                                    .FIELD_REGISTRY_KIND))) {
                 throw new IllegalStateException("Unexpected Blue Language core registry identity");
             }
             verifyPackageIdentity(raw);
-            manifest.packageIdentity = requiredText(raw, "packageIdentity");
-            manifest.fixturePackageIdentity = requiredText(raw, "fixturePackageIdentity");
-            Object entriesObject = raw.get("entries");
+            manifest.packageIdentity = requiredText(
+                    raw,
+                    RegistryManifestConstants
+                            .FIELD_PACKAGE_IDENTITY);
+            manifest.fixturePackageIdentity = requiredText(
+                    raw,
+                    RegistryManifestConstants
+                            .FIELD_FIXTURE_PACKAGE_IDENTITY);
+            Object entriesObject = raw.get(
+                    RegistryManifestConstants.FIELD_ENTRIES);
             if (!(entriesObject instanceof List)) {
                 throw new IllegalStateException("Blue Language core registry manifest must contain an entries list");
             }
@@ -113,14 +183,22 @@ public final class BlueCoreTypeRegistry {
                 }
                 @SuppressWarnings("unchecked")
                 Map<String, Object> entry = (Map<String, Object>) rawEntry;
-                String key = requiredText(entry, "key");
+                String key = requiredText(
+                        entry,
+                        RegistryManifestConstants.FIELD_KEY);
                 if (manifest.entries.containsKey(key)) {
                     throw new IllegalStateException("Duplicate Blue Language core registry key: " + key);
                 }
                 manifest.entries.put(key, new ManifestEntry(
-                        requiredText(entry, "path"),
-                        requiredText(entry, "blueId"),
-                        requiredText(entry, "sha256")));
+                        requiredText(
+                                entry,
+                                RegistryManifestConstants.FIELD_PATH),
+                        requiredText(
+                                entry,
+                                RegistryManifestConstants.FIELD_BLUE_ID),
+                        requiredText(
+                                entry,
+                                RegistryManifestConstants.FIELD_SHA256)));
             }
             if (!manifest.entries.keySet().equals(REQUIRED_KEYS)) {
                 throw new IllegalStateException("Blue Language core registry must contain exactly "
@@ -133,7 +211,9 @@ public final class BlueCoreTypeRegistry {
     }
 
     static void verifyPackageIdentity(Map<String, Object> raw) {
-        String declared = requiredText(raw, "packageIdentity");
+        String declared = requiredText(
+                raw,
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
         String calculated = computePackageIdentity(raw);
         if (!declared.equals(calculated)) {
             throw new IllegalStateException("Blue Language core registry package identity mismatch: "
@@ -144,11 +224,17 @@ public final class BlueCoreTypeRegistry {
     static String computePackageIdentity(Map<String, Object> raw) {
         try {
             Map<String, Object> normalized = new LinkedHashMap<>(raw);
-            normalized.put("packageIdentity", null);
-            normalized.put("fixturePackageIdentity", null);
+            normalized.put(
+                    RegistryManifestConstants
+                            .FIELD_PACKAGE_IDENTITY,
+                    null);
+            normalized.put(
+                    RegistryManifestConstants
+                            .FIELD_FIXTURE_PACKAGE_IDENTITY,
+                    null);
             byte[] canonicalJson = new com.fasterxml.jackson.databind.ObjectMapper()
                     .writeValueAsBytes(canonicalizeJsonValue(normalized));
-            return "sha256:" + sha256Hex(canonicalJson);
+            return SHA_256_PREFIX + sha256Hex(canonicalJson);
         } catch (IOException ex) {
             throw new IllegalStateException(
                     "Unable to calculate Blue Language core registry package identity", ex);
@@ -227,7 +313,8 @@ public final class BlueCoreTypeRegistry {
 
     private static String sha256Hex(byte[] bytes) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            byte[] digest = MessageDigest.getInstance(
+                    SHA_256_ALGORITHM).digest(bytes);
             StringBuilder result = new StringBuilder(digest.length * 2);
             for (byte value : digest) {
                 result.append(String.format("%02x", value & 0xff));

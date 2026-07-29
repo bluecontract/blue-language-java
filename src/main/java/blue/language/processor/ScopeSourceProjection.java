@@ -3,9 +3,10 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.JsonPointer;
 import blue.language.utils.CanonicalIdentityInputBuilder;
+import blue.language.utils.JsonPointer;
 import blue.language.utils.Nodes;
+import blue.language.utils.Properties;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,10 @@ import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
  * Source-equivalent document without changing its completed resolved view.
  */
 final class ScopeSourceProjection {
+
+    private static final String STRUCTURE_PROPERTIES_SEGMENT = "properties";
+    private static final String STRUCTURE_KEYS_SEGMENT = "keys";
+    private static final String STRUCTURE_SIZE_SEGMENT = "size";
 
     private final String scopePath;
     private final FrozenNode standaloneSource;
@@ -232,54 +237,69 @@ final class ScopeSourceProjection {
                     + ", projected=" + (projected != null) + ")";
         }
         if (!Objects.equals(captured.getName(), projected.getName())) {
-            return path + "/name (captured=" + captured.getName()
+            return JsonPointer.append(path, Properties.OBJECT_NAME)
+                    + " (captured=" + captured.getName()
                     + ", projected=" + projected.getName()
                     + ", capturedBlueId=" + captured.getReferenceBlueId()
                     + ", projectedBlueId=" + projected.getReferenceBlueId() + ")";
         }
         if (!Objects.equals(captured.getDescription(), projected.getDescription())) {
-            return path + "/description";
+            return JsonPointer.append(
+                    path,
+                    Properties.OBJECT_DESCRIPTION);
         }
         if (!Objects.deepEquals(captured.getValue(), projected.getValue())) {
-            return path + "/value";
+            return JsonPointer.append(path, Properties.OBJECT_VALUE);
         }
         if (!Objects.equals(captured.getReferenceBlueId(), projected.getReferenceBlueId())) {
-            return path + "/blueId";
+            return JsonPointer.append(path, Properties.OBJECT_BLUE_ID);
         }
         if (!Objects.equals(captured.getMergePolicy(), projected.getMergePolicy())) {
-            return path + "/mergePolicy";
+            return JsonPointer.append(
+                    path,
+                    Properties.OBJECT_MERGE_POLICY);
         }
         if (!Objects.equals(captured.getPreviousBlueId(), projected.getPreviousBlueId())) {
-            return path + "/$previous";
+            return JsonPointer.append(
+                    path,
+                    Properties.LIST_CONTROL_PREVIOUS);
         }
         if (!Objects.equals(captured.getPosition(), projected.getPosition())) {
-            return path + "/$pos";
+            return JsonPointer.append(
+                    path,
+                    Properties.LIST_CONTROL_POS);
         }
-        String nested = firstNestedDifference(captured.getType(), projected.getType(), path + "/type");
+        String nested = firstNestedDifference(
+                captured.getType(),
+                projected.getType(),
+                JsonPointer.append(path, Properties.OBJECT_TYPE));
         if (nested != null) {
             return nested;
         }
         nested = firstNestedDifference(captured.getItemType(), projected.getItemType(),
-                path + "/itemType");
+                JsonPointer.append(path, Properties.OBJECT_ITEM_TYPE));
         if (nested != null) {
             return nested;
         }
         nested = firstNestedDifference(captured.getKeyType(), projected.getKeyType(),
-                path + "/keyType");
+                JsonPointer.append(path, Properties.OBJECT_KEY_TYPE));
         if (nested != null) {
             return nested;
         }
         nested = firstNestedDifference(captured.getValueType(), projected.getValueType(),
-                path + "/valueType");
+                JsonPointer.append(path, Properties.OBJECT_VALUE_TYPE));
         if (nested != null) {
             return nested;
         }
         nested = firstNestedDifference(captured.getContracts(), projected.getContracts(),
-                path + "/contracts");
+                JsonPointer.append(path, Properties.OBJECT_CONTRACTS));
         if (nested != null) {
             return nested;
         }
-        nested = firstNestedDifference(captured.getBlue(), projected.getBlue(), path + "/blue");
+        nested = firstNestedDifference(
+                captured.getBlue(),
+                projected.getBlue(),
+                JsonPointer.append(path, Properties.OBJECT_BLUE));
         if (nested != null) {
             return nested;
         }
@@ -287,15 +307,25 @@ final class ScopeSourceProjection {
         List<FrozenNode> projectedItems = projected.getItems();
         if (capturedItems == null || projectedItems == null) {
             if (capturedItems != projectedItems) {
-                return path + "/items";
+                return JsonPointer.append(
+                        path,
+                        Properties.OBJECT_ITEMS);
             }
         } else {
             if (capturedItems.size() != projectedItems.size()) {
-                return path + "/items/size";
+                return JsonPointer.append(
+                        JsonPointer.append(
+                                path,
+                                Properties.OBJECT_ITEMS),
+                        STRUCTURE_SIZE_SEGMENT);
             }
             for (int index = 0; index < capturedItems.size(); index++) {
                 nested = firstNestedDifference(capturedItems.get(index), projectedItems.get(index),
-                        path + "/items/" + index);
+                        JsonPointer.append(
+                                JsonPointer.append(
+                                        path,
+                                        Properties.OBJECT_ITEMS),
+                                String.valueOf(index)));
                 if (nested != null) {
                     return nested;
                 }
@@ -305,15 +335,22 @@ final class ScopeSourceProjection {
         Map<String, FrozenNode> projectedProperties = projected.getProperties();
         if (capturedProperties == null || projectedProperties == null) {
             if (capturedProperties != projectedProperties) {
-                return path + "/properties";
+                return JsonPointer.append(
+                        path,
+                        STRUCTURE_PROPERTIES_SEGMENT);
             }
         } else {
             if (!capturedProperties.keySet().equals(projectedProperties.keySet())) {
-                return path + "/properties/keys";
+                return JsonPointer.append(
+                        JsonPointer.append(
+                                path,
+                                STRUCTURE_PROPERTIES_SEGMENT),
+                        STRUCTURE_KEYS_SEGMENT);
             }
             for (String key : capturedProperties.keySet()) {
                 nested = firstNestedDifference(capturedProperties.get(key),
-                        projectedProperties.get(key), path + "/" + key);
+                        projectedProperties.get(key),
+                        JsonPointer.append(path, key));
                 if (nested != null) {
                     return nested;
                 }
@@ -321,7 +358,7 @@ final class ScopeSourceProjection {
         }
         if (!Objects.equals(String.valueOf(captured.getSchema()),
                 String.valueOf(projected.getSchema()))) {
-            return path + "/schema";
+            return JsonPointer.append(path, Properties.OBJECT_SCHEMA);
         }
         return path + " (unknown representation difference)";
     }

@@ -1,7 +1,10 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.snapshot.FrozenNode;
 import blue.language.processor.model.JsonPatch;
+import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,6 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Immutable hand-off from patch planning to runtime commit.
+ *
+ * <p>The canonical and resolved roots form one atomic candidate state.
+ * Optional update materialization and generalization metadata belong to that
+ * same candidate and must never be applied independently.</p>
+ */
 final class BatchPatchResult {
 
     private final FrozenNode canonicalRoot;
@@ -197,7 +207,7 @@ final class BatchPatchResult {
 
         GeneralizationMetadataWrite(String path, FrozenNode value) {
             this.path = Objects.requireNonNull(path, "path");
-            this.value = Objects.requireNonNull(value, "value");
+            this.value = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
         }
 
         String path() {
@@ -272,7 +282,7 @@ final class BatchPatchResult {
                             after,
                             before == null ? JsonPatch.Op.ADD : JsonPatch.Op.REPLACE,
                             originScopeForGeneratedUpdate(),
-                            Collections.singletonList("/"),
+                            Collections.singletonList(JsonPointer.ROOT),
                             materializationMetrics));
                 }
             }
@@ -280,7 +290,9 @@ final class BatchPatchResult {
         }
 
         private String originScopeForGeneratedUpdate() {
-            return records.isEmpty() ? "/" : records.get(0).originScope();
+            return records.isEmpty()
+                    ? JsonPointer.ROOT
+                    : records.get(0).originScope();
         }
 
         private static boolean[] computeLaterOverlaps(List<BatchPatchRecord> records) {

@@ -23,23 +23,51 @@ public final class SubscriptionDelta {
     private final List<Entry> added;
     private final List<Entry> removed;
 
+    /**
+     * Creates a canonically ordered immutable delta.
+     *
+     * @param added newly active subscription occurrences
+     * @param removed retired subscription occurrences
+     * @throws NullPointerException when either list or one of its entries is null
+     * @throws IllegalArgumentException when an occurrence is duplicated
+     */
     public SubscriptionDelta(List<Entry> added, List<Entry> removed) {
         this.added = immutable(added);
         this.removed = immutable(removed);
     }
 
+    /**
+     * Returns the allocation-free delta used when no subscriptions changed.
+     *
+     * @return shared empty immutable delta
+     */
     public static SubscriptionDelta empty() {
         return EMPTY;
     }
 
+    /**
+     * Returns occurrences that become active at commit.
+     *
+     * @return canonically ordered immutable additions
+     */
     public List<Entry> added() {
         return added;
     }
 
+    /**
+     * Returns occurrences that retire at commit.
+     *
+     * @return canonically ordered immutable removals
+     */
     public List<Entry> removed() {
         return removed;
     }
 
+    /**
+     * Reports whether committing this delta changes no subscription.
+     *
+     * @return whether both sides of the delta are empty
+     */
     public boolean isEmpty() {
         return added.isEmpty() && removed.isEmpty();
     }
@@ -60,6 +88,9 @@ public final class SubscriptionDelta {
         return Collections.unmodifiableList(copy);
     }
 
+    /**
+     * Immutable canonical subscription occurrence and optional active interval.
+     */
     public static final class Entry {
         private static final Comparator<Entry> CANONICAL_ORDER =
                 (left, right) -> {
@@ -90,6 +121,17 @@ public final class SubscriptionDelta {
         private final ExternalOrderKey startAfterExternalOrderKey;
         private final Long endAtRootRevision;
 
+        /**
+         * Creates an unversioned occurrence without dependency evidence.
+         *
+         * @param scopePath absolute scope path
+         * @param channelKey raw channel key
+         * @param effectiveTypeBlueId effective external-channel type
+         * @param subscriptionKeys immutable logical subscription keys
+         * @param checkpointDomainBlueId checkpoint-domain identity
+         * @throws NullPointerException when a required identity or list is null
+         * @throws IllegalArgumentException when a key is empty or duplicated
+         */
         public Entry(String scopePath,
                      String channelKey,
                      String effectiveTypeBlueId,
@@ -108,6 +150,20 @@ public final class SubscriptionDelta {
                     null);
         }
 
+        /**
+         * Creates an ordered unversioned occurrence.
+         *
+         * @param scopePath absolute scope path
+         * @param channelKey raw channel key
+         * @param effectiveTypeBlueId effective external-channel type
+         * @param sourceContributionNodeBlueIds ordered exact source identities
+         * @param order canonical contract order
+         * @param subscriptionKeys logical subscription keys
+         * @param checkpointDomainBlueId checkpoint-domain identity
+         * @param startAfterExternalOrderKey lower exclusive delivery order
+         * @throws NullPointerException when a required identity or list is null
+         * @throws IllegalArgumentException when an identity list is invalid
+         */
         public Entry(String scopePath,
                      String channelKey,
                      String effectiveTypeBlueId,
@@ -129,6 +185,22 @@ public final class SubscriptionDelta {
                     null);
         }
 
+        /**
+         * Creates a revision-bounded occurrence without dependency evidence.
+         *
+         * @param scopePath absolute scope path
+         * @param channelKey raw channel key
+         * @param effectiveTypeBlueId effective external-channel type
+         * @param sourceContributionNodeBlueIds ordered exact source identities
+         * @param order canonical contract order
+         * @param subscriptionKeys logical subscription keys
+         * @param checkpointDomainBlueId checkpoint-domain identity
+         * @param activationRootRevision activation revision, or {@code null}
+         * @param startAfterExternalOrderKey lower exclusive delivery order
+         * @param endAtRootRevision retirement revision, or {@code null}
+         * @throws NullPointerException when a required identity or list is null
+         * @throws IllegalArgumentException when identities or interval bounds are invalid
+         */
         public Entry(String scopePath,
                      String channelKey,
                      String effectiveTypeBlueId,
@@ -152,6 +224,24 @@ public final class SubscriptionDelta {
                     endAtRootRevision);
         }
 
+        /**
+         * Creates a fully evidenced revision-bounded occurrence.
+         *
+         * @param scopePath absolute scope path
+         * @param channelKey raw channel key
+         * @param effectiveTypeBlueId effective external-channel type
+         * @param sourceContributionNodeBlueIds ordered exact source identities
+         * @param order canonical contract order
+         * @param subscriptionKeys logical subscription keys
+         * @param checkpointDomainBlueId checkpoint-domain identity
+         * @param dependencies immutable deterministic dependency evidence
+         * @param activationRootRevision activation revision, or {@code null}
+         * @param startAfterExternalOrderKey lower exclusive delivery order
+         * @param endAtRootRevision retirement revision, or {@code null}
+         * @throws NullPointerException when a required identity, list, or
+         *         dependency snapshot is null
+         * @throws IllegalArgumentException when identities or interval bounds are invalid
+         */
         public Entry(
                 String scopePath,
                 String channelKey,
@@ -195,46 +285,102 @@ public final class SubscriptionDelta {
             }
         }
 
+        /**
+         * Returns the absolute scope that owns this occurrence.
+         *
+         * @return absolute participating scope path
+         */
         public String scopePath() {
             return scopePath;
         }
 
+        /**
+         * Returns the exact raw key of the External Channel contract.
+         *
+         * @return raw channel contract key
+         */
         public String channelKey() {
             return channelKey;
         }
 
+        /**
+         * Returns the effective runtime type used to derive the occurrence.
+         *
+         * @return effective external-channel type BlueId
+         */
         public String effectiveTypeBlueId() {
             return effectiveTypeBlueId;
         }
 
+        /**
+         * Returns exact Source identities in effective contribution order.
+         *
+         * @return immutable ordered exact source contribution identities
+         */
         public List<String> sourceContributionNodeBlueIds() {
             return sourceContributionNodeBlueIds;
         }
 
+        /**
+         * Returns the order used when occurrences are canonically sorted.
+         *
+         * @return canonical contract order
+         */
         public int order() {
             return order;
         }
 
+        /**
+         * Returns the finite logical keys selected by the channel runtime.
+         *
+         * @return immutable logical subscription keys
+         */
         public List<String> subscriptionKeys() {
             return subscriptionKeys;
         }
 
+        /**
+         * Returns the identity of the domain that isolates checkpoint state.
+         *
+         * @return checkpoint-domain BlueId
+         */
         public String checkpointDomainBlueId() {
             return checkpointDomainBlueId;
         }
 
+        /**
+         * Returns the exact dependencies consulted during subscription
+         * derivation.
+         *
+         * @return immutable deterministic dependency evidence
+         */
         public ExternalChannelDependencySnapshot dependencies() {
             return dependencies;
         }
 
+        /**
+         * Returns the Root revision at which this interval became active.
+         *
+         * @return activation root revision, or {@code null}
+         */
         public Long activationRootRevision() {
             return activationRootRevision;
         }
 
+        /**
+         * Returns the exclusive event-order boundary for activation.
+         *
+         * @return exclusive lower external order bound, or {@code null}
+         */
         public ExternalOrderKey startAfterExternalOrderKey() {
             return startAfterExternalOrderKey;
         }
 
+        /**
+         * Returns the Root revision at which this interval retired.
+         *
+         * @return retirement root revision, or {@code null}
+         */
         public Long endAtRootRevision() {
             return endAtRootRevision;
         }
@@ -242,6 +388,8 @@ public final class SubscriptionDelta {
         /**
          * Returns whether this entry describes an interval that remains active
          * at the retained index revision.
+         *
+         * @return whether no retirement revision is present
          */
         public boolean isActiveInterval() {
             return endAtRootRevision == null;
@@ -298,7 +446,9 @@ public final class SubscriptionDelta {
         }
 
         String occurrenceKey() {
-            return scopePath + "\u0000" + channelKey;
+            return scopePath
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                    + channelKey;
         }
 
         @Override

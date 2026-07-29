@@ -34,138 +34,89 @@ final class ChannelCheckpointSubjectTest {
             "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
 
     @Test
-    void inlineSequenceSubjectSurvivesCheckpointAndDrivesStrictNewness() {
-        Blue language = ProcessorTestSupport.blue();
-        TrackingSnapshotManager snapshots =
-                new TrackingSnapshotManager(
-                        language.getDocumentProcessor()
-                                .snapshotManager());
-        InlineSequenceChannelProcessor channelProcessor =
-                new InlineSequenceChannelProcessor();
-        DocumentProcessor owner = DocumentProcessor.builder()
-                .registerContractProcessor(
-                        channelProcessor)
-                .withMatchingService(
-                        new ContractMatchingService(
-                                language))
-                .withSnapshotManager(
-                        snapshots)
-                .build();
-        Node document = new Node().contracts(
-                new Node().properties(
-                        "timeline",
-                        new Node().type(
-                                new Node().blueId(
-                                        CHANNEL_TYPE_BLUE_ID))));
+    void shouldStoreFirstInlineSequenceSubjectWithoutSnapshotMaterialization() {
+        // given
         Node first = event("first", 10);
-        Node lower = event("lower", 9);
-        Node duplicate = event("duplicate", 10);
-        Node higher = event("higher", 11);
-        for (Node subject : Arrays.asList(
-                subject(9),
-                subject(10),
-                subject(11))) {
-            snapshots.watch(
-                    BlueIdCalculator.calculateBlueId(
-                            subject));
-        }
+        CheckpointScenario scenario = CheckpointScenario.create(first);
 
-        ProcessorEngine.Execution execution =
-                execution(
-                        owner,
-                        document,
-                        first);
-        execution.preflightScope("/");
-        ContractBundle bundle =
-                execution.bundleForScope("/");
-        CheckpointManager checkpointManager =
-                new CheckpointManager(
-                        execution.runtime(),
-                        ProcessorEngine::canonicalSignature);
-        ChannelRunner runner =
-                new ChannelRunner(
-                        owner,
-                        execution,
-                        execution.runtime(),
-                        checkpointManager);
-        ContractBundle.ChannelBinding channel =
-                bundle.channelBinding(
-                        "timeline");
+        // when
+        scenario.deliver(first);
+        CheckpointObservation observation = scenario.observe();
 
-        runner.runExternalChannel(
-                "/", bundle, channel, first);
-        runner.persistPendingCheckpoints("/");
-        bundle = refreshBundle(execution);
-        channel = bundle.channelBinding("timeline");
-        assertStoredInlineSequence(
-                bundle, 10);
-
-        runner.runExternalChannel(
-                "/", bundle, channel, lower);
-        runner.persistPendingCheckpoints("/");
-        bundle = refreshBundle(execution);
-        channel = bundle.channelBinding("timeline");
-        assertStoredInlineSequence(
-                bundle, 10);
-
-        runner.runExternalChannel(
-                "/", bundle, channel, duplicate);
-        runner.persistPendingCheckpoints("/");
-        bundle = refreshBundle(execution);
-        channel = bundle.channelBinding("timeline");
-        assertStoredInlineSequence(
-                bundle, 10);
-
-        runner.runExternalChannel(
-                "/", bundle, channel, higher);
-        runner.persistPendingCheckpoints("/");
-        bundle = refreshBundle(execution);
-        assertStoredInlineSequence(
-                bundle, 11);
-
-        String firstSubjectBlueId =
-                BlueIdCalculator.calculateBlueId(
-                        subject(10));
+        // then
+        assertCheckpoint(observation, 10);
         assertEquals(
-                Arrays.asList(
-                        null,
-                        firstSubjectBlueId,
-                        firstSubjectBlueId,
-                        firstSubjectBlueId),
-                channelProcessor
-                        .previousSubjectBlueIds);
+                Collections.singletonList(null),
+                observation.previousSubjectBlueIds);
         assertEquals(
-                Arrays.asList(
-                        BigInteger.TEN,
-                        BigInteger.TEN,
-                        BigInteger.TEN),
-                channelProcessor
-                        .secondReadSequences);
-        assertEquals(0,
-                snapshots.watchedMaterializations);
+                Collections.emptyList(),
+                observation.secondReadSequences);
+        assertEquals(0, observation.watchedMaterializations);
     }
 
-    private static void assertStoredInlineSequence(
-            ContractBundle bundle,
+    @Test
+    void shouldKeepCheckpointWhenInlineSequenceIsLowerOrDuplicate() {
+        // given
+        Node first = event("first", 10);
+        CheckpointScenario scenario = CheckpointScenario.create(first);
+        scenario.deliver(first);
+        scenario.resetObservations();
+        String firstSubjectBlueId =
+                BlueIdCalculator.calculateBlueId(subject(10));
+
+        // when
+        scenario.deliver(event("lower", 9));
+        scenario.deliver(event("duplicate", 10));
+        CheckpointObservation observation = scenario.observe();
+
+        // then
+        assertCheckpoint(observation, 10);
+        assertEquals(
+                Arrays.asList(
+                        firstSubjectBlueId,
+                        firstSubjectBlueId),
+                observation.previousSubjectBlueIds);
+        assertEquals(
+                Arrays.asList(BigInteger.TEN, BigInteger.TEN),
+                observation.secondReadSequences);
+        assertEquals(0, observation.watchedMaterializations);
+    }
+
+    @Test
+    void shouldAdvanceCheckpointWhenInlineSequenceIsHigher() {
+        // given
+        Node first = event("first", 10);
+        CheckpointScenario scenario = CheckpointScenario.create(first);
+        scenario.deliver(first);
+        scenario.resetObservations();
+        String firstSubjectBlueId =
+                BlueIdCalculator.calculateBlueId(subject(10));
+
+        // when
+        scenario.deliver(event("higher", 11));
+        CheckpointObservation observation = scenario.observe();
+
+        // then
+        assertCheckpoint(observation, 11);
+        assertEquals(
+                Collections.singletonList(firstSubjectBlueId),
+                observation.previousSubjectBlueIds);
+        assertEquals(
+                Collections.singletonList(BigInteger.TEN),
+                observation.secondReadSequences);
+        assertEquals(0, observation.watchedMaterializations);
+    }
+
+    private static void assertCheckpoint(
+            CheckpointObservation observation,
             long expected) {
-        ChannelEventCheckpoint checkpoint =
-                (ChannelEventCheckpoint) bundle.marker(
-                        "checkpoint");
-        assertNotNull(checkpoint);
-        Node stored = checkpoint.entry(
-                "timeline")
-                .getSubject();
-        assertNotNull(stored);
-        assertFalse(stored.isReferenceOnly());
         assertEquals(
                 BigInteger.valueOf(expected),
-                stored.get("/sequence"));
+                observation.storedSequence);
+        assertFalse(observation.storedReferenceOnly);
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
-                        stored),
-                checkpoint.entry(
-                        "timeline")
-                        .subjectBlueId());
+                observation.calculatedStoredBlueId,
+                observation.storedSubjectBlueId);
     }
 
     private static ContractBundle refreshBundle(
@@ -255,6 +206,136 @@ final class ChannelCheckpointSubjectTest {
             Node node) {
         return (BigInteger) node.get(
                 "/sequence");
+    }
+
+    private static final class CheckpointScenario {
+        private final InlineSequenceChannelProcessor channelProcessor;
+        private final TrackingSnapshotManager snapshots;
+        private final ProcessorEngine.Execution execution;
+        private final ChannelRunner runner;
+        private ContractBundle bundle;
+        private ContractBundle.ChannelBinding channel;
+
+        private CheckpointScenario(
+                InlineSequenceChannelProcessor channelProcessor,
+                TrackingSnapshotManager snapshots,
+                ProcessorEngine.Execution execution,
+                ChannelRunner runner,
+                ContractBundle bundle,
+                ContractBundle.ChannelBinding channel) {
+            this.channelProcessor = channelProcessor;
+            this.snapshots = snapshots;
+            this.execution = execution;
+            this.runner = runner;
+            this.bundle = bundle;
+            this.channel = channel;
+        }
+
+        private static CheckpointScenario create(Node firstEvent) {
+            Blue language = ProcessorTestSupport.blue();
+            TrackingSnapshotManager snapshots =
+                    new TrackingSnapshotManager(
+                            language.getDocumentProcessor()
+                                    .snapshotManager());
+            InlineSequenceChannelProcessor channelProcessor =
+                    new InlineSequenceChannelProcessor();
+            DocumentProcessor owner = DocumentProcessor.builder()
+                    .registerContractProcessor(channelProcessor)
+                    .withMatchingService(
+                            new ContractMatchingService(language))
+                    .withSnapshotManager(snapshots)
+                    .build();
+            Node document = new Node().contracts(
+                    new Node().properties(
+                            "timeline",
+                            new Node().type(
+                                    new Node().blueId(
+                                            CHANNEL_TYPE_BLUE_ID))));
+            for (Node watched : Arrays.asList(
+                    subject(9),
+                    subject(10),
+                    subject(11))) {
+                snapshots.watch(
+                        BlueIdCalculator.calculateBlueId(watched));
+            }
+            ProcessorEngine.Execution execution =
+                    execution(owner, document, firstEvent);
+            execution.preflightScope("/");
+            ContractBundle bundle = execution.bundleForScope("/");
+            CheckpointManager checkpointManager =
+                    new CheckpointManager(
+                            execution.runtime(),
+                            ProcessorEngine::canonicalSignature);
+            ChannelRunner runner =
+                    new ChannelRunner(
+                            owner,
+                            execution,
+                            execution.runtime(),
+                            checkpointManager);
+            return new CheckpointScenario(
+                    channelProcessor,
+                    snapshots,
+                    execution,
+                    runner,
+                    bundle,
+                    bundle.channelBinding("timeline"));
+        }
+
+        private void deliver(Node event) {
+            runner.runExternalChannel("/", bundle, channel, event);
+            runner.persistPendingCheckpoints("/");
+            bundle = refreshBundle(execution);
+            channel = bundle.channelBinding("timeline");
+        }
+
+        private void resetObservations() {
+            channelProcessor.previousSubjectBlueIds.clear();
+            channelProcessor.secondReadSequences.clear();
+            snapshots.watchedMaterializations = 0;
+        }
+
+        private CheckpointObservation observe() {
+            ChannelEventCheckpoint checkpoint =
+                    (ChannelEventCheckpoint) bundle.marker("checkpoint");
+            Node stored = checkpoint.entry("timeline").getSubject();
+            return new CheckpointObservation(
+                    sequence(stored),
+                    stored.isReferenceOnly(),
+                    BlueIdCalculator.calculateBlueId(stored),
+                    checkpoint.entry("timeline").subjectBlueId(),
+                    channelProcessor.previousSubjectBlueIds,
+                    channelProcessor.secondReadSequences,
+                    snapshots.watchedMaterializations);
+        }
+    }
+
+    private static final class CheckpointObservation {
+        private final BigInteger storedSequence;
+        private final boolean storedReferenceOnly;
+        private final String calculatedStoredBlueId;
+        private final String storedSubjectBlueId;
+        private final List<String> previousSubjectBlueIds;
+        private final List<BigInteger> secondReadSequences;
+        private final int watchedMaterializations;
+
+        private CheckpointObservation(
+                BigInteger storedSequence,
+                boolean storedReferenceOnly,
+                String calculatedStoredBlueId,
+                String storedSubjectBlueId,
+                List<String> previousSubjectBlueIds,
+                List<BigInteger> secondReadSequences,
+                int watchedMaterializations) {
+            this.storedSequence = storedSequence;
+            this.storedReferenceOnly = storedReferenceOnly;
+            this.calculatedStoredBlueId = calculatedStoredBlueId;
+            this.storedSubjectBlueId = storedSubjectBlueId;
+            this.previousSubjectBlueIds =
+                    new ArrayList<>(previousSubjectBlueIds);
+            this.secondReadSequences =
+                    new ArrayList<>(secondReadSequences);
+            this.watchedMaterializations = watchedMaterializations;
+        }
     }
 
     private static final class InlineSequenceChannelProcessor

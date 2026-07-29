@@ -54,35 +54,72 @@ public final class ProcessingConformanceTrace {
         this.byKind = Collections.unmodifiableMap(frozen);
     }
 
+    /**
+     * Returns the shared trace instance representing an execution with no entries.
+     *
+     * @return shared empty immutable trace
+     */
     public static ProcessingConformanceTrace empty() {
         return EMPTY;
     }
 
+    /**
+     * Returns the gas entries recorded in admission order.
+     *
+     * @return immutable ordered gas entries
+     */
     public List<GasTraceEntry> gas() {
         return gas;
     }
 
     /**
-     * Semantic evidence demands (exact BlueIds or canonical logical demand
-     * paths), in first-demand order.
+     * Returns semantic evidence demands in first-demand order.
+     *
+     * <p>Each demand is either an exact BlueId or a canonical logical demand
+     * path.</p>
+     *
+     * @return immutable ordered demands
      */
     public List<String> semanticDemands() {
         return semanticDemands;
     }
 
+    /**
+     * Returns all semantic trace records in encounter order.
+     *
+     * @return immutable ordered semantic trace records
+     */
     public List<ProcessingTraceRecord> records() {
         return records;
     }
 
+    /**
+     * Selects records of one kind without changing encounter order.
+     *
+     * @param kind record kind
+     * @return immutable matching records
+     */
     public List<ProcessingTraceRecord> records(ProcessingTraceRecord.Kind kind) {
         List<ProcessingTraceRecord> selected = byKind.get(kind);
         return selected != null ? selected : Collections.emptyList();
     }
 
+    /**
+     * Returns the effective contract snapshots indexed by deterministic location.
+     *
+     * @return immutable map of deterministic locations to contract snapshots
+     */
     public Map<String, EffectiveContractSnapshot> contractSnapshots() {
         return contractSnapshots;
     }
 
+    /**
+     * Sums admitted quantity for one qualified gas counter, saturating on overflow.
+     *
+     * @param namespace counter namespace
+     * @param counter counter name
+     * @return saturated admitted quantity
+     */
     public long counterQuantity(String namespace, String counter) {
         long quantity = 0L;
         for (GasTraceEntry entry : gas) {

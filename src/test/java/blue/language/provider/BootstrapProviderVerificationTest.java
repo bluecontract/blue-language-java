@@ -32,75 +32,116 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class BootstrapProviderVerificationTest {
 
     @Test
-    void coreAliasMapMatchesRegistryBlueIds() {
-        assertEquals(TEXT_TYPE_BLUE_ID, CORE_TYPE_NAME_TO_BLUE_ID_MAP.get("Text"));
-        assertEquals(DOUBLE_TYPE_BLUE_ID, CORE_TYPE_NAME_TO_BLUE_ID_MAP.get("Double"));
-        assertEquals(INTEGER_TYPE_BLUE_ID, CORE_TYPE_NAME_TO_BLUE_ID_MAP.get("Integer"));
-        assertEquals(BOOLEAN_TYPE_BLUE_ID, CORE_TYPE_NAME_TO_BLUE_ID_MAP.get("Boolean"));
-        assertEquals(LIST_TYPE_BLUE_ID, CORE_TYPE_NAME_TO_BLUE_ID_MAP.get("List"));
-        assertEquals(DICTIONARY_TYPE_BLUE_ID, CORE_TYPE_NAME_TO_BLUE_ID_MAP.get("Dictionary"));
+    void shouldMatchCoreAliasMapAgainstRegistryBlueIds() {
+        // given
+        Map<String, String> expectedCoreAliases = new LinkedHashMap<>();
+        expectedCoreAliases.put("Text", TEXT_TYPE_BLUE_ID);
+        expectedCoreAliases.put("Double", DOUBLE_TYPE_BLUE_ID);
+        expectedCoreAliases.put("Integer", INTEGER_TYPE_BLUE_ID);
+        expectedCoreAliases.put("Boolean", BOOLEAN_TYPE_BLUE_ID);
+        expectedCoreAliases.put("List", LIST_TYPE_BLUE_ID);
+        expectedCoreAliases.put("Dictionary", DICTIONARY_TYPE_BLUE_ID);
 
-        CORE_TYPE_NAME_TO_BLUE_ID_MAP.forEach((name, blueId) ->
-                assertEquals(name, CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(blueId)));
-        assertEquals(CORE_TYPE_NAME_TO_BLUE_ID_MAP, new Blue().conformanceReport().getCoreRegistryBlueIds());
+        // when
+        Map<String, String> actualCoreAliases = new LinkedHashMap<>(CORE_TYPE_NAME_TO_BLUE_ID_MAP);
+        Map<String, String> actualCoreNames = new LinkedHashMap<>(CORE_TYPE_BLUE_ID_TO_NAME_MAP);
+        Map<String, String> reportedCoreAliases = new Blue().conformanceReport().getCoreRegistryBlueIds();
+
+        // then
+        assertEquals(expectedCoreAliases, actualCoreAliases);
+        expectedCoreAliases.forEach((name, blueId) ->
+                assertEquals(name, actualCoreNames.get(blueId)));
+        assertEquals(actualCoreAliases, reportedCoreAliases);
     }
 
     @Test
-    void defaultBlueAliasMapIncludesRuntimeTypeBlueIds() {
+    void shouldIncludeRuntimeTypeBlueIdsInDefaultBlueAliasMap() {
+        // given
         BlueRuntimeTypeRegistry registry = BlueRuntimeTypeRegistry.getDefault();
         Map<String, String> expectedRuntimeAliases = new LinkedHashMap<>();
-
+        Map<String, String> expectedRuntimeNames = new LinkedHashMap<>();
         for (RuntimeTypeKey key : RuntimeTypeKey.values()) {
             String name = registry.node(key).getName();
             String blueId = registry.blueId(key);
             expectedRuntimeAliases.put(name, blueId);
-            assertEquals(blueId, DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get(name));
-            assertEquals(name, DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP.get(blueId));
+            expectedRuntimeNames.put(blueId, name);
         }
-        assertEquals(expectedRuntimeAliases,
-                BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP);
-        assertFalse(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.containsKey(
-                "Document Processing Fatal Error"));
+
+        // when
+        Map<String, String> actualRuntimeAliases =
+                new LinkedHashMap<>(BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP);
+        Map<String, String> actualDefaultAliases =
+                new LinkedHashMap<>(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP);
+        Map<String, String> actualDefaultNames =
+                new LinkedHashMap<>(DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP);
+
+        // then
+        assertEquals(expectedRuntimeAliases, actualRuntimeAliases);
+        expectedRuntimeAliases.forEach((name, blueId) ->
+                assertEquals(blueId, actualDefaultAliases.get(name)));
+        expectedRuntimeNames.forEach((blueId, name) ->
+                assertEquals(name, actualDefaultNames.get(blueId)));
+        assertFalse(actualDefaultAliases.containsKey("Document Processing Fatal Error"));
     }
 
     @Test
-    void defaultBlueResourceMappingsMatchDefaultAliasMap() throws Exception {
+    void shouldMatchDefaultBlueResourceMappingsToDefaultAliasMap() throws Exception {
+        // given
         Node defaultBlue = readResource("transformation/DefaultBlue.blue");
         Node mappings = defaultBlue.getItems().get(0).getProperties().get("mappings");
         Map<String, String> actual = new LinkedHashMap<>();
+        // when
         mappings.getProperties().forEach((name, node) -> actual.put(name, (String) node.getValue()));
 
+        // then
         assertEquals(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP, actual);
     }
 
     @Test
-    void defaultBlueTransformBlueIdsMatchResources() throws Exception {
+    void shouldMatchDefaultBlueTransformBlueIdsToResources() throws Exception {
+        // given
         Node defaultBlue = readResource("transformation/DefaultBlue.blue");
         Node transformation = readResource("transformation/Transformation.blue");
         Node replaceInlineTypes = readResource("transformation/ReplaceInlineTypesWithBlueIds.blue");
         Node inferBasicTypes = readResource("transformation/InferBasicTypesForUntypedValues.blue");
 
+        // when
         String transformationBlueId = BlueIdCalculator.calculateBlueId(transformation);
         String replaceInlineTypesBlueId = BlueIdCalculator.calculateBlueId(replaceInlineTypes);
         String inferBasicTypesBlueId = BlueIdCalculator.calculateBlueId(inferBasicTypes);
+        String defaultBlueBlueId = BlueIdCalculator.calculateBlueId(defaultBlue.getItems());
 
+        // then
         assertEquals(transformationBlueId, replaceInlineTypes.getType().getBlueId());
         assertEquals(transformationBlueId, inferBasicTypes.getType().getBlueId());
         assertEquals(replaceInlineTypesBlueId, defaultBlue.getItems().get(0).getType().getBlueId());
         assertEquals(inferBasicTypesBlueId, defaultBlue.getItems().get(1).getType().getBlueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(defaultBlue.getItems()), Preprocessor.DEFAULT_BLUE_BLUE_ID);
+        assertEquals(defaultBlueBlueId, Preprocessor.DEFAULT_BLUE_BLUE_ID);
     }
 
     @Test
-    void bootstrapProviderContentHashesToAdvertisedBlueIds() throws Exception {
-        for (String resource : new String[]{
+    void shouldHashBootstrapProviderContentToAdvertisedBlueIds() throws Exception {
+        // given
+        String[] resources = {
                 "transformation/Transformation.blue",
                 "transformation/ReplaceInlineTypesWithBlueIds.blue",
-                "transformation/InferBasicTypesForUntypedValues.blue"}) {
+                "transformation/InferBasicTypesForUntypedValues.blue"
+        };
+        Map<String, String> advertisedBlueIds = new LinkedHashMap<>();
+        Map<String, List<Node>> fetchedByResource = new LinkedHashMap<>();
+
+        // when
+        for (String resource : resources) {
             Node advertised = readResource(resource);
             String blueId = BlueIdCalculator.calculateBlueId(advertised);
-            List<Node> fetched = BootstrapProvider.INSTANCE.fetchByBlueId(blueId);
+            advertisedBlueIds.put(resource, blueId);
+            fetchedByResource.put(resource, BootstrapProvider.INSTANCE.fetchByBlueId(blueId));
+        }
 
+        // then
+        for (String resource : resources) {
+            String blueId = advertisedBlueIds.get(resource);
+            List<Node> fetched = fetchedByResource.get(resource);
             assertNotNull(fetched, "Bootstrap provider returned null for " + resource);
             assertFalse(fetched.isEmpty(), "Bootstrap provider returned no content for " + resource);
             assertEquals(blueId, BlueIdCalculator.calculateBlueId(withoutRootIdentity(fetched.get(0))), resource);
@@ -108,17 +149,23 @@ class BootstrapProviderVerificationTest {
     }
 
     @Test
-    void allDefaultBlueTransformsAreFetchableAndVerifiedByBlueId() throws Exception {
+    void shouldFetchAndVerifyAllDefaultBlueTransformsByBlueId() throws Exception {
+        // given
         Node defaultBlue = readResource("transformation/DefaultBlue.blue");
+        Map<String, List<Node>> fetchedByBlueId = new LinkedHashMap<>();
 
+        // when
         for (Node transformationReference : defaultBlue.getItems()) {
             String blueId = transformationReference.getType().getBlueId();
-            List<Node> fetched = BootstrapProvider.INSTANCE.fetchByBlueId(blueId);
+            fetchedByBlueId.put(blueId, BootstrapProvider.INSTANCE.fetchByBlueId(blueId));
+        }
 
+        // then
+        fetchedByBlueId.forEach((blueId, fetched) -> {
             assertNotNull(fetched, "Bootstrap provider returned null for DefaultBlue transform " + blueId);
             assertFalse(fetched.isEmpty(), "Bootstrap provider returned no transform content for " + blueId);
             assertEquals(blueId, BlueIdCalculator.calculateBlueId(withoutRootIdentity(fetched.get(0))));
-        }
+        });
     }
 
     private Node withoutRootIdentity(Node node) {

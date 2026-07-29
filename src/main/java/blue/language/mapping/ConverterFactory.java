@@ -8,10 +8,19 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
+/**
+ * Chooses recursive Node-to-Java converters from reflective target types and
+ * resolved Blue type metadata.
+ */
 public class ConverterFactory {
     private final TypeClassResolver typeClassResolver;
     private final Map<Class<?>, Converter<?>> converters = new HashMap<>();
 
+    /**
+     * Creates a converter catalog backed by a Blue type resolver.
+     *
+     * @param typeClassResolver resolver for Blue-declared Java types
+     */
     public ConverterFactory(TypeClassResolver typeClassResolver) {
         this.typeClassResolver = typeClassResolver;
         registerConverters();
@@ -43,10 +52,26 @@ public class ConverterFactory {
 
     }
 
+    /**
+     * Selects a converter using normal Blue-type precedence.
+     *
+     * @param node source node, possibly {@code null}
+     * @param targetType requested Java type
+     * @return converter appropriate for the source and target
+     */
     public Converter<?> getConverter(Node node, Type targetType) {
         return getConverter(node, targetType, false);
     }
 
+    /**
+     * Selects a converter with explicit target-type precedence.
+     *
+     * @param node source node, possibly {@code null}
+     * @param targetType requested Java type
+     * @param prioritizeTargetType whether the target type takes precedence
+     *                             over resolved Blue metadata
+     * @return converter appropriate for the source and target
+     */
     @SuppressWarnings("unchecked")
     public Converter<?> getConverter(Node node, Type targetType, boolean prioritizeTargetType) {
 
@@ -91,6 +116,13 @@ public class ConverterFactory {
         throw new IllegalArgumentException("Unsupported type: " + type);
     }
 
+    /**
+     * Converts an object node using generic map key/value rules.
+     *
+     * @param node source object node
+     * @param mapType requested map type, including generic arguments
+     * @return converted map, or {@code null} for absent properties
+     */
     public Map<?, ?> convertMap(Node node, Type mapType) {
         MapConverter mapConverter = new MapConverter(this, typeClassResolver);
         return mapConverter.convert(node, mapType);

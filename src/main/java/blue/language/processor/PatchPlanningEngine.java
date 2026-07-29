@@ -1,10 +1,13 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -370,10 +373,12 @@ final class PatchPlanningEngine {
             FrozenNode contracts =
                     scope != null ? scope.getContracts() : null;
             FrozenNode embedded = contracts != null
-                    ? contracts.property("embedded")
+                    ? contracts.property(
+                    ProcessorContractConstants.KEY_EMBEDDED)
                     : null;
             FrozenNode paths = embedded != null
-                    ? embedded.property("paths")
+                    ? embedded.property(
+                    ProcessorContractConstants.KEY_PATHS)
                     : null;
             List<FrozenNode> items =
                     paths != null ? paths.getItems() : null;
@@ -441,16 +446,16 @@ final class PatchPlanningEngine {
         if (parent == null) {
             return null;
         }
-        if ("type".equals(field)) {
+        if (Properties.OBJECT_TYPE.equals(field)) {
             return parent.getType();
         }
-        if ("itemType".equals(field)) {
+        if (Properties.OBJECT_ITEM_TYPE.equals(field)) {
             return parent.getItemType();
         }
-        if ("keyType".equals(field)) {
+        if (Properties.OBJECT_KEY_TYPE.equals(field)) {
             return parent.getKeyType();
         }
-        if ("valueType".equals(field)) {
+        if (Properties.OBJECT_VALUE_TYPE.equals(field)) {
             return parent.getValueType();
         }
         return null;
@@ -462,10 +467,10 @@ final class PatchPlanningEngine {
             return false;
         }
         String field = segments.get(segments.size() - 1);
-        return "type".equals(field)
-                || "itemType".equals(field)
-                || "keyType".equals(field)
-                || "valueType".equals(field);
+        return Properties.OBJECT_TYPE.equals(field)
+                || Properties.OBJECT_ITEM_TYPE.equals(field)
+                || Properties.OBJECT_KEY_TYPE.equals(field)
+                || Properties.OBJECT_VALUE_TYPE.equals(field);
     }
 
     private ConformancePlan planBatchConformance(FrozenNode canonicalRoot,
@@ -551,7 +556,8 @@ final class PatchPlanningEngine {
         String relative = PointerUtils.relativizePointer(
                 record.originScope(), record.path());
         return PointerUtils.descendantOrEqual(
-                relative, "/contracts");
+                relative,
+                ProcessorPointerConstants.RELATIVE_CONTRACTS);
     }
 
     private boolean hasTypedNodeBetweenOriginAndPath(FrozenNode resolvedRoot, String originScope, String changedPath) {
@@ -563,7 +569,8 @@ final class PatchPlanningEngine {
             if (hasTypeMetadata(node)) {
                 return true;
             }
-            if (current.equals(normalizedOrigin) || "/".equals(current)) {
+            if (current.equals(normalizedOrigin)
+                    || JsonPointer.ROOT.equals(current)) {
                 return false;
             }
             current = parentPointer(current);
@@ -581,13 +588,15 @@ final class PatchPlanningEngine {
     private String parentPointer(String pointer) {
         List<String> segments = JsonPointer.split(pointer);
         if (segments.isEmpty()) {
-            return "/";
+            return JsonPointer.ROOT;
         }
         return JsonPointer.toPointer(segments.subList(0, segments.size() - 1));
     }
 
     private String originScopeForGeneratedUpdate(List<BatchPatchRecord> records) {
-        return records.isEmpty() ? "/" : records.get(0).originScope();
+        return records.isEmpty()
+                ? JsonPointer.ROOT
+                : records.get(0).originScope();
     }
 
     private boolean isProcessorManagedConformanceBypass(ImmutablePatchPlanner.PatchPlan result) {

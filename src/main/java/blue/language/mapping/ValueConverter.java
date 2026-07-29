@@ -9,8 +9,29 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static blue.language.utils.Properties.*;
 
+/**
+ * Converts Blue scalar payloads to supported Java scalar classes.
+ *
+ * <p>The Blue primitive type identity controls interpretation when present.
+ * Absent values become null for reference types and Java defaults for
+ * primitives. Numeric narrowing follows the corresponding JDK number
+ * conversion.</p>
+ */
 public class ValueConverter {
 
+    /** Creates a compatibility facade over stateless scalar conversions. */
+    public ValueConverter() {
+    }
+
+    /**
+     * Converts one scalar node.
+     *
+     * @param node source scalar node, possibly {@code null}
+     * @param targetClass requested Java scalar class
+     * @return converted value, or {@code null} for an absent reference value
+     * @throws IllegalArgumentException when the requested conversion is not
+     *                                  supported
+     */
     public static Object convertValue(Node node, Class<?> targetClass) {
         if (node == null || node.getValue() == null) {
             if (targetClass.isPrimitive()) {
@@ -86,6 +107,12 @@ public class ValueConverter {
         throw new IllegalArgumentException("Cannot convert Boolean to " + targetClass);
     }
 
+    /**
+     * Tests membership in the scalar conversion vocabulary.
+     *
+     * @param targetClass Java class to inspect
+     * @return whether the class is supported as a scalar target
+     */
     public static boolean isSupportedType(Class<?> targetClass) {
         return targetClass == String.class ||
                targetClass == Character.class ||
@@ -96,6 +123,13 @@ public class ValueConverter {
                targetClass.isPrimitive();
     }
 
+    /**
+     * Returns the Java language default for a primitive class.
+     *
+     * @param targetClass primitive class
+     * @return boxed Java default value
+     * @throws IllegalArgumentException for nonprimitive or unsupported classes
+     */
     public static Object getDefaultPrimitiveValue(Class<?> targetClass) {
         if (targetClass == int.class) return 0;
         if (targetClass == long.class) return 0L;

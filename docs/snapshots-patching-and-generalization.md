@@ -1,9 +1,9 @@
 # Snapshots, Patch Planning, And Generalization
 
-This document explains the immutable runtime architecture implemented in this
-branch: `FrozenNode`, `ResolvedSnapshot`, resolved type caching, immutable patch
-planning, canonical minimization during patches, and dynamic type
-generalization.
+This document explains the immutable runtime architecture in the final
+implementation: `FrozenNode`, `ResolvedSnapshot`, resolved type caching,
+immutable patch planning, canonical minimization during patches, and dynamic
+type generalization.
 
 ## Core Representations
 
@@ -420,18 +420,16 @@ Expected behavior:
 - preloading can still make processing much faster by avoiding repeated
   resolution and cloning
 
-## Current Limitations
+## Boundaries
 
-The architecture is immutable at the snapshot boundary, but not every internal
-algorithm is fully frozen-native yet.
+The architecture is immutable at the snapshot boundary, but some
+conformance/generalization checks still bridge through mutable resolver
+internals. Persistent collections and incremental index maintenance are
+possible performance refinements rather than correctness requirements.
 
-Still missing:
-
-- conformance checks directly over `FrozenNode`
-- no `Node` materialization in the conformance hot path
-- persistent collection data structures optimized for many edits
-- incremental index maintenance for new snapshots
-- canonical-plus-bundle transport format
+Canonical-plus-bundle transport is outside this module. The kernel preserves
+exact identities and exposes fragmentation boundaries; a host owns its
+transport, persistence, and acquisition strategy.
 
 ## Key Tests
 

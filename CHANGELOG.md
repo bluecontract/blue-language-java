@@ -2,7 +2,7 @@
 
 ### Feat
 
-- bind the corrected 125-fixture Language 1.0 and 127-fixture Contracts 1.0
+- bind the corrected 128-fixture Language 1.0 and 140-fixture Contracts 1.0
   conformance packages and add a strict machine-readable release gate
 - add the generic cyclic-set member mutation guard before provider demand
 - split canonical identity construction from author-facing minimization
@@ -40,12 +40,12 @@
 - remove deprecated pre-1.0 aliases, routed-delivery carriers, trusted provider
   behavior, ambiguous reverse APIs, and fatal-termination compatibility paths
 - retain the released `NodeProviderWrapper.unverified(...)` and
-  `isExplicitlyHostTrusted(...)` descriptors for `blue-repo-java:3.0.0-rc.10`
-  linkage while enforcing verification and always denying host trust
+  `isExplicitlyHostTrusted(...)` descriptors for downstream binary linkage
+  while enforcing verification and always denying host trust
 - keep raw accepted sources as checkpoint owners while allowing immutable
   same-scope handler selection and logical-delivery coalescing
-- record that downstream BEX 1.1 still needs a named live counter stream before
-  it can supply conforming runtime child-ledger traces
+- document the named live counter stream used by downstream BEX 2.0 runtime
+  integrations to supply conforming child-ledger traces
 - retain Java 8 bytecode targeting
 - preserve full-resolution fallbacks for schema, fixed-value type, reference, collection,
   contracts-changing, custom-merger, and unknown-capability cases
@@ -90,7 +90,7 @@
 
 ### Feat
 
-- use core type blue ids from blue-repository (#11)
+- adopt canonical core type BlueIds (#11)
 
 ### Fix
 

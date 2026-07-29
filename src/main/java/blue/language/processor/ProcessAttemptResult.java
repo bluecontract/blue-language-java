@@ -12,8 +12,11 @@ import java.util.TreeSet;
  */
 public final class ProcessAttemptResult {
 
+    /** Distinguishes completed processing from resource suspension. */
     public enum Kind {
+        /** Attempt produced a completed semantic result. */
         COMPLETE("complete"),
+        /** Attempt suspended until exact evidence becomes available. */
         NEEDS_RESOURCES("needs-resources");
 
         private final String wireValue;
@@ -22,6 +25,11 @@ public final class ProcessAttemptResult {
             this.wireValue = wireValue;
         }
 
+        /**
+         * Returns the stable value used to serialize this attempt kind.
+         *
+         * @return stable serialized attempt kind
+         */
         public String wireValue() {
             return wireValue;
         }
@@ -40,12 +48,25 @@ public final class ProcessAttemptResult {
                 Collections.unmodifiableList(new ArrayList<>(requiredExactBlueIds));
     }
 
+    /**
+     * Creates a completed attempt.
+     *
+     * @param result completed semantic result
+     * @return completed attempt wrapper
+     */
     public static ProcessAttemptResult complete(DocumentProcessingResult result) {
         return new ProcessAttemptResult(Kind.COMPLETE,
                 Objects.requireNonNull(result, "result"),
                 Collections.emptyList());
     }
 
+    /**
+     * Creates a suspended attempt with a sorted, duplicate-free demand list.
+     *
+     * @param exactBlueIds required exact identities
+     * @return resource suspension
+     * @throws IllegalArgumentException when no valid identity is supplied
+     */
     public static ProcessAttemptResult needsResources(List<String> exactBlueIds) {
         Objects.requireNonNull(exactBlueIds, "exactBlueIds");
         TreeSet<String> sorted = new TreeSet<>();
@@ -65,24 +86,46 @@ public final class ProcessAttemptResult {
                 new ArrayList<>(sorted));
     }
 
+    /**
+     * Returns whether this wrapper represents completion or suspension.
+     *
+     * @return immutable attempt kind
+     */
     public Kind kind() {
         return kind;
     }
 
+    /**
+     * Reports whether processing completed instead of requesting resources.
+     *
+     * @return whether this attempt contains a completed result
+     */
     public boolean isComplete() {
         return kind == Kind.COMPLETE;
     }
 
+    /**
+     * Returns the semantic result produced by a completed attempt.
+     *
+     * @return completed result, or {@code null} for a suspension
+     */
     public DocumentProcessingResult processResult() {
         return processResult;
     }
 
+    /**
+     * Returns the exact identities required to resume a suspended attempt.
+     *
+     * @return immutable sorted exact-resource demands
+     */
     public List<String> requiredExactBlueIds() {
         return requiredExactBlueIds;
     }
 
     /**
      * Suspension deliberately has no portable-gas value.
+     *
+     * @return completed gas total, or {@code null} for a suspension
      */
     public Long portableGas() {
         return processResult != null ? processResult.totalGas() : null;

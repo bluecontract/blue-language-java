@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class DocumentUpdateChannelTest {
 
     @Test
-    void documentUpdatePathsAreRelativeToEveryReceivingScope() {
+    void shouldVerifyDocumentUpdatePathsAreRelativeToEveryReceivingScope() {
+        // given
         DocumentProcessingRuntime.DocumentUpdateData update =
                 new DocumentProcessingRuntime.DocumentUpdateData(
                         "/a/b/x",
@@ -30,27 +31,30 @@ class DocumentUpdateChannelTest {
                         "/a/b",
                         Collections.<String>emptyList());
 
+        // when
         Node sourceEvent =
                 ProcessorEngine.createDocumentUpdateEvent(
                         update, "/a/b");
+        Node ancestorEvent =
+                ProcessorEngine.createDocumentUpdateEvent(
+                        update, "/a");
+        Node rootEvent =
+                ProcessorEngine.createDocumentUpdateEvent(
+                        update, "/");
+
+        // then
         assertEquals("/x",
                 sourceEvent.getAsText("/path"));
         assertEquals("/",
                 sourceEvent.getAsText(
                         "/sourceScopePath"));
 
-        Node ancestorEvent =
-                ProcessorEngine.createDocumentUpdateEvent(
-                        update, "/a");
         assertEquals("/b/x",
                 ancestorEvent.getAsText("/path"));
         assertEquals("/b",
                 ancestorEvent.getAsText(
                         "/sourceScopePath"));
 
-        Node rootEvent =
-                ProcessorEngine.createDocumentUpdateEvent(
-                        update, "/");
         assertEquals("/a/b/x",
                 rootEvent.getAsText("/path"));
         assertEquals("/a/b",
@@ -59,7 +63,8 @@ class DocumentUpdateChannelTest {
     }
 
     @Test
-    void initializationTriggersDocumentUpdateHandlers() {
+    void shouldVerifyInitializationTriggersDocumentUpdateHandlers() {
+        // given
         String yaml = "name: Sample Doc\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
@@ -79,7 +84,7 @@ class DocumentUpdateChannelTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n" +
                 "  setY:\n" +
@@ -99,24 +104,25 @@ class DocumentUpdateChannelTest {
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node processed = result.document();
-
         Node xNode = processed.getProperties().get("x");
+        Node yNode = processed.getProperties().get("y");
+        Node zNode = processed.getProperties().get("z");
+
+        // then
         assertNotNull(xNode);
         assertEquals(new BigInteger("1"), xNode.getValue());
-
-        Node yNode = processed.getProperties().get("y");
         assertNotNull(yNode);
         assertEquals(new BigInteger("1"), yNode.getValue());
-
-        Node zNode = processed.getProperties().get("z");
         assertNotNull(zNode);
         assertEquals(new BigInteger("1"), zNode.getValue());
     }
 
     @Test
-    void nestedUpdatesPropagateToParentWatchers() {
+    void shouldVerifyNestedUpdatesPropagateToParentWatchers() {
+        // given
         String yaml = "name: Nested Doc\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
@@ -132,7 +138,7 @@ class DocumentUpdateChannelTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: /a/x\n" +
                 "    propertyValue: 1\n" +
                 "  setABX:\n" +
@@ -142,7 +148,7 @@ class DocumentUpdateChannelTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: /a/b/x\n" +
                 "    propertyValue: 1\n" +
                 "  incrementYOnA:\n" +
@@ -156,28 +162,29 @@ class DocumentUpdateChannelTest {
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node processed = result.document();
-
         Node a = processed.getProperties().get("a");
-        assertNotNull(a);
         Node x = a.getProperties().get("x");
+        Node b = a.getProperties().get("b");
+        Node nestedX = b.getProperties().get("x");
+        Node y = processed.getProperties().get("y");
+
+        // then
+        assertNotNull(a);
         assertNotNull(x);
         assertEquals(new BigInteger("1"), x.getValue());
-
-        Node b = a.getProperties().get("b");
         assertNotNull(b);
-        Node nestedX = b.getProperties().get("x");
         assertNotNull(nestedX);
         assertEquals(new BigInteger("1"), nestedX.getValue());
-
-        Node y = processed.getProperties().get("y");
         assertNotNull(y);
         assertEquals(new BigInteger("2"), y.getValue());
     }
 
     @Test
-    void cascadedUpdatesPropagateThroughEmbeddedScopes() {
+    void shouldVerifyCascadedUpdatesPropagateThroughEmbeddedScopes() {
+        // given
         String yaml = "name: Cascading Doc\n" +
                 "x:\n" +
                 "  name: Embedded X\n" +
@@ -191,7 +198,7 @@ class DocumentUpdateChannelTest {
                 "        channel: life\n" +
                 "        event:\n" +
                 "          type:\n" +
-                "            blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "            blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "        type:\n" +
                 "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "        propertyKey: /a\n" +
@@ -233,37 +240,38 @@ class DocumentUpdateChannelTest {
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node processed = result.document();
-
         Node rootA = processed.getProperties().get("a");
+        Node x = processed.getProperties().get("x");
+        Node xA = x.getProperties().get("a");
+        Node y = x.getProperties().get("y");
+        Node yA = y.getProperties().get("a");
+        Node originalX = original.getProperties().get("x");
+        Node originalY = originalX.getProperties().get("y");
+
+        // then
         assertNotNull(rootA, result.status() + ": " + diagnosticMessage(result)
                 + "\n" + blue.nodeToYaml(processed));
         assertEquals(new BigInteger("1"), rootA.getValue());
-
-        Node x = processed.getProperties().get("x");
         assertNotNull(x);
-        Node xA = x.getProperties().get("a");
         assertNotNull(xA);
         assertEquals(new BigInteger("1"), xA.getValue());
-
-        Node y = x.getProperties().get("y");
         assertNotNull(y);
-        Node yA = y.getProperties().get("a");
         assertNotNull(yA);
         assertEquals(new BigInteger("1"), yA.getValue());
 
         assertNull(original.getProperties().get("a"));
-        Node originalX = original.getProperties().get("x");
         assertNotNull(originalX);
         assertNull(originalX.getProperties().get("a"));
-        Node originalY = originalX.getProperties().get("y");
         assertNotNull(originalY);
         assertNull(originalY.getProperties() != null ? originalY.getProperties().get("a") : null);
     }
 
     @Test
-    void documentUpdateEventExposesRelativePathAndSnapshots() {
+    void shouldVerifyDocumentUpdateEventExposesRelativePathAndSnapshots() {
+        // given
         String yaml = "name: Update Doc\n" +
                 "a:\n" +
                 "  contracts:\n" +
@@ -276,7 +284,7 @@ class DocumentUpdateChannelTest {
                 "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "    watchX:\n" +
@@ -313,16 +321,18 @@ class DocumentUpdateChannelTest {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new AssertDocumentUpdateContractProcessor());
-
         Node original = blue.yamlToNode(yaml);
+
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
+        Node processed = result.document();
+        Node a = processed.getProperties().get("a");
+        Node x = a.getProperties().get("x");
+
+        // then
         assertEquals(ProcessorStatus.SUCCESS,
                 result.status(), diagnosticMessage(result));
-        Node processed = result.document();
-
-        Node a = processed.getProperties().get("a");
         assertNotNull(a);
-        Node x = a.getProperties().get("x");
         assertNotNull(x);
         assertEquals(new BigInteger("1"), x.getValue());
     }

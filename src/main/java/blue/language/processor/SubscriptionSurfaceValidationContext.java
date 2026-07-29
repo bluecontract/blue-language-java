@@ -32,6 +32,8 @@ public final class SubscriptionSurfaceValidationContext {
     private final GasSchedule gasSchedule;
     private final ExternalOrderKey currentEventOrderKey;
     private final Long committingRootRevision;
+    private final RuntimeWorkSessionFactory
+            runtimeWorkSessionFactory;
 
     private SubscriptionSurfaceValidationContext(Builder builder) {
         this.inputRoot = Objects.requireNonNull(
@@ -52,6 +54,8 @@ public final class SubscriptionSurfaceValidationContext {
                 builder.gasSchedule, "gasSchedule");
         this.currentEventOrderKey = builder.currentEventOrderKey;
         this.committingRootRevision = builder.committingRootRevision;
+        this.runtimeWorkSessionFactory =
+                builder.runtimeWorkSessionFactory;
         if (committingRootRevision != null
                 && committingRootRevision.longValue() < 0L) {
             throw new IllegalArgumentException(
@@ -59,6 +63,15 @@ public final class SubscriptionSurfaceValidationContext {
         }
     }
 
+    /**
+     * Creates a builder for one tentative subscription-surface transition.
+     *
+     * @param inputRoot exact selected Root before the transition
+     * @param tentativeRoot exact selected Root after tentative changes
+     * @param changedPaths changed absolute pointers
+     * @param gasSchedule admission gas schedule
+     * @return new validation-context builder
+     */
     public static Builder builder(Node inputRoot,
                                   Node tentativeRoot,
                                   Set<String> changedPaths,
@@ -67,22 +80,47 @@ public final class SubscriptionSurfaceValidationContext {
                 inputRoot, tentativeRoot, changedPaths, gasSchedule);
     }
 
+    /**
+     * Returns the exact input Root retained by this context.
+     *
+     * @return caller-supplied mutable input Root reference
+     */
     public Node inputRoot() {
         return inputRoot;
     }
 
+    /**
+     * Returns the tentative Root retained by this context.
+     *
+     * @return caller-supplied mutable tentative Root reference
+     */
     public Node tentativeRoot() {
         return tentativeRoot;
     }
 
+    /**
+     * Returns the optional resolved input companion.
+     *
+     * @return immutable input snapshot, or {@code null}
+     */
     public ResolvedSnapshot inputSnapshot() {
         return inputSnapshot;
     }
 
+    /**
+     * Returns the optional resolved tentative companion.
+     *
+     * @return immutable tentative snapshot, or {@code null}
+     */
     public ResolvedSnapshot tentativeSnapshot() {
         return tentativeSnapshot;
     }
 
+    /**
+     * Returns changed paths captured when the context was built.
+     *
+     * @return immutable insertion-ordered path set
+     */
     public Set<String> changedPaths() {
         return changedPaths;
     }
@@ -95,27 +133,72 @@ public final class SubscriptionSurfaceValidationContext {
      * not inferred from the event's preselected delivery subset. The validator
      * reuses these identities for unchanged branches and closes the exact prior
      * interval on removal or replacement.</p>
+     *
+     * @return immutable retained active interval list
      */
     public List<SubscriptionDelta.Entry> activeSubscriptionIntervals() {
         return activeSubscriptionIntervals;
     }
 
+    /**
+     * Reports whether the complete active interval surface was supplied.
+     *
+     * @return {@code true} for supplied evidence, including an empty surface
+     */
     public boolean hasActiveSubscriptionIntervals() {
         return activeSubscriptionIntervalsSupplied;
     }
 
+    /**
+     * Returns the schedule used for admission/runtime validation work.
+     *
+     * @return immutable gas schedule
+     */
     public GasSchedule gasSchedule() {
         return gasSchedule;
     }
 
+    /**
+     * Returns the event position closing/opening subscription intervals.
+     *
+     * @return immutable event order key, or {@code null}
+     */
     public ExternalOrderKey currentEventOrderKey() {
         return currentEventOrderKey;
     }
 
+    /**
+     * Returns the Root revision produced by the committing transition.
+     *
+     * @return non-negative revision, or {@code null}
+     */
     public Long committingRootRevision() {
         return committingRootRevision;
     }
 
+    RuntimeWorkSession newRuntimeWorkSession() {
+        if (runtimeWorkSessionFactory != null) {
+            return Objects.requireNonNull(
+                    runtimeWorkSessionFactory.open(),
+                    "runtimeWorkSession");
+        }
+        return new RuntimeWorkSession(
+                new GasMeter(gasSchedule),
+                RuntimeWorkSession.Mode.ADMISSION);
+    }
+
+    /** Factory for admission-scoped runtime work sessions. */
+    interface RuntimeWorkSessionFactory {
+
+        /**
+         * Opens a fresh admission session.
+         *
+         * @return non-null runtime work session
+         */
+        RuntimeWorkSession open();
+    }
+
+    /** Mutable accumulator for an immutable validation context. */
     public static final class Builder {
         private final Node inputRoot;
         private final Node tentativeRoot;
@@ -128,6 +211,8 @@ public final class SubscriptionSurfaceValidationContext {
         private ResolvedSnapshot tentativeSnapshot;
         private ExternalOrderKey currentEventOrderKey;
         private Long committingRootRevision;
+        private RuntimeWorkSessionFactory
+                runtimeWorkSessionFactory;
 
         private Builder(Node inputRoot,
                         Node tentativeRoot,
@@ -139,6 +224,13 @@ public final class SubscriptionSurfaceValidationContext {
             this.gasSchedule = gasSchedule;
         }
 
+        /**
+         * Attaches optional resolved snapshot companions.
+         *
+         * @param input resolved input snapshot, or {@code null}
+         * @param tentative resolved tentative snapshot, or {@code null}
+         * @return this builder
+         */
         public Builder snapshots(ResolvedSnapshot input,
                                  ResolvedSnapshot tentative) {
             this.inputSnapshot = input;
@@ -149,6 +241,11 @@ public final class SubscriptionSurfaceValidationContext {
         /**
          * Supplies the complete active subscription-index surface retained at
          * the input Root revision.
+         *
+         * @param intervals complete retained interval surface
+         * @return this builder
+         * @throws NullPointerException if {@code intervals} or an entry is
+         *         {@code null}
          */
         public Builder activeSubscriptionIntervals(
                 Iterable<SubscriptionDelta.Entry> intervals) {
@@ -163,6 +260,15 @@ public final class SubscriptionSurfaceValidationContext {
             return this;
         }
 
+        /**
+         * Binds the committing event position and resulting Root revision.
+         *
+         * @param eventOrderKey non-null event order key
+         * @param rootRevision resulting non-negative Root revision
+         * @return this builder
+         * @throws NullPointerException if {@code eventOrderKey} is
+         *         {@code null}
+         */
         public Builder committingInterval(
                 ExternalOrderKey eventOrderKey,
                 long rootRevision) {
@@ -172,6 +278,24 @@ public final class SubscriptionSurfaceValidationContext {
             return this;
         }
 
+        Builder runtimeWorkSessions(
+                RuntimeWorkSessionFactory factory) {
+            this.runtimeWorkSessionFactory =
+                    Objects.requireNonNull(
+                            factory,
+                            "runtimeWorkSessionFactory");
+            return this;
+        }
+
+        /**
+         * Validates and freezes the accumulated context.
+         *
+         * @return immutable validation context
+         * @throws NullPointerException if a required Root, changed-path set,
+         *         or gas schedule is absent
+         * @throws IllegalArgumentException for a negative committing revision
+         *         or invalid retained interval surface
+         */
         public SubscriptionSurfaceValidationContext build() {
             return new SubscriptionSurfaceValidationContext(this);
         }
@@ -190,7 +314,10 @@ public final class SubscriptionSurfaceValidationContext {
                                 + entry.scopePath() + "/" + entry.channelKey());
             }
             String occurrence =
-                    entry.scopePath() + "\u0000" + entry.channelKey();
+                    entry.scopePath()
+                            + ProcessorIdentityConstants
+                                    .SELECTOR_COMPONENT_DELIMITER
+                            + entry.channelKey();
             if (!occurrences.add(occurrence)) {
                 throw new IllegalArgumentException(
                         "Duplicate retained subscription occurrence: "

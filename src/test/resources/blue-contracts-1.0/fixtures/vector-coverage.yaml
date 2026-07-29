@@ -14,6 +14,14 @@ vectors:
   - chk/c-chk-06.yaml
   C-CHK-07:
   - chk/c-chk-07.yaml
+  C-CYC-01:
+  - snd/c-cyc-01.yaml
+  C-CYC-02:
+  - snd/c-cyc-02.yaml
+  C-CYC-03:
+  - emb/c-cyc-03.yaml
+  C-CYC-04:
+  - snd/c-cyc-04.yaml
   C-DISC-01:
   - disc/c-disc-01.yaml
   C-DISC-02:
@@ -187,6 +195,8 @@ vectors:
   - init/c-init-04.yaml
   C-INIT-05:
   - init/c-init-05.yaml
+  C-INIT-06:
+  - init/c-init-06.yaml
   C-LIFE-01:
   - life/c-life-01.yaml
   C-LIFE-02:
@@ -195,6 +205,8 @@ vectors:
   - life/c-life-03.yaml
   C-LIFE-04:
   - life/c-life-04.yaml
+  C-LOOP-01:
+  - fail/c-fail-05.yaml
   C-PROT-01:
   - prot/c-prot-01.yaml
   C-PROT-02:
@@ -213,6 +225,19 @@ vectors:
   - rep/c-rep-06.yaml
   C-REP-07:
   - rep/c-rep-07.yaml
+  C-ROUTE-01:
+  - feed/c-feed-16.yaml
+  C-ROUTE-02:
+  - feed/c-feed-11.yaml
+  C-ROUTE-03:
+  - feed/c-feed-12.yaml
+  C-ROUTE-04:
+  - feed/c-feed-13.yaml
+  C-ROUTE-05:
+  - feed/c-feed-14.yaml
+  - feed/c-feed-17.yaml
+  C-ROUTE-06:
+  - feed/c-feed-15.yaml
   C-SND-01:
   - snd/c-snd-01.yaml
   C-SND-02:

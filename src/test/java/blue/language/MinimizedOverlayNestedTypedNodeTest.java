@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class MinimizedOverlayNestedTypedNodeTest {
 
     @Test
-    void canonicalPatchOfTypedChildRoundTripsThroughMinimizedSource() {
+    void shouldCanonicalPatchOfTypedChildRoundTripsThroughMinimizedSource() {
+        // given
         BasicNodeProvider writerProvider = provider();
         Blue writer = new Blue(writerProvider);
         String markerTypeBlueId = writerProvider.getBlueIdByName("Processing Marker");
@@ -23,23 +24,24 @@ class MinimizedOverlayNestedTypedNodeTest {
         Node marker = new Node()
                 .type(new Node().blueId(markerTypeBlueId))
                 .properties("documentId", new Node().value("document-1"));
+        Node expectedCanonical = new Node().contracts(
+                new Node().properties(
+                        "initialized", marker.clone()));
 
+        // when
         ResolvedSnapshot patched = writer.applyCanonicalPatch(initial,
                 JsonPatch.add("/contracts/initialized", marker));
-        Node expectedCanonical = new Node().contracts(new Node().properties(
-                "initialized", marker.clone()));
-        assertEquals(writer.calculateBlueId(expectedCanonical), patched.blueId());
-        assertCanonicalMarkerContainsOnlyInstanceContent(
-                patched.canonicalRoot().getAsNode("/contracts/initialized"));
-
         Node minimized = new MinimizedOverlayBuilder().build(
                 patched.resolvedRoot());
-
         BasicNodeProvider readerProvider = provider();
         Blue reader = new Blue(readerProvider);
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(
                 reader.jsonToNode(writer.nodeToJson(minimized)));
 
+        // then
+        assertEquals(writer.calculateBlueId(expectedCanonical), patched.blueId());
+        assertCanonicalMarkerContainsOnlyInstanceContent(
+                patched.canonicalRoot().getAsNode("/contracts/initialized"));
         assertEquals(patched.blueId(), reloaded.blueId());
         assertEquals(writer.calculateBlueId(expectedCanonical), reloaded.blueId());
         assertCanonicalMarkerContainsOnlyInstanceContent(
@@ -49,7 +51,8 @@ class MinimizedOverlayNestedTypedNodeTest {
     }
 
     @Test
-    void minimizedOverlayOmitsTypeDerivedMetadataFromAnInstanceIntroducedTypedChild() {
+    void shouldOmitTypeDerivedMetadataFromInstanceIntroducedTypedChildInMinimizedOverlay() {
+        // given
         BasicNodeProvider writerProvider = provider();
         Blue writer = new Blue(writerProvider);
         String markerTypeBlueId = writerProvider.getBlueIdByName("Processing Marker");
@@ -61,25 +64,29 @@ class MinimizedOverlayNestedTypedNodeTest {
                 "    documentId: document-1"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
+        // when
         Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
-
         Node minimizedDocumentId = minimized.getContracts().getProperties().get("initialized")
                 .getProperties().get("documentId");
-        assertNull(minimizedDocumentId.getDescription());
-        assertNull(minimized.getContracts().getProperties().get("initialized")
-                .getProperties().get("order"));
-
+        Node minimizedOrder =
+                minimized.getContracts().getProperties().get("initialized")
+                        .getProperties().get("order");
         BasicNodeProvider readerProvider = provider();
         Blue reader = new Blue(readerProvider);
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(
                 reader.jsonToNode(writer.nodeToJson(minimized)));
+
+        // then
+        assertNull(minimizedDocumentId.getDescription());
+        assertNull(minimizedOrder);
         assertEquals(original.blueId(), reloaded.blueId());
         assertEquals(original.frozenResolvedRoot().resolvedStructuralKey(),
                 reloaded.frozenResolvedRoot().resolvedStructuralKey());
     }
 
     @Test
-    void minimizedOverlayPreservesExplicitLabelsOnIntroducedTypedPropertiesContractsAndItems() {
+    void shouldPreserveExplicitLabelsOnIntroducedTypedPropertiesContractsAndItemsInMinimizedOverlay() {
+        // given
         BasicNodeProvider writerProvider = provider();
         Blue writer = new Blue(writerProvider);
         String markerTypeBlueId = writerProvider.getBlueIdByName("Processing Marker");
@@ -104,21 +111,24 @@ class MinimizedOverlayNestedTypedNodeTest {
                 "    documentId: item"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
+        // when
         Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
-
-        assertExplicitMarkerLabels(minimized.getAsNode("/direct"));
-        assertExplicitMarkerLabels(minimized.getAsNode("/contracts/labeled"));
-        assertExplicitMarkerLabels(minimized.getAsNode("/list/0"));
         Blue reader = new Blue(provider());
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(
                 reader.jsonToNode(writer.nodeToJson(minimized)));
+
+        // then
+        assertExplicitMarkerLabels(minimized.getAsNode("/direct"));
+        assertExplicitMarkerLabels(minimized.getAsNode("/contracts/labeled"));
+        assertExplicitMarkerLabels(minimized.getAsNode("/list/0"));
         assertEquals(original.blueId(), reloaded.blueId());
         assertEquals(original.frozenResolvedRoot().resolvedStructuralKey(),
                 reloaded.frozenResolvedRoot().resolvedStructuralKey());
     }
 
     @Test
-    void minimizedOverlayPreservesExplicitLabelsOnIntroducedInlineTypedProperty() {
+    void shouldPreserveExplicitLabelsOnIntroducedInlineTypedPropertyInMinimizedOverlay() {
+        // given
         Blue writer = new Blue();
         Node source = writer.yamlToNode(String.join("\n",
                 "inline:",
@@ -132,21 +142,24 @@ class MinimizedOverlayNestedTypedNodeTest {
                 "  documentId: inline"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
+        // when
         Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
-
         Node minimizedInline = minimized.getAsNode("/inline");
-        assertEquals("Inline Marker", minimizedInline.getName());
-        assertEquals("Inline marker metadata.", minimizedInline.getDescription());
         Blue reader = new Blue();
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(
                 reader.jsonToNode(writer.nodeToJson(minimized)));
+
+        // then
+        assertEquals("Inline Marker", minimizedInline.getName());
+        assertEquals("Inline marker metadata.", minimizedInline.getDescription());
         assertEquals(original.blueId(), reloaded.blueId());
         assertEquals(original.frozenResolvedRoot().resolvedStructuralKey(),
                 reloaded.frozenResolvedRoot().resolvedStructuralKey());
     }
 
     @Test
-    void canonicalOverlayPreservesExplicitLabelsEqualToInheritedChildLabels() {
+    void shouldPreserveExplicitLabelsEqualToInheritedChildLabelsInCanonicalOverlay() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Labeled Container",
@@ -169,8 +182,10 @@ class MinimizedOverlayNestedTypedNodeTest {
                 "  value: value"));
 
         ResolvedSnapshot unlabeled = blue.resolveToSnapshot(unlabeledSource);
+        // when
         ResolvedSnapshot explicitlyLabeled = blue.resolveToSnapshot(explicitlyLabeledSource);
 
+        // then
         assertNull(unlabeled.canonicalNodeAt("/child").getName());
         assertNull(unlabeled.canonicalNodeAt("/child").getDescription());
         assertEquals("Declared Child", explicitlyLabeled.canonicalNodeAt("/child").getName());

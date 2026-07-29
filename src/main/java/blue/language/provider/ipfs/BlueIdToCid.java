@@ -3,26 +3,49 @@ package blue.language.provider.ipfs;
 import blue.language.utils.Base58;
 import org.apache.commons.codec.binary.Base32;
 
+/**
+ * Converts a Base58 SHA-256 BlueId to a CIDv1 raw-content identifier using the
+ * Base32 multibase representation.
+ */
 public class BlueIdToCid {
 
+    private static final byte MULTIHASH_SHA2_256_CODE = 0x12;
+    private static final byte SHA_256_LENGTH_BYTES = 0x20;
+    private static final byte CID_VERSION_1 = 0x01;
+    private static final byte RAW_CODEC = 0x55;
+    private static final String BASE32_MULTIBASE_PREFIX = "b";
+
+    /**
+     * Creates a compatibility facade over the static conversion operation.
+     */
+    public BlueIdToCid() {
+    }
+
+    /**
+     * Converts one plain SHA-256 BlueId to its deterministic raw CIDv1.
+     *
+     * @param blueId Base58-encoded SHA-256 identity
+     * @return lowercase Base32 multibase CIDv1
+     * @throws IllegalArgumentException when the identity is not valid Base58
+     */
     public static String convert(String blueId) {
         byte[] sha256Bytes = Base58.decode(blueId);
 
-        // Create the multihash bytes for SHA-256 (0x12 for the hash function and 0x20 for the length)
+        // A CID embeds the hash algorithm and digest length before the digest.
         byte[] multihash = new byte[2 + sha256Bytes.length];
-        multihash[0] = 0x12; // SHA-256
-        multihash[1] = 0x20; // 32 bytes (256 bits)
+        multihash[0] = MULTIHASH_SHA2_256_CODE;
+        multihash[1] = SHA_256_LENGTH_BYTES;
         System.arraycopy(sha256Bytes, 0, multihash, 2, sha256Bytes.length);
 
-        // Create the CIDv1 bytes with version byte (0x01) and codec for raw (0x55)
+        // Blue content is addressed as a CIDv1 raw block.
         byte[] cidBytes = new byte[2 + multihash.length];
-        cidBytes[0] = 0x01; // CIDv1
-        cidBytes[1] = 0x55; // raw binary data
+        cidBytes[0] = CID_VERSION_1;
+        cidBytes[1] = RAW_CODEC;
         System.arraycopy(multihash, 0, cidBytes, 2, multihash.length);
 
-        // Encode the CIDv1 with Base32
         Base32 base32 = new Base32();
-        String cid = "b" + base32.encodeAsString(cidBytes).toLowerCase().replaceAll("=", "");
+        String cid = BASE32_MULTIBASE_PREFIX
+                + base32.encodeAsString(cidBytes).toLowerCase().replaceAll("=", "");
 
         return cid;
     }

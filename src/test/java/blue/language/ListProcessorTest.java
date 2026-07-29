@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ListProcessorTest {
 
     @Test
-    public void testItemTypeAssignment() {
+    public void shouldAssignDeclaredItemType() {
+        // given
         Node listA = new Node().name("ListA")
                 .type("List")
                 .itemType("Integer");
@@ -39,14 +40,17 @@ public class ListProcessorTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listANode = nodeProvider.findNodeByName("ListA").orElseThrow(() -> new IllegalStateException("No \"ListA\" available for NodeProvider."));
+        // when
         Node result = merger.resolve(listANode, Limits.NO_LIMITS);
 
+        // then
         assertEquals("Integer", CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(result.getItemType().getBlueId()));
     }
 
     @Test
-    public void testListWithValidItemTypes() throws Exception {
+    public void shouldAcceptListWithValidItemTypes() throws Exception {
 
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -84,8 +88,10 @@ public class ListProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listOfBNode = nodeProvider.getNodeByName("ListOfB");
         new NodeExtender(nodeProvider).extend(listOfBNode, Limits.NO_LIMITS);
+        // when
         Node result = merger.resolve(listOfBNode);
 
+        // then
         assertEquals("B", result.getItemType().getName());
         assertEquals(2, result.getItems().size());
         assertEquals("B", result.getItems().get(0).getType().getName());
@@ -93,7 +99,8 @@ public class ListProcessorTest {
     }
 
     @Test
-    public void testListWithInvalidItemType() throws Exception {
+    public void shouldRejectListWithInvalidItemType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -124,13 +131,16 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listOfBNode = nodeProvider.findNodeByName("ListOfB").orElseThrow(() -> new IllegalStateException("No \"ListOfB\" available for NodeProvider."));
+        // when
         new NodeExtender(nodeProvider).extend(listOfBNode, Limits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(listOfBNode));
     }
 
     @Test
-    public void testInheritedList() throws Exception {
+    public void shouldResolveInheritedListItems() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -173,8 +183,10 @@ public class ListProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node inheritedListNode = nodeProvider.findNodeByName("InheritedList").orElseThrow(() -> new IllegalStateException("No \"InheritedList\" available for NodeProvider."));
         new NodeExtender(nodeProvider).extend(inheritedListNode, Limits.NO_LIMITS);
+        // when
         Node result = merger.resolve(inheritedListNode);
 
+        // then
         assertEquals("B", result.getItemType().getName());
         assertEquals(2, result.getItems().size());
         assertEquals("B", result.getItems().get(0).getType().getName());
@@ -182,7 +194,8 @@ public class ListProcessorTest {
     }
 
     @Test
-    public void testInheritedListWithInvalidItemType() throws Exception {
+    public void shouldRejectInheritedListWithInvalidItemType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -219,13 +232,16 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node inheritedListNode = nodeProvider.findNodeByName("InheritedList").orElseThrow(() -> new IllegalStateException("No \"InheritedList\" available for NodeProvider."));
+        // when
         new NodeExtender(nodeProvider).extend(inheritedListNode, Limits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(inheritedListNode));
     }
 
     @Test
-    public void testListWithNoItemType() throws Exception {
+    public void shouldPreserveItemsWhenListHasNoItemType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -249,15 +265,18 @@ public class ListProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listNode = nodeProvider.findNodeByName("ListWithNoItemType").orElseThrow(() -> new IllegalStateException("No \"ListWithNoItemType\" available for NodeProvider."));
         new NodeExtender(nodeProvider).extend(listNode, Limits.NO_LIMITS);
+        // when
         Node result = merger.resolve(listNode);
 
+        // then
         assertNull(result.getItemType());
         assertEquals(1, result.getItems().size());
         assertEquals("A", result.getItems().get(0).getType().getName());
     }
 
     @Test
-    public void testNonListTypeWithItemType() throws Exception {
+    public void shouldRejectItemTypeOnNonListType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -279,8 +298,10 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node nonListNode = nodeProvider.findNodeByName("NonListWithItemType").orElseThrow(() -> new IllegalStateException("No \"NonListWithItemType\" available for NodeProvider."));
+        // when
         new NodeExtender(nodeProvider).extend(nonListNode, Limits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nonListNode));
     }
 }

@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ConformanceEngineTest {
 
     @Test
-    void detectsFixedValueViolationAndGeneralizesToNearestConformingType() {
+    void shouldDetectFixedValueViolationAndGeneralizeToNearestConformingType() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -32,19 +33,24 @@ public class ConformanceEngineTest {
 
         document.getProperties().get("price").getProperties().get("currency").value("USD");
 
+        // when
         ConformanceEngine engine = blue.conformanceEngine();
-        assertFalse(engine.conforms(document));
-
+        boolean initiallyConformant = engine.conforms(document);
         ConformancePlan plan = engine.planGeneralization(FrozenNode.fromResolvedNode(document), "/price/currency");
+        boolean generalizedRootConformant =
+                engine.conforms(plan.rootNode());
 
+        // then
+        assertFalse(initiallyConformant);
         assertTrue(plan.generalized());
-        assertTrue(engine.conforms(plan.rootNode()));
+        assertTrue(generalizedRootConformant);
         assertEquals("Price", plan.root().property("price").getType().getName());
         assertEquals("Global Product", plan.root().getType().getName());
     }
 
     @Test
-    void leavesAlreadyConformantDocumentUnchanged() {
+    void shouldLeaveAlreadyConformantDocumentUnchanged() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -55,16 +61,19 @@ public class ConformanceEngineTest {
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(FrozenNode.fromResolvedNode(document), "/price/amount");
 
+        // then
         assertFalse(plan.generalized());
         assertEquals("Price in EUR", plan.root().property("price").getType().getName());
         assertEquals("European Product", plan.root().getType().getName());
     }
 
     @Test
-    void plansGeneralizationWithoutMutatingFrozenRoot() {
+    void shouldPlanGeneralizationWithoutMutatingFrozenRoot() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -77,8 +86,10 @@ public class ConformanceEngineTest {
         document.getProperties().get("price").getProperties().get("currency").value("USD");
         FrozenNode patchedRoot = FrozenNode.fromResolvedNode(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine().planGeneralization(patchedRoot, "/price/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertFalse(plan.fullSnapshotRebuildAvoidable());
         assertTrue(plan.canonicalPatches().isEmpty());
@@ -90,7 +101,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void plansCanonicalGeneralizationPatchesAndChangedPaths() {
+    void shouldPlanCanonicalGeneralizationPatchesAndChangedPaths() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -106,9 +118,11 @@ public class ConformanceEngineTest {
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
         FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/price/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertTrue(plan.fullSnapshotRebuildAvoidable());
         assertEquals("Price", plan.root().property("price").getType().getName());
@@ -132,7 +146,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void generalizesRootWhenRootFixedValueIsViolated() {
+    void shouldGeneralizeRootWhenRootFixedValueIsViolated() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Product\n" +
@@ -154,9 +169,11 @@ public class ConformanceEngineTest {
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
         FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/status");
 
+        // then
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertTrue(plan.fullSnapshotRebuildAvoidable());
         assertEquals("Product", plan.root().getType().getName());
@@ -173,7 +190,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void generalizesRootWhenSchemaConstraintIsViolated() {
+    void shouldGeneralizeRootWhenSchemaConstraintIsViolated() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Any Score\n" +
@@ -193,16 +211,19 @@ public class ConformanceEngineTest {
 
         document.value(-1);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(FrozenNode.fromResolvedNode(document), "/value");
 
+        // then
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertEquals("Any Score", plan.root().getType().getName());
         assertEquals(-1, plan.rootNode().getAsInteger("/"));
     }
 
     @Test
-    void appendPointerGeneralizationUsesConcreteLastListIndexAndSharesUnchangedItems() {
+    void shouldUseConcreteLastListIndexForAppendPointerGeneralizationAndShareUnchangedItems() {
+        // given
         BasicNodeProvider nodeProvider = basketProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -228,9 +249,11 @@ public class ConformanceEngineTest {
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
         FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/prices/-/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertEquals("Basket", plan.root().getType().getName());
@@ -244,7 +267,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void dictionaryValueTypeGeneralizationUpdatesMetadataAndSharesUnchangedEntries() {
+    void shouldUpdateDictionaryValueTypeMetadataDuringGeneralizationAndShareUnchangedEntries() {
+        // given
         BasicNodeProvider nodeProvider = catalogProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -273,9 +297,11 @@ public class ConformanceEngineTest {
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
         FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/prices/sku2/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertEquals("Catalog Type", plan.root().getType().getName());
@@ -289,7 +315,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void failedGeneralizationLeavesFrozenRootAndCanonicalRootUntouched() {
+    void shouldLeaveFrozenAndCanonicalRootsUntouchedAfterFailedGeneralization() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Fixed One\n" +
@@ -302,8 +329,10 @@ public class ConformanceEngineTest {
                 "x: 1", Node.class));
         document.getProperties().get("x").value(2);
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
+        // when
         FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> blue.conformanceEngine().planGeneralization(canonicalRoot, resolvedRoot, "/x"));
 

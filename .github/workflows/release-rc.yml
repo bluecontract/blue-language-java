@@ -85,11 +85,19 @@ jobs:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: node .github/scripts/verify-release-readiness.js
 
+      - name: Commit RC version
+        run: |
+          git add .cz.toml
+          git commit -m "chore: release ${{ steps.version.outputs.version }}"
+
       - name: Configure reproducible build timestamp
         run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
 
-      - name: Execute Gradle build
-        run: ./gradlew clean build rcVerify jmhClasses
+      - name: Execute clean Gradle build
+        run: ./gradlew clean build
+
+      - name: Execute RC verification
+        run: ./gradlew rcVerify
 
       - name: Verify reproducible source release
         run: |
@@ -103,11 +111,8 @@ jobs:
       - name: Verify final Language 1.0 and Contracts kernel 1.0 API baseline
         run: ./gradlew verifyFinalApiBaseline
 
-      - name: Commit and tag RC version
-        run: |
-          git add .cz.toml
-          git commit -m "chore: release ${{ steps.version.outputs.version }}"
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+      - name: Tag verified RC version
+        run: git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
 
       # Publish the unique version reservation before any remote artifact upload.
       # A failed release can then advance to a new RC instead of reusing a

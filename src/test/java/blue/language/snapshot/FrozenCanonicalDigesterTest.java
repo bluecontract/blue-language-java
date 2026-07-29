@@ -24,28 +24,39 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FrozenCanonicalDigesterTest {
 
     @Test
-    void directIdentitySizingAcceptsTheCanonicalEmptyListPlaceholder() {
+    void shouldAcceptCanonicalEmptyListPlaceholderDuringDirectIdentitySizing() {
+        // given
         Node list = new Node().items(
                 Nodes.emptyPlaceholder());
 
-        assertTrue(NodeCanonicalizer
-                .directIdentityCanonicalSize(list) > 0L);
+        // when
+        long canonicalSize = NodeCanonicalizer
+                .directIdentityCanonicalSize(list);
+
+        // then
+        assertTrue(canonicalSize > 0L);
     }
 
     @Test
-    void streamingWriterMatchesGenericJcsForRepresentativeFrozenInputs() throws Exception {
+    void shouldMatchGenericJcsWhenStreamingRepresentativeFrozenInputs() throws Exception {
+        // given
         List<Node> cases = representativeNodes();
+
+        // when
+        List<CanonicalBytesObservation> observations =
+                new ArrayList<>();
         for (int index = 0; index < cases.size(); index++) {
             FrozenNode frozen = FrozenNode.fromNode(cases.get(index));
             byte[] json = JSON_MAPPER.writeValueAsBytes(FrozenNodeToBlueIdInput.get(frozen));
@@ -53,24 +64,54 @@ class FrozenCanonicalDigesterTest {
             ByteArraySink sink = new ByteArraySink();
 
             FrozenCanonicalWriter.write(frozen, sink);
+            observations.add(new CanonicalBytesObservation(
+                    expected,
+                    sink.bytes(),
+                    index));
+        }
 
-            assertArrayEquals(expected, sink.bytes(), "canonical bytes at case " + index);
+        // then
+        for (CanonicalBytesObservation observation
+                : observations) {
+            assertArrayEquals(
+                    observation.expected,
+                    observation.actual,
+                    "canonical bytes at case "
+                            + observation.index);
         }
     }
 
     @Test
-    void streamingDigesterMatchesGenericOracleForRepresentativeFrozenInputs() {
+    void shouldMatchGenericOracleWhenDigestingRepresentativeFrozenInputs() {
+        // given
         List<Node> cases = representativeNodes();
+
+        // when
+        List<IdentityObservation> observations =
+                new ArrayList<>();
         for (int index = 0; index < cases.size(); index++) {
             FrozenNode frozen = FrozenNode.fromNode(cases.get(index));
-            assertEquals(FrozenCanonicalDigester.calculateGenericOracle(frozen),
-                    FrozenCanonicalDigester.calculateBlueId(frozen),
-                    "BlueId at case " + index);
+            observations.add(new IdentityObservation(
+                    FrozenCanonicalDigester
+                            .calculateGenericOracle(frozen),
+                    FrozenCanonicalDigester
+                            .calculateBlueId(frozen),
+                    index));
+        }
+
+        // then
+        for (IdentityObservation observation
+                : observations) {
+            assertEquals(
+                    observation.expected,
+                    observation.actual,
+                    "BlueId at case " + observation.index);
         }
     }
 
     @Test
-    void typedSchemaScalarsAndMergePolicyMatchMutableIdentityWithoutFallback() {
+    void shouldMatchMutableIdentityForTypedSchemaScalarsAndMergePolicyWithoutFallback() {
+        // given
         BigInteger beyondSafeInteger = new BigInteger("900719925474099200000000000000000001");
         Schema schema = new Schema()
                 .required(true)
@@ -104,15 +145,27 @@ class FrozenCanonicalDigesterTest {
             }
         };
 
+        // when
         String mutableIdentity = BlueIdCalculator.calculateBlueId(mutable);
-        assertEquals(mutableIdentity, FrozenCanonicalDigester.calculateGenericOracle(frozen));
-        assertEquals(mutableIdentity, FrozenCanonicalDigester.calculateBlueId(frozen, observer));
-        assertEquals(0, fallbacks.get());
+        String genericIdentity = FrozenCanonicalDigester
+                .calculateGenericOracle(frozen);
+        String streamingIdentity = FrozenCanonicalDigester
+                .calculateBlueId(frozen, observer);
+        int fallbackCount = fallbacks.get();
+
+        // then
+        assertEquals(mutableIdentity, genericIdentity);
+        assertEquals(mutableIdentity, streamingIdentity);
+        assertEquals(0, fallbackCount);
     }
 
     @Test
-    void canonicalScalarWriterMatchesJcsAcrossDeterministicUnicodeAndNumberCorpus() throws Exception {
+    void shouldMatchJcsAcrossDeterministicUnicodeAndNumberCorpus() throws Exception {
+        // given
         Random random = new Random(0x4a435346524f5a45L);
+
+        // when
+        List<Integer> mismatches = new ArrayList<>();
         for (int index = 0; index < 20_000; index++) {
             Object value = scalarValue(random, index);
             byte[] json = JSON_MAPPER.writeValueAsBytes(Arrays.asList(value));
@@ -120,12 +173,20 @@ class FrozenCanonicalDigesterTest {
             byte[] expected = Arrays.copyOfRange(wrapped, 1, wrapped.length - 1);
             ByteArraySink sink = new ByteArraySink();
             FrozenCanonicalWriter.writeCanonicalValue(value, sink);
-            assertArrayEquals(expected, sink.bytes(), "scalar canonical bytes at case " + index);
+            if (!Arrays.equals(expected, sink.bytes())) {
+                mismatches.add(index);
+            }
         }
+
+        // then
+        assertTrue(mismatches.isEmpty(),
+                "scalar canonical byte mismatches: "
+                        + mismatches);
     }
 
     @Test
-    void streamingDigestMatchesGenericOracleForOneHundredThousandGeneratedFrozenTrees() {
+    void shouldMatchGenericOracleForOneHundredThousandStreamingFrozenTreeDigests() {
+        // given
         Random random = new Random(0x424c554549444a43L);
         AtomicInteger fallbacks = new AtomicInteger();
         FrozenCanonicalDigester.Observer observer = new FrozenCanonicalDigester.Observer() {
@@ -134,32 +195,64 @@ class FrozenCanonicalDigesterTest {
                 fallbacks.incrementAndGet();
             }
         };
+
+        // when
+        List<Integer> genericOracleMismatches =
+                new ArrayList<>();
+        List<Integer> identityMismatches =
+                new ArrayList<>();
         for (int index = 0; index < 100_000; index++) {
             Node generated = generatedNode(random, index);
             FrozenNode frozen = FrozenNode.fromNode(generated);
             String expected = FrozenCanonicalDigester.calculateGenericOracle(frozen);
             String mutableExpected = BlueIdCalculator.calculateBlueId(frozen.toNode());
             String actual = FrozenCanonicalDigester.calculateBlueId(frozen, observer);
-            assertEquals(mutableExpected, expected, "independent generic oracle case " + index);
-            assertEquals(expected, actual, "generated identity case " + index);
+            if (!mutableExpected.equals(expected)) {
+                genericOracleMismatches.add(index);
+            }
+            if (!expected.equals(actual)) {
+                identityMismatches.add(index);
+            }
         }
-        assertEquals(0, fallbacks.get(), "generated supported cases must stay on the streaming path");
+        int fallbackCount = fallbacks.get();
+
+        // then
+        assertTrue(genericOracleMismatches.isEmpty(),
+                "independent generic oracle mismatches: "
+                        + genericOracleMismatches);
+        assertTrue(identityMismatches.isEmpty(),
+                "generated identity mismatches: "
+                        + identityMismatches);
+        assertEquals(0, fallbackCount,
+                "generated supported cases must stay on the streaming path");
     }
 
     @Test
-    void officialCanonicalSizeMatchesLegacyGasRepresentationForGeneratedTrees() {
+    void shouldMatchLegacyGasRepresentationWhenSizingGeneratedTreesCanonically() {
+        // given
         Random random = new Random(0x47415353495a454cL);
+
+        // when
+        List<Integer> mismatches = new ArrayList<>();
         for (int index = 0; index < 10_000; index++) {
             Node generated = generatedNode(random, index);
             FrozenNode frozen = FrozenNode.fromNode(generated);
-            assertEquals(NodeCanonicalizer.canonicalSize(generated),
-                    FrozenCanonicalWriter.officialCanonicalSize(frozen),
-                    "official canonical size case " + index);
+            if (NodeCanonicalizer.canonicalSize(generated)
+                    != FrozenCanonicalWriter
+                    .officialCanonicalSize(frozen)) {
+                mismatches.add(index);
+            }
         }
+
+        // then
+        assertTrue(mismatches.isEmpty(),
+                "official canonical size mismatches: "
+                        + mismatches);
     }
 
     @Test
-    void rawJsonContainersAndNonInferredNumbersKeepCanonicalSizeParity() {
+    void shouldKeepCanonicalSizeParityForRawJsonContainersAndNonInferredNumbers() {
+        // given
         Map<String, Object> raw = new LinkedHashMap<>();
         raw.put("items", Arrays.<Object>asList("first", BigInteger.valueOf(2), true));
         raw.put("nested", Collections.<String, Object>singletonMap("key", "value"));
@@ -183,22 +276,39 @@ class FrozenCanonicalDigesterTest {
                         Collections.emptyMap(),
                         Collections.singletonMap("kept", "value")
                 }));
+        Map<String, Object> invalidRaw = new LinkedHashMap<>();
+        invalidRaw.put("nullsInList",
+                Collections.<Object>singletonList(null));
+        Node invalid = new Node().value(invalidRaw);
 
+        // when
+        List<CanonicalIdentityObservation> observations =
+                new ArrayList<>();
         for (Node authored : cases) {
             FrozenNode frozen = FrozenNode.fromNode(authored);
-            assertEquals(NodeCanonicalizer.canonicalSize(authored),
-                    FrozenCanonicalWriter.officialCanonicalSize(frozen));
-            assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
+            observations.add(new CanonicalIdentityObservation(
+                    NodeCanonicalizer.canonicalSize(authored),
+                    FrozenCanonicalWriter
+                            .officialCanonicalSize(frozen),
+                    BlueIdCalculator.calculateBlueId(authored),
+                    frozen.blueId()));
         }
+        FailurePair invalidFailure = sameFailure(invalid);
 
-        Map<String, Object> invalidRaw = new LinkedHashMap<>();
-        invalidRaw.put("nullsInList", Collections.<Object>singletonList(null));
-        Node invalid = new Node().value(invalidRaw);
-        assertSameFailure(invalid);
+        // then
+        for (CanonicalIdentityObservation observation
+                : observations) {
+            assertEquals(observation.expectedSize,
+                    observation.actualSize);
+            assertEquals(observation.expectedIdentity,
+                    observation.actualIdentity);
+        }
+        assertSameFailure(invalidFailure);
     }
 
     @Test
-    void unhandledConcreteContainerArraysMatchMutableCanonicalOracles() throws Exception {
+    void shouldMatchMutableCanonicalOraclesForUnhandledConcreteContainerArrays() throws Exception {
+        // given
         CustomJsonList custom = new CustomJsonList();
         custom.add(Collections.<String, Object>singletonMap("kind", "custom"));
 
@@ -207,6 +317,9 @@ class FrozenCanonicalDigesterTest {
         Object singletonArray = Array.newInstance(singleton.getClass(), 1);
         Array.set(singletonArray, 0, singleton);
 
+        // when
+        List<ContainerArrayObservation> observations =
+                new ArrayList<>();
         for (Object rawArray : Arrays.asList(
                 new CustomJsonList[] {custom}, singletonArray)) {
             Node authored = new Node().value(rawArray);
@@ -216,18 +329,37 @@ class FrozenCanonicalDigesterTest {
             ByteArraySink sink = new ByteArraySink();
 
             FrozenCanonicalWriter.write(frozen, sink);
+            observations.add(new ContainerArrayObservation(
+                    expectedCanonical,
+                    sink.bytes(),
+                    BlueIdCalculator.calculateBlueId(authored),
+                    frozen.blueId(),
+                    FrozenCanonicalDigester
+                            .calculateGenericOracle(frozen),
+                    FrozenCanonicalDigester
+                            .calculateBlueId(frozen),
+                    NodeCanonicalizer.canonicalSize(authored),
+                    FrozenCanonicalWriter
+                            .officialCanonicalSize(frozen)));
+        }
 
-            assertArrayEquals(expectedCanonical, sink.bytes());
-            assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
-            assertEquals(FrozenCanonicalDigester.calculateGenericOracle(frozen),
-                    FrozenCanonicalDigester.calculateBlueId(frozen));
-            assertEquals(NodeCanonicalizer.canonicalSize(authored),
-                    FrozenCanonicalWriter.officialCanonicalSize(frozen));
+        // then
+        for (ContainerArrayObservation observation
+                : observations) {
+            assertArrayEquals(observation.expectedBytes,
+                    observation.actualBytes);
+            assertEquals(observation.expectedMutableIdentity,
+                    observation.frozenIdentity);
+            assertEquals(observation.genericIdentity,
+                    observation.streamingIdentity);
+            assertEquals(observation.expectedSize,
+                    observation.actualSize);
         }
     }
 
     @Test
-    void enumsPreserveJacksonWireBytesAndUseGenericDigestFallback() throws Exception {
+    void shouldPreserveJacksonWireBytesForEnumsAndUseGenericDigestFallback() throws Exception {
+        // given
         List<Enum<?>> values = Arrays.<Enum<?>>asList(
                 DefaultWireEnum.DEFAULT_VALUE,
                 AnnotatedWireEnum.ANNOTATED_VALUE);
@@ -242,11 +374,11 @@ class FrozenCanonicalDigesterTest {
             }
         };
 
+        // when
+        List<EnumObservation> observations =
+                new ArrayList<>();
         for (int index = 0; index < values.size(); index++) {
             Enum<?> value = values.get(index);
-            assertEquals(expectedJson.get(index), JSON_MAPPER.writeValueAsString(value));
-            assertFalse(FrozenCanonicalWriter.supportsCanonicalValue(value));
-
             ByteArraySink directSink = new ByteArraySink();
             FrozenCanonicalWriter.writeCanonicalValue(value, directSink);
             byte[] wrappedOracle = new JsonCanonicalizer(
@@ -254,7 +386,6 @@ class FrozenCanonicalDigesterTest {
                     .getEncodedUTF8();
             byte[] directOracle = Arrays.copyOfRange(
                     wrappedOracle, 1, wrappedOracle.length - 1);
-            assertArrayEquals(directOracle, directSink.bytes());
 
             Node authored = new Node().value(value);
             FrozenNode frozen = FrozenNode.fromNode(authored);
@@ -264,41 +395,95 @@ class FrozenCanonicalDigesterTest {
                     .getEncodedUTF8();
             ByteArraySink nodeSink = new ByteArraySink();
             FrozenCanonicalWriter.write(frozen, nodeSink);
-
-            assertArrayEquals(canonicalInputOracle, nodeSink.bytes());
-            assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
-            assertEquals(NodeCanonicalizer.canonicalSize(authored),
-                    FrozenCanonicalWriter.officialCanonicalSize(frozen));
-            assertEquals(FrozenCanonicalDigester.calculateGenericOracle(frozen),
-                    FrozenCanonicalDigester.calculateBlueId(frozen, observer));
+            observations.add(new EnumObservation(
+                    expectedJson.get(index),
+                    JSON_MAPPER.writeValueAsString(value),
+                    FrozenCanonicalWriter
+                            .supportsCanonicalValue(value),
+                    directOracle,
+                    directSink.bytes(),
+                    canonicalInputOracle,
+                    nodeSink.bytes(),
+                    BlueIdCalculator.calculateBlueId(authored),
+                    frozen.blueId(),
+                    NodeCanonicalizer.canonicalSize(authored),
+                    FrozenCanonicalWriter
+                            .officialCanonicalSize(frozen),
+                    FrozenCanonicalDigester
+                            .calculateGenericOracle(frozen),
+                    FrozenCanonicalDigester
+                            .calculateBlueId(frozen, observer)));
         }
-        assertEquals(values.size(), fallbacks.get());
+        int fallbackCount = fallbacks.get();
+
+        // then
+        for (EnumObservation observation : observations) {
+            assertEquals(observation.expectedJson,
+                    observation.actualJson);
+            assertFalse(observation.directlySupported);
+            assertArrayEquals(observation.expectedDirectBytes,
+                    observation.actualDirectBytes);
+            assertArrayEquals(observation.expectedNodeBytes,
+                    observation.actualNodeBytes);
+            assertEquals(observation.expectedMutableIdentity,
+                    observation.frozenIdentity);
+            assertEquals(observation.expectedSize,
+                    observation.actualSize);
+            assertEquals(observation.genericIdentity,
+                    observation.streamingIdentity);
+        }
+        assertEquals(values.size(), fallbackCount);
     }
 
     @Test
-    void invalidInputDiagnosticsRemainCompatibleWithExistingOracles() {
-        assertSameFailure(new Node().blueId(TEXT_TYPE_BLUE_ID + "#member"));
-        RuntimeException previousFailure = assertThrows(RuntimeException.class,
-                () -> FrozenNode.fromNode(new Node().items(
-                        new Node().value("before"),
-                        new Node().previousBlueId(TEXT_TYPE_BLUE_ID))));
+    void shouldKeepInvalidInputDiagnosticsCompatibleWithExistingOracles() {
+        // given
+        Node invalidMemberReference = new Node()
+                .blueId(TEXT_TYPE_BLUE_ID + "#member");
+        Node invalidPrevious = new Node().items(
+                new Node().value("before"),
+                new Node().previousBlueId(
+                        TEXT_TYPE_BLUE_ID));
+        Node invalidSchema = new Node().schema(
+                new Schema().minLength(
+                        new Node().value(1).blue(
+                                new Node().value(
+                                        "directive"))));
+        Node invalidEnum = new Node().schema(
+                new Schema().enumValues(
+                        Arrays.asList(new Node())));
+
+        // when
+        FailurePair memberFailure =
+                sameFailure(invalidMemberReference);
+        Throwable previousFailure = captureFailure(
+                () -> FrozenNode.fromNode(
+                        invalidPrevious));
+        Throwable schemaFailure = captureFailure(
+                () -> FrozenNode.fromNode(
+                        invalidSchema));
+        FailurePair enumFailure =
+                sameFailure(invalidEnum);
+
+        // then
+        assertSameFailure(memberFailure);
+        assertInstanceOf(RuntimeException.class,
+                previousFailure);
         assertEquals("\"$previous\" must appear only as the first list item.",
                 previousFailure.getMessage(),
                 "FrozenNode list construction keeps its rc.14 diagnostic");
-        Node invalidSchema = new Node().schema(new Schema().minLength(
-                new Node().value(1).blue(new Node().value("directive"))));
-        RuntimeException schemaFailure = assertThrows(RuntimeException.class,
-                () -> FrozenNode.fromNode(invalidSchema));
+        assertInstanceOf(RuntimeException.class,
+                schemaFailure);
         assertEquals("\"blue\" is a preprocessing directive and must not be present in BlueId input. "
                         + "Call preprocess/canonicalize/calculateSemanticBlueId first. Path: /",
                 schemaFailure.getMessage(),
                 "rc.11 FrozenNode schema diagnostics use the nested-node root path");
-        assertSameFailure(new Node().schema(new Schema().enumValues(
-                Arrays.asList(new Node()))));
+        assertSameFailure(enumFailure);
     }
 
     @Test
-    void genericFallbackPreservesReservedPropertyAndEmptySchemaCleaning() {
+    void shouldPreserveReservedPropertyAndEmptySchemaCleaningDuringGenericFallback() {
+        // given
         List<Node> cases = Arrays.asList(
                 new Node().properties("child", new Node()
                         .name("discarded")
@@ -329,32 +514,51 @@ class FrozenCanonicalDigesterTest {
             }
         };
 
+        // when
+        List<IdentityObservation> observations =
+                new ArrayList<>();
         for (int index = 0; index < cases.size(); index++) {
             FrozenNode frozen = FrozenNode.fromNode(cases.get(index));
-            assertEquals(FrozenCanonicalDigester.calculateGenericOracle(frozen),
-                    FrozenCanonicalDigester.calculateBlueId(frozen, observer),
-                    "fallback identity case " + index);
+            observations.add(new IdentityObservation(
+                    FrozenCanonicalDigester
+                            .calculateGenericOracle(frozen),
+                    FrozenCanonicalDigester
+                            .calculateBlueId(frozen, observer),
+                    index));
         }
-        assertTrue(fallbacks.get() >= 3,
+        int fallbackCount = fallbacks.get();
+
+        // then
+        for (IdentityObservation observation
+                : observations) {
+            assertEquals(observation.expected,
+                    observation.actual,
+                    "fallback identity case "
+                            + observation.index);
+        }
+        assertTrue(fallbackCount >= 3,
                 "reserved-key representations must stay on the compatibility oracle");
     }
 
-    private static void assertSameFailure(Node input) {
-        RuntimeException expected = assertThrows(RuntimeException.class,
-                () -> BlueIdCalculator.calculateBlueId(input));
-        RuntimeException actual = assertThrows(RuntimeException.class,
+    private static FailurePair sameFailure(Node input) {
+        Throwable expected = captureFailure(
+                () -> BlueIdCalculator
+                        .calculateBlueId(input));
+        Throwable actual = captureFailure(
                 () -> FrozenNode.fromNode(input));
-        assertEquals(expected.getClass(), actual.getClass());
-        assertEquals(expected.getMessage(), actual.getMessage());
+        return new FailurePair(expected, actual);
     }
 
-    private static void assertSameIdentityFailure(Node input) {
-        RuntimeException expected = assertThrows(RuntimeException.class,
-                () -> BlueIdCalculator.calculateBlueId(input));
-        RuntimeException actual = assertThrows(RuntimeException.class,
-                () -> FrozenNode.fromNode(input).blueId());
-        assertEquals(expected.getClass(), actual.getClass());
-        assertEquals(expected.getMessage(), actual.getMessage());
+    private static void assertSameFailure(
+            FailurePair failure) {
+        assertInstanceOf(RuntimeException.class,
+                failure.expected);
+        assertInstanceOf(RuntimeException.class,
+                failure.actual);
+        assertEquals(failure.expected.getClass(),
+                failure.actual.getClass());
+        assertEquals(failure.expected.getMessage(),
+                failure.actual.getMessage());
     }
 
     private static List<Node> representativeNodes() {
@@ -468,6 +672,143 @@ class FrozenCanonicalDigesterTest {
                 return new Node().schema(schema).contracts(new Node().properties(
                         "audit-" + index, new Node().value(true)));
             }
+        }
+    }
+
+    private static final class CanonicalBytesObservation {
+        private final byte[] expected;
+        private final byte[] actual;
+        private final int index;
+
+        private CanonicalBytesObservation(
+                byte[] expected,
+                byte[] actual,
+                int index) {
+            this.expected = expected;
+            this.actual = actual;
+            this.index = index;
+        }
+    }
+
+    private static final class IdentityObservation {
+        private final String expected;
+        private final String actual;
+        private final int index;
+
+        private IdentityObservation(
+                String expected,
+                String actual,
+                int index) {
+            this.expected = expected;
+            this.actual = actual;
+            this.index = index;
+        }
+    }
+
+    private static final class CanonicalIdentityObservation {
+        private final long expectedSize;
+        private final long actualSize;
+        private final String expectedIdentity;
+        private final String actualIdentity;
+
+        private CanonicalIdentityObservation(
+                long expectedSize,
+                long actualSize,
+                String expectedIdentity,
+                String actualIdentity) {
+            this.expectedSize = expectedSize;
+            this.actualSize = actualSize;
+            this.expectedIdentity = expectedIdentity;
+            this.actualIdentity = actualIdentity;
+        }
+    }
+
+    private static final class ContainerArrayObservation {
+        private final byte[] expectedBytes;
+        private final byte[] actualBytes;
+        private final String expectedMutableIdentity;
+        private final String frozenIdentity;
+        private final String genericIdentity;
+        private final String streamingIdentity;
+        private final long expectedSize;
+        private final long actualSize;
+
+        private ContainerArrayObservation(
+                byte[] expectedBytes,
+                byte[] actualBytes,
+                String expectedMutableIdentity,
+                String frozenIdentity,
+                String genericIdentity,
+                String streamingIdentity,
+                long expectedSize,
+                long actualSize) {
+            this.expectedBytes = expectedBytes;
+            this.actualBytes = actualBytes;
+            this.expectedMutableIdentity =
+                    expectedMutableIdentity;
+            this.frozenIdentity = frozenIdentity;
+            this.genericIdentity = genericIdentity;
+            this.streamingIdentity = streamingIdentity;
+            this.expectedSize = expectedSize;
+            this.actualSize = actualSize;
+        }
+    }
+
+    private static final class EnumObservation {
+        private final String expectedJson;
+        private final String actualJson;
+        private final boolean directlySupported;
+        private final byte[] expectedDirectBytes;
+        private final byte[] actualDirectBytes;
+        private final byte[] expectedNodeBytes;
+        private final byte[] actualNodeBytes;
+        private final String expectedMutableIdentity;
+        private final String frozenIdentity;
+        private final long expectedSize;
+        private final long actualSize;
+        private final String genericIdentity;
+        private final String streamingIdentity;
+
+        private EnumObservation(
+                String expectedJson,
+                String actualJson,
+                boolean directlySupported,
+                byte[] expectedDirectBytes,
+                byte[] actualDirectBytes,
+                byte[] expectedNodeBytes,
+                byte[] actualNodeBytes,
+                String expectedMutableIdentity,
+                String frozenIdentity,
+                long expectedSize,
+                long actualSize,
+                String genericIdentity,
+                String streamingIdentity) {
+            this.expectedJson = expectedJson;
+            this.actualJson = actualJson;
+            this.directlySupported = directlySupported;
+            this.expectedDirectBytes = expectedDirectBytes;
+            this.actualDirectBytes = actualDirectBytes;
+            this.expectedNodeBytes = expectedNodeBytes;
+            this.actualNodeBytes = actualNodeBytes;
+            this.expectedMutableIdentity =
+                    expectedMutableIdentity;
+            this.frozenIdentity = frozenIdentity;
+            this.expectedSize = expectedSize;
+            this.actualSize = actualSize;
+            this.genericIdentity = genericIdentity;
+            this.streamingIdentity = streamingIdentity;
+        }
+    }
+
+    private static final class FailurePair {
+        private final Throwable expected;
+        private final Throwable actual;
+
+        private FailurePair(
+                Throwable expected,
+                Throwable actual) {
+            this.expected = expected;
+            this.actual = actual;
         }
     }
 

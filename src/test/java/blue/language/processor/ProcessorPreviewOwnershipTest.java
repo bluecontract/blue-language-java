@@ -11,48 +11,59 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.List;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProcessorPreviewOwnershipTest {
 
     @Test
-    void successfulBufferingTransfersAndReleasesPreviewOwnership() {
+    void shouldVerifySuccessfulBufferingTransfersAndReleasesPreviewOwnership() {
+        // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         Fixture fixture = fixture(manager);
         List<JsonPatch> patches = Collections.singletonList(
                 JsonPatch.add("/applied", new Node().value("committed")));
         WorkingDocument.Preview preview = preview(fixture.context, patches);
 
+        // when
         fixture.context.applyPreviewedPatches(patches, preview);
         fixture.context.applyBufferedEffects();
 
+        // then
         assertEquals("committed", fixture.execution.runtime().document().getAsText("/applied"));
         assertNull(preview.patch(0));
         assertEquals(manager.openCalls, manager.releaseCalls);
     }
 
     @Test
-    void fatalExitReleasesBufferedPreview() {
+    void shouldVerifyFatalExitReleasesBufferedPreview() {
+        // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         Fixture fixture = fixture(manager);
         List<JsonPatch> patches = Collections.singletonList(
                 JsonPatch.add("/notApplied", new Node().value(1)));
         WorkingDocument.Preview preview = preview(fixture.context, patches);
 
+        // when
         fixture.context.applyPreviewedPatches(patches, preview);
-        assertThrows(ProcessorFatalException.class,
+        Throwable fatalFailure = captureFailure(
                 () -> fixture.context.throwFatal(
                         "fatal after rejected anonymous gas"));
+
+        // then
+        assertInstanceOf(ProcessorFatalException.class,
+                fatalFailure);
         assertNull(preview.patch(0));
         assertEquals(manager.openCalls, manager.releaseCalls);
         assertNull(nodeAt(fixture.execution.runtime().document(), "/notApplied"));
     }
 
     @Test
-    void protectedStatePreviewFailureDoesNotLeakItselfOrEarlierBufferedPreview() {
+    void shouldVerifyProtectedStatePreviewFailureDoesNotLeakItselfOrEarlierBufferedPreview() {
+        // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         Fixture fixture = fixture(manager);
         List<JsonPatch> reserved = Collections.singletonList(
@@ -61,19 +72,27 @@ class ProcessorPreviewOwnershipTest {
                 JsonPatch.add("/notApplied", new Node().value(2)));
         WorkingDocument.Preview laterPreview = preview(fixture.context, later);
 
+        // when
         fixture.context.applyPreviewedPatches(later, laterPreview);
-        assertThrows(ProcessorFailureException.class,
+        Throwable previewFailure = captureFailure(
                 () -> preview(fixture.context, reserved));
-        assertThrows(ProcessorFatalException.class,
+        Throwable fatalFailure = captureFailure(
                 () -> fixture.context.throwFatal(
                         "abort after protected-state rejection"));
+
+        // then
+        assertInstanceOf(ProcessorFailureException.class,
+                previewFailure);
+        assertInstanceOf(ProcessorFatalException.class,
+                fatalFailure);
         assertNull(laterPreview.patch(0));
         assertEquals(manager.openCalls, manager.releaseCalls);
         assertNull(nodeAt(fixture.execution.runtime().document(), "/notApplied"));
     }
 
     @Test
-    void handlerExceptionReleasesPreviewRetainedByBufferedEffects() {
+    void shouldVerifyHandlerExceptionReleasesPreviewRetainedByBufferedEffects() {
+        // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         PreviewThenThrowProcessor handler = new PreviewThenThrowProcessor();
         ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
@@ -94,9 +113,14 @@ class ProcessorPreviewOwnershipTest {
                 execution.runtime(),
                 new CheckpointManager(execution.runtime()));
 
-        assertThrows(RunTerminationException.class,
-                () -> runner.runHandlers("/", bundle, "events", new Node()));
+        // when
+        Throwable runFailure = captureFailure(
+                () -> runner.runHandlers(
+                        "/", bundle, "events", new Node()));
 
+        // then
+        assertInstanceOf(RunTerminationException.class,
+                runFailure);
         assertTrue(handler.preview != null);
         assertNull(handler.preview.patch(0));
         assertEquals(manager.openCalls, manager.releaseCalls);
@@ -104,27 +128,35 @@ class ProcessorPreviewOwnershipTest {
     }
 
     @Test
-    void failedWorkingPreviewRetainReleasesTheUnreturnedFork() {
+    void shouldVerifyFailedWorkingPreviewRetainReleasesTheUnreturnedFork() {
+        // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         manager.failNextRetain = true;
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 new Node(), null, manager);
 
-        assertThrows(IllegalStateException.class, () -> {
+        // when
+        Throwable retainFailure = captureFailure(() -> {
             try (WorkingDocument working = runtime.workingDocument("/")) {
                 working.previewAndApplyPatches(Collections.singletonList(
                         JsonPatch.add("/value", new Node().value(1))));
             }
         });
+        int openCalls = manager.openCalls;
+        int releaseCalls = manager.releaseCalls;
 
-        assertEquals(2, manager.openCalls,
+        // then
+        assertInstanceOf(IllegalStateException.class,
+                retainFailure);
+        assertEquals(2, openCalls,
                 "one working scope and one handoff fork must have opened");
-        assertEquals(manager.openCalls, manager.releaseCalls,
+        assertEquals(openCalls, releaseCalls,
                 "both the failed fork and the working scope must be released");
     }
 
     @Test
-    void failedFinalPromotionReleasesItsScopeAndSecondCloseRetriesInANewScope() {
+    void shouldVerifyFailedFinalPromotionReleasesItsScopeAndSecondCloseRetriesInANewScope() {
+        // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         manager.failNextCacheSnapshot = true;
         Node document = new Node();
@@ -136,40 +168,67 @@ class ProcessorPreviewOwnershipTest {
         DocumentProcessingRuntime.PreparedPatchSequence sequence =
                 runtime.preparePatchSequence("/", patches, null);
 
+        // when
         sequence.applyNext(0);
-        assertThrows(IllegalStateException.class, sequence::close);
-
-        assertEquals("committed", document.getAsText("/prefix"));
-        assertEquals(1, manager.openCalls);
-        assertEquals(1, manager.releaseCalls);
+        Throwable firstCloseFailure =
+                captureFailure(sequence::close);
+        String committedPrefix =
+                document.getAsText("/prefix");
+        int openCallsAfterFailure =
+                manager.openCalls;
+        int releaseCallsAfterFailure =
+                manager.releaseCalls;
         sequence.close();
+        int cacheSnapshotAttempts =
+                manager.cacheSnapshotAttempts;
+        int finalOpenCalls = manager.openCalls;
+        int finalReleaseCalls = manager.releaseCalls;
+        long finalSnapshotCacheInserts =
+                runtime.sequenceFinalSnapshotCacheInsertsForTest();
 
-        assertEquals(2, manager.cacheSnapshotAttempts);
-        assertEquals(2, manager.openCalls,
+        // then
+        assertInstanceOf(IllegalStateException.class,
+                firstCloseFailure);
+        assertEquals("committed", committedPrefix);
+        assertEquals(1, openCallsAfterFailure);
+        assertEquals(1, releaseCallsAfterFailure);
+        assertEquals(2, cacheSnapshotAttempts);
+        assertEquals(2, finalOpenCalls,
                 "retry must open a fresh transient publication scope");
-        assertEquals(manager.openCalls, manager.releaseCalls);
-        assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
+        assertEquals(finalOpenCalls, finalReleaseCalls);
+        assertEquals(1, finalSnapshotCacheInserts);
     }
 
     @Test
-    void closedContextRejectsLatePreviewTransferAndCloseRemainsIdempotent() {
+    void shouldVerifyClosedContextRejectsLatePreviewTransferAndCloseRemainsIdempotent() {
+        // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         Fixture fixture = fixture(manager);
         List<JsonPatch> patches = Collections.singletonList(
                 JsonPatch.add("/late", new Node().value("not accepted")));
         WorkingDocument.Preview preview = preview(fixture.context, patches);
 
+        // when
         fixture.context.close();
         fixture.context.close();
-
-        assertThrows(IllegalStateException.class,
+        Throwable lateTransferFailure = captureFailure(
                 () -> fixture.context.applyPreviewedPatches(patches, preview));
-        assertTrue(preview.patch(0) != null,
-                "rejected transfer must leave preview ownership with the caller");
-
+        boolean callerStillOwnsPreview =
+                preview.patch(0) != null;
         preview.close();
-        assertEquals(manager.openCalls, manager.releaseCalls);
-        assertNull(nodeAt(fixture.execution.runtime().document(), "/late"));
+        int openCalls = manager.openCalls;
+        int releaseCalls = manager.releaseCalls;
+        Node lateValue = nodeAt(
+                fixture.execution.runtime().document(),
+                "/late");
+
+        // then
+        assertInstanceOf(IllegalStateException.class,
+                lateTransferFailure);
+        assertTrue(callerStillOwnsPreview,
+                "rejected transfer must leave preview ownership with the caller");
+        assertEquals(openCalls, releaseCalls);
+        assertNull(lateValue);
     }
 
     private Fixture fixture(TrackingSnapshotManager manager) {

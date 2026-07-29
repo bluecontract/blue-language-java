@@ -68,42 +68,93 @@ public final class ExternalDeliveryPlan {
         }
     }
 
+    /**
+     * Creates an empty mutable accumulator for one plan.
+     *
+     * @return new delivery-plan builder
+     */
     public static Builder builder() {
         return new Builder();
     }
 
+    /**
+     * Returns the managed Root revision observed during derivation.
+     *
+     * @return non-negative managed Root revision
+     */
     public long managedRootRevision() {
         return managedRootRevision;
     }
 
+    /**
+     * Returns the Root revision represented by the subscription index.
+     *
+     * @return non-negative indexed Root revision
+     */
     public long indexedRootRevision() {
         return indexedRootRevision;
     }
 
+    /**
+     * Returns the total-order position of the incoming event.
+     *
+     * @return immutable event order key
+     */
     public ExternalOrderKey eventOrderKey() {
         return eventOrderKey;
     }
 
+    /**
+     * Returns the complete preselected delivery surface.
+     *
+     * @return immutable delivery snapshots in derivation order
+     */
     public List<ExternalDeliverySnapshot> deliveries() {
         return deliveries;
     }
 
+    /**
+     * Returns retained subscription intervals active in the indexed revision.
+     *
+     * @return immutable active interval list
+     */
     public List<SubscriptionDelta.Entry> activeSubscriptionIntervals() {
         return activeSubscriptionIntervals;
     }
 
+    /**
+     * Reports whether the deriver supplied the complete interval surface,
+     * including an explicitly empty surface.
+     *
+     * @return {@code true} when interval evidence was supplied
+     */
     public boolean hasActiveSubscriptionIntervals() {
         return activeSubscriptionIntervalsSupplied;
     }
 
+    /**
+     * Returns exact node identities available to execution.
+     *
+     * @return immutable insertion-ordered identity set
+     */
     public Set<String> availableExactNodeBlueIds() {
         return availableExactNodeBlueIds;
     }
 
+    /**
+     * Returns exact node identities execution must be able to open.
+     *
+     * @return immutable insertion-ordered identity set
+     */
     public Set<String> requiredExactNodeBlueIds() {
         return requiredExactNodeBlueIds;
     }
 
+    /**
+     * Reports whether complete environmental runtime state was certified.
+     *
+     * @return {@code true} when the deriver set the completeness certificate
+     */
     public boolean exactRuntimeState() {
         return exactRuntimeState;
     }
@@ -144,6 +195,7 @@ public final class ExternalDeliveryPlan {
                 new LinkedHashSet<>(source));
     }
 
+    /** Mutable, single-use accumulator for a revision-bound delivery plan. */
     public static final class Builder {
         private long managedRootRevision;
         private long indexedRootRevision;
@@ -162,22 +214,51 @@ public final class ExternalDeliveryPlan {
         private Builder() {
         }
 
+        /**
+         * Records the managed and subscription-index revisions that must
+         * agree when the plan is built.
+         *
+         * @param managed managed Root revision
+         * @param indexed subscription-index Root revision
+         * @return this builder
+         */
         public Builder revisions(long managed, long indexed) {
             this.managedRootRevision = managed;
             this.indexedRootRevision = indexed;
             return this;
         }
 
+        /**
+         * Binds the incoming event's immutable total-order position.
+         *
+         * @param key immutable total-order event key
+         * @return this builder
+         */
         public Builder eventOrderKey(ExternalOrderKey key) {
             this.eventOrderKey = key;
             return this;
         }
 
+        /**
+         * Appends one preselected delivery in deterministic derivation order.
+         *
+         * @param snapshot immutable preselected delivery
+         * @return this builder
+         * @throws NullPointerException if {@code snapshot} is {@code null}
+         */
         public Builder delivery(ExternalDeliverySnapshot snapshot) {
             deliveries.add(Objects.requireNonNull(snapshot, "snapshot"));
             return this;
         }
 
+        /**
+         * Appends one retained subscription interval and marks the interval
+         * surface as supplied.
+         *
+         * @param interval one retained active subscription interval
+         * @return this builder
+         * @throws NullPointerException if {@code interval} is {@code null}
+         */
         public Builder activeSubscriptionInterval(
                 SubscriptionDelta.Entry interval) {
             activeSubscriptionIntervalsSupplied = true;
@@ -189,6 +270,11 @@ public final class ExternalDeliveryPlan {
         /**
          * Supplies the complete retained active subscription-index surface,
          * including an exact empty surface.
+         *
+         * @param intervals complete retained interval surface
+         * @return this builder
+         * @throws NullPointerException if {@code intervals} or any contained
+         *         interval is {@code null}
          */
         public Builder activeSubscriptionIntervals(
                 Iterable<SubscriptionDelta.Entry> intervals) {
@@ -202,12 +288,28 @@ public final class ExternalDeliveryPlan {
             return this;
         }
 
+        /**
+         * Adds one exact node identity available to execution.
+         *
+         * @param blueId exact node identity available to execution
+         * @return this builder
+         * @throws IllegalArgumentException if {@code blueId} is {@code null}
+         *         or empty
+         */
         public Builder availableExactNode(String blueId) {
             availableExactNodeBlueIds.add(
                     requireText(blueId, "available exact BlueId"));
             return this;
         }
 
+        /**
+         * Adds one exact node identity required by execution.
+         *
+         * @param blueId exact node identity required by execution
+         * @return this builder
+         * @throws IllegalArgumentException if {@code blueId} is {@code null}
+         *         or empty
+         */
         public Builder requiredExactNode(String blueId) {
             requiredExactNodeBlueIds.add(
                     requireText(blueId, "required exact BlueId"));
@@ -217,12 +319,21 @@ public final class ExternalDeliveryPlan {
         /**
          * Certifies that the deriver evaluated the complete environmental
          * subscription and activation state, including an exact empty result.
+         *
+         * @return this builder
          */
         public Builder exactRuntimeState() {
             this.exactRuntimeState = true;
             return this;
         }
 
+        /**
+         * Validates revision completeness and freezes the plan.
+         *
+         * @return immutable plan
+         * @throws IllegalArgumentException for revision or activation mismatch
+         * @throws NullPointerException when no event order key was supplied
+         */
         public ExternalDeliveryPlan build() {
             return new ExternalDeliveryPlan(this);
         }

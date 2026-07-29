@@ -10,45 +10,62 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BlueContractsPackageIntegrityTest {
 
     @Test
-    void malformedOrEmptyInventoryFailsClosed() {
+    void shouldFailClosedForMalformedOrEmptyInventory() {
+        // given
         ObjectNode missing = JSON_MAPPER.createObjectNode();
-        assertThrows(IllegalStateException.class,
-                () -> BlueContractsConformanceReport.loadFixtureInventory(
-                        missing, ignored -> fixture("c-gas-01")));
-
         ObjectNode empty = JSON_MAPPER.createObjectNode();
         empty.putArray("files");
-        assertThrows(IllegalStateException.class,
+
+        // when
+        Throwable missingFailure = captureFailure(
+                () -> BlueContractsConformanceReport.loadFixtureInventory(
+                        missing, ignored -> fixture("c-gas-01")));
+        Throwable emptyFailure = captureFailure(
                 () -> BlueContractsConformanceReport.loadFixtureInventory(
                         empty, ignored -> fixture("c-gas-01")));
+
+        // then
+        assertEquals(IllegalStateException.class,
+                missingFailure.getClass());
+        assertEquals(IllegalStateException.class,
+                emptyFailure.getClass());
     }
 
     @Test
-    void duplicateExecutablePathOrIdFailsClosed() {
+    void shouldFailClosedForDuplicateExecutablePathOrId() {
+        // given
         ObjectNode duplicatePath = manifest(
                 file("same.yaml", "behavior-fixture"),
                 file("same.yaml", "gas-fixture"));
-        assertThrows(IllegalStateException.class,
-                () -> BlueContractsConformanceReport.loadFixtureInventory(
-                        duplicatePath, ignored -> fixture("c-gas-01")));
-
         ObjectNode duplicateId = manifest(
                 file("one.yaml", "behavior-fixture"),
                 file("two.yaml", "gas-fixture"));
-        assertThrows(IllegalStateException.class,
+
+        // when
+        Throwable duplicatePathFailure = captureFailure(
+                () -> BlueContractsConformanceReport.loadFixtureInventory(
+                        duplicatePath, ignored -> fixture("c-gas-01")));
+        Throwable duplicateIdFailure = captureFailure(
                 () -> BlueContractsConformanceReport.loadFixtureInventory(
                         duplicateId, ignored -> fixture("c-gas-01")));
+
+        // then
+        assertEquals(IllegalStateException.class,
+                duplicatePathFailure.getClass());
+        assertEquals(IllegalStateException.class,
+                duplicateIdFailure.getClass());
     }
 
     @Test
-    void missingMachineResultIsRejected() {
+    void shouldRejectMissingMachineResult() {
+        // given
         Map<String, BlueContractsFixtureCategory> categories =
                 new LinkedHashMap<>();
         categories.put("one", BlueContractsFixtureCategory.GAS);
@@ -64,7 +81,8 @@ class BlueContractsPackageIntegrityTest {
                         BlueContractsFixtureResult.Status.PASS,
                         null);
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> new BlueContractsConformanceReport(
                         "1.0",
                         BlueContractsConformanceReport.RELEASE_NAME,
@@ -86,17 +104,29 @@ class BlueContractsPackageIntegrityTest {
                         categories,
                         Collections.emptyList(),
                         Collections.singletonList(onlyOne)));
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                failure.getClass());
     }
 
     @Test
-    void exactExecutableInventoryIsNonVacuousAndUnique() {
-        assertEquals(127,
+    void shouldRequireExactExecutableInventoryToBeNonVacuousAndUnique() {
+        // given
+        // The required fixture inventory is defined by the package report.
+
+        // when
+        int requiredCount =
                 BlueContractsConformanceReport
-                        .requiredFixtureIdsForContracts10().size());
-        assertEquals(127,
+                        .requiredFixtureIdsForContracts10().size();
+        int uniqueCount =
                 new java.util.LinkedHashSet<>(
                         BlueContractsConformanceReport
-                                .requiredFixtureIdsForContracts10()).size());
+                                .requiredFixtureIdsForContracts10()).size();
+
+        // then
+        assertEquals(140, requiredCount);
+        assertEquals(140, uniqueCount);
     }
 
     private static ObjectNode manifest(ObjectNode... files) {

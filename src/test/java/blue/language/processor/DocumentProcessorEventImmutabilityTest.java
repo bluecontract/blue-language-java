@@ -28,7 +28,8 @@ class DocumentProcessorEventImmutabilityTest {
     }
 
     @Test
-    void handlersSeeImmutableEventSnapshots() {
+    void shouldExposeImmutableEventSnapshotsToHandlers() {
+        // given
         String documentYaml = "name: Immutable\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
@@ -54,12 +55,14 @@ class DocumentProcessorEventImmutabilityTest {
                 .kind("original")
                 .toNode();
 
+        // when
         DocumentProcessingResult result = blue.processDocument(initialized, event);
+        Node resultNode = result.document().getProperties().get("result");
 
+        // then
         assertEquals(ProcessorStatus.SUCCESS, result.status());
         assertTrue(result.events().isEmpty(),
                 "the exact input event is never echoed to the public outbox");
-        Node resultNode = result.document().getProperties().get("result");
         assertEquals(BigInteger.valueOf(42), resultNode.getValue());
     }
 }

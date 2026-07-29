@@ -7,32 +7,75 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
 
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_ELEMENT_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_VALUE;
 import static blue.language.utils.Properties.*;
 
+/**
+ * Calculates deterministic BlueIds from canonical map/list/scalar identity
+ * input.
+ *
+ * <p>Public node helpers first project nodes into the appropriate identity
+ * representation. "Unchecked" helpers retain legacy structural projection and
+ * therefore must not be treated as canonical validation.</p>
+ */
 public class BlueIdCalculator {
 
     private static final Base58Sha256Provider CANONICAL_HASH_PROVIDER = new Base58Sha256Provider();
+    /** Shared calculator using the Language canonical SHA-256 hash function. */
     public static final BlueIdCalculator INSTANCE =
             new BlueIdCalculator(CANONICAL_HASH_PROVIDER::applyCanonicalValue);
 
     private Function<Object, String> hashProvider;
 
+    /**
+     * Creates a calculator with an injected hash function.
+     *
+     * @param hashProvider deterministic canonical-value hash function
+     */
     public BlueIdCalculator(Function<Object, String> hashProvider) {
         this.hashProvider = hashProvider;
     }
 
+    /**
+     * Calculates the strict canonical identity of one node.
+     *
+     * @param node exact node
+     * @return canonical BlueId
+     */
     public static String calculateBlueId(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.get(node));
     }
 
+    /**
+     * Calculates legacy structural identity without strict validation.
+     *
+     * @param node source node
+     * @return unchecked structural BlueId
+     */
     public static String calculateUncheckedBlueId(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToMapListOrValue.get(node));
     }
 
+    /**
+     * Calculates strict identity while accepting cyclic placeholders.
+     *
+     * @param node exact node
+     * @return canonical BlueId
+     */
     public static String calculateBlueIdAllowingCyclicPlaceholders(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getAllowingCyclicPlaceholders(node));
     }
 
+    /**
+     * Calculates strict ordered identity for node elements.
+     *
+     * @param nodes ordered elements
+     * @return canonical list BlueId
+     */
     public static String calculateBlueId(List<Node> nodes) {
         List<Object> objects = new ArrayList<>(nodes.size());
         for (int i = 0; i < nodes.size(); i++) {
@@ -41,6 +84,12 @@ public class BlueIdCalculator {
         return BlueIdCalculator.INSTANCE.calculate(objects);
     }
 
+    /**
+     * Calculates legacy structural identity for a node list.
+     *
+     * @param nodes ordered elements
+     * @return unchecked list BlueId
+     */
     public static String calculateUncheckedBlueId(List<Node> nodes) {
         List<Object> objects = new ArrayList<>(nodes.size());
         for (Node node : nodes) {
@@ -49,6 +98,12 @@ public class BlueIdCalculator {
         return BlueIdCalculator.INSTANCE.calculate(objects);
     }
 
+    /**
+     * Calculates ordered list identity while accepting cyclic placeholders.
+     *
+     * @param nodes ordered elements
+     * @return canonical list BlueId
+     */
     public static String calculateBlueIdAllowingCyclicPlaceholders(List<Node> nodes) {
         List<Object> objects = new ArrayList<>(nodes.size());
         for (int i = 0; i < nodes.size(); i++) {
@@ -57,6 +112,14 @@ public class BlueIdCalculator {
         return BlueIdCalculator.INSTANCE.calculate(objects);
     }
 
+    /**
+     * Calculates identity from an already projected map/list/scalar value.
+     *
+     * @param object projected identity input
+     * @return calculated BlueId
+     * @throws IllegalArgumentException if the root or a semantic child has an
+     *                                  unsupported shape
+     */
     public String calculate(Object object) {
         // we invoke calculateCleanedObject method only once (for root)
         Object cleaned = cleanRoot(object);
@@ -95,10 +158,8 @@ public class BlueIdCalculator {
             BigInteger integer = value instanceof BigInteger
                     ? (BigInteger) value
                     : BigInteger.valueOf(((Number) value).longValue());
-            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-            canonicalValue = integer.compareTo(lowerBound) < 0
-                    || integer.compareTo(upperBound) > 0
+            canonicalValue = integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                    || integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0
                     ? integer.toString()
                     : integer;
         } else {
@@ -126,14 +187,15 @@ public class BlueIdCalculator {
                 hashes.put(key, entry.getValue());
             } else {
                 String blueId = calculateCleanedObject(entry.getValue());
-                hashes.put(key, Collections.singletonMap("blueId", blueId));
+                hashes.put(key, Collections.singletonMap(Properties.OBJECT_BLUE_ID, blueId));
             }
         }
         return hashProvider.apply(hashes);
     }
 
     private String calculateList(List<Object> list) {
-        String accumulator = hashProvider.apply(Collections.singletonMap("$list", "empty"));
+        String accumulator = hashProvider.apply(
+                Collections.singletonMap(LIST_SEED_KEY, LIST_SEED_VALUE));
         int start = 0;
         if (!list.isEmpty() && isPreviousControl(list.get(0))) {
             accumulator = previousBlueId(list.get(0));
@@ -147,9 +209,11 @@ public class BlueIdCalculator {
                     ? calculateEmptyPlaceholder()
                     : calculateCleanedObject(element);
             Map<String, Object> cons = new TreeMap<>(String::compareTo);
-            cons.put("elem", Collections.singletonMap("blueId", elementHash));
-            cons.put("prev", Collections.singletonMap("blueId", accumulator));
-            accumulator = hashProvider.apply(Collections.singletonMap("$listCons", cons));
+            cons.put(LIST_CONS_ELEMENT_KEY,
+                    Collections.singletonMap(Properties.OBJECT_BLUE_ID, elementHash));
+            cons.put(LIST_CONS_PREVIOUS_KEY,
+                    Collections.singletonMap(Properties.OBJECT_BLUE_ID, accumulator));
+            accumulator = hashProvider.apply(Collections.singletonMap(LIST_CONS_KEY, cons));
         }
         return accumulator;
     }
@@ -166,7 +230,7 @@ public class BlueIdCalculator {
     private String calculateEmptyPlaceholder() {
         Map<String, Object> helper = new TreeMap<>(String::compareTo);
         helper.put(LIST_CONTROL_EMPTY,
-                Collections.singletonMap("blueId", hashProvider.apply(Boolean.TRUE)));
+                Collections.singletonMap(Properties.OBJECT_BLUE_ID, hashProvider.apply(Boolean.TRUE)));
         return hashProvider.apply(helper);
     }
 

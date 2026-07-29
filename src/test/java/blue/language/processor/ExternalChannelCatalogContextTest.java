@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -54,7 +54,8 @@ final class ExternalChannelCatalogContextTest {
                     new Node().value("exact-event"));
 
     @Test
-    void declaredCatalogIncludesBothChannelRolesWithoutEvaluatingPeers() {
+    void shouldExposeBothChannelRolesWithoutEvaluatingPeerHeaders() {
+        // given
         TargetProcessor targetProcessor = new TargetProcessor();
         try (DocumentProcessor processor =
                      processor(targetProcessor)) {
@@ -64,9 +65,11 @@ final class ExternalChannelCatalogContextTest {
                     "target",
                     true);
 
+            // when
             ExternalChannelFunctionEvaluation evaluation =
                     evaluate(processor, bundle);
 
+            // then
             assertTrue(evaluation.accepts());
             assertTrue(
                     evaluation.dependencies()
@@ -109,9 +112,28 @@ final class ExternalChannelCatalogContextTest {
                             evaluation.dependencies(),
                             "handler"));
             assertEquals(0, targetProcessor.headerEvaluations);
+        }
+    }
 
+    @Test
+    void shouldReturnExactExternalChannelSnapshotForCatalogLookup() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+        try (DocumentProcessor processor =
+                     processor(targetProcessor)) {
+            ContractBundle bundle = bundle(
+                    true,
+                    true,
+                    "target",
+                    true);
+
+            // when
+            ExternalChannelFunctionEvaluation evaluation =
+                    evaluate(processor, bundle);
             ChannelMemberSnapshot routed =
                     evaluation.handlerChannel();
+
+            // then
             assertNotNull(routed);
             assertEquals("target", routed.channelKey());
             assertEquals(2, routed.order());
@@ -147,25 +169,57 @@ final class ExternalChannelCatalogContextTest {
                     routed.contractNode()
                             .getProperties()
                             .containsKey("program"));
+        }
+    }
 
+    @Test
+    void shouldReturnDefensiveContractNodeFromExternalCatalogSnapshot() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+        try (DocumentProcessor processor =
+                     processor(targetProcessor)) {
+            ContractBundle bundle = bundle(
+                    true,
+                    true,
+                    "target",
+                    true);
+
+            // when
+            ChannelMemberSnapshot routed =
+                    evaluate(processor, bundle)
+                            .handlerChannel();
             Node mutatedCopy = routed.contractNode();
             mutatedCopy.getProperties().put(
                     "label",
                     new Node().value("mutated"));
+            Node freshCopy = routed.contractNode();
+
+            // then
             assertEquals(
                     "target-label",
-                    routed.contractNode().get("/label"));
+                    freshCopy.get("/label"));
+        }
+    }
 
-            ExternalChannelFunctionEvaluation managedEvaluation =
-                    evaluate(
-                            processor,
-                            bundle(
-                                    true,
-                                    true,
-                                    "managed",
-                                    true));
+    @Test
+    void shouldReturnManagedChannelSnapshotForCatalogLookup() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+        try (DocumentProcessor processor =
+                     processor(targetProcessor)) {
+            ContractBundle bundle = bundle(
+                    true,
+                    true,
+                    "managed",
+                    true);
+
+            // when
+            ExternalChannelFunctionEvaluation evaluation =
+                    evaluate(processor, bundle);
             ChannelMemberSnapshot managedTarget =
-                    managedEvaluation.handlerChannel();
+                    evaluation.handlerChannel();
+
+            // then
             assertNotNull(managedTarget);
             assertEquals("managed", managedTarget.channelKey());
             assertEquals(
@@ -177,84 +231,140 @@ final class ExternalChannelCatalogContextTest {
     }
 
     @Test
-    void eventLookupFailsClosedForUndeclaredAndNonChannelKeys() {
+    void shouldRejectEventLookupOutsideDeclaredChannelSurface() {
+        // given
         TargetProcessor targetProcessor = new TargetProcessor();
+
+        // when
+        IllegalStateException undeclared;
         try (DocumentProcessor processor =
                      processor(targetProcessor)) {
-            IllegalStateException undeclared =
-                    assertThrows(
-                            IllegalStateException.class,
-                            () -> evaluate(
-                                    processor,
-                                    bundle(
-                                            false,
-                                            true,
-                                            "target",
-                                            false)));
-            assertTrue(undeclared.getMessage().contains(
-                    "undeclared same-scope Channel header"));
+            undeclared = captureFailure(
+                    () -> evaluate(
+                            processor,
+                            bundle(
+                                    false,
+                                    true,
+                                    "target",
+                                    false)));
+        }
 
-            ExternalChannelFunctionEvaluation absent =
-                    evaluate(
+        // then
+        assertEquals(IllegalStateException.class,
+                undeclared.getClass());
+        assertTrue(undeclared.getMessage().contains(
+                "undeclared same-scope Channel header"));
+    }
+
+    @Test
+    void shouldReportAbsentDeclaredChannelDuringEventLookup() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+
+        // when
+        ExternalChannelFunctionEvaluation absent;
+        try (DocumentProcessor processor =
+                     processor(targetProcessor)) {
+            absent = evaluate(
+                    processor,
+                    bundle(
+                            true,
+                            true,
+                            "absent",
+                            false));
+        }
+
+        // then
+        assertFalse(absent.accepts());
+        assertNull(absent.handlerChannel());
+        assertEquals(
+                Collections.singletonList(
+                        "absent:ABSENT"),
+                absent.channelLookupResults());
+    }
+
+    @Test
+    void shouldReportNonChannelContractDuringEventLookup() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+
+        // when
+        ExternalChannelFunctionEvaluation nonChannel;
+        try (DocumentProcessor processor =
+                     processor(targetProcessor)) {
+            nonChannel = evaluate(
+                    processor,
+                    bundle(
+                            true,
+                            true,
+                            "handler",
+                            false));
+        }
+
+        // then
+        assertFalse(nonChannel.accepts());
+        assertNull(nonChannel.handlerChannel());
+        assertEquals(
+                Collections.singletonList(
+                        "handler:NON_CHANNEL"),
+                nonChannel.channelLookupResults());
+    }
+
+    @Test
+    void shouldRejectPeerRouteWithoutDeclaredDependency() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+
+        // when
+        IllegalStateException failure;
+        try (DocumentProcessor processor =
+                     processor(targetProcessor)) {
+            failure = captureFailure(
+                    () -> evaluate(
+                            processor,
+                            bundle(
+                                    false,
+                                    false,
+                                    "target",
+                                    true)));
+        }
+
+        // then
+        assertEquals(IllegalStateException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "was not declared"));
+    }
+
+    @Test
+    void shouldRejectPeerRouteAbsentFromDeclaredCatalog() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+
+        // when
+        IllegalStateException failure;
+        try (DocumentProcessor processor =
+                     processor(targetProcessor)) {
+            failure = captureFailure(
+                    () -> evaluate(
                             processor,
                             bundle(
                                     true,
-                                    true,
+                                    false,
                                     "absent",
-                                    false));
-            assertFalse(absent.accepts());
-            assertNull(absent.handlerChannel());
-
-            IllegalStateException nonChannel =
-                    assertThrows(
-                            IllegalStateException.class,
-                            () -> evaluate(
-                                    processor,
-                                    bundle(
-                                            true,
-                                            true,
-                                            "handler",
-                                            false)));
-            assertTrue(nonChannel.getMessage().contains(
-                    "not a Channel"));
+                                    true)));
         }
+
+        // then
+        assertEquals(IllegalStateException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "absent from the same-scope Channel catalog"));
     }
 
     @Test
-    void everyPeerRouteRequiresAnExactOrCatalogDependency() {
-        TargetProcessor targetProcessor = new TargetProcessor();
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
-            IllegalStateException undeclared =
-                    assertThrows(
-                            IllegalStateException.class,
-                            () -> evaluate(
-                                    processor,
-                                    bundle(
-                                            false,
-                                            false,
-                                            "target",
-                                            true)));
-            assertTrue(undeclared.getMessage().contains(
-                    "was not declared"));
-
-            IllegalStateException declared =
-                    assertThrows(
-                            IllegalStateException.class,
-                            () -> evaluate(
-                                    processor,
-                                    bundle(
-                                            true,
-                                            false,
-                                            "absent",
-                                            true)));
-            assertTrue(declared.getMessage().contains(
-                    "absent from the same-scope Channel catalog"));
-        }
-    }
-
-    @Test
-    void genericChannelDependenciesRoundTripAndCoverExactHeaders() {
+    void shouldRoundTripGenericChannelDependenciesAndCoverExactHeaders() {
+        // given
         ExternalChannelDependencySnapshot.ChannelEntry external =
                 new ExternalChannelDependencySnapshot.ChannelEntry(
                         "target",
@@ -290,6 +400,7 @@ final class ExternalChannelCatalogContextTest {
                                 "handler",
                                 "managed",
                                 "target"));
+        // when
         ExternalChannelDependencySnapshot reconstructed =
                 new ExternalChannelDependencySnapshot(
                         original.intrinsicNodeBlueIds(),
@@ -299,19 +410,10 @@ final class ExternalChannelCatalogContextTest {
                         original.channelEntries(),
                         original.wholeSameScopeChannelCatalog(),
                         original.channelCatalogContractKeys());
-
-        assertEquals(original, reconstructed);
-        assertEquals(
-                original.deterministicDependencyNodeBlueIds(),
-                reconstructed
-                        .deterministicDependencyNodeBlueIds());
-
         ExternalChannelDependencySnapshot exactDemand =
                 channelDemand(
                         Collections.singletonList(external),
                         false);
-        assertTrue(original.covers(exactDemand));
-
         ExternalChannelDependencySnapshot changedHeaderDemand =
                 channelDemand(
                         Collections.singletonList(
@@ -327,12 +429,20 @@ final class ExternalChannelCatalogContextTest {
                                                 TARGET_DEPENDENCY_BLUE_ID),
                                         "changed-header")),
                         false);
-        assertFalse(original.covers(changedHeaderDemand));
-
         ExternalChannelDependencySnapshot exactOnly =
                 channelDemand(
                         Arrays.asList(managed, external),
                         false);
+
+        // then
+        assertEquals(original, reconstructed);
+        assertEquals(
+                original.deterministicDependencyNodeBlueIds(),
+                reconstructed
+                        .deterministicDependencyNodeBlueIds());
+
+        assertTrue(original.covers(exactDemand));
+        assertFalse(original.covers(changedHeaderDemand));
         assertFalse(
                 exactOnly.covers(
                         channelDemand(
@@ -343,21 +453,11 @@ final class ExternalChannelCatalogContextTest {
     }
 
     @Test
-    void catalogRemovalAndRetypingRotateTheOwningSubscription() {
+    void shouldRotateOwningSubscriptionWhenCatalogEntryIsRemoved() {
+        // given
         TargetProcessor targetProcessor = new TargetProcessor();
         try (Blue blue = ProcessorTestSupport.blue()) {
-            blue.registerExternalContractType(
-                    SOURCE_TYPE_BLUE_ID,
-                    SOURCE_TYPE,
-                    new SourceProcessor());
-            blue.registerExternalContractType(
-                    TARGET_TYPE_BLUE_ID,
-                    TARGET_TYPE,
-                    targetProcessor);
-            blue.registerExternalContractType(
-                    NON_CHANNEL_TYPE_BLUE_ID,
-                    NON_CHANNEL_TYPE,
-                    new NonChannelProcessor());
+            registerCatalogTypes(blue, targetProcessor);
             Node before = catalogDocument(
                     new Node()
                             .type(reference(
@@ -370,34 +470,19 @@ final class ExternalChannelCatalogContextTest {
             removed.getContracts()
                     .getProperties()
                     .remove("target");
-            Node retyped = catalogDocument(
-                    new Node()
-                            .type(reference(
-                                    NON_CHANNEL_TYPE_BLUE_ID))
-                            .properties(
-                                    "channel",
-                                    new Node().value(
-                                            "source")));
 
+            // when
             SubscriptionDelta removal =
                     validateCatalogChange(
                             blue,
                             before,
                             removed);
-            SubscriptionDelta retyping =
-                    validateCatalogChange(
-                            blue,
-                            before,
-                            retyped);
 
+            // then
             assertNotNull(deltaEntry(
                     removal.removed(), "source"));
             assertNotNull(deltaEntry(
                     removal.added(), "source"));
-            assertNotNull(deltaEntry(
-                    retyping.removed(), "source"));
-            assertNotNull(deltaEntry(
-                    retyping.added(), "source"));
             assertEquals(
                     Arrays.asList("source", "target"),
                     deltaEntry(
@@ -412,6 +497,44 @@ final class ExternalChannelCatalogContextTest {
                             "source")
                             .dependencies()
                             .channelCatalogContractKeys());
+        }
+    }
+
+    @Test
+    void shouldRotateOwningSubscriptionWhenCatalogEntryIsRetypedAsNonChannel() {
+        // given
+        TargetProcessor targetProcessor = new TargetProcessor();
+        try (Blue blue = ProcessorTestSupport.blue()) {
+            registerCatalogTypes(blue, targetProcessor);
+            Node before = catalogDocument(
+                    new Node()
+                            .type(reference(
+                                    TARGET_TYPE_BLUE_ID))
+                            .properties(
+                                    "label",
+                                    new Node().value(
+                                            "target-label")));
+            Node retyped = catalogDocument(
+                    new Node()
+                            .type(reference(
+                                    NON_CHANNEL_TYPE_BLUE_ID))
+                            .properties(
+                                    "channel",
+                                    new Node().value(
+                                            "source")));
+
+            // when
+            SubscriptionDelta retyping =
+                    validateCatalogChange(
+                            blue,
+                            before,
+                            retyped);
+
+            // then
+            assertNotNull(deltaEntry(
+                    retyping.removed(), "source"));
+            assertNotNull(deltaEntry(
+                    retyping.added(), "source"));
             assertEquals(
                     Arrays.asList("source", "target"),
                     deltaEntry(
@@ -429,7 +552,8 @@ final class ExternalChannelCatalogContextTest {
     }
 
     @Test
-    void pureReferenceProcessorChannelRetypingRotatesWholeCatalog() {
+    void shouldRotateWholeCatalogWhenPureReferenceProcessorChannelIsRetyped() {
+        // given
         Node nonChannel = new Node()
                 .type(reference(
                         NON_CHANNEL_TYPE_BLUE_ID))
@@ -465,6 +589,7 @@ final class ExternalChannelCatalogContextTest {
                     NON_CHANNEL_TYPE,
                     new NonChannelProcessor());
 
+            // when
             SubscriptionDelta retyping =
                     validateCatalogChange(
                             blue,
@@ -483,6 +608,7 @@ final class ExternalChannelCatalogContextTest {
                             retyping.added(),
                             "source");
 
+            // then
             assertNotNull(removed);
             assertNotNull(added);
             assertEquals(
@@ -507,7 +633,8 @@ final class ExternalChannelCatalogContextTest {
     }
 
     @Test
-    void retainedCatalogRehydratesThroughSparseVerifierWithoutBodyDemand() {
+    void shouldRehydrateRetainedCatalogThroughSparseVerifierWithoutBodyDemand() {
+        // given
         String coldBodyBlueId =
                 BlueIdCalculator.calculateBlueId(
                         new Node().value(
@@ -630,6 +757,7 @@ final class ExternalChannelCatalogContextTest {
                                          (root, event) ->
                                                  exactPlan)
                                  .build()) {
+                // when
                 DocumentProcessingResult result =
                         verifier.processDocument(
                                 document,
@@ -638,6 +766,7 @@ final class ExternalChannelCatalogContextTest {
                                         new Node().value(
                                                 "no-match")));
 
+                // then
                 assertEquals(
                         ProcessorStatus.NO_MATCH,
                         result.status(),
@@ -650,8 +779,11 @@ final class ExternalChannelCatalogContextTest {
     }
 
     @Test
-    void wholeCatalogObeysThePortableMemberLimit() {
+    void shouldEnforcePortableMemberLimitForWholeCatalog() {
+        // given
         TargetProcessor targetProcessor = new TargetProcessor();
+        IllegalStateException exceeded;
+        long limit;
         try (DocumentProcessor processor =
                      processor(targetProcessor)) {
             Node sourceNode = sourceNode(
@@ -703,7 +835,7 @@ final class ExternalChannelCatalogContextTest {
                                     frozenSource)
                             .addEffectiveContractSnapshot(
                                     source);
-            long limit = GasSchedule.contracts10()
+            limit = GasSchedule.contracts10()
                     .portableLimit(
                             "effectiveContractsPerParticipatingScope");
             for (int index = 0; index < limit; index++) {
@@ -722,19 +854,21 @@ final class ExternalChannelCatalogContextTest {
                                 .build());
             }
 
-            IllegalStateException exceeded =
-                    assertThrows(
-                            IllegalStateException.class,
+            // when
+            exceeded = captureFailure(
                             () -> new ExternalChannelFunctionResolver(
                                     processor.registry(),
                                     processor
                                             .contractConverter(),
                                     bundle.build())
                                     .header(source));
-
-            assertTrue(exceeded.getMessage().contains(
-                    "catalog exceeds " + limit));
         }
+
+        // then
+        assertEquals(IllegalStateException.class,
+                exceeded.getClass());
+        assertTrue(exceeded.getMessage().contains(
+                "catalog exceeds " + limit));
     }
 
     private static DocumentProcessor processor(
@@ -749,6 +883,23 @@ final class ExternalChannelCatalogContextTest {
                         TARGET_TYPE,
                         targetProcessor)
                 .build();
+    }
+
+    private static void registerCatalogTypes(
+            Blue blue,
+            TargetProcessor targetProcessor) {
+        blue.registerExternalContractType(
+                SOURCE_TYPE_BLUE_ID,
+                SOURCE_TYPE,
+                new SourceProcessor());
+        blue.registerExternalContractType(
+                TARGET_TYPE_BLUE_ID,
+                TARGET_TYPE,
+                targetProcessor);
+        blue.registerExternalContractType(
+                NON_CHANNEL_TYPE_BLUE_ID,
+                NON_CHANNEL_TYPE,
+                new NonChannelProcessor());
     }
 
     private static Node catalogDocument(
@@ -1151,10 +1302,10 @@ final class ExternalChannelCatalogContextTest {
                                 contract.getInspectCatalog())) {
                             return true;
                         }
-                        Optional<ChannelMemberSnapshot> selected =
-                                context.channel(
+                        ChannelLookupResult selected =
+                                context.lookupChannel(
                                         contract.getLookupKey());
-                        return selected.isPresent();
+                        return selected.isChannel();
                     }
 
                     @Override

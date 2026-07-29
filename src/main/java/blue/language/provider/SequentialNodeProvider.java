@@ -3,19 +3,48 @@ package blue.language.provider;
 import blue.language.model.Node;
 import blue.language.NodeProvider;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Ordered provider chain that stops at the first outcome other than
+ * {@link NodeProviderOutcome#NOT_FOUND}.
+ *
+ * <p>Unavailable and invalid evidence are authoritative failures and are never
+ * hidden by a later provider.</p>
+ */
 public class SequentialNodeProvider implements NodeProvider {
-    private List<NodeProvider> nodeProviders;
+    private final List<NodeProvider> nodeProviders;
 
+    /**
+     * Creates an ordered provider chain.
+     *
+     * @param nodeProviders providers in lookup order
+     */
     public SequentialNodeProvider(List<NodeProvider> nodeProviders) {
-        this.nodeProviders = nodeProviders;
+        Objects.requireNonNull(nodeProviders, "nodeProviders");
+        List<NodeProvider> retained =
+                new ArrayList<>(nodeProviders.size());
+        for (NodeProvider provider : nodeProviders) {
+            retained.add(Objects.requireNonNull(
+                    provider, "nodeProvider"));
+        }
+        this.nodeProviders =
+                Collections.unmodifiableList(retained);
     }
 
+    /**
+     * Creates an ordered provider chain.
+     *
+     * @param nodeProviders providers in lookup order
+     */
     public SequentialNodeProvider(NodeProvider... nodeProviders) {
-        this.nodeProviders = Arrays.asList(nodeProviders);
+        this(Arrays.asList(
+                Objects.requireNonNull(
+                        nodeProviders, "nodeProviders")));
     }
 
     @Override
@@ -29,7 +58,7 @@ public class SequentialNodeProvider implements NodeProvider {
                     "Provider returned invalid evidence for " + blueId));
         }
         if (result.outcome() == NodeProviderOutcome.UNAVAILABLE) {
-            throw new IllegalStateException(result.diagnostic().orElse(
+            throw new ProviderUnavailableException(result.diagnostic().orElse(
                     "Provider unavailable for " + blueId));
         }
         return null;
@@ -46,6 +75,12 @@ public class SequentialNodeProvider implements NodeProvider {
         return NodeProviderResult.notFound();
     }
 
+    /**
+     * Returns the immutable configured provider snapshot retained by this
+     * chain.
+     *
+     * @return unmodifiable providers in lookup order
+     */
     public List<NodeProvider> getNodeProviders() {
         return nodeProviders;
     }

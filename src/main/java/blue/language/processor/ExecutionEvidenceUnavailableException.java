@@ -21,12 +21,26 @@ import java.util.TreeSet;
 public final class ExecutionEvidenceUnavailableException
         extends RuntimeException {
 
+    /** Exact identities serialized with this retryable suspension. */
     private final List<String> requiredExactBlueIds;
 
+    /**
+     * Creates a suspension without a known exact resource list.
+     *
+     * @param message host-facing explanation
+     */
     public ExecutionEvidenceUnavailableException(String message) {
         this(message, Collections.<String>emptyList());
     }
 
+    /**
+     * Creates a suspension naming every exact resource needed to retry.
+     *
+     * @param message host-facing explanation
+     * @param requiredExactBlueIds exact resource identities, deduplicated and
+     *         sorted by this constructor
+     * @throws IllegalArgumentException if an identity is null or empty
+     */
     public ExecutionEvidenceUnavailableException(
             String message,
             Collection<String> requiredExactBlueIds) {
@@ -45,6 +59,11 @@ public final class ExecutionEvidenceUnavailableException
                 new ArrayList<>(sorted));
     }
 
+    /**
+     * Returns the deterministic resource set required for a retry.
+     *
+     * @return immutable, sorted exact BlueIds
+     */
     public List<String> requiredExactBlueIds() {
         return requiredExactBlueIds;
     }

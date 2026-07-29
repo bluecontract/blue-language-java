@@ -8,6 +8,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Invocation-owned buffer for patches, emissions, and termination intent.
+ *
+ * <p>No buffered effect mutates runtime state until its owning execution
+ * context commits it. Closing abandons the buffer and releases every
+ * transferred preview exactly once, aggregating close failures through
+ * suppressed exceptions.</p>
+ */
 final class ContractEffectBuffer implements AutoCloseable {
 
     private final List<PatchInput> patches = new ArrayList<>();

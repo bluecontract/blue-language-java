@@ -24,10 +24,20 @@ public final class PlatformProcessingResult {
                 commitCompanion, "commitCompanion");
     }
 
+    /**
+     * Returns the immutable five-field semantic PROCESS result.
+     *
+     * @return semantic processing result
+     */
     public DocumentProcessingResult processResult() {
         return processResult;
     }
 
+    /**
+     * Returns the revision-bound host commit companion.
+     *
+     * @return platform commit companion paired with the result
+     */
     public PlatformCommitCompanion commitCompanion() {
         return commitCompanion;
     }

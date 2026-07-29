@@ -11,17 +11,46 @@ import java.util.stream.Collectors;
 import static blue.language.utils.NodeToMapListOrValue.Strategy.*;
 import static blue.language.utils.Properties.*;
 
+/**
+ * Converts mutable Blue nodes to their map/list/scalar wire representation.
+ *
+ * <p>This compatibility conversion validates payload exclusivity but does not
+ * provide the strict identity validation performed by
+ * {@link NodeToBlueIdInput}.</p>
+ */
 public class NodeToMapListOrValue {
 
+    /**
+     * Creates a mutable-node wire-projection helper.
+     */
+    public NodeToMapListOrValue() {
+    }
+
+    /** Controls whether scalar/list sugar is preserved in the result. */
     public enum Strategy {
+        /** Emits the complete normalized node representation. */
         OFFICIAL,
+        /** Returns bare scalar or list payloads when possible. */
         SIMPLE
     }
 
+    /**
+     * Converts using the official normalized representation.
+     *
+     * @param node node to convert
+     * @return map, list, or scalar wire representation
+     */
     public static Object get(Node node) {
         return get(node, OFFICIAL);
     }
 
+    /**
+     * Converts using the requested representation strategy.
+     *
+     * @param node node to convert
+     * @param strategy representation strategy
+     * @return map, list, or scalar wire representation
+     */
     public static Object get(Node node, Strategy strategy) {
         validatePayloadKind(node);
 
@@ -146,10 +175,8 @@ public class NodeToMapListOrValue {
         }
         if (value instanceof BigInteger) {
             BigInteger bigIntValue = (BigInteger) value;
-            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-
-            if (bigIntValue.compareTo(lowerBound) < 0 || bigIntValue.compareTo(upperBound) > 0) {
+            if (bigIntValue.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                    || bigIntValue.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
                 return bigIntValue.toString();
             }
         }

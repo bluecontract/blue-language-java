@@ -13,13 +13,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TypeClassResolverTest {
 
     @Test
-    void blueIdMapViewRemainsLiveAndUnmodifiableAcrossRegistration() {
+    void shouldKeepBlueIdMapViewLiveAndUnmodifiableAcrossRegistration() {
+        // given
         TypeClassResolver resolver = new TypeClassResolver();
         Map<String, Class<?>> view = resolver.getBlueIdMap();
         Set<Map.Entry<String, Class<?>>> entries = view.entrySet();
 
+        // when
         resolver.register("retained-live-view", String.class);
 
+        // then
         assertSame(String.class, view.get("retained-live-view"));
         assertEquals(1, entries.size());
         assertTrue(entries.stream().anyMatch(entry ->

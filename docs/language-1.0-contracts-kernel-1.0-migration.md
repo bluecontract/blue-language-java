@@ -5,19 +5,23 @@ Baseline identified by:
 
 ```text
 release:
-  blue-language-1.0-contracts-1.0-bex-2.0-implementation-baseline
+  blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline
 releasePackage:
-  sha256:e114721126a0c74aade6f4a6530583848de191a727d84dd3b49ce48a384f180d
+  sha256:1059e8250bce470febfe281bade2ebc4a0b2da5ce9bb297a50283eebe70ab747
+languageSpecification:
+  sha256:ac1ac47e10c91be82ebe45e2406f33ad5073cc3f3684bc1651704117b5008852
+contractsSpecification:
+  sha256:75e8d212a3818ad756bd8227d8bda877fb27df9192cff312e347d7742daaed0f
 languageRegistryPackage:
   sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e
 languageFixturePackage:
-  sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb
+  sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5
 contractsRegistryPackage:
-  sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366
+  sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8
 contractsGasPackage:
   sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
 contractsFixturePackage:
-  sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5
+  sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca
 ```
 
 The Contracts gas weights and portable limits are loaded from the bound
@@ -178,18 +182,43 @@ declarations and ambiguous bare `reverse` semantics.
 The checked-in `api/blue-language-java-1.0.json` file is the final
 public/protected JVM descriptor baseline after this preview cleanup.
 `verifyFinalApiBaseline` compares every candidate jar to that surface instead
-of treating a pre-1.0 branch or release candidate as authoritative.
+of treating a pre-1.0 branch or snapshot as authoritative.
 
-## Downstream compatibility and Coordination boundary
+## Repository-independent provider boundary
 
-The published `blue.repo:blue-repo-java:3.0.0-rc.10`
-`BlueRepository.configure()` bytecode calls
-`NodeProviderWrapper.unverified(NodeProvider)`. This candidate retains that
-exact descriptor for binary linkage. Its implementation delegates to
-`NodeProviderWrapper.wrap(...)`, so repository setup keeps working while every
-result-producing provider leaf is verified. The companion
-`isExplicitlyHostTrusted(NodeProvider)` descriptor remains linkable and always
-returns `false`; neither compatibility path restores host-trusted evidence.
+The Language API depends only on the generic `NodeProvider` contract. It does
+not recognize a concrete repository, catalog artifact, or manifest.
+`NodeProviderWrapper.unverified(NodeProvider)` is retained only as a binary
+signature and delegates to the same strict direct-node verification as
+`NodeProviderWrapper.wrap(...)`. Applications that explicitly admit authored
+source documents use `ProviderEvidenceVerifier` with a fully bound
+`SourceProviderEnvironment`.
+`isExplicitlyHostTrusted(NodeProvider)` always returns `false`; no provider
+entry point restores host-trusted evidence.
+
+## Generic hosted-runtime extension boundary
+
+Hosted runtimes now receive one processor-owned `RuntimeWorkSession` in each
+deterministic processor phase. A runtime opens immutable, named counter
+catalogs, charges live-bounded child ledgers before work, and submits their
+ordered traces; the processor alone merges or discards them according to
+success, deterministic failure, evidence suspension, or gas exhaustion.
+Several independently named ledgers can additionally share one
+invocation-owned `RuntimeWorkBudget`. Its weighted maximum is enforced before
+child-trace or parent-reservation mutation, and exhaustion follows the same
+structured session rejection path as the parent invocation limit.
+
+Transient runtime output must cross `SemanticOutputBoundary`, which returns an
+immutable `ExactBlueValue` and meters semantic construction and changed
+identity work. External Channel payload and checkpoint-subject functions use
+that boundary automatically. Executing handlers can additionally use
+`SelectedExecutableBody` to open only verified references reachable from the
+selected exact body.
+
+Composite Channel implementations can declare a bounded subtype-family
+dependency with `membersAssignableToType(...)`. Fragment splitters can consume
+`ExecutableBodySourceDescriptor` to locate the exact owning contribution and
+RFC 6901 pointer without rerunning overlay precedence or loading the body.
 
 Contracts 1.0 §4.9 binds each Handler to exactly one same-scope channel key, and
 §7.7 starts from an accepted raw source `channelKey`. Context-aware
@@ -365,9 +394,34 @@ The machine-readable implementation report records the release and package
 identities above plus one pass/fail entry for every manifest-listed fixture.
 There is no skip status.
 
-The corrected, identity-bound packages produce 125/125 Language passes and
-127/127 Contracts passes. The combined release report contains exactly 252
-unique results: 252 `PASS`, zero `FAIL`, and zero skipped.
+### Canonical fixture-envelope clarifications
+
+The final canonical package is retained byte-for-byte. Two envelope spellings
+need narrow runner normalization because the specifications and registry remain
+normative:
+
+- `c-feed-14`, `c-feed-15`, and `c-feed-17` give both tied source Channels
+  effective `order: 0`, while their compact hints spell the second tied
+  occurrence as `order: 1`. The runner keeps the derived delivery order at
+  zero and accepts the redundant hint only as the stable ordinal within that
+  same-scope, same-order tie. A value outside that exact tie ordinal still
+  fails closed as an order mismatch.
+- `c-cyc-04` combines scalar shorthand `value: 0` with the authored `cyclic`
+  object edge. Before strict Language decoding, the conformance runner promotes
+  that scalar into its existing private fixture field and rewrites the
+  fixture-authored `/value` patch to the private field. Production Blue
+  decoding, processing, and patch admission are unchanged; the final cyclic
+  member remains an opaque exact edge.
+- `c-fail-05` sets an invocation limit of 500 gas but omits initialized state,
+  while the bound gas manifest charges 1000 for `scopeInitialization`. The
+  runner treats the fixture's declared `C-LOOP-01` scenario as preinitialized,
+  adding a final-form marker whose `document` is a pure reference to the exact
+  pre-initialization Root. This lets the published limit exercise the intended
+  internal-event cycle; ordinary PROCESS inputs still pay initialization gas.
+
+The final identity-bound packages produce 128/128 Language passes and 140/140
+Contracts passes (82 behavior and 58 gas fixtures). The combined release report
+contains exactly 268 unique results: 268 `PASS`, zero `FAIL`, and zero skipped.
 
 Thirteen prior Contracts failures were corrected in the fixture package because
 their old inputs or assertions did not describe executable normative scenarios:
@@ -387,19 +441,21 @@ ordinary patch operation.
 Run the strict gate with:
 
 ```bash
-./gradlew releaseConformanceTest
+BLUE_RELEASE_EPOCH="$(git show -s --format=%ct HEAD)"
+SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew clean build
+SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew rcVerify
 ```
 
 It validates the exact package identities, executes every fixture, rejects any
-failure or unexecuted case, and writes JSON plus human-readable reports under
-`build/reports/conformance`.
+failure or unexecuted case, verifies API and archive reproducibility, and
+writes the machine-readable release evidence.
 
 This repository deliberately does not implement application-specific
 Coordination parsing, authorization, registry policy, Timeline-provider
 persistence, feeder databases, or BEX/expression evaluation. It does provide
 the generic same-scope handler-selection and logical-delivery coalescing
 boundary that such a runtime can register.
-The generic named child-ledger API is complete here, but downstream BEX 1.1
-does not yet expose the named live counter stream needed to populate it. A
-coordinated BEX update remains a downstream requirement and is not claimed by
-this Language/Contracts-kernel release.
+The generic named child-ledger API is complete here. BEX 2.0 integrations bind
+their named live counter stream through this Language-owned boundary; each
+downstream release must validate the exact compatible artifact before claiming
+the resulting Contracts 1.0 runtime ledger.

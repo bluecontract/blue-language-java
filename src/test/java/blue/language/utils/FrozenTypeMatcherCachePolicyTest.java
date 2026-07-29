@@ -11,53 +11,84 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FrozenTypeMatcherCachePolicyTest {
 
     @Test
-    void allMatcherRegionsShareTheConfiguredEntryAndWeightBudget() {
+    void shouldShareConfiguredEntryAndWeightBudgetAcrossMatcherRegions() {
+        // given
         BlueCachePolicy policy = BlueCachePolicy.builder()
                 .conformancePlans(5, 4_096L)
                 .maximumDerivedEntryWeightBytes(4_096L)
                 .build();
         FrozenTypeMatcher matcher = new FrozenTypeMatcher(null, true, policy);
 
+        // when
+        boolean allMatched = true;
+        boolean entryBudgetRespected = true;
+        boolean weightBudgetRespected = true;
         for (int index = 0; index < 40; index++) {
             FrozenNode value = value("value-" + index);
-            assertTrue(matcher.matchesType(value, value));
-            assertTrue(matcher.cacheEntryCount() <= 5);
-            assertTrue(matcher.cacheWeightBytes() <= 4_096L);
+            allMatched &= matcher.matchesType(value, value);
+            entryBudgetRespected &= matcher.cacheEntryCount() <= 5;
+            weightBudgetRespected &= matcher.cacheWeightBytes() <= 4_096L;
         }
+        int retainedEntries = matcher.cacheEntryCount();
+        boolean recomputed = matcher.matchesType(value("value-0"), value("value-0"));
+        int entriesAfterRecompute = matcher.cacheEntryCount();
+        long weightAfterRecompute = matcher.cacheWeightBytes();
 
-        assertTrue(matcher.cacheEntryCount() > 0);
-        assertTrue(matcher.matchesType(value("value-0"), value("value-0")),
+        // then
+        assertTrue(allMatched);
+        assertTrue(entryBudgetRespected);
+        assertTrue(weightBudgetRespected);
+        assertTrue(retainedEntries > 0);
+        assertTrue(recomputed,
                 "an evicted plan must remain safely recomputable");
-        assertTrue(matcher.cacheEntryCount() <= 5);
-        assertTrue(matcher.cacheWeightBytes() <= 4_096L);
+        assertTrue(entriesAfterRecompute <= 5);
+        assertTrue(weightAfterRecompute <= 4_096L);
     }
 
     @Test
-    void oversizedPlansAreUsedWithoutBeingRetainedAndClearReleasesAcceptedPlans() {
+    void shouldUseOversizedPlansWithoutRetainingThem() {
+        // given
         BlueCachePolicy rejectingPolicy = BlueCachePolicy.builder()
                 .conformancePlans(4, 256L)
                 .maximumDerivedEntryWeightBytes(256L)
                 .build();
         FrozenTypeMatcher rejecting = new FrozenTypeMatcher(null, true, rejectingPolicy);
 
+        // when
         FrozenNode large = value(repeat('x', 2_048));
-        assertTrue(rejecting.matchesType(large, large));
-        assertEquals(0, rejecting.cacheEntryCount());
-        assertEquals(0L, rejecting.cacheWeightBytes());
+        boolean matched = rejecting.matchesType(large, large);
+        int retainedEntries = rejecting.cacheEntryCount();
+        long retainedWeight = rejecting.cacheWeightBytes();
 
+        // then
+        assertTrue(matched);
+        assertEquals(0, retainedEntries);
+        assertEquals(0L, retainedWeight);
+    }
+
+    @Test
+    void shouldReleaseAcceptedPlansWhenClearingCacheAndAllowRecomputation() {
+        // given
         BlueCachePolicy acceptingPolicy = BlueCachePolicy.builder()
                 .conformancePlans(4, 8_192L)
                 .maximumDerivedEntryWeightBytes(8_192L)
                 .build();
         FrozenTypeMatcher accepting = new FrozenTypeMatcher(null, true, acceptingPolicy);
-        assertTrue(accepting.matchesType(value("small"), value("small")));
-        assertTrue(accepting.cacheEntryCount() > 0);
 
+        // when
+        boolean initiallyMatched = accepting.matchesType(value("small"), value("small"));
+        int entriesBeforeClear = accepting.cacheEntryCount();
         accepting.clearCaches();
+        int entriesAfterClear = accepting.cacheEntryCount();
+        long weightAfterClear = accepting.cacheWeightBytes();
+        boolean recomputed = accepting.matchesType(value("small"), value("small"));
 
-        assertEquals(0, accepting.cacheEntryCount());
-        assertEquals(0L, accepting.cacheWeightBytes());
-        assertTrue(accepting.matchesType(value("small"), value("small")));
+        // then
+        assertTrue(initiallyMatched);
+        assertTrue(entriesBeforeClear > 0);
+        assertEquals(0, entriesAfterClear);
+        assertEquals(0L, weightAfterClear);
+        assertTrue(recomputed);
     }
 
     private FrozenNode value(String value) {

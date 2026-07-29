@@ -1,6 +1,7 @@
 package blue.language.mapping;
 
 import blue.language.model.Node;
+import blue.language.utils.Properties;
 import blue.language.utils.TypeClassResolver;
 
 import java.lang.reflect.*;
@@ -9,10 +10,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Converts Blue object properties to a Java map using the map's generic key
+ * and value types.
+ *
+ * <p>Node name and description metadata are exposed as map entries when
+ * present. Implementations that cannot be instantiated fall back to a
+ * {@link HashMap}.</p>
+ */
 public class MapConverter implements Converter<Map<?, ?>> {
     private final ConverterFactory converterFactory;
     private final TypeClassResolver typeClassResolver;
 
+    /**
+     * Creates a recursive map converter.
+     *
+     * @param converterFactory factory for nested value converters
+     * @param typeClassResolver resolver for Blue-declared Java types
+     */
     public MapConverter(ConverterFactory converterFactory, TypeClassResolver typeClassResolver) {
         this.converterFactory = converterFactory;
         this.typeClassResolver = typeClassResolver;
@@ -37,10 +52,10 @@ public class MapConverter implements Converter<Map<?, ?>> {
         Type valueType = typeArguments[1];
 
         if (node.getName() != null) {
-            result.put("name", node.getName());
+            result.put(Properties.OBJECT_NAME, node.getName());
         }
         if (node.getDescription() != null) {
-            result.put("description", node.getDescription());
+            result.put(Properties.OBJECT_DESCRIPTION, node.getDescription());
         }
 
         for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
@@ -55,7 +70,7 @@ public class MapConverter implements Converter<Map<?, ?>> {
     private Object convertKey(String key, Type keyType) {
         Class<?> keyClass = getRawType(keyType);
         Node keyNode = new Node().value(key);
-        keyNode.type(new Node().blueId(blue.language.utils.Properties.TEXT_TYPE_BLUE_ID));
+        keyNode.type(new Node().blueId(Properties.TEXT_TYPE_BLUE_ID));
         return ValueConverter.convertValue(keyNode, keyClass);
     }
 

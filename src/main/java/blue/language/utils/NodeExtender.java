@@ -10,25 +10,55 @@ import java.util.stream.Collectors;
 
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
 
+/**
+ * Expands non-core BlueId references in a mutable node graph through a
+ * {@link NodeProvider}.
+ *
+ * <p>Expansion mutates the supplied graph in place, follows caller-provided
+ * {@link Limits}, and can reconstruct list-history fragments before traversing
+ * their elements.</p>
+ */
 public class NodeExtender {
 
+    /** Policy used when a referenced BlueId cannot be materialized. */
     public enum MissingElementStrategy {
+        /** Fail the expansion immediately. */
         THROW_EXCEPTION,
+        /** Leave the unresolved reference in place. */
         RETURN_EMPTY
     }
 
     private final NodeProvider nodeProvider;
     private final MissingElementStrategy strategy;
 
+    /**
+     * Creates a fail-fast extender.
+     *
+     * @param nodeProvider provider used to materialize references
+     */
     public NodeExtender(NodeProvider nodeProvider) {
         this(nodeProvider, MissingElementStrategy.THROW_EXCEPTION);
     }
 
+    /**
+     * Creates an extender with an explicit missing-reference policy.
+     *
+     * @param nodeProvider provider used to materialize references
+     * @param strategy behavior when a referenced node is unavailable
+     */
     public NodeExtender(NodeProvider nodeProvider, MissingElementStrategy strategy) {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.strategy = strategy;
     }
 
+    /**
+     * Expands eligible references in {@code node} in place.
+     *
+     * @param node mutable graph root to expand
+     * @param limits traversal and reference-expansion limits
+     * @throws IllegalArgumentException when fail-fast lookup cannot resolve a
+     *                                  reference
+     */
     public void extend(Node node, Limits limits) {
         extendNode(node, limits, "");
     }
@@ -65,19 +95,19 @@ public class NodeExtender {
 
             // Handle type nodes
             if (currentNode.getType() != null) {
-                extendNode(currentNode.getType(), currentLimits, "type", true);
+                extendNode(currentNode.getType(), currentLimits, Properties.OBJECT_TYPE, true);
             }
             if (currentNode.getItemType() != null) {
-                extendNode(currentNode.getItemType(), currentLimits, "itemType", true);
+                extendNode(currentNode.getItemType(), currentLimits, Properties.OBJECT_ITEM_TYPE, true);
             }
             if (currentNode.getKeyType() != null) {
-                extendNode(currentNode.getKeyType(), currentLimits, "keyType", true);
+                extendNode(currentNode.getKeyType(), currentLimits, Properties.OBJECT_KEY_TYPE, true);
             }
             if (currentNode.getValueType() != null) {
-                extendNode(currentNode.getValueType(), currentLimits, "valueType", true);
+                extendNode(currentNode.getValueType(), currentLimits, Properties.OBJECT_VALUE_TYPE, true);
             }
             if (currentNode.getContracts() != null) {
-                extendNode(currentNode.getContracts(), currentLimits, "contracts", false);
+                extendNode(currentNode.getContracts(), currentLimits, Properties.OBJECT_CONTRACTS, false);
             }
 
             Map<String, Node> properties = currentNode.getProperties();

@@ -32,20 +32,47 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FrozenNodeStructuralInternerTest {
 
     @Test
-    void directThenReferencedNodesDoNotLoseReferenceProvenance() {
-        assertReferenceProvenanceIsIndependentOfInsertionOrder(false);
+    void shouldNotLoseReferenceProvenanceWhenDirectNodesPrecedeReferencedNodes() {
+        // given
+        boolean referenceFirst = false;
+
+        // when
+        ReferenceProvenanceObservation observation =
+                referenceProvenanceObservation(referenceFirst);
+
+        // then
+        assertEquals(observation.expectedBlueId,
+                observation.referenceBlueId);
+        assertNull(observation.materializedReferenceBlueId);
+        assertNotSame(observation.referenced,
+                observation.materialized);
     }
 
     @Test
-    void referencedThenDirectNodesDoNotGainReferenceProvenance() {
-        assertReferenceProvenanceIsIndependentOfInsertionOrder(true);
+    void shouldNotGainReferenceProvenanceWhenReferencedNodesPrecedeDirectNodes() {
+        // given
+        boolean referenceFirst = true;
+
+        // when
+        ReferenceProvenanceObservation observation =
+                referenceProvenanceObservation(referenceFirst);
+
+        // then
+        assertEquals(observation.expectedBlueId,
+                observation.referenceBlueId);
+        assertNull(observation.materializedReferenceBlueId);
+        assertNotSame(observation.referenced,
+                observation.materialized);
     }
 
     @Test
-    void snapshotResolvedViewsAreIndependentOfInsertionOrder() {
+    void shouldKeepSnapshotResolvedViewsIndependentOfInsertionOrder() {
+        // given
         SnapshotPair referenceFirst = snapshots(true);
+        // when
         SnapshotPair materializedFirst = snapshots(false);
 
+        // then
         assertEquals(referenceFirst.reference.blueId(), materializedFirst.reference.blueId());
         assertEquals(referenceFirst.reference.frozenCanonicalRoot().resolvedStructuralKey(),
                 materializedFirst.reference.frozenCanonicalRoot().resolvedStructuralKey());
@@ -59,20 +86,24 @@ class FrozenNodeStructuralInternerTest {
     }
 
     @Test
-    void structuralSharingOccursOnlyForExactlyEquivalentFrozenNodes() {
+    void shouldShareStructureOnlyForExactlyEquivalentFrozenNodes() {
+        // given
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         Node source = new Node().name("Equivalent").properties("field", new Node().value("value"));
 
         FrozenNode first = cache.freezeResolved(source);
         FrozenNode second = cache.freezeResolved(source.clone());
+        // when
         FrozenNode different = cache.freezeResolved(source.clone().description("different"));
 
+        // then
         assertSame(first, second);
         assertNotSame(first, different);
     }
 
     @Test
-    void repeatedEquivalentSnapshotsRetainOnlyBoundedStructuralEntries() {
+    void shouldRepeatedEquivalentSnapshotsRetainOnlyBoundedStructuralEntries() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node direct = new Node().name("Bounded Subject")
                 .properties("identifier", new Node().value("subject-1"));
@@ -83,42 +114,64 @@ class FrozenNodeStructuralInternerTest {
         blue.resolveToSnapshot(direct);
         blue.resolveToSnapshot(reference(blueId));
         int retained = blue.resolvedStructuralCacheSize();
+        // when
         for (int index = 0; index < 100; index++) {
             blue.resolveToSnapshot(index % 2 == 0 ? direct : reference(blueId));
         }
 
+        // then
         assertEquals(retained, blue.resolvedStructuralCacheSize());
     }
 
     @Test
-    void concurrentInterningCannotChooseSemanticallyDifferentFirstWriter() throws Exception {
+    void shouldPreventConcurrentInterningFromChoosingSemanticallyDifferentFirstWriter() throws Exception {
+        // given
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         ExecutorService executor = Executors.newFixedThreadPool(12);
+        List<Callable<FrozenNode>> work = new ArrayList<>();
+        List<Boolean> expectedInlineValues =
+                new ArrayList<>();
+        for (int index = 0; index < 200; index++) {
+            final boolean inline = index % 2 == 0;
+            expectedInlineValues.add(inline);
+            work.add(() -> cache.freezeResolved(
+                    new Node().name("Concurrent")
+                            .inlineValue(inline)));
+        }
+
+        // when
+        List<Boolean> actualInlineValues = new ArrayList<>();
         try {
-            List<Callable<FrozenNode>> work = new ArrayList<>();
-            for (int index = 0; index < 200; index++) {
-                final boolean inline = index % 2 == 0;
-                work.add(() -> cache.freezeResolved(new Node().name("Concurrent").inlineValue(inline)));
-            }
             List<Future<FrozenNode>> futures = executor.invokeAll(work);
-            for (int index = 0; index < futures.size(); index++) {
-                assertEquals(index % 2 == 0, futures.get(index).get(10, TimeUnit.SECONDS).isInlineValue());
+            for (Future<FrozenNode> future : futures) {
+                actualInlineValues.add(
+                        future.get(
+                                10,
+                                TimeUnit.SECONDS)
+                                .isInlineValue());
             }
         } finally {
             executor.shutdownNow();
         }
+
+        // then
+        assertEquals(expectedInlineValues,
+                actualInlineValues);
     }
 
     @Test
-    void matcherCacheDistinguishesExactRepresentationsWithSameSemanticBlueId() {
+    void shouldDistinguishExactRepresentationsWithSameSemanticBlueIdInMatcherCache() {
+        // given
         Node directNode = new Node().name("Matcher Candidate");
         String targetId = new Blue().calculateBlueId(new Node().name("Target Identity"));
         FrozenNode direct = FrozenNode.fromResolvedNode(directNode);
         FrozenNode withReferenceProvenance = FrozenNode.fromResolvedNode(
                 directNode.clone().blueId(targetId));
         FrozenNode target = FrozenNode.fromResolvedNode(reference(targetId));
+        // when
         FrozenTypeMatcher matcher = new FrozenTypeMatcher(null);
 
+        // then
         assertFalse(matcher.matchesType(direct, target));
         assertEquals(direct.blueId(), withReferenceProvenance.blueId());
         assertFalse(direct.resolvedStructuralKey().equals(
@@ -128,28 +181,42 @@ class FrozenNodeStructuralInternerTest {
     }
 
     @Test
-    void directResolvedStructureComparisonMatchesRefreezeNormalization() {
+    void shouldMatchRefreezeNormalizationWithDirectResolvedStructureComparison() {
+        // given
         Node source = new Node().name("Subject")
                 .description("description")
                 .schema(new Schema().required(true))
                 .properties("field", new Node().value("value"));
         FrozenNode canonical = FrozenNode.fromNode(source);
+        // when
         FrozenNode resolved = FrozenNode.fromResolvedNode(source.clone());
+        boolean canonicalParity =
+                legacyNormalizationAgrees(
+                        canonical,
+                        resolved);
+        FrozenNode listElement = FrozenNode.fromNode(
+                new Node().items(
+                        new Node().value("item")))
+                .item(0);
+        FrozenNode rootValue = FrozenNode.fromNode(
+                new Node().value("item"));
+        boolean listParity =
+                legacyNormalizationAgrees(
+                        listElement,
+                        rootValue);
 
+        // then
         assertFalse(canonical.resolvedStructuralKey().equals(resolved.resolvedStructuralKey()));
         assertTrue(canonical.sameResolvedStructure(resolved));
-        assertLegacyNormalizationParity(canonical, resolved);
-
-        FrozenNode listElement = FrozenNode.fromNode(
-                new Node().items(new Node().value("item"))).item(0);
-        FrozenNode rootValue = FrozenNode.fromNode(new Node().value("item"));
+        assertTrue(canonicalParity);
         assertTrue(listElement.sameResolvedStructure(rootValue),
                 "list-element construction context is normalized away by refreezing");
-        assertLegacyNormalizationParity(listElement, rootValue);
+        assertTrue(listParity);
     }
 
     @Test
-    void directResolvedStructureComparisonIgnoresNonSemanticPropertyOrder() {
+    void shouldIgnoreNonSemanticPropertyOrderDuringDirectResolvedStructureComparison() {
+        // given
         Map<String, Node> firstOrder = new LinkedHashMap<>();
         firstOrder.put("a", new Node().value(1));
         firstOrder.put("b", new Node().value(2));
@@ -157,8 +224,10 @@ class FrozenNodeStructuralInternerTest {
         secondOrder.put("b", new Node().value(2));
         secondOrder.put("a", new Node().value(1));
         FrozenNode first = FrozenNode.fromResolvedNode(new Node().properties(firstOrder));
+        // when
         FrozenNode second = FrozenNode.fromResolvedNode(new Node().properties(secondOrder));
 
+        // then
         assertEquals(first.blueId(), second.blueId());
         assertFalse(first.resolvedStructuralKey().equals(second.resolvedStructuralKey()),
                 "interner keys retain exact representation order");
@@ -167,12 +236,15 @@ class FrozenNodeStructuralInternerTest {
     }
 
     @Test
-    void directResolvedStructureComparisonIgnoresInlineConstructionMode() {
+    void shouldIgnoreInlineConstructionModeDuringDirectResolvedStructureComparison() {
+        // given
         FrozenNode inline = FrozenNode.fromResolvedNode(
                 new Node().value("same").inlineValue(true));
+        // when
         FrozenNode wrapped = FrozenNode.fromResolvedNode(
                 new Node().value("same").inlineValue(false));
 
+        // then
         assertFalse(inline.resolvedStructuralKey().equals(wrapped.resolvedStructuralKey()),
                 "interner keys retain exact construction representation");
         assertTrue(inline.sameResolvedStructure(wrapped));
@@ -181,17 +253,24 @@ class FrozenNodeStructuralInternerTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("observableFieldVariants")
-    void structuralKeyIncludesEveryObservableField(String field, UnaryOperator<Node> variant) {
+    void shouldIncludeEveryObservableFieldInStructuralKey(String field, UnaryOperator<Node> variant) {
+        // given
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         Node base = new Node().name("Base");
 
         FrozenNode first = cache.freezeResolved(base);
+        // when
         FrozenNode second = cache.freezeResolved(variant.apply(base.clone()));
+        boolean legacyParity =
+                legacyNormalizationAgrees(
+                        first,
+                        second);
 
+        // then
         assertNotSame(first, second, field + " must participate in exact structural identity");
         assertFalse(first.sameResolvedStructure(second),
                 field + " must participate in direct resolved structure comparison");
-        assertLegacyNormalizationParity(first, second);
+        assertTrue(legacyParity);
     }
 
     private static Stream<Arguments> observableFieldVariants() {
@@ -215,14 +294,19 @@ class FrozenNodeStructuralInternerTest {
         );
     }
 
-    private static void assertLegacyNormalizationParity(FrozenNode left, FrozenNode right) {
+    private static boolean legacyNormalizationAgrees(
+            FrozenNode left,
+            FrozenNode right) {
         boolean expected = FrozenNode.fromResolvedNode(left.toNode()).resolvedStructuralKey().equals(
                 FrozenNode.fromResolvedNode(right.toNode()).resolvedStructuralKey());
-        assertEquals(expected, left.sameResolvedStructure(right));
-        assertEquals(expected, right.sameResolvedStructure(left));
+        return expected
+                == left.sameResolvedStructure(right)
+                && expected
+                == right.sameResolvedStructure(left);
     }
 
-    private void assertReferenceProvenanceIsIndependentOfInsertionOrder(boolean referenceFirst) {
+    private ReferenceProvenanceObservation referenceProvenanceObservation(
+            boolean referenceFirst) {
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
         Node direct = new Node().name("Subject");
         String blueId = new Blue().calculateBlueId(direct);
@@ -233,9 +317,12 @@ class FrozenNodeStructuralInternerTest {
         FrozenNode referenced = referenceFirst ? first : second;
         FrozenNode materialized = referenceFirst ? second : first;
 
-        assertEquals(blueId, referenced.getReferenceBlueId());
-        assertNull(materialized.getReferenceBlueId());
-        assertNotSame(referenced, materialized);
+        return new ReferenceProvenanceObservation(
+                blueId,
+                referenced.getReferenceBlueId(),
+                materialized.getReferenceBlueId(),
+                referenced,
+                materialized);
     }
 
     private SnapshotPair snapshots(boolean referenceFirst) {
@@ -266,6 +353,28 @@ class FrozenNodeStructuralInternerTest {
 
         private SnapshotPair(ResolvedSnapshot reference, ResolvedSnapshot materialized) {
             this.reference = reference;
+            this.materialized = materialized;
+        }
+    }
+
+    private static final class ReferenceProvenanceObservation {
+        private final String expectedBlueId;
+        private final String referenceBlueId;
+        private final String materializedReferenceBlueId;
+        private final FrozenNode referenced;
+        private final FrozenNode materialized;
+
+        private ReferenceProvenanceObservation(
+                String expectedBlueId,
+                String referenceBlueId,
+                String materializedReferenceBlueId,
+                FrozenNode referenced,
+                FrozenNode materialized) {
+            this.expectedBlueId = expectedBlueId;
+            this.referenceBlueId = referenceBlueId;
+            this.materializedReferenceBlueId =
+                    materializedReferenceBlueId;
+            this.referenced = referenced;
             this.materialized = materialized;
         }
     }

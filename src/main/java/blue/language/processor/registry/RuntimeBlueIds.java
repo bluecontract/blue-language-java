@@ -2,73 +2,113 @@ package blue.language.processor.registry;
 
 /**
  * Published Blue Contracts and Processor 1.0 runtime identities.
+ *
+ * <p>These constants are the verified identities from the bundled runtime
+ * registry. They are protocol values: consumers should reference the named
+ * constants instead of repeating their encoded strings.</p>
  */
 public final class RuntimeBlueIds {
 
+    /** SHA-256 identity of the complete runtime-registry package. */
     public static final String REGISTRY_PACKAGE_IDENTITY =
-            "sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366";
+            "sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8";
 
+    /** BlueId of the BlueId meta-type used by registry type references. */
     public static final String BLUE_ID_TYPE =
             "APr87o8Wq358V8onThLEiW44hEn43wFGf9sKbw5TmmYz";
 
+    /** Published BlueId of the Channel runtime type. */
     public static final String CHANNEL =
             "CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR";
+    /** Published BlueId of the Channel Event Checkpoint runtime type. */
     public static final String CHANNEL_EVENT_CHECKPOINT =
             "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR";
+    /** Published BlueId of the Checkpoint Entry runtime type. */
     public static final String CHECKPOINT_ENTRY =
             "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY";
+    /** Published BlueId of the Contract runtime type. */
     public static final String CONTRACT =
             "4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4";
+    /** Published BlueId of the Contract Execution Result runtime type. */
     public static final String CONTRACT_EXECUTION_RESULT =
             "6i9NrtN7uqtSYx136MwLyZSiLjJ98aCUCJNHuQvZah6n";
+    /** Published BlueId of the processing-initiated lifecycle event. */
     public static final String DOCUMENT_PROCESSING_INITIATED =
-            "D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt";
+            "Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C";
+    /** Published BlueId of the processing-terminated lifecycle event. */
     public static final String DOCUMENT_PROCESSING_TERMINATED =
             "xaVhnN73YeTiJ1vaLGwndpYQE2RsbckfvzihLQsp2Yi";
+    /** Published BlueId of the Document Update runtime type. */
     public static final String DOCUMENT_UPDATE =
             "5qmRyRFrX38eVmgtRxUb79R27sG8VJRJcgsafyANxKgG";
+    /** Published BlueId of the Document Update Channel runtime type. */
     public static final String DOCUMENT_UPDATE_CHANNEL =
             "4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An";
+    /** Published BlueId of the Embedded Event Delivery runtime type. */
     public static final String EMBEDDED_EVENT_DELIVERY =
             "58trfDqLwD1F8JiPg86korUKEjgH1NXxgHSMjeLFRSFC";
+    /** Published BlueId of the Embedded Node Channel runtime type. */
     public static final String EMBEDDED_NODE_CHANNEL =
             "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN";
+    /** Published BlueId of the External Channel runtime type. */
     public static final String EXTERNAL_CHANNEL =
             "4wXKQivSASbs6PLnR562Q2XcT52x1bBViGk7cxhQ3swq";
+    /** Published BlueId of the conformance Fixture Event type. */
     public static final String FIXTURE_EVENT =
             "5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX";
+    /** Published BlueId of the Handler runtime type. */
     public static final String HANDLER =
             "2Ag2NfcWpCfPqBAR7bFAEL9L3roX3UWGUkDq7nN3D4gV";
+    /** Published BlueId of the JSON Patch Entry runtime type. */
     public static final String JSON_PATCH_ENTRY =
             "6ibiR9xVJNErraawKrsDzrGS3H5HyUUNwdZbDTDbU2U6";
+    /** Published BlueId of the Lifecycle Event Channel runtime type. */
     public static final String LIFECYCLE_EVENT_CHANNEL =
             "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo";
+    /** Published BlueId of the processor Marker runtime type. */
     public static final String MARKER =
             "8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD";
+    /** Published BlueId of the Process Embedded runtime type. */
     public static final String PROCESS_EMBEDDED =
             "D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr";
+    /** Published BlueId of the initialized processor marker. */
     public static final String PROCESSING_INITIALIZED_MARKER =
-            "5qrHeD39ytiuWtKXStznJHTjDfgAtiPAr3jwHibvQKvR";
+            "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB";
+    /** Published BlueId of the terminated processor marker. */
     public static final String PROCESSING_TERMINATED_MARKER =
             "4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v";
+    /** Published BlueId of a runtime gas-counter entry. */
     public static final String RUNTIME_COUNTER_ENTRY =
             "2fQHvWpJRfkPW9rqcqZKdcEKx4586LDkYR2bWTPRDZEo";
+    /** Published BlueId of the runtime gas ledger. */
     public static final String RUNTIME_LEDGER =
             "EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2";
+    /** Published BlueId of the conformance Scripted External Channel. */
     public static final String SCRIPTED_EXTERNAL_CHANNEL =
-            "EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7";
+            "LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp";
+    /** Published BlueId of the conformance Scripted Handler. */
     public static final String SCRIPTED_HANDLER =
             "DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ";
+    /** Published BlueId of the Triggered Event Channel runtime type. */
     public static final String TRIGGERED_EVENT_CHANNEL =
             "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf";
+    /** Published BlueId of the Type Generalization Policy runtime type. */
     public static final String TYPE_GENERALIZATION_POLICY =
             "8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz";
+    /** Published BlueId of an individual Type Generalization Rule. */
     public static final String TYPE_GENERALIZATION_RULE =
             "5BwjjfvodMVCfD2cKChbUMmjEBd83vv5kbEQwAFHcSnv";
 
     private RuntimeBlueIds() {
     }
 
+    /**
+     * Returns the published BlueId corresponding to a runtime registry key.
+     *
+     * @param key closed runtime-type key
+     * @return its published BlueId
+     * @throws IllegalArgumentException if the key is not recognized
+     */
     public static String blueId(RuntimeTypeKey key) {
         switch (key) {
             case CHANNEL:

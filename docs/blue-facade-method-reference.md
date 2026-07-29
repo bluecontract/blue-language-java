@@ -1,13 +1,19 @@
-# `Blue` facade: developer overview and complete public-method reference
+# `Blue` facade: developer overview and complete method reference
 
 ## Scope and methodology
 
-This document describes the public, class-level surface of
-`src/main/java/blue/language/Blue.java` as it exists in this working tree. The
-inventory contains **112 declarations**: seven construction paths and 105
-methods. Constructors, overloads, the static factory, deprecated methods, and
-`AutoCloseable.close()` are counted separately. Private helpers and public
-methods on anonymous or nested implementation classes are outside the scope.
+This document describes the final
+[`Blue.java`](../src/main/java/blue/language/Blue.java) facade surface. The main
+inventory contains **109 live outer public declarations**: six constructors,
+the static `withCachePolicy` factory, and 102 other methods. Constructors,
+overloads, deprecated methods, and `AutoCloseable.close()` are counted
+separately. Historical numbering slots 15–16 remain reserved for two removed
+`reverse(...)` overloads, so the final live entry is numbered 111.
+
+The internal appendix is a design-oriented navigation map rather than an
+exhaustive declaration count. Its declaration names and IDs are durable;
+search [`Blue.java`](../src/main/java/blue/language/Blue.java) by exact
+signature after implementation changes.
 
 The usage notes report direct calls from the currently compiled
 `src/test/java` bytecode. Bytecode descriptors were used so overloaded methods
@@ -83,7 +89,7 @@ the preferred boundary for repeated processing and patching, while mutable
 
 ### Method groups
 
-| Declarations | Group | What the group owns |
+| Numbered entries | Group | What the group owns |
 | ---: | --- | --- |
 | 1–7 | Runtime construction | Provider, merger, Java type mapping, bounded cache policy, and owned default processor setup |
 | 8–32 | Language transformations | Resolve, preserve/select, canonicalize/minimize, expand/collapse, limited operations, and snapshot loading |
@@ -91,8 +97,8 @@ the preferred boundary for repeated processing and patching, while mutable
 | 45–51 | Conformance | Language/Contracts version metadata, fixture reports, isolated engines, and suite execution |
 | 52–59 | Extension, conversion, matching, limits | In-place reference extension, Java conversion, type matching, and global resolution limits |
 | 60–85 | Parsing, export, dictionaries, identity | YAML/JSON boundaries, dictionary-aware export, cloning, and structural/semantic BlueIds |
-| 86–102 | Preprocessing and Contracts runtime | Aliases, processor/type registration, document initialize/process operations, and object/type bridges |
-| 103–112 | Configuration and lifecycle | Runtime dependencies, fluent reconfiguration, defensive configuration views, and close semantics |
+| 86–101 | Preprocessing and Contracts runtime | Aliases, processor/type registration, document initialize/process operations, and object/type bridges |
+| 102–111 | Configuration and lifecycle | Runtime dependencies, fluent reconfiguration, defensive configuration views, and close semantics |
 
 ### Important operational distinctions
 
@@ -112,6 +118,519 @@ the preferred boundary for repeated processing and patching, while mutable
   runtime work. Pure serialization helpers that do not enter runtime admission
   remain usable, as documented by `close()`.
 
+### Caching process
+
+#### Mental model: authority, evidence, and acceleration
+
+`Blue` does not have one undifferentiated cache. It separates retained state by
+what that state is allowed to prove:
+
+1. **Caller-authoritative state** is explicitly pinned by
+   `cacheResolvedSnapshot(s)`. It is not evicted by `BlueCachePolicy`.
+2. **Verified shared evidence** is content whose canonical form has been
+   checked against its BlueId. Unpinned evidence is bounded; evidence attached
+   to an explicit pin is retained with that pin.
+3. **Transient working state** belongs to one processing operation or
+   working-document sequence. Verified discoveries and structural graphs may
+   be reused within that scope. Legacy transient-trusted compatibility
+   operations fail closed and retain no content.
+4. **Derived acceleration data** consists of resolved snapshots, weak BlueId
+   aliases, immutable subtree interns, and processor plans. Losing it may make
+   the next operation slower, but must not change the language result.
+
+This separation is central to Blue's content-addressed model. A structural
+match is useful for reuse, but it is not proof that a provider supplied the
+content addressed by a BlueId. Similarly, strict canonical/BlueId validation
+is not the same as provider provenance. The implementation therefore keeps
+canonical structural keys, verified-reference evidence, and BlueId indexes as
+related but distinct concepts.
+
+All cache ownership is per `Blue` runtime. `BlueCachePolicy` is not a
+process-wide memory budget, and its weights are approximate retained-memory
+estimates rather than heap measurements. The standard bounded policy uses:
+
+| Family | Default entry bound | Default weight bound | Default maximum single entry |
+| --- | ---: | ---: | ---: |
+| Derived snapshots | 128 | 64 MiB | 16 MiB |
+| Canonical/BlueId aliases | 256 | 16 MiB | 512 bytes for the weak-alias entry |
+| Resolved structural interns | 8,192 | 64 MiB | 16 MiB |
+| Unpinned verified references in root and transient scopes | 2,048 | 32 MiB | 16 MiB |
+| Each physical processor-plan cache | 4,096 | 32 MiB | 16 MiB |
+
+`lowMemoryDefaults()`, `highThroughputDefaults()`, and a custom builder alter
+those bounds. `BlueCachePolicy.disabled()` prevents retained reloadable shared
+acceleration data, but does not prevent temporary objects/scopes needed to
+perform an operation and does not disable explicit pins.
+
+Shared snapshot publication follows these invariants:
+
+- only **resolution-complete** snapshots may enter the shared snapshot caches;
+- the canonical root is made strict-canonical and strict-BlueId-valid before
+  publication;
+- a cached snapshot with verified provenance is preferred over a structurally
+  equal candidate without it;
+- a BlueId alias is installed only for a retained derived snapshot that carries
+  verified-reference provenance; and
+- eviction or an oversized-entry rejection affects retention, not the value
+  returned by the operation that produced the snapshot.
+
+#### Normal snapshot lookup and publication
+
+The canonical and BlueId lookup routes deliberately use different indexes:
+
+```mermaid
+flowchart TD
+    CN["loadSnapshot(canonical Node)"] --> CK["Canonical structural key"]
+    CK --> PC["Pinned canonical snapshot"]
+    PC -->|"miss"| DC["Derived snapshot LRU"]
+    DC -->|"verified hit"| OUT["Return snapshot"]
+    DC -->|"miss or unverified hit"| BUILD["Verify and resolve canonical content"]
+
+    ID["loadSnapshot(BlueId) or cachedResolvedSnapshot(BlueId)"] --> PI["Pinned verified BlueId index"]
+    PI -->|"miss"| WA["Weak derived BlueId alias"]
+    WA -->|"live hit"| OUT
+    WA -->|"miss or collected"| FETCH{"Provider access allowed?"}
+    FETCH -->|"cachedResolvedSnapshot: no"| MISS["Return Optional.empty"]
+    FETCH -->|"loadSnapshot: yes"| BUILD
+
+    BUILD --> COMPLETE{"Resolution complete?"}
+    COMPLETE -->|"no"| LOCAL["Return locally; do not publish"]
+    COMPLETE -->|"yes"| STRICT["Strict canonical and BlueId validation"]
+    STRICT --> EVIDENCE["Remember verified evidence and resolved structure"]
+    EVIDENCE --> CHOOSE{"Pinned canonical entry exists?"}
+    CHOOSE -->|"yes"| KEEP["Keep pin; upgrade it only when candidate adds verification"]
+    CHOOSE -->|"no"| DERIVE["Insert/select bounded derived snapshot"]
+    DERIVE --> ALIAS{"Retained and verified?"}
+    ALIAS -->|"yes"| WEAK["Install weak BlueId alias"]
+    ALIAS -->|"no"| OUT
+    KEEP --> OUT
+    WEAK --> OUT
+
+    EXPLICIT["cacheResolvedSnapshot(s)"] --> PIN["Pin complete snapshot by canonical key"]
+    PIN --> VERIFIED{"Verified provenance?"}
+    VERIFIED -->|"yes"| STRONG["Add strong BlueId index and pin reference evidence"]
+    VERIFIED -->|"no"| CONLY["Canonical-key pin only"]
+```
+
+The important public-method differences are:
+
+- `resolveToSnapshot(Node/Object)` preprocesses and resolves first. Reference
+  resolution can reuse verified entries and structural interns, and the
+  completed top-level result is then de-duplicated/published as a derived
+  snapshot.
+- `loadSnapshot(Node)` first checks the canonical structural indexes. It only
+  accepts a cache hit as a load result when the snapshot carries verified
+  reference resolution; otherwise it verifies and resolves the supplied
+  canonical content.
+- `loadSnapshot(String)` checks the strong pinned BlueId index, then the weak
+  derived alias, then fetches provider content on a miss.
+- `cachedResolvedSnapshot(String)` uses the same BlueId indexes but never
+  consults the provider.
+- `applyCanonicalPatch(ResolvedSnapshot, JsonPatch)` re-resolves the patched
+  canonical root and can reuse or publish a snapshot. In contrast,
+  `canonicalPatchEngine(Node)` and `applyCanonicalPatch(Node, JsonPatch)` are
+  pure canonical patch operations and do not populate snapshot caches.
+- `resolveToSnapshotPreservingPaths(...)` builds with a one-shot transient
+  reference child and does not publish its result to shared snapshot caches.
+  Non-empty preserved paths can make the result deferred; an empty selection
+  can produce a complete result. Only a complete result may later be
+  explicitly pinned.
+- The ordinary `resolve`, canonicalization, minimization, and semantic-BlueId
+  routes can reuse verified references and immutable structures without
+  necessarily creating a top-level `ResolvedSnapshot` cache entry.
+  `expand`/`expandLimited` use direct provider expansion, and `resolveLimited`
+  deliberately uses no `ResolvedReferenceCache`, so budgeted partial work does
+  not become shared verified evidence.
+
+#### Processing is a scoped cache transaction
+
+Document processing adds a transaction-like boundary around those same
+caches:
+
+1. `processDocument(...)` or `initializeDocument(...)` admits the operation
+   and captures the active processor owner token, runtime cache generation,
+   provider, merger, aliases, and limits.
+2. The processor snapshot manager first tries
+   `recentProcessingSnapshots`, keyed by the exact resolved structure of the
+   selected Processing Document.
+3. On a miss, resolution and patch planning run in a transient child
+   `ResolvedReferenceCache`. The child can read shared verified evidence but
+   keeps newly discovered verified references and structural interns local.
+4. A reusable working sequence can fork that child and prune entries no longer
+   reachable from its current canonical/resolved graph.
+5. A complete final snapshot is published only if both the runtime generation
+   and transient reference generation are still current. Before publication,
+   only verified references reachable through the final canonical root,
+   including transitive verified dependencies, are promoted. Evidence used
+   only by discarded intermediate states remains local; unverified candidates
+   are never retained.
+6. The completed result is also remembered under the selected document's
+   structural key for near-term processor reuse.
+
+Facade-admitted work and retained/direct processor work take different
+invalidation paths. Reconfiguration blocks new facade admission, waits for
+already admitted facade work to finish, and then clears any reloadable result
+that work published. A publication also carries a
+`(processor owner token, generation)` stamp. That second defense suppresses
+late publication by retained/direct processor handles or transient sequences
+that are outside the facade's admission count after configuration rotates the
+token and/or generation.
+
+#### The constants, one by one
+
+There are nine constants in the question, but only the first is a numeric
+behavioral limit. The other eight are stable logical region names used by
+`BlueCacheStats` and, where instrumented, `ProcessingMetricsSink`. A logical
+region is not necessarily one physical map.
+
+##### `RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT = 32`
+
+This is the hard entry cap for the recent selected-document locality window.
+The actual entry bound is:
+
+```text
+min(32, cachePolicy.derivedSnapshotMaxEntries())
+```
+
+The cache also uses the derived-snapshot total-weight and maximum-entry-weight
+bounds. Thus standard low-memory, bounded, and high-throughput profiles still
+cap this region at 32 entries; a smaller custom derived bound lowers it, and
+the disabled policy lowers it to zero. It is intentionally not an unbounded
+document history or audit log.
+
+`cachedProcessingSnapshotFor`, `selectedStructuralKey`, and
+`recentProcessingSnapshot` implement lookup. `rememberProcessingSnapshot`
+stores only complete results under a current generation. The process and
+initialize overloads reach those helpers through the processor snapshot
+manager and published-result remember path.
+
+No current test isolates a successful recent-processing-cache hit. Lifecycle
+and generation-barrier coverage is concentrated in `BlueCacheLifecycleTest`,
+especially
+`shouldSkipReloadableRetentionWhenCachingIsDisabled`,
+`shouldKeepExplicitPinsWhenCachingIsDisabled`,
+`shouldPreventDisplacedProcessorFromPublishingSnapshotAfterProviderReplacement`,
+`shouldRejectLateBorrowedProcessorPublicationAfterExplicitClear`, and
+`shouldWaitForAdmittedOwnedProcessingAndReleaseItsPublicationWhenClosing`.
+
+##### `PINNED_SNAPSHOT_CACHE = "pinnedAuthoritativeSnapshots"`
+
+This region represents the caller-authoritative snapshot tier. Physically,
+`Blue` has two strong concurrent indexes:
+
+- canonical `ResolvedStructuralKey -> ResolvedSnapshot`; and
+- verified `BlueId String -> ResolvedSnapshot`.
+
+`cacheResolvedSnapshot` and `cacheResolvedSnapshots` are the only public
+methods that create a pin. `pinSnapshot` requires a complete snapshot, makes
+its canonical form publishable, prefers verified provenance when an equivalent
+entry already exists, removes the equivalent derived entry/weak alias, and
+updates observed retained weight.
+
+Pinned does **not** mean provider-verified. A complete snapshot without
+`verifiedReferenceResolution` can be pinned by canonical structure, but it
+does not receive the strong BlueId index and cannot certify reference content.
+When verified evidence is present, its reference entry is pinned as well.
+
+This tier has no policy eviction and survives reloadable configuration
+changes. It is removed by `clearResolvedSnapshotCache()` or `close()`. The
+region's entry count is the canonical index count; the secondary BlueId index
+is not double-counted.
+
+Representative tests are
+`BlueCacheLifecycleTest.shouldKeepPublicAuthoritativeSnapshotPinnedAcrossDerivedEviction`,
+`shouldPreserveCallerPinnedAuthoritativeContentAcrossConfigurationRefresh`,
+`shouldKeepExplicitPinsWhenCachingIsDisabled`, and
+`shouldPromoteReferenceEvidenceWhenReplacingPinnedSnapshotWithVerifiedSnapshot`,
+plus
+`DeferredSnapshotCacheIsolationTest.shouldRejectPinningDeferredSnapshotAsAuthoritative`.
+
+##### `DERIVED_SNAPSHOT_CACHE = "derivedResolvedSnapshots"`
+
+This is a synchronized weighted access-order LRU from canonical
+`ResolvedStructuralKey` to complete `ResolvedSnapshot`. It is populated by
+ordinary snapshot publication from `resolveToSnapshot`, `loadSnapshot`,
+snapshot patching, and committed processor snapshot-manager work.
+
+`cachedSnapshotByCanonical` checks the pinned canonical map first and then this
+LRU. `cacheSnapshot` and `cacheSnapshotLocked` enforce complete/strict
+publication, remember verified and structural evidence, select the best
+existing representation, and insert it. `preferVerified` keeps the current
+entry unless the candidate is the one that adds verified provenance.
+
+The region is bounded simultaneously by derived entry count, total estimated
+weight, and maximum single-entry weight. An oversized snapshot is still
+returned to the current caller; it is merely rejected from retained derived
+state. Pinning an equivalent snapshot removes the derived copy.
+
+Representative tests are
+`BlueCacheLifecycleTest.shouldBoundDerivedSnapshotsWithoutChangingReloadIdentity`,
+`shouldUseButNotRetainOversizedDerivedSnapshotAndStillAllowPinning`, and
+`shouldSkipReloadableRetentionWhenCachingIsDisabled`, plus
+`ResolvedSnapshotTest.shouldCacheResolvedSnapshotByBlueIdAndReuseFrozenRootsWhenLoadingSnapshot`
+and
+`ProcessingSnapshotProviderPatchTest.shouldVerifySequentialIntermediateStatesUseBlueTransientResolutionAndOnlyPublishTheFinalSnapshot`.
+
+##### `CANONICAL_ALIAS_CACHE = "canonicalAliases"`
+
+Despite the name, this region has nothing to do with preprocessing aliases.
+It is a bounded access-order LRU from BlueId string to a
+`WeakReference<ResolvedSnapshot>`. The canonical structural cache remains the
+primary owner and identity index.
+
+`putDerivedBlueIdAlias` creates an alias only after the derived canonical cache
+actually retained a snapshot with verified-reference provenance.
+`cachedSnapshotByBlueId`, used by `loadSnapshot(String)` and
+`cachedResolvedSnapshot(String)`, checks the strong pinned BlueId map first and
+then this weak index. Canonical-LRU eviction does not itself remove the weak
+alias: it can still hit while some other strong reference keeps the snapshot
+alive. Once no strong reference remains, garbage collection may clear the
+target; lookup then removes the dead alias and reports a miss.
+
+The alias cache uses its own entry/weight policy. Each weak alias is estimated
+at 64 bytes and has a 512-byte maximum-entry cap (or a smaller runtime maximum
+entry limit). It is removed on reloadable invalidation, full clear, close, or
+promotion of that snapshot to a pin.
+
+Representative behavior appears in
+`ResolvedSnapshotTest.shouldCacheResolvedSnapshotByBlueIdAndReuseFrozenRootsWhenLoadingSnapshot`,
+`RootReferenceSnapshotTest.shouldNotCertifyUnmaterializedContentFromRootReferenceSnapshot`,
+and
+`BlueCacheLifecycleTest.shouldSkipReloadableRetentionWhenCachingIsDisabled`.
+There is no current test dedicated solely to alias eviction.
+
+##### `RECENT_PROCESSING_CACHE = "recentProcessingSnapshots"`
+
+This is the reporting/metrics name for the cache bounded by
+`RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT`. Physically it is a weighted
+access-order LRU from the selected resolved document's
+`ResolvedStructuralKey` to a complete snapshot.
+
+It is not used by general `loadSnapshot` calls. The Blue-owned
+`ProcessingSnapshotManager` reads it while selecting a snapshot for processor
+work, and process/initialize result handling writes it. Both read and write
+require a current generation stamp; a document that cannot be frozen to a
+resolved structural key simply misses. It is cleared on every reloadable
+invalidation, full clear, and close.
+
+The representative tests are the recent-processing and generation-barrier
+tests listed for the numeric limit above. No current test directly asserts the
+processing hit/miss metric counters.
+
+##### `VERIFIED_REFERENCE_CACHE = "verifiedReferences"`
+
+This logical region belongs to `ResolvedReferenceCache`. Its primary map is:
+
+```text
+BlueId -> (strict verified canonical FrozenNode,
+           optional fully resolved FrozenNode)
+```
+
+It is the cache that can establish reusable identity evidence. A node merely
+carrying a `blueId`, a structural interner hit, or caller-provided candidate
+content is not enough. Verified insertion requires materialized strict
+canonical content whose calculated identity matches the requested BlueId.
+
+`Merger` and snapshot resolution use
+`getOrLoadVerifiedCanonical`, `getVerifiedCanonical`, and
+`getVerifiedResolved`; concurrent misses for the same BlueId and generation
+share one provider load. `putVerifiedResolved` records ordinary evidence.
+`putPinnedVerifiedResolved` marks root evidence non-evictable. It is reached
+both by explicit verified snapshot pinning and when ordinary publication adds
+verified provenance to an already pinned structurally equivalent snapshot.
+Processing child scopes may hold verified discoveries locally and
+`promoteReferencesReachableFrom` publishes only the final reachable dependency
+closure.
+
+Pinned and unpinned entries share this one reported region. Root unpinned
+entries use the `transientReference*` count/weight limits and insertion-order
+eviction; reads do not refresh that order. Pinned entries are skipped during
+eviction, so the region can exceed those limits when callers explicitly pin
+authority. Reloadable invalidation retains pinned verified entries, whereas
+full clear and close remove them.
+
+`resolvedReferenceCacheSize()` is a narrow logical root size, not total cache
+ownership. `cacheStats()` can aggregate verified entries in currently live
+transient child scopes and marks the region pinned when at least one pinned
+verified entry exists.
+
+Representative tests are
+`BlueCacheLifecycleTest.shouldBoundVerifiedReferenceAccelerationWhilePinningExplicitRegistration`,
+`shouldPromoteReferenceEvidenceWhenReplacingPinnedSnapshotWithVerifiedSnapshot`,
+`shouldPreventRetainedConformanceEngineFromPublishingStaleEvidenceAfterRefresh`,
+and
+`shouldRetainCallerPinnedVerifiedSnapshotVisibilityInConformanceEngine`,
+plus
+`ResolvedReferenceCacheContractTest.shouldReuseValidVerifiedCanonicalAndResolvedContent`,
+`shouldClearVerifiedEntriesAfterProviderOrProcessorChange`, and
+`shouldNotCertifyUnrelatedResolvedContent`.
+
+##### Legacy transient-trusted compatibility region
+
+The `transientTrustedReferences` statistics name remains for compatibility,
+but there is no retained content lane. `getTransientTrustedCanonical` fails
+closed and always returns empty. `putTransientTrustedCanonical` returns the
+candidate unchanged without retaining or certifying it. The associated entry,
+weight, high-water, eviction, rejection, hit, and miss statistics therefore
+remain zero.
+
+Transient child caches still isolate verified discoveries and structural-graph
+reuse. Only verified evidence reachable from the final roots can be promoted
+to shared state.
+
+Representative tests are
+`ResolvedReferenceCacheContractTest.shouldReadParentFromTransientChildWhileKeepingNewEntriesAndGraphNodesLocal`,
+`shouldReleaseLeakedTransientChildStateWhenClosingParent`,
+`shouldRetainAggregateLifetimeHighWaterMarksWhenClosingTransientChild`, and
+`shouldClearStaleChildAndPreventOldEvidencePromotionDuringParentInvalidation`.
+
+##### `STRUCTURAL_INTERNER_CACHE = "resolvedStructuralInterner"`
+
+This is structural sharing, not identity certification. Its map is:
+
+```text
+ResolvedStructuralKey -> immutable resolved FrozenNode
+```
+
+`freezeResolved` reuses or installs exactly equivalent immutable subtrees.
+`freezeResolvedWithoutRemembering` can reuse an existing subtree without
+retaining a new one. `rememberResolvedGraph` seeds the interner from a
+completed graph, but never promotes BlueId-bearing nodes to verified reference
+evidence.
+
+The shared root uses the `resolvedStructural*` entry/weight limits and
+insertion-order eviction. Transient children can read the root while keeping
+new structural nodes local; those child entries are controlled by reachability
+pruning and scope close rather than root eviction. Reloadable invalidation
+clears structural interns even when caller-pinned snapshots themselves
+survive.
+
+`resolvedStructuralCacheSize()` reports the root interner size only.
+Representative coverage includes
+`FrozenNodeStructuralInternerTest.shouldShareStructureOnlyForExactlyEquivalentFrozenNodes`,
+`shouldRepeatedEquivalentSnapshotsRetainOnlyBoundedStructuralEntries`, and
+`ProcessingSnapshotProviderPatchTest.shouldVerifyRemovedTypedIntermediateStateDoesNotPolluteBlueCaches`,
+plus
+`ResolvedReferenceCacheContractTest.shouldReadParentFromTransientChildWhileKeepingNewEntriesAndGraphNodesLocal`.
+
+##### `PROCESSOR_PLAN_CACHE = "processorPlans"`
+
+This is a reporting aggregate, not a physical cache in `Blue`. For a
+Blue-owned `DocumentProcessor`, `cacheStats()` sums:
+
+1. `ContractLoader.BundleCache`, keyed by processing scope, registry version,
+   selected-contract signature, contract signature, and channel-binding
+   signature;
+2. `FrozenTypeMatcher.BoundedPlanCache`, which multiplexes resolved-reference,
+   subtype, match, compatibility, and unresolved-reference plan regions; and
+3. `DeclaredTypeLineageMatcher`, keyed by declared type BlueId and storing its
+   direct-parent or terminal fact.
+
+Each physical component independently receives the full
+`conformancePlan*` policy. Therefore `processorPlans` is not itself limited to
+one 4,096-entry/32-MiB default budget: the three-cache aggregate can
+theoretically reach 12,288 entries and 96 MiB before per-entry limits. Blue
+reports aggregate entries, current weight, and a high-water mark, but currently
+reports no processor-plan hit/miss/eviction counters in `BlueCacheStats`.
+
+Processor registration clears loader/matcher plan state. An explicit
+`clearResolvedSnapshotCache()` clears plan caches only when the processor is
+owned by `Blue`; close likewise closes only an owned processor. An injected
+processor is borrowed, so its plan caches are reported as zero by
+`Blue.cacheStats()` and are neither cleared nor closed as Blue-owned state.
+Metered contract recognition also deliberately bypasses bundle reuse so a warm
+cache cannot change logical reads or gas.
+
+Representative tests are
+`ProcessorOwnedCacheLifecycleTest.shouldVerifyContractBundleCacheUsesDeterministicWeightedLruBounds`,
+`shouldVerifyDeclaredLineageCacheUsesPolicyBoundsAndCanBeCleared`, and
+`shouldVerifyDocumentProcessorClearCachesCascadesToLoaderAndMatchingService`;
+`FrozenTypeMatcherCachePolicyTest.shouldShareConfiguredEntryAndWeightBudgetAcrossMatcherRegions`,
+`shouldUseOversizedPlansWithoutRetainingThem`, and
+`shouldReleaseAcceptedPlansWhenClearingCacheAndAllowRecomputation`;
+and `ContractBundleCacheTest.shouldVerifyChangingContractsInvalidatesBundleCache`
+and `shouldVerifyEmbeddedScopesCacheIndependently`.
+
+#### Which public methods control the cache lifecycle?
+
+| Public method or family | Cache effect |
+| --- | --- |
+| `withCachePolicy(...)` and the four-argument constructor | Select immutable per-runtime bounds when caches are created. |
+| `cachePolicy()` | Returns those configured bounds; it does not expose mutable cache state. |
+| `resolveToSnapshot(...)`, `loadSnapshot(...)`, and snapshot `applyCanonicalPatch(...)` | Reuse reference/structural state and publish complete derived snapshots. |
+| `cacheResolvedSnapshot(s)` | Explicitly pin complete caller-authoritative snapshots; verified provenance additionally creates the strong BlueId/reference indexes. |
+| `cachedResolvedSnapshot(...)` | Cache-only BlueId lookup; never fetches provider content. |
+| `processDocument(...)` and `initializeDocument(...)` | Reuse recent selections and processor plans; resolve speculative work in transient scopes; publish only a current, complete result. |
+| `conformanceEngine()` | Creates a caller-owned isolated cache seeded only with currently pinned verified references; later discoveries do not contaminate the parent runtime. |
+| `resolvedSnapshotCacheSize()` | Counts canonical pinned plus canonical derived snapshot entries, excluding aliases and recent processing entries. |
+| `resolvedReferenceCacheSize()` | Reports the root verified-reference view, excluding legacy transient-trusted compatibility counters and structural regions. |
+| `resolvedStructuralCacheSize()` | Reports only the root structural interner. |
+| `cacheStats()` | Reports all eight logical regions, approximate weights/high-water marks, bounded-cache counters where available, and closed state. |
+| `clearResolvedSnapshotCache()` | Performs a full runtime-cache wipe, including pins, and clears plan caches on an owned processor. |
+| `nodeProvider(...)`, `mergingProcessor(...)`, preprocessing-alias changes, `setGlobalLimits(...)`, `documentProcessor(...)`, and external type-content registration | Cross an invalidation barrier and clear reloadable state; pinned authority survives. Owned processor infrastructure is refreshed where applicable. |
+| One/two-argument `registerContractProcessor(...)` | Invalidates processor plan caches through `DocumentProcessor`, but does not wipe Blue snapshot/reference regions. |
+| `typeClassResolver(...)` | Replaces the Java mapping dependency without runtime-cache invalidation. |
+| `close()` | Stops new runtime admission, waits for admitted facade work, clears every runtime region, closes all reference scopes, and closes only an owned processor. |
+
+#### Invalidation and observability details
+
+Reloadable invalidation and full clear are intentionally different:
+
+| Operation | Snapshot/reference effect | Processor-plan effect |
+| --- | --- | --- |
+| Provider, merger, alias, limit, processor, or external-type reconfiguration | Advances the runtime/reference generation; clears derived snapshots, weak aliases, recent snapshots, unpinned verified references, transient state, and structural interns; preserves snapshot pins and pinned verified evidence | Refreshes or replaces owned processor infrastructure as required |
+| Processor registration without new external type content | No Blue snapshot/reference wipe | Clears processor bundle/matcher/lineage plans |
+| `clearResolvedSnapshotCache()` | Clears all runtime regions, including snapshot pins and pinned verified evidence | Clears caches only on an owned processor |
+| `close()` | Prevents new work, drains admitted facade operations, clears all regions, and permanently closes the reference-cache generation | Closes only an owned processor |
+
+`beginDirectCacheOperation`/`endDirectCacheOperation` and
+`beginProcessingOperation`/`finishProcessingOperation` account for admitted
+work. `beginCacheInvalidation` blocks new admissions and waits for current
+facade operations before the handoff, then invalidation clears their reloadable
+publications. Generation checks independently prevent stale retained/direct
+processor sequences or an old reference-cache load from publishing across the
+handoff.
+
+The public statistics have several deliberate limitations:
+
+- `pinnedAuthoritativeSnapshots`, `verifiedReferences`,
+  `transientTrustedReferences`, `resolvedStructuralInterner`, and
+  `processorPlans` currently expose zero hit/miss fields in `BlueCacheStats`,
+  even though some separate processing metrics are emitted.
+- Verified and structural statistics can aggregate live transient reference
+  scopes, while the three public size helpers are narrower root/top-level
+  views. Transient-trusted compatibility statistics remain zero.
+- High-water marks survive ordinary clears, and approximate weights can count
+  immutable graphs visible from more than one logical region. They are
+  operational indicators, not an exact heap census.
+- The deprecated `legacyResolvedAliasesByBlueId` compatibility lane is
+  intentionally not a separate `BlueCacheStats` region.
+- Isolated conformance-engine caches are caller-owned and are not included in
+  their parent `Blue.cacheStats()`.
+
+The admission wait-and-clear path is exercised particularly by
+`BlueCacheLifecycleTest.shouldWaitForDirectResolutionAndClearItsResultWhenReplacingMerger`
+and `shouldWaitForInProgressInvalidationWithoutStrandingConcurrentCloseGate`.
+Late publication from displaced/retained handles is covered by
+`BlueCacheLifecycleTest.shouldPreventDisplacedProcessorFromPublishingSnapshotAfterProviderReplacement`
+and `shouldRejectLateBorrowedProcessorPublicationAfterExplicitClear`. Transient
+sequence generation behavior is covered by
+`ProcessingSnapshotProviderPatchTest.shouldVerifyCacheInvalidationMakesPreviewReplanWithFreshProviderEvidence`,
+`shouldVerifyInvalidationBetweenPreviewedStepsReopensTheSequenceScope`, and
+`shouldVerifyStaleEarlyCloseDoesNotRepublishAPrefixAfterProviderReplacement`,
+together with
+`ResolvedReferenceCacheContractTest.shouldClearStaleChildAndPreventOldEvidencePromotionDuringParentInvalidation`.
+
+### Related specifications and deeper design notes
+
+- [Project overview and examples](../README.md)
+- [Blue Language 1.0 specification](../src/test/resources/language/1.0/spec.md)
+- [Blue Contracts and Processor 1.0 specification](../src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md)
+- [Canonical language core](canonical-language-core.md)
+- [Snapshots, patching, and generalization](snapshots-patching-and-generalization.md)
+- [Frozen type matching](frozen-type-matching.md)
+- [Processor contract matching](processor-contract-matching.md)
+
 ## Runtime construction
 
 ### 1. `public Blue()`
@@ -125,8 +644,8 @@ that does not initially need external references.
 **Direct test/test-support callers.** `BlueCacheLifecycleTest`,
 `BlueConformanceReportTest`, `BlueIdReferenceValidatorDepthTest`,
 `DictionaryExportTest`, `DictionaryProcessorTest`, `LimitedCanonicalPatchTest`,
-`ListControlFormsTest`, `ListProcessorTest`, `MergeReverserInlineTypeTest`,
-`MergeReverserNestedTypedNodeTest`, `NodeDeserializerTest`,
+`ListControlFormsTest`, `ListProcessorTest`, `MinimizedOverlayInlineTypeTest`,
+`MinimizedOverlayNestedTypedNodeTest`, `NodeDeserializerTest`,
 `NodeToMapListOrValueTest`, `PreprocessorTest`,
 `ProcessingSnapshotProviderProvenanceTest`, `RecursiveTypeResolutionTest`,
 `ReferenceBlueIdResolutionValidationTest`, `RootReferenceSnapshotTest`,
@@ -159,8 +678,8 @@ types must be resolved.
 `CyclicProviderFallbackTest`, `DeferredSnapshotCacheIsolationTest`,
 `ListControlFormsTest`, `MaskedResolutionTest`,
 `MaterializedSelectedProcessingDocumentFailFirstTest`,
-`MergeReverserInlineTypeTest`, `MergeReverserNestedTypedNodeTest`,
-`MergeReverserPureReferenceProvenanceTest`, `MergeReverserTest`,
+`MinimizedOverlayInlineTypeTest`, `MinimizedOverlayNestedTypedNodeTest`,
+`MinimizedOverlayPureReferenceProvenanceTest`, `OverlayBuildersTest`,
 `ProcessingSnapshotProviderProvenanceTest`, `RecursiveTypeResolutionTest`,
 `ReferenceBlueIdResolutionValidationTest`, `ResolvedInstanceSchemaValidationTest`,
 `ResolvedSchemaValidationLifecycleTest`, `RootReferenceSnapshotTest`,
@@ -241,7 +760,7 @@ does not itself run preprocessing or Contracts processing.
 
 **Direct test/test-support callers.** `BlueCacheLifecycleTest`,
 `CyclicProviderFallbackTest`, `ListControlFormsTest`, `MaskedResolutionTest`,
-`MergeReverserTest`, `NodeDeserializerTest`,
+`OverlayBuildersTest`, `NodeDeserializerTest`,
 `ProcessingSnapshotProviderProvenanceTest`, `RecursiveTypeResolutionTest`,
 `ReferenceBlueIdResolutionValidationTest`, `ResolvedInstanceSchemaValidationTest`,
 `ResolvedSchemaValidationLifecycleTest`, `RootReferenceSnapshotTest`,
@@ -309,24 +828,12 @@ is the implementation endpoint for the shorter overload.
 directly tested three-argument overload in `BlueCacheLifecycleTest` and
 `MaskedResolutionTest`.
 
-### 15. `public Node reverse(Node node)`
+### Removed pre-1.0 entries 15–16: ambiguous reverse APIs
 
-**Purpose and library role.** Deprecated compatibility entry point that applies
-`MergeReverser.reverse` to a supplied node, yielding the legacy minimized
-overlay behavior. It preserves older integrations, but new identity code
-should call `canonicalize`, and author-facing compaction should call
-`minimize`.
-
-**Direct test caller.** `conformance.ConformanceEngineTest`.
-
-### 16. `public Node reverse(Object object)`
-
-**Purpose and library role.** Deprecated object-conversion wrapper around
-`reverse(Node)`. It exists for source compatibility and should not be chosen
-for new canonical identity work.
-
-**Direct test caller.** No direct test caller found in current compiled
-`src/test` bytecode.
+`Blue.reverse(Node)` and `Blue.reverse(Object)` were removed before the public
+1.0 API. Use `canonicalize` for canonical identity input and `minimize` for an
+author-facing minimized overlay. The former shared `MergeReverser` abstraction
+was split into purpose-specific canonical and minimization builders.
 
 ### 17. `public Node canonicalize(Node node)`
 
@@ -356,7 +863,9 @@ overlay that resolves back to the same result. Unlike `canonicalize`, it is
 optimized for concise authored form rather than source-provenance identity.
 
 **Direct test caller.** No direct Blue-facade test caller found in current
-compiled `src/test` bytecode.
+compiled `src/test` bytecode. `BlueConformanceSuiteRunner` does call this
+overload, so `BlueConformanceReportTest` and
+`conformance.BlueLanguageConformanceFixtureTest` exercise it indirectly.
 
 ### 20. `public Node minimize(Object object)`
 
@@ -374,7 +883,9 @@ fail-closed boundary prevents partial provider evidence from becoming a
 whole-document identity.
 
 **Direct test caller.** No direct Blue-facade test caller found in current
-compiled `src/test` bytecode.
+compiled `src/test` bytecode. `BlueConformanceSuiteRunner` uses this fail-closed
+overload for limited canonicalization fixtures, so `BlueConformanceReportTest`
+and `conformance.BlueLanguageConformanceFixtureTest` cover it indirectly.
 
 ### 22. `public Node expand(Node node)`
 
@@ -395,7 +906,9 @@ paths under a reference-expansion budget and distinguishes `ESTABLISHED`,
 provider evidence from being misreported as semantic absence.
 
 **Direct test caller.** No direct Blue-facade test caller found in current
-compiled `src/test` bytecode.
+compiled `src/test` bytecode. It is called by `BlueConformanceSuiteRunner` for
+limited expansion and expand/collapse fixtures, so `BlueConformanceReportTest`
+and `conformance.BlueLanguageConformanceFixtureTest` exercise it indirectly.
 
 ### 24. `public BlueOperationResult<Node> resolveLimited(Node node, BlueOperationLimits limits)`
 
@@ -421,7 +934,9 @@ returns a pure reference node containing that ID. It implements the reference
 creation side of expand/collapse; it does not persist the original content.
 
 **Direct test caller.** No direct Blue-facade test caller found in current
-compiled `src/test` bytecode.
+compiled `src/test` bytecode. `BlueConformanceSuiteRunner` uses it for collapse
+fixtures and expand/collapse round trips, so `BlueConformanceReportTest` and
+`conformance.BlueLanguageConformanceFixtureTest` exercise it indirectly.
 
 ### 27. `public Node collapse(Object object)`
 
@@ -441,8 +956,8 @@ from mutable authored data into immutable identity-plus-runtime state.
 
 **Direct test callers.** `BlueCacheLifecycleTest`,
 `MaterializedSelectedProcessingDocumentFailFirstTest`,
-`MergeReverserInlineTypeTest`, `MergeReverserNestedTypedNodeTest`,
-`MergeReverserPureReferenceProvenanceTest`,
+`MinimizedOverlayInlineTypeTest`, `MinimizedOverlayNestedTypedNodeTest`,
+`MinimizedOverlayPureReferenceProvenanceTest`,
 `ProcessingDocumentStateInvariantFailFirstTest`,
 `ProcessingSnapshotProviderProvenanceTest`, `RecursiveTypeResolutionTest`,
 `ResolvedInstanceSchemaValidationTest`,
@@ -469,14 +984,19 @@ and `utils.NodeTypeMatcherTest`.
 
 ### 29. `public ResolvedSnapshot resolveToSnapshotPreservingPaths(Node node, Collection<String> preservedPaths)`
 
-**Purpose and library role.** Builds a verified snapshot whose canonical lane
-still comes from complete source while resolution below selected paths is
-deferred and exact authored subtrees are retained. It supports demand-driven
-Contracts execution without falsely treating deferred evidence as resolved.
+**Purpose and library role.** Builds a snapshot whose exact canonical identity
+comes from complete source while resolution below any selected paths is
+deferred and those authored subtrees are retained. With an empty selection the
+result can be complete; with preserved paths it can carry deferred-resolution
+state. In either case its one-shot transient reference scope is discarded and
+the result is not automatically published to shared snapshot caches. It
+supports demand-driven Contracts execution without falsely treating deferred
+evidence as resolved.
 
 **Direct usage.** No direct compiled test call was found. Production caller
 `processor.conformance.ContractsFixtureHarness` uses it, so it is exercised
-indirectly by Contracts/release conformance execution.
+indirectly by `processor.conformance.BlueContractsConformanceFixtureTest` and
+Contracts/release conformance execution.
 
 ### 30. `public ResolvedSnapshot resolveToSnapshot(Object object)`
 
@@ -495,7 +1015,7 @@ resolves a new one. It is the storage-ingestion path for canonical content,
 not an authored-source parser.
 
 **Direct test callers.** `BlueCacheLifecycleTest`,
-`LimitedCanonicalPatchTest`, `MergeReverserNestedTypedNodeTest`,
+`LimitedCanonicalPatchTest`, `MinimizedOverlayNestedTypedNodeTest`,
 `ProcessingSnapshotProviderProvenanceTest`,
 `ResolvedInstanceSchemaValidationTest`, `processor.DocumentProcessorGasTest`,
 `processor.PublishedSnapshotRoundTripTest`, and
@@ -543,15 +1063,18 @@ minimal and resolved meaning synchronized.
 
 **Direct test callers.** `LimitedCanonicalPatchTest`,
 `MaterializedSelectedProcessingDocumentFailFirstTest`,
-`MergeReverserNestedTypedNodeTest`,
+`MinimizedOverlayNestedTypedNodeTest`,
 `processor.DocumentProcessorGeneralizationTest`, and
 `snapshot.ResolvedSnapshotTest`.
 
 ### 36. `public Blue cacheResolvedSnapshot(ResolvedSnapshot snapshot)`
 
-**Purpose and library role.** Explicitly pins a verified authoritative snapshot
-by canonical representation and BlueId. Pinned content is not evicted by the
-bounded derived-cache policy and remains until clear or close.
+**Purpose and library role.** Explicitly pins a complete caller-authoritative
+snapshot by canonical representation. A snapshot with verified-reference
+provenance also receives a strong BlueId index and pins that reference
+evidence; a complete snapshot without that provenance remains a canonical-key
+pin only. Pinned content is not evicted by the bounded derived-cache policy and
+remains until full clear or close.
 
 **Direct test callers.** `BlueCacheLifecycleTest`,
 `DeferredSnapshotCacheIsolationTest`, `processor.DocumentProcessorGasTest`,
@@ -804,8 +1327,8 @@ the normal authored-YAML ingestion API.
 
 **Direct test callers.** `BlueCacheLifecycleTest`, `ListControlFormsTest`,
 `MaskedResolutionTest`, `MaterializedSelectedProcessingDocumentFailFirstTest`,
-`MergeReverserInlineTypeTest`, `MergeReverserNestedTypedNodeTest`,
-`MergeReverserPureReferenceProvenanceTest`, `MergeReverserTest`,
+`MinimizedOverlayInlineTypeTest`, `MinimizedOverlayNestedTypedNodeTest`,
+`MinimizedOverlayPureReferenceProvenanceTest`, `OverlayBuildersTest`,
 `NodeToMapListOrValueTest`, `PreprocessorTest`,
 `ReferenceBlueIdResolutionValidationTest`,
 `SelectedProcessingStateCacheIsolationFailFirstTest`, `SelfReferenceTest`,
@@ -840,8 +1363,8 @@ as `yamlToNode`.
 
 **Direct test callers.** `BlueCacheLifecycleTest`,
 `MaterializedSelectedProcessingDocumentFailFirstTest`,
-`MergeReverserInlineTypeTest`, `MergeReverserNestedTypedNodeTest`,
-`MergeReverserPureReferenceProvenanceTest`,
+`MinimizedOverlayInlineTypeTest`, `MinimizedOverlayNestedTypedNodeTest`,
+`MinimizedOverlayPureReferenceProvenanceTest`,
 `ProcessingDocumentStateInvariantFailFirstTest`,
 `SelectedProcessingStateCacheIsolationFailFirstTest`,
 `processor.DocumentProcessorInitializationTest`, and
@@ -854,7 +1377,9 @@ preprocessing. It is the correct boundary when a caller must inspect or control
 source directives before applying the language’s Default Blue step.
 
 **Direct test caller.** No exact direct call found. It is reached by the heavily
-tested `yamlToNode()` wrapper and by Language conformance execution.
+tested `yamlToNode()` wrapper and by `BlueConformanceSuiteRunner`, whose report
+is asserted by `BlueConformanceReportTest` and
+`conformance.BlueLanguageConformanceFixtureTest`.
 
 ### 63. `public Node parseSourceJson(String json)`
 
@@ -889,7 +1414,7 @@ the canonical map/list/value representation, including required type inference
 for untyped scalar output. It is the ordinary YAML egress boundary.
 
 **Direct test callers.** `MaterializedSelectedProcessingDocumentFailFirstTest`,
-`MergeReverserInlineTypeTest`,
+`MinimizedOverlayInlineTypeTest`,
 `SelectedProcessingStateCacheIsolationFailFirstTest`,
 `processor.DocumentUpdateChannelTest`, and `processor.ProcessEmbeddedTest`.
 
@@ -918,8 +1443,8 @@ boundary and preserves Blue language metadata.
 
 **Direct test callers.** `BlueCacheLifecycleTest`,
 `MaterializedSelectedProcessingDocumentFailFirstTest`,
-`MergeReverserInlineTypeTest`, `MergeReverserNestedTypedNodeTest`,
-`MergeReverserPureReferenceProvenanceTest`,
+`MinimizedOverlayInlineTypeTest`, `MinimizedOverlayNestedTypedNodeTest`,
+`MinimizedOverlayPureReferenceProvenanceTest`,
 `ProcessingDocumentStateInvariantFailFirstTest`,
 `ResolvedProcessingSelectionCorrectnessTest`,
 `ResolvedSnapshotSelectionCacheTest`,
@@ -1043,7 +1568,7 @@ canonical identity input. It is sensitive to authored structure and rejects
 invalid reference/source forms rather than silently canonicalizing them.
 
 **Direct test callers.** `BlueCacheLifecycleTest`,
-`MergeReverserNestedTypedNodeTest`,
+`MinimizedOverlayNestedTypedNodeTest`,
 `ProcessingSnapshotProviderProvenanceTest`,
 `ResolvedInstanceSchemaValidationTest`, `RootReferenceSnapshotTest`,
 `SelectedProcessingStateCacheIsolationFailFirstTest`,
@@ -1070,7 +1595,7 @@ when preprocessing, inheritance, and redundant overrides make them
 semantically equivalent.
 
 **Direct test callers.** `DictionaryProcessorTest`, `ListProcessorTest`,
-`MaterializedSelectedProcessingDocumentFailFirstTest`, `MergeReverserTest`,
+`MaterializedSelectedProcessingDocumentFailFirstTest`, `OverlayBuildersTest`,
 `ResolvedInstanceSchemaValidationTest`,
 `ResolvedProcessingSelectionCorrectnessTest`, `SemanticCanonicalizationTest`,
 `TrustedProviderResolutionTest`, `processor.CheckpointIdentityCalculatorTest`,
@@ -1136,15 +1661,7 @@ bound to Blue identity rather than synthesized Java class-name nodes.
 `processor.RegisteredContractProviderEvidenceTest`, and
 `processor.external.ExternalContractIntegrationTest`.
 
-### 89. `public Blue registerContractProcessor(String blueId, Node canonicalTypeNode, ContractProcessor<? extends Contract> processor)`
-
-**Purpose and library role.** Compatibility/convenience overload that delegates
-to external contract-type registration. It binds executable Java behavior and
-its canonical type evidence in one call.
-
-**Direct test caller.** `processor.InternalEventOccurrenceFifoTest`.
-
-### 90. `public Blue registerExternalContractType(String blueId, Node canonicalTypeNode, ContractProcessor<? extends Contract> processor)`
+### 89. `public Blue registerExternalContractType(String blueId, Node canonicalTypeNode, ContractProcessor<? extends Contract> processor)`
 
 **Purpose and library role.** Validates that supplied canonical type content
 matches the declared BlueId, registers its processor, publishes the type to the
@@ -1160,7 +1677,7 @@ checks.
 `processor.SelectedScopeContentBlueIdFailFirstTest`, and
 `processor.external.ExternalContractIntegrationTest`.
 
-### 91. `public DocumentProcessingResult processDocument(Node document, Node event)`
+### 90. `public DocumentProcessingResult processDocument(Node document, Node event)`
 
 **Purpose and library role.** Admits one lifecycle-coordinated Contracts
 operation over a mutable document and read-only event, runs the active
@@ -1180,7 +1697,7 @@ records timing. It is the primary `PROCESS(document,event)` facade.
 `processor.InternalEventOccurrenceFifoTest`, `processor.ProcessEmbeddedTest`,
 and `processor.TestEventChannelTest`.
 
-### 92. `public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event)`
+### 91. `public DocumentProcessingResult processDocument(ResolvedSnapshot snapshot, Node event)`
 
 **Purpose and library role.** Processes the snapshot’s resolved root as the
 selected Processing Document while preserving the immutable canonical root as
@@ -1191,7 +1708,7 @@ stale state when an authoritative snapshot is already available.
 `processor.DocumentProcessorTerminationTest`, and
 `processor.PublishedSnapshotRoundTripTest`.
 
-### 93. `public DocumentProcessor getDocumentProcessor()`
+### 92. `public DocumentProcessor getDocumentProcessor()`
 
 **Purpose and library role.** Returns the active processor after open-state and
 invalidation checks, creating the default one if needed. Direct operations on
@@ -1218,7 +1735,7 @@ caller must coordinate them before reconfiguration or close.
 `processor.SelectedScopeContentBlueIdFailFirstTest`, and
 `processor.TerminationConformanceTest`.
 
-### 94. `public Blue documentProcessor(DocumentProcessor documentProcessor)`
+### 93. `public Blue documentProcessor(DocumentProcessor documentProcessor)`
 
 **Purpose and library role.** Replaces the active processor under a cache
 invalidation barrier, closes the previous processor only if `Blue` owned it,
@@ -1229,7 +1746,7 @@ Contracts runtimes without transferring ownership unexpectedly.
 `MaterializedSelectedProcessingDocumentFailFirstTest`, and
 `processor.DocumentProcessorExactFeederSupport` (test support).
 
-### 95. `public DocumentProcessingResult initializeDocument(Node document)`
+### 94. `public DocumentProcessingResult initializeDocument(Node document)`
 
 **Purpose and library role.** Runs the Contracts initialization lifecycle over
 a mutable document, attaches an authoritative snapshot to successful results
@@ -1260,7 +1777,7 @@ application event.
 `processor.TerminationConformanceTest`, `processor.TestEventChannelTest`, and
 `processor.external.ExternalContractIntegrationTest`.
 
-### 96. `public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot)`
+### 95. `public DocumentProcessingResult initializeDocument(ResolvedSnapshot snapshot)`
 
 **Purpose and library role.** Initializes the snapshot’s resolved root while
 retaining its canonical identity companion and remembering the resulting
@@ -1272,7 +1789,7 @@ snapshot. It is the immutable, selection-safe initialization path.
 `processor.ScopeSourceProjectionTest`, and
 `processor.SelectedScopeContentBlueIdFailFirstTest`.
 
-### 97. `public boolean isInitialized(Node document)`
+### 96. `public boolean isInitialized(Node document)`
 
 **Purpose and library role.** Asks the active processor whether a mutable
 document carries effective Contracts initialization state. It centralizes the
@@ -1282,7 +1799,7 @@ runtime’s marker semantics rather than making callers inspect fields directly.
 `processor.DocumentProcessorGasTest`, and
 `processor.DocumentProcessorInitializationTest`.
 
-### 98. `public boolean isInitialized(ResolvedSnapshot snapshot)`
+### 97. `public boolean isInitialized(ResolvedSnapshot snapshot)`
 
 **Purpose and library role.** Checks effective initialization against the
 authoritative resolved snapshot view. It avoids ambiguity between canonical
@@ -1290,19 +1807,19 @@ storage omissions and inherited/effective marker state.
 
 **Direct test caller.** `BlueCacheLifecycleTest`.
 
-### 99. `public Node preprocess(Node node)`
+### 98. `public Node preprocess(Node node)`
 
 **Purpose and library role.** Applies the current source preprocessing
 environment: resolves a configured alias or potential BlueId in the `blue`
 directive and applies Default Blue through the active provider. It converts
 authored source into the form expected by resolution and identity operations.
 
-**Direct test callers.** `BlueCacheLifecycleTest`, `MergeReverserTest`,
+**Direct test callers.** `BlueCacheLifecycleTest`, `OverlayBuildersTest`,
 `NodeDeserializerTest`, `PreprocessorTest`, `RecursiveTypeResolutionTest`,
 `ResolvedInstanceSchemaValidationTest`,
 `ResolvedTypeCacheHistoryRegressionTest`, and `SelfReferenceTest`.
 
-### 100. `public Optional<Class<?>> determineClass(Node node)`
+### 99. `public Optional<Class<?>> determineClass(Node node)`
 
 **Purpose and library role.** Delegates to the configured `TypeClassResolver`,
 if any, and returns an optional Java class. It keeps application type binding
@@ -1310,7 +1827,7 @@ optional and outside the deterministic core language model.
 
 **Direct test caller.** `BlueCacheLifecycleTest`.
 
-### 101. `public <T> T nodeToObject(Node node, Class<T> clazz)`
+### 100. `public <T> T nodeToObject(Node node, Class<T> clazz)`
 
 **Purpose and library role.** Converts a Blue node to the requested Java class
 using `NodeToObjectConverter` and the currently configured class resolver. It
@@ -1319,7 +1836,7 @@ is the language-to-application object bridge.
 **Direct test callers.** `BlueCacheLifecycleTest` and
 `mapping.JsonPropertyMappingTest`.
 
-### 102. `public boolean isNodeSubtypeOf(Node candidateNode, Node superTypeNode)`
+### 101. `public boolean isNodeSubtypeOf(Node candidateNode, Node superTypeNode)`
 
 **Purpose and library role.** Evaluates Blue type-lineage subtyping through the
 active provider. It exposes nominal/derived type relationships needed by
@@ -1329,7 +1846,7 @@ mapping and runtime selection without running full document processing.
 
 ## Configuration and lifecycle
 
-### 103. `public NodeProvider getNodeProvider()`
+### 102. `public NodeProvider getNodeProvider()`
 
 **Purpose and library role.** Returns the active wrapped provider used by
 language operations. It supports integrations that must share the facade’s
@@ -1341,7 +1858,7 @@ current verified/reference-aware provider boundary.
 `processor.PatchImpactIncrementalResolutionTest`, and
 `processor.registry.BlueRuntimeTypeRegistryTest`.
 
-### 104. `public MergingProcessor getMergingProcessor()`
+### 103. `public MergingProcessor getMergingProcessor()`
 
 **Purpose and library role.** Returns the current merge pipeline. It lets
 snapshot/conformance integrations use exactly the same resolution semantics as
@@ -1353,7 +1870,7 @@ the facade.
 `processor.ProcessingSnapshotProviderPatchTest`, and
 `snapshot.ResolvedReferenceCacheContractTest`.
 
-### 105. `public TypeClassResolver getTypeClassResolver()`
+### 104. `public TypeClassResolver getTypeClassResolver()`
 
 **Purpose and library role.** Returns the optional Java class resolver. It is
 the compatibility accessor for application mapping configuration.
@@ -1361,7 +1878,7 @@ the compatibility accessor for application mapping configuration.
 **Direct test caller.** No direct test caller found in current compiled
 `src/test` bytecode.
 
-### 106. `public Map<String, String> getPreprocessingAliases()`
+### 105. `public Map<String, String> getPreprocessingAliases()`
 
 **Purpose and library role.** Returns an unmodifiable defensive snapshot of the
 current preprocessing aliases. This prevents callers from bypassing the
@@ -1369,7 +1886,7 @@ invalidation required when preprocessing semantics change.
 
 **Direct test caller.** `BlueCacheLifecycleTest`.
 
-### 107. `public Blue nodeProvider(NodeProvider nodeProvider)`
+### 106. `public Blue nodeProvider(NodeProvider nodeProvider)`
 
 **Purpose and library role.** Replaces and wraps the provider under coordinated
 invalidation, clears reloadable evidence derived from the previous provider,
@@ -1384,7 +1901,7 @@ content from crossing provider generations.
 `snapshot.ResolvedReferenceCacheContractTest`, and
 `snapshot.ResolvedSnapshotTest`.
 
-### 108. `public Blue mergingProcessor(MergingProcessor mergingProcessor)`
+### 107. `public Blue mergingProcessor(MergingProcessor mergingProcessor)`
 
 **Purpose and library role.** Replaces the merge pipeline under the same
 generation/invalidation discipline and returns the facade. Resolution,
@@ -1393,7 +1910,7 @@ snapshots, conformance, and owned processing then share the new semantics.
 **Direct test callers.** `BlueCacheLifecycleTest` and
 `snapshot.ResolvedReferenceCacheContractTest`.
 
-### 109. `public Blue typeClassResolver(TypeClassResolver typeClassResolver)`
+### 108. `public Blue typeClassResolver(TypeClassResolver typeClassResolver)`
 
 **Purpose and library role.** Replaces the optional Java class resolver and
 returns the facade. This changes only application mapping, not Blue canonical
@@ -1402,7 +1919,7 @@ identity or provider/merge evidence.
 **Direct test caller.** No direct test caller found in current compiled
 `src/test` bytecode.
 
-### 110. `public Blue preprocessingAliases(Map<String, String> preprocessingAliases)`
+### 109. `public Blue preprocessingAliases(Map<String, String> preprocessingAliases)`
 
 **Purpose and library role.** Replaces the entire alias map (`null` becomes an
 empty map), invalidates configuration-dependent caches, refreshes owned
@@ -1411,14 +1928,14 @@ processor state, and returns the facade. It is the replace-all counterpart to
 
 **Direct test caller.** `BlueCacheLifecycleTest`.
 
-### 111. `public boolean isClosed()`
+### 110. `public boolean isClosed()`
 
 **Purpose and library role.** Reports whether the runtime has released its
 owned state. It provides a non-mutating lifecycle check for hosts and tests.
 
 **Direct test caller.** `BlueCacheLifecycleTest`.
 
-### 112. `public void close()`
+### 111. `public void close()`
 
 **Purpose and library role.** Idempotently stops new runtime work, waits for
 admitted provider/processor/cache operations, releases pinned and derived
@@ -1434,10 +1951,190 @@ ownership boundary that makes long-lived Blue runtimes safe and bounded.
 `processor.ProcessorPhasePrecedenceTest`, and
 `processor.RegisteredContractProviderEvidenceTest`.
 
-## Internal-method appendix (placeholder)
+## Internal implementation appendix
 
-> **Placeholder for a future internal-method appendix.** This document’s
-> verified 112-entry inventory intentionally covers only `Blue`’s class-level
-> public facade. Internal lifecycle, cache-publication, snapshot-construction,
-> limited-operation, and provider-composition helpers can be documented here
-> without changing that public count.
+The entries below are a design-oriented map of important collaborators in
+[`Blue.java`](../src/main/java/blue/language/Blue.java); they are **not methods
+on the outer public `Blue` API**. Search by exact declaration because source
+positions move as implementation comments and behavior evolve. Tests normally
+exercise these declarations indirectly through the public owner shown in the
+coverage column. “Dormant” means the declaration has no current production
+caller, so no public test route can execute it without reflection.
+
+### Outer `Blue` private implementation
+
+#### Reference materialization and limited expansion (P01–P09)
+
+| ID | Source | Exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| P01 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Node providerContentWithoutRootIdentity(Node node)` | Clones provider content and removes a non-reference root `blueId` wrapper before using it as payload. | `loadSnapshot(String)`, `expand(Node)`, and `expandLimited(...)`; `RootReferenceSnapshotTest`, `BlueLimitedOperationTest`. |
+| P02 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private List<Node> providerContentWithoutRootIdentity(List<Node> nodes)` | Applies root-identity stripping to every provider result node. | Same routes as P01 plus exact-reference materialization; `VerifiedReferenceMaterializationTest`. |
+| P03 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Node expandReferences(Node node)` | Recursively materializes reference-only nodes and traverses every semantic node field, property, item, and schema. | `expand(Node)`; `VerifiedReferenceMaterializationTest` directly, plus `BlueLanguageConformanceFixtureTest` through the suite runner. |
+| P04 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DemandExpansion expandDemand(Node node, List<String> segments, int index, LimitedExpansionContext context)` | Expands only one demanded semantic path while preserving budget, evidence, and four-way outcome state. | `expandLimited(...)`; no direct test call to that public method, but `BlueLanguageConformanceFixtureTest` reaches it through `runConformanceSuite()`. |
+| P05 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Node semanticChild(Node node, String segment)` | Projects a semantic field, scalar, schema, contract, or property into node form for demanded traversal. | `expandLimited(...)` through P04; indirect conformance-fixture coverage as described for P04. |
+| P06 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void setSemanticChild(Node node, String segment, Node child)` | Writes a materialized demanded child back to its correct semantic slot. | `expandLimited(...)` through P04; indirect conformance-fixture coverage as described for P04. |
+| P07 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private boolean semanticPathExists(Node root, String path)` | Tests Blue-view path presence while treating invalid or absent selections as `false`. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
+| P08 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private List<Node> expandReferences(List<Node> nodes)` | Recursively expands each node in a list. | `expand(Node)` through P03/P09; `VerifiedReferenceMaterializationTest` and the language conformance suite. |
+| P09 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Schema expandReferences(Schema schema)` | Materializes reference-only schemas and expands node-valued schema constraints. | `expand(Node)` through P03; the full expand route is covered by `BlueLanguageConformanceFixtureTest`. |
+
+#### Preprocessing, processor construction, admission, and configuration (P10–P34)
+
+| ID | Source | Exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| P10 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Node preprocess(Node node, NodeProvider preprocessingNodeProvider, Map<String, String> aliases)` | Normalizes textual `blue` directives through aliases or BlueIds and applies the default-blue preprocessor with captured dependencies. | `preprocess`, parse/resolve/canonicalize/snapshot/process routes; `PreprocessorTest`, `OverlayBuildersTest`. |
+| P11 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DocumentProcessor ensureDocumentProcessor()` | Enforces open state and lazily creates an owned default document processor. | `getDocumentProcessor`, registration, processing, initialization, and initialization checks; `BlueCacheLifecycleTest`, `DocumentProcessorInitializationTest`. |
+| P12 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DocumentProcessor beginDocumentProcessorMutation()` | Opens an exclusive invalidation window and returns the processor used for registry mutation. | `registerContractProcessor(...)`, `registerExternalContractType(...)`; `RegisteredContractProviderEvidenceTest`. |
+| P13 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void endDocumentProcessorMutation()` | Closes the exclusive invalidation window after processor registry mutation. | Same registration routes as P12; `RegisteredContractProviderEvidenceTest`. |
+| P14 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ProcessingOperation beginProcessingOperation()` | Admits a process/initialize call and captures one generation-consistent processor/provider/merger/configuration bundle. | `processDocument(...)`, `initializeDocument(...)`; `DocumentProcessorResolvedSnapshotParityTest`. |
+| P15 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void finishProcessingOperation(CacheGenerationStamp previousStamp)` | Restores thread-local generation state, decrements active work, and wakes invalidators or closers. | `processDocument(...)`, `initializeDocument(...)`; `BlueCacheLifecycleTest`. |
+| P16 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void beginDirectCacheOperation()` | Admits nested direct runtime work and blocks new work across cache invalidation. | Most resolve, snapshot, mapping, conformance, and lookup methods; `BlueCacheLifecycleTest`. |
+| P17 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void endDirectCacheOperation()` | Unwinds direct-operation depth and signals waiters when the outermost call finishes. | Paired with P16 across public runtime methods; `BlueCacheLifecycleTest`. |
+| P18 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void beginCacheInvalidation()` | Rejects invalidation reentry, prevents new work, and waits for admitted work to drain. | Cache clear, processor injection/registration, and configuration setters; `BlueCacheLifecycleTest`. |
+| P19 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void endCacheInvalidation()` | Releases invalidation ownership and wakes blocked operations. | Same public routes as P18; `BlueCacheLifecycleTest`. |
+| P20 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void awaitCacheInvalidation()` | Waits for another invalidation and rejects same-thread invalidation reentry. | Direct/processing admission, `getDocumentProcessor`, transient sequences, and `close`; `BlueCacheLifecycleTest`. |
+| P21 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void restoreProcessingCacheStamp(CacheGenerationStamp previousStamp)` | Restores or removes the prior processing generation stamp after wrapper processing. | `processDocument(...)`, `initializeDocument(...)` through P15; `ProcessingSnapshotProviderProvenanceTest`. |
+| P22 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private CacheGenerationStamp currentCacheStamp(Object expectedOwnerToken)` | Returns a current stamp or an intentionally invalid stamp after runtime/processor ownership changes. | Snapshot-manager direct operations; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| P23 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private boolean isCurrentCacheStampLocked(CacheGenerationStamp stamp)` | Checks owner token, generation, and open state while the lifecycle lock is held. | Processing snapshot lookup, remember, and publication; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| P24 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private boolean isCurrentCacheStamp(CacheGenerationStamp stamp)` | Provides a synchronized wrapper around the locked generation check. | Snapshot-manager state reuse/publication; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| P25 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DocumentProcessor createDefaultDocumentProcessor()` | Builds the owned processor with captured conformance engine, snapshot manager, matching service, and runtime configuration. | Constructors and lazy processor creation; `DocumentProcessorBoundaryTest`, `DocumentProcessorInitializationTest`. |
+| P26 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ConformanceEngine processorConformanceEngine(NodeProvider snapshotNodeProvider, MergingProcessor snapshotMergingProcessor)` | Creates and tracks a processor-managed conformance engine sharing the runtime reference cache. | Default/refresh processor construction; `RegisteredContractProviderEvidenceTest`. |
+| P27 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DocumentProcessingResult rememberPublishedProcessingSnapshot(ProcessingOperation operation, DocumentProcessingResult result)` | Selects an authoritative snapshot already published during successful processing and remembers it under the result document’s structural key without performing new semantic resolution. | Node overloads of `processDocument` and `initializeDocument`; `DocumentProcessorResolvedSnapshotParityTest`. |
+| P28 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot publishedProcessingSnapshot(Node document, CacheGenerationStamp stamp)` | Looks up a structurally exact pinned or derived snapshot only while the processing generation remains current. | P27 after successful processing or initialization; `ResolvedSnapshotSelectionCacheTest`. |
+| P29 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot cachedProcessingSnapshotFor(Node document, ProcessingMetricsSink metrics, CacheGenerationStamp stamp)` | Looks up a recent processing snapshot and records hit, miss, and latency metrics. | Snapshot-manager `fromDocument*`; `ResolvedSnapshotSelectionCacheTest`. |
+| P30 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private FrozenNode.ResolvedStructuralKey selectedStructuralKey(Node document)` | Best-effort freezes a resolved document into a structural cache key. | Recent processing snapshot lookup/remember paths; `ResolvedSnapshotSelectionCacheTest`. |
+| P31 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot recentProcessingSnapshot(FrozenNode.ResolvedStructuralKey selectedKey, CacheGenerationStamp stamp)` | Returns a recent snapshot only when its runtime generation is still current. | Snapshot-manager `fromDocument*`; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| P32 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void rememberProcessingSnapshot(Node document, ResolvedSnapshot snapshot, CacheGenerationStamp stamp)` | Publishes a complete selected-document snapshot to the bounded recent cache with mutation metrics. | `processDocument(...)`, `initializeDocument(...)` through P27; `ResolvedSnapshotSelectionCacheTest`. |
+| P33 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DocumentProcessor refreshDocumentProcessorConformanceEngine()` | Rebuilds generation-bound processor infrastructure around the previous registry, resolver, and metrics. | Provider, merger, alias, and limit configuration changes; `BlueCacheLifecycleTest`. |
+| P34 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ConfigurationRefresh refreshRuntimeConfiguration(Runnable mutation, boolean replaceBorrowedProcessor)` | Serializes configuration mutation, rotates generation, clears reloadable caches, and optionally refreshes the processor. | `setGlobalLimits`, alias/provider/merger setters; `BlueCacheLifecycleTest`. |
+
+#### Processing snapshots, patching, preservation, and provider composition (P35–P53)
+
+| ID | Source | Exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| P35 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot resolveProcessingSnapshot(Node node, ProcessingOperation operation)` | Resolves through a one-shot transient reference cache and publishes only under the admitted generation. | Node `processDocument`/`initializeDocument` through P27; `ProcessingSnapshotProviderProvenanceTest`. |
+| P36 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot resolveProcessingSnapshot(Node node, ResolvedReferenceCache resolutionCache, NodeProvider preprocessingNodeProvider, Map<String, String> aliases, NodeProvider snapshotNodeProvider, MergingProcessor snapshotMergingProcessor, Limits limits)` | Preprocesses, resolves, derives canonical overlay, freezes the resolved graph, and returns a complete snapshot using captured dependencies. | Processing snapshot manager and P35; `DocumentProcessorResolvedSnapshotParityTest`. |
+| P37 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot resolveProcessingSnapshot(Node node, ResolvedReferenceCache resolutionCache, NodeProvider preprocessingNodeProvider, Map<String, String> aliases, NodeProvider snapshotNodeProvider, MergingProcessor snapshotMergingProcessor, Limits limits, Collection<String> preservedPaths)` | Creates a deferred snapshot by resolving outside preserved paths and restoring their exact source subtrees. | `resolveToSnapshotPreservingPaths` and snapshot-manager preserving routes; `DeferredSnapshotCacheIsolationTest`, `ProcessingSnapshotManagerPreservationTest`. |
+| P38 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot applyProcessingCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch, NodeProvider snapshotNodeProvider, MergingProcessor snapshotMergingProcessor, Limits limits, ResolvedReferenceCache resolutionCache)` | Applies a canonical patch with captured processing dependencies and transient evidence. | Snapshot-manager `applyPatch`; `ProcessingSnapshotProviderPatchTest`. |
+| P39 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot applyCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch, Function<FrozenNode, ResolvedSnapshot> snapshotResolver)` | Patches and re-resolves canonical content, dropping a semantically redundant non-array override when safe. | Public `applyCanonicalPatch` and P38; `LimitedCanonicalPatchTest`, `ProcessingSnapshotProviderPatchTest`. |
+| P40 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot snapshotFromVerifiedCanonical(FrozenNode canonicalRoot)` | Reuses only verified cached content or resolves with the shared verified-reference cache before publication. | `loadSnapshot(...)`, public snapshot patching; `RootReferenceSnapshotTest`, `LimitedCanonicalPatchTest`. |
+| P41 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot snapshotFromCanonical(FrozenNode canonicalRoot, NodeProvider snapshotNodeProvider)` | Resolves a canonical root with a supplied provider and shared merger/cache. | **Dormant legacy chain:** no current production caller or indirect test route. |
+| P42 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot snapshotFromCanonical(FrozenNode canonicalRoot, NodeProvider snapshotNodeProvider, MergingProcessor snapshotMergingProcessor, Limits limits, ResolvedReferenceCache resolutionCache)` | Resolves canonical content with captured processing dependencies into an unpublished snapshot. | P38 through canonical patching; `ProcessingSnapshotProviderPatchTest`. |
+| P43 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource, Node resolved, FrozenNode authoritativeCanonicalRoot)` | Convenience overload that derives and publishes a snapshot from resolved content. | **Dormant legacy chain:** called only by dormant P41. |
+| P44 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource, Node resolved, FrozenNode authoritativeCanonicalRoot, boolean publish)` | Convenience overload selecting publication while using the shared reference cache. | **Dormant legacy chain:** reachable only from P43. |
+| P45 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource, Node resolved, FrozenNode authoritativeCanonicalRoot, boolean publish, ResolvedReferenceCache resolutionCache)` | Derives an absent canonical root, freezes the resolved root, constructs a snapshot, and optionally caches it. | **Dormant legacy chain:** reachable only from P44. |
+| P46 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Set<String> processorContractPaths(Node root)` | Collects JSON pointers for every `contracts` subtree in a node graph. | **Dormant preservation chain:** no current production caller or indirect test route. |
+| P47 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void collectProcessorContractPaths(Node node, List<String> path, Set<String> paths)` | Recursively traverses properties, items, and contracts to build contract-subtree pointers. | **Dormant preservation chain:** called only by dormant P46. |
+| P48 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void restorePreservedPaths(Node resolved, Node source, Set<String> paths)` | Clones exact source subtrees back into a partially resolved document. | P37 via preserving snapshot APIs; `ProcessingSnapshotManagerPreservationTest`. |
+| P49 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private boolean canMinimizePatchedOverride(JsonPatch patch)` | Restricts redundant-override minimization to non-remove, non-root, non-array paths. | Public/snapshot-manager canonical patching through P39; `LimitedCanonicalPatchTest`. |
+| P50 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Set<String> canonicalPreservedPaths(Collection<String> preservedPaths)` | Normalizes requested paths into deduplicated canonical JSON pointers. | `resolvePreservingPaths` and P37; `MaskedResolutionTest`, `ProcessingSnapshotManagerPreservationTest`. |
+| P51 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private NodeProvider processorSnapshotNodeProvider()` | Builds processor snapshot provider precedence: bootstrap, runtime types, external registered types, then potential user BlueIds. | Processor construction/admission and transient sequences; `ProcessingSnapshotProviderProvenanceTest`. |
+| P52 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private NodeProvider registeredExtensionTypeProvider()` | Exposes cloned externally registered canonical types while excluding invalid and runtime-managed ids. | P51 after `registerExternalContractType`; `RegisteredContractProviderEvidenceTest`, `ExternalContractIntegrationTest`. |
+| P53 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Node validatedExternalTypeNode(String blueId, Node canonicalTypeNode)` | Clones explicit external type content and proves its calculated BlueId matches the declared id. | `registerExternalContractType`; `RegisteredContractProviderEvidenceTest`. |
+
+#### Snapshot caches, metrics, lifecycle, limits, and default merger (P54–P79)
+
+| ID | Source | Exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| P54 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot)` | Rejects shared publication of deferred snapshots, canonicalizes publishable identity, and serializes cache publication. | Snapshot creation/loading/patching; `DeferredSnapshotCacheIsolationTest`, `ResolvedSnapshotTest`. |
+| P55 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private CacheSnapshotPublication cacheSnapshotLocked(ResolvedSnapshot snapshot)` | Linearizes verified-reference publication and pinned-versus-derived selection, aliases, promotion, and metric capture. | P54 and P56; `BlueCacheLifecycleTest`, `ResolvedReferenceCacheContractTest`. |
+| P56 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot publishProcessingSnapshot(ResolvedSnapshot snapshot, ResolvedReferenceCache transientReferenceCache, CacheGenerationStamp stamp)` | Publishes complete processing snapshots only when runtime and transient-cache generations remain current. | Processing snapshot manager and P35; `DeferredSnapshotProvenancePropagationTest`, `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| P57 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void pinSnapshot(ResolvedSnapshot snapshot)` | Promotes a complete snapshot and verified evidence to non-evictable pinned caches while updating retained weights. | `cacheResolvedSnapshot(s)`; `BlueCacheLifecycleTest`, `RootReferenceSnapshotTest`. |
+| P58 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot publishableCacheSnapshot(ResolvedSnapshot snapshot)` | Makes a snapshot strict-canonical and strict-BlueId-validated without processor timing metrics. | P54, P55, and P57; `ResolvedSnapshotTest`. |
+| P59 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot publishableCacheSnapshot(ResolvedSnapshot snapshot, ProcessingMetricsSink metrics)` | Returns an already strict snapshot or canonicalizes and validates it while recording optional publication metrics. | P58 and P56; `ProcessingSnapshotProviderPatchTest`, `BlueCacheLifecycleTest`. |
+| P60 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void replacePinnedSnapshot(FrozenNode.ResolvedStructuralKey key, ResolvedSnapshot previous, ResolvedSnapshot replacement)` | Replaces a pinned snapshot, adjusts retained weight/watermark, and refreshes its verified BlueId index. | P55 and P57; `BlueCacheLifecycleTest`. |
+| P61 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot preferVerified(ResolvedSnapshot existing, ResolvedSnapshot candidate)` | Keeps an existing cache value unless only the candidate carries verified-reference provenance. | P55 and P57; `ResolvedReferenceCacheContractTest`. |
+| P62 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot cachedSnapshotByCanonical(FrozenNode.ResolvedStructuralKey key)` | Looks up pinned then LRU-derived snapshots by canonical structure and records cache metrics. | `loadSnapshot(Node)` and P40; `BlueCacheLifecycleTest`, `ResolvedSnapshotTest`. |
+| P63 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot cachedSnapshotByBlueId(String blueId)` | Looks up pinned then weak derived BlueId aliases, pruning collected aliases and recording metrics. | `loadSnapshot(String)`, `cachedResolvedSnapshot`; `BlueCacheLifecycleTest`, `RootReferenceSnapshotTest`. |
+| P64 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private CacheMutationMetrics putDerivedBlueIdAlias(ResolvedSnapshot snapshot)` | Stores a weak BlueId alias for a derived snapshot and captures mutation deltas. | P55; `BlueCacheLifecycleTest`. |
+| P65 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private <K, V> CacheMutationMetrics captureCacheMutation(String cacheName, WeightedLruCache<K, V> cache, long evictionsBefore, long oversizedBefore)` | Captures eviction/rejection deltas and resulting cache gauges after a weighted-LRU mutation. | P32, P55, and P64; `BlueCacheLifecycleTest`. |
+| P66 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private CacheGaugeSnapshot captureCacheGauges()` | Snapshots weights, watermarks, entries, and pinned/derived counts across all runtime cache regions. | Cache clear/configuration/pinning/close; `BlueCacheLifecycleTest`, `ProcessorOwnedCacheLifecycleTest`. |
+| P67 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private <K, V> BlueCacheStats.Region cacheRegion(WeightedLruCache<K, V> cache, boolean pinned)` | Adapts one weighted cache’s counters into a public cache-statistics region. | `cacheStats`; `BlueCacheLifecycleTest`. |
+| P68 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private static long approximateSnapshotWeightBytes(ResolvedSnapshot snapshot)` | Estimates retained snapshot memory from both frozen roots plus identity overhead. | Constructor cache weighers and pinned-cache mutation; `BlueCacheLifecycleTest`. |
+| P69 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private static long saturatedAdd(long left, long right)` | Adds retained-weight values without `long` overflow. | Cache weighting, clearing, and close; `BlueCacheLifecycleTest`. |
+| P70 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private long clearReloadableRuntimeCaches()` | Advances generation and clears derived, recent, transient, and structural state while retaining pinned authority. | Configuration changes, processor injection, external type registration; `BlueCacheLifecycleTest`, `RegisteredContractProviderEvidenceTest`. |
+| P71 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private long clearAllRuntimeCaches()` | Releases pinned and all reloadable snapshot/reference/interner state and reports estimated released weight. | `clearResolvedSnapshotCache`, `close`; `BlueCacheLifecycleTest`. |
+| P72 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private static void closeProcessor(DocumentProcessor processor)` | Null-safely closes a displaced owned processor. | Configuration replacement and `close`; `BlueCacheLifecycleTest`, `ProcessorOwnedCacheLifecycleTest`. |
+| P73 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ProcessingMetricsSink metricsSink()` | Returns active processor metrics or the retained lifecycle sink after processor removal. | Cache lookup/publication, configuration, clear, and close; `BlueCacheLifecycleTest`. |
+| P74 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void ensureOpen()` | Rejects new runtime work after close or during external close while allowing already admitted internal work. | Nearly all runtime/mutation methods; `BlueCacheLifecycleTest`. |
+| P75 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private static Throwable combineFailure(Throwable first, Throwable next)` | Accumulates close failures with suppressed exceptions while avoiding self-suppression. | `close`; `BlueCacheLifecycleTest`. |
+| P76 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private static void rethrowCloseFailure(Throwable failure)` | Rethrows runtime/error close failures unchanged and wraps checked failures. | `close`; `BlueCacheLifecycleTest`. |
+| P77 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private ResolvedSnapshot cacheProcessingSnapshot(ResolvedSnapshot snapshot)` | Legacy one-line alias to shared snapshot caching. | **Dormant alias:** no current production caller or indirect test route. |
+| P78 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Limits combineWithGlobalLimits(Limits methodLimits)` | Returns method limits, global limits, or their composite conjunction. | `resolve`, `resolveToSnapshot`, `extend`, and processing resolution; `MaskedResolutionTest`. |
+| P79 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private MergingProcessor createDefaultNodeProcessor()` | Builds the ordered core merge pipeline for values, types, lists, dictionaries, schemas, and basic-type checks. | Constructors when no custom merger is supplied; `MergerIntegrationTest`, `ResolvedInstanceSchemaValidationTest`. |
+
+### Nested and anonymous implementation declarations
+
+#### Anonymous budgeted provider in `resolveLimited` (N01–N02)
+
+| ID | Source | Owner and exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| N01 | [Blue.java](../src/main/java/blue/language/Blue.java) | anonymous `NodeProvider`: `@Override public List<Node> fetchByBlueId(String blueId)` | Adapts four-way provider results to the legacy list/null/exception contract expected by `Merger`. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
+| N02 | [Blue.java](../src/main/java/blue/language/Blue.java) | anonymous `NodeProvider`: `@Override public NodeProviderResult fetchResultByBlueId(String blueId)` | Charges the distinct-reference budget, queries the real provider, and records outcome and outstanding ids. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
+
+#### `BlueProcessingSnapshotManager` (N03–N20)
+
+| ID | Source | Owner and exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| N03 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `private BlueProcessingSnapshotManager(Object ownerToken, NodeProvider preprocessingNodeProvider, NodeProvider snapshotNodeProvider, MergingProcessor snapshotMergingProcessor, Map<String, String> aliases, Limits limits, ResolvedReferenceCache sequenceReferenceCache, CacheGenerationStamp fixedStamp)` | Captures a generation-consistent processing environment and optional sequence cache/stamp. | Processor construction and transient sequences under `processDocument`/`initializeDocument`; `DocumentProcessorSnapshotTransactionTest`. |
+| N04 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `private CacheGenerationStamp operationStamp()` | Selects fixed, active-wrapper, or direct-call generation state and invalidates it across owner changes. | All generation-sensitive snapshot-manager routes; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| N05 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `private ProcessingMetricsSink processingMetrics()` | Returns active processor metrics only while this manager still owns the current generation. | `fromDocument*`; `ResolvedSnapshotSelectionCacheTest`. |
+| N06 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ResolvedSnapshot fromDocument(Node document)` | Reuses a recent snapshot or resolves with transient evidence and generation-safely publishes one-shot results. | `processDocument`/`initializeDocument`; `DocumentProcessorResolvedSnapshotParityTest`. |
+| N07 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ResolvedSnapshot fromDocumentTransient(Node document)` | Reuses a recent snapshot or resolves transiently without publishing a new result to shared caches. | Processor previews/planning under public processing; `ProcessorPreviewOwnershipTest`. |
+| N08 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ResolvedSnapshot fromDocumentPreservingPaths(Node document, Collection<String> preservedPaths)` | Creates a deferred snapshot that preserves requested authored subtrees. | Processing with preserved executable-body paths; `ProcessingSnapshotManagerPreservationTest`. |
+| N09 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ResolvedSnapshot fromDocumentTransientPreservingPaths(Node document, Collection<String> preservedPaths)` | Selects transient full resolution for no paths or preserving resolution otherwise. | Processor transient processing; `ProcessingSnapshotManagerPreservationTest`. |
+| N10 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public FrozenNode materializeVerifiedExactReference(FrozenNode reference)` | Fetches, canonicalizes, BlueId-verifies, and caches exact provider content for a reference-only node. | Provider/type/contract evidence under public processing; `RegisteredContractProviderEvidenceTest`. |
+| N11 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ProcessingSnapshotManager transientSequence()` | Creates a generation-fixed manager backed by a child transient reference cache. | Transactional processing; `DocumentProcessorSnapshotTransactionTest`. |
+| N12 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ProcessingSnapshotManager forkTransientSequence()` | Forks independent transient evidence or starts a sequence when none exists. | Preview/branch processing; `ProcessorPreviewOwnershipTest`. |
+| N13 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public void retainTransientState(FrozenNode canonicalRoot, FrozenNode resolvedRoot)` | Prunes sequence reference state to evidence reachable from the supplied roots. | Transaction compaction; `DocumentProcessorSnapshotTransactionTest`. |
+| N14 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public void releaseTransientState()` | Closes the sequence reference cache when present. | Transaction cleanup; `DocumentProcessorSnapshotTransactionTest`. |
+| N15 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public boolean isTransientStateCurrent()` | Verifies both runtime generation and transient-cache generation currency. | Guards transient reuse/publication; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| N16 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public boolean supportsIncrementalValueResolution()` | Reports whether the captured merger enables incremental value resolution. | Processor capability negotiation; `DocumentProcessorCapabilityTest`. |
+| N17 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public boolean supportsIncrementalValueResolution(IncrementalValueResolutionRequest request)` | Performs request-specific incremental-resolution capability negotiation. | Processor capability negotiation; `DocumentProcessorCapabilityTest`. |
+| N18 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ConformanceEngine transientConformanceEngine(ConformanceEngine conformanceEngine)` | Builds a transient conformance view sharing sequence evidence and captured provider/merger state. | Transient planning/execution; `RegisteredContractProviderEvidenceTest`. |
+| N19 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch)` | Applies and re-resolves a canonical patch with sequence or one-shot transient evidence. | Processor patch execution; `ProcessingSnapshotProviderPatchTest`. |
+| N20 | [Blue.java](../src/main/java/blue/language/Blue.java) | `BlueProcessingSnapshotManager`: `@Override public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot)` | Generation-safely publishes a processor snapshot and promotes reachable sequence evidence. | Processor commit/publication; `DeferredSnapshotProvenancePropagationTest`. |
+
+#### Cache publication, metric, generation, and operation holders (N21–N31)
+
+| ID | Source | Owner and exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| N21 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheSnapshotPublication`: `private CacheSnapshotPublication(ResolvedSnapshot result, ProcessingMetricsSink metrics, CacheMutationMetrics derivedMutation, CacheMutationMetrics aliasMutation, CacheGaugeSnapshot gauges)` | Bundles the selected cache result and metrics to emit after releasing the lifecycle lock. | Snapshot publication via `resolveToSnapshot`, processing, and pinning; `BlueCacheLifecycleTest`. |
+| N22 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheSnapshotPublication`: `private void emit()` | Emits mutation deltas and optional full cache gauges outside the publication lock. | Same routes as N21; `BlueCacheLifecycleTest`. |
+| N23 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheMutationMetrics`: `private CacheMutationMetrics(String cacheName, long evictionDelta, long oversizedDelta, long currentWeight, long highWaterWeight, int entries)` | Stores one cache mutation’s deltas and resulting gauges. | Cache/recent-snapshot mutation; `BlueCacheLifecycleTest`. |
+| N24 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheMutationMetrics`: `private void emit(ProcessingMetricsSink metrics)` | Adds nonzero eviction/rejection counters and updates weight and entry gauges. | Cache publication and recent-snapshot remember; `BlueCacheLifecycleTest`. |
+| N25 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheGaugeSnapshot`: `private CacheGaugeSnapshot(List<CacheGauge> gauges)` | Captures a deferred set of per-region cache gauges. | Cache clear/configuration/pinning/close; `BlueCacheLifecycleTest`. |
+| N26 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheGaugeSnapshot`: `private void emit(ProcessingMetricsSink metrics)` | Emits weight, watermark, entries, and optional pinned/derived counts for each region. | Same routes as N25; `ProcessorOwnedCacheLifecycleTest`. |
+| N27 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheGauge`: `private CacheGauge(String cacheName, long currentWeight, long highWaterWeight, int entries, int pinnedEntries, int derivedEntries)` | Holds one cache region’s gauge values; negative optional counts mean “do not emit.” | Constructed during cache-gauge capture; `BlueCacheLifecycleTest`. |
+| N28 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheGenerationStamp`: `private CacheGenerationStamp(Object ownerToken, long generation)` | Pairs processor ownership identity with cache generation for stale-work rejection. | Processing admission and transient sequences; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| N29 | [Blue.java](../src/main/java/blue/language/Blue.java) | `CacheGenerationStamp`: `private static CacheGenerationStamp invalid(Object ownerToken)` | Creates a deliberately non-current generation marker while retaining expected owner identity. | Snapshot-manager generation checks; `SelectedProcessingStateCacheIsolationFailFirstTest`. |
+| N30 | [Blue.java](../src/main/java/blue/language/Blue.java) | `ProcessingOperation`: `private ProcessingOperation(DocumentProcessor processor, CacheGenerationStamp stamp, NodeProvider preprocessingNodeProvider, NodeProvider snapshotNodeProvider, MergingProcessor snapshotMergingProcessor, Map<String, String> aliases, Limits limits)` | Stores the exact dependencies admitted for one public process or initialize call. | `processDocument`/`initializeDocument`; `DocumentProcessorResolvedSnapshotParityTest`. |
+| N31 | [Blue.java](../src/main/java/blue/language/Blue.java) | `ConfigurationRefresh`: `private ConfigurationRefresh(DocumentProcessor processorToClose, ProcessingMetricsSink metrics, CacheGaugeSnapshot gauges)` | Returns displaced owned processor and deferred metric state from an atomic configuration refresh. | Provider/merger/alias/limit setters; `BlueCacheLifecycleTest`. |
+
+#### Limited-operation state and path limits (N32–N50)
+
+| ID | Source | Owner and exact declaration | Purpose | Public owner and representative coverage |
+|---|---|---|---|---|
+| N32 | [Blue.java](../src/main/java/blue/language/Blue.java) | `LimitedExpansionContext`: `private LimitedExpansionContext(int maximum)` | Initializes unique-reference expansion budget and provider-diagnostic state. | `expandLimited(...)`; no direct test call, but `BlueLanguageConformanceFixtureTest` reaches it through the suite runner. |
+| N33 | [Blue.java](../src/main/java/blue/language/Blue.java) | `LimitedExpansionContext`: `private boolean tryAcquire(String blueId)` | Charges only the first expansion of each BlueId and records an outstanding id when capped. | `expandLimited(...)` through P04; indirect language-conformance coverage as described for N32. |
+| N34 | [Blue.java](../src/main/java/blue/language/Blue.java) | `ReferenceBudget`: `private ReferenceBudget(int maximum)` | Initializes distinct provider-request budget and outcome state for limited resolution. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
+| N35 | [Blue.java](../src/main/java/blue/language/Blue.java) | `ReferenceBudget`: `private boolean tryAcquire(String blueId)` | Allows repeated known ids but rejects and records new ids beyond the maximum. | `resolveLimited(...)` through N02; `BlueLimitedOperationTest`. |
+| N36 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `private SemanticDemandLimits(List<List<String>> demands)` | Initializes path-aware merge/extension limits for demanded segment lists. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
+| N37 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public boolean shouldExtendPathSegment(String pathSegment, Node currentNode)` | Allows extension only on the ancestor/descendant closure of a demanded path. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
+| N38 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public boolean shouldMergePathSegment(String pathSegment, Node currentNode)` | Allows merge only on the ancestor/descendant closure of a demanded path. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
+| N39 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public void enterPathSegment(String pathSegment, Node currentNode)` | Pushes a nonempty traversal segment while recording balanced entry state. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
+| N40 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public void exitPathSegment()` | Pops the most recent entered segment and safely ignores excess exits. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
+| N41 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `private List<String> potentialPath(String segment)` | Builds a prospective traversal path without mutating current state. | N37/N38 under `resolveLimited`; `BlueLimitedOperationTest`. |
+| N42 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `private boolean isDemandedClosure(List<String> path)` | Tests whether a path is an ancestor or descendant of any demand. | N37/N38 under `resolveLimited`; `BlueLimitedOperationTest`. |
+| N43 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `private boolean isPrefix(List<String> prefix, List<String> value)` | Performs null-safe segment-wise path-prefix comparison. | N42 under `resolveLimited`; `BlueLimitedOperationTest`. |
+| N44 | [Blue.java](../src/main/java/blue/language/Blue.java) | `ReferenceExpansionLimitException`: `private ReferenceExpansionLimitException(String blueId)` | Signals budget exhaustion through `Merger` with a BlueId-specific diagnostic. | Thrown/caught inside `resolveLimited(...)`; `BlueLimitedOperationTest`. |
+| N45 | [Blue.java](../src/main/java/blue/language/Blue.java) | `DemandExpansion`: `private DemandExpansion(Node node, BlueOperationOutcome outcome, String reason)` | Stores an expansion step’s rebuilt root, semantic outcome, and diagnostic. | `expandLimited(...)` through P04; indirect language-conformance coverage. |
+| N46 | [Blue.java](../src/main/java/blue/language/Blue.java) | `DemandExpansion`: `private static DemandExpansion established(Node node)` | Creates a complete-established expansion result. | `expandLimited(...)` base case; indirect language-conformance coverage. |
+| N47 | [Blue.java](../src/main/java/blue/language/Blue.java) | `DemandExpansion`: `private static DemandExpansion absent(Node node)` | Creates a definitive semantic-absence result with the standard reason. | `expandLimited(...)` missing-path cases; indirect language-conformance coverage. |
+| N48 | [Blue.java](../src/main/java/blue/language/Blue.java) | `DemandExpansion`: `private static DemandExpansion incomplete(Node node, String reason)` | Creates a missing-evidence or budget-incomplete result. | `expandLimited(...)` provider/limit cases; indirect language-conformance coverage. |
+| N49 | [Blue.java](../src/main/java/blue/language/Blue.java) | `DemandExpansion`: `private static DemandExpansion invalid(Node node, String reason)` | Creates an invalid-provider-evidence result. | `expandLimited(...)`; indirect language-conformance coverage. |
+| N50 | [Blue.java](../src/main/java/blue/language/Blue.java) | `DemandExpansion`: `private DemandExpansion withNode(Node replacement)` | Propagates a child outcome and reason while replacing it with the rebuilt ancestor root. | Recursive `expandLimited(...)` traversal; indirect language-conformance coverage. |
+
+Compiler-generated `access$...` and `lambda$...` bytecode methods are
+intentionally excluded. Treat this appendix as an implementation map; the
+compiler and generated API reports remain authoritative for exhaustive
+inventories.

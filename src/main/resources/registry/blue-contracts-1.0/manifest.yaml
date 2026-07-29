@@ -2,7 +2,7 @@ registry: blue-contracts-runtime
 registryKind: runtime-type
 specificationVersion: '1.0'
 languageVersion: '1.0'
-fixturePackageIdentity: sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5
+fixturePackageIdentity: sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca
 entries:
 - key: Channel
   path: Channel.blue
@@ -36,8 +36,8 @@ entries:
   fixtureOnly: false
 - key: DocumentProcessingInitiated
   path: DocumentProcessingInitiated.blue
-  blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt
-  sha256: ada59c183cafbdfeb5430d4e89865fb3db945fa989aaf3aa347ed9b0910a4aa0
+  blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C
+  sha256: 90a68a2a869b0a234e06aa99747b6a3dff7f52ac34fdc119db00a3caded6eec9
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: DocumentProcessingTerminated
@@ -114,8 +114,8 @@ entries:
   fixtureOnly: false
 - key: ProcessingInitializedMarker
   path: ProcessingInitializedMarker.blue
-  blueId: 5qrHeD39ytiuWtKXStznJHTjDfgAtiPAr3jwHibvQKvR
-  sha256: 9fa075fffecd52497422f5b5d86da0aa7bcf86a30f0a2ed3a082d34f7c3dd11c
+  blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+  sha256: 0ff5a8d1bc06f5a6bc9a5c4cd1c340d05c83be39697f2e966a84a67a489b32c6
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: ProcessingTerminatedMarker
@@ -138,8 +138,8 @@ entries:
   fixtureOnly: false
 - key: ScriptedExternalChannel
   path: ScriptedExternalChannel.blue
-  blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
-  sha256: b8ba0d9c3208db453755e1863fda47f1c26d28bbeaa03c0d1fe3f39db0f9409c
+  blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+  sha256: 8246d62d77bc88ba45e97e70c9211e6c6377892a5e4fd170b4ae02e89c2306fc
   semanticDescriptionIdentityBearing: true
   fixtureOnly: true
 - key: ScriptedHandler
@@ -170,4 +170,4 @@ packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity and fixturePackageIdentity are null before hashing
-packageIdentity: sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366
+packageIdentity: sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8

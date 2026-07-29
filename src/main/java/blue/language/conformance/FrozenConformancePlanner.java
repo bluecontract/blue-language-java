@@ -1,5 +1,7 @@
 package blue.language.conformance;
 
+import blue.language.utils.Properties;
+
 import blue.language.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
@@ -22,6 +24,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Package-local planner that widens changed frozen nodes through declared type
+ * ancestry until the document conforms again.
+ *
+ * <p>Planning is immutable: it structurally replaces the affected path and its
+ * ancestors and records the corresponding canonical overlay changes.</p>
+ */
 final class FrozenConformancePlanner {
 
     private final NodeProvider nodeProvider;
@@ -121,16 +130,16 @@ final class FrozenConformancePlanner {
             }
             applyGeneralizationStep(canonical, step);
             switch (step.metadataField()) {
-                case "type":
+                case Properties.OBJECT_TYPE:
                     type = step.parentType();
                     break;
-                case "itemType":
+                case Properties.OBJECT_ITEM_TYPE:
                     itemType = step.parentType();
                     break;
-                case "keyType":
+                case Properties.OBJECT_KEY_TYPE:
                     keyType = step.parentType();
                     break;
-                case "valueType":
+                case Properties.OBJECT_VALUE_TYPE:
                     valueType = step.parentType();
                     break;
                 default:
@@ -183,35 +192,35 @@ final class FrozenConformancePlanner {
                                                       FrozenNode itemTypeNode,
                                                       FrozenNode keyTypeNode,
                                                       FrozenNode valueTypeNode) {
-        GeneralizationStep type = generalizationStep("type", typeNode);
+        GeneralizationStep type = generalizationStep(Properties.OBJECT_TYPE, typeNode);
         if (type != null) {
             return type;
         }
-        GeneralizationStep itemType = generalizationStep("itemType", itemTypeNode);
+        GeneralizationStep itemType = generalizationStep(Properties.OBJECT_ITEM_TYPE, itemTypeNode);
         if (itemType != null) {
             return itemType;
         }
-        GeneralizationStep keyType = generalizationStep("keyType", keyTypeNode);
+        GeneralizationStep keyType = generalizationStep(Properties.OBJECT_KEY_TYPE, keyTypeNode);
         if (keyType != null) {
             return keyType;
         }
-        return generalizationStep("valueType", valueTypeNode);
+        return generalizationStep(Properties.OBJECT_VALUE_TYPE, valueTypeNode);
     }
 
     private GeneralizationStep nextGeneralizationStep(FrozenNode node) {
-        GeneralizationStep type = generalizationStep("type", node.getType());
+        GeneralizationStep type = generalizationStep(Properties.OBJECT_TYPE, node.getType());
         if (type != null) {
             return type;
         }
-        GeneralizationStep itemType = generalizationStep("itemType", node.getItemType());
+        GeneralizationStep itemType = generalizationStep(Properties.OBJECT_ITEM_TYPE, node.getItemType());
         if (itemType != null) {
             return itemType;
         }
-        GeneralizationStep keyType = generalizationStep("keyType", node.getKeyType());
+        GeneralizationStep keyType = generalizationStep(Properties.OBJECT_KEY_TYPE, node.getKeyType());
         if (keyType != null) {
             return keyType;
         }
-        return generalizationStep("valueType", node.getValueType());
+        return generalizationStep(Properties.OBJECT_VALUE_TYPE, node.getValueType());
     }
 
     private GeneralizationStep generalizationStep(String metadataField, FrozenNode typeNode) {
@@ -222,16 +231,16 @@ final class FrozenConformancePlanner {
     private void applyGeneralizationStep(Node canonical, GeneralizationStep step) {
         Node parentType = new Node().blueId(typeReferenceBlueId(step.parentType()));
         switch (step.metadataField()) {
-            case "type":
+            case Properties.OBJECT_TYPE:
                 canonical.type(parentType);
                 return;
-            case "itemType":
+            case Properties.OBJECT_ITEM_TYPE:
                 canonical.itemType(parentType);
                 return;
-            case "keyType":
+            case Properties.OBJECT_KEY_TYPE:
                 canonical.keyType(parentType);
                 return;
-            case "valueType":
+            case Properties.OBJECT_VALUE_TYPE:
                 canonical.valueType(parentType);
                 return;
             default:
@@ -271,7 +280,7 @@ final class FrozenConformancePlanner {
     }
 
     private List<String> existingPathSegments(FrozenNode root, String pointer) {
-        if ("/".equals(pointer)) {
+        if (JsonPointer.ROOT.equals(pointer)) {
             return Collections.emptyList();
         }
         List<String> requested = JsonPointer.split(pointer);
@@ -314,7 +323,7 @@ final class FrozenConformancePlanner {
         if (root == null) {
             return null;
         }
-        if ("/".equals(pointer)) {
+        if (JsonPointer.ROOT.equals(pointer)) {
             return root;
         }
         FrozenNode current = root;
@@ -330,7 +339,7 @@ final class FrozenConformancePlanner {
     private FrozenNode replaceAt(FrozenNode root, String pointer, FrozenNode replacement) {
         Objects.requireNonNull(root, "root");
         Objects.requireNonNull(replacement, "replacement");
-        if ("/".equals(pointer)) {
+        if (JsonPointer.ROOT.equals(pointer)) {
             return replacement;
         }
         List<String> segments = JsonPointer.split(pointer);

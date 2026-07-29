@@ -3,6 +3,8 @@ package blue.language.provider;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
+import blue.language.utils.Properties;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.IOException;
@@ -16,21 +18,43 @@ import java.util.function.Function;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
+/**
+ * Eager provider built from files below one or more classpath directories.
+ *
+ * <p>{@code .blue} resources are parsed and preprocessed; other resources are
+ * stored as addressable Text content. Both exploded directories and JAR
+ * entries are supported.</p>
+ */
 public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
 
     private static final String BLUE_FILE_EXTENSION = ".blue";
+    /** Identity transformation for already-preprocessed bootstrap resources. */
     public static final Function<Node, Node> NO_PREPROCESSING = e -> e;
 
     private Map<String, Object> blueIdToContentMap = new HashMap<>();
     private Map<String, Boolean> blueIdToMultipleDocumentsMap = new HashMap<>();
     private Function<Node, Node> preprocessor;
 
+    /**
+     * Loads resources using a preprocessor configured with this provider's
+     * default Blue.
+     *
+     * @param classpathDirectories classpath directories to scan recursively
+     * @throws IOException when a directory or resource cannot be read
+     */
     public ClasspathBasedNodeProvider(String... classpathDirectories) throws IOException {
         Preprocessor defaultPreprocessor = new Preprocessor(this);
         this.preprocessor = defaultPreprocessor::preprocessWithDefaultBlue;
         load(classpathDirectories);
     }
 
+    /**
+     * Loads resources using an explicit preprocessing function.
+     *
+     * @param preprocessor preprocessing function applied to Blue documents
+     * @param classpathDirectories classpath directories to scan recursively
+     * @throws IOException when a directory or resource cannot be read
+     */
     public ClasspathBasedNodeProvider(Function<Node, Node> preprocessor, String... classpathDirectories) throws IOException {
         this.preprocessor = preprocessor;
         load(classpathDirectories);
@@ -112,7 +136,10 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
         if (parsedContent.content.isArray()) {
             for (int i = 0; i < parsedContent.content.size(); i++) {
                 JsonNode node = parsedContent.content.get(i);
-                addNodeToNameMap(node, parsedContent.blueId + "#" + i);
+                addNodeToNameMap(
+                        node,
+                        BlueIds.indexedCyclicMemberBlueId(
+                                parsedContent.blueId, i));
             }
         } else {
             addNodeToNameMap(parsedContent.content, parsedContent.blueId);
@@ -120,7 +147,7 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private void addNodeToNameMap(JsonNode node, String blueId) {
-        JsonNode nameNode = node.get("name");
+        JsonNode nameNode = node.get(Properties.OBJECT_NAME);
         if (nameNode != null && !nameNode.isNull()) {
             String name = nameNode.asText();
             addToNameMap(name, blueId);
@@ -147,6 +174,11 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
         return null;
     }
 
+    /**
+     * Returns a shallow snapshot of the provider's content index.
+     *
+     * @return mutable map copy keyed by BlueId
+     */
     public Map<String, Object> getBlueIdToContentMap() {
         return new HashMap<>(blueIdToContentMap);
     }

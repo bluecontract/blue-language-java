@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
@@ -63,7 +65,7 @@ final class ScopeExecutor {
         Set<String> processedEmbedded = new LinkedHashSet<>();
         ContractBundle bundle = null;
         ScopeRuntimeContext scopeContext = runtime.scope(normalizedScope);
-        if ("/".equals(normalizedScope)) {
+        if (JsonPointer.ROOT.equals(normalizedScope)) {
             runtime.setScopeEmbeddedDepth(normalizedScope, 0);
         }
         scopeContext.clearProcessedEmbeddedPaths();
@@ -165,10 +167,11 @@ final class ScopeExecutor {
         }
 
         runtime.chargeInitialization(normalizedScope);
-        String documentId;
+        FrozenNode initialDocument;
         try {
-            documentId = runtime.calculatePreInitializationScopeNodeBlueId(
-                    normalizedScope, owner.scopeIdentitySnapshotManager());
+            initialDocument =
+                    runtime.capturePreInitializationScopeDocument(
+                            normalizedScope);
         } catch (RuntimeException ex) {
             execution.abortRuntimeFailure(normalizedScope,
                     bundle,
@@ -178,13 +181,15 @@ final class ScopeExecutor {
                             "Exact scope identity calculation failed"));
             return;
         }
-        Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
+        Node lifecycleEvent =
+                ProcessorEngine.createLifecycleInitiatedEvent(
+                        initialDocument);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
         if (finalizeAfterInitialization && !execution.shouldStopScopeWork(normalizedScope)) {
             drainInternalEvents();
         }
         if (!execution.shouldStopScopeWork(normalizedScope)) {
-            addInitializationMarker(normalizedScope, documentId);
+            addInitializationMarker(normalizedScope, initialDocument);
         }
     }
 
@@ -477,10 +482,12 @@ final class ScopeExecutor {
             return bundle;
         }
         runtime.chargeInitialization(normalizedScope);
-        String documentId = runtime.calculatePreInitializationScopeNodeBlueId(
-                normalizedScope, owner.scopeIdentitySnapshotManager());
+        FrozenNode initialDocument =
+                runtime.capturePreInitializationScopeDocument(
+                        normalizedScope);
         Node lifecycleEvent =
-                ProcessorEngine.createLifecycleInitiatedEvent(documentId);
+                ProcessorEngine.createLifecycleInitiatedEvent(
+                        initialDocument);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, false);
         if (execution.shouldStopScopeWork(normalizedScope)) {
             return null;
@@ -489,7 +496,7 @@ final class ScopeExecutor {
         if (execution.shouldStopScopeWork(normalizedScope)) {
             return null;
         }
-        addInitializationMarker(normalizedScope, documentId);
+        addInitializationMarker(normalizedScope, initialDocument);
         return refreshBundle(normalizedScope);
     }
 
@@ -664,10 +671,18 @@ final class ScopeExecutor {
                 freezeDocumentUpdateReceivingChain(data);
         for (String cascadeScope : receivingChain) {
             java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
-            details.put("op", data.op().name().toLowerCase());
-            details.put("beforePresent", data.beforePresent());
-            details.put("afterPresent", data.afterPresent());
-            details.put("sourceScopePath", data.originScope());
+            details.put(
+                    ProcessingTraceConstants.FIELD_OPERATION,
+                    data.op().name().toLowerCase());
+            details.put(
+                    ProcessingTraceConstants.FIELD_BEFORE_PRESENT,
+                    data.beforePresent());
+            details.put(
+                    ProcessingTraceConstants.FIELD_AFTER_PRESENT,
+                    data.afterPresent());
+            details.put(
+                    ProcessingTraceConstants.FIELD_SOURCE_SCOPE_PATH,
+                    data.originScope());
             runtime.recordTrace(ProcessingTraceRecord.Kind.DOCUMENT_UPDATE,
                     cascadeScope,
                     null,
@@ -742,8 +757,7 @@ final class ScopeExecutor {
             String changedPath) {
         String embeddedPaths = ProcessorEngine.resolvePointer(
                 scopePath,
-                ProcessorPointerConstants.RELATIVE_EMBEDDED
-                        + "/paths");
+                ProcessorPointerConstants.RELATIVE_EMBEDDED_PATHS);
         String normalizedChange =
                 PointerUtils.normalizePointer(changedPath);
         return PointerUtils.descendantOrEqual(
@@ -761,7 +775,7 @@ final class ScopeExecutor {
             String normalized =
                     ProcessorEngine.normalizeScope(candidate);
             boolean isEndpoint = normalized.equals(origin)
-                    || "/".equals(normalized);
+                    || JsonPointer.ROOT.equals(normalized);
             if (!isEndpoint && !bundles.containsKey(normalized)) {
                 continue;
             }
@@ -912,13 +926,15 @@ final class ScopeExecutor {
         if (node == null || node.isReferenceOnly()) {
             return false;
         }
-        return "/".equals(
+        return JsonPointer.ROOT.equals(
                 ProcessorEngine.normalizeScope(scopePath))
                 || isObjectScope(node);
     }
 
-    private void addInitializationMarker(String scopePath, String documentId) {
-        FrozenNode marker = ProcessorMarkerFactory.initialized(documentId);
+    private void addInitializationMarker(String scopePath,
+                                         FrozenNode initialDocument) {
+        FrozenNode marker =
+                ProcessorMarkerFactory.initialized(initialDocument);
         String pointer = ProcessorEngine.resolvePointer(
                 scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
         /*
@@ -988,9 +1004,12 @@ final class ScopeExecutor {
                 runtime.chargeDrainEvent();
                 Map<String, Object> details =
                         new java.util.LinkedHashMap<>();
-                details.put("drainOwner",
-                        "invocation-event-fifo");
-                details.put("sourceScopePath",
+                details.put(
+                        ProcessingTraceConstants.FIELD_DRAIN_OWNER,
+                        ProcessingTraceConstants
+                                .DRAIN_OWNER_INVOCATION_EVENT_FIFO);
+                details.put(
+                        ProcessingTraceConstants.FIELD_SOURCE_SCOPE_PATH,
                         occurrence.source().scopePath());
                 runtime.recordTrace(
                         ProcessingTraceRecord.Kind.EVENT_DEQUEUED,
@@ -1047,7 +1066,7 @@ final class ScopeExecutor {
 
     private boolean rootIsCutOff() {
         ScopeRuntimeContext root =
-                runtime.existingScope("/");
+                runtime.existingScope(JsonPointer.ROOT);
         return root != null && root.isCutOff();
     }
 
@@ -1082,8 +1101,11 @@ final class ScopeExecutor {
                 runtime.chargeTriggeredDelivery();
                 Map<String, Object> details =
                         new java.util.LinkedHashMap<>();
-                details.put("mode", "triggered");
-                details.put("sourceScopePath",
+                details.put(
+                        ProcessingTraceConstants.FIELD_MODE,
+                        ProcessingTraceConstants.MODE_TRIGGERED);
+                details.put(
+                        ProcessingTraceConstants.FIELD_SOURCE_SCOPE_PATH,
                         sourcePath);
                 runtime.recordTrace(
                         ProcessingTraceRecord.Kind.EVENT_DELIVERED,
@@ -1120,10 +1142,10 @@ final class ScopeExecutor {
                         RuntimeBlueIds
                                 .EMBEDDED_EVENT_DELIVERY))
                 .properties(
-                        "sourcePath",
+                        ProcessorContractConstants.KEY_SOURCE_PATH,
                         new Node().value(sourcePath))
                 .properties(
-                        "event",
+                        ProcessorContractConstants.KEY_EVENT,
                         new Node().blueId(
                                 occurrence.eventBlueId()));
         ContractBundle currentBundle =
@@ -1153,10 +1175,15 @@ final class ScopeExecutor {
             runtime.chargeBridge(wrapper);
             Map<String, Object> details =
                     new java.util.LinkedHashMap<>();
-            details.put("mode", "embedded");
-            details.put("sourceScopePath",
+            details.put(
+                    ProcessingTraceConstants.FIELD_MODE,
+                    ProcessingTraceConstants.MODE_EMBEDDED);
+            details.put(
+                    ProcessingTraceConstants.FIELD_SOURCE_SCOPE_PATH,
                     occurrence.source().scopePath());
-            details.put("sourcePath", sourcePath);
+            details.put(
+                    ProcessingTraceConstants.FIELD_SOURCE_PATH,
+                    sourcePath);
             runtime.recordTrace(
                     ProcessingTraceRecord.Kind.EVENT_DELIVERED,
                     receivingPath,
@@ -1199,7 +1226,7 @@ final class ScopeExecutor {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         String targetPath = PointerUtils.assertValidRuntimePointer(patch.authoredPath());
 
-        if ("/".equals(targetPath)) {
+        if (JsonPointer.ROOT.equals(targetPath)) {
             throw new ProcessorEngine.BoundaryViolationException("Patch path '/' is forbidden");
         }
 
@@ -1207,7 +1234,7 @@ final class ScopeExecutor {
             throw new ProcessorEngine.BoundaryViolationException("Self-root mutation is forbidden at scope " + normalizedScope);
         }
 
-        if (!"/".equals(normalizedScope)) {
+        if (!JsonPointer.ROOT.equals(normalizedScope)) {
             if (!PointerUtils.strictlyInside(targetPath, normalizedScope)) {
                 throw new ProcessorEngine.BoundaryViolationException(
                         "Patch path " + targetPath + " is outside scope " + normalizedScope);
@@ -1284,7 +1311,7 @@ final class ScopeExecutor {
                 && targetSegments.subList(
                 0, contractsSegments.size()).equals(
                 contractsSegments)
-                && "type".equals(targetSegments.get(
+                && Properties.OBJECT_TYPE.equals(targetSegments.get(
                 targetSegments.size() - 1))) {
             String key =
                     targetSegments.get(contractsSegments.size());
@@ -1318,7 +1345,8 @@ final class ScopeExecutor {
             if (PointerUtils.descendantOrEqual(targetPath, reservedPointer)) {
                 if (ProcessorContractConstants.KEY_EMBEDDED.equals(key)) {
                     String embeddedPathsPointer = ProcessorEngine.resolvePointer(normalizedScope,
-                            ProcessorPointerConstants.RELATIVE_EMBEDDED + "/paths");
+                            ProcessorPointerConstants
+                                    .RELATIVE_EMBEDDED_PATHS);
                     if (PointerUtils.descendantOrEqual(targetPath, embeddedPathsPointer)) {
                         return;
                     }
@@ -1336,7 +1364,8 @@ final class ScopeExecutor {
         if ((patch.op() != JsonPatch.Op.ADD
                 && patch.op() != JsonPatch.Op.REPLACE)
                 || !targetPath.equals(ProcessorEngine.resolvePointer(
-                scopePath, "/type"))) {
+                scopePath,
+                ProcessorPointerConstants.RELATIVE_TYPE))) {
             return;
         }
         Node authoredContracts = patch.mutableValue() != null
@@ -1350,7 +1379,7 @@ final class ScopeExecutor {
                 ProcessorContractConstants.KEY_TERMINATED,
                 ProcessorContractConstants.KEY_CHECKPOINT,
                 ProcessorContractConstants.KEY_EMBEDDED,
-                "generalization")) {
+                ProcessorContractConstants.KEY_GENERALIZATION)) {
             boolean present = authoredContracts != null
                     && authoredContracts.getProperties() != null
                     && authoredContracts.getProperties().containsKey(
@@ -1367,8 +1396,11 @@ final class ScopeExecutor {
                                 .ProtectedProcessorStateMutation,
                         "Application type patch contributes protected "
                                 + "processor state at "
-                                + targetPath + "/contracts/"
-                                + JsonPointer.escape(protectedKey));
+                                + ProcessorEngine.resolvePointer(
+                                        targetPath,
+                                        ProcessorPointerConstants
+                                                .relativeContractsEntry(
+                                                        protectedKey)));
             }
         }
     }

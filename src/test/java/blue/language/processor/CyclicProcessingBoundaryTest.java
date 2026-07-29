@@ -17,10 +17,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 final class CyclicProcessingBoundaryTest {
 
     @Test
-    void exactMaterializationRetainsCyclicSetProofWithoutStandaloneHash() {
+    void shouldVerifyExactMaterializationRetainsCyclicSetProofWithoutStandaloneHash() {
+        // given
         CyclicFixture fixture = new CyclicFixture();
+
+        // when
+        FrozenNode materialized;
         try (Blue blue = new Blue(fixture.provider)) {
-            FrozenNode materialized =
+            materialized =
                     blue.getDocumentProcessor()
                             .snapshotManager()
                             .materializeVerifiedExactReference(
@@ -28,28 +32,33 @@ final class CyclicProcessingBoundaryTest {
                                             new Node().blueId(
                                                     fixture.memberBlueId)));
 
-            assertFalse(materialized.isReferenceOnly());
-            assertEquals(
-                    "member-a",
-                    materialized.toNode().getAsText("/label"));
-            assertFalse(
-                    fixture.memberBlueId.equals(
-                            materialized.blueId()),
-                    "a cyclic member must not claim an independently "
-                            + "calculated ordinary BlueId");
         }
+
+        // then
+        assertFalse(materialized.isReferenceOnly());
+        assertEquals(
+                "member-a",
+                materialized.toNode().getAsText("/label"));
+        assertFalse(
+                fixture.memberBlueId.equals(
+                        materialized.blueId()),
+                "a cyclic member must not claim an independently "
+                        + "calculated ordinary BlueId");
     }
 
     @Test
-    void ordinaryContentCannotCounterfeitCyclicMemberProof() {
+    void shouldVerifyOrdinaryContentCannotCounterfeitCyclicMemberProof() {
+        // given
         Node ordinary = new Node().value("ordinary");
         String ordinaryBlueId =
                 BlueIdCalculator.calculateBlueId(ordinary);
         BasicNodeProvider provider =
                 new BasicNodeProvider(ordinary);
+        // when
         VerifyingNodeProvider verifying =
                 new VerifyingNodeProvider(provider);
 
+        // then
         assertEquals(
                 blue.language.provider.NodeProviderOutcome
                         .INVALID_EVIDENCE,
@@ -59,7 +68,8 @@ final class CyclicProcessingBoundaryTest {
     }
 
     @Test
-    void snapshotEntryRejectsTopLevelCyclicMemberBeforeExecution() {
+    void shouldVerifySnapshotEntryRejectsTopLevelCyclicMemberBeforeExecution() {
+        // given
         CyclicFixture fixture = new CyclicFixture();
         try (Blue blue = new Blue(fixture.provider)) {
             Node member =
@@ -77,12 +87,14 @@ final class CyclicProcessingBoundaryTest {
                             FrozenNode.fromResolvedNode(member),
                             fixture.memberBlueId);
 
+            // when
             ProcessingDebugResult result =
                     blue.getDocumentProcessor()
                             .processDocumentWithTrace(
                                     snapshot,
                                     new Node().value("event"));
 
+            // then
             assertEquals(
                     ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                     result.processResult().status());

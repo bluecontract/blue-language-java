@@ -3,6 +3,7 @@ package blue.language.snapshot;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIds;
 import blue.language.utils.BlueNumbers;
+import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.SchemaToMapListOrValue;
 
@@ -14,20 +15,39 @@ import java.util.List;
 import java.util.Map;
 
 import static blue.language.utils.Properties.*;
+import static blue.language.utils.SchemaPropertyConstants.*;
 
+/**
+ * Projects a {@link FrozenNode} into the exact map/list/scalar input consumed
+ * by the BlueId algorithm.
+ *
+ * <p>The projection validates context-sensitive list controls, pure-reference
+ * shapes, scalar types, and canonical number rules without mutating the frozen
+ * graph.</p>
+ */
 public final class FrozenNodeToBlueIdInput {
 
     private FrozenNodeToBlueIdInput() {
     }
 
+    /**
+     * Returns the exact canonical identity input for one root node.
+     *
+     * @param node frozen root node to project
+     * @return canonical map, list, or scalar identity input
+     */
     public static Object get(FrozenNode node) {
         Context context = node != null && node.isListElementContext() ? Context.LIST_ELEMENT : Context.ROOT;
         int listIndex = node != null && node.isListElementContext() ? 0 : -1;
-        return get(node, "/", context, listIndex);
+        return get(node, JsonPointer.ROOT, context, listIndex);
     }
 
     static Object getListElement(FrozenNode node, int index) {
-        return get(node, "/" + index, Context.LIST_ELEMENT, index);
+        return get(
+                node,
+                JsonPointer.ROOT + index,
+                Context.LIST_ELEMENT,
+                index);
     }
 
     private enum Context {
@@ -268,22 +288,26 @@ public final class FrozenNodeToBlueIdInput {
         if (schema == null) {
             return;
         }
-        validateSchemaNode(schema.getRequired(), appendPath(path, "required"));
-        validateSchemaNode(schema.getMinLength(), appendPath(path, "minLength"));
-        validateSchemaNode(schema.getMaxLength(), appendPath(path, "maxLength"));
-        validateSchemaNode(schema.getMinimum(), appendPath(path, "minimum"));
-        validateSchemaNode(schema.getMaximum(), appendPath(path, "maximum"));
-        validateSchemaNode(schema.getExclusiveMinimum(), appendPath(path, "exclusiveMinimum"));
-        validateSchemaNode(schema.getExclusiveMaximum(), appendPath(path, "exclusiveMaximum"));
-        validateSchemaNode(schema.getMultipleOf(), appendPath(path, "multipleOf"));
-        validateSchemaNode(schema.getMinItems(), appendPath(path, "minItems"));
-        validateSchemaNode(schema.getMaxItems(), appendPath(path, "maxItems"));
-        validateSchemaNode(schema.getUniqueItems(), appendPath(path, "uniqueItems"));
-        validateSchemaNode(schema.getMinFields(), appendPath(path, "minFields"));
-        validateSchemaNode(schema.getMaxFields(), appendPath(path, "maxFields"));
+        validateSchemaNode(schema.getRequired(), appendPath(path, KEY_REQUIRED));
+        validateSchemaNode(schema.getMinLength(), appendPath(path, KEY_MIN_LENGTH));
+        validateSchemaNode(schema.getMaxLength(), appendPath(path, KEY_MAX_LENGTH));
+        validateSchemaNode(schema.getMinimum(), appendPath(path, KEY_MINIMUM));
+        validateSchemaNode(schema.getMaximum(), appendPath(path, KEY_MAXIMUM));
+        validateSchemaNode(
+                schema.getExclusiveMinimum(),
+                appendPath(path, KEY_EXCLUSIVE_MINIMUM));
+        validateSchemaNode(
+                schema.getExclusiveMaximum(),
+                appendPath(path, KEY_EXCLUSIVE_MAXIMUM));
+        validateSchemaNode(schema.getMultipleOf(), appendPath(path, KEY_MULTIPLE_OF));
+        validateSchemaNode(schema.getMinItems(), appendPath(path, KEY_MIN_ITEMS));
+        validateSchemaNode(schema.getMaxItems(), appendPath(path, KEY_MAX_ITEMS));
+        validateSchemaNode(schema.getUniqueItems(), appendPath(path, KEY_UNIQUE_ITEMS));
+        validateSchemaNode(schema.getMinFields(), appendPath(path, KEY_MIN_FIELDS));
+        validateSchemaNode(schema.getMaxFields(), appendPath(path, KEY_MAX_FIELDS));
         if (schema.getEnum() != null) {
             for (int i = 0; i < schema.getEnum().size(); i++) {
-                validateSchemaNode(schema.getEnum().get(i), appendPath(path, "enum", i));
+                validateSchemaNode(schema.getEnum().get(i), appendPath(path, KEY_ENUM, i));
             }
         }
     }
@@ -300,9 +324,8 @@ public final class FrozenNodeToBlueIdInput {
         }
         if (value instanceof BigInteger) {
             BigInteger bigIntValue = (BigInteger) value;
-            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-            if (bigIntValue.compareTo(lowerBound) < 0 || bigIntValue.compareTo(upperBound) > 0) {
+            if (bigIntValue.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                    || bigIntValue.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
                 return bigIntValue.toString();
             }
         }
@@ -326,11 +349,7 @@ public final class FrozenNodeToBlueIdInput {
     }
 
     private static String appendPath(String path, String segment) {
-        String prefix = path == null || path.isEmpty() ? "/" : path;
-        if ("/".equals(prefix)) {
-            return "/" + escapePathSegment(segment);
-        }
-        return prefix + "/" + escapePathSegment(segment);
+        return JsonPointer.append(path, segment);
     }
 
     private static String appendPath(String path, String segment, int index) {
@@ -338,13 +357,18 @@ public final class FrozenNodeToBlueIdInput {
     }
 
     private static boolean isTypePosition(String path) {
-        return path != null && (path.endsWith("/" + OBJECT_TYPE)
-                || path.endsWith("/" + OBJECT_ITEM_TYPE)
-                || path.endsWith("/" + OBJECT_KEY_TYPE)
-                || path.endsWith("/" + OBJECT_VALUE_TYPE));
-    }
-
-    private static String escapePathSegment(String segment) {
-        return segment.replace("~", "~0").replace("/", "~1");
+        return path != null
+                && (path.endsWith(JsonPointer.append(
+                JsonPointer.ROOT,
+                OBJECT_TYPE))
+                || path.endsWith(JsonPointer.append(
+                JsonPointer.ROOT,
+                OBJECT_ITEM_TYPE))
+                || path.endsWith(JsonPointer.append(
+                JsonPointer.ROOT,
+                OBJECT_KEY_TYPE))
+                || path.endsWith(JsonPointer.append(
+                JsonPointer.ROOT,
+                OBJECT_VALUE_TYPE)));
     }
 }

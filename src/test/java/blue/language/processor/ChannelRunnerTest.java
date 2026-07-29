@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 final class ChannelRunnerTest {
 
     @Test
-    void skipsDuplicateEventsUsingCheckpoint() {
+    void shouldSkipDuplicateEventsAndProcessNewEventsUsingCheckpoint() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
@@ -54,33 +55,42 @@ final class ChannelRunnerTest {
         ContractBundle.ChannelBinding channelBinding = bindings.get(0);
 
         Node event = blue.objectToNode(new TestEvent().eventId("evt-1").kind("original"));
+        Node secondEvent = blue.objectToNode(new TestEvent().eventId("evt-2").kind("original"));
 
+        // when
         runner.runExternalChannel("/", bundle, channelBinding, event);
         runner.persistPendingCheckpoints("/");
         bundle = refreshBundle(execution);
         channelBinding = bundle.channelBinding("testChannel");
-
         Node counterNode = execution.runtime().document().getProperties().get("counter");
-        assertNotNull(counterNode);
-        assertEquals(BigInteger.ONE, counterNode.getValue());
-        assertNotNull(bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT));
+        BigInteger afterFirstEvent =
+                counterNode != null
+                        ? (BigInteger) counterNode.getValue()
+                        : null;
+        Object checkpointAfterFirstEvent =
+                bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
 
         runner.runExternalChannel("/", bundle, channelBinding, event);
         runner.persistPendingCheckpoints("/");
         bundle = refreshBundle(execution);
         channelBinding = bundle.channelBinding("testChannel");
         BigInteger afterDuplicate = (BigInteger) execution.runtime().document().getProperties().get("counter").getValue();
-        assertEquals(BigInteger.ONE, afterDuplicate);
 
-        Node secondEvent = blue.objectToNode(new TestEvent().eventId("evt-2").kind("original"));
         runner.runExternalChannel("/", bundle, channelBinding, secondEvent);
         runner.persistPendingCheckpoints("/");
         BigInteger afterNewEvent = (BigInteger) execution.runtime().document().getProperties().get("counter").getValue();
+
+        // then
+        assertNotNull(afterFirstEvent);
+        assertEquals(BigInteger.ONE, afterFirstEvent);
+        assertNotNull(checkpointAfterFirstEvent);
+        assertEquals(BigInteger.ONE, afterDuplicate);
         assertEquals(new BigInteger("2"), afterNewEvent);
     }
 
     @Test
-    void treatsDifferentContentWithSameEventIdAsNewByDefault() {
+    void shouldTreatDifferentContentWithSameEventIdAsNewByDefault() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
@@ -110,6 +120,7 @@ final class ChannelRunnerTest {
         Node sameIdDifferentPayload = blue.objectToNode(new TestEvent().eventId("evt-1").kind("mutated"));
         Node newId = blue.objectToNode(new TestEvent().eventId("evt-2").kind("mutated"));
 
+        // when
         runner.runExternalChannel("/", bundle, channelBinding, first);
         runner.persistPendingCheckpoints("/");
         bundle = refreshBundle(execution);
@@ -124,14 +135,16 @@ final class ChannelRunnerTest {
         channelBinding = bundle.channelBinding("testChannel");
         runner.runExternalChannel("/", bundle, channelBinding, newId);
         runner.persistPendingCheckpoints("/");
-
         Node counterNode = execution.runtime().document().getProperties().get("counter");
+
+        // then
         assertNotNull(counterNode);
         assertEquals(new BigInteger("3"), counterNode.getValue());
     }
 
     @Test
-    void skipsDuplicateEventsByCanonicalPayloadWhenNoEventIdPresent() {
+    void shouldSkipDuplicateEventsByCanonicalPayloadWhenNoEventIdPresent() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
@@ -161,6 +174,7 @@ final class ChannelRunnerTest {
         Node duplicate = blue.objectToNode(new TestEvent().kind("original"));
         Node different = blue.objectToNode(new TestEvent().kind("other"));
 
+        // when
         runner.runExternalChannel("/", bundle, channelBinding, first);
         runner.persistPendingCheckpoints("/");
         bundle = refreshBundle(execution);
@@ -171,14 +185,16 @@ final class ChannelRunnerTest {
         channelBinding = bundle.channelBinding("testChannel");
         runner.runExternalChannel("/", bundle, channelBinding, different);
         runner.persistPendingCheckpoints("/");
-
         Node counterNode = execution.runtime().document().getProperties().get("counter");
+
+        // then
         assertNotNull(counterNode);
         assertEquals(new BigInteger("2"), counterNode.getValue());
     }
 
     @Test
-    void deliversChannelizedEventToHandlersAndStoresOriginalEventInCheckpoint() {
+    void shouldDeliverChannelizedEventToHandlersAndStoreOriginalEventInCheckpoint() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
@@ -200,33 +216,34 @@ final class ChannelRunnerTest {
         ProcessorEngine.Execution execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
-
-        assertNull(bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT));
-
         CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
         ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
-
         ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
         Node event = blue.objectToNode(new TestEvent().eventId("evt-1").kind("original"));
+        Object checkpointBeforeEvent =
+                bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
 
+        // when
         runner.runExternalChannel("/", bundle, channelBinding, event);
         runner.persistPendingCheckpoints("/");
         bundle = refreshBundle(execution);
-
         Node flagNode = execution.runtime().document().getProperties().get("flag");
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        Node storedSubject = checkpoint.entry(channelBinding.key()).getSubject();
+
+        // then
+        assertNull(checkpointBeforeEvent);
         assertNotNull(flagNode);
         assertEquals(7, ((Number) flagNode.getValue()).intValue());
-
-        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
         assertNotNull(checkpoint);
-        Node storedSubject = checkpoint.entry(channelBinding.key()).getSubject();
         assertNotNull(storedSubject);
         assertEquals(BlueIdCalculator.calculateBlueId(event),
                 storedSubject.getBlueId());
     }
 
     @Test
-    void duplicateSignatureForChannelizedEventsUsesOriginalExternalEvent() {
+    void shouldVerifyDuplicateSignatureForChannelizedEventsUsesOriginalExternalEvent() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
@@ -254,12 +271,14 @@ final class ChannelRunnerTest {
         Node first = blue.objectToNode(new TestEvent().kind("first"));
         Node second = blue.objectToNode(new TestEvent().kind("second"));
 
+        // when
         runner.runExternalChannel("/", bundle, channelBinding, first);
         runner.persistPendingCheckpoints("/");
         runner.runExternalChannel("/", bundle, channelBinding, second);
         runner.persistPendingCheckpoints("/");
-
         Node counterNode = execution.runtime().document().getProperties().get("counter");
+
+        // then
         assertNotNull(counterNode);
         assertEquals(new BigInteger("2"), counterNode.getValue());
     }

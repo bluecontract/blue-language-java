@@ -53,6 +53,235 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 8
 }
 
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+def sourceDateEpochEnvironment = providers.environmentVariable('SOURCE_DATE_EPOCH')
+def effectiveSourceDateEpoch = sourceDateEpochEnvironment.map { value ->
+    def normalized = value.trim()
+    normalized.isEmpty() ? '0' : normalized
+}.orElse('0')
+def sourceDateEpochOrigin = sourceDateEpochEnvironment.map { value ->
+    value.trim().isEmpty() ? 'deterministic-fallback' : 'environment'
+}.orElse('deterministic-fallback')
+def parseSourceDateEpoch = { String value ->
+    try {
+        java.time.Instant.ofEpochSecond(Long.parseLong(value))
+    } catch (Exception exception) {
+        throw new GradleException(
+                'SOURCE_DATE_EPOCH must be a valid Unix epoch second',
+                exception)
+    }
+}
+def formatBuildTimestamp = { java.time.Instant instant ->
+    java.time.format.DateTimeFormatter
+            .ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
+            .withZone(java.time.ZoneOffset.UTC)
+            .format(instant)
+}
+def sha256IdentityOf = { File artifact ->
+    if (!artifact.isFile()) {
+        throw new GradleException(
+                "Required artifact does not exist: ${artifact}")
+    }
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    artifact.withInputStream { input ->
+        byte[] buffer = new byte[8192]
+        int read
+        while ((read = input.read(buffer)) != -1) {
+            digest.update(buffer, 0, read)
+        }
+    }
+    'sha256:' + digest.digest().collect {
+        String.format('%02x', ((byte) it) & 0xff)
+    }.join()
+}
+
+def releaseEvidenceSourceInputs = fileTree(rootDir) {
+    include '.cz.toml'
+    include 'CHANGELOG.md'
+    include 'LICENSE*'
+    include 'README*'
+    include 'build.gradle'
+    include 'settings.gradle*'
+    include 'gradle.properties'
+    include 'gradlew'
+    include 'gradlew.bat'
+    include 'gradle/**'
+    include 'api/**'
+    include '.github/**'
+    include 'docs/**'
+    include 'src/**'
+    include 'tools/**'
+
+    exclude '**/.DS_Store'
+    exclude '**/._*'
+    exclude '**/*.jfr'
+    exclude '**/*.hprof'
+    exclude '**/*.heapdump'
+    exclude '**/*.db'
+    exclude '**/*.sqlite*'
+    exclude '**/node_modules/**'
+    exclude '**/__pycache__/**'
+    exclude '**/*.pyc'
+    exclude '**/*.pyo'
+    exclude '**/.gradle/**'
+    exclude '**/build/**'
+    exclude '**/*.zip'
+    exclude '**/*.tar'
+    exclude '**/*.tar.gz'
+    exclude '**/*.tgz'
+}
+def releaseEvidenceSourceSnapshot = {
+    def sourceFiles = releaseEvidenceSourceInputs.files.findAll {
+        it.isFile()
+    }.sort { left, right ->
+        project.relativePath(left) <=> project.relativePath(right)
+    }
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    sourceFiles.each { sourceFile ->
+        def relativePath = project.relativePath(sourceFile)
+                .replace(File.separatorChar, '/' as char)
+        def record = relativePath + '\u0000' +
+                sha256IdentityOf(sourceFile) + '\n'
+        digest.update(record.getBytes(
+                java.nio.charset.StandardCharsets.UTF_8))
+    }
+    [
+            identity: 'sha256:' + digest.digest().collect {
+                String.format('%02x', ((byte) it) & 0xff)
+            }.join(),
+            fileCount: sourceFiles.size()
+    ]
+}
+def releaseEvidenceSourceCommit = providers.exec {
+    workingDir rootDir
+    commandLine 'git', 'rev-parse', '--verify', 'HEAD^{commit}'
+}.standardOutput.asText.map {
+    it.trim()
+}
+def cleanSourceInputEvidenceSchema =
+        'blue-language-java-clean-source-input/1.0'
+def cleanBuildEvidenceSchema =
+        'blue-language-java-clean-build/1.0'
+def cleanBuildEvidenceKind = 'successful-clean-build-marker'
+def cleanTaskPath = ':clean'
+def buildTaskPath = ':build'
+def cleanSourceInputEvidenceFile = layout.buildDirectory.file(
+        'reports/release-evidence/clean-source-input.json')
+def cleanBuildEvidenceFile = layout.buildDirectory.file(
+        'reports/release-evidence/clean-build.json')
+tasks.named('clean') {
+    doLast {
+        def sourceSnapshot = releaseEvidenceSourceSnapshot()
+        def evidence = [
+                schema             : cleanSourceInputEvidenceSchema,
+                cleanTask          : cleanTaskPath,
+                sourceCommit       : releaseEvidenceSourceCommit.get(),
+                sourceInputIdentity: sourceSnapshot.identity,
+                sourceFileCount    : sourceSnapshot.fileCount,
+                sourceDateEpoch    : effectiveSourceDateEpoch.get(),
+                excludedTasks      :
+                        new ArrayList<>(
+                                gradle.startParameter
+                                        .excludedTaskNames).sort(),
+                invocationTasks    :
+                        new ArrayList<>(gradle.startParameter.taskNames)
+        ]
+        def output = cleanSourceInputEvidenceFile.get().asFile
+        output.parentFile.mkdirs()
+        output.setText(
+                groovy.json.JsonOutput.prettyPrint(
+                        groovy.json.JsonOutput.toJson(evidence)) + '\n',
+                'UTF-8')
+    }
+}
+tasks.named('build') {
+    mustRunAfter tasks.named('clean')
+    doLast {
+        def output = cleanBuildEvidenceFile.get().asFile
+        delete(output)
+        def excludedTasks =
+                new ArrayList<>(
+                        gradle.startParameter
+                                .excludedTaskNames).sort()
+        if (!gradle.taskGraph.hasTask(tasks.named('clean').get())) {
+            return
+        }
+        if (!excludedTasks.isEmpty()) {
+            return
+        }
+
+        def cleanInput = cleanSourceInputEvidenceFile.get().asFile
+        if (!cleanInput.isFile()) {
+            return
+        }
+
+        try {
+            def cleanMarker = new groovy.json.JsonSlurper()
+                    .parse(cleanInput)
+            def sourceSnapshot = releaseEvidenceSourceSnapshot()
+            def sourceCommit = releaseEvidenceSourceCommit.get()
+            if (cleanMarker.schema
+                    != cleanSourceInputEvidenceSchema
+                    || cleanMarker.cleanTask != cleanTaskPath
+                    || cleanMarker.sourceCommit != sourceCommit
+                    || cleanMarker.sourceInputIdentity
+                    != sourceSnapshot.identity
+                    || cleanMarker.sourceFileCount
+                    != sourceSnapshot.fileCount
+                    || cleanMarker.sourceDateEpoch
+                    != effectiveSourceDateEpoch.get()
+                    || cleanMarker.excludedTasks != excludedTasks) {
+                return
+            }
+
+            def evidence = [
+                    schema             : cleanBuildEvidenceSchema,
+                    cleanTask          : cleanTaskPath,
+                    buildTask          : buildTaskPath,
+                    sourceCommit       : sourceCommit,
+                    sourceInputIdentity: sourceSnapshot.identity,
+                    sourceFileCount    : sourceSnapshot.fileCount,
+                    sourceDateEpoch    : effectiveSourceDateEpoch.get(),
+                    excludedTasks      : excludedTasks,
+                    invocationTasks    :
+                            new ArrayList<>(
+                                    gradle.startParameter.taskNames)
+            ]
+            output.parentFile.mkdirs()
+            output.setText(
+                    groovy.json.JsonOutput.prettyPrint(
+                            groovy.json.JsonOutput.toJson(evidence)) + '\n',
+                    'UTF-8')
+        } catch (Exception ignored) {
+            // Absence of completion evidence keeps the release gate red.
+        }
+    }
+}
+
+ext.genResourcesDir = file("$buildDir/generated-resources")
+tasks.register('generateBuildProperties') {
+    ext.buildPropertiesFile = file(
+            "$genResourcesDir/blue/language/build.properties")
+    inputs.property('buildVersion', project.version.toString())
+    inputs.property('sourceDateEpoch', effectiveSourceDateEpoch)
+    outputs.file(buildPropertiesFile)
+    doLast {
+        def buildTimestamp = formatBuildTimestamp(
+                parseSourceDateEpoch(effectiveSourceDateEpoch.get()))
+        buildPropertiesFile.parentFile.mkdirs()
+        buildPropertiesFile.setText("""\
+                |blue-language-java.build.version=$project.version
+                |blue-language-java.build.timestamp=${buildTimestamp}
+        """.stripMargin().trim(), 'UTF-8')
+    }
+}
+sourceSets.main.output.dir genResourcesDir, builtBy: tasks.named(
+        'generateBuildProperties')
+
 compileTestJava {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
@@ -80,13 +309,15 @@ dependencies {
 
 }
 
+def allTestResults = layout.buildDirectory.dir('test-results/test')
 test {
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(8)
     }
     useJUnitPlatform()
     reports {
-        junitXml.required = false
+        junitXml.required = true
+        junitXml.outputLocation = allTestResults
         html.required = true
     }
     testLogging {
@@ -235,13 +466,159 @@ tasks.register('verifyFinalApiBaseline', Exec) {
     }
 }
 
+def primaryJarTask = tasks.named('jar', Jar)
+def repeatabilityJarTask = tasks.register('jarRepeatabilityReplica', Jar) {
+    group = 'build'
+    description = 'Independently assembles the production JAR content for repeatability verification.'
+    archiveBaseName = 'blue-language-java'
+    archiveVersion = project.version
+    archiveClassifier = 'repeatability-replica'
+    destinationDirectory = layout.buildDirectory.dir('reproducibility')
+    from(sourceSets.main.output)
+    dependsOn tasks.named('classes')
+}
+def primarySourcesJarTask = tasks.named('sourcesJar', Jar)
+def repeatabilitySourcesJarTask = tasks.register(
+        'sourcesJarRepeatabilityReplica',
+        Jar) {
+    group = 'build'
+    description = 'Independently assembles the sources JAR content for repeatability verification.'
+    archiveBaseName = 'blue-language-java'
+    archiveVersion = project.version
+    archiveClassifier = 'sources-repeatability-replica'
+    destinationDirectory = layout.buildDirectory.dir('reproducibility')
+    from(sourceSets.main.allSource)
+}
+def jarRepeatabilityJson = layout.buildDirectory.file(
+        'reports/reproducibility/jar-repeatability.json')
+def sourceArchiveRepeatabilityJson = layout.buildDirectory.file(
+        'reports/reproducibility/source-archive-repeatability.json')
+tasks.register('verifyDeterministicJar') {
+    group = 'verification'
+    description = 'Assembles the production JAR twice and requires byte-for-byte identical output.'
+    dependsOn primaryJarTask
+    dependsOn repeatabilityJarTask
+    inputs.file(primaryJarTask.flatMap { it.archiveFile })
+    inputs.file(repeatabilityJarTask.flatMap { it.archiveFile })
+    inputs.property('buildVersion', project.version.toString())
+    inputs.property('sourceDateEpoch', effectiveSourceDateEpoch)
+    inputs.property('sourceDateEpochOrigin', sourceDateEpochOrigin)
+    outputs.file(jarRepeatabilityJson)
+
+    doLast {
+        def primaryTask = primaryJarTask.get()
+        def replicaTask = repeatabilityJarTask.get()
+        if (primaryTask.preserveFileTimestamps
+                || replicaTask.preserveFileTimestamps
+                || !primaryTask.reproducibleFileOrder
+                || !replicaTask.reproducibleFileOrder) {
+            throw new GradleException(
+                    'JAR tasks must disable file timestamps and use reproducible file order')
+        }
+
+        def archiveEvidence = { File archive ->
+            def names = []
+            def timestamps = []
+            String buildProperties = null
+            def zip = new java.util.zip.ZipFile(archive)
+            try {
+                def entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    def entry = entries.nextElement()
+                    names.add(entry.name)
+                    timestamps.add(entry.time)
+                    if (entry.name == 'blue/language/build.properties') {
+                        buildProperties = new String(
+                                zip.getInputStream(entry).bytes,
+                                java.nio.charset.StandardCharsets.UTF_8)
+                    }
+                }
+            } finally {
+                zip.close()
+            }
+            [
+                    entryNames     : names,
+                    entryCount     : names.size(),
+                    entryTimestamps: timestamps.toSet().sort(),
+                    buildProperties: buildProperties
+            ]
+        }
+
+        def primaryArtifact = primaryTask.archiveFile.get().asFile
+        def replicaArtifact = replicaTask.archiveFile.get().asFile
+        def primaryIdentity = sha256IdentityOf(primaryArtifact)
+        def replicaIdentity = sha256IdentityOf(replicaArtifact)
+        def primaryEvidence = archiveEvidence(primaryArtifact)
+        def replicaEvidence = archiveEvidence(replicaArtifact)
+        def expectedTimestamp = formatBuildTimestamp(
+                parseSourceDateEpoch(effectiveSourceDateEpoch.get()))
+        def expectedBuildProperties = """\
+                |blue-language-java.build.version=${project.version}
+                |blue-language-java.build.timestamp=${expectedTimestamp}
+        """.stripMargin().trim()
+
+        if (primaryEvidence.buildProperties == null
+                || primaryEvidence.buildProperties != expectedBuildProperties) {
+            throw new GradleException(
+                    'Production JAR build.properties is missing or does not match '
+                            + 'the effective SOURCE_DATE_EPOCH')
+        }
+        if (replicaEvidence.buildProperties != expectedBuildProperties) {
+            throw new GradleException(
+                    'Repeatability JAR build.properties does not match the production JAR')
+        }
+        if (primaryEvidence.entryNames != replicaEvidence.entryNames
+                || primaryIdentity != replicaIdentity) {
+            throw new GradleException(
+                    "Production JAR is not repeatable: ${primaryIdentity} != "
+                            + replicaIdentity)
+        }
+
+        def report = [
+                schema              : 'blue-language-java-jar-repeatability/1.0',
+                repeatable          : true,
+                archiveConfiguration: [
+                        preserveFileTimestamps: false,
+                        reproducibleFileOrder : true
+                ],
+                buildProperties     : [
+                        sourceDateEpoch      : effectiveSourceDateEpoch.get(),
+                        sourceDateEpochOrigin: sourceDateEpochOrigin.get(),
+                        timestamp            : expectedTimestamp
+                ],
+                primary             : [
+                        name                       : primaryArtifact.name,
+                        identity                   : primaryIdentity,
+                        entryCount                 : primaryEvidence.entryCount,
+                        entryTimestampsEpochMillis:
+                                primaryEvidence.entryTimestamps
+                ],
+                replica             : [
+                        name                       : replicaArtifact.name,
+                        identity                   : replicaIdentity,
+                        entryCount                 : replicaEvidence.entryCount,
+                        entryTimestampsEpochMillis:
+                                replicaEvidence.entryTimestamps
+                ]
+        ]
+        def output = jarRepeatabilityJson.get().asFile
+        output.parentFile.mkdirs()
+        output.setText(
+                groovy.json.JsonOutput.prettyPrint(
+                        groovy.json.JsonOutput.toJson(report)) + '\n',
+                'UTF-8')
+    }
+}
+
 def releaseConformanceJson = layout.buildDirectory.file(
         'reports/conformance/release-conformance.json')
 def releaseConformanceText = layout.buildDirectory.file(
         'reports/conformance/release-conformance.txt')
+def runtimeTraceEvidenceJson = layout.buildDirectory.file(
+        'reports/runtime-trace/runtime-work-session.json')
 tasks.register('releaseConformanceTest', JavaExec) {
     group = 'verification'
-    description = 'Runs all tests and the strict 125/125 Language plus 127/127 Contracts release gate.'
+    description = 'Runs all tests and the strict 128/128 Language plus 140/140 Contracts release gate.'
     dependsOn tasks.named('test')
     dependsOn tasks.named('verifyNoDeprecatedProductionApi')
     dependsOn tasks.named('verifyNoAmbiguousReverseApi')
@@ -257,8 +634,29 @@ tasks.register('releaseConformanceTest', JavaExec) {
     inputs.files(fileTree('src/test/resources/blue-contracts-1.0/fixtures'))
     inputs.files(fileTree('src/main/resources/registry'))
     inputs.file('src/main/resources/blue/language/processor/contracts-gas-1.0.yaml')
+    inputs.files(fileTree('src/main/resources/specifications'))
+    inputs.file(
+            'src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml')
     outputs.file(releaseConformanceJson)
     outputs.file(releaseConformanceText)
+}
+
+tasks.register('runtimeTraceEvidence', JavaExec) {
+    group = 'verification'
+    description = 'Executes and records the required ordered RuntimeWorkSession trace scenarios.'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'blue.language.processor.RuntimeTraceEvidenceCli'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    args runtimeTraceEvidenceJson.get().asFile.absolutePath
+    inputs.files(
+            'src/main/java/blue/language/processor/RuntimeWorkSession.java',
+            'src/main/java/blue/language/processor/GasMeter.java',
+            'src/main/java/blue/language/processor/GasTraceEntry.java',
+            'src/test/java/blue/language/processor/RuntimeTraceEvidenceCli.java')
+    outputs.file(runtimeTraceEvidenceJson)
 }
 
 def fragmentedProcessingTestResults = layout.buildDirectory.dir(
@@ -268,14 +666,44 @@ def fragmentedProcessingJson = layout.buildDirectory.file(
 def fragmentedProcessingJar = tasks.named('jar', Jar).flatMap {
     it.archiveFile
 }
+def fragmentedProcessingSourcesJar = tasks.named('sourcesJar', Jar).flatMap {
+    it.archiveFile
+}
+def fragmentedProcessingJavadocJar = tasks.named('javadocJar', Jar).flatMap {
+    it.archiveFile
+}
 def fragmentedProcessingSourceRelease = layout.buildDirectory.file(
         "release/blue-language-java-${project.version}-source-release.zip")
-def fragmentedProcessingSourceCommit = providers.exec {
+def fragmentedProcessingTestLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(8)
+}
+def representationEvidenceSources = files(
+        'src/test/java/blue/language/provider/ExactNodeGraphFragmentsTest.java',
+        'src/test/java/blue/language/processor/DeepGraphPhysicalLocalityIntegrationTest.java',
+        'src/test/java/blue/language/processor/FragmentedProcessingLocalityIntegrationTest.java',
+        'src/test/java/blue/language/processor/FragmentedProcessingFailureMatrixTest.java')
+def fragmentedProcessingSourceCommit = releaseEvidenceSourceCommit
+def fragmentedProcessingGitStatus = providers.exec {
     workingDir rootDir
-    commandLine 'git', 'rev-parse', '--verify', 'HEAD^{commit}'
+    commandLine 'git', 'status', '--porcelain', '--untracked-files=all'
 }.standardOutput.asText.map {
     it.trim()
 }
+def fragmentedProcessingCommitAutomationDiff = providers.exec {
+    workingDir rootDir
+    commandLine 'git', 'diff', 'HEAD', '--', '.cz.toml'
+}.standardOutput.asText.map {
+    it.trim()
+}
+def fragmentedProcessingApiBaselineDiff = providers.exec {
+    workingDir rootDir
+    commandLine 'git', 'diff', 'HEAD', '--',
+            'api/blue-language-java-1.0.json'
+}.standardOutput.asText.map {
+    it.trim()
+}
+def finalGenericKernelMarkdown = layout.buildDirectory.file(
+        'reports/fragmented-processing/final-generic-kernel.md')
 tasks.register('fragmentedProcessingTest', Test) {
     configureFocusedTest(delegate)
     description = 'Runs provider-fragment admission, physical-locality, and logical-delivery coverage.'
@@ -312,27 +740,52 @@ tasks.register('fragmentedProcessingTest', Test) {
 
 tasks.register('fragmentedProcessingReport') {
     group = 'verification'
-    description = 'Emits deterministic fragmented-processing verification evidence.'
+    description = 'Emits machine-readable release, test, API, artifact, and locality evidence.'
     dependsOn tasks.named('fragmentedProcessingTest')
     dependsOn tasks.named('releaseConformanceTest')
-    dependsOn tasks.named('jar')
+    dependsOn tasks.named('runtimeTraceEvidence')
+    dependsOn tasks.named('verifyFinalApiBaseline')
+    dependsOn tasks.named('verifyDeterministicJar')
+    dependsOn tasks.named('verifyDeterministicSourceArchives')
+    dependsOn tasks.named('sourcesJar')
+    dependsOn tasks.named('javadocJar')
+    dependsOn tasks.named('jmhClasses')
     dependsOn 'sourceReleaseArchive'
+    inputs.dir(allTestResults)
     inputs.dir(fragmentedProcessingTestResults)
     inputs.file(releaseConformanceJson)
+    inputs.file(runtimeTraceEvidenceJson)
     inputs.file(fragmentedProcessingJar)
+    inputs.file(fragmentedProcessingSourcesJar)
+    inputs.file(fragmentedProcessingJavadocJar)
     inputs.file(fragmentedProcessingSourceRelease)
+    inputs.file(finalApiBaseline)
+    inputs.file(finalApiReport)
+    inputs.file(jarRepeatabilityJson)
+    inputs.file(sourceArchiveRepeatabilityJson)
+    inputs.files(representationEvidenceSources)
+    inputs.files(releaseEvidenceSourceInputs)
+    inputs.file(cleanBuildEvidenceFile).optional()
     inputs.property('sourceCommit', fragmentedProcessingSourceCommit)
+    inputs.property('gitStatus', fragmentedProcessingGitStatus)
+    inputs.property(
+            'commitAutomationDiff',
+            fragmentedProcessingCommitAutomationDiff)
+    inputs.property(
+            'apiBaselineDiff',
+            fragmentedProcessingApiBaselineDiff)
+    inputs.property('gradleVersion', gradle.gradleVersion)
+    inputs.property('buildJavaVersion', System.getProperty('java.version'))
+    inputs.property('buildJavaVendor', System.getProperty('java.vendor'))
+    inputs.property('buildJvmVersion', System.getProperty('java.vm.version'))
+    inputs.property('testJavaRuntimeVersion',
+            fragmentedProcessingTestLauncher.map {
+                it.metadata.javaRuntimeVersion
+            })
     outputs.file(fragmentedProcessingJson)
+    outputs.file(finalGenericKernelMarkdown)
 
     doLast {
-        def xmlFiles = fileTree(fragmentedProcessingTestResults.get().asFile) {
-            include 'TEST-*.xml'
-        }.files.sort { left, right -> left.name <=> right.name }
-        if (xmlFiles.isEmpty()) {
-            throw new GradleException(
-                    'fragmentedProcessingTest produced no JUnit XML test suites')
-        }
-
         def documentBuilderFactory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
         documentBuilderFactory.setFeature(
                 'http://apache.org/xml/features/disallow-doctype-decl', true)
@@ -343,56 +796,130 @@ tasks.register('fragmentedProcessingReport') {
         documentBuilderFactory.setXIncludeAware(false)
         documentBuilderFactory.setExpandEntityReferences(false)
 
-        def focusedSuitesByName = new TreeMap<String, Map<String, Object>>()
-        xmlFiles.each { xmlFile ->
-            def suite = documentBuilderFactory.newDocumentBuilder().parse(xmlFile)
-                    .documentElement
-            def suiteName = suite.getAttribute('name')
-            if (suiteName == null || suiteName.trim().isEmpty()) {
-                suiteName = xmlFile.name
-            }
-            int tests = Integer.parseInt(suite.getAttribute('tests') ?: '0')
-            int failures = Integer.parseInt(suite.getAttribute('failures') ?: '0')
-            int errors = Integer.parseInt(suite.getAttribute('errors') ?: '0')
-            int skipped = Integer.parseInt(suite.getAttribute('skipped') ?: '0')
-            int failed = failures + errors
-            int passed = tests - failed - skipped
-            if (passed < 0) {
-                throw new GradleException(
-                        "Invalid JUnit counts in ${xmlFile}: tests=${tests}, "
-                                + "failed=${failed}, skipped=${skipped}")
-            }
-            def prior = focusedSuitesByName.get(suiteName)
-            if (prior == null) {
-                prior = [
-                        name   : suiteName,
-                        tests  : 0,
-                        passed : 0,
-                        failed : 0,
-                        skipped: 0
+        def parseJUnitEvidence = {
+            File resultDirectory, String sourceTask, boolean includeTestCases ->
+                def xmlFiles = fileTree(resultDirectory) {
+                    include 'TEST-*.xml'
+                }.files.sort { left, right ->
+                    left.name <=> right.name
+                }
+                if (xmlFiles.isEmpty()) {
+                    throw new GradleException(
+                            "${sourceTask} produced no JUnit XML test suites")
+                }
+
+                def suitesByName = new TreeMap<String, Map<String, Object>>()
+                xmlFiles.each { xmlFile ->
+                    def suite = documentBuilderFactory.newDocumentBuilder()
+                            .parse(xmlFile).documentElement
+                    def suiteName = suite.getAttribute('name')
+                    if (suiteName == null || suiteName.trim().isEmpty()) {
+                        suiteName = xmlFile.name
+                    }
+                    int tests = Integer.parseInt(
+                            suite.getAttribute('tests') ?: '0')
+                    int failures = Integer.parseInt(
+                            suite.getAttribute('failures') ?: '0')
+                    int errors = Integer.parseInt(
+                            suite.getAttribute('errors') ?: '0')
+                    int skipped = Integer.parseInt(
+                            suite.getAttribute('skipped') ?: '0')
+                    int failed = failures + errors
+                    int passed = tests - failed - skipped
+                    if (passed < 0) {
+                        throw new GradleException(
+                                "Invalid JUnit counts in ${xmlFile}: tests=${tests}, "
+                                        + "failed=${failed}, skipped=${skipped}")
+                    }
+                    def prior = suitesByName.get(suiteName)
+                    if (prior == null) {
+                        prior = [
+                                name   : suiteName,
+                                tests  : 0,
+                                passed : 0,
+                                failed : 0,
+                                skipped: 0
+                        ]
+                        if (includeTestCases) {
+                            prior.testCases = []
+                        }
+                        suitesByName.put(suiteName, prior)
+                    }
+                    prior.tests += tests
+                    prior.passed += passed
+                    prior.failed += failed
+                    prior.skipped += skipped
+
+                    if (includeTestCases) {
+                        def testCases = suite.getElementsByTagName('testcase')
+                        for (int index = 0; index < testCases.length; index++) {
+                            def testCase = testCases.item(index)
+                            def status = testCase
+                                    .getElementsByTagName('failure').length > 0
+                                    || testCase.getElementsByTagName(
+                                    'error').length > 0
+                                    ? 'FAILED'
+                                    : testCase.getElementsByTagName(
+                                    'skipped').length > 0
+                                    ? 'SKIPPED'
+                                    : 'PASSED'
+                            prior.testCases.add([
+                                    className: testCase.getAttribute('classname'),
+                                    name     : testCase.getAttribute('name'),
+                                    status   : status
+                            ])
+                        }
+                    }
+                }
+
+                def suites = suitesByName.values().findAll {
+                    it.tests > 0
+                }.collect {
+                    def copy = new LinkedHashMap<String, Object>(it)
+                    if (includeTestCases) {
+                        copy.testCases = copy.testCases.sort { left, right ->
+                            def classOrder = left.className <=> right.className
+                            classOrder != 0
+                                    ? classOrder
+                                    : left.name <=> right.name
+                        }
+                    }
+                    copy
+                }
+                if (suites.isEmpty()) {
+                    throw new GradleException(
+                            "${sourceTask} executed no tests")
+                }
+                int tests = suites.sum { it.tests } as int
+                int passed = suites.sum { it.passed } as int
+                int failed = suites.sum { it.failed } as int
+                int skipped = suites.sum { it.skipped } as int
+                [
+                        sourceTask    : sourceTask,
+                        suiteCount   : suites.size(),
+                        tests        : tests,
+                        passed       : passed,
+                        failed       : failed,
+                        skipped      : skipped,
+                        conformant   : failed == 0 && skipped == 0,
+                        executedSuites: suites.collect { it.name },
+                        suites       : suites
                 ]
-                focusedSuitesByName.put(suiteName, prior)
-            }
-            prior.tests += tests
-            prior.passed += passed
-            prior.failed += failed
-            prior.skipped += skipped
         }
 
-        def focusedSuites = focusedSuitesByName.values().findAll {
-            it.tests > 0
-        }.collect { new LinkedHashMap<String, Object>(it) }
-        if (focusedSuites.isEmpty()) {
-            throw new GradleException(
-                    'fragmentedProcessingTest executed no focused tests')
-        }
-        int focusedTests = focusedSuites.sum { it.tests } as int
-        int focusedPassed = focusedSuites.sum { it.passed } as int
-        int focusedFailed = focusedSuites.sum { it.failed } as int
-        int focusedSkipped = focusedSuites.sum { it.skipped } as int
+        def allTests = parseJUnitEvidence(
+                allTestResults.get().asFile,
+                ':test',
+                false)
+        def focusedVerification = parseJUnitEvidence(
+                fragmentedProcessingTestResults.get().asFile,
+                ':fragmentedProcessingTest',
+                true)
 
         def releaseReport = new groovy.json.JsonSlurper()
                 .parse(releaseConformanceJson.get().asFile)
+        def runtimeTraceReport = new groovy.json.JsonSlurper()
+                .parse(runtimeTraceEvidenceJson.get().asFile)
         def requiredPackageKeys = [
                 'languageRegistry',
                 'languageFixtures',
@@ -411,103 +938,746 @@ tasks.register('fragmentedProcessingReport') {
             throw new GradleException(
                     'release-conformance.json is missing exact release/package identities')
         }
+        def runtimeScenariosById =
+                runtimeTraceReport.scenarios instanceof List
+                        ? runtimeTraceReport.scenarios.collectEntries {
+                            [(it.id): it]
+                        }
+                        : [:]
+        def longTraceScenario =
+                runtimeScenariosById['long-trace-success']
+        def gasExhaustionScenario =
+                runtimeScenariosById[
+                        'known-entry-gas-exhaustion']
+        def boundedVisitsScenario =
+                runtimeScenariosById['bounded-member-visits']
+        def catalogOverflowScenario =
+                runtimeScenariosById['counter-catalog-overflow']
+        def multipleNamespacesScenario =
+                runtimeScenariosById[
+                        'combined-multiple-namespaces']
+        def namespaceOrderScenario =
+                runtimeScenariosById[
+                        'deterministic-namespace-order']
+        def deterministicFailureScenario =
+                runtimeScenariosById[
+                        'deterministic-failure-retention']
+        def transientSuspensionScenario =
+                runtimeScenariosById[
+                        'transient-suspension-discard']
+        def requiredRuntimeScenarioIds = [
+                'long-trace-success',
+                'known-entry-gas-exhaustion',
+                'bounded-member-visits',
+                'counter-catalog-overflow',
+                'combined-multiple-namespaces',
+                'deterministic-namespace-order',
+                'deterministic-failure-retention',
+                'transient-suspension-discard'
+        ]
+        boolean runtimeTraceConformant =
+                runtimeTraceReport.schemaVersion
+                == 'blue-language-java-runtime-trace-evidence/1.0'
+                        && runtimeTraceReport.sourceTask
+                        == ':runtimeTraceEvidence'
+                        && runtimeTraceReport.summary instanceof Map
+                        && runtimeTraceReport.summary.executed == 8
+                        && runtimeTraceReport.summary.passed == 8
+                        && runtimeTraceReport.summary.failed == 0
+                        && runtimeTraceReport.summary.skipped == 0
+                        && runtimeTraceReport.summary
+                        .maximumObservedOrderedEntries == 4096
+                        && runtimeTraceReport.summary
+                        .minimumRequiredOrderedEntries == 516
+                        && runtimeTraceReport.summary.conformant == true
+                        && runtimeTraceReport.failures instanceof List
+                        && runtimeTraceReport.failures.isEmpty()
+                        && runtimeScenariosById.size() == 8
+                        && runtimeScenariosById.keySet()
+                        .containsAll(requiredRuntimeScenarioIds)
+                        && runtimeScenariosById.values().every {
+                            it.status == 'PASS'
+                        }
+                        && longTraceScenario
+                        .observedOrderedEntries >= 516
+                        && longTraceScenario
+                        .exactOrderVerified == true
+                        && gasExhaustionScenario
+                        .observedOrderedEntries == 515
+                        && gasExhaustionScenario
+                        .rejectedChargeAbsent == true
+                        && gasExhaustionScenario
+                        .laterWorkPrevented == true
+                        && gasExhaustionScenario
+                        .exactPrefixVerified == true
+                        && boundedVisitsScenario
+                        .boundedMemberVisits == 1024
+                        && boundedVisitsScenario
+                        .observedOrderedEntries == 4096
+                        && catalogOverflowScenario
+                        .rejectedBeforeAdmission == true
+                        && multipleNamespacesScenario
+                        .combinedEntriesExceed256 == true
+                        && namespaceOrderScenario
+                        .canonicalOrderVerified == true
+                        && deterministicFailureScenario
+                        .exactPrefixRetained == true
+                        && transientSuspensionScenario
+                        .portableTraceDiscarded == true
+                        && transientSuspensionScenario
+                        .committedEntries == 0
 
-        def releaseSuiteNames = releaseReport.fixtures.collect {
-            it.suite.toString()
-        }.toSet().sort().collect {
-            "release-conformance:${it}".toString()
+        def releaseSuitesByName = new TreeMap<String, Map<String, Object>>()
+        releaseReport.fixtures.each { fixture ->
+            def suiteName = fixture.suite.toString()
+            def suite = releaseSuitesByName.get(suiteName)
+            if (suite == null) {
+                suite = [
+                        name   : suiteName,
+                        tests  : 0,
+                        passed : 0,
+                        failed : 0,
+                        skipped: 0
+                ]
+                releaseSuitesByName.put(suiteName, suite)
+            }
+            suite.tests++
+            if (fixture.status == 'PASS') {
+                suite.passed++
+            } else if (fixture.status == 'SKIP'
+                    || fixture.status == 'SKIPPED') {
+                suite.skipped++
+            } else {
+                suite.failed++
+            }
+        }
+        def releaseSuites = releaseSuitesByName.values().collect {
+            new LinkedHashMap<String, Object>(it)
         }
         int releaseTests = releaseReport.summary.total as int
         int releasePassed = releaseReport.summary.passed as int
         int releaseFailed = releaseReport.summary.failed as int
         int releaseSkipped = releaseReport.summary.skipped as int
-        boolean focusedConformant = focusedFailed == 0 && focusedSkipped == 0
         boolean releaseConformant = releaseReport.summary.conformant == true
-        boolean conformant = focusedConformant && releaseConformant
+        if (releaseSuites.sum { it.tests } != releaseTests
+                || releaseSuites.sum { it.passed } != releasePassed
+                || releaseSuites.sum { it.failed } != releaseFailed
+                || releaseSuites.sum { it.skipped } != releaseSkipped) {
+            throw new GradleException(
+                    'Release fixture records do not match their summary counts')
+        }
 
         def sourceCommit = fragmentedProcessingSourceCommit.get()
         if (!(sourceCommit ==~ /(?:[0-9a-f]{40}|[0-9a-f]{64})/)) {
             throw new GradleException(
                     "Git returned an invalid source commit identity: '${sourceCommit}'")
         }
-        def sha256Identity = { artifact ->
-            if (!artifact.isFile()) {
-                throw new GradleException(
-                        "Required report artifact does not exist: ${artifact}")
+
+        def binaryApiValues = new LinkedHashMap<String, String>()
+        finalApiReport.get().asFile.readLines('UTF-8').each { line ->
+            int separator = line.indexOf('=')
+            if (separator > 0) {
+                binaryApiValues.put(
+                        line.substring(0, separator),
+                        line.substring(separator + 1))
             }
-            def digest = java.security.MessageDigest.getInstance('SHA-256')
-            artifact.withInputStream { input ->
-                byte[] buffer = new byte[8192]
-                int read
-                while ((read = input.read(buffer)) != -1) {
-                    digest.update(buffer, 0, read)
-                }
-            }
-            'sha256:' + digest.digest().collect {
-                String.format('%02x', ((byte) it) & 0xff)
-            }.join()
         }
+        def requiredBinaryApiKeys = [
+                'baseline',
+                'current',
+                'baselineApiClasses',
+                'currentApiClasses',
+                'currentClassMajorVersions',
+                'incompatibleChanges',
+                'additiveChanges'
+        ]
+        if (!requiredBinaryApiKeys.every {
+            binaryApiValues.containsKey(it)
+        }) {
+            throw new GradleException(
+                    'Binary API report is missing required result fields')
+        }
+        int incompatibleChanges = Integer.parseInt(
+                binaryApiValues.incompatibleChanges)
+        int additiveChanges = Integer.parseInt(
+                binaryApiValues.additiveChanges)
+        def additiveApiChanges = []
+        boolean readingAdditiveChanges = false
+        finalApiReport.get().asFile.readLines('UTF-8').each { line ->
+            if (line == 'Additive changes:') {
+                readingAdditiveChanges = true
+            } else if (readingAdditiveChanges
+                    && !line.trim().isEmpty()) {
+                additiveApiChanges.add(line.trim())
+            }
+        }
+        if (additiveApiChanges.size() != additiveChanges) {
+            throw new GradleException(
+                    'Binary API report additive-change details do not match '
+                            + 'their summary count')
+        }
+        def classMajorVersions = binaryApiValues.currentClassMajorVersions
+                .split(',')
+                .findAll { !it.isEmpty() }
+                .collect { Integer.parseInt(it) }
+        boolean binaryApiCompatible = incompatibleChanges == 0
+                && !classMajorVersions.isEmpty()
+                && classMajorVersions.every { it <= 52 }
+
+        def repeatabilityReport = new groovy.json.JsonSlurper()
+                .parse(jarRepeatabilityJson.get().asFile)
+        boolean jarRepeatable = repeatabilityReport.repeatable == true
+                && repeatabilityReport.primary.identity
+                == repeatabilityReport.replica.identity
+        def sourceArchiveRepeatabilityReport =
+                new groovy.json.JsonSlurper()
+                        .parse(sourceArchiveRepeatabilityJson.get().asFile)
+        boolean sourceArchivesRepeatable =
+                sourceArchiveRepeatabilityReport.repeatable == true
+                        && sourceArchiveRepeatabilityReport
+                        .sourcesJar.byteIdentical == true
+                        && sourceArchiveRepeatabilityReport
+                        .sourcesJar.entriesIdentical == true
+                        && sourceArchiveRepeatabilityReport
+                        .sourceReleaseZip.byteIdentical == true
+                        && sourceArchiveRepeatabilityReport
+                        .sourceReleaseZip.entriesIdentical == true
+
         def jarArtifact = fragmentedProcessingJar.get().asFile
+        def sourcesJarArtifact = fragmentedProcessingSourcesJar.get().asFile
+        def javadocJarArtifact = fragmentedProcessingJavadocJar.get().asFile
         def sourceReleaseArtifact = fragmentedProcessingSourceRelease.get().asFile
+        def replicaJarArtifact = repeatabilityJarTask.get()
+                .archiveFile.get().asFile
+        def jarIdentity = sha256IdentityOf(jarArtifact)
+        if (jarIdentity != repeatabilityReport.primary.identity) {
+            throw new GradleException(
+                    'Reported production JAR identity does not match repeatability evidence')
+        }
+
+        def diagnosticEvidenceFor = { String suiteSuffix ->
+            def suites = focusedVerification.suites.findAll {
+                it.name == suiteSuffix || it.name.endsWith('.' + suiteSuffix)
+            }
+            [
+                    executed   : !suites.isEmpty(),
+                    suiteNames : suites.collect { it.name },
+                    tests      : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.tests } as int,
+                    passed     : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.passed } as int,
+                    failed     : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.failed } as int,
+                    skipped    : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.skipped } as int,
+                    testCases  : suites.collectMany { it.testCases }
+            ]
+        }
+        def allTestSuiteEvidenceFor = { String suiteSuffix ->
+            def suites = allTests.suites.findAll {
+                it.name == suiteSuffix
+                        || it.name.endsWith('.' + suiteSuffix)
+            }
+            [
+                    evidenceKind: 'passing-junit-suite',
+                    executed    : !suites.isEmpty(),
+                    suiteNames  : suites.collect { it.name },
+                    tests       : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.tests } as int,
+                    passed      : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.passed } as int,
+                    failed      : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.failed } as int,
+                    skipped     : suites.isEmpty()
+                            ? 0
+                            : suites.sum { it.skipped } as int
+            ]
+        }
+        def representationMatrixEvidence = diagnosticEvidenceFor(
+                'FragmentedProcessingLocalityIntegrationTest')
+        def deepLocalityEvidence = diagnosticEvidenceFor(
+                'DeepGraphPhysicalLocalityIntegrationTest')
+        def exactFragmentEvidence = diagnosticEvidenceFor(
+                'ExactNodeGraphFragmentsTest')
+        def failureMatrixEvidence = diagnosticEvidenceFor(
+                'FragmentedProcessingFailureMatrixTest')
+        def requiredDiagnosticEvidence = [
+                representationMatrixEvidence,
+                deepLocalityEvidence,
+                exactFragmentEvidence,
+                failureMatrixEvidence
+        ]
+        def diagnosticCaseEvidenceFor = {
+            Map<String, Object> suiteEvidence, String testMethod ->
+                def matches = suiteEvidence.testCases.findAll {
+                    it.name == testMethod
+                            || it.name == testMethod + '()'
+                            || it.name.startsWith(testMethod + '(')
+                }
+                [
+                        testMethod: testMethod,
+                        executed  : !matches.isEmpty(),
+                        passed    : !matches.isEmpty()
+                                && matches.every {
+                                    it.status == 'PASSED'
+                                },
+                        records   : matches
+                ]
+        }
+        def representationMatrixCase = diagnosticCaseEvidenceFor(
+                representationMatrixEvidence,
+                'shouldVerifyExactRootAndEventFragmentsHaveIdenticalSemanticsAcrossMatrix')
+        def deepLocalityCase = diagnosticCaseEvidenceFor(
+                deepLocalityEvidence,
+                'shouldVerifyDeepGraphHasSemanticParityAndPhysicalLocalityAcrossRepresentationsAndProviders')
+        def exactFragmentCase = diagnosticCaseEvidenceFor(
+                exactFragmentEvidence,
+                'shouldSplitOnlySelectedCutsAndTheirAncestorSpine')
+        def providerFailureCase = diagnosticCaseEvidenceFor(
+                failureMatrixEvidence,
+                'shouldVerifySelectedBodyUnavailableSuspendsWithoutPortableGasAndRetryMatches')
+        def requiredDiagnosticCases = [
+                representationMatrixCase,
+                deepLocalityCase,
+                exactFragmentCase,
+                providerFailureCase
+        ]
+        boolean diagnosticEvidenceConformant = requiredDiagnosticEvidence.every {
+            it.executed && it.tests > 0 && it.failed == 0 && it.skipped == 0
+        } && requiredDiagnosticCases.every {
+            it.executed && it.passed
+        }
+        def runtimeWorkSessionEvidence =
+                allTestSuiteEvidenceFor(
+                        'RuntimeWorkSessionTest')
+        def runtimePhaseIntegrationEvidence =
+                allTestSuiteEvidenceFor(
+                        'RuntimeWorkSessionProcessorPhaseIntegrationTest')
+        def semanticIdentityEvidence =
+                allTestSuiteEvidenceFor(
+                        'SemanticOutputBoundaryTest')
+        def gasExhaustionEvidence =
+                allTestSuiteEvidenceFor(
+                        'DocumentProcessorHandlerFailureTest')
+        def subtypeCatalogEvidence =
+                allTestSuiteEvidenceFor(
+                        'ExternalChannelDependencyContextTest')
+        def subtypePredicateEvidence =
+                allTestSuiteEvidenceFor(
+                        'SubtypeAssignablePredicateTest')
+        def bodySourceEvidence =
+                allTestSuiteEvidenceFor(
+                        'ContractContributionResolverTest')
+        def selectedBodyEvidence =
+                allTestSuiteEvidenceFor(
+                        'SelectedExecutableBodyCapabilityTest')
+        def hostedOutputAdmissionEvidence =
+                allTestSuiteEvidenceFor(
+                        'ExternalChannelHostedOutputAdmissionTest')
+        def cyclicBoundaryEvidence =
+                allTestSuiteEvidenceFor(
+                        'CyclicProcessingBoundaryTest')
+        def hostedRuntimeEvidence = [
+                runtimeWorkSession      :
+                        runtimeWorkSessionEvidence,
+                runtimePhaseIntegration:
+                        runtimePhaseIntegrationEvidence,
+                semanticIdentityBoundary:
+                        semanticIdentityEvidence,
+                gasExhaustion           :
+                        gasExhaustionEvidence,
+                subtypeCatalog          :
+                        subtypeCatalogEvidence,
+                subtypePredicate        :
+                        subtypePredicateEvidence,
+                executableBodySource    :
+                        bodySourceEvidence,
+                selectedBodyMaterializer:
+                        selectedBodyEvidence,
+                hostedOutputAdmission  :
+                        hostedOutputAdmissionEvidence
+        ]
+        boolean hostedRuntimeEvidenceConformant =
+                hostedRuntimeEvidence.values().every {
+                    it.executed
+                            && it.tests > 0
+                            && it.failed == 0
+                            && it.skipped == 0
+                }
+
+        def assertionEvidence = { List<Map<String, Object>> testCases ->
+            [
+                    evidenceKind : 'passing-junit-assertions',
+                    asserted     : testCases.every {
+                        it.executed && it.passed
+                    },
+                    valuesExported: false,
+                    testCases    : testCases
+            ]
+        }
+        def measurementEvidence = [
+                exactRequestedBlueIds            :
+                        assertionEvidence([
+                                representationMatrixCase,
+                                deepLocalityCase
+                        ]),
+                transferredProviderBytes         :
+                        assertionEvidence([
+                                representationMatrixCase,
+                                deepLocalityCase
+                        ]),
+                forbiddenDemands                 :
+                        assertionEvidence([
+                                representationMatrixCase,
+                                deepLocalityCase
+                        ]),
+                structuralSharing                :
+                        assertionEvidence([
+                                deepLocalityCase
+                        ]),
+                semanticDemandSet                :
+                        assertionEvidence([
+                                representationMatrixCase,
+                                deepLocalityCase
+                        ]),
+                representationNeutralSemanticsGas:
+                        assertionEvidence([
+                                representationMatrixCase,
+                                deepLocalityCase
+                        ])
+        ]
+
+        def currentSourceSnapshot = releaseEvidenceSourceSnapshot()
+        def cleanEvidencePath = cleanBuildEvidenceFile.get().asFile
+        def cleanEvidenceReason = 'missing-clean-build-evidence'
+        def cleanMarker = null
+        if (cleanEvidencePath.isFile()) {
+            try {
+                cleanMarker = new groovy.json.JsonSlurper()
+                        .parse(cleanEvidencePath)
+                cleanEvidenceReason = cleanMarker.schema
+                        != cleanBuildEvidenceSchema
+                        ? 'unexpected-clean-build-evidence-schema'
+                        : cleanMarker.cleanTask != cleanTaskPath
+                        ? 'unexpected-clean-task'
+                        : cleanMarker.buildTask != buildTaskPath
+                        ? 'unexpected-build-task'
+                        : cleanMarker.sourceCommit != sourceCommit
+                        ? 'source-commit-changed-since-clean-build'
+                        : cleanMarker.sourceDateEpoch
+                        != effectiveSourceDateEpoch.get()
+                        ? 'source-date-epoch-changed-since-clean-build'
+                        : cleanMarker.excludedTasks
+                        != Collections.emptyList()
+                        ? 'clean-build-used-task-exclusions'
+                        : cleanMarker.sourceInputIdentity
+                        != currentSourceSnapshot.identity
+                        || cleanMarker.sourceFileCount
+                        != currentSourceSnapshot.fileCount
+                        ? 'source-inputs-changed-since-clean-build'
+                        : 'verified'
+            } catch (Exception ignored) {
+                cleanEvidenceReason = 'invalid-clean-build-evidence'
+                cleanMarker = null
+            }
+        }
+        boolean cleanBuildVerified = cleanEvidenceReason == 'verified'
+
+        def testLauncherMetadata = fragmentedProcessingTestLauncher.get().metadata
+        boolean conformant = allTests.conformant
+                && focusedVerification.conformant
+                && releaseConformant
+                && runtimeTraceConformant
+                && binaryApiCompatible
+                && jarRepeatable
+                && sourceArchivesRepeatable
+                && diagnosticEvidenceConformant
+                && hostedRuntimeEvidenceConformant
+                && cleanBuildVerified
+
+        boolean workingTreeClean =
+                fragmentedProcessingGitStatus.get().isEmpty()
+        boolean commitAutomationUntouched =
+                fragmentedProcessingCommitAutomationDiff
+                        .get().isEmpty()
+        boolean apiBaselineIndependent =
+                fragmentedProcessingApiBaselineDiff
+                        .get().isEmpty()
+        def knownLimitations = []
+        if (!workingTreeClean) {
+            knownLimitations.add(
+                    'The candidate source tree has uncommitted changes, so '
+                            + 'HEAD is not the exact candidate source identity; '
+                            + 'the report binds the candidate separately with '
+                            + 'sourceInputIdentity.')
+        }
+        if (!apiBaselineIndependent) {
+            knownLimitations.add(
+                    'api/blue-language-java-1.0.json already differs from '
+                            + 'HEAD, so the zero-break comparison is not '
+                            + 'independent evidence against the committed '
+                            + 'baseline.')
+        }
+        boolean readyToGo = conformant
+                && workingTreeClean
+                && commitAutomationUntouched
+                && apiBaselineIndependent
 
         def report = [
-                schema              : 'blue-language-java-fragmented-processing-report/1.1',
-                version             : '1.1',
-                source              : [
-                        commit: sourceCommit
+                schema                  : 'blue-language-java-release-evidence/1.4',
+                version                 : '1.4',
+                source                  : [
+                        commit           : sourceCommit,
+                        workingTreeClean : workingTreeClean,
+                        modifiedPathCount: fragmentedProcessingGitStatus
+                                .get().isEmpty()
+                                ? 0
+                                : fragmentedProcessingGitStatus.get()
+                                .readLines().size()
                 ],
-                release             : [
+                baseline                : [
+                        sourceTask: ':test before generic-kernel changes',
+                        suites    : 171,
+                        tests     : 1765,
+                        passed    : 1765,
+                        failed    : 0,
+                        skipped   : 0
+                ],
+                execution               : [
+                        cleanBuild          : [
+                                verified          : cleanBuildVerified,
+                                reason            : cleanEvidenceReason,
+                                evidenceKind      : cleanBuildEvidenceKind,
+                                cleanTask         : cleanTaskPath,
+                                buildTask         : buildTaskPath,
+                                marker            :
+                                        project.relativePath(
+                                                cleanEvidencePath),
+                                sourceCommit      : cleanMarker != null
+                                        ? cleanMarker.sourceCommit
+                                        : null,
+                                sourceInputIdentity:
+                                        currentSourceSnapshot.identity,
+                                sourceFileCount   :
+                                        currentSourceSnapshot.fileCount,
+                                sourceDateEpoch   : cleanMarker != null
+                                        ? cleanMarker.sourceDateEpoch
+                                        : null,
+                                excludedTasks    : cleanMarker != null
+                                        ? cleanMarker.excludedTasks
+                                        : [],
+                                invocationTasks   : cleanMarker != null
+                                        ? cleanMarker.invocationTasks
+                                        : []
+                        ],
+                        benchmarkCompilation: [
+                                task      : ':jmhClasses',
+                                successful: true,
+                                scope     : 'compilation-only; benchmarks were not executed'
+                        ]
+                ],
+                toolchain               : [
+                        gradle       : [
+                                version: gradle.gradleVersion
+                        ],
+                        buildJvm     : [
+                                javaVersion   : System.getProperty('java.version'),
+                                javaRuntime   : System.getProperty(
+                                        'java.runtime.version'),
+                                javaVendor    : System.getProperty('java.vendor'),
+                                vmName        : System.getProperty('java.vm.name'),
+                                vmVersion     : System.getProperty(
+                                        'java.vm.version'),
+                                architecture  : System.getProperty('os.arch')
+                        ],
+                        testJvm      : [
+                                languageVersion: testLauncherMetadata
+                                        .languageVersion.toString(),
+                                runtimeVersion : testLauncherMetadata
+                                        .javaRuntimeVersion,
+                                jvmVersion     : testLauncherMetadata.jvmVersion,
+                                vendor         : testLauncherMetadata.vendor
+                        ],
+                        bytecodeTarget: 8
+                ],
+                release                 : [
                         name           : releaseReport.release.name,
                         packageIdentity: releaseReport.release.packageIdentity
                 ],
-                packages            : [
+                packages                : [
                         languageRegistry : releaseReport.packages.languageRegistry,
                         languageFixtures : releaseReport.packages.languageFixtures,
                         contractsRegistry: releaseReport.packages.contractsRegistry,
                         contractsGas     : releaseReport.packages.contractsGas,
                         contractsFixtures: releaseReport.packages.contractsFixtures
                 ],
-                artifacts           : [
-                        jar          : [
+                specifications          : [
+                        languageSha256 :
+                                releaseReport.specifications.languageSha256,
+                        contractsSha256:
+                                releaseReport.specifications.contractsSha256
+                ],
+                artifacts               : [
+                        jar                    : [
                                 name    : jarArtifact.name,
-                                identity: sha256Identity(jarArtifact)
+                                identity: jarIdentity
                         ],
-                        sourceRelease: [
+                        sourcesJar             : [
+                                name    : sourcesJarArtifact.name,
+                                identity: sha256IdentityOf(sourcesJarArtifact)
+                        ],
+                        javadocJar             : [
+                                name    : javadocJarArtifact.name,
+                                identity: sha256IdentityOf(javadocJarArtifact)
+                        ],
+                        sourceRelease          : [
                                 name    : sourceReleaseArtifact.name,
-                                identity: sha256Identity(sourceReleaseArtifact)
+                                identity: sha256IdentityOf(sourceReleaseArtifact)
+                        ],
+                        repeatabilityReplicaJar: [
+                                name    : replicaJarArtifact.name,
+                                identity: sha256IdentityOf(replicaJarArtifact)
+                        ],
+                        apiBaseline            : [
+                                name    : finalApiBaseline.asFile.name,
+                                identity: sha256IdentityOf(finalApiBaseline.asFile)
+                        ],
+                        binaryApiReport        : [
+                                name    : finalApiReport.get().asFile.name,
+                                identity: sha256IdentityOf(
+                                        finalApiReport.get().asFile)
+                        ],
+                        releaseConformanceReport: [
+                                name    : releaseConformanceJson.get()
+                                        .asFile.name,
+                                identity: sha256IdentityOf(
+                                        releaseConformanceJson.get().asFile)
+                        ],
+                        runtimeTraceEvidence     : [
+                                name    : runtimeTraceEvidenceJson.get()
+                                        .asFile.name,
+                                identity: sha256IdentityOf(
+                                        runtimeTraceEvidenceJson.get().asFile)
+                        ],
+                        jarRepeatabilityReport : [
+                                name    : jarRepeatabilityJson.get().asFile.name,
+                                identity: sha256IdentityOf(
+                                        jarRepeatabilityJson.get().asFile)
+                        ],
+                        sourceArchiveRepeatabilityReport: [
+                                name    :
+                                        sourceArchiveRepeatabilityJson
+                                        .get().asFile.name,
+                                identity:
+                                        sha256IdentityOf(
+                                                sourceArchiveRepeatabilityJson
+                                                .get().asFile)
                         ]
                 ],
-                summary             : [
-                        suiteCount: focusedSuites.size() + releaseSuiteNames.size(),
-                        tests     : focusedTests + releaseTests,
-                        passed    : focusedPassed + releasePassed,
-                        failed    : focusedFailed + releaseFailed,
-                        skipped   : focusedSkipped + releaseSkipped,
-                        conformant: conformant
+                summary                 : [
+                        allTestSuites         : allTests.suiteCount,
+                        allTests              : allTests.tests,
+                        releaseFixtureSuites  : releaseSuites.size(),
+                        releaseFixtures       : releaseTests,
+                        focusedEvidenceSuites : focusedVerification.suiteCount,
+                        focusedEvidenceTests  : focusedVerification.tests,
+                        binaryApiCompatible   : binaryApiCompatible,
+                        jarRepeatable         : jarRepeatable,
+                        sourceArchivesRepeatable:
+                                sourceArchivesRepeatable,
+                        cleanBuildVerified    : cleanBuildVerified,
+                        localityEvidencePassed: diagnosticEvidenceConformant,
+                        hostedRuntimeEvidencePassed:
+                                hostedRuntimeEvidenceConformant,
+                        runtimeTraceEvidencePassed:
+                                runtimeTraceConformant,
+                        maximumObservedRuntimeTraceEntries:
+                                runtimeTraceReport.summary
+                                .maximumObservedOrderedEntries,
+                        commitAutomationUntouched:
+                                commitAutomationUntouched,
+                        conformant            : conformant
                 ],
-                focusedVerification : [
-                        suiteCount   : focusedSuites.size(),
-                        tests        : focusedTests,
-                        passed       : focusedPassed,
-                        failed       : focusedFailed,
-                        skipped      : focusedSkipped,
-                        conformant   : focusedConformant,
-                        executedSuites: focusedSuites.collect { it.name },
-                        suites       : focusedSuites
-                ],
-                releaseConformance  : [
+                allTests                : allTests,
+                focusedVerification     : focusedVerification,
+                releaseConformance      : [
                         schema        : releaseReport.schema,
-                        suiteCount    : releaseSuiteNames.size(),
+                        sourceTask    : ':releaseConformanceTest',
+                        suiteCount    : releaseSuites.size(),
                         tests         : releaseTests,
                         passed        : releasePassed,
                         failed        : releaseFailed,
                         skipped       : releaseSkipped,
                         conformant    : releaseConformant,
-                        executedSuites: releaseSuiteNames
+                        executedSuites: releaseSuites.collect {
+                            "release-conformance:${it.name}".toString()
+                        },
+                        suites         : releaseSuites
                 ],
-                executedSuites      : focusedSuites.collect { it.name }
-                        + releaseSuiteNames,
-                demandVocabulary    : [
+                binaryApi              : [
+                        sourceTask               : ':verifyFinalApiBaseline',
+                        compatible               : binaryApiCompatible,
+                        baseline                 : binaryApiValues.baseline,
+                        current                  : binaryApiValues.current,
+                        baselineApiClasses       : Integer.parseInt(
+                                binaryApiValues.baselineApiClasses),
+                        currentApiClasses        : Integer.parseInt(
+                                binaryApiValues.currentApiClasses),
+                        currentClassMajorVersions: classMajorVersions,
+                        incompatibleChanges      : incompatibleChanges,
+                        additiveChanges          : additiveChanges
+                        ,
+                        additiveApi               :
+                                additiveApiChanges,
+                        baselineUnmodifiedFromHead:
+                                apiBaselineIndependent
+                ],
+                jarRepeatability        : repeatabilityReport,
+                sourceArchiveRepeatability:
+                        sourceArchiveRepeatabilityReport,
+                runtimeTrace            : runtimeTraceReport,
+                hostedRuntime           : hostedRuntimeEvidence,
+                cyclicEvidence          : cyclicBoundaryEvidence,
+                representationAndLocality: [
+                        evidenceSource          :
+                                ':fragmentedProcessingTest JUnit XML',
+                        sourceFiles             :
+                                representationEvidenceSources.files.sort {
+                                    left, right ->
+                                        project.relativePath(left)
+                                                <=> project.relativePath(right)
+                                }.collect {
+                                    [
+                                            path    : project.relativePath(it),
+                                            identity: sha256IdentityOf(it)
+                                    ]
+                                },
+                        representationMatrix    :
+                                representationMatrixEvidence,
+                        deepPhysicalLocality    : deepLocalityEvidence,
+                        exactFragmentAdmission  : exactFragmentEvidence,
+                        providerFailureMatrix   : failureMatrixEvidence,
+                        requiredTestCases       : requiredDiagnosticCases,
+                        measurementEvidence     : measurementEvidence,
+                        measurementExport       : [
+                                exactValuesAvailable: false,
+                                reason:
+                                        'JUnit XML proves assertion outcomes but '
+                                                + 'does not export per-variant '
+                                                + 'requested-BlueId, byte, or '
+                                                + 'semantic-demand values.'
+                        ],
+                        conformant              :
+                                diagnosticEvidenceConformant
+                ],
+                demandVocabulary        : [
                         semanticDemands: [
                                 category: 'logical-consensus',
                                 portable: true,
@@ -532,6 +1702,19 @@ tasks.register('fragmentedProcessingReport') {
                                 'Equivalent representations preserve semanticDemands '
                                         + 'and logicalGasTrace; providerCalls and providerBytes '
                                         + 'may vary with cache and provider segmentation.'
+                ],
+                releaseReadiness        : [
+                        readyToGo      : readyToGo,
+                        implementationGatesPassed:
+                                conformant,
+                        exactCandidateCommit:
+                                workingTreeClean,
+                        commitAutomationUntouched:
+                                commitAutomationUntouched,
+                        independentApiBaseline:
+                                apiBaselineIndependent,
+                        knownLimitations:
+                                knownLimitations
                 ]
         ]
 
@@ -541,11 +1724,279 @@ tasks.register('fragmentedProcessingReport') {
                 groovy.json.JsonOutput.prettyPrint(
                         groovy.json.JsonOutput.toJson(report)) + '\n',
                 'UTF-8')
-        if (!conformant) {
-            throw new GradleException(
-                    'Fragmented-processing verification is not conformant; see '
-                            + output)
+        def markdown = new StringBuilder()
+        markdown.append(
+                '# Blue Language 1.0 final generic-kernel report\n\n')
+        markdown.append(
+                "- Ready to go: **${readyToGo}**\n")
+        markdown.append(
+                "- Implementation gates passed: **${conformant}**\n")
+        markdown.append(
+                "- Candidate source commit: `${sourceCommit}`\n")
+        markdown.append(
+                "- Candidate source input: `${currentSourceSnapshot.identity}`\n")
+        markdown.append(
+                "- Working tree clean: **${workingTreeClean}**\n\n")
+        markdown.append('## Verification\n\n')
+        markdown.append(
+                "| Evidence | Baseline | Final |\n"
+                        + "|---|---:|---:|\n"
+                        + "| Main tests | 1,765/1,765 | "
+                        + "${allTests.passed}/${allTests.tests} |\n"
+                        + "| Language fixtures | 128/128 | "
+                        + "${releaseSuitesByName.language.passed}/"
+                        + "${releaseSuitesByName.language.tests} |\n"
+                        + "| Contracts fixtures | 140/140 | "
+                        + "${releaseSuitesByName.contracts.passed}/"
+                        + "${releaseSuitesByName.contracts.tests} |\n\n")
+        markdown.append(
+                "- Skipped tests: `${allTests.skipped}`\n"
+                        + "- Skipped release fixtures: `${releaseSkipped}`\n"
+                        + "- Binary API breaks: `${incompatibleChanges}`\n"
+                        + "- Additive API changes: `${additiveChanges}`\n"
+                        + "- API baseline unmodified from HEAD: "
+                        + "`${apiBaselineIndependent}`\n"
+                        + "- Java class major versions: "
+                        + "`${classMajorVersions.join(',')}`\n"
+                        + "- Main JAR reproducible: `${jarRepeatable}`\n"
+                        + "- Source archives reproducible: "
+                        + "`${sourceArchivesRepeatable}`\n"
+                        + "- Clean-build evidence: "
+                        + "`${cleanBuildVerified}`\n"
+                        + "- `.cz.toml` untouched: "
+                        + "`${commitAutomationUntouched}`\n"
+                        + "- Provider/locality evidence: "
+                        + "`${diagnosticEvidenceConformant}`\n"
+                        + "- Hosted-runtime evidence: "
+                        + "`${hostedRuntimeEvidenceConformant}`\n"
+                        + "- Runtime-trace scenarios: "
+                        + "`${runtimeTraceReport.summary.passed}/"
+                        + "${runtimeTraceReport.summary.executed}`\n"
+                        + "- Maximum observed ordered runtime entries: "
+                        + "`${runtimeTraceReport.summary.maximumObservedOrderedEntries}`\n"
+                        + "- Cyclic-boundary suite: "
+                        + "`${cyclicBoundaryEvidence.passed}/"
+                        + "${cyclicBoundaryEvidence.tests}`\n\n")
+        markdown.append('## Exact identities\n\n')
+        markdown.append(
+                "- Release package: "
+                        + "`${releaseReport.release.packageIdentity}`\n"
+                        + "- Language registry: "
+                        + "`${releaseReport.packages.languageRegistry}`\n"
+                        + "- Contracts registry: "
+                        + "`${releaseReport.packages.contractsRegistry}`\n"
+                        + "- Contracts gas manifest: "
+                        + "`${releaseReport.packages.contractsGas}`\n"
+                        + "- Language fixtures: "
+                        + "`${releaseReport.packages.languageFixtures}`\n"
+                        + "- Contracts fixtures: "
+                        + "`${releaseReport.packages.contractsFixtures}`\n"
+                        + "- Main JAR: `${jarIdentity}`\n"
+                        + "- Sources JAR: "
+                        + "`${sha256IdentityOf(sourcesJarArtifact)}`\n"
+                        + "- Source release: "
+                        + "`${sha256IdentityOf(sourceReleaseArtifact)}`\n\n")
+        markdown.append('## Hosted-runtime evidence\n\n')
+        markdown.append(
+                "| Workstream | Passed | Failed | Skipped |\n"
+                        + "|---|---:|---:|---:|\n")
+        hostedRuntimeEvidence.each { name, evidence ->
+            markdown.append(
+                    "| `${name}` | ${evidence.passed}/${evidence.tests} "
+                            + "| ${evidence.failed} | ${evidence.skipped} |\n")
         }
+        markdown.append('\n')
+        markdown.append('## New JVM API\n\n')
+        additiveApiChanges.each {
+            markdown.append("- `${it.replace('`', '\\`')}`\n")
+        }
+        markdown.append('\n## Known limitations\n\n')
+        if (knownLimitations.isEmpty()) {
+            markdown.append('- None.\n')
+        } else {
+            knownLimitations.each {
+                markdown.append("- ${it}\n")
+            }
+        }
+        def markdownOutput =
+                finalGenericKernelMarkdown.get().asFile
+        markdownOutput.parentFile.mkdirs()
+        markdownOutput.setText(
+                markdown.toString(), 'UTF-8')
+    }
+}
+
+tasks.register('verifyReleaseEvidenceReport') {
+    group = 'verification'
+    description = 'Validates the machine-readable release evidence schema and mandatory gate results.'
+    dependsOn tasks.named('fragmentedProcessingReport')
+    inputs.file(fragmentedProcessingJson)
+    inputs.file(finalGenericKernelMarkdown)
+    doLast {
+        def report = new groovy.json.JsonSlurper()
+                .parse(fragmentedProcessingJson.get().asFile)
+        def failUnless = { boolean condition, String message ->
+            if (!condition) {
+                throw new GradleException(message)
+            }
+        }
+        failUnless(
+                report.schema == 'blue-language-java-release-evidence/1.4',
+                'Release evidence uses an unexpected schema')
+        failUnless(
+                report.source.commit ==~ /(?:[0-9a-f]{40}|[0-9a-f]{64})/,
+                'Release evidence is missing a valid source commit')
+        failUnless(
+                report.toolchain.gradle.version != null
+                        && report.toolchain.buildJvm.javaVersion != null
+                        && report.toolchain.testJvm.runtimeVersion != null,
+                'Release evidence is missing Java or Gradle versions')
+        failUnless(
+                report.allTests.tests > 0
+                        && report.allTests.failed == 0
+                        && report.allTests.skipped == 0,
+                'Release evidence does not prove a complete passing test task')
+        def fixtureSuites = report.releaseConformance.suites.collectEntries {
+            [(it.name): it]
+        }
+        failUnless(
+                fixtureSuites.language?.tests == 128
+                        && fixtureSuites.language?.passed == 128
+                        && fixtureSuites.contracts?.tests == 140
+                        && fixtureSuites.contracts?.passed == 140
+                        && report.releaseConformance.failed == 0
+                        && report.releaseConformance.skipped == 0,
+                'Release evidence does not prove 128/128 Language and '
+                        + '140/140 Contracts fixtures')
+        failUnless(
+                report.artifacts.values().every {
+                    it.identity ==~ /sha256:[0-9a-f]{64}/
+                },
+                'Release evidence contains an invalid artifact SHA-256 identity')
+        failUnless(
+                report.binaryApi.compatible == true
+                        && report.binaryApi.incompatibleChanges == 0,
+                'Release evidence does not prove binary API compatibility')
+        failUnless(
+                report.jarRepeatability.repeatable == true
+                        && report.jarRepeatability.primary.identity
+                        == report.jarRepeatability.replica.identity,
+                'Release evidence does not prove JAR repeatability')
+        failUnless(
+                report.sourceArchiveRepeatability.repeatable == true
+                        && report.summary.sourceArchivesRepeatable == true,
+                'Release evidence does not prove source-archive repeatability')
+        failUnless(
+                report.binaryApi.additiveApi.size()
+                        == report.binaryApi.additiveChanges,
+                'Release evidence does not contain the exact additive API list')
+        def runtimeScenarios =
+                report.runtimeTrace.scenarios.collectEntries {
+                    [(it.id): it]
+                }
+        failUnless(
+                report.runtimeTrace.schemaVersion
+                        == 'blue-language-java-runtime-trace-evidence/1.0'
+                        && report.runtimeTrace.summary.executed == 8
+                        && report.runtimeTrace.summary.passed == 8
+                        && report.runtimeTrace.summary.failed == 0
+                        && report.runtimeTrace.summary.skipped == 0
+                        && report.runtimeTrace.summary
+                        .maximumObservedOrderedEntries == 4096
+                        && report.runtimeTrace.failures.isEmpty()
+                        && runtimeScenarios[
+                        'long-trace-success']
+                        .observedOrderedEntries >= 516
+                        && runtimeScenarios[
+                        'known-entry-gas-exhaustion']
+                        .rejectedChargeAbsent == true
+                        && runtimeScenarios[
+                        'known-entry-gas-exhaustion']
+                        .laterWorkPrevented == true
+                        && runtimeScenarios[
+                        'bounded-member-visits']
+                        .observedOrderedEntries == 4096
+                        && runtimeScenarios[
+                        'counter-catalog-overflow']
+                        .rejectedBeforeAdmission == true
+                        && runtimeScenarios[
+                        'deterministic-failure-retention']
+                        .exactPrefixRetained == true
+                        && runtimeScenarios[
+                        'transient-suspension-discard']
+                        .portableTraceDiscarded == true
+                        && report.summary.runtimeTraceEvidencePassed
+                        == true
+                        && report.summary
+                        .maximumObservedRuntimeTraceEntries == 4096,
+                'Release evidence does not prove the required observed '
+                        + 'RuntimeWorkSession trace semantics')
+        failUnless(
+                report.hostedRuntime.values().every {
+                    it.executed == true
+                            && it.tests > 0
+                            && it.failed == 0
+                            && it.skipped == 0
+                },
+                'Release evidence does not prove every generic hosted-runtime workstream')
+        failUnless(
+                report.releaseReadiness.commitAutomationUntouched == true
+                        && report.summary.commitAutomationUntouched == true,
+                'Release evidence does not prove .cz.toml remained untouched')
+        failUnless(
+                report.releaseReadiness.readyToGo == true
+                        && report.releaseReadiness.readyToGo
+                        == (report.releaseReadiness
+                        .implementationGatesPassed
+                        && report.releaseReadiness.exactCandidateCommit
+                        && report.releaseReadiness
+                        .commitAutomationUntouched
+                        && report.releaseReadiness
+                        .independentApiBaseline),
+                'Release readiness is false or inconsistent with candidate-state gates')
+        failUnless(
+                finalGenericKernelMarkdown.get().asFile.isFile()
+                        && finalGenericKernelMarkdown.get()
+                        .asFile.length() > 0L,
+                'Release evidence did not produce the Markdown final report')
+        failUnless(
+                report.representationAndLocality.conformant == true
+                        && report.representationAndLocality
+                        .representationMatrix.executed == true
+                        && report.representationAndLocality
+                        .deepPhysicalLocality.executed == true
+                        && report.representationAndLocality
+                        .requiredTestCases.every {
+                            it.executed == true && it.passed == true
+                        }
+                        && report.representationAndLocality
+                        .measurementEvidence.values().every {
+                            it.asserted == true
+                                    && it.valuesExported == false
+                        },
+                'Release evidence does not prove representation/locality coverage')
+        failUnless(
+                report.execution.cleanBuild.verified == true
+                        && report.execution.cleanBuild.evidenceKind
+                        == cleanBuildEvidenceKind
+                        && report.execution.cleanBuild.cleanTask
+                        == cleanTaskPath
+                        && report.execution.cleanBuild.buildTask
+                        == buildTaskPath
+                        && report.execution.cleanBuild.excludedTasks
+                        == Collections.emptyList()
+                        && report.execution.cleanBuild.sourceDateEpoch
+                        == report.jarRepeatability.buildProperties
+                        .sourceDateEpoch
+                        && report.summary.cleanBuildVerified == true,
+                'Release evidence is not bound to a successful clean build '
+                        + 'over the exact source-release inputs')
+        failUnless(
+                report.execution.benchmarkCompilation.successful == true,
+                'Release evidence does not prove benchmark compilation')
+        failUnless(
+                report.summary.conformant == true,
+                'Release evidence summary is not conformant')
     }
 }
 
@@ -567,38 +2018,6 @@ jmh {
     resultFormat = 'JSON'
     resultsFile = file("$buildDir/reports/jmh/processor-process-event-context.json")
 }
-
-ext.genResourcesDir = file("$buildDir/generated-resources")
-def sourceDateEpoch = providers.environmentVariable('SOURCE_DATE_EPOCH')
-task generateBuildProperties {
-    ext.buildPropertiesFile = file("$genResourcesDir/blue/language/build.properties")
-    inputs.property('buildVersion', project.version.toString())
-    inputs.property('sourceDateEpoch', sourceDateEpoch.orNull ?: '')
-    outputs.file(buildPropertiesFile)
-    doLast {
-        def epoch = sourceDateEpoch.orNull
-        def buildInstant
-        if (epoch != null && !epoch.trim().isEmpty()) {
-            try {
-                buildInstant = java.time.Instant.ofEpochSecond(Long.parseLong(epoch.trim()))
-            } catch (NumberFormatException exception) {
-                throw new GradleException("SOURCE_DATE_EPOCH must be a Unix epoch second", exception)
-            }
-        } else {
-            buildInstant = java.time.Instant.now()
-        }
-        def buildTimestamp = java.time.format.DateTimeFormatter
-                .ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
-                .withZone(java.time.ZoneOffset.UTC)
-                .format(buildInstant)
-        buildPropertiesFile.text = """\
-                |blue-language-java.build.version=$project.version
-                |blue-language-java.build.timestamp=${buildTimestamp}
-        """.stripMargin().trim()
-    }
-}
-sourceSets.main.output.dir genResourcesDir, builtBy: generateBuildProperties
-
 
 tasks.withType(GenerateModuleMetadata) {
     enabled = false
@@ -699,6 +2118,227 @@ tasks.register('sourceReleaseArchive', Zip) {
 }
 
 def sourceReleaseArchiveTask = tasks.named('sourceReleaseArchive', Zip)
+def repeatabilitySourceReleaseArchiveTask = tasks.register(
+        'sourceReleaseArchiveRepeatabilityReplica',
+        Zip) {
+    group = 'build'
+    description = 'Independently assembles the source-release ZIP content for repeatability verification.'
+    archiveBaseName = 'blue-language-java'
+    archiveVersion = project.version
+    archiveClassifier = 'source-release-repeatability-replica'
+    destinationDirectory = layout.buildDirectory.dir('reproducibility')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    dependsOn tasks.named('generateSourceReleaseMetadata')
+    eachFile { details ->
+        details.permissions { permissions ->
+            permissions.unix(details.path.endsWith('/gradlew')
+                    || details.path.endsWith('.sh')
+                    ? 0755
+                    : 0644)
+        }
+    }
+
+    into("blue-language-java-${project.version}") {
+        from(rootDir) {
+            include 'CHANGELOG.md'
+            include 'LICENSE*'
+            include 'README*'
+            include 'build.gradle'
+            include 'settings.gradle*'
+            include 'gradle.properties'
+            include 'gradlew'
+            include 'gradlew.bat'
+            include 'gradle/**'
+            include 'api/**'
+            include '.github/**'
+            include 'docs/**'
+            include 'src/**'
+            include 'tools/**'
+
+            exclude '**/.DS_Store'
+            exclude '**/._*'
+            exclude '**/*.jfr'
+            exclude '**/*.hprof'
+            exclude '**/*.heapdump'
+            exclude '**/*.db'
+            exclude '**/*.sqlite*'
+            exclude '**/node_modules/**'
+            exclude '**/__pycache__/**'
+            exclude '**/*.pyc'
+            exclude '**/*.pyo'
+            exclude '**/.gradle/**'
+            exclude '**/build/**'
+            exclude '**/*.zip'
+            exclude '**/*.tar'
+            exclude '**/*.tar.gz'
+            exclude '**/*.tgz'
+        }
+        from(sourceReleaseMetadataDir) {
+            include '.cz.toml'
+        }
+    }
+}
+
+tasks.register('verifyDeterministicSourceArchives') {
+    group = 'verification'
+    description = 'Independently assembles the sources JAR and source-release ZIP twice and requires identical bytes and entries.'
+    dependsOn primarySourcesJarTask
+    dependsOn repeatabilitySourcesJarTask
+    dependsOn sourceReleaseArchiveTask
+    dependsOn repeatabilitySourceReleaseArchiveTask
+    inputs.file(primarySourcesJarTask.flatMap { it.archiveFile })
+    inputs.file(repeatabilitySourcesJarTask.flatMap { it.archiveFile })
+    inputs.file(sourceReleaseArchiveTask.flatMap { it.archiveFile })
+    inputs.file(repeatabilitySourceReleaseArchiveTask.flatMap {
+        it.archiveFile
+    })
+    inputs.property('buildVersion', project.version.toString())
+    outputs.file(sourceArchiveRepeatabilityJson)
+
+    doLast {
+        def archiveEntryEvidence = { File archive ->
+            def entries = []
+            def zip = new java.util.zip.ZipFile(archive)
+            try {
+                def enumeration = zip.entries()
+                while (enumeration.hasMoreElements()) {
+                    def entry = enumeration.nextElement()
+                    String identity = null
+                    if (!entry.directory) {
+                        def digest = java.security.MessageDigest.getInstance(
+                                'SHA-256')
+                        zip.getInputStream(entry).withCloseable { input ->
+                            byte[] buffer = new byte[8192]
+                            int read
+                            while ((read = input.read(buffer)) != -1) {
+                                digest.update(buffer, 0, read)
+                            }
+                        }
+                        identity = 'sha256:' + digest.digest().collect {
+                            String.format('%02x', ((byte) it) & 0xff)
+                        }.join()
+                    }
+                    entries.add([
+                            name     : entry.name,
+                            directory: entry.directory,
+                            size     : entry.size,
+                            crc32    : entry.crc,
+                            identity : identity
+                    ])
+                }
+            } finally {
+                zip.close()
+            }
+            [
+                    entryCount: entries.size(),
+                    entries   : entries
+            ]
+        }
+        def byteIdentical = { File primary, File replica ->
+            if (primary.length() != replica.length()) {
+                return false
+            }
+            def primaryInput = new java.io.BufferedInputStream(
+                    new java.io.FileInputStream(primary))
+            def replicaInput = new java.io.BufferedInputStream(
+                    new java.io.FileInputStream(replica))
+            try {
+                while (true) {
+                    int primaryByte = primaryInput.read()
+                    int replicaByte = replicaInput.read()
+                    if (primaryByte != replicaByte) {
+                        return false
+                    }
+                    if (primaryByte == -1) {
+                        return true
+                    }
+                }
+            } finally {
+                primaryInput.close()
+                replicaInput.close()
+            }
+        }
+        def compareArchivePair = {
+            String kind,
+            AbstractArchiveTask primaryTask,
+            AbstractArchiveTask replicaTask ->
+            if (primaryTask.preserveFileTimestamps
+                    || replicaTask.preserveFileTimestamps
+                    || !primaryTask.reproducibleFileOrder
+                    || !replicaTask.reproducibleFileOrder) {
+                throw new GradleException(
+                        "${kind} tasks must disable file timestamps and use "
+                                + 'reproducible file order')
+            }
+
+            def primary = primaryTask.archiveFile.get().asFile
+            def replica = replicaTask.archiveFile.get().asFile
+            def primaryIdentity = sha256IdentityOf(primary)
+            def replicaIdentity = sha256IdentityOf(replica)
+            def primaryEvidence = archiveEntryEvidence(primary)
+            def replicaEvidence = archiveEntryEvidence(replica)
+            def bytesMatch = byteIdentical(primary, replica)
+            def entriesMatch =
+                    primaryEvidence.entries == replicaEvidence.entries
+
+            if (!bytesMatch
+                    || primaryIdentity != replicaIdentity
+                    || !entriesMatch) {
+                throw new GradleException(
+                        "${kind} is not repeatable: primary "
+                                + "${primaryIdentity}, replica "
+                                + "${replicaIdentity}, byteIdentical="
+                                + "${bytesMatch}, entriesIdentical="
+                                + entriesMatch)
+            }
+
+            [
+                    byteIdentical   : bytesMatch,
+                    entriesIdentical: entriesMatch,
+                    primary        : [
+                            name      : primary.name,
+                            identity  : primaryIdentity,
+                            sizeBytes : primary.length(),
+                            entryCount: primaryEvidence.entryCount,
+                            entries   : primaryEvidence.entries
+                    ],
+                    replica        : [
+                            name      : replica.name,
+                            identity  : replicaIdentity,
+                            sizeBytes : replica.length(),
+                            entryCount: replicaEvidence.entryCount,
+                            entries   : replicaEvidence.entries
+                    ]
+            ]
+        }
+
+        def report = [
+                schema              :
+                        'blue-language-java-source-archive-repeatability/1.0',
+                repeatable          : true,
+                archiveConfiguration: [
+                        preserveFileTimestamps: false,
+                        reproducibleFileOrder : true
+                ],
+                sourcesJar          : compareArchivePair(
+                        'Sources JAR',
+                        primarySourcesJarTask.get(),
+                        repeatabilitySourcesJarTask.get()),
+                sourceReleaseZip    : compareArchivePair(
+                        'Source-release ZIP',
+                        sourceReleaseArchiveTask.get(),
+                        repeatabilitySourceReleaseArchiveTask.get())
+        ]
+        def output = sourceArchiveRepeatabilityJson.get().asFile
+        output.parentFile.mkdirs()
+        output.setText(
+                groovy.json.JsonOutput.prettyPrint(
+                        groovy.json.JsonOutput.toJson(report)) + '\n',
+                'UTF-8')
+    }
+}
+
 tasks.register('verifySourceReleaseArchive') {
     group = 'verification'
     description = 'Checks the source release archive for required files and local-only debris.'
@@ -742,7 +2382,15 @@ tasks.register('verifySourceReleaseArchive') {
                 root + 'build.gradle',
                 root + 'settings.gradle.kts',
                 root + 'README.md',
-                root + 'src/main/java/blue/language/Blue.java'
+                root + 'src/main/java/blue/language/Blue.java',
+                root + 'src/main/resources/specifications/blue-language-specification-1.0.md',
+                root + 'src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md',
+                root + 'src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml',
+                root + 'src/main/resources/registry/blue-language-1.0/manifest.yaml',
+                root + 'src/main/resources/registry/blue-contracts-1.0/manifest.yaml',
+                root + 'src/main/resources/blue/language/processor/contracts-gas-1.0.yaml',
+                root + 'src/test/resources/blue-language-1.0/fixtures/manifest.yaml',
+                root + 'src/test/resources/blue-contracts-1.0/fixtures/manifest.yaml'
         ]
         def missing = required.findAll { requiredName -> !names.contains(requiredName) }
         if (!missing.isEmpty()) {
@@ -754,15 +2402,18 @@ tasks.register('verifySourceReleaseArchive') {
 
 tasks.register('rcVerify') {
     group = 'verification'
-    description = 'Runs the local blue-language-java release-candidate verification gates.'
+    description = 'Runs incremental release-candidate gates; first run clean build with the same SOURCE_DATE_EPOCH.'
     dependsOn tasks.named('check')
     dependsOn tasks.named('identityDifferentialTest')
     dependsOn tasks.named('patchSequenceDifferentialTest')
     dependsOn tasks.named('memoryIntegrationTest')
     dependsOn tasks.named('cacheLifecycleTest')
     dependsOn tasks.named('releaseConformanceTest')
-    dependsOn tasks.named('fragmentedProcessingReport')
+    dependsOn tasks.named('verifyDeterministicJar')
+    dependsOn tasks.named('verifyDeterministicSourceArchives')
+    dependsOn tasks.named('verifyReleaseEvidenceReport')
     dependsOn tasks.named('verifySourceReleaseArchive')
+    dependsOn tasks.named('jmhClasses')
 }
 
 publishing {

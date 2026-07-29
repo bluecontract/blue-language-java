@@ -6,16 +6,57 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import static blue.language.utils.Properties.*;
+
+/**
+ * Reads values or structural nodes from a mutable Blue graph by RFC 6901
+ * pointer.
+ *
+ * <p>The value-oriented methods unwrap a terminal scalar and can follow links
+ * through a caller-supplied materializer. {@link #getNode(Node, String)}
+ * performs structural traversal only and returns the actual mutable node.</p>
+ */
 public class NodePathAccessor {
 
+    /**
+     * Creates a node-path accessor.
+     */
+    public NodePathAccessor() {
+    }
+
+    /**
+     * Reads a path without resolving links.
+     *
+     * @param node graph root to read
+     * @param path absolute pointer path
+     * @return terminal scalar value or structural node
+     */
     public static Object get(Node node, String path) {
         return get(node, path, null);
     }
     
+    /**
+     * Reads a path, materializing intermediate and final links when possible.
+     *
+     * @param node graph root to read
+     * @param path absolute pointer path
+     * @param linkingProvider optional reference materializer
+     * @return terminal scalar value or structural node
+     */
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider) {
         return get(node, path, linkingProvider, true);
     }
 
+    /**
+     * Reads a path with explicit control over whether the final link is
+     * materialized.
+     *
+     * @param node graph root to read
+     * @param path absolute pointer path
+     * @param linkingProvider optional reference materializer
+     * @param resolveFinalLink whether to materialize a reference at the terminal segment
+     * @return terminal scalar value or structural node
+     */
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
         if (path == null || !path.startsWith("/")) {
             throw new IllegalArgumentException("Invalid path: " + path);
@@ -29,6 +70,13 @@ public class NodePathAccessor {
         return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
+    /**
+     * Returns the mutable structural node at a path without link resolution.
+     *
+     * @param node graph root to read
+     * @param path absolute pointer path
+     * @return mutable structural node at the path
+     */
     public static Node getNode(Node node, String path) {
         if (path == null || !path.startsWith("/")) {
             throw new IllegalArgumentException("Invalid path: " + path);
@@ -63,23 +111,23 @@ public class NodePathAccessor {
         Node result;
 
         switch (segment) {
-            case "name":
+            case OBJECT_NAME:
                 return new Node().value(node.getName());
-            case "description":
+            case OBJECT_DESCRIPTION:
                 return new Node().value(node.getDescription());
-            case "type":
+            case OBJECT_TYPE:
                 return node.getType();
-            case "itemType":
+            case OBJECT_ITEM_TYPE:
                 return node.getItemType();
-            case "keyType":
+            case OBJECT_KEY_TYPE:
                 return node.getKeyType();
-            case "valueType":
+            case OBJECT_VALUE_TYPE:
                 return node.getValueType();
-            case "value":
+            case OBJECT_VALUE:
                 return new Node().value(node.getValue());
-            case "blueId":
+            case OBJECT_BLUE_ID:
                 return new Node().value(BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node)));
-            case "contracts":
+            case OBJECT_CONTRACTS:
                 return node.getContracts();
         }
 
@@ -103,23 +151,23 @@ public class NodePathAccessor {
 
     private static Node getStructuralNodeForSegment(Node node, String segment) {
         switch (segment) {
-            case "name":
+            case OBJECT_NAME:
                 return new Node().value(node.getName());
-            case "description":
+            case OBJECT_DESCRIPTION:
                 return new Node().value(node.getDescription());
-            case "type":
+            case OBJECT_TYPE:
                 return node.getType();
-            case "itemType":
+            case OBJECT_ITEM_TYPE:
                 return node.getItemType();
-            case "keyType":
+            case OBJECT_KEY_TYPE:
                 return node.getKeyType();
-            case "valueType":
+            case OBJECT_VALUE_TYPE:
                 return node.getValueType();
-            case "value":
+            case OBJECT_VALUE:
                 return new Node().value(node.getRawValue());
-            case "blueId":
+            case OBJECT_BLUE_ID:
                 return new Node().value(BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node)));
-            case "contracts":
+            case OBJECT_CONTRACTS:
                 return node.getContracts();
         }
 

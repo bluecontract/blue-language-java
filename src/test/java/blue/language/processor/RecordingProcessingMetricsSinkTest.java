@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class RecordingProcessingMetricsSinkTest {
 
     @Test
-    void snapshotsCountersGaugesAndHighWaterImmutably() {
+    void shouldSnapshotCountersGaugesAndHighWaterImmutably() {
+        // given
         RecordingProcessingMetricsSink sink = new RecordingProcessingMetricsSink();
         sink.incrementPatchImpactAnalyses();
         sink.incrementPatchImpactAnalyses();
@@ -28,7 +29,12 @@ class RecordingProcessingMetricsSinkTest {
         sink.setCacheCurrentWeightBytes("resolvedSnapshots", 40L);
         sink.recordCacheHighWaterBytes("resolvedSnapshots", 40L);
 
+        // when
         ProcessingMetricsSnapshot first = sink.snapshot();
+        sink.incrementPatchImpactAnalyses();
+        ProcessingMetricsSnapshot second = sink.snapshot();
+
+        // then
         assertEquals(2L, first.counter("patchImpactAnalyses"));
         assertEquals(1L, first.counter("fullSnapshotFallbacks"));
         assertEquals(1L, first.counter("fullSnapshotFallbackReason.ROOT_REPLACEMENT"));
@@ -42,13 +48,13 @@ class RecordingProcessingMetricsSinkTest {
         assertThrows(UnsupportedOperationException.class,
                 () -> first.counters().put("other", 1L));
 
-        sink.incrementPatchImpactAnalyses();
         assertEquals(2L, first.counter("patchImpactAnalyses"));
-        assertEquals(3L, sink.snapshot().counter("patchImpactAnalyses"));
+        assertEquals(3L, second.counter("patchImpactAnalyses"));
     }
 
     @Test
-    void concurrentUpdatesAreNotLost() throws Exception {
+    void shouldNotLoseConcurrentUpdates() throws Exception {
+        // given
         RecordingProcessingMetricsSink sink = new RecordingProcessingMetricsSink();
         int threads = 8;
         int iterations = 2_000;
@@ -75,21 +81,26 @@ class RecordingProcessingMetricsSinkTest {
             worker.join();
         }
 
+        // when
         ProcessingMetricsSnapshot snapshot = sink.snapshot();
+        // then
         assertEquals((long) threads * iterations,
                 snapshot.counter("incrementalSnapshotResolutions"));
         assertEquals(iterations - 1L, snapshot.gauge("cache.plans.highWaterBytes"));
     }
 
     @Test
-    void mutablePatchAttributionUsesFixedSourceNames() {
+    void shouldAttributeMutablePatchesUsingFixedSourceNames() {
+        // given
         RecordingProcessingMetricsSink sink = new RecordingProcessingMetricsSink();
 
+        // when
         sink.incrementMutablePatchValuesFrozen(PatchSource.PROCESSOR_INITIALIZATION_MARKER);
         sink.incrementMutablePatchValuesFrozen(PatchSource.CONFORMANCE_FIXTURE);
         sink.incrementMutablePatchValuesFrozen(null);
-
         ProcessingMetricsSnapshot snapshot = sink.snapshot();
+
+        // then
         assertEquals(3L, snapshot.counter("mutablePatchValuesFrozen"));
         assertEquals(1L, snapshot.counter(
                 "mutablePatchValuesFrozenBySource.PROCESSOR_INITIALIZATION_MARKER"));

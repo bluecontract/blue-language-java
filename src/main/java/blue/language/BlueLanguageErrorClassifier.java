@@ -1,10 +1,20 @@
 package blue.language;
 
+import blue.language.utils.Properties;
+
 import blue.language.utils.JsonPointer;
 
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Maps implementation exceptions and diagnostics to the closed Language 1.0
+ * error vocabulary used in conformance evidence.
+ *
+ * <p>The classifier walks the cause chain and deliberately falls back to
+ * {@link BlueLanguageErrorCategory#CanonicalizationError} when no narrower
+ * category can be proven.</p>
+ */
 public final class BlueLanguageErrorClassifier {
 
     private static final String PLAIN_BLUE_ID_PREFIX =
@@ -17,6 +27,12 @@ public final class BlueLanguageErrorClassifier {
     private BlueLanguageErrorClassifier() {
     }
 
+    /**
+     * Classifies a throwable without mutating or rethrowing it.
+     *
+     * @param throwable failure to classify
+     * @return a non-null stable error category
+     */
     public static BlueLanguageErrorCategory classify(Throwable throwable) {
         if (throwable == null) {
             return BlueLanguageErrorCategory.CanonicalizationError;
@@ -63,13 +79,13 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("type alias")) {
             return BlueLanguageErrorCategory.InvalidBlueIdInput;
         }
-        if (lower.contains("$pos")
-                || lower.contains("$replace")
-                || lower.contains("$previous")
-                || lower.contains("$empty")
+        if (lower.contains(Properties.LIST_CONTROL_POS)
+                || lower.contains(Properties.LIST_CONTROL_REPLACE)
+                || lower.contains(Properties.LIST_CONTROL_PREVIOUS)
+                || lower.contains(Properties.LIST_CONTROL_EMPTY)
                 || lower.contains("list control")
-                || lower.contains("positional")
-                || lower.contains("append-only")) {
+                || lower.contains(Properties.LIST_MERGE_POLICY_POSITIONAL)
+                || lower.contains(Properties.LIST_MERGE_POLICY_APPEND_ONLY)) {
             return BlueLanguageErrorCategory.ListControlViolation;
         }
         if (lower.contains("wrong kind")) {
@@ -85,7 +101,7 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("exclusiveminimum must")) {
             return BlueLanguageErrorCategory.SchemaVocabularyError;
         }
-        if (lower.contains("schema")
+        if (lower.contains(Properties.OBJECT_SCHEMA)
                 || lower.contains("minimum")
                 || lower.contains("maximum")
                 || lower.contains("multiple of")
@@ -147,8 +163,9 @@ public final class BlueLanguageErrorClassifier {
         List<String> segments = JsonPointer.split(path);
         int size = segments.size();
         if (size >= 2
-                && "$previous".equals(segments.get(size - 2))
-                && "blueId".equals(segments.get(size - 1))) {
+                && Properties.LIST_CONTROL_PREVIOUS.equals(
+                        segments.get(size - 2))
+                && Properties.OBJECT_BLUE_ID.equals(segments.get(size - 1))) {
             return BlueLanguageErrorCategory.ListControlViolation;
         }
         return BlueLanguageErrorCategory.InvalidBlueId;

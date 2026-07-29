@@ -2,6 +2,7 @@ package blue.language.provider;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.utils.BlueIds;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Collections;
@@ -11,11 +12,24 @@ import java.util.stream.IntStream;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
+/**
+ * Base provider that converts stored JSON content into Blue nodes and resolves
+ * {@code this} placeholders against the requested base identity.
+ *
+ * <p>Subclasses supply content only for the part before an optional
+ * {@code #index}; this class selects cyclic/list members and assigns the
+ * requested root identity.</p>
+ */
 public abstract class AbstractNodeProvider implements NodeProvider {
+
+    /** Creates a provider backed by subclass-defined JSON content lookup. */
+    public AbstractNodeProvider() {
+    }
 
     @Override
     public List<Node> fetchByBlueId(String blueId) {
-        final String baseBlueId = blueId.split("#")[0];
+        final String baseBlueId =
+                blueId.split(BlueIds.CYCLIC_MEMBER_SEPARATOR)[0];
         final JsonNode content = fetchContentByBlueId(baseBlueId);
         if (content == null) {
             return null;
@@ -24,8 +38,9 @@ public abstract class AbstractNodeProvider implements NodeProvider {
         boolean isMultipleDocuments = content.isArray() && content.size() > 1;
         final JsonNode resolvedContent = NodeContentHandler.resolveThisReferences(content, baseBlueId, isMultipleDocuments);
 
-        if (blueId.contains("#")) {
-            String[] parts = blueId.split("#");
+        if (BlueIds.hasCyclicMemberSeparator(blueId)) {
+            String[] parts =
+                    blueId.split(BlueIds.CYCLIC_MEMBER_SEPARATOR);
             if (parts.length > 1) {
                 int index = Integer.parseInt(parts[1]);
                 if (resolvedContent.isArray() && index < resolvedContent.size()) {
@@ -51,5 +66,11 @@ public abstract class AbstractNodeProvider implements NodeProvider {
         }
     }
 
+    /**
+     * Returns stored content for a plain base BlueId.
+     *
+     * @param baseBlueId identity without a cyclic-member suffix
+     * @return stored JSON content, or {@code null} on a miss
+     */
     protected abstract JsonNode fetchContentByBlueId(String baseBlueId);
 }

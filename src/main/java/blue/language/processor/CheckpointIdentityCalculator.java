@@ -4,6 +4,14 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 
+/**
+ * Establishes the deterministic identity used for checkpoint newness.
+ *
+ * <p>Exact BlueId input is preferred. When a {@link Blue} context is
+ * available, authored values may fall back to semantic canonicalization and
+ * finally to the processor's canonical signature. Each path is timed
+ * independently for production diagnostics.</p>
+ */
 final class CheckpointIdentityCalculator {
 
     private CheckpointIdentityCalculator() {

@@ -16,71 +16,332 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EffectiveFragmentationCatalogTest {
 
     @Test
-    void reportsInheritedBodyAndExactHeaderWithoutDemandingBody() {
+    void shouldReportInheritedExecutableBodyMetadataWithoutDemandingBody() {
+        // given
         Fixture fixture = new Fixture();
-        try (Blue blue = fixture.blue()) {
-            EffectiveFragmentationCatalog catalog =
-                    blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
-                                    fixture.document());
 
+        // when
+        CatalogObservation observation =
+                observeCatalog(fixture);
+
+        // then
+        assertEquals("handler", observation.handler.role());
+        assertEquals(
+                fixture.handlerTypeBlueId,
+                observation.handler.effectiveTypeBlueId());
+        assertEquals(
+                Arrays.asList(
+                        fixture.inheritedContributionBlueId,
+                        fixture.directContributionBlueId),
+                observation.handler
+                        .sourceContributionNodeBlueIds());
+        assertEquals(
+                Collections.singletonList("program"),
+                observation.handler.executableBodyFields());
+        assertEquals(
+                Collections.singletonMap(
+                        "program",
+                        fixture.programBlueId),
+                observation.handler
+                        .executableBodyNodeBlueIdsByField());
+        assertEquals(
+                Collections.singletonList(
+                        fixture.programBlueId),
+                observation.handler.executableBodyNodeBlueIds());
+        assertFalse(
+                fixture.providerRequests
+                        .contains(fixture.programBlueId),
+                "catalog inspection demanded the executable body");
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        fixture.document()),
+                observation.catalog.rootBlueId());
+    }
+
+    @Test
+    void shouldReportExactInheritedExecutableBodySourceDescriptor() {
+        // given
+        Fixture fixture = new Fixture();
+
+        // when
+        CatalogObservation observation =
+                observeCatalog(fixture);
+        ExecutableBodySourceDescriptor bodySource =
+                observation.bodySource;
+
+        // then
+        assertEquals("/", bodySource.scopePath());
+        assertEquals("run", bodySource.contractKey());
+        assertEquals(
+                fixture.handlerTypeBlueId,
+                bodySource.effectiveTypeBlueId());
+        assertEquals("program", bodySource.bodyField());
+        assertEquals(
+                fixture.programBlueId,
+                bodySource.bodyNodeBlueId());
+        assertEquals(
+                Arrays.asList(
+                        fixture.inheritedContributionBlueId,
+                        fixture.directContributionBlueId),
+                bodySource.sourceContributionNodeBlueIds());
+        assertEquals(
+                fixture.inheritedContributionBlueId,
+                bodySource.owningSourceContributionNodeBlueId());
+        assertEquals("/program", bodySource.sourcePointer());
+        assertTrue(bodySource.pureReference());
+    }
+
+    @Test
+    void shouldReportEffectiveHeaderWithoutExecutableBody() {
+        // given
+        Fixture fixture = new Fixture();
+
+        // when
+        EffectiveContractSnapshot handler =
+                observeCatalog(fixture).handler;
+
+        // then
+        assertEquals(
+                "lifecycle",
+                handler.headerFields()
+                        .get("channel")
+                        .getValue());
+        assertEquals(
+                "instance-overlay",
+                handler.headerFields()
+                        .get("label")
+                        .getValue());
+        assertFalse(
+                handler.headerFields()
+                        .containsKey("program"));
+    }
+
+    @Test
+    void shouldAssignExactDescriptorOwnershipToDescendantInlineBody() {
+        // given
+        Fixture fixture = new Fixture();
+        Node inlineProgram =
+                new Node().properties(
+                        "operation",
+                        new Node().value(
+                                "descendant"));
+        Node document = fixture.document();
+        Node direct =
+                document.getContracts()
+                        .getProperties()
+                        .get("run");
+        direct.properties(
+                "program",
+                inlineProgram.clone());
+        String directBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        direct);
+        String bodyBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        inlineProgram);
+
+        // when
+        try (Blue blue = fixture.blue()) {
             EffectiveContractSnapshot handler =
-                    contract(catalog, "/", "run");
-            assertEquals("handler", handler.role());
-            assertEquals(
-                    fixture.handlerTypeBlueId,
-                    handler.effectiveTypeBlueId());
+                    contract(
+                            blue.getDocumentProcessor()
+                                    .effectiveFragmentationCatalog(
+                                            document),
+                            "/",
+                            "run");
+            ExecutableBodySourceDescriptor source =
+                    handler
+                            .executableBodySourceDescriptorsByField()
+                            .get("program");
+
+            // then
             assertEquals(
                     Arrays.asList(
                             fixture.inheritedContributionBlueId,
-                            fixture.directContributionBlueId),
-                    handler.sourceContributionNodeBlueIds());
+                            directBlueId),
+                    source
+                            .sourceContributionNodeBlueIds());
             assertEquals(
-                    Collections.singletonList("program"),
-                    handler.executableBodyFields());
+                    directBlueId,
+                    source
+                            .owningSourceContributionNodeBlueId());
             assertEquals(
-                    Collections.singletonMap(
-                            "program",
-                            fixture.programBlueId),
-                    handler.executableBodyNodeBlueIdsByField());
+                    bodyBlueId,
+                    source.bodyNodeBlueId());
             assertEquals(
-                    Collections.singletonList(
-                            fixture.programBlueId),
-                    handler.executableBodyNodeBlueIds());
-            assertEquals(
-                    "lifecycle",
-                    handler.headerFields()
-                            .get("channel")
-                            .getValue());
-            assertEquals(
-                    "instance-overlay",
-                    handler.headerFields()
-                            .get("label")
-                            .getValue());
-            assertFalse(
-                    handler.headerFields()
-                            .containsKey("program"));
+                    "/program",
+                    source.sourcePointer());
+            assertFalse(source.pureReference());
             assertFalse(
                     fixture.providerRequests
                             .contains(fixture.programBlueId),
-                    "catalog inspection demanded the executable body");
-            assertEquals(
-                    BlueIdCalculator.calculateBlueId(
-                            fixture.document()),
-                    catalog.rootBlueId());
+                    "overridden inherited body was demanded");
         }
     }
 
     @Test
-    void inlineContractsFragmentAndPureRootProduceSameCatalog() {
+    void shouldAssignExactColdDescriptorOwnershipToDirectPureReferenceBody() {
+        // given
+        Fixture fixture = new Fixture();
+        Node document = fixture.document();
+        Node direct =
+                document.getContracts()
+                        .getProperties()
+                        .get("run");
+        direct.properties(
+                "program",
+                new Node().blueId(
+                        fixture.programBlueId));
+        String directBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        direct);
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            ExecutableBodySourceDescriptor source =
+                    contract(
+                            blue.getDocumentProcessor()
+                                    .effectiveFragmentationCatalog(
+                                            document),
+                            "/",
+                            "run")
+                            .executableBodySourceDescriptorsByField()
+                            .get("program");
+
+            // then
+            assertEquals(
+                    directBlueId,
+                    source
+                            .owningSourceContributionNodeBlueId());
+            assertEquals(
+                    fixture.programBlueId,
+                    source.bodyNodeBlueId());
+            assertEquals(
+                    "/program",
+                    source.sourcePointer());
+            assertTrue(source.pureReference());
+            assertFalse(
+                    fixture.providerRequests
+                            .contains(
+                                    fixture.programBlueId),
+                    "catalog inspection demanded a direct referenced body");
+        }
+    }
+
+    @Test
+    void shouldInvalidateCatalogEvidenceWhenOwningContributionChanges() {
+        // given
+        Fixture fixture = new Fixture();
+        Node firstDocument = fixture.document();
+        Node firstBody =
+                new Node().properties(
+                        "operation",
+                        new Node().value("first"));
+        firstDocument.getContracts()
+                .getProperties()
+                .get("run")
+                .properties(
+                        "program",
+                        firstBody);
+
+        Node secondDocument = firstDocument.clone();
+        Node secondBody =
+                new Node().properties(
+                        "operation",
+                        new Node().value("second"));
+        secondDocument.getContracts()
+                .getProperties()
+                .get("run")
+                .properties(
+                        "program",
+                        secondBody);
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            EffectiveFragmentationCatalog first =
+                    blue.getDocumentProcessor()
+                            .effectiveFragmentationCatalog(
+                                    firstDocument);
+            EffectiveFragmentationCatalog second =
+                    blue.getDocumentProcessor()
+                            .effectiveFragmentationCatalog(
+                                    secondDocument);
+            ExecutableBodySourceDescriptor firstSource =
+                    contract(first, "/", "run")
+                            .executableBodySourceDescriptorsByField()
+                            .get("program");
+            ExecutableBodySourceDescriptor secondSource =
+                    contract(second, "/", "run")
+                            .executableBodySourceDescriptorsByField()
+                            .get("program");
+
+            // then
+            assertNotEquals(
+                    firstSource
+                            .owningSourceContributionNodeBlueId(),
+                    secondSource
+                            .owningSourceContributionNodeBlueId());
+            assertNotEquals(
+                    firstSource.bodyNodeBlueId(),
+                    secondSource.bodyNodeBlueId());
+            assertNotEquals(
+                    signature(first),
+                    signature(second));
+        }
+    }
+
+    @Test
+    void shouldKeepCyclicBodyReferenceAsOpaqueExactSourceEdge() {
+        // given
+        Fixture fixture = new Fixture();
+        String cyclicMemberBlueId =
+                fixture.programBlueId + "#0";
+        Node document = fixture.document();
+        document.getContracts()
+                .getProperties()
+                .get("run")
+                .properties(
+                        "program",
+                        new Node().blueId(
+                                cyclicMemberBlueId));
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            ExecutableBodySourceDescriptor source =
+                    contract(
+                            blue.getDocumentProcessor()
+                                    .effectiveFragmentationCatalog(
+                                            document),
+                            "/",
+                            "run")
+                            .executableBodySourceDescriptorsByField()
+                            .get("program");
+
+            // then
+            assertEquals(
+                    cyclicMemberBlueId,
+                    source.bodyNodeBlueId());
+            assertTrue(source.pureReference());
+            assertFalse(
+                    fixture.providerRequests
+                            .contains(cyclicMemberBlueId),
+                    "catalog inspection opened a cyclic body member");
+        }
+    }
+
+    @Test
+    void shouldProduceSameCatalogForInlineContractsFragmentAndPureRoot() {
+        // given
         Fixture fixture = new Fixture();
         Node inline = fixture.document();
         Node exactContracts =
@@ -103,6 +364,13 @@ class EffectiveFragmentationCatalogTest {
                 rootBlueId,
                 fragmented);
 
+        // when
+        String inlineSignature;
+        String fragmentedSignature;
+        String referenceSignature;
+        String inlineRootBlueId;
+        String fragmentedRootBlueId;
+        String referenceRootBlueId;
         try (Blue blue = fixture.blue()) {
             EffectiveFragmentationCatalog inlineCatalog =
                     blue.getDocumentProcessor()
@@ -117,29 +385,22 @@ class EffectiveFragmentationCatalogTest {
                             .effectiveFragmentationCatalog(
                                     new Node().blueId(
                                             rootBlueId));
-
-            assertEquals(
-                    signature(inlineCatalog),
-                    signature(fragmentedCatalog));
-            assertEquals(
-                    signature(inlineCatalog),
-                    signature(referenceCatalog));
-            assertEquals(
-                    inlineCatalog.rootBlueId(),
-                    fragmentedCatalog.rootBlueId());
-            assertEquals(
-                    inlineCatalog.rootBlueId(),
-                    referenceCatalog.rootBlueId());
-            assertEquals(rootBlueId, inlineCatalog.rootBlueId());
-            assertFalse(
-                    fixture.providerRequests
-                            .contains(fixture.programBlueId));
+            inlineSignature = signature(inlineCatalog);
+            fragmentedSignature = signature(fragmentedCatalog);
+            referenceSignature = signature(referenceCatalog);
+            inlineRootBlueId = inlineCatalog.rootBlueId();
+            fragmentedRootBlueId =
+                    fragmentedCatalog.rootBlueId();
+            referenceRootBlueId =
+                    referenceCatalog.rootBlueId();
         }
 
         /*
          * A fresh processor starts with the pure Root reference so the same
          * comparison also covers cold-reference then warm-inline order.
          */
+        String coldReferenceSignature;
+        String warmInlineSignature;
         try (Blue cold = fixture.blue()) {
             EffectiveFragmentationCatalog coldReference =
                     cold.getDocumentProcessor()
@@ -150,14 +411,26 @@ class EffectiveFragmentationCatalogTest {
                     cold.getDocumentProcessor()
                             .effectiveFragmentationCatalog(
                                     inline);
-            assertEquals(
-                    signature(coldReference),
-                    signature(warmInline));
+            coldReferenceSignature = signature(coldReference);
+            warmInlineSignature = signature(warmInline);
         }
+        boolean programRequested =
+                fixture.providerRequests
+                        .contains(fixture.programBlueId);
+
+        // then
+        assertEquals(inlineSignature, fragmentedSignature);
+        assertEquals(inlineSignature, referenceSignature);
+        assertEquals(inlineRootBlueId, fragmentedRootBlueId);
+        assertEquals(inlineRootBlueId, referenceRootBlueId);
+        assertEquals(rootBlueId, inlineRootBlueId);
+        assertEquals(coldReferenceSignature, warmInlineSignature);
+        assertFalse(programRequested);
     }
 
     @Test
-    void reportsDirectProcessEmbeddedPath() {
+    void shouldReportDirectProcessEmbeddedPath() {
+        // given
         Node document =
                 new Node()
                         .properties(
@@ -179,6 +452,7 @@ class EffectiveFragmentationCatalogTest {
                                                                 new Node().value(
                                                                         "/child")))));
 
+        // when
         try (Blue blue = blue(
                 new LinkedHashMap<String, Node>(),
                 new ArrayList<String>())) {
@@ -187,6 +461,7 @@ class EffectiveFragmentationCatalogTest {
                             .effectiveFragmentationCatalog(
                                     document);
 
+            // then
             assertEquals(
                     Collections.singletonList("/child"),
                     catalog
@@ -205,7 +480,8 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
-    void inheritedProcessEmbeddedPathDefinesChildCatalogScope() {
+    void shouldDefineChildCatalogScopeFromInheritedProcessEmbeddedPath() {
+        // given
         Node inheritedEmbedded =
                 new Node()
                         .type(new Node().blueId(
@@ -240,12 +516,14 @@ class EffectiveFragmentationCatalogTest {
                 new LinkedHashMap<>();
         content.put(rootTypeBlueId, rootType);
 
+        // when
         try (Blue blue = blue(content, new ArrayList<String>())) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
                             .effectiveFragmentationCatalog(
                                     document);
 
+            // then
             assertEquals(
                     Collections.singletonList("/child"),
                     catalog
@@ -267,7 +545,8 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
-    void declaredEmbeddedReferenceIsOpenedButUnrelatedReferenceStaysCold() {
+    void shouldOpenDeclaredEmbeddedReferenceWhileUnrelatedReferenceStaysCold() {
+        // given
         Node child = new Node().properties(
                 "value",
                 new Node().value("embedded"));
@@ -305,12 +584,14 @@ class EffectiveFragmentationCatalogTest {
         content.put(unrelatedBlueId, unrelated);
         List<String> requests = new ArrayList<>();
 
+        // when
         try (Blue blue = blue(content, requests)) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
                             .effectiveFragmentationCatalog(
                                     document);
 
+            // then
             assertTrue(
                     catalog.effectiveContractsByScope()
                             .containsKey("/child"));
@@ -322,7 +603,8 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
-    void referencedHandlerEventMatcherRemainsAnExactColdHeaderEdge() {
+    void shouldKeepReferencedHandlerEventMatcherAsExactColdHeaderEdge() {
+        // given
         Fixture fixture = new Fixture();
         Node eventPattern =
                 new Node().properties(
@@ -343,6 +625,7 @@ class EffectiveFragmentationCatalogTest {
                         new Node().blueId(
                                 eventPatternBlueId));
 
+        // when
         try (Blue blue = fixture.blue()) {
             EffectiveContractSnapshot handler =
                     contract(
@@ -352,6 +635,7 @@ class EffectiveFragmentationCatalogTest {
                             "/",
                             "run");
 
+            // then
             assertTrue(
                     handler.headerFields()
                             .get("event")
@@ -368,7 +652,8 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
-    void unrelatedUnavailableReferenceDoesNotBlockRootCatalog() {
+    void shouldBuildRootCatalogDespiteUnrelatedUnavailableReference() {
+        // given
         Node unavailable =
                 new Node().properties(
                         "data",
@@ -378,6 +663,7 @@ class EffectiveFragmentationCatalogTest {
                         unavailable);
         List<String> requests = new ArrayList<>();
 
+        // when
         try (Blue blue = blue(
                 Collections.<String, Node>emptyMap(),
                 requests)) {
@@ -389,6 +675,7 @@ class EffectiveFragmentationCatalogTest {
                                             new Node().blueId(
                                                     unavailableBlueId)));
 
+            // then
             assertTrue(
                     catalog.effectiveContractsByScope()
                             .containsKey("/"));
@@ -398,7 +685,8 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
-    void unsupportedTypeFailsBeforeUnrelatedBodyDemand() {
+    void shouldFailUnsupportedTypeBeforeDemandingUnrelatedBody() {
+        // given
         Node body =
                 new Node().properties(
                         "secret",
@@ -427,26 +715,169 @@ class EffectiveFragmentationCatalogTest {
         content.put(unknownTypeBlueId, unknownType);
         content.put(bodyBlueId, body);
         List<String> requests = new ArrayList<>();
-
         try (Blue blue = blue(content, requests)) {
-            MustUnderstandFailureException failure =
-                    assertThrows(
-                            MustUnderstandFailureException.class,
+            // when
+            Throwable failure =
+                    captureFailure(
                             () -> blue
                                     .getDocumentProcessor()
                                     .effectiveFragmentationCatalog(
                                             document));
+
+            // then
+            assertTrue(failure instanceof MustUnderstandFailureException);
             assertEquals(
                     ProcessorErrorCategory
                             .UnsupportedRuntimeType,
-                    failure.errorCategory());
+                    ((MustUnderstandFailureException) failure)
+                            .errorCategory());
             assertFalse(requests.contains(bodyBlueId));
         }
     }
 
     @Test
-    void returnedCatalogAndSnapshotSurfacesAreImmutable() {
+    void shouldReturnImmutableCatalogCollections() {
+        // given
         Fixture fixture = new Fixture();
+
+        // when
+        EffectiveFragmentationCatalog catalog =
+                observeCatalog(fixture).catalog;
+        UnsupportedOperationException scopeMapFailure =
+                captureFailure(
+                        () -> catalog
+                                .effectiveContractsByScope()
+                                .put("/other",
+                                        Collections
+                                                .<EffectiveContractSnapshot>
+                                                        emptyList()));
+        UnsupportedOperationException scopeListFailure =
+                captureFailure(
+                        () -> catalog
+                                .effectiveContractsByScope()
+                                .get("/")
+                                .clear());
+
+        // then
+        assertEquals(UnsupportedOperationException.class,
+                scopeMapFailure.getClass());
+        assertEquals(UnsupportedOperationException.class,
+                scopeListFailure.getClass());
+    }
+
+    @Test
+    void shouldReturnImmutableHeaderFields() {
+        // given
+        Fixture fixture = new Fixture();
+
+        // when
+        EffectiveContractSnapshot handler =
+                observeCatalog(fixture).handler;
+        UnsupportedOperationException failure =
+                captureFailure(
+                        () -> handler.headerFields()
+                                .put("other",
+                                        FrozenNode.fromNode(
+                                                new Node()
+                                                        .value("x"))));
+
+        // then
+        assertEquals(UnsupportedOperationException.class,
+                failure.getClass());
+    }
+
+    @Test
+    void shouldReturnImmutableExecutableBodyMetadataCollections() {
+        // given
+        Fixture fixture = new Fixture();
+
+        // when
+        EffectiveContractSnapshot handler =
+                observeCatalog(fixture).handler;
+        UnsupportedOperationException fieldsFailure =
+                captureFailure(
+                        () -> handler
+                                .executableBodyFields()
+                                .add("other"));
+        UnsupportedOperationException idsFailure =
+                captureFailure(
+                        () -> handler
+                                .executableBodyNodeBlueIdsByField()
+                                .clear());
+        UnsupportedOperationException descriptorsFailure =
+                captureFailure(
+                        () -> handler
+                                .executableBodySourceDescriptorsByField()
+                                .clear());
+
+        // then
+        assertEquals(UnsupportedOperationException.class,
+                fieldsFailure.getClass());
+        assertEquals(UnsupportedOperationException.class,
+                idsFailure.getClass());
+        assertEquals(UnsupportedOperationException.class,
+                descriptorsFailure.getClass());
+    }
+
+    @Test
+    void shouldReturnImmutableBodySourceContributions() {
+        // given
+        Fixture fixture = new Fixture();
+
+        // when
+        ExecutableBodySourceDescriptor bodySource =
+                observeCatalog(fixture).bodySource;
+        UnsupportedOperationException failure =
+                captureFailure(
+                        () -> bodySource
+                                .sourceContributionNodeBlueIds()
+                                .clear());
+
+        // then
+        assertEquals(UnsupportedOperationException.class,
+                failure.getClass());
+    }
+
+    @Test
+    void shouldRejectBodyDescriptorIdentityDisagreement() {
+        // given
+        ExecutableBodySourceDescriptor descriptor =
+                new ExecutableBodySourceDescriptor(
+                        "/",
+                        "run",
+                        "sha256:type",
+                        "program",
+                        "sha256:body-a",
+                        Collections.singletonList(
+                                "sha256:contribution"),
+                        "sha256:contribution",
+                        "/program",
+                        false);
+
+        // when
+        IllegalArgumentException failure = captureFailure(
+                () -> EffectiveContractSnapshot
+                        .builder("/", "run")
+                        .effectiveTypeBlueId(
+                                "sha256:type")
+                        .role("handler")
+                        .sourceContribution(
+                                "sha256:contribution")
+                        .executableBody(
+                                "program",
+                                "sha256:body-b")
+                        .executableBodySourceDescriptor(
+                                "program",
+                                descriptor)
+                        .build());
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                failure.getClass());
+    }
+
+    private static CatalogObservation observeCatalog(
+            Fixture fixture) {
         try (Blue blue = fixture.blue()) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
@@ -454,38 +885,27 @@ class EffectiveFragmentationCatalogTest {
                                     fixture.document());
             EffectiveContractSnapshot handler =
                     contract(catalog, "/", "run");
+            return new CatalogObservation(
+                    catalog,
+                    handler,
+                    handler
+                            .executableBodySourceDescriptorsByField()
+                            .get("program"));
+        }
+    }
 
-            assertThrows(
-                    UnsupportedOperationException.class,
-                    () -> catalog
-                            .effectiveContractsByScope()
-                            .put("/other",
-                                    Collections
-                                            .<EffectiveContractSnapshot>
-                                                    emptyList()));
-            assertThrows(
-                    UnsupportedOperationException.class,
-                    () -> catalog
-                            .effectiveContractsByScope()
-                            .get("/")
-                            .clear());
-            assertThrows(
-                    UnsupportedOperationException.class,
-                    () -> handler.headerFields()
-                            .put("other",
-                                    FrozenNode.fromNode(
-                                            new Node()
-                                                    .value("x"))));
-            assertThrows(
-                    UnsupportedOperationException.class,
-                    () -> handler
-                            .executableBodyFields()
-                            .add("other"));
-            assertThrows(
-                    UnsupportedOperationException.class,
-                    () -> handler
-                            .executableBodyNodeBlueIdsByField()
-                            .clear());
+    private static final class CatalogObservation {
+        private final EffectiveFragmentationCatalog catalog;
+        private final EffectiveContractSnapshot handler;
+        private final ExecutableBodySourceDescriptor bodySource;
+
+        private CatalogObservation(
+                EffectiveFragmentationCatalog catalog,
+                EffectiveContractSnapshot handler,
+                ExecutableBodySourceDescriptor bodySource) {
+            this.catalog = catalog;
+            this.handler = handler;
+            this.bodySource = bodySource;
         }
     }
 
@@ -551,6 +971,36 @@ class EffectiveFragmentationCatalogTest {
                         .append(
                                 contract
                                         .executableBodyNodeBlueIdsByField());
+                for (Map.Entry<String,
+                        ExecutableBodySourceDescriptor> body :
+                        contract
+                                .executableBodySourceDescriptorsByField()
+                                .entrySet()) {
+                    ExecutableBodySourceDescriptor source =
+                            body.getValue();
+                    value.append(':')
+                            .append(body.getKey())
+                            .append('=')
+                            .append(source.scopePath())
+                            .append(',')
+                            .append(source.contractKey())
+                            .append(',')
+                            .append(source.effectiveTypeBlueId())
+                            .append(',')
+                            .append(source.bodyNodeBlueId())
+                            .append(',')
+                            .append(
+                                    source
+                                            .sourceContributionNodeBlueIds())
+                            .append(',')
+                            .append(
+                                    source
+                                            .owningSourceContributionNodeBlueId())
+                            .append(',')
+                            .append(source.sourcePointer())
+                            .append(',')
+                            .append(source.pureReference());
+                }
             }
         }
         return value.toString();

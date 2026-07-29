@@ -1,11 +1,18 @@
 package blue.language.processor.conformance;
 
+import blue.language.processor.registry.RuntimeBlueIds;
+
+/**
+ * BlueIds for the fixed conformance-only channel and handler types.
+ */
 public final class MockTypeBlueIds {
 
+    /** BlueId of {@link MockExternalChannel}. */
     public static final String MOCK_EXTERNAL_CHANNEL =
-            "EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7";
+            RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL;
+    /** BlueId of {@link MockHandler}. */
     public static final String MOCK_HANDLER =
-            "DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ";
+            RuntimeBlueIds.SCRIPTED_HANDLER;
 
     private MockTypeBlueIds() {
     }

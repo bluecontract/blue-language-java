@@ -13,15 +13,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChannelCheckpointContextTest {
 
     @Test
-    void factoryPreservesCheckpointFields() {
+    void shouldVerifyFactoryPreservesCheckpointFields() {
+        // given
         MarkerContract marker = new TestMarker();
         Map<String, MarkerContract> markers = new LinkedHashMap<>();
         markers.put("checkpoint", marker);
@@ -31,6 +33,7 @@ class ChannelCheckpointContextTest {
                 .properties("timestamp", new Node().value(10));
         Node lastEvent = new Node().properties("timestamp", new Node().value(9));
 
+        // when
         ChannelCheckpointContext context = ChannelCheckpointContext.of("/child",
                 "inbox::owner",
                 event,
@@ -40,6 +43,7 @@ class ChannelCheckpointContextTest {
                 "last-signature",
                 markers);
 
+        // then
         assertEquals("/child", context.scopePath());
         assertEquals("inbox::owner", context.channelKey());
         assertEquals("current-signature", context.eventSignature());
@@ -53,7 +57,8 @@ class ChannelCheckpointContextTest {
     }
 
     @Test
-    void factoryDefensivelyCopiesEventNodes() {
+    void shouldVerifyFactoryDefensivelyCopiesEventNodes() {
+        // given
         Node event = new Node().properties("timestamp", new Node().value(10));
         Node currentSubject = new Node()
                 .properties("timestamp", new Node().value(10));
@@ -68,30 +73,41 @@ class ChannelCheckpointContextTest {
                 "last",
                 null);
 
+        // when
         event.properties("timestamp", new Node().value(11));
         currentSubject.properties("timestamp", new Node().value(12));
         lastEvent.properties("timestamp", new Node().value(8));
-
-        assertEquals(BigInteger.TEN, context.event().get("/timestamp"));
-        assertEquals(BigInteger.TEN,
-                context.currentSubject().get("/timestamp"));
-        assertEquals(BigInteger.valueOf(9), context.lastEvent().get("/timestamp"));
-
+        Object eventAfterCallerMutation =
+                context.event().get("/timestamp");
+        Object subjectAfterCallerMutation =
+                context.currentSubject().get("/timestamp");
+        Object lastEventAfterCallerMutation =
+                context.lastEvent().get("/timestamp");
         Node contextEvent = context.event();
         Node contextCurrentSubject = context.currentSubject();
         Node contextLastEvent = context.lastEvent();
         contextEvent.properties("timestamp", new Node().value(12));
         contextCurrentSubject.properties("timestamp", new Node().value(13));
         contextLastEvent.properties("timestamp", new Node().value(7));
+        Object eventAfterReturnedCopyMutation =
+                context.event().get("/timestamp");
+        Object subjectAfterReturnedCopyMutation =
+                context.currentSubject().get("/timestamp");
+        Object lastEventAfterReturnedCopyMutation =
+                context.lastEvent().get("/timestamp");
 
-        assertEquals(BigInteger.TEN, context.event().get("/timestamp"));
-        assertEquals(BigInteger.TEN,
-                context.currentSubject().get("/timestamp"));
-        assertEquals(BigInteger.valueOf(9), context.lastEvent().get("/timestamp"));
+        // then
+        assertEquals(BigInteger.TEN, eventAfterCallerMutation);
+        assertEquals(BigInteger.TEN, subjectAfterCallerMutation);
+        assertEquals(BigInteger.valueOf(9), lastEventAfterCallerMutation);
+        assertEquals(BigInteger.TEN, eventAfterReturnedCopyMutation);
+        assertEquals(BigInteger.TEN, subjectAfterReturnedCopyMutation);
+        assertEquals(BigInteger.valueOf(9), lastEventAfterReturnedCopyMutation);
     }
 
     @Test
-    void factoryDefensivelyCopiesMarkerMap() {
+    void shouldVerifyFactoryDefensivelyCopiesMarkerMap() {
+        // given
         MarkerContract marker = new TestMarker();
         Map<String, MarkerContract> markers = new LinkedHashMap<>();
         markers.put("checkpoint", marker);
@@ -104,22 +120,29 @@ class ChannelCheckpointContextTest {
                 null,
                 markers);
 
+        // when
         markers.clear();
+        Throwable mutationFailure = captureFailure(
+                () -> context.markers().put(
+                        "other",
+                        new TestMarker()));
 
+        // then
         assertSame(marker, context.markers().get("checkpoint"));
         assertFalse(context.markers().isEmpty());
-        assertThrows(UnsupportedOperationException.class,
-                () -> context.markers().put("other", new TestMarker()));
+        assertTrue(mutationFailure instanceof UnsupportedOperationException);
     }
 
     @Test
-    void lazyPreviousSubjectIsDemandedOnceAndDefensivelyCopied() {
+    void shouldVerifyLazyPreviousSubjectIsDemandedOnceAndDefensivelyCopied() {
+        // given
         AtomicInteger materializations =
                 new AtomicInteger();
         Node exactPreviousSubject =
                 new Node().properties(
                         "timestamp",
                         new Node().value(9));
+        // when
         ChannelCheckpointContext context =
                 ChannelCheckpointContext.withLazyLastEvent(
                         "/",
@@ -137,11 +160,8 @@ class ChannelCheckpointContextTest {
                             materializations.incrementAndGet();
                             return exactPreviousSubject;
                         });
-
-        assertEquals("previous",
-                context.lastEventSignature());
-        assertEquals(0, materializations.get());
-
+        String previousSignature = context.lastEventSignature();
+        int materializationsBeforeRead = materializations.get();
         Node firstRead = context.lastEvent();
         firstRead.properties(
                 "timestamp",
@@ -151,13 +171,19 @@ class ChannelCheckpointContextTest {
                 new Node().value(200));
 
         Node secondRead = context.lastEvent();
-        assertEquals(1, materializations.get());
+        int materializationsAfterReads = materializations.get();
+
+        // then
+        assertEquals("previous", previousSignature);
+        assertEquals(0, materializationsBeforeRead);
+        assertEquals(1, materializationsAfterReads);
         assertEquals(BigInteger.valueOf(9),
                 secondRead.get("/timestamp"));
     }
 
     @Test
-    void pureReferencePreviousSubjectUsesCapturedVerifiedManagerOnDemand() {
+    void shouldVerifyPureReferencePreviousSubjectUsesCapturedVerifiedManagerOnDemand() {
+        // given
         Node exactPreviousSubject =
                 new Node().properties(
                         "timestamp",
@@ -173,6 +199,7 @@ class ChannelCheckpointContextTest {
                         new Node(),
                         null,
                         manager);
+        // when
         ChannelCheckpointContext context =
                 ChannelCheckpointContext.withLazyLastEvent(
                         "/",
@@ -187,21 +214,23 @@ class ChannelCheckpointContextTest {
                         runtime.checkpointSubjectMaterializer(
                                 new Node().blueId(
                                         blueId)));
+        int materializationsBeforeRead = manager.materializations;
+        Object firstTimestamp =
+                context.lastEvent().get("/timestamp");
+        Object secondTimestamp =
+                context.lastEvent().get("/timestamp");
+        int materializationsAfterReads = manager.materializations;
 
-        assertEquals(0, manager.materializations);
-        assertEquals(
-                BigInteger.valueOf(9),
-                context.lastEvent().get(
-                        "/timestamp"));
-        assertEquals(
-                BigInteger.valueOf(9),
-                context.lastEvent().get(
-                        "/timestamp"));
-        assertEquals(1, manager.materializations);
+        // then
+        assertEquals(0, materializationsBeforeRead);
+        assertEquals(BigInteger.valueOf(9), firstTimestamp);
+        assertEquals(BigInteger.valueOf(9), secondTimestamp);
+        assertEquals(1, materializationsAfterReads);
     }
 
     @Test
-    void pureReferencePreviousSubjectRejectsProviderIdentityMismatch() {
+    void shouldVerifyPureReferencePreviousSubjectRejectsProviderIdentityMismatch() {
+        // given
         Node expected =
                 new Node().value(
                         "expected");
@@ -232,10 +261,12 @@ class ChannelCheckpointContextTest {
                                 new Node().blueId(
                                         expectedBlueId)));
 
+        // when
         ProcessorFailureException failure =
-                assertThrows(
-                        ProcessorFailureException.class,
-                        context::lastEvent);
+                captureFailure(context::lastEvent);
+
+        // then
+        assertEquals(ProcessorFailureException.class, failure.getClass());
         assertEquals(
                 ProcessorErrorCategory
                         .InvalidProcessingDocument,
@@ -244,7 +275,8 @@ class ChannelCheckpointContextTest {
     }
 
     @Test
-    void pureReferencePreviousSubjectPropagatesProviderUnavailability() {
+    void shouldVerifyPureReferencePreviousSubjectPropagatesProviderUnavailability() {
+        // given
         Node expected =
                 new Node().value(
                         "expected");
@@ -263,6 +295,7 @@ class ChannelCheckpointContextTest {
                         new Node(),
                         null,
                         manager);
+        // when
         ChannelCheckpointContext context =
                 ChannelCheckpointContext.withLazyLastEvent(
                         "/",
@@ -277,12 +310,10 @@ class ChannelCheckpointContextTest {
                         runtime.checkpointSubjectMaterializer(
                                 new Node().blueId(
                                         expectedBlueId)));
+        Throwable failure = captureFailure(context::lastEvent);
 
-        assertSame(
-                unavailable,
-                assertThrows(
-                        IllegalStateException.class,
-                        context::lastEvent));
+        // then
+        assertSame(unavailable, failure);
         assertEquals(1, manager.materializations);
     }
 

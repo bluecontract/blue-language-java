@@ -15,6 +15,11 @@ public final class PotentialBlueIdNodeProvider implements NodeProvider {
 
     private final NodeProvider delegate;
 
+    /**
+     * Creates a syntax-filtering provider wrapper.
+     *
+     * @param delegate backing provider
+     */
     public PotentialBlueIdNodeProvider(NodeProvider delegate) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
     }
@@ -31,10 +36,21 @@ public final class PotentialBlueIdNodeProvider implements NodeProvider {
                 : NodeProviderResult.notFound();
     }
 
+    /**
+     * Tests whether a string can represent a plain or cyclic-member BlueId.
+     *
+     * @param blueId candidate identity
+     * @return whether provider lookup is permitted
+     */
     public boolean acceptsBlueId(String blueId) {
         return BlueIds.isPotentialBlueId(blueId);
     }
 
+    /**
+     * Returns the backing provider.
+     *
+     * @return backing provider
+     */
     public NodeProvider delegate() {
         return delegate;
     }

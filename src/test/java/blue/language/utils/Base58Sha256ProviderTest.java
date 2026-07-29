@@ -32,47 +32,76 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 class Base58Sha256ProviderTest {
 
     @Test
-    void sha256MatchesPublishedVectors() {
-        assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                hexadecimal(Base58Sha256Provider.sha256("")));
-        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-                hexadecimal(Base58Sha256Provider.sha256("abc")));
+    void shouldMatchPublishedSha256Vectors() {
+        // given
+        String emptyExpected =
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        String abcExpected =
+                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+
+        // when
+        String emptyActual = hexadecimal(Base58Sha256Provider.sha256(""));
+        String abcActual = hexadecimal(Base58Sha256Provider.sha256("abc"));
+
+        // then
+        assertEquals(emptyExpected, emptyActual);
+        assertEquals(abcExpected, abcActual);
     }
 
     @Test
-    void repeatedAndAlternatingInputsDoNotLeakDigestState() {
+    void shouldNotLeakDigestStateAcrossRepeatedAndAlternatingInputs() {
+        // given
         String[] inputs = {"", "abc", "Blue", "zażółć gęślą jaźń", "\uD83D\uDE80"};
+
+        // when
+        boolean allMatched = true;
         for (int round = 0; round < 1_000; round++) {
             for (String input : inputs) {
-                assertArrayEquals(independentSha256(input), Base58Sha256Provider.sha256(input));
+                allMatched &= Arrays.equals(
+                        independentSha256(input),
+                        Base58Sha256Provider.sha256(input));
             }
         }
+
+        // then
+        assertTrue(allMatched);
     }
 
     @Test
-    void failedCallDoesNotPoisonTheThreadLocalDigest() {
+    void shouldNotPoisonThreadLocalDigestAfterFailedCall() {
+        // given
         byte[] expected = independentSha256("after failure");
 
-        assertThrows(NullPointerException.class, () -> Base58Sha256Provider.sha256(null));
+        // when
+        NullPointerException failure =
+                captureFailure(() -> Base58Sha256Provider.sha256(null));
+        byte[] actual = Base58Sha256Provider.sha256("after failure");
 
-        assertArrayEquals(expected, Base58Sha256Provider.sha256("after failure"));
+        // then
+        assertTrue(failure instanceof NullPointerException);
+        assertArrayEquals(expected, actual);
     }
 
     @Test
-    void threadLocalDigestsAreIsolatedAcrossConcurrentCallers() throws Exception {
+    void shouldIsolateThreadLocalDigestsAcrossConcurrentCallers() throws Exception {
+        // given
         int threadCount = 12;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+        // when
+        int completedTasks = 0;
+        boolean terminated;
         try {
             List<Callable<Void>> work = new ArrayList<>();
             for (int thread = 0; thread < threadCount; thread++) {
@@ -94,88 +123,132 @@ class Base58Sha256ProviderTest {
             List<Future<Void>> results = executor.invokeAll(work);
             for (Future<Void> result : results) {
                 result.get();
+                completedTasks++;
             }
         } finally {
             executor.shutdownNow();
+            terminated = executor.awaitTermination(5, TimeUnit.SECONDS);
         }
+
+        // then
+        assertEquals(threadCount, completedTasks);
+        assertTrue(terminated);
     }
 
     @Test
-    void canonicalHashProviderRemainsDeterministicAcrossCalls() {
+    void shouldKeepCanonicalHashProviderDeterministicAcrossCalls() {
+        // given
         Base58Sha256Provider provider = new Base58Sha256Provider();
         String first = provider.apply(Arrays.asList("alpha", 2, true));
 
+        // when
         provider.apply("unrelated");
+        String repeated = provider.apply(Arrays.asList("alpha", 2, true));
 
-        assertEquals(first, provider.apply(Arrays.asList("alpha", 2, true)));
+        // then
+        assertEquals(first, repeated);
     }
 
     @Test
-    void optimizedCanonicalWriterMatchesLegacyStringPipelineForGeneratedIdentityCorpus() {
+    void shouldMatchLegacyStringPipelineWithOptimizedWriterForGeneratedIdentityCorpus() {
+        // given
         Base58Sha256Provider provider = new Base58Sha256Provider();
         Random random = new Random(0x4A435342595445L);
+
+        // when
+        String mismatch = null;
         for (int index = 0; index < 100_000; index++) {
             Object value = identityValue(random, index);
             String expected = legacyStringPipeline(value);
             String actual = provider.applyCanonicalValue(value);
             if (!expected.equals(actual)) {
-                fail("Canonical byte pipeline mismatch at deterministic case " + index
-                        + " value=" + value + " expected=" + expected + " actual=" + actual);
+                mismatch = "Canonical byte pipeline mismatch at deterministic case " + index
+                        + " value=" + value + " expected=" + expected + " actual=" + actual;
+                break;
             }
         }
+
+        // then
+        assertNull(mismatch, mismatch);
     }
 
     @Test
-    void unsupportedJacksonValuesRetainTheCompatibilityHashPath() {
+    void shouldRetainCompatibilityHashPathForUnsupportedJacksonValues() {
+        // given
         Base58Sha256Provider provider = new Base58Sha256Provider();
         Map<String, Object> value = new LinkedHashMap<>();
+        // when
         value.put("subject", AnnotatedWireValue.SUBJECT);
+        String expected = legacyStringPipeline(value);
+        String actual = provider.applyCanonicalValue(value);
 
-        assertEquals(legacyStringPipeline(value), provider.applyCanonicalValue(value));
+        // then
+        assertEquals(expected, actual);
     }
 
     @Test
-    void plainCanonicalHelperMapsUseTheCompatibleOptimizedPath() {
+    void shouldUseCompatibleOptimizedPathForPlainCanonicalHelperMaps() {
+        // given
         Map<String, Object> value = new LinkedHashMap<>();
         value.put("subject", arrayList("entry", BigDecimal.valueOf(125, 2), true));
         Map<String, Object> folded = new TreeMap<>();
         folded.put("elem", Collections.singletonMap("blueId", "element-id"));
         folded.put("prev", Collections.singletonMap("blueId", "previous-id"));
+        // when
         value.put("folded", folded);
+        boolean supported = FrozenCanonicalWriter.supportsCanonicalValue(value);
+        String expected = legacyStringPipeline(value);
+        String actual = new Base58Sha256Provider().applyCanonicalValue(value);
 
-        assertTrue(FrozenCanonicalWriter.supportsCanonicalValue(value));
-        assertEquals(legacyStringPipeline(value), new Base58Sha256Provider().applyCanonicalValue(value));
+        // then
+        assertTrue(supported);
+        assertEquals(expected, actual);
     }
 
     @Test
-    void jacksonCustomizedContainerAndNumberSubclassesRetainCompatibilityPath() {
+    void shouldRetainCompatibilityPathForJacksonCustomizedContainersAndNumbers() {
+        // given
         Base58Sha256Provider provider = new Base58Sha256Provider();
+
+        // when
+        boolean allCompatible = true;
         for (Object customized : Arrays.<Object>asList(
                 new AnnotatedWireList(),
                 new AnnotatedWireMap(),
                 new AnnotatedBigDecimal())) {
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("subject", customized);
-
-            assertFalse(FrozenCanonicalWriter.supportsCanonicalValue(value));
-            assertEquals(legacyStringPipeline(value), provider.applyCanonicalValue(value));
+            allCompatible &= !FrozenCanonicalWriter.supportsCanonicalValue(value);
+            allCompatible &= legacyStringPipeline(value)
+                    .equals(provider.applyCanonicalValue(value));
         }
+
+        // then
+        assertTrue(allCompatible);
     }
 
     @Test
-    void duplicateSerializedMapKeysRetainLegacyRejection() {
+    void shouldRetainLegacyRejectionForDuplicateSerializedMapKeys() {
+        // given
         IdentityHashMap<String, Object> ambiguous = new IdentityHashMap<>();
         ambiguous.put(new String("duplicate"), "first");
+        // when
         ambiguous.put(new String("duplicate"), "second");
-
-        assertFalse(FrozenCanonicalWriter.supportsCanonicalValue(ambiguous));
-        assertThrows(IllegalArgumentException.class, () -> legacyStringPipeline(ambiguous));
-        assertThrows(IllegalArgumentException.class,
+        boolean supported = FrozenCanonicalWriter.supportsCanonicalValue(ambiguous);
+        IllegalArgumentException legacyFailure =
+                captureFailure(() -> legacyStringPipeline(ambiguous));
+        IllegalArgumentException optimizedFailure = captureFailure(
                 () -> new Base58Sha256Provider().applyCanonicalValue(ambiguous));
+
+        // then
+        assertFalse(supported);
+        assertTrue(legacyFailure instanceof IllegalArgumentException);
+        assertTrue(optimizedFailure instanceof IllegalArgumentException);
     }
 
     @Test
-    void comparatorDistinctDuplicateTextualKeysRetainLegacyRejection() {
+    void shouldRetainLegacyRejectionForComparatorDistinctDuplicateTextualKeys() {
+        // given
         Comparator<String> identityOrder = new Comparator<String>() {
             @Override
             public int compare(String left, String right) {
@@ -186,67 +259,100 @@ class Base58Sha256ProviderTest {
         };
         Map<String, Object> ambiguous = new TreeMap<>(identityOrder);
         ambiguous.put(new String("duplicate"), "first");
+        // when
         ambiguous.put(new String("duplicate"), "second");
-
-        assertEquals(2, ambiguous.size());
-        assertFalse(FrozenCanonicalWriter.supportsCanonicalValue(ambiguous));
-        assertThrows(IllegalArgumentException.class, () -> legacyStringPipeline(ambiguous));
-        assertThrows(IllegalArgumentException.class,
+        int size = ambiguous.size();
+        boolean supported = FrozenCanonicalWriter.supportsCanonicalValue(ambiguous);
+        IllegalArgumentException legacyFailure =
+                captureFailure(() -> legacyStringPipeline(ambiguous));
+        IllegalArgumentException optimizedFailure = captureFailure(
                 () -> new Base58Sha256Provider().applyCanonicalValue(ambiguous));
+
+        // then
+        assertEquals(2, size);
+        assertFalse(supported);
+        assertTrue(legacyFailure instanceof IllegalArgumentException);
+        assertTrue(optimizedFailure instanceof IllegalArgumentException);
     }
 
     @Test
-    void topLevelCharacterRetainsLegacyRejection() {
+    void shouldRetainLegacyRejectionForTopLevelCharacter() {
+        // given
         Character value = Character.valueOf('a');
 
-        assertFalse(FrozenCanonicalWriter.supportsCanonicalValue(value));
-        assertThrows(IllegalArgumentException.class, () -> legacyStringPipeline(value));
-        assertThrows(IllegalArgumentException.class,
+        // when
+        boolean supported = FrozenCanonicalWriter.supportsCanonicalValue(value);
+        IllegalArgumentException legacyFailure =
+                captureFailure(() -> legacyStringPipeline(value));
+        IllegalArgumentException optimizedFailure = captureFailure(
                 () -> new Base58Sha256Provider().applyCanonicalValue(value));
+
+        // then
+        assertFalse(supported);
+        assertTrue(legacyFailure instanceof IllegalArgumentException);
+        assertTrue(optimizedFailure instanceof IllegalArgumentException);
     }
 
     @Test
-    void linkedAndCyclicListsAreExcludedFromTheOptimizedPath() {
+    void shouldExcludeLinkedAndCyclicListsFromOptimizedPath() {
+        // given
         List<Object> linked = new LinkedList<>();
         linked.add("entry");
         List<Object> cyclic = new ArrayList<>();
+        // when
         cyclic.add(cyclic);
+        boolean linkedSupported =
+                FrozenCanonicalWriter.supportsCanonicalValue(linked);
+        String linkedExpected = legacyStringPipeline(linked);
+        String linkedActual =
+                new Base58Sha256Provider().applyCanonicalValue(linked);
+        boolean cyclicSupported =
+                FrozenCanonicalWriter.supportsCanonicalValue(cyclic);
 
-        assertFalse(FrozenCanonicalWriter.supportsCanonicalValue(linked));
-        assertEquals(legacyStringPipeline(linked),
-                new Base58Sha256Provider().applyCanonicalValue(linked));
-        assertFalse(FrozenCanonicalWriter.supportsCanonicalValue(cyclic));
+        // then
+        assertFalse(linkedSupported);
+        assertEquals(linkedExpected, linkedActual);
+        assertFalse(cyclicSupported);
     }
 
     @Test
-    void optimizedHashingDoesNotMutateAccessOrderedMaps() {
+    void shouldNotMutateAccessOrderedMapsDuringOptimizedHashing() {
+        // given
         Map<String, Object> value = new LinkedHashMap<>(16, 0.75f, true);
         value.put("z", 1);
         value.put("a", 2);
         value.put("m", 3);
+        // when
         List<String> before = new ArrayList<>(value.keySet());
+        boolean supported = FrozenCanonicalWriter.supportsCanonicalValue(value);
+        String expected = legacyStringPipeline(value);
+        String actual = new Base58Sha256Provider().applyCanonicalValue(value);
+        List<String> after = new ArrayList<>(value.keySet());
 
-        assertTrue(FrozenCanonicalWriter.supportsCanonicalValue(value));
-        assertEquals(legacyStringPipeline(value),
-                new Base58Sha256Provider().applyCanonicalValue(value));
-        assertEquals(before, new ArrayList<>(value.keySet()));
+        // then
+        assertTrue(supported);
+        assertEquals(expected, actual);
+        assertEquals(before, after);
     }
 
     @Test
-    void publicProviderRetainsMapperCustomizationCompatibility() throws Exception {
+    void shouldRetainMapperCustomizationCompatibilityInPublicProvider() throws Exception {
+        // given
         String java = new File(new File(System.getProperty("java.home"), "bin"), "java")
                 .getAbsolutePath();
-        Process process = new ProcessBuilder(
+        ProcessBuilder processBuilder = new ProcessBuilder(
                 java,
                 "-cp",
                 System.getProperty("java.class.path"),
                 Base58Sha256ProviderMapperCustomizationProbe.class.getName())
-                .redirectErrorStream(true)
-                .start();
+                .redirectErrorStream(true);
+
+        // when
+        Process process = processBuilder.start();
         boolean exited = process.waitFor(30, TimeUnit.SECONDS);
         if (!exited) {
             process.destroyForcibly();
-            fail("Mapper customization compatibility probe timed out");
+            process.waitFor(5, TimeUnit.SECONDS);
         }
         StringBuilder output = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -256,7 +362,11 @@ class Base58Sha256ProviderTest {
                 output.append(line).append('\n');
             }
         }
-        assertEquals(0, process.exitValue(), output.toString());
+        int exitValue = process.isAlive() ? -1 : process.exitValue();
+
+        // then
+        assertTrue(exited, "Mapper customization compatibility probe timed out");
+        assertEquals(0, exitValue, output.toString());
     }
 
     private static byte[] independentSha256(String input) {

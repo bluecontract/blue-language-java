@@ -5,6 +5,7 @@ import blue.language.model.Schema;
 import blue.language.utils.Base58Sha256Provider;
 import blue.language.utils.BlueNumbers;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.NodeToMapListOrValue;
@@ -26,8 +27,22 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_ELEMENT_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_KEY;
+import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_VALUE;
 import static blue.language.utils.Properties.*;
 
+/**
+ * Immutable Blue node used by snapshots and processing hot paths.
+ *
+ * <p>Canonical instances enforce canonical payload/reference rules and lazily
+ * cache their BlueId. Resolved instances may retain expanded reference
+ * metadata and are keyed separately by exact resolved structure. Lists and
+ * maps are unmodifiable, scalar container values and schemas are owned, and
+ * public mutable views are defensive copies.</p>
+ */
 public final class FrozenNode {
 
     private static final Function<Object, String> HASH = new Base58Sha256Provider();
@@ -88,22 +103,57 @@ public final class FrozenNode {
         this.blueId = strictCanonical && builder.eagerBlueId ? computeBlueId() : null;
     }
 
+    /**
+     * Creates a strict canonical node with no fields.
+     *
+     * @return the empty canonical node
+     */
     public static FrozenNode empty() {
         return builder().build();
     }
 
+    /**
+     * Strictly validates and defensively freezes canonical content.
+     *
+     * @param node canonical content to freeze
+     * @return an immutable canonical representation of {@code node}
+     */
     public static FrozenNode fromNode(Node node) {
         return fromNode(node, true);
     }
 
+    /**
+     * Defensively freezes a completed resolved view without imposing canonical shape.
+     *
+     * @param node resolved content to freeze
+     * @return an immutable resolved representation of {@code node}
+     */
     public static FrozenNode fromResolvedNode(Node node) {
         return fromNode(node, false, null);
     }
 
+    /**
+     * Defensively freezes a completed resolved view and offers each exact
+     * structural representation to {@code interner} for identity reuse.
+     *
+     * <p>A null interner simply disables reuse.</p>
+     *
+     * @param node resolved content to freeze
+     * @param interner optional callback for reusing equal resolved representations
+     * @return an immutable resolved representation, possibly retained by {@code interner}
+     * @throws NullPointerException if {@code node} is {@code null}
+     */
     public static FrozenNode fromResolvedNode(Node node, ResolvedStructuralInterner interner) {
         return fromNode(node, false, interner, false);
     }
 
+    /**
+     * Freezes canonical-shaped content without strict BlueId validation.
+     * This is an internal compatibility boundary, not verified evidence.
+     *
+     * @param node canonical-shaped content to freeze
+     * @return an immutable canonical-shaped representation of {@code node}
+     */
     public static FrozenNode fromUncheckedCanonicalNode(Node node) {
         return fromNode(node, true, null, false);
     }
@@ -118,6 +168,7 @@ public final class FrozenNode {
      *
      * @param authoredCanonicalValue a canonical authored value, never a resolved view
      * @param modeTemplate a node whose canonical/validation mode should be used
+     * @return {@code authoredCanonicalValue} in the construction mode of {@code modeTemplate}
      */
     public static FrozenNode authoredValueInModeOf(FrozenNode authoredCanonicalValue,
                                                    FrozenNode modeTemplate) {
@@ -236,6 +287,11 @@ public final class FrozenNode {
         return frozen;
     }
 
+    /**
+     * Returns the lazily cached key for this node's exact resolved representation.
+     *
+     * @return the exact structural key used for resolved-node interning
+     */
     public ResolvedStructuralKey resolvedStructuralKey() {
         ResolvedStructuralKey key = resolvedStructuralKey;
         if (key == null) {
@@ -261,6 +317,12 @@ public final class FrozenNode {
         return result;
     }
 
+    /**
+     * Strictly freezes a list of canonical nodes as an unmodifiable list.
+     *
+     * @param nodes canonical nodes to freeze, or {@code null}
+     * @return the frozen nodes, or {@code null} when {@code nodes} is {@code null}
+     */
     public static List<FrozenNode> fromNodes(List<Node> nodes) {
         if (nodes == null) {
             return null;
@@ -288,6 +350,12 @@ public final class FrozenNode {
         return result.isEmpty() ? null : result;
     }
 
+    /**
+     * Calculates the Content BlueId for the supplied canonical node sequence.
+     *
+     * @param nodes canonical nodes contributing to the identity
+     * @return the calculated Content BlueId
+     */
     public static String calculateBlueId(List<FrozenNode> nodes) {
         return FrozenCanonicalDigester.calculateBlueId(nodes);
     }
@@ -302,6 +370,9 @@ public final class FrozenNode {
      * therefore stricter than semantic BlueId equality but may be less strict
      * than {@link #resolvedStructuralKey()}, which preserves representation
      * details needed by the structural interner.</p>
+     *
+     * @param other node to compare with this node
+     * @return {@code true} when both nodes have the same resolved graph content
      */
     public boolean sameResolvedStructure(FrozenNode other) {
         if (this == other) {
@@ -380,6 +451,11 @@ public final class FrozenNode {
                 ResolvedStructuralKey.valueKeyOf(schemaObject(right)));
     }
 
+    /**
+     * Returns a deep mutable materialization of this frozen graph.
+     *
+     * @return a detached mutable node graph
+     */
     public Node toNode() {
         Node node = new Node()
                 .name(name)
@@ -411,6 +487,11 @@ public final class FrozenNode {
         return node;
     }
 
+    /**
+     * Returns the lazily cached Content BlueId for this exact frozen node.
+     *
+     * @return this node's Content BlueId
+     */
     public String blueId() {
         String identity = blueId;
         if (identity == null) {
@@ -425,10 +506,20 @@ public final class FrozenNode {
         return identity;
     }
 
+    /**
+     * Returns the authored node name.
+     *
+     * @return the name, or {@code null} when absent
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns a defensive public view of the scalar value graph.
+     *
+     * @return the scalar value, container value, or {@code null} when absent
+     */
     public Object getValue() {
         return publicValueView(value);
     }
@@ -438,34 +529,74 @@ public final class FrozenNode {
         return value;
     }
 
+    /**
+     * Returns the authored node description.
+     *
+     * @return the description, or {@code null} when absent
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * Returns the node's type declaration.
+     *
+     * @return the frozen type node, or {@code null} when absent
+     */
     public FrozenNode getType() {
         return type;
     }
 
+    /**
+     * Returns the declared list-item type.
+     *
+     * @return the frozen item type, or {@code null} when absent
+     */
     public FrozenNode getItemType() {
         return itemType;
     }
 
+    /**
+     * Returns the declared object-key type.
+     *
+     * @return the frozen key type, or {@code null} when absent
+     */
     public FrozenNode getKeyType() {
         return keyType;
     }
 
+    /**
+     * Returns the declared object-value type.
+     *
+     * @return the frozen value type, or {@code null} when absent
+     */
     public FrozenNode getValueType() {
         return valueType;
     }
 
+    /**
+     * Returns the authored BlueId reference stored on this node.
+     *
+     * @return the reference BlueId, or {@code null} when absent
+     */
     public String getReferenceBlueId() {
         return referenceBlueId;
     }
 
+    /**
+     * Returns the preprocessing {@code blue} directive.
+     *
+     * @return the frozen directive node, or {@code null} when absent
+     */
     public FrozenNode getBlue() {
         return blue;
     }
 
+    /**
+     * Returns a defensive copy of the node schema.
+     *
+     * @return a detached schema, or {@code null} when absent
+     */
     public Schema getSchema() {
         return schema != null ? schema.clone() : null;
     }
@@ -483,6 +614,8 @@ public final class FrozenNode {
      * this immutable graph. The estimate is intended for cache admission and
      * eviction, not heap-accounting assertions; it never materializes a
      * {@link Node} or computes an identity.
+     *
+     * @return the estimated retained weight in bytes
      */
     public long approximateRetainedWeightBytes() {
         return approximateRetainedWeightBytesOf(this);
@@ -492,6 +625,8 @@ public final class FrozenNode {
      * Estimates only this node and its directly owned containers/keys. Child
      * nodes are deliberately excluded so caches that weigh each interned node
      * independently do not multiply-count shared descendants.
+     *
+     * @return the estimated shallow retained weight in bytes
      */
     public long approximateShallowRetainedWeightBytes() {
         IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
@@ -517,6 +652,9 @@ public final class FrozenNode {
     /**
      * Estimates multiple roots as one graph, deduplicating structurally shared
      * frozen nodes and other shared objects by reference identity.
+     *
+     * @param roots graph roots to estimate; null roots are ignored
+     * @return the estimated retained weight in bytes
      */
     public static long approximateRetainedWeightBytesOf(FrozenNode... roots) {
         IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
@@ -769,34 +907,75 @@ public final class FrozenNode {
         return weight;
     }
 
+    /**
+     * Returns the node's merge policy.
+     *
+     * @return the merge policy, or {@code null} when absent
+     */
     public String getMergePolicy() {
         return mergePolicy;
     }
 
+    /**
+     * Returns the previous-list anchor BlueId.
+     *
+     * @return the previous BlueId, or {@code null} when absent
+     */
     public String getPreviousBlueId() {
         return previousBlueId;
     }
 
+    /**
+     * Returns the preprocessing position overlay.
+     *
+     * @return the position, or {@code null} when absent
+     */
     public Integer getPosition() {
         return position;
     }
 
+    /**
+     * Reports whether the node was represented using inline scalar syntax.
+     *
+     * @return {@code true} for an inline scalar representation
+     */
     public boolean isInlineValue() {
         return inlineValue;
     }
 
+    /**
+     * Returns the immutable list payload.
+     *
+     * @return the unmodifiable item list, or {@code null} when absent
+     */
     public List<FrozenNode> getItems() {
         return items;
     }
 
+    /**
+     * Returns the immutable object-property payload.
+     *
+     * @return the unmodifiable property map, or {@code null} when absent
+     */
     public Map<String, FrozenNode> getProperties() {
         return properties;
     }
 
+    /**
+     * Returns the contracts child associated with this object.
+     *
+     * @return the frozen contracts node, or {@code null} when absent
+     */
     public FrozenNode getContracts() {
         return contracts;
     }
 
+    /**
+     * Looks up an object child, including the distinguished contracts child.
+     *
+     * @param key object-property key
+     * @return the matching child, or {@code null} when absent
+     */
     public FrozenNode property(String key) {
         if (OBJECT_CONTRACTS.equals(key)) {
             return contracts;
@@ -804,6 +983,12 @@ public final class FrozenNode {
         return properties != null ? properties.get(key) : null;
     }
 
+    /**
+     * Looks up an item by zero-based index.
+     *
+     * @param index item index
+     * @return the matching item, or {@code null} when the list or index is absent
+     */
     public FrozenNode item(int index) {
         if (items == null || index < 0 || index >= items.size()) {
             return null;
@@ -811,11 +996,23 @@ public final class FrozenNode {
         return items.get(index);
     }
 
+    /**
+     * Resolves an RFC 6901 pointer against this frozen graph.
+     *
+     * @param pointer pointer to resolve
+     * @return the addressed node, or {@code null} when no node exists at the pointer
+     */
     public FrozenNode at(String pointer) {
         List<String> segments = JsonPointer.split(pointer);
         return at(segments);
     }
 
+    /**
+     * Resolves decoded RFC 6901 pointer segments against this frozen graph.
+     *
+     * @param pointerSegments decoded pointer segments; {@code null} addresses the root
+     * @return the addressed node, or {@code null} when no node exists at the path
+     */
     public FrozenNode at(List<String> pointerSegments) {
         List<String> segments = pointerSegments != null ? pointerSegments : Collections.emptyList();
         if (segments.isEmpty()) {
@@ -835,20 +1032,40 @@ public final class FrozenNode {
         return current;
     }
 
+    /**
+     * Builds an unmodifiable RFC 6901 path index including the root at {@code /}.
+     *
+     * @return all addressable paths mapped to their frozen nodes
+     */
     public Map<String, FrozenNode> pathIndex() {
         Map<String, FrozenNode> index = new LinkedHashMap<>();
-        indexPaths("/", index);
+        indexPaths(JsonPointer.ROOT, index);
         return Collections.unmodifiableMap(index);
     }
 
+    /**
+     * Reports whether this node carries a list payload.
+     *
+     * @return {@code true} when an item list is present
+     */
     public boolean hasItems() {
         return items != null;
     }
 
+    /**
+     * Reports whether this node carries ordinary object properties.
+     *
+     * @return {@code true} when a property map is present
+     */
     public boolean hasProperties() {
         return properties != null;
     }
 
+    /**
+     * Reports whether this node consists solely of a BlueId reference.
+     *
+     * @return {@code true} for a reference-only node
+     */
     public boolean isReferenceOnly() {
         return referenceBlueId != null
                 && name == null
@@ -868,6 +1085,11 @@ public final class FrozenNode {
                 && blue == null;
     }
 
+    /**
+     * Reports whether this node consists solely of a previous-list anchor.
+     *
+     * @return {@code true} for a previous-anchor-only node
+     */
     public boolean isPreviousOnly() {
         return previousBlueId != null
                 && name == null
@@ -887,22 +1109,47 @@ public final class FrozenNode {
                 && referenceBlueId == null;
     }
 
+    /**
+     * Reports whether canonical payload and reference rules are enforced.
+     *
+     * @return {@code true} for a strict canonical node
+     */
     public boolean isStrictCanonical() {
         return strictCanonical;
     }
 
+    /**
+     * Reports whether referenced BlueIds were subject to strict validation.
+     *
+     * @return {@code true} when strict BlueId validation is enabled
+     */
     public boolean isStrictBlueIdValidation() {
         return strictBlueIdValidation;
     }
 
+    /**
+     * Reports whether this graph contains a cyclic-set reference.
+     *
+     * @return {@code true} when a cyclic-set reference occurs in this subtree
+     */
     public boolean containsCyclicSetReference() {
         return containsCyclicSetReference;
     }
 
+    /**
+     * Reports whether this graph contains schema metadata.
+     *
+     * @return {@code true} when a schema occurs in this subtree
+     */
     public boolean containsSchema() {
         return containsSchema;
     }
 
+    /**
+     * Reports whether this graph contains a nested typed object payload.
+     *
+     * @return {@code true} when a nested typed object occurs in this subtree
+     */
     public boolean containsNestedTypedObjectPayload() {
         return containsNestedTypedObjectPayload;
     }
@@ -915,6 +1162,11 @@ public final class FrozenNode {
         return constructionModeNormalized;
     }
 
+    /**
+     * Reports whether this node has no modeled fields.
+     *
+     * @return {@code true} for an empty node
+     */
     public boolean isEmptyNode() {
         return name == null
                 && description == null
@@ -934,6 +1186,14 @@ public final class FrozenNode {
                 && blue == null;
     }
 
+    /**
+     * Returns a copy with one object child replaced or removed; unchanged
+     * subtrees retain object identity.
+     *
+     * @param key object-property key, or the distinguished contracts key
+     * @param child replacement child; {@code null} removes the property
+     * @return the updated immutable node
+     */
     public FrozenNode withProperty(String key, FrozenNode child) {
         return withProperty(key, child, false);
     }
@@ -960,6 +1220,12 @@ public final class FrozenNode {
         return (deferBlueId ? builder.deferBlueId() : builder).build();
     }
 
+    /**
+     * Returns a copy with the supplied list payload.
+     *
+     * @param nextItems replacement list payload
+     * @return the updated immutable node
+     */
     public FrozenNode withItems(List<FrozenNode> nextItems) {
         return toBuilder().items(nextItems).build();
     }
@@ -978,6 +1244,9 @@ public final class FrozenNode {
     /**
      * Applies a non-null object overlay while retaining unchanged frozen
      * children. Non-object replacements are returned unchanged.
+     *
+     * @param overlay overlay to apply
+     * @return the merged immutable node, or {@code overlay} when either node is not mergeable
      */
     public FrozenNode overlayObject(FrozenNode overlay) {
         return overlayObject(overlay, false);
@@ -1015,6 +1284,11 @@ public final class FrozenNode {
         return (deferBlueId ? merged.deferBlueId() : merged).build();
     }
 
+    /**
+     * Removes the preprocessing position overlay.
+     *
+     * @return this node when no position is present, otherwise a copy without it
+     */
     public FrozenNode withoutPosition() {
         if (position == null) {
             return this;
@@ -1182,7 +1456,8 @@ public final class FrozenNode {
     }
 
     private static String foldCachedListBlueIds(List<FrozenNode> nodes) {
-        String accumulator = HASH.apply(Collections.singletonMap("$list", "empty"));
+        String accumulator = HASH.apply(
+                Collections.singletonMap(LIST_SEED_KEY, LIST_SEED_VALUE));
         int start = 0;
         if (!nodes.isEmpty() && nodes.get(0).isPreviousOnly()) {
             accumulator = nodes.get(0).previousBlueId;
@@ -1195,9 +1470,9 @@ public final class FrozenNode {
                             Collections.<String, Object>singletonMap(LIST_CONTROL_EMPTY, true))
                     : node.blueId();
             Map<String, Object> cons = new TreeMap<>(String::compareTo);
-            cons.put("elem", reference(elementBlueId));
-            cons.put("prev", reference(accumulator));
-            accumulator = HASH.apply(Collections.singletonMap("$listCons", cons));
+            cons.put(LIST_CONS_ELEMENT_KEY, reference(elementBlueId));
+            cons.put(LIST_CONS_PREVIOUS_KEY, reference(accumulator));
+            accumulator = HASH.apply(Collections.singletonMap(LIST_CONS_KEY, cons));
         }
         return accumulator;
     }
@@ -1250,7 +1525,7 @@ public final class FrozenNode {
     }
 
     private boolean computeContainsCyclicSetReference() {
-        if (referenceBlueId != null && referenceBlueId.indexOf('#') >= 0) {
+        if (BlueIds.hasCyclicMemberSeparator(referenceBlueId)) {
             return true;
         }
         if (containsCyclicSetReference(type)
@@ -1422,9 +1697,8 @@ public final class FrozenNode {
         }
         if (value instanceof BigInteger) {
             BigInteger bigIntValue = (BigInteger) value;
-            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-            if (bigIntValue.compareTo(lowerBound) < 0 || bigIntValue.compareTo(upperBound) > 0) {
+            if (bigIntValue.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                    || bigIntValue.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
                 return bigIntValue.toString();
             }
         }
@@ -1853,7 +2127,16 @@ public final class FrozenNode {
         }
     }
 
+    /** Callback used to reuse equal immutable resolved representations. */
     public interface ResolvedStructuralInterner {
+
+        /**
+         * Returns the retained node for an exact structural key.
+         *
+         * @param structuralKey exact immutable representation key
+         * @param node newly frozen node associated with the key
+         * @return the retained node for {@code structuralKey}
+         */
         FrozenNode intern(ResolvedStructuralKey structuralKey, FrozenNode node);
     }
 

@@ -96,6 +96,8 @@ entries:
 - path: result.document
   type: value
   definition: Exact resulting authoritative Root; input Root for every noncommitting status.
+- path: result.document.cyclic.blueId
+  definition: Opaque cyclic member identity preserved in the resulting Root.
 - path: result.document.child.b
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -123,6 +125,18 @@ entries:
 - path: result.document.contracts.checkpoint.entries.old
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.source
+  type: value
+  definition: Checkpoint entry owned by the raw source Channel.
+- path: result.document.contracts.checkpoint.entries.sourceA
+  type: value
+  definition: Checkpoint entry owned by sourceA.
+- path: result.document.contracts.checkpoint.entries.sourceB
+  type: value
+  definition: Checkpoint entry owned by sourceB.
+- path: result.document.contracts.checkpoint.entries.target
+  type: value
+  definition: Checkpoint entry at the Handler target key; normally absent.
 - path: result.document.contracts.embedded.paths
   type: sequence-or-value
   definition: Exact resulting Process Embedded paths value.
@@ -132,12 +146,18 @@ entries:
 - path: result.document.contracts.initialized
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.initialized.document
+  type: value
+  definition: Exact pre-initialization scope document retained by the initialization marker.
 - path: result.document.contracts.old
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
 - path: result.document.contracts.terminated.reason
   type: scalar-or-node
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.executions
+  type: integer
+  definition: Number of logical Handler executions recorded by the fixture.
 - path: result.document.h2Ran
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -147,6 +167,9 @@ entries:
 - path: result.document.postInitRan
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.value
+  type: value
+  definition: Resulting fixture scalar value.
 - path: result.events
   type: sequence-or-value
   definition: Out-of-band ordered sequence of exact events emitted by Root only.
@@ -171,6 +194,9 @@ entries:
 - path: trace.acceptedChannelSnapshot.usedAfterInitialization
   type: value
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.channelLookupResults
+  type: sequence-or-value
+  definition: Ordered exact same-scope Channel lookup results KEY:CHANNEL|ABSENT|NON_CHANNEL.
 - path: trace.checkpointCleanupKeys
   type: sequence-or-value
   definition: Raw checkpoint keys removed by deterministic processor cleanup.
@@ -237,12 +263,24 @@ entries:
 - path: trace.generalizationTestOrder
   type: sequence-or-value
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.handlerChannelKeys
+  type: sequence-or-value
+  definition: Frozen same-scope Channel keys used for Handler binding.
+- path: trace.handlerExecutionCount
+  type: integer
+  definition: Number of Handler executions after logical-delivery coalescing.
+- path: trace.initialDocumentBlueId
+  type: scalar-or-node
+  definition: Exact Node BlueId of the pre-initialization document recorded by marker/event.
 - path: trace.integerLimbOperation
   type: integer
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
 - path: trace.lifecycleOrder
   type: sequence-or-value
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.logicalDeliveryGroups
+  type: sequence-or-value
+  definition: Canonical logical delivery groups and their participating raw source keys.
 - path: trace.markerWrites
   type: sequence-or-value
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
@@ -288,6 +326,9 @@ entries:
 - path: trace.sortComparison
   type: integer
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.sourceCheckpointKeys
+  type: sequence-or-value
+  definition: Raw accepted source keys whose checkpoints committed.
 - path: trace.terminationEvents
   type: sequence-or-value
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.

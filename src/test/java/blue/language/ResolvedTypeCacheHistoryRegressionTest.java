@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class ResolvedTypeCacheHistoryRegressionTest {
 
     @Test
-    void resolvedTypeShapeDoesNotDependOnReferenceCacheHistory() {
+    void shouldKeepResolvedTypeShapeIndependentOfReferenceCacheHistory() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
@@ -43,9 +44,11 @@ class ResolvedTypeCacheHistoryRegressionTest {
 
         Node cold = new Merger(blue.getMergingProcessor(), processingProvider, cache)
                 .resolve(source.clone());
+        // when
         Node warm = new Merger(blue.getMergingProcessor(), processingProvider, cache)
                 .resolve(source.clone());
 
+        // then
         assertNotNull(NodePathEditor.getOrNull(cold, "/type/contracts/audit/type/type/order"),
                 "cold resolution must materialize the Handler field inherited from Contract");
         assertNotNull(NodePathEditor.getOrNull(warm, "/type/contracts/audit/type/type/order"),

@@ -33,7 +33,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
             ExternalOrderKey.of(Arrays.asList(1, "snapshot-parity"));
 
     @Test
-    void snapshotAndNodeTraceEntriesAreEquivalentForSuccessAndRuntimeFailures() {
+    void shouldVerifySnapshotAndNodeTraceEntriesAreEquivalentForSuccessAndRuntimeFailures() {
+        // given
         for (FailureMode mode : FailureMode.values()) {
             Node root = root();
             Node event = event();
@@ -41,6 +42,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
             DocumentProcessor processor = processor(
                     plan(root, event), mode, null);
 
+            // when
             ProcessingDebugResult nodeResult =
                     processor.processDocumentWithTrace(
                             root.clone(), event.clone());
@@ -48,6 +50,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
                     processor.processDocumentWithTrace(
                             snapshot, event.clone());
 
+            // then
             assertEquivalent(
                     nodeResult,
                     snapshotResult,
@@ -81,13 +84,15 @@ class DocumentProcessorResolvedSnapshotParityTest {
     }
 
     @Test
-    void gasLimitFailureHasNodeAndSnapshotParityAndRetainsInputSnapshot() {
+    void shouldVerifyGasLimitFailureHasNodeAndSnapshotParityAndRetainsInputSnapshot() {
+        // given
         Node root = root();
         Node event = event();
         ResolvedSnapshot snapshot = snapshot(root);
         DocumentProcessor processor = processor(
                 plan(root, event), FailureMode.SUCCESS, 0L);
 
+        // when
         ProcessingDebugResult nodeResult =
                 processor.processDocumentWithTrace(
                         root.clone(), event.clone());
@@ -95,6 +100,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 processor.processDocumentWithTrace(
                         snapshot, event.clone());
 
+        // then
         assertEquivalent(nodeResult, snapshotResult, "gas limit");
         assertEquals(
                 ProcessorStatus.GAS_LIMIT_EXCEEDED,
@@ -109,7 +115,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
     }
 
     @Test
-    void invalidExplicitEvidenceUsesCanonicalInputForBothSnapshotApis() {
+    void shouldVerifyInvalidExplicitEvidenceUsesCanonicalInputForBothSnapshotApis() {
+        // given
         Node root = root();
         Node event = event();
         ResolvedSnapshot snapshot = snapshot(root);
@@ -128,6 +135,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
                         .eventOrderKey(EVENT_ORDER)
                         .build();
 
+        // when
         ProcessingDebugResult nodeResult =
                 processor.processDocumentWithTrace(
                         root.clone(), event.clone(), forged);
@@ -138,6 +146,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 processor.processDocument(
                         snapshot, event.clone(), forged);
 
+        // then
         assertEquivalent(nodeResult, snapshotResult, "invalid evidence");
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
@@ -155,7 +164,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
     }
 
     @Test
-    void preExecutionValidationFailureReturnsCanonicalNotResolvedInput() {
+    void shouldVerifyPreExecutionValidationFailureReturnsCanonicalNotResolvedInput() {
+        // given
         Node canonical = root();
         Node invalidResolved = canonical.clone()
                 .blue(new Node().value("forbidden"));
@@ -168,9 +178,11 @@ class DocumentProcessorResolvedSnapshotParityTest {
         DocumentProcessor processor = processor(
                 plan(canonical, event), FailureMode.SUCCESS, null);
 
+        // when
         ProcessingDebugResult result =
                 processor.processDocumentWithTrace(snapshot, event);
 
+        // then
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 result.processResult().status());

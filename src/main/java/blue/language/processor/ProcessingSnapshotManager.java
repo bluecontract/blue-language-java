@@ -11,16 +11,30 @@ import java.util.Collection;
 import java.util.Objects;
 
 /**
- * Bridges the mutable processor runtime to the canonical immutable snapshot layer.
+ * Bridges invocation mutation to canonical immutable snapshot publication.
+ *
+ * <p>Transient sequences and working documents are ownership scopes: callers
+ * must close or release them, and implementations must not publish their
+ * intermediate roots. Exact-reference materialization must preserve provider
+ * verification and cyclic-member proof.</p>
  */
 public interface ProcessingSnapshotManager {
 
+    /**
+     * Resolves and publishes an immutable snapshot for an authored document.
+     *
+     * @param document authored mutable document
+     * @return immutable canonical and resolved snapshot
+     */
     ResolvedSnapshot fromDocument(Node document);
 
     /**
      * Resolves a short-lived processing state without requiring it to be
      * published to shared snapshot caches. Implementations that do not have a
      * separate transient path retain their historical behavior by default.
+     *
+     * @param document authored mutable document
+     * @return transient immutable snapshot
      */
     default ResolvedSnapshot fromDocumentTransient(Node document) {
         return fromDocument(document);
@@ -36,6 +50,11 @@ public interface ProcessingSnapshotManager {
      * Silently falling back to ordinary eager resolution would turn a deferred
      * executable body into a semantic provider demand. Managers backed by a
      * selective Language resolver must override this method.</p>
+     *
+     * @param document authored processing document
+     * @param preservedPaths absolute paths whose authored form must remain exact
+     * @return resolved snapshot retaining the requested canonical subtrees
+     * @throws UnsupportedOperationException when preservation is unsupported
      */
     default ResolvedSnapshot fromDocumentPreservingPaths(
             Node document,
@@ -50,6 +69,10 @@ public interface ProcessingSnapshotManager {
     /**
      * Transient counterpart to
      * {@link #fromDocumentPreservingPaths(Node, Collection)}.
+     *
+     * @param document authored processing document
+     * @param preservedPaths absolute paths whose authored form must remain exact
+     * @return transient resolved snapshot retaining the requested subtrees
      */
     default ResolvedSnapshot fromDocumentTransientPreservingPaths(
             Node document,
@@ -76,6 +99,12 @@ public interface ProcessingSnapshotManager {
      * Language pipeline reproduces the exact captured resolved scope. The
      * resolved view is never hashed directly and unchecked BlueId calculation
      * is never used.</p>
+     *
+     * @param scopePath absolute selected scope path
+     * @param selectedScope exact canonical selected contribution
+     * @param capturedDocumentSnapshot immutable containing document snapshot
+     * @return strict standalone scope Content BlueId
+     * @throws IllegalArgumentException when projection cannot be reproduced
      */
     default String calculateScopeContentBlueId(String scopePath,
                                                FrozenNode selectedScope,
@@ -95,6 +124,10 @@ public interface ProcessingSnapshotManager {
      * the normal Language resolver to fetch and verify its target. This keeps
      * custom managers conservative while avoiding an unchecked provider side
      * channel.</p>
+     *
+     * @param reference pure exact reference or already materialized node
+     * @return immutable verified resolved content
+     * @throws IllegalArgumentException when verified content is unavailable
      */
     default FrozenNode materializeVerifiedReference(FrozenNode reference) {
         FrozenNode checked = Objects.requireNonNull(reference, "reference");
@@ -125,6 +158,9 @@ public interface ProcessingSnapshotManager {
      * <p>Managers with direct verified-provider access should override; the
      * runtime independently revalidates the returned direct BlueId and fails
      * closed if a recursively resolved representation was substituted.</p>
+     *
+     * @param reference pure exact reference or already exact content
+     * @return immutable exact canonical provider content
      */
     default FrozenNode materializeVerifiedExactReference(
             FrozenNode reference) {
@@ -137,17 +173,28 @@ public interface ProcessingSnapshotManager {
      * retain intermediate resolution data locally until final publication.
      * Decorators around a cache-aware manager must override and delegate this
      * method if they need to preserve that manager's optimized cache scope.
+     *
+     * @return invocation-owned transient manager
      */
     default ProcessingSnapshotManager transientSequence() {
         return this;
     }
 
-    /** Returns an independent hand-off scope containing the current transient evidence. */
+    /**
+     * Returns an independent hand-off scope containing current transient evidence.
+     *
+     * @return independently owned transient manager
+     */
     default ProcessingSnapshotManager forkTransientSequence() {
         return transientSequence();
     }
 
-    /** Prunes a reusable transient scope to entries reachable from the current working state. */
+    /**
+     * Prunes a reusable transient scope to entries reachable from current state.
+     *
+     * @param canonicalRoot current canonical root
+     * @param resolvedRoot current resolved root
+     */
     default void retainTransientState(FrozenNode canonicalRoot, FrozenNode resolvedRoot) {
         // Historical managers have no explicit transient cache to prune.
     }
@@ -157,7 +204,11 @@ public interface ProcessingSnapshotManager {
         // Historical managers have no explicitly owned transient state.
     }
 
-    /** Whether this transient scope still belongs to the manager's current cache generation. */
+    /**
+     * Reports whether this scope belongs to the current cache generation.
+     *
+     * @return {@code true} when transient evidence may still be reused
+     */
     default boolean isTransientStateCurrent() {
         return true;
     }
@@ -167,11 +218,19 @@ public interface ProcessingSnapshotManager {
      * updates without invoking {@link #fromDocumentTransient(Node)}.
      *
      * <p>The default is deliberately conservative for custom managers.</p>
+     *
+     * @return whether generic incremental value resolution is supported
      */
     default boolean supportsIncrementalValueResolution() {
         return false;
     }
 
+    /**
+     * Tests incremental support for a dependency-proven request.
+     *
+     * @param request immutable incremental-resolution request
+     * @return whether the manager can safely apply that request
+     */
     default boolean supportsIncrementalValueResolution(
             IncrementalValueResolutionRequest request) {
         return supportsIncrementalValueResolution();
@@ -181,13 +240,29 @@ public interface ProcessingSnapshotManager {
      * Returns the conformance view that shares this sequence's transient
      * resolution scope. Cache-aware decorators should delegate this method
      * together with {@link #transientSequence()}.
+     *
+     * @param conformanceEngine base conformance engine, or {@code null}
+     * @return transient conformance view, or {@code null}
      */
     default ConformanceEngine transientConformanceEngine(ConformanceEngine conformanceEngine) {
         return conformanceEngine != null ? conformanceEngine.transientView() : null;
     }
 
+    /**
+     * Applies one patch and resolves the resulting immutable snapshot.
+     *
+     * @param snapshot immutable base snapshot
+     * @param patch patch to apply
+     * @return resulting immutable snapshot
+     */
     ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch);
 
+    /**
+     * Publishes or retains a completed snapshot in shared cache state.
+     *
+     * @param snapshot completed immutable snapshot
+     * @return published snapshot
+     */
     default ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
         return snapshot;
     }

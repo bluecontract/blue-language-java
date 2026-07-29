@@ -1,8 +1,11 @@
 package blue.language.preprocess.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.preprocess.TransformationProcessor;
+import blue.language.utils.JsonPointer;
 import blue.language.utils.Nodes;
 
 import java.util.ArrayList;
@@ -11,8 +14,22 @@ import java.util.List;
 import java.util.Map;
 
 import static blue.language.utils.Properties.LIST_CONTROL_EMPTY;
+import static blue.language.utils.SchemaPropertyConstants.*;
 
+/**
+ * Normalizes empty list elements to explicit {@code $empty: true}
+ * placeholders while removing empty object fields.
+ *
+ * <p>The transformation operates on a deep clone and applies the same rules to
+ * schema values and nested metadata.</p>
+ */
 public class NormalizeListPlaceholders implements TransformationProcessor {
+
+    /**
+     * Creates a stateless list-placeholder normalization transformation.
+     */
+    public NormalizeListPlaceholders() {
+    }
 
     @Override
     public Node process(Node document) {
@@ -23,7 +40,7 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
         if (node == null) {
             return null;
         }
-        return normalizeNode(node, false, "/");
+        return normalizeNode(node, false, JsonPointer.ROOT);
     }
 
     private Node normalizeObjectField(Node node, String path) {
@@ -55,31 +72,31 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
         }
 
         if (normalized.getType() != null) {
-            normalized.type(normalizeNode(normalized.getType(), false, append(path, "type")));
+            normalized.type(normalizeNode(normalized.getType(), false, append(path, Properties.OBJECT_TYPE)));
         }
         if (normalized.getItemType() != null) {
-            normalized.itemType(normalizeNode(normalized.getItemType(), false, append(path, "itemType")));
+            normalized.itemType(normalizeNode(normalized.getItemType(), false, append(path, Properties.OBJECT_ITEM_TYPE)));
         }
         if (normalized.getKeyType() != null) {
-            normalized.keyType(normalizeNode(normalized.getKeyType(), false, append(path, "keyType")));
+            normalized.keyType(normalizeNode(normalized.getKeyType(), false, append(path, Properties.OBJECT_KEY_TYPE)));
         }
         if (normalized.getValueType() != null) {
-            normalized.valueType(normalizeNode(normalized.getValueType(), false, append(path, "valueType")));
+            normalized.valueType(normalizeNode(normalized.getValueType(), false, append(path, Properties.OBJECT_VALUE_TYPE)));
         }
         if (normalized.getBlue() != null) {
-            normalized.blue(normalizeNode(normalized.getBlue(), false, append(path, "blue")));
+            normalized.blue(normalizeNode(normalized.getBlue(), false, append(path, Properties.OBJECT_BLUE)));
         }
         if (normalized.getContracts() != null) {
-            normalized.contracts(normalizeNode(normalized.getContracts(), false, append(path, "contracts")));
+            normalized.contracts(normalizeNode(normalized.getContracts(), false, append(path, Properties.OBJECT_CONTRACTS)));
         }
         if (normalized.getSchema() != null) {
-            normalizeSchema(normalized.getSchema(), append(path, "schema"));
+            normalizeSchema(normalized.getSchema(), append(path, Properties.OBJECT_SCHEMA));
         }
 
         if (normalized.getItems() != null) {
             List<Node> items = new ArrayList<>(normalized.getItems().size());
             for (int i = 0; i < normalized.getItems().size(); i++) {
-                items.add(normalizeListElement(normalized.getItems().get(i), append(path, "items", i)));
+                items.add(normalizeListElement(normalized.getItems().get(i), append(path, Properties.OBJECT_ITEMS, i)));
             }
             normalized.items(items);
         }
@@ -99,23 +116,26 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
     }
 
     private void normalizeSchema(Schema schema, String path) {
-        schema.required(normalizeObjectField(schema.getRequired(), append(path, "required")));
-        schema.minLength(normalizeObjectField(schema.getMinLength(), append(path, "minLength")));
-        schema.maxLength(normalizeObjectField(schema.getMaxLength(), append(path, "maxLength")));
-        schema.minimum(normalizeObjectField(schema.getMinimum(), append(path, "minimum")));
-        schema.maximum(normalizeObjectField(schema.getMaximum(), append(path, "maximum")));
-        schema.exclusiveMinimum(normalizeObjectField(schema.getExclusiveMinimum(), append(path, "exclusiveMinimum")));
-        schema.exclusiveMaximum(normalizeObjectField(schema.getExclusiveMaximum(), append(path, "exclusiveMaximum")));
-        schema.multipleOf(normalizeObjectField(schema.getMultipleOf(), append(path, "multipleOf")));
-        schema.minItems(normalizeObjectField(schema.getMinItems(), append(path, "minItems")));
-        schema.maxItems(normalizeObjectField(schema.getMaxItems(), append(path, "maxItems")));
-        schema.uniqueItems(normalizeObjectField(schema.getUniqueItems(), append(path, "uniqueItems")));
-        schema.minFields(normalizeObjectField(schema.getMinFields(), append(path, "minFields")));
-        schema.maxFields(normalizeObjectField(schema.getMaxFields(), append(path, "maxFields")));
+        schema.required(normalizeObjectField(schema.getRequired(), append(path, KEY_REQUIRED)));
+        schema.minLength(normalizeObjectField(schema.getMinLength(), append(path, KEY_MIN_LENGTH)));
+        schema.maxLength(normalizeObjectField(schema.getMaxLength(), append(path, KEY_MAX_LENGTH)));
+        schema.minimum(normalizeObjectField(schema.getMinimum(), append(path, KEY_MINIMUM)));
+        schema.maximum(normalizeObjectField(schema.getMaximum(), append(path, KEY_MAXIMUM)));
+        schema.exclusiveMinimum(normalizeObjectField(
+                schema.getExclusiveMinimum(), append(path, KEY_EXCLUSIVE_MINIMUM)));
+        schema.exclusiveMaximum(normalizeObjectField(
+                schema.getExclusiveMaximum(), append(path, KEY_EXCLUSIVE_MAXIMUM)));
+        schema.multipleOf(normalizeObjectField(schema.getMultipleOf(), append(path, KEY_MULTIPLE_OF)));
+        schema.minItems(normalizeObjectField(schema.getMinItems(), append(path, KEY_MIN_ITEMS)));
+        schema.maxItems(normalizeObjectField(schema.getMaxItems(), append(path, KEY_MAX_ITEMS)));
+        schema.uniqueItems(normalizeObjectField(
+                schema.getUniqueItems(), append(path, KEY_UNIQUE_ITEMS)));
+        schema.minFields(normalizeObjectField(schema.getMinFields(), append(path, KEY_MIN_FIELDS)));
+        schema.maxFields(normalizeObjectField(schema.getMaxFields(), append(path, KEY_MAX_FIELDS)));
         if (schema.getEnum() != null) {
             List<Node> enumValues = new ArrayList<>(schema.getEnum().size());
             for (int i = 0; i < schema.getEnum().size(); i++) {
-                String enumPath = append(path, "enum", i);
+                String enumPath = append(path, KEY_ENUM, i);
                 Node enumValue = normalizeObjectField(schema.getEnum().get(i), enumPath);
                 if (enumValue == null
                         || Nodes.isEmptyPlaceholder(enumValue)
@@ -129,18 +149,10 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
     }
 
     private static String append(String path, String segment) {
-        String prefix = path == null || path.isEmpty() ? "/" : path;
-        if ("/".equals(prefix)) {
-            return "/" + escape(segment);
-        }
-        return prefix + "/" + escape(segment);
+        return JsonPointer.append(path, segment);
     }
 
     private static String append(String path, String segment, int index) {
         return append(append(path, segment), String.valueOf(index));
-    }
-
-    private static String escape(String segment) {
-        return segment.replace("~", "~0").replace("/", "~1");
     }
 }

@@ -1,5 +1,9 @@
 package blue.language.processor;
 
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.utils.JsonPointer;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -25,6 +29,12 @@ final class ContractRecognitionMeter {
 
     ContractRecognitionMeter(GasMeter gas) {
         this.gas = Objects.requireNonNull(gas, "gas");
+    }
+
+    RuntimeWorkSession newRuntimeWorkSession() {
+        return new RuntimeWorkSession(
+                gas,
+                RuntimeWorkSession.Mode.PROCESSING);
     }
 
     void recognizeHeader(String scopePath,
@@ -132,9 +142,14 @@ final class ContractRecognitionMeter {
         String prefix = "/".equals(normalizedScope)
                 ? ""
                 : normalizedScope;
-        return prefix + "/contracts/"
-                + blue.language.utils.JsonPointer.escape(contractKey)
-                + "/paths/" + index;
+        String contractPath = ProcessorEngine.resolvePointer(
+                prefix,
+                ProcessorPointerConstants.relativeContractsEntry(
+                        contractKey));
+        String paths = JsonPointer.append(
+                contractPath,
+                ProcessorContractConstants.KEY_PATHS);
+        return JsonPointer.append(paths, String.valueOf(index));
     }
 
     private static final class HeaderIdentity {

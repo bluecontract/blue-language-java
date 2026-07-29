@@ -17,6 +17,12 @@ public final class ProcessingDebugResult {
     private final PlatformCommitCompanion platformCommitCompanion;
     private final ResolvedSnapshot resultingSnapshot;
 
+    /**
+     * Creates a debug result without platform or snapshot metadata.
+     *
+     * @param processResult semantic PROCESS result
+     * @param trace immutable conformance trace
+     */
     public ProcessingDebugResult(DocumentProcessingResult processResult,
                                  ProcessingConformanceTrace trace) {
         this(processResult, trace, null, null);
@@ -40,10 +46,20 @@ public final class ProcessingDebugResult {
         this.resultingSnapshot = resultingSnapshot;
     }
 
+    /**
+     * Returns the semantic result produced by the PROCESS operation.
+     *
+     * @return immutable semantic PROCESS result
+     */
     public DocumentProcessingResult processResult() {
         return processResult;
     }
 
+    /**
+     * Returns the non-semantic trace captured for conformance and debugging.
+     *
+     * @return immutable non-semantic conformance trace
+     */
     public ProcessingConformanceTrace trace() {
         return trace;
     }
@@ -52,6 +68,8 @@ public final class ProcessingDebugResult {
      * Returns the non-semantic platform hand-off when execution was bound to
      * verified revision evidence. It is absent for initialization and for
      * attempts rejected before evidence admission.
+     *
+     * @return platform companion, or {@code null}
      */
     public PlatformCommitCompanion platformCommitCompanion() {
         return platformCommitCompanion;
@@ -60,6 +78,8 @@ public final class ProcessingDebugResult {
     /**
      * Returns the out-of-band immutable processing snapshot, when execution
      * used the snapshot-native runtime. It is not a ProcessResult field.
+     *
+     * @return resulting snapshot, or {@code null}
      */
     public ResolvedSnapshot resultingSnapshot() {
         return resultingSnapshot;

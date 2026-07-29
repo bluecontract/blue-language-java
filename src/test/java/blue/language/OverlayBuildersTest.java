@@ -16,8 +16,9 @@ import static org.junit.jupiter.api.Assertions.*;
 public class OverlayBuildersTest {
 
     @Test
-    public void testBasic1() throws Exception {
+    public void shouldMinimizeBasicResolvedOverlay() throws Exception {
 
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A\n" +
@@ -48,8 +49,10 @@ public class OverlayBuildersTest {
         Node resolved = blue.resolve(bNode);
 
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
+        // when
         Node reversed = builder.build(resolved);
 
+        // then
         assertFalse(reversed.getProperties().containsKey("x"));
         assertEquals(2, reversed.getAsInteger("/y/value"));
         assertEquals(Properties.LIST_TYPE_BLUE_ID, reversed.getAsText("/z/type/blueId"));
@@ -57,7 +60,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void testNestedTypes() throws Exception {
+    public void shouldMinimizeNestedResolvedTypes() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A\n" +
@@ -82,8 +86,10 @@ public class OverlayBuildersTest {
         Node resolved = blue.resolve(cNode);
 
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
+        // when
         Node reversed = builder.build(resolved);
 
+        // then
         assertEquals("C", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("B"), reversed.getType().getBlueId());
         assertEquals(20, reversed.getAsInteger("/w/value"));
@@ -95,7 +101,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void testComplexNestedProperties() throws Exception {
+    public void shouldMinimizeComplexNestedProperties() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String m = "name: M\n" +
@@ -123,14 +130,15 @@ public class OverlayBuildersTest {
 
         Node pNode = nodeProvider.getNodeByName("P");
         Blue blue = new Blue(nodeProvider);
+        // when
         Node resolved = blue.resolve(pNode);
-        assertEquals(1, resolved.getAsInteger("/a/b/c/d1/value"));
-        assertEquals(1, resolved.getAsInteger("/a/b/c/d2/value"));
-        assertEquals(3, resolved.getAsInteger("/a/b/c/d3/value"));
-
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
         Node reversed = builder.build(resolved);
 
+        // then
+        assertEquals(1, resolved.getAsInteger("/a/b/c/d1/value"));
+        assertEquals(1, resolved.getAsInteger("/a/b/c/d2/value"));
+        assertEquals(3, resolved.getAsInteger("/a/b/c/d3/value"));
         assertEquals("P", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("M"), reversed.getType().getBlueId());
         assertEquals(nodeProvider.getBlueIdByName("N"), reversed.getAsNode("/a/b/type").getBlueId());
@@ -140,7 +148,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void testInheritedListAndMap() throws Exception {
+    public void shouldMinimizeInheritedListAndMapChanges() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String base = "name: Base\n" +
@@ -168,8 +177,11 @@ public class OverlayBuildersTest {
         Node resolved = blue.resolve(derivedNode);
 
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
+        // when
         Node reversed = builder.build(resolved);
+        Node roundTripped = blue.resolve(reversed);
 
+        // then
         assertEquals("Derived", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("Base"), reversed.getType().getBlueId());
         assertEquals(2, reversed.getAsNode("/list").getItems().size());
@@ -177,7 +189,6 @@ public class OverlayBuildersTest {
         assertEquals("C", reversed.getAsNode("/list").getItems().get(1).getValue());
         assertEquals(1, reversed.getAsNode("/map").getProperties().size());
         assertEquals("value3", reversed.getAsText("/map/key3/value"));
-        Node roundTripped = blue.resolve(reversed);
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 roundTripped.getAsNode("/list").getItems().get(0).getValue(),
                 roundTripped.getAsNode("/list").getItems().get(1).getValue(),
@@ -185,7 +196,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void omitsUnchangedInheritedListDuringReverseMinimization() throws Exception {
+    public void shouldOmitUnchangedInheritedListDuringReverseMinimization() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -200,13 +212,16 @@ public class OverlayBuildersTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Base"));
 
         Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        // when
         Node reversed = new MinimizedOverlayBuilder().build(resolved);
 
+        // then
         assertTrue(reversed.getProperties() == null || !reversed.getProperties().containsKey("list"));
     }
 
     @Test
-    public void preservesInheritedListPositionalReplacementDuringReverseMinimization() throws Exception {
+    public void shouldPreserveInheritedListPositionalReplacementDuringReverseMinimization() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -233,8 +248,10 @@ public class OverlayBuildersTest {
 
         Node resolved = blue.resolve(derived);
         Node reversed = new MinimizedOverlayBuilder().build(resolved);
+        // when
         Node reversedList = reversed.getAsNode("/list");
 
+        // then
         assertEquals(1, reversedList.getItems().size());
         assertNull(reversedList.getItems().get(0).getPreviousBlueId());
         assertEquals(Integer.valueOf(1), reversedList.getItems().get(0).getPosition());
@@ -243,7 +260,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void preservesMultipleInheritedListReplacementsAndAppendsDuringReverseMinimization() throws Exception {
+    public void shouldPreserveMultipleInheritedListReplacementsAndAppendsDuringReverseMinimization() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -273,8 +291,11 @@ public class OverlayBuildersTest {
                 "    - D");
 
         Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
+        // when
         Node reversedList = reversed.getAsNode("/list");
+        Node roundTripped = blue.resolve(reversed);
 
+        // then
         assertEquals(3, reversedList.getItems().size());
         assertNull(reversedList.getItems().get(0).getPreviousBlueId());
         assertEquals(Integer.valueOf(0), reversedList.getItems().get(0).getPosition());
@@ -282,8 +303,6 @@ public class OverlayBuildersTest {
         assertEquals(Integer.valueOf(2), reversedList.getItems().get(1).getPosition());
         assertEquals("Z", reversedList.getItems().get(1).getValue());
         assertEquals("D", reversedList.getItems().get(2).getValue());
-
-        Node roundTripped = blue.resolve(reversed);
         assertEquals(Arrays.asList("X", "B", "Z", "D"), Arrays.asList(
                 roundTripped.getAsNode("/list").getItems().get(0).getValue(),
                 roundTripped.getAsNode("/list").getItems().get(1).getValue(),
@@ -292,7 +311,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void preservesNestedInheritedListItemOverlayDuringReverseMinimization() throws Exception {
+    public void shouldPreserveNestedInheritedListItemOverlayDuringReverseMinimization() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -321,8 +341,10 @@ public class OverlayBuildersTest {
                 "        color: red");
 
         Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
+        // when
         Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
+        // then
         assertNull(overlay.getPreviousBlueId());
         assertEquals(Integer.valueOf(0), overlay.getPosition());
         assertEquals("red", overlay.getAsText("/details/color/value"));
@@ -333,7 +355,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void preservesReplacementOfInheritedEmptyListPlaceholder() throws Exception {
+    public void shouldPreserveReplacementOfInheritedEmptyListPlaceholder() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -359,8 +382,10 @@ public class OverlayBuildersTest {
                 "      value: A");
 
         Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
+        // when
         Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
+        // then
         assertNull(overlay.getPreviousBlueId());
         assertEquals(Integer.valueOf(0), overlay.getPosition());
         assertEquals("A", overlay.getValue());
@@ -368,7 +393,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void canonicalOverlayDoesNotSerializePreviousOrPos() throws Exception {
+    public void shouldNotSerializePreviousOrPositionControlsInCanonicalOverlay() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -396,8 +422,10 @@ public class OverlayBuildersTest {
         Node preprocessed = blue.preprocess(derived.clone());
         Node canonical = new CanonicalIdentityInputBuilder().build(
                 blue.resolve(preprocessed.clone()), preprocessed);
+        // when
         Node canonicalList = canonical.getAsNode("/list");
 
+        // then
         assertEquals(2, canonicalList.getItems().size());
         assertEquals("A", canonicalList.getItems().get(0).getValue());
         assertEquals("C", canonicalList.getItems().get(1).getValue());
@@ -408,7 +436,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void canonicalOverlayPreservesExplicitRootLabelsEqualToTypeLabels() {
+    public void shouldPreserveExplicitRootLabelsEqualToTypeLabelsInCanonicalOverlay() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Node canonicalType = new Node()
                 .name("Same Label")
@@ -424,8 +453,10 @@ public class OverlayBuildersTest {
         Node preprocessed = blue.preprocess(source.clone());
         Node canonical = new CanonicalIdentityInputBuilder().build(
                 blue.resolve(preprocessed.clone()), preprocessed);
+        // when
         Node expectedCanonical = source.clone();
 
+        // then
         assertEquals("Same Label", canonical.getName());
         assertEquals("Same Description", canonical.getDescription());
         assertEquals(BlueIdCalculator.calculateBlueId(expectedCanonical),
@@ -436,7 +467,8 @@ public class OverlayBuildersTest {
     }
 
     @Test
-    public void preservesScalarOverrideThatDiffersFromType() throws Exception {
+    public void shouldPreserveScalarOverrideThatDiffersFromType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -448,13 +480,16 @@ public class OverlayBuildersTest {
                 "status: draft");
         resolved = new Blue(nodeProvider).resolve(resolved);
         resolved.getProperties().get("status").value("published");
+        // when
         Node reversed = new MinimizedOverlayBuilder().build(resolved);
 
+        // then
         assertEquals("published", reversed.getAsText("/status/value"));
     }
 
     @Test
-    public void preservesSchemaOverrideThatDiffersFromType() throws Exception {
+    public void shouldPreserveSchemaOverrideThatDiffersFromType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -470,8 +505,10 @@ public class OverlayBuildersTest {
                 "  minLength: 3");
 
         Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        // when
         Node reversed = new MinimizedOverlayBuilder().build(resolved);
 
+        // then
         assertNotNull(reversed.getSchema());
         assertEquals(BigInteger.valueOf(3), reversed.getSchema().getMinLengthExact());
     }

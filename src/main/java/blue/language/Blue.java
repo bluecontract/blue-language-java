@@ -1,5 +1,7 @@
 package blue.language;
 
+import blue.language.utils.Properties;
+
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.dictionary.DictionaryAwareExporter;
@@ -69,6 +71,17 @@ import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.utils.limits.Limits.NO_LIMITS;
 
+/**
+ * Primary facade for parsing, resolving, canonicalizing, matching, snapshotting,
+ * and processing Blue documents.
+ *
+ * <p>A facade owns its provider configuration, bounded derived caches, and any
+ * document processor it creates. Callers that inject a processor retain
+ * ownership of that processor. {@link #close()} releases facade-owned runtime
+ * state and prevents subsequent admitted runtime operations. Unless a method
+ * is explicitly described as a pure serialization helper, admitted operations
+ * throw {@link IllegalStateException} after close.</p>
+ */
 public class Blue implements NodeResolver, AutoCloseable {
 
     private static final int RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT = 32;
@@ -131,27 +144,66 @@ public class Blue implements NodeResolver, AutoCloseable {
 
 
 
+    /**
+     * Creates a runtime with bootstrap/runtime providers, default merging and
+     * type mapping, and bounded default caches.
+     */
     public Blue() {
         this(node -> null, null, null, BlueCachePolicy.boundedDefaults());
     }
 
+    /**
+     * Creates a runtime with one caller provider and default merging/caches.
+     *
+     * <p>The provider is retained as a borrowed dependency and wrapped with
+     * bootstrap, runtime-type, and evidence-verification boundaries.</p>
+     *
+     * @param nodeProvider non-null provider for external BlueId content
+     */
     public Blue(NodeProvider nodeProvider) {
         this(nodeProvider, null, null, BlueCachePolicy.boundedDefaults());
     }
 
+    /**
+     * Creates a runtime with explicit provider and optional merging strategy.
+     *
+     * @param nodeProvider non-null borrowed external-content provider
+     * @param mergingProcessor merging strategy, or {@code null} for the default
+     */
     public Blue(NodeProvider nodeProvider, MergingProcessor mergingProcessor) {
         this(nodeProvider, mergingProcessor, null, BlueCachePolicy.boundedDefaults());
     }
 
+    /**
+     * Creates a runtime with explicit provider and optional Java type registry.
+     *
+     * @param nodeProvider non-null borrowed external-content provider
+     * @param typeClassResolver Java type resolver, or {@code null} to disable
+     *                          automatic class lookup
+     */
     public Blue(NodeProvider nodeProvider, TypeClassResolver typeClassResolver) {
         this(nodeProvider, null, typeClassResolver, BlueCachePolicy.boundedDefaults());
     }
 
+    /**
+     * Creates a runtime with explicit provider, merging strategy, and Java
+     * type registry under bounded default cache policy.
+     *
+     * @param nodeProvider non-null borrowed external-content provider
+     * @param mergingProcessor merging strategy, or {@code null} for the default
+     * @param typeClassResolver Java type resolver, or {@code null}
+     */
     public Blue(NodeProvider nodeProvider, MergingProcessor mergingProcessor, TypeClassResolver typeClassResolver) {
         this(nodeProvider, mergingProcessor, typeClassResolver, BlueCachePolicy.boundedDefaults());
     }
 
-    /** Creates a default runtime with explicit bounded acceleration-cache policy. */
+    /**
+     * Creates a default runtime with explicit acceleration-cache bounds.
+     *
+     * @param cachePolicy immutable non-null cache policy
+     * @return a runtime using bootstrap/runtime providers and default merging
+     * @throws NullPointerException if {@code cachePolicy} is null
+     */
     public static Blue withCachePolicy(BlueCachePolicy cachePolicy) {
         return new Blue(node -> null, null, null, cachePolicy);
     }
@@ -159,11 +211,21 @@ public class Blue implements NodeResolver, AutoCloseable {
     /**
      * Additive constructor for hosts that need explicit per-runtime cache bounds.
      * Existing constructors continue to use {@link BlueCachePolicy#boundedDefaults()}.
+     *
+     * <p>Provider, merger, and resolver dependencies are borrowed. A
+     * {@code null} merger selects the default pipeline and a {@code null}
+     * resolver disables automatic Java class lookup.</p>
+     *
+     * @param nodeProvider non-null external-content provider
+     * @param mergingProcessor merging strategy, or {@code null} for the default
+     * @param typeClassResolver Java type resolver, or {@code null}
+     * @param cachePolicy immutable non-null cache policy
+     * @throws NullPointerException if {@code cachePolicy} is null
      */
     public Blue(NodeProvider nodeProvider,
                 MergingProcessor mergingProcessor,
                 TypeClassResolver typeClassResolver,
-                BlueCachePolicy cachePolicy) {
+        BlueCachePolicy cachePolicy) {
         this.originalNodeProvider = nodeProvider;
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = mergingProcessor != null ? mergingProcessor : createDefaultNodeProcessor();
@@ -190,10 +252,25 @@ public class Blue implements NodeResolver, AutoCloseable {
         this.documentProcessorOwned = true;
     }
 
+    /**
+     * Resolves a node under the current global limits.
+     *
+     * @param node non-null mutable source; resolution may normalize nested type
+     *             metadata while constructing the returned graph
+     * @return a newly materialized resolved node
+     */
     public Node resolve(Node node) {
         return resolve(node, NO_LIMITS);
     }
 
+    /**
+     * Resolves a node under the intersection of method and global limits.
+     *
+     * @param node non-null mutable source; resolution may normalize nested type
+     *             metadata while constructing the returned graph
+     * @param limits non-null per-call traversal limits
+     * @return a newly materialized resolved node
+     */
     @Override
     public Node resolve(Node node, Limits limits) {
         beginDirectCacheOperation();
@@ -206,10 +283,27 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Resolves a defensive copy while restoring authored subtrees at selected
+     * RFC 6901 paths.
+     *
+     * @param node non-null authored source
+     * @param preservedPaths paths to retain; null or empty preserves none
+     * @return an independent partially resolved graph
+     */
     public Node resolvePreservingPaths(Node node, Collection<String> preservedPaths) {
         return resolvePreservingPaths(node, NO_LIMITS, preservedPaths);
     }
 
+    /**
+     * Resolves a defensive copy under caller limits while restoring authored
+     * subtrees at selected RFC 6901 paths.
+     *
+     * @param node non-null authored source
+     * @param limits non-null per-call traversal limits
+     * @param preservedPaths paths to retain; null or empty preserves none
+     * @return an independent partially resolved graph
+     */
     public Node resolvePreservingPaths(Node node, Limits limits, Collection<String> preservedPaths) {
         beginDirectCacheOperation();
         try {
@@ -220,7 +314,7 @@ public class Blue implements NodeResolver, AutoCloseable {
             if (canonicalPreservedPaths.isEmpty()) {
                 return resolve(node.clone(), limits);
             }
-            if (canonicalPreservedPaths.contains("/")) {
+            if (canonicalPreservedPaths.contains(JsonPointer.ROOT)) {
                 return node.clone();
             }
 
@@ -241,16 +335,46 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Selects canonical RFC 6901 paths matching both path patterns and a node
+     * predicate.
+     *
+     * @param node graph to inspect; null yields an empty result
+     * @param pathPatterns selector patterns understood by
+     *                     {@link NodePathSelector}; null or empty yields no paths
+     * @param predicate non-null additional node predicate
+     * @return matching paths in deterministic traversal order
+     * @throws IllegalArgumentException if a non-empty selection has a null predicate
+     */
     public List<String> selectPaths(Node node, Collection<String> pathPatterns, Predicate<Node> predicate) {
         return NodePathSelector.select(node, pathPatterns, predicate);
     }
 
+    /**
+     * Resolves while preserving every authored path selected by pattern and
+     * predicate.
+     *
+     * @param node non-null authored source
+     * @param pathPatterns selector patterns
+     * @param predicate additional node predicate
+     * @return an independent partially resolved graph
+     */
     public Node resolvePreservingMatchingPaths(Node node,
                                                Collection<String> pathPatterns,
                                                Predicate<Node> predicate) {
         return resolvePreservingMatchingPaths(node, NO_LIMITS, pathPatterns, predicate);
     }
 
+    /**
+     * Resolves under caller limits while preserving every authored path
+     * selected by pattern and predicate.
+     *
+     * @param node non-null authored source
+     * @param limits non-null per-call traversal limits
+     * @param pathPatterns selector patterns
+     * @param predicate additional node predicate
+     * @return an independent partially resolved graph
+     */
     public Node resolvePreservingMatchingPaths(Node node,
                                                Limits limits,
                                                Collection<String> pathPatterns,
@@ -264,6 +388,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Reconstructs strict canonical identity input from authored provenance
+     * and completed resolution.
+     *
+     * @param node non-null authored source; it is not mutated
+     * @return a new canonical node suitable for strict BlueId calculation
+     */
     public Node canonicalize(Node node) {
         beginDirectCacheOperation();
         try {
@@ -275,6 +406,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps an object to Blue and returns its strict canonical identity input.
+     *
+     * @param object non-null serializable object
+     * @return a new canonical node
+     */
     public Node canonicalize(Object object) {
         beginDirectCacheOperation();
         try {
@@ -288,6 +425,9 @@ public class Blue implements NodeResolver, AutoCloseable {
      * Produces an author-facing overlay which resolves back to the same
      * completed meaning. This is the inverse Language operation to
      * {@link #resolve(Node)}; it is deliberately distinct from canonicalization.
+     *
+     * @param node non-null authored source; it is not mutated
+     * @return a new minimized overlay
      */
     public Node minimize(Node node) {
         beginDirectCacheOperation();
@@ -299,6 +439,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps an object to Blue and returns a minimized author-facing overlay.
+     *
+     * @param object non-null serializable object
+     * @return a new minimized overlay
+     */
     public Node minimize(Object object) {
         beginDirectCacheOperation();
         try {
@@ -311,6 +457,10 @@ public class Blue implements NodeResolver, AutoCloseable {
     /**
      * Canonicalization is valid only for an established, complete operation
      * result. Absence, incomplete evidence, and invalid content fail closed.
+     *
+     * @param result non-null operation result
+     * @return canonical identity input for the established value
+     * @throws IllegalStateException if the result is not established
      */
     public Node canonicalize(BlueOperationResult<Node> result) {
         Objects.requireNonNull(result, "result");
@@ -321,6 +471,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         return canonicalize(result.requireEstablished());
     }
 
+    /**
+     * Recursively replaces every resolvable reference without applying type
+     * inheritance or merge semantics.
+     *
+     * @param node non-null source; it is not mutated
+     * @return a new expanded graph
+     * @throws IllegalArgumentException if required content is unavailable
+     */
     public Node expand(Node node) {
         beginDirectCacheOperation();
         try {
@@ -337,6 +495,10 @@ public class Blue implements NodeResolver, AutoCloseable {
      * Expands only references on the semantic closure of the demanded paths.
      * Provider absence or unavailability never turns into a definitive field
      * absence.
+     *
+     * @param node non-null source; it is defensively copied
+     * @param limits non-null demanded-path and expansion-budget policy
+     * @return an explicit established, absent, incomplete, or invalid outcome
      */
     public BlueOperationResult<Node> expandLimited(Node node, BlueOperationLimits limits) {
         beginDirectCacheOperation();
@@ -376,6 +538,10 @@ public class Blue implements NodeResolver, AutoCloseable {
     /**
      * Resolves with a provider-expansion budget and reports semantic absence
      * separately from missing evidence.
+     *
+     * @param node non-null authored source; it is not mutated
+     * @param limits non-null demanded-path and expansion-budget policy
+     * @return an explicit established, absent, incomplete, or invalid outcome
      */
     public BlueOperationResult<Node> resolveLimited(Node node, BlueOperationLimits limits) {
         beginDirectCacheOperation();
@@ -453,6 +619,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps an object to Blue and recursively expands references without merge
+     * semantics.
+     *
+     * @param object non-null serializable object
+     * @return a new expanded graph
+     */
     public Node expand(Object object) {
         beginDirectCacheOperation();
         try {
@@ -462,6 +635,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Replaces canonical node content with a pure reference to its strict
+     * Content BlueId.
+     *
+     * @param node non-null strict BlueId input; it is not mutated
+     * @return a new reference-only node
+     */
     public Node collapse(Node node) {
         if (node == null) {
             throw new IllegalArgumentException("node must not be null");
@@ -469,6 +649,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         return new Node().blueId(BlueIdCalculator.calculateBlueId(node));
     }
 
+    /**
+     * Maps an object to Blue and collapses it to a strict Content BlueId
+     * reference.
+     *
+     * @param object non-null serializable object
+     * @return a new reference-only node
+     */
     public Node collapse(Object object) {
         beginDirectCacheOperation();
         try {
@@ -478,6 +665,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Preprocesses and completely resolves a source into immutable canonical
+     * and resolved lanes, reusing or publishing bounded cache state.
+     *
+     * @param node non-null authored source; it is not mutated
+     * @return a complete immutable snapshot
+     */
     public ResolvedSnapshot resolveToSnapshot(Node node) {
         beginDirectCacheOperation();
         try {
@@ -495,6 +689,10 @@ public class Blue implements NodeResolver, AutoCloseable {
      * Builds a verified snapshot while retaining exact authored subtrees for
      * a later semantic demand. The canonical lane is still derived from the
      * complete input; only resolution below the supplied paths is deferred.
+     *
+     * @param node non-null authored source; it is not mutated
+     * @param preservedPaths paths whose resolution is deferred
+     * @return an invocation-local snapshot that may be resolution-incomplete
      */
     public ResolvedSnapshot resolveToSnapshotPreservingPaths(
             Node node,
@@ -518,6 +716,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps an object to Blue and returns a complete immutable snapshot.
+     *
+     * @param object non-null serializable object
+     * @return a complete immutable snapshot
+     */
     public ResolvedSnapshot resolveToSnapshot(Object object) {
         beginDirectCacheOperation();
         try {
@@ -527,6 +731,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Resolves already-canonical input, reusing verified cached evidence when
+     * available.
+     *
+     * @param canonical non-null strict canonical node; it is defensively frozen
+     * @return a complete immutable snapshot
+     */
     public ResolvedSnapshot loadSnapshot(Node canonical) {
         beginDirectCacheOperation();
         try {
@@ -542,6 +753,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Loads verified provider content for a BlueId and resolves it as a
+     * complete immutable snapshot.
+     *
+     * @param blueId canonical plain or cyclic-member BlueId
+     * @return a cached or newly resolved complete snapshot
+     * @throws IllegalArgumentException if provider content is absent or invalid
+     */
     public ResolvedSnapshot loadSnapshot(String blueId) {
         beginDirectCacheOperation();
         try {
@@ -654,10 +873,10 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
 
         String segment = segments.get(index);
-        if ("blueId".equals(segment)) {
+        if (Properties.OBJECT_BLUE_ID.equals(segment)) {
             return DemandExpansion.absent(current);
         }
-        if ("items".equals(segment)) {
+        if (Properties.OBJECT_ITEMS.equals(segment)) {
             if (index + 1 >= segments.size() || current.getItems() == null) {
                 return DemandExpansion.absent(current);
             }
@@ -686,49 +905,52 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     private Node semanticChild(Node node, String segment) {
-        if ("name".equals(segment)) {
+        if (Properties.OBJECT_NAME.equals(segment)) {
             return node.getName() == null ? null : new Node().value(node.getName());
         }
-        if ("description".equals(segment)) {
+        if (Properties.OBJECT_DESCRIPTION.equals(segment)) {
             return node.getDescription() == null ? null : new Node().value(node.getDescription());
         }
-        if ("type".equals(segment)) return node.getType();
-        if ("itemType".equals(segment)) return node.getItemType();
-        if ("keyType".equals(segment)) return node.getKeyType();
-        if ("valueType".equals(segment)) return node.getValueType();
-        if ("value".equals(segment)) {
+        if (Properties.OBJECT_TYPE.equals(segment)) return node.getType();
+        if (Properties.OBJECT_ITEM_TYPE.equals(segment)) return node.getItemType();
+        if (Properties.OBJECT_KEY_TYPE.equals(segment)) return node.getKeyType();
+        if (Properties.OBJECT_VALUE_TYPE.equals(segment)) return node.getValueType();
+        if (Properties.OBJECT_VALUE.equals(segment)) {
             return node.getRawValue() == null ? null : new Node().value(node.getRawValue());
         }
-        if ("schema".equals(segment)) {
+        if (Properties.OBJECT_SCHEMA.equals(segment)) {
             return node.getSchema() == null
                     ? null
                     : JSON_MAPPER.convertValue(
                     SchemaToMapListOrValue.get(node.getSchema(), NodeToMapListOrValue::get),
                     Node.class);
         }
-        if ("contracts".equals(segment)) return node.getContracts();
+        if (Properties.OBJECT_CONTRACTS.equals(segment)) return node.getContracts();
         return node.getProperties() == null ? null : node.getProperties().get(segment);
     }
 
     private void setSemanticChild(Node node, String segment, Node child) {
-        if ("type".equals(segment)) {
+        if (Properties.OBJECT_TYPE.equals(segment)) {
             node.type(child);
-        } else if ("itemType".equals(segment)) {
+        } else if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
             node.itemType(child);
-        } else if ("keyType".equals(segment)) {
+        } else if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
             node.keyType(child);
-        } else if ("valueType".equals(segment)) {
+        } else if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
             node.valueType(child);
-        } else if ("contracts".equals(segment)) {
+        } else if (Properties.OBJECT_CONTRACTS.equals(segment)) {
             node.contracts(child);
-        } else if ("schema".equals(segment)) {
+        } else if (Properties.OBJECT_SCHEMA.equals(segment)) {
             node.schema(child == null
                     ? null
                     : NodeDeserializer.parseSchema(
-                    JSON_MAPPER.valueToTree(NodeToMapListOrValue.get(child)), "/schema"));
-        } else if (!"name".equals(segment)
-                && !"description".equals(segment)
-                && !"value".equals(segment)) {
+                    JSON_MAPPER.valueToTree(NodeToMapListOrValue.get(child)),
+                    JsonPointer.append(
+                            JsonPointer.ROOT,
+                            Properties.OBJECT_SCHEMA)));
+        } else if (!Properties.OBJECT_NAME.equals(segment)
+                && !Properties.OBJECT_DESCRIPTION.equals(segment)
+                && !Properties.OBJECT_VALUE.equals(segment)) {
             Map<String, Node> properties = node.getProperties();
             if (properties != null) {
                 properties.put(segment, child);
@@ -770,7 +992,9 @@ public class Blue implements NodeResolver, AutoCloseable {
             Schema materialized = NodeDeserializer.parseSchema(
                     JSON_MAPPER.valueToTree(
                             NodeToMapListOrValue.get(providerContentWithoutRootIdentity(nodes.get(0)))),
-                    "/schema");
+                    JsonPointer.append(
+                            JsonPointer.ROOT,
+                            Properties.OBJECT_SCHEMA));
             if (materialized.isReferenceOnly()) {
                 throw new IllegalArgumentException(
                         "Schema provider returned a reference-only wrapper for " + schema.getBlueId());
@@ -797,14 +1021,36 @@ public class Blue implements NodeResolver, AutoCloseable {
         return expanded;
     }
 
+    /**
+     * Strictly freezes canonical content for immutable overlay patching.
+     *
+     * @param canonical non-null strict canonical root; it is not retained mutably
+     * @return a new patch engine rooted at the frozen content
+     */
     public CanonicalOverlayPatchEngine canonicalPatchEngine(Node canonical) {
         return new CanonicalOverlayPatchEngine(FrozenNode.fromNode(canonical));
     }
 
+    /**
+     * Applies one patch to strict canonical content without resolving the
+     * resulting graph.
+     *
+     * @param canonical non-null strict canonical root
+     * @param patch non-null patch operation
+     * @return immutable patched root plus before/after evidence
+     */
     public CanonicalPatchResult applyCanonicalPatch(Node canonical, JsonPatch patch) {
         return canonicalPatchEngine(canonical).apply(patch);
     }
 
+    /**
+     * Applies a patch to a snapshot's canonical lane and re-resolves the
+     * resulting canonical root under the current runtime configuration.
+     *
+     * @param snapshot non-null snapshot whose canonical lane is patchable
+     * @param patch non-null patch operation
+     * @return a complete immutable snapshot for the patched identity
+     */
     public ResolvedSnapshot applyCanonicalPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
         beginDirectCacheOperation();
         try {
@@ -814,6 +1060,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Pins a complete snapshot until explicit cache clearing or runtime close.
+     * Attached verified reference provenance, when present, is pinned with it.
+     *
+     * @param snapshot non-null resolution-complete snapshot
+     * @return this runtime
+     * @throws IllegalArgumentException if resolution is deferred
+     */
     public Blue cacheResolvedSnapshot(ResolvedSnapshot snapshot) {
         beginDirectCacheOperation();
         try {
@@ -824,6 +1078,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Pins each complete snapshot in iteration order. The operation is not
+     * atomic: earlier entries remain pinned if a later entry fails.
+     *
+     * @param snapshots non-null collection of resolution-complete snapshots
+     * @return this runtime
+     */
     public Blue cacheResolvedSnapshots(Collection<ResolvedSnapshot> snapshots) {
         beginDirectCacheOperation();
         try {
@@ -834,6 +1095,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Looks up a pinned or bounded derived snapshot by canonical BlueId.
+     * BlueId aliases exist only for snapshots carrying verified resolution
+     * provenance.
+     *
+     * @param blueId canonical snapshot identity
+     * @return the cached immutable snapshot, if present
+     */
     public Optional<ResolvedSnapshot> cachedResolvedSnapshot(String blueId) {
         beginDirectCacheOperation();
         try {
@@ -843,19 +1112,38 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Counts canonical snapshots retained by both runtime cache tiers.
+     *
+     * @return the number of pinned and derived canonical snapshot entries
+     */
     public int resolvedSnapshotCacheSize() {
         return pinnedSnapshotsByCanonicalRepresentation.size()
                 + derivedSnapshotsByCanonicalRepresentation.size();
     }
 
+    /**
+     * Counts verified reference identities retained by the runtime.
+     *
+     * @return the number of verified reference entries retained by the runtime
+     */
     public int resolvedReferenceCacheSize() {
         return resolvedReferenceCache.size();
     }
 
+    /**
+     * Counts exact resolved structures retained for graph sharing.
+     *
+     * @return the number of exact resolved structures retained by the interner
+     */
     public int resolvedStructuralCacheSize() {
         return resolvedReferenceCache.resolvedGraphSize();
     }
 
+    /**
+     * Clears all runtime-owned snapshot, reference, structural, processor-plan,
+     * and recent-processing cache state while preserving configuration.
+     */
     public void clearResolvedSnapshotCache() {
         DocumentProcessor ownedProcessor;
         ProcessingMetricsSink metrics;
@@ -884,12 +1172,20 @@ public class Blue implements NodeResolver, AutoCloseable {
         gauges.emit(metrics);
     }
 
-    /** Returns the immutable cache policy selected when this runtime was created. */
+    /**
+     * Returns the immutable cache policy selected when this runtime was created.
+     *
+     * @return the runtime-owned immutable policy
+     */
     public BlueCachePolicy cachePolicy() {
         return cachePolicy;
     }
 
-    /** Returns approximate retained weights and ownership counters by cache region. */
+    /**
+     * Returns approximate retained weights and ownership counters by cache region.
+     *
+     * @return a point-in-time immutable statistics snapshot
+     */
     public BlueCacheStats cacheStats() {
         Map<String, BlueCacheStats.Region> regions = new LinkedHashMap<>();
         synchronized (lifecycleLock) {
@@ -961,6 +1257,8 @@ public class Blue implements NodeResolver, AutoCloseable {
      * verified references and owns an otherwise independent bounded cache, so
      * retaining it across later runtime reconfiguration cannot contaminate this
      * Blue instance; callers should close it when no longer needed.
+     *
+     * @return an independently closeable conformance engine
      */
     public ConformanceEngine conformanceEngine() {
         beginDirectCacheOperation();
@@ -976,10 +1274,21 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Reports the implemented Blue Language specification version.
+     *
+     * @return the implemented Blue Language specification version
+     */
     public String languageVersion() {
         return "1.0";
     }
 
+    /**
+     * Creates an unexecuted Language report bound to the packaged registry and
+     * fixture inventory.
+     *
+     * @return a report with no pass/fail fixture outcomes yet
+     */
     public BlueConformanceReport conformanceReport() {
         String fixturePackageIdentity = BlueConformanceReport.loadFixturePackageIdentity("blue-language-1.0-fixtures:unavailable");
         List<String> fixtureIds = BlueConformanceReport.loadFixtureIds();
@@ -995,10 +1304,21 @@ public class Blue implements NodeResolver, AutoCloseable {
         );
     }
 
+    /**
+     * Executes the exact packaged Language conformance fixture inventory.
+     *
+     * @return the completed Language conformance report
+     */
     public BlueConformanceReport runConformanceSuite() {
         return BlueConformanceSuiteRunner.run(this);
     }
 
+    /**
+     * Creates an unexecuted Contracts report bound to packaged release
+     * identities and fixture inventory.
+     *
+     * @return a report with no pass/fail fixture outcomes yet
+     */
     public BlueContractsConformanceReport contractsConformanceReport() {
         String fixturePackageIdentity = BlueContractsConformanceReport.loadFixturePackageIdentity(
                 "blue-contracts-1.0-fixtures:unavailable");
@@ -1026,13 +1346,20 @@ public class Blue implements NodeResolver, AutoCloseable {
                 Collections.emptyList());
     }
 
+    /**
+     * Executes the exact packaged Contracts conformance fixture inventory.
+     *
+     * @return the completed Contracts conformance report
+     */
     public BlueContractsConformanceReport runContractsConformanceSuite() {
         return BlueContractsConformanceSuiteRunner.run(this);
     }
 
     /**
      * Executes both exact release fixture packages and returns one
-     * machine-readable 252-result report with no skip outcome.
+     * machine-readable 268-result report with no skip outcome.
+     *
+     * @return the combined completed release report
      */
     public BlueReleaseConformanceReport runReleaseConformanceSuites() {
         BlueConformanceReport languageReport = runConformanceSuite();
@@ -1042,6 +1369,13 @@ public class Blue implements NodeResolver, AutoCloseable {
                 languageReport, contractsReport);
     }
 
+    /**
+     * Expands eligible references directly in a mutable graph under the
+     * intersection of method and global limits.
+     *
+     * @param node mutable graph to modify in place
+     * @param limits non-null per-call traversal limits
+     */
     public void extend(Node node, Limits limits) {
         beginDirectCacheOperation();
         try {
@@ -1052,6 +1386,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Serializes an object through the Language JSON model and applies
+     * preprocessing.
+     *
+     * @param object non-null serializable object
+     * @return a new preprocessed node graph
+     */
     public Node objectToNode(Object object) {
         beginDirectCacheOperation();
         try {
@@ -1062,6 +1403,15 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Round-trips an object through preprocessed Blue mapping into another
+     * Java type.
+     *
+     * @param object non-null serializable source
+     * @param clazz non-null target class
+     * @param <T> target type
+     * @return a newly mapped target instance
+     */
     public <T> T convertObject(Object object, Class<T> clazz) {
         beginDirectCacheOperation();
         try {
@@ -1071,6 +1421,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Resolves and fail-closed matches a mutable candidate against a type
+     * pattern under current global limits.
+     *
+     * @param node candidate node
+     * @param type target type/shape pattern; null imposes no constraint
+     * @return whether matching completed successfully and matched
+     */
     public boolean nodeMatchesType(Node node, Node type) {
         beginDirectCacheOperation();
         try {
@@ -1080,6 +1438,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Matches two already-resolved immutable nodes without another resolve.
+     *
+     * @param resolvedNode resolved candidate
+     * @param resolvedType resolved target pattern
+     * @return whether the candidate matches
+     */
     public boolean nodeMatchesType(FrozenNode resolvedNode, FrozenNode resolvedType) {
         beginDirectCacheOperation();
         try {
@@ -1089,6 +1454,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Matches one resolved snapshot path against an immutable target pattern.
+     *
+     * @param snapshot resolved snapshot
+     * @param pointer RFC 6901 path in the resolved lane
+     * @param resolvedType resolved target pattern
+     * @return whether the selected candidate matches
+     */
     public boolean nodeMatchesType(ResolvedSnapshot snapshot, String pointer, FrozenNode resolvedType) {
         beginDirectCacheOperation();
         try {
@@ -1098,6 +1471,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Replaces runtime-wide traversal limits, invalidating configuration-bound
+     * caches and Blue-owned processor state. An injected borrowed processor is
+     * not replaced. Null restores {@link Limits#NO_LIMITS}.
+     *
+     * @param globalLimits new limits, or {@code null}
+     */
     public void setGlobalLimits(Limits globalLimits) {
         ConfigurationRefresh refresh = refreshRuntimeConfiguration(() ->
                 this.globalLimits = globalLimits != null ? globalLimits : NO_LIMITS,
@@ -1106,10 +1486,23 @@ public class Blue implements NodeResolver, AutoCloseable {
         refresh.gauges.emit(refresh.metrics);
     }
 
+    /**
+     * Returns the active limits instance. Stateful implementations remain
+     * caller-owned and are not copied.
+     *
+     * @return active global limits
+     */
     public Limits getGlobalLimits() {
         return globalLimits;
     }
 
+    /**
+     * Parses strict YAML source and applies the configured preprocessing
+     * pipeline.
+     *
+     * @param yaml YAML source
+     * @return a new preprocessed node graph
+     */
     public Node yamlToNode(String yaml) {
         beginDirectCacheOperation();
         try {
@@ -1119,6 +1512,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Parses strict JSON source and applies the configured preprocessing
+     * pipeline.
+     *
+     * @param json JSON source
+     * @return a new preprocessed node graph
+     */
     public Node jsonToNode(String json) {
         beginDirectCacheOperation();
         try {
@@ -1128,14 +1528,34 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Parses strict YAML into its authored node shape without preprocessing.
+     *
+     * @param yaml YAML source
+     * @return a newly parsed node graph
+     */
     public Node parseSourceYaml(String yaml) {
         return YAML_MAPPER.readValue(yaml, Node.class);
     }
 
+    /**
+     * Parses strict JSON into its authored node shape without preprocessing.
+     *
+     * @param json JSON source
+     * @return a newly parsed node graph
+     */
     public Node parseSourceJson(String json) {
         return JSON_MAPPER.readValue(json, Node.class);
     }
 
+    /**
+     * Parses YAML as direct strict BlueId input and validates reference and
+     * canonical identity rules without preprocessing.
+     *
+     * @param yaml YAML identity input
+     * @return the validated newly parsed graph
+     * @throws IllegalArgumentException if the graph is not valid BlueId input
+     */
     public Node parseBlueIdInputYaml(String yaml) {
         Node node = YAML_MAPPER.readValue(yaml, Node.class);
         BlueIdReferenceValidator.validate(node);
@@ -1143,6 +1563,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         return node;
     }
 
+    /**
+     * Parses JSON as direct strict BlueId input and validates reference and
+     * canonical identity rules without preprocessing.
+     *
+     * @param json JSON identity input
+     * @return the validated newly parsed graph
+     * @throws IllegalArgumentException if the graph is not valid BlueId input
+     */
     public Node parseBlueIdInputJson(String json) {
         Node node = JSON_MAPPER.readValue(json, Node.class);
         BlueIdReferenceValidator.validate(node);
@@ -1150,30 +1578,74 @@ public class Blue implements NodeResolver, AutoCloseable {
         return node;
     }
 
+    /**
+     * Serializes the official normalized node representation as YAML.
+     *
+     * @param node node to serialize; it is not mutated
+     * @return YAML text
+     */
     public String nodeToYaml(Node node) {
         return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
     }
 
+    /**
+     * Applies dictionary export rules to a copy and serializes normalized YAML.
+     *
+     * @param node node to export; it is not mutated
+     * @param exportContext export policy; null uses {@link ExportContext#empty()}
+     * @return YAML text
+     */
     public String nodeToYaml(Node node, ExportContext exportContext) {
         return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(exportNode(node, exportContext)));
     }
 
+    /**
+     * Serializes YAML using bare scalar/list sugar where possible.
+     *
+     * @param node node to serialize; it is not mutated
+     * @return simplified YAML text
+     */
     public String nodeToSimpleYaml(Node node) {
         return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node, NodeToMapListOrValue.Strategy.SIMPLE));
     }
 
+    /**
+     * Serializes the official normalized node representation as JSON.
+     *
+     * @param node node to serialize; it is not mutated
+     * @return JSON text
+     */
     public String nodeToJson(Node node) {
         return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
     }
 
+    /**
+     * Applies dictionary export rules to a copy and serializes normalized JSON.
+     *
+     * @param node node to export; it is not mutated
+     * @param exportContext export policy; null uses {@link ExportContext#empty()}
+     * @return JSON text
+     */
     public String nodeToJson(Node node, ExportContext exportContext) {
         return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(exportNode(node, exportContext)));
     }
 
+    /**
+     * Serializes JSON using bare scalar/list sugar where possible.
+     *
+     * @param node node to serialize; it is not mutated
+     * @return simplified JSON text
+     */
     public String nodeToSimpleJson(Node node) {
         return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node, NodeToMapListOrValue.Strategy.SIMPLE));
     }
 
+    /**
+     * Maps and preprocesses an object, then serializes normalized YAML.
+     *
+     * @param object non-null serializable object
+     * @return YAML text
+     */
     public String objectToYaml(Object object) {
         beginDirectCacheOperation();
         try {
@@ -1183,6 +1655,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps and preprocesses an object, then serializes simplified YAML.
+     *
+     * @param object non-null serializable object
+     * @return simplified YAML text
+     */
     public String objectToSimpleYaml(Object object) {
         beginDirectCacheOperation();
         try {
@@ -1192,6 +1670,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps and preprocesses an object, then serializes normalized JSON.
+     *
+     * @param object non-null serializable object
+     * @return JSON text
+     */
     public String objectToJson(Object object) {
         beginDirectCacheOperation();
         try {
@@ -1201,6 +1685,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps and preprocesses an object, applies dictionary export, and
+     * serializes normalized JSON.
+     *
+     * @param object non-null serializable object
+     * @param exportContext export policy; null uses {@link ExportContext#empty()}
+     * @return JSON text
+     */
     public String objectToJson(Object object, ExportContext exportContext) {
         beginDirectCacheOperation();
         try {
@@ -1210,6 +1702,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps and preprocesses an object, then serializes simplified JSON.
+     *
+     * @param object non-null serializable object
+     * @return simplified JSON text
+     */
     public String objectToSimpleJson(Object object) {
         beginDirectCacheOperation();
         try {
@@ -1219,10 +1717,24 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Exports a defensive graph using registered type dictionaries and the
+     * supplied policy.
+     *
+     * @param node node to export; it is not mutated
+     * @param exportContext export policy; null uses {@link ExportContext#empty()}
+     * @return a newly exported node graph
+     */
     public Node exportNode(Node node, ExportContext exportContext) {
         return new DictionaryAwareExporter(dictionaryRegistry, exportContext).export(node);
     }
 
+    /**
+     * Registers a borrowed type dictionary by its unique name.
+     *
+     * @param dictionary non-null dictionary retained by reference
+     * @return this runtime
+     */
     public Blue registerTypeDictionary(TypeDictionary dictionary) {
         synchronized (lifecycleLock) {
             ensureOpen();
@@ -1231,6 +1743,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Registers borrowed type dictionaries in iteration order.
+     *
+     * @param dictionaries dictionaries to retain; null is a no-op
+     * @return this runtime
+     */
     public Blue registerTypeDictionaries(Collection<? extends TypeDictionary> dictionaries) {
         synchronized (lifecycleLock) {
             ensureOpen();
@@ -1239,10 +1757,24 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Returns the live runtime-owned mutable dictionary registry. Coordinate
+     * direct mutations with runtime use; registration helpers are preferred.
+     *
+     * @return the live dictionary registry
+     */
     public DictionaryRegistry dictionaryRegistry() {
         return dictionaryRegistry;
     }
 
+    /**
+     * Deep-clones a Node directly or round-trips another object through Blue
+     * mapping into the same runtime class.
+     *
+     * @param object source object, or null
+     * @param <T> source/result type
+     * @return an independent clone, or null for null input
+     */
     public <T> T clone(T object) {
         if (object == null) {
             return null;
@@ -1263,10 +1795,24 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Calculates a strict Content BlueId from direct canonical node input.
+     * This overload does not preprocess, resolve, or canonicalize.
+     *
+     * @param node non-null strict canonical identity input
+     * @return canonical Base58 SHA-256 BlueId
+     */
     public String calculateBlueId(Node node) {
         return BlueIdCalculator.calculateBlueId(node);
     }
 
+    /**
+     * Maps and preprocesses an object, then calculates its direct strict
+     * Content BlueId without semantic resolution.
+     *
+     * @param object non-null serializable object
+     * @return canonical Base58 SHA-256 BlueId
+     */
     public String calculateBlueId(Object object) {
         beginDirectCacheOperation();
         try {
@@ -1276,10 +1822,23 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Preprocesses, resolves, canonicalizes, and calculates semantic identity.
+     *
+     * @param node non-null authored source; it is not mutated
+     * @return canonical Base58 SHA-256 BlueId of completed meaning
+     */
     public String calculateSemanticBlueId(Node node) {
         return BlueIdCalculator.calculateBlueId(canonicalize(node));
     }
 
+    /**
+     * Maps an object and calculates the semantic identity of its completed
+     * meaning.
+     *
+     * @param object non-null serializable object
+     * @return canonical Base58 SHA-256 semantic BlueId
+     */
     public String calculateSemanticBlueId(Object object) {
         beginDirectCacheOperation();
         try {
@@ -1289,6 +1848,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Adds aliases to a defensive copy of current preprocessing configuration,
+     * invalidating configuration-bound caches and processor state.
+     *
+     * @param aliases non-null alias-to-BlueId mappings
+     */
     public void addPreprocessingAliases(Map<String, String> aliases) {
         ConfigurationRefresh refresh = refreshRuntimeConfiguration(() -> {
             Map<String, String> nextAliases = new HashMap<>(preprocessingAliases);
@@ -1299,6 +1864,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         refresh.gauges.emit(refresh.metrics);
     }
 
+    /**
+     * Registers a borrowed annotated contract processor and invalidates
+     * processor matching/plan state.
+     *
+     * @param processor non-null processor whose contract type supplies identity
+     * @return this runtime
+     */
     public Blue registerContractProcessor(ContractProcessor<? extends Contract> processor) {
         ensureOpen();
         if (processor == null) {
@@ -1317,6 +1889,10 @@ public class Blue implements NodeResolver, AutoCloseable {
      * Registers a processor mapping for {@code blueId} without supplying type
      * content. The configured provider must already be able to return verified
      * content for that BlueId; no Java class-name node is synthesized.
+     *
+     * @param blueId exact contract type identity
+     * @param processor non-null borrowed processor
+     * @return this runtime
      */
     public Blue registerContractProcessor(String blueId, ContractProcessor<? extends Contract> processor) {
         ensureOpen();
@@ -1332,6 +1908,20 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Registers a borrowed processor together with exact canonical external
+     * type content.
+     *
+     * <p>The type node is cloned, strictly hashed, and retained only when its
+     * calculated identity equals {@code blueId}; dependent caches are then
+     * invalidated.</p>
+     *
+     * @param blueId declared external contract type identity
+     * @param canonicalTypeNode non-null strict canonical type definition
+     * @param processor non-null borrowed processor
+     * @return this runtime
+     * @throws IllegalArgumentException if the declared identity does not match
+     */
     public Blue registerExternalContractType(String blueId,
                                              Node canonicalTypeNode,
                                              ContractProcessor<? extends Contract> processor) {
@@ -1363,6 +1953,17 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Processes an authored document/event pair under one admitted runtime
+     * configuration and publishes any complete authoritative snapshot.
+     *
+     * <p>Neither input is mutated. Transient execution-evidence unavailability
+     * may propagate; invalid evidence yields a non-committing result.</p>
+     *
+     * @param document non-null Processing Document
+     * @param event non-null read-only Processing Event
+     * @return processing result and authoritative snapshot
+     */
     public DocumentProcessingResult processDocument(Node document, Node event) {
         ProcessingOperation operation = beginProcessingOperation();
         DocumentProcessor processor = operation.processor;
@@ -1414,6 +2015,8 @@ public class Blue implements NodeResolver, AutoCloseable {
      * finish and externally coordinate such work before reconfiguring or closing
      * this runtime. Prefer the processing methods on {@code Blue} when lifecycle
      * coordination is required.
+     *
+     * @return the live processor handle
      */
     public DocumentProcessor getDocumentProcessor() {
         synchronized (lifecycleLock) {
@@ -1423,6 +2026,15 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Replaces the active processor with a borrowed instance.
+     *
+     * <p>The runtime never closes the injected processor. Any previously owned
+     * processor is closed and configuration-bound caches are invalidated.</p>
+     *
+     * @param documentProcessor non-null borrowed processor
+     * @return this runtime
+     */
     public Blue documentProcessor(DocumentProcessor documentProcessor) {
         if (documentProcessor == null) {
             throw new IllegalArgumentException("documentProcessor must not be null");
@@ -1452,6 +2064,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Initializes an authored Processing Document without mutating the caller's
+     * node and publishes any complete authoritative snapshot.
+     *
+     * @param document non-null Processing Document
+     * @return initialization result and authoritative snapshot
+     */
     public DocumentProcessingResult initializeDocument(Node document) {
         ProcessingOperation operation = beginProcessingOperation();
         CacheGenerationStamp previousStamp = activeProcessingCacheStamp.get();
@@ -1484,6 +2103,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Validates and inspects the direct initialization marker.
+     *
+     * @param document Processing Document to inspect
+     * @return whether the document is initialized under current configuration
+     */
     public boolean isInitialized(Node document) {
         beginDirectCacheOperation();
         try {
@@ -1493,6 +2118,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Snapshot-native initialization check.
+     *
+     * @param snapshot snapshot to inspect
+     * @return whether its resolved document is initialized
+     */
     public boolean isInitialized(ResolvedSnapshot snapshot) {
         beginDirectCacheOperation();
         try {
@@ -1502,6 +2133,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Applies default and declared preprocessing transformations to a
+     * defensive clone.
+     *
+     * @param node non-null authored source
+     * @return a newly preprocessed graph with the {@code blue} directive removed
+     */
     public Node preprocess(Node node) {
         beginDirectCacheOperation();
         try {
@@ -1535,6 +2173,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         return new Preprocessor(preprocessingNodeProvider).preprocessWithDefaultBlue(node);
     }
 
+    /**
+     * Resolves the effective node type through the optional Java type registry.
+     *
+     * @param node node whose effective type should be inspected
+     * @return registered Java class, or empty when unavailable/disabled
+     */
     public Optional<Class<?>> determineClass(Node node) {
         beginDirectCacheOperation();
         try {
@@ -1553,6 +2197,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Maps a node graph to a newly created Java object.
+     *
+     * @param node source graph; it is not mutated
+     * @param clazz non-null target class
+     * @param <T> target type
+     * @return newly mapped object
+     */
     public <T> T nodeToObject(Node node, Class<T> clazz) {
         beginDirectCacheOperation();
         try {
@@ -1566,6 +2218,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Traverses verified provider-backed type ancestry.
+     *
+     * @param candidateNode candidate type
+     * @param superTypeNode requested base type
+     * @return whether the candidate is identical to or derives from the base
+     */
     public boolean isNodeSubtypeOf(Node candidateNode, Node superTypeNode) {
         beginDirectCacheOperation();
         try {
@@ -1575,24 +2234,52 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Returns the active composed provider, including bootstrap/runtime and
+     * evidence-verification boundaries.
+     *
+     * @return active provider view
+     */
     public NodeProvider getNodeProvider() {
         return nodeProvider;
     }
 
+    /**
+     * Returns the currently configured merging strategy.
+     *
+     * @return the active merging strategy
+     */
     public MergingProcessor getMergingProcessor() {
         return mergingProcessor;
     }
 
+    /**
+     * Returns the currently configured Java type resolver.
+     *
+     * @return the active Java type resolver, or {@code null} when disabled
+     */
     public TypeClassResolver getTypeClassResolver() {
         return typeClassResolver;
     }
 
+    /**
+     * Snapshots the preprocessing aliases configured on this facade.
+     *
+     * @return an unmodifiable point-in-time copy of preprocessing aliases
+     */
     public Map<String, String> getPreprocessingAliases() {
         synchronized (lifecycleLock) {
             return Collections.unmodifiableMap(new HashMap<>(preprocessingAliases));
         }
     }
 
+    /**
+     * Replaces the borrowed external provider, rebuilds verified provider
+     * composition, and invalidates configuration-bound caches/processor state.
+     *
+     * @param nodeProvider non-null borrowed provider
+     * @return this runtime
+     */
     public Blue nodeProvider(NodeProvider nodeProvider) {
         ConfigurationRefresh refresh = refreshRuntimeConfiguration(() -> {
             this.originalNodeProvider = nodeProvider;
@@ -1603,6 +2290,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Replaces the borrowed merging strategy and invalidates
+     * configuration-bound caches/processor state.
+     *
+     * @param mergingProcessor non-null merging strategy
+     * @return this runtime
+     */
     public Blue mergingProcessor(MergingProcessor mergingProcessor) {
         ConfigurationRefresh refresh = refreshRuntimeConfiguration(() ->
                 this.mergingProcessor = mergingProcessor, true);
@@ -1611,6 +2305,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         return this;
     }
 
+    /**
+     * Replaces Java type lookup without taking ownership.
+     *
+     * @param typeClassResolver resolver, or {@code null} to disable lookup
+     * @return this runtime
+     */
     public Blue typeClassResolver(TypeClassResolver typeClassResolver) {
         synchronized (lifecycleLock) {
             ensureOpen();
@@ -1619,6 +2319,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
+    /**
+     * Replaces preprocessing aliases with a defensive copy and invalidates
+     * configuration-bound caches/processor state.
+     *
+     * @param preprocessingAliases mappings to copy; null clears all aliases
+     * @return this runtime
+     */
     public Blue preprocessingAliases(Map<String, String> preprocessingAliases) {
         ConfigurationRefresh refresh = refreshRuntimeConfiguration(() ->
                 this.preprocessingAliases = preprocessingAliases != null
@@ -2002,7 +2709,20 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
-    private final class BlueProcessingSnapshotManager implements ProcessingSnapshotManager {
+    /**
+     * Processor-facing snapshot boundary captured from one exact
+     * {@link Blue} runtime configuration generation.
+     *
+     * <p>Ordinary instances borrow the facade's shared verified-reference
+     * cache and use an owner/generation stamp to reject stale work after
+     * reconfiguration. Sequence instances own an isolated transient child
+     * cache: callers may fork or retain that state during planning, but must
+     * eventually invoke {@link #releaseTransientState()}. Captured providers,
+     * merge behavior, aliases, and limits never drift to a newer facade
+     * configuration mid-operation.</p>
+     */
+    private final class BlueProcessingSnapshotManager
+            implements ProcessingSnapshotManager {
         private final Object ownerToken;
         private final NodeProvider preprocessingNodeProvider;
         private final NodeProvider snapshotNodeProvider;
@@ -2223,7 +2943,7 @@ public class Blue implements NodeResolver, AutoCloseable {
                                             nodes));
             FrozenNode exact =
                     FrozenNode.fromNode(canonical);
-            if (blueId.indexOf('#') >= 0) {
+            if (BlueIds.hasCyclicMemberSeparator(blueId)) {
                 /*
                  * snapshotNodeProvider has already required the delegate's
                  * complete cyclic-set proof for this member identity.
@@ -2576,7 +3296,7 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
         if (node.getContracts() != null) {
             List<String> contractsPath = new ArrayList<>(path);
-            contractsPath.add("contracts");
+            contractsPath.add(Properties.OBJECT_CONTRACTS);
             paths.add(JsonPointer.toPointer(contractsPath));
             collectProcessorContractPaths(node.getContracts(), contractsPath, paths);
         }
@@ -2613,7 +3333,8 @@ public class Blue implements NodeResolver, AutoCloseable {
             return false;
         }
         String path = patch.getPath();
-        if (path == null || path.isEmpty() || "/".equals(path)) {
+        if (path == null || path.isEmpty()
+                || JsonPointer.ROOT.equals(path)) {
             return false;
         }
         List<String> segments = JsonPointer.split(path);
@@ -3162,7 +3883,8 @@ public class Blue implements NodeResolver, AutoCloseable {
 
     private long clearReloadableRuntimeCaches() {
         runtimeCacheGeneration++;
-        long released = derivedSnapshotsByCanonicalRepresentation.clear();
+        long released =
+                derivedSnapshotsByCanonicalRepresentation.clear();
         released = saturatedAdd(released, derivedSnapshotsByBlueId.clear());
         released = saturatedAdd(released, recentProcessingDocumentSnapshots.clear());
         ResolvedReferenceCache.CacheStats reference = resolvedReferenceCache.cacheStats();
@@ -3214,7 +3936,13 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
     }
 
-    /** Returns whether this runtime has released its owned caches. */
+    /**
+     * Returns whether this runtime has released its owned caches.
+     *
+     * @return true once close has transitioned the runtime and released its
+     *         caches; this remains true if later dependency cleanup reports a
+     *         failure
+     */
     public boolean isClosed() {
         return closed;
     }
@@ -3229,6 +3957,10 @@ public class Blue implements NodeResolver, AutoCloseable {
      * attempted reentrantly by active runtime work is rejected with
      * {@link IllegalStateException} to avoid waiting for itself. Pure serialization
      * helpers remain usable; runtime work rejects later calls.
+     *
+     * @throws IllegalStateException for close from active runtime work, an
+     *                               interrupted close wait, or owned-resource
+     *                               close failure
      */
     @Override
     public void close() {

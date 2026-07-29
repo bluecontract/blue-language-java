@@ -10,10 +10,19 @@ import java.util.List;
 
 import static blue.language.utils.Types.isSubtype;
 
+/**
+ * Compatibility merge stage that checks contributed list-item types against
+ * the target list type.
+ */
 public class ListItemsTypeChecker implements MergingProcessor {
 
     private final Types types;
 
+    /**
+     * Creates a checker using the supplied type hierarchy.
+     *
+     * @param types type hierarchy available to the compatibility check
+     */
     public ListItemsTypeChecker(Types types) {
         this.types = types;
     }

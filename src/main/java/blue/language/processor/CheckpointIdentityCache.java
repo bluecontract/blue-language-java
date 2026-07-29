@@ -8,6 +8,14 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Invocation-local memo for event and stored-checkpoint identities.
+ *
+ * <p>Event entries use object identity because callers may hold distinct
+ * authored representations with equal content. Stored entries additionally
+ * bind to the exact checkpoint object and channel key; the cache is never
+ * shared across processing invocations.</p>
+ */
 final class CheckpointIdentityCache {
     private final Blue blue;
     private final ProcessingMetricsSink metrics;

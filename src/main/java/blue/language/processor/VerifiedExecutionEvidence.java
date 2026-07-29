@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,34 +62,76 @@ public final class VerifiedExecutionEvidence {
         }
     }
 
+    /**
+     * Creates a builder bound to exact semantic input identities.
+     *
+     * @param rootBlueId exact Root BlueId
+     * @param eventBlueId exact event BlueId
+     * @return new evidence builder
+     */
     public static Builder builder(String rootBlueId, String eventBlueId) {
         return new Builder(rootBlueId, eventBlueId);
     }
 
+    /**
+     * Returns the exact Root identity bound by this evidence.
+     *
+     * @return non-empty Root BlueId
+     */
     public String rootBlueId() {
         return rootBlueId;
     }
 
+    /**
+     * Returns the exact event identity bound by this evidence.
+     *
+     * @return non-empty event BlueId
+     */
     public String eventBlueId() {
         return eventBlueId;
     }
 
+    /**
+     * Returns the feeder's managed Root revision.
+     *
+     * @return non-negative managed revision
+     */
     public long managedRootRevision() {
         return managedRootRevision;
     }
 
+    /**
+     * Returns the subscription-index Root revision.
+     *
+     * @return non-negative indexed revision equal to the managed revision
+     */
     public long indexedRootRevision() {
         return indexedRootRevision;
     }
 
+    /**
+     * Returns the identity of the runtime registry used to derive evidence.
+     *
+     * @return non-empty runtime registry identity
+     */
     public String runtimeRegistryIdentity() {
         return runtimeRegistryIdentity;
     }
 
+    /**
+     * Returns the exact total-order position of the event.
+     *
+     * @return immutable event order key
+     */
     public ExternalOrderKey eventOrderKey() {
         return eventOrderKey;
     }
 
+    /**
+     * Returns the revision-bound preselected deliveries.
+     *
+     * @return immutable delivery list in deterministic order
+     */
     public List<ExternalDeliverySnapshot> deliveries() {
         return deliveries;
     }
@@ -96,23 +139,45 @@ public final class VerifiedExecutionEvidence {
     /**
      * Complete active subscription-index surface retained at
      * {@link #indexedRootRevision()}, when supplied by the feeder.
+     *
+     * @return immutable retained interval list
      */
     public List<SubscriptionDelta.Entry> activeSubscriptionIntervals() {
         return activeSubscriptionIntervals;
     }
 
+    /**
+     * Reports whether the complete active interval surface was supplied.
+     *
+     * @return {@code true} for supplied evidence, including an empty surface
+     */
     public boolean hasActiveSubscriptionIntervals() {
         return activeSubscriptionIntervalsSupplied;
     }
 
+    /**
+     * Returns exact node identities available to execution.
+     *
+     * @return immutable insertion-ordered identity set
+     */
     public Set<String> availableExactNodeBlueIds() {
         return availableExactNodeBlueIds;
     }
 
+    /**
+     * Returns exact node identities required by execution.
+     *
+     * @return immutable insertion-ordered identity set
+     */
     public Set<String> requiredExactNodeBlueIds() {
         return requiredExactNodeBlueIds;
     }
 
+    /**
+     * Calculates required identities absent from the available set.
+     *
+     * @return immutable sorted list of missing exact BlueIds
+     */
     public List<String> missingRequiredExactNodeBlueIds() {
         List<String> missing = new ArrayList<>();
         for (String required : requiredExactNodeBlueIds) {
@@ -126,6 +191,15 @@ public final class VerifiedExecutionEvidence {
 
     /**
      * Revalidates binding to the exact semantic inputs.
+     *
+     * @param root exact Root to verify
+     * @param event exact event to verify
+     * @param expectedRuntimeRegistryIdentity expected registry identity, or
+     *        {@code null} to skip that comparison
+     * @throws NullPointerException if {@code root} or {@code event} is
+     *         {@code null}
+     * @throws InvalidExecutionEvidenceException if any identity or revision
+     *         binding is invalid
      */
     public void revalidate(Node root, Node event, String expectedRuntimeRegistryIdentity) {
         revalidate(root,
@@ -134,6 +208,19 @@ public final class VerifiedExecutionEvidence {
                 RootExternalDeliveryEvidenceVerifier.INSTANCE);
     }
 
+    /**
+     * Revalidates semantic bindings and delegates environmental verification.
+     *
+     * @param root exact Root to verify
+     * @param event exact event to verify
+     * @param expectedRuntimeRegistryIdentity expected registry identity, or
+     *        {@code null}
+     * @param deliveryVerifier non-null environmental evidence verifier
+     * @throws NullPointerException if a required input or verifier is
+     *         {@code null}
+     * @throws InvalidExecutionEvidenceException if binding or environmental
+     *         verification fails
+     */
     public void revalidate(Node root,
                            Node event,
                            String expectedRuntimeRegistryIdentity,
@@ -194,7 +281,9 @@ public final class VerifiedExecutionEvidence {
                                 + "interval");
             }
             String occurrence =
-                    interval.scopePath() + "\u0000"
+                    interval.scopePath()
+                            + ProcessorIdentityConstants
+                                    .SELECTOR_COMPONENT_DELIMITER
                             + interval.channelKey();
             if (!occurrences.add(occurrence)) {
                 throw new IllegalArgumentException(
@@ -215,7 +304,7 @@ public final class VerifiedExecutionEvidence {
     }
 
     private static int scopeDepth(String scope) {
-        if ("/".equals(scope)) {
+        if (JsonPointer.ROOT.equals(scope)) {
             return 0;
         }
         int depth = 0;
@@ -227,6 +316,7 @@ public final class VerifiedExecutionEvidence {
         return depth;
     }
 
+    /** Mutable accumulator for one immutable evidence bundle. */
     public static final class Builder {
         private final String rootBlueId;
         private final String eventBlueId;
@@ -246,27 +336,60 @@ public final class VerifiedExecutionEvidence {
             this.eventBlueId = eventBlueId;
         }
 
+        /**
+         * Sets the managed and indexed revisions that must agree.
+         *
+         * @param managed managed Root revision
+         * @param indexed subscription-index Root revision
+         * @return this builder
+         */
         public Builder revisions(long managed, long indexed) {
             this.managedRootRevision = managed;
             this.indexedRootRevision = indexed;
             return this;
         }
 
+        /**
+         * Sets the runtime registry identity.
+         *
+         * @param identity non-empty registry identity
+         * @return this builder
+         */
         public Builder runtimeRegistryIdentity(String identity) {
             this.runtimeRegistryIdentity = identity;
             return this;
         }
 
+        /**
+         * Sets the immutable event order key.
+         *
+         * @param key event order key
+         * @return this builder
+         */
         public Builder eventOrderKey(ExternalOrderKey key) {
             this.eventOrderKey = key;
             return this;
         }
 
+        /**
+         * Appends one revision-bound delivery.
+         *
+         * @param snapshot non-null delivery snapshot
+         * @return this builder
+         * @throws NullPointerException if {@code snapshot} is {@code null}
+         */
         public Builder delivery(ExternalDeliverySnapshot snapshot) {
             deliveries.add(Objects.requireNonNull(snapshot, "snapshot"));
             return this;
         }
 
+        /**
+         * Appends one retained active subscription interval.
+         *
+         * @param interval non-null active interval
+         * @return this builder
+         * @throws NullPointerException if {@code interval} is {@code null}
+         */
         public Builder activeSubscriptionInterval(
                 SubscriptionDelta.Entry interval) {
             activeSubscriptionIntervalsSupplied = true;
@@ -278,6 +401,11 @@ public final class VerifiedExecutionEvidence {
         /**
          * Supplies the complete retained active subscription-index surface,
          * including an exact empty surface.
+         *
+         * @param intervals complete interval surface
+         * @return this builder
+         * @throws NullPointerException if {@code intervals} or an interval is
+         *         {@code null}
          */
         public Builder activeSubscriptionIntervals(
                 Iterable<SubscriptionDelta.Entry> intervals) {
@@ -291,16 +419,40 @@ public final class VerifiedExecutionEvidence {
             return this;
         }
 
+        /**
+         * Adds one exact identity available to execution.
+         *
+         * @param blueId non-empty available BlueId
+         * @return this builder
+         * @throws IllegalArgumentException if {@code blueId} is empty or
+         *         {@code null}
+         */
         public Builder availableExactNode(String blueId) {
             availableExactNodeBlueIds.add(requireText(blueId, "available exact BlueId"));
             return this;
         }
 
+        /**
+         * Adds one exact identity required by execution.
+         *
+         * @param blueId non-empty required BlueId
+         * @return this builder
+         * @throws IllegalArgumentException if {@code blueId} is empty or
+         *         {@code null}
+         */
         public Builder requiredExactNode(String blueId) {
             requiredExactNodeBlueIds.add(requireText(blueId, "required exact BlueId"));
             return this;
         }
 
+        /**
+         * Validates and freezes the evidence bundle.
+         *
+         * @return immutable verified execution evidence
+         * @throws IllegalArgumentException for invalid identities, revisions,
+         *         deliveries, or active intervals
+         * @throws NullPointerException if the event order key is absent
+         */
         public VerifiedExecutionEvidence build() {
             return new VerifiedExecutionEvidence(this);
         }

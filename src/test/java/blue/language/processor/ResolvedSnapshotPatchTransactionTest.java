@@ -12,15 +12,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ResolvedSnapshotPatchTransactionTest {
 
     @Test
-    void plainScalarReplacementKeepsSnapshotCoherentWithoutFullResolution() {
+    void shouldVerifyPlainScalarReplacementKeepsSnapshotCoherentWithoutFullResolution() {
+        // given
         Blue blue = new Blue();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -29,9 +31,11 @@ class ResolvedSnapshotPatchTransactionTest {
                 blue.conformanceEngine(),
                 manager);
 
+        // when
         runtime.applyPatch("/", JsonPatch.replace("/counter", new Node().value(1)));
-
         ResolvedSnapshot result = runtime.snapshot();
+
+        // then
         assertEquals(1, result.canonicalRoot().getAsInteger("/counter"));
         assertEquals(1, result.resolvedRoot().getAsInteger("/counter"));
         assertEquals(1, runtime.document().getAsInteger("/counter"));
@@ -41,7 +45,8 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotPatchKeepsAuthoredCanonicalValueAndResolvedEffectiveValue() {
+    void shouldVerifySnapshotPatchKeepsAuthoredCanonicalValueAndResolvedEffectiveValue() {
+        // given
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         ResolvedSnapshot input = fixture.blue.resolveToSnapshot(fixture.document());
@@ -49,9 +54,11 @@ class ResolvedSnapshotPatchTransactionTest {
                 input, fixture.blue.conformanceEngine(), manager);
         String inputResolved = fixture.blue.nodeToJson(input.resolvedRoot());
 
+        // when
         runtime.applyPatch("/", JsonPatch.replace("/status", reference(fixture.activeId)));
-
         ResolvedSnapshot result = runtime.snapshot();
+
+        // then
         assertEquals(fixture.activeId, result.canonicalRoot().getAsText("/status/type/blueId"));
         assertEquals("active", result.resolvedRoot().getAsText("/status/mode"));
         assertMissing(result.resolvedRoot(), "/status/pendingOnly");
@@ -68,7 +75,8 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotPatchRollsBackCanonicalResolvedAndSelectedViewsWhenValueResolutionFails() {
+    void shouldVerifySnapshotPatchRollsBackCanonicalResolvedAndSelectedViewsWhenValueResolutionFails() {
+        // given
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         manager.failResolution = true;
@@ -79,9 +87,16 @@ class ResolvedSnapshotPatchTransactionTest {
         String canonicalBefore = fixture.blue.nodeToJson(runtime.snapshot().canonicalRoot());
         String resolvedBefore = fixture.blue.nodeToJson(runtime.snapshot().resolvedRoot());
 
-        IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> runtime.applyPatch("/", JsonPatch.replace("/status", reference(fixture.activeId))));
+        // when
+        IllegalStateException failure = captureFailure(
+                () -> runtime.applyPatch(
+                        "/",
+                        JsonPatch.replace(
+                                "/status",
+                                reference(fixture.activeId))));
 
+        // then
+        assertNotNull(failure);
         assertEquals("patch value resolution failed", failure.getMessage());
         assertEquals(selectedBefore, fixture.blue.nodeToJson(runtime.document()));
         assertEquals(canonicalBefore, fixture.blue.nodeToJson(runtime.snapshot().canonicalRoot()));
@@ -90,7 +105,8 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotAddToExistingMemberAlsoReplacesTheCompleteValue() {
+    void shouldVerifySnapshotAddToExistingMemberAlsoReplacesTheCompleteValue() {
+        // given
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -98,9 +114,11 @@ class ResolvedSnapshotPatchTransactionTest {
                 fixture.blue.conformanceEngine(),
                 manager);
 
+        // when
         DocumentProcessingRuntime.DocumentUpdateData update = runtime.applyPatch(
                 "/", JsonPatch.add("/status", reference(fixture.activeId)));
 
+        // then
         assertEquals(JsonPatch.Op.ADD, update.op());
         assertEquals("active", runtime.document().getAsText("/status/mode"));
         assertMissing(runtime.document(), "/status/pendingOnly");
@@ -109,7 +127,8 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotListAddPreservesInsertionSemantics() {
+    void shouldVerifySnapshotListAddPreservesInsertionSemantics() {
+        // given
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -117,8 +136,10 @@ class ResolvedSnapshotPatchTransactionTest {
                 fixture.blue.conformanceEngine(),
                 manager);
 
+        // when
         runtime.applyPatch("/", JsonPatch.add("/values/1", new Node().value(2)));
 
+        // then
         assertEquals(3, runtime.document().getAsNode("/values").getItems().size());
         assertEquals(1, runtime.document().getAsInteger("/values/0"));
         assertEquals(2, runtime.document().getAsInteger("/values/1"));
@@ -128,7 +149,8 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotListReplaceDoesNotInsertAnotherItem() {
+    void shouldVerifySnapshotListReplaceDoesNotInsertAnotherItem() {
+        // given
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -136,8 +158,10 @@ class ResolvedSnapshotPatchTransactionTest {
                 fixture.blue.conformanceEngine(),
                 manager);
 
+        // when
         runtime.applyPatch("/", JsonPatch.replace("/values/1", new Node().value(2)));
 
+        // then
         assertEquals(2, runtime.document().getAsNode("/values").getItems().size());
         assertEquals(1, runtime.document().getAsInteger("/values/0"));
         assertEquals(2, runtime.document().getAsInteger("/values/1"));
@@ -146,7 +170,8 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotRemoveKeepsAllViewsCoherent() {
+    void shouldVerifySnapshotRemoveKeepsAllViewsCoherent() {
+        // given
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -155,8 +180,10 @@ class ResolvedSnapshotPatchTransactionTest {
                 fixture.blue.conformanceEngine(),
                 manager);
 
+        // when
         runtime.applyPatch("/", JsonPatch.remove("/obsolete"));
 
+        // then
         assertMissing(runtime.document(), "/obsolete");
         assertMissing(runtime.snapshot().canonicalRoot(), "/obsolete");
         assertMissing(runtime.snapshot().resolvedRoot(), "/obsolete");
@@ -166,32 +193,38 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotReplacementRetainsConstraintsInheritedFromTheDocumentPath() {
+    void shouldVerifySnapshotReplacementRetainsConstraintsInheritedFromTheDocumentPath() {
+        // given
         ParentConstraintFixture fixture = new ParentConstraintFixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 fixture.snapshot(), fixture.blue.conformanceEngine(), manager);
 
+        // when
         runtime.applyPatch("/", JsonPatch.replace("/state",
                 new Node().properties("local", new Node().value("replacement"))));
 
+        // then
         assertEquals("required-by-parent", runtime.document().getAsText("/state/inherited"),
                 "the effective replacement must still include constraints contributed by the root type");
         assertEquals("replacement", runtime.document().getAsText("/state/local"));
     }
 
     @Test
-    void sequentialSnapshotPatchesCommitOneAuthoritativeFinalResult() {
+    void shouldVerifySequentialSnapshotPatchesCommitOneAuthoritativeFinalResult() {
+        // given
         ParentConstraintFixture fixture = new ParentConstraintFixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 fixture.snapshot(), fixture.blue.conformanceEngine(), manager);
 
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/state",
                         new Node().properties("local", new Node().value("first"))),
                 JsonPatch.replace("/state/local", new Node().value("second"))));
 
+        // then
         assertEquals("required-by-parent", runtime.document().getAsText("/state/inherited"));
         assertEquals("second", runtime.document().getAsText("/state/local"));
         assertEquals(1, manager.inputs.size(),
@@ -200,7 +233,8 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void observableSequenceRefreezesSuffixAfterAuthoritativeCanonicalModeTransition() {
+    void shouldVerifyObservableSequenceRefreezesSuffixAfterAuthoritativeCanonicalModeTransition() {
+        // given
         Blue blue = new Blue();
         Node source = new Node().properties(
                 "first", new Node().value("initial"),
@@ -214,6 +248,7 @@ class ResolvedSnapshotPatchTransactionTest {
                         "empty", new Node(),
                         "kept", new Node().value("value"))));
 
+        // when
         DocumentProcessingRuntime optimized = new DocumentProcessingRuntime(
                 initial, null, new RecordingSnapshotManager(blue));
         try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
@@ -221,12 +256,12 @@ class ResolvedSnapshotPatchTransactionTest {
             sequence.applyNext(0);
             sequence.applyNext(1);
         }
-
         DocumentProcessingRuntime reference = new DocumentProcessingRuntime(
                 initial, null, new RecordingSnapshotManager(blue));
         reference.applyPatch("/", patches.get(0));
         reference.applyPatch("/", patches.get(1));
 
+        // then
         assertEquals(blue.nodeToJson(reference.snapshot().canonicalRoot()),
                 blue.nodeToJson(optimized.snapshot().canonicalRoot()));
         assertEquals(reference.snapshot().blueId(), optimized.snapshot().blueId());
@@ -235,22 +270,26 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void snapshotDirectWriteRetainsParentConstraints() {
+    void shouldVerifySnapshotDirectWriteRetainsParentConstraints() {
+        // given
         ParentConstraintFixture fixture = new ParentConstraintFixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 fixture.snapshot(), fixture.blue.conformanceEngine(), manager);
 
+        // when
         runtime.directWrite("/state",
                 new Node().properties("local", new Node().value("direct")));
 
+        // then
         assertEquals("required-by-parent", runtime.document().getAsText("/state/inherited"));
         assertEquals("direct", runtime.document().getAsText("/state/local"));
         assertEquals(1, manager.inputs.size());
     }
 
     @Test
-    void invalidReplacementRollsBackAllSnapshotViews() {
+    void shouldVerifyInvalidReplacementRollsBackAllSnapshotViews() {
+        // given
         ParentConstraintFixture fixture = new ParentConstraintFixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
@@ -258,10 +297,19 @@ class ResolvedSnapshotPatchTransactionTest {
         String selectedBefore = fixture.blue.nodeToJson(runtime.document());
         String canonicalBefore = fixture.blue.nodeToJson(runtime.snapshot().canonicalRoot());
 
-        assertThrows(IllegalArgumentException.class, () -> runtime.applyPatch("/",
-                JsonPatch.replace("/state", new Node()
-                        .properties("inherited", new Node().value("contradiction")))));
+        // when
+        IllegalArgumentException failure = captureFailure(
+                () -> runtime.applyPatch(
+                        "/",
+                        JsonPatch.replace(
+                                "/state",
+                                new Node().properties(
+                                        "inherited",
+                                        new Node().value(
+                                                "contradiction")))));
 
+        // then
+        assertNotNull(failure);
         assertEquals(selectedBefore, fixture.blue.nodeToJson(runtime.document()));
         assertEquals(canonicalBefore, fixture.blue.nodeToJson(runtime.snapshot().canonicalRoot()));
         assertEquals(0, manager.cachedSnapshots);

@@ -3,6 +3,8 @@ package blue.language.provider;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
+import blue.language.utils.Properties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
@@ -19,6 +21,13 @@ import java.util.stream.Stream;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
+/**
+ * Eager provider built from files below one or more filesystem directories.
+ *
+ * <p>{@code .blue} files are parsed and preprocessed; other files are stored as
+ * addressable Text content. Directory traversal completes during
+ * construction.</p>
+ */
 public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
 
     private static final String BLUE_FILE_EXTENSION = ".blue";
@@ -27,12 +36,26 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
     private Map<String, Boolean> blueIdToMultipleDocumentsMap = new HashMap<>();
     private Function<Node, Node> preprocessor;
 
+    /**
+     * Loads resources using a preprocessor configured with this provider's
+     * default Blue.
+     *
+     * @param directories filesystem directories to scan recursively
+     * @throws IOException when a directory or file cannot be read
+     */
     public DirectoryBasedNodeProvider(String... directories) throws IOException {
         Preprocessor defaultPreprocessor = new Preprocessor(this);
         this.preprocessor = defaultPreprocessor::preprocessWithDefaultBlue;
         load(directories);
     }
 
+    /**
+     * Loads resources using an explicit preprocessing function.
+     *
+     * @param preprocessor preprocessing function applied to Blue documents
+     * @param directories filesystem directories to scan recursively
+     * @throws IOException when a directory or file cannot be read
+     */
     public DirectoryBasedNodeProvider(Function<Node, Node> preprocessor, String... directories) throws IOException {
         this.preprocessor = preprocessor;
         load(directories);
@@ -74,7 +97,10 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
             }
             IntStream.range(0, parsedContent.content.size()).forEach(i -> {
                 JsonNode node = parsedContent.content.get(i);
-                addNodeToNameMap(node, parsedContent.blueId + "#" + i);
+                addNodeToNameMap(
+                        node,
+                        BlueIds.indexedCyclicMemberBlueId(
+                                parsedContent.blueId, i));
             });
         } else {
             addNodeToNameMap(parsedContent.content, parsedContent.blueId);
@@ -82,7 +108,7 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private void addNodeToNameMap(JsonNode node, String blueId) {
-        JsonNode nameNode = node.get("name");
+        JsonNode nameNode = node.get(Properties.OBJECT_NAME);
         if (nameNode != null && !nameNode.isNull()) {
             String name = nameNode.asText();
             addToNameMap(name, blueId);
@@ -109,6 +135,11 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
         return null;
     }
 
+    /**
+     * Returns a shallow snapshot of the provider's content index.
+     *
+     * @return mutable map copy keyed by BlueId
+     */
     public Map<String, Object> getBlueIdToContentMap() {
         return new HashMap<>(blueIdToContentMap);
     }

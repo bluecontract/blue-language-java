@@ -1,9 +1,13 @@
 package blue.language.processor;
 
+import blue.language.BlueLanguageErrorCategory;
+import blue.language.BlueLanguageErrorClassifier;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -84,6 +88,8 @@ final class ContractContributionResolver {
         List<String> contributions = new ArrayList<>();
         Map<String, Node> exactExecutableBodies =
                 new LinkedHashMap<>();
+        Map<String, ExecutableBodySource> executableBodySources =
+                new LinkedHashMap<>();
         Set<String> requestedExecutableBodies =
                 executableBodyFields == null
                         ? Collections.<String>emptySet()
@@ -116,6 +122,7 @@ final class ContractContributionResolver {
                 contributions,
                 requestedExecutableBodies,
                 exactExecutableBodies,
+                executableBodySources,
                 activeTypes,
                 0);
         Node contracts = selectedScope != null ? selectedScope.getContracts() : null;
@@ -124,11 +131,14 @@ final class ContractContributionResolver {
             direct = contracts.getProperties().get(contractKey);
         }
         if (direct != null && contributesContent(direct)) {
-            contributions.add(exactIdentity(direct));
+            String contributionBlueId = exactIdentity(direct);
+            contributions.add(contributionBlueId);
             overlayDeclaredExecutableBodies(
                     direct,
+                    contributionBlueId,
                     requestedExecutableBodies,
-                    exactExecutableBodies);
+                    exactExecutableBodies,
+                    executableBodySources);
         }
         if (effectiveContractExists && contributions.isEmpty()) {
             throw new MustUnderstandFailureException(
@@ -138,7 +148,8 @@ final class ContractContributionResolver {
         }
         return new BindingResolution(
                 contributions,
-                exactExecutableBodies);
+                exactExecutableBodies,
+                executableBodySources);
     }
 
     private void collectTypeContributions(Node typeReference,
@@ -146,16 +157,18 @@ final class ContractContributionResolver {
                                           List<String> result,
                                           Set<String> executableBodyFields,
                                           Map<String, Node> exactExecutableBodies,
+                                          Map<String, ExecutableBodySource>
+                                                  executableBodySources,
                                           Set<String> activeTypes,
                                           int depth) {
         if (typeReference == null) {
             return;
         }
-        long maxTypeEdges = gasSchedule.portableLimit("typeChainEdges");
+        long maxTypeEdges = gasSchedule.portableLimit(GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES);
         if (depth >= maxTypeEdges) {
             throw new PortableLimitExceededException(
                     ProcessorErrorCategory.DirectNodeLimitExceeded,
-                    "typeChainEdges",
+                    GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES,
                     depth + 1L,
                     maxTypeEdges);
         }
@@ -176,6 +189,7 @@ final class ContractContributionResolver {
                 result,
                 executableBodyFields,
                 exactExecutableBodies,
+                executableBodySources,
                 activeTypes,
                 depth + 1);
         Node contracts = typeNode.getContracts();
@@ -184,19 +198,26 @@ final class ContractContributionResolver {
             contribution = contracts.getProperties().get(contractKey);
         }
         if (contribution != null && contributesContent(contribution)) {
-            result.add(exactIdentity(contribution));
+            String contributionBlueId =
+                    exactIdentity(contribution);
+            result.add(contributionBlueId);
             overlayDeclaredExecutableBodies(
                     contribution,
+                    contributionBlueId,
                     executableBodyFields,
-                    exactExecutableBodies);
+                    exactExecutableBodies,
+                    executableBodySources);
         }
         activeTypes.remove(cycleKey);
     }
 
     private void overlayDeclaredExecutableBodies(
             Node contribution,
+            String contributionBlueId,
             Set<String> executableBodyFields,
-            Map<String, Node> exactExecutableBodies) {
+            Map<String, Node> exactExecutableBodies,
+            Map<String, ExecutableBodySource>
+                    executableBodySources) {
         if (contribution == null
                 || executableBodyFields.isEmpty()) {
             return;
@@ -221,6 +242,15 @@ final class ContractContributionResolver {
             exactExecutableBodies.put(
                     field,
                     body != null ? body.clone() : new Node());
+            executableBodySources.put(
+                    field,
+                    new ExecutableBodySource(
+                            contributionBlueId,
+                            PointerUtils.toPointer(
+                                    Collections.singletonList(
+                                            field)),
+                            body != null
+                                    && body.isReferenceOnly()));
         }
     }
 
@@ -229,12 +259,24 @@ final class ContractContributionResolver {
             return reference;
         }
         if (provider == null || blueId == null) {
-            throw new MustUnderstandFailureException(
-                    "Provider content is required for type contribution " + blueId,
-                    ProcessorErrorCategory.InvalidContractBinding);
+            throw unavailable(blueId, null);
         }
-        List<Node> nodes = provider.fetchByBlueId(blueId);
-        if (nodes == null || nodes.size() != 1 || nodes.get(0) == null) {
+        final List<Node> nodes;
+        try {
+            nodes = provider.fetchByBlueId(blueId);
+        } catch (ExecutionEvidenceUnavailableException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            if (BlueLanguageErrorClassifier.classify(exception)
+                    == BlueLanguageErrorCategory.ProviderUnavailable) {
+                throw unavailable(blueId, exception);
+            }
+            throw exception;
+        }
+        if (nodes == null || nodes.isEmpty()) {
+            throw unavailable(blueId, null);
+        }
+        if (nodes.size() != 1 || nodes.get(0) == null) {
             throw new MustUnderstandFailureException(
                     "Expected one verified type contribution for " + blueId,
                     ProcessorErrorCategory.InvalidContractBinding);
@@ -250,7 +292,7 @@ final class ContractContributionResolver {
              */
             canonicalContent.blueId(null);
         }
-        if (blueId.indexOf('#') >= 0) {
+        if (BlueIds.hasCyclicMemberSeparator(blueId)) {
             /*
              * The processor's provider graph verifies MASTER#index through
              * the owning cyclic set. A member is not ordinary standalone
@@ -266,6 +308,27 @@ final class ContractContributionResolver {
                     ProcessorErrorCategory.InvalidContractBinding);
         }
         return canonicalContent;
+    }
+
+    private ExecutionEvidenceUnavailableException unavailable(
+            String blueId,
+            RuntimeException cause) {
+        String identity =
+                blueId != null ? blueId : "<unknown>";
+        String message =
+                "Exact Source contribution is unavailable for "
+                        + identity;
+        if (cause != null
+                && cause.getMessage() != null
+                && !cause.getMessage().isEmpty()) {
+            message += ": " + cause.getMessage();
+        }
+        return new ExecutionEvidenceUnavailableException(
+                message,
+                blueId != null
+                        ? Collections.singletonList(
+                                blueId)
+                        : Collections.<String>emptyList());
     }
 
     private String referenceIdentity(Node node) {
@@ -298,13 +361,24 @@ final class ContractContributionResolver {
                 || node.getDescription() != null;
     }
 
+    /**
+     * Immutable contribution-binding result for one effective contract.
+     *
+     * <p>It retains contribution identities in merge order together with
+     * defensive copies of exact executable bodies and their authored source
+     * provenance.</p>
+     */
     static final class BindingResolution {
         private final List<String> sourceContributions;
         private final Map<String, Node> exactExecutableBodies;
+        private final Map<String, ExecutableBodySource>
+                executableBodySources;
 
         private BindingResolution(
                 List<String> sourceContributions,
-                Map<String, Node> exactExecutableBodies) {
+                Map<String, Node> exactExecutableBodies,
+                Map<String, ExecutableBodySource>
+                        executableBodySources) {
             this.sourceContributions =
                     Collections.unmodifiableList(
                             new ArrayList<>(
@@ -322,6 +396,10 @@ final class ContractContributionResolver {
             this.exactExecutableBodies =
                     Collections.unmodifiableMap(
                             exactBodies);
+            this.executableBodySources =
+                    Collections.unmodifiableMap(
+                            new LinkedHashMap<>(
+                                    executableBodySources));
         }
 
         List<String> sourceContributions() {
@@ -330,6 +408,48 @@ final class ContractContributionResolver {
 
         Map<String, Node> exactExecutableBodies() {
             return exactExecutableBodies;
+        }
+
+        Map<String, ExecutableBodySource>
+        executableBodySources() {
+            return executableBodySources;
+        }
+    }
+
+    /**
+     * Provenance of one executable body selected from an owning
+     * contribution.
+     */
+    static final class ExecutableBodySource {
+        private final String owningContributionBlueId;
+        private final String sourcePointer;
+        private final boolean pureReference;
+
+        private ExecutableBodySource(
+                String owningContributionBlueId,
+                String sourcePointer,
+                boolean pureReference) {
+            this.owningContributionBlueId =
+                    Objects.requireNonNull(
+                            owningContributionBlueId,
+                            "owningContributionBlueId");
+            this.sourcePointer =
+                    Objects.requireNonNull(
+                            sourcePointer,
+                            "sourcePointer");
+            this.pureReference = pureReference;
+        }
+
+        String owningContributionBlueId() {
+            return owningContributionBlueId;
+        }
+
+        String sourcePointer() {
+            return sourcePointer;
+        }
+
+        boolean pureReference() {
+            return pureReference;
         }
     }
 }

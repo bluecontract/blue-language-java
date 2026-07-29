@@ -27,11 +27,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -43,7 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FrozenNodeTest {
 
     @Test
-    void blueIdMatchesMutableCalculatorForObjectsScalarsAndPureReferences() {
+    void shouldMatchMutableBlueIdCalculatorForObjectsScalarsAndPureReferences() {
+        // given
         String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node node = YAML_MAPPER.readValue(
                 "name: Product\n" +
@@ -53,15 +54,19 @@ class FrozenNodeTest {
                 "ref:\n" +
                 "  blueId: " + referenceBlueId, Node.class);
 
+        // when
         FrozenNode frozen = FrozenNode.fromNode(node);
 
+        // then
         assertEquals(BlueIdCalculator.calculateBlueId(node), frozen.blueId());
         assertEquals(referenceBlueId, FrozenNode.fromNode(new Node().blueId(referenceBlueId)).blueId());
     }
 
     @Test
-    void frozenNodeBlueIdMatchesBlueIdCalculatorForEveryBlueIdFixture() throws Exception {
+    void shouldMatchBlueIdCalculatorForEveryFrozenNodeFixture() throws Exception {
+        // given
         JsonNode manifest = readFixtureResource("manifest.yaml");
+        // when
         for (JsonNode entry : behaviorFixtureEntries(manifest)) {
             JsonNode fixture = readFixtureResource(entry.get("path").asText());
             if (expectsError(fixture)
@@ -70,6 +75,7 @@ class FrozenNodeTest {
             }
             Node input = YAML_MAPPER.treeToValue(fixture.get("input"), Node.class);
 
+            // then
             assertEquals(
                     BlueIdCalculator.calculateBlueId(input),
                     FrozenNode.fromNode(input).blueId(),
@@ -78,13 +84,15 @@ class FrozenNodeTest {
     }
 
     @Test
-    void frozenNodeToBlueIdInputMatchesNodeToBlueIdInputForCanonicalShapes() {
+    void shouldMatchMutableBlueIdInputForCanonicalFrozenNodeShapes() {
+        // given
         String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
         String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node withSchema = new Node()
                 .schema(new blue.language.model.Schema().minimum(new Node().type(new Node().blueId(
                         blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID)).value("9007199254740992")));
 
+        // when
         for (Node node : Arrays.asList(
                 new Node().value("text"),
                 new Node().items(new Node().value("A"), Nodes.emptyPlaceholder(), new Node().value("B")),
@@ -92,6 +100,7 @@ class FrozenNodeTest {
                 new Node().blueId(referenceBlueId),
                 new Node().value("abc").contracts(new Node().properties("audit", new Node().value(true))),
                 withSchema)) {
+            // then
             assertEquals(
                     NodeToBlueIdInput.get(node),
                     FrozenNodeToBlueIdInput.get(FrozenNode.fromNode(node)),
@@ -100,8 +109,10 @@ class FrozenNodeTest {
     }
 
     @Test
-    void frozenNodeToBlueIdInputHashesLikeNodeToBlueIdInputForEveryValidBlueIdFixture() throws Exception {
+    void shouldHashFrozenBlueIdInputLikeMutableInputForEveryValidFixture() throws Exception {
+        // given
         JsonNode manifest = readFixtureResource("manifest.yaml");
+        // when
         for (JsonNode entry : behaviorFixtureEntries(manifest)) {
             JsonNode fixture = readFixtureResource(entry.get("path").asText());
             if (!"BlueId".equals(fixture.path("category").asText())
@@ -111,6 +122,7 @@ class FrozenNodeTest {
             }
             Node input = YAML_MAPPER.treeToValue(fixture.get("input"), Node.class);
 
+            // then
             assertEquals(
                     BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.get(input)),
                     BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(FrozenNode.fromNode(input))),
@@ -119,8 +131,10 @@ class FrozenNodeTest {
     }
 
     @Test
-    void frozenNodeRejectsEveryInvalidBlueIdFixtureThatParsesAsNode() throws Exception {
+    void shouldRejectEveryInvalidBlueIdFixtureThatParsesAsNode() throws Exception {
+        // given
         JsonNode manifest = readFixtureResource("manifest.yaml");
+        // when
         for (JsonNode entry : behaviorFixtureEntries(manifest)) {
             JsonNode fixture = readFixtureResource(entry.get("path").asText());
             if (!"BlueId".equals(fixture.path("category").asText())
@@ -136,6 +150,7 @@ class FrozenNodeTest {
                 continue;
             }
 
+            // then
             assertThrows(
                     RuntimeException.class,
                     () -> BlueIdCalculator.calculateBlueId(input),
@@ -148,39 +163,71 @@ class FrozenNodeTest {
     }
 
     @Test
-    void repeatedFrozenBlueIdIsCached() {
-        FrozenNode frozen = FrozenNode.fromNode(new Node().properties("a", new Node().value("b")));
+    void shouldCacheRepeatedFrozenBlueId() {
+        // given
+        Node node = new Node()
+                .properties("a", new Node().value("b"));
 
-        assertSame(frozen.blueId(), frozen.blueId());
+        // when
+        FrozenNode frozen = FrozenNode.fromNode(node);
+        String firstBlueId = frozen.blueId();
+        String secondBlueId = frozen.blueId();
+
+        // then
+        assertSame(firstBlueId, secondBlueId);
     }
 
     @Test
-    void repeatedFrozenBlueIdDoesNotRecompute() {
+    void shouldNotRecomputeRepeatedFrozenBlueId() {
+        // given
         FrozenNode frozen = FrozenNode.fromNode(new Node()
                 .properties("a", new Node().value("b"))
                 .properties("nested", new Node().properties("c", new Node().value("d"))));
+
+        // when
         String first = frozen.blueId();
-
+        boolean everyRepeatedIdentityIsCached = true;
         for (int i = 0; i < 10; i++) {
-            assertSame(first, frozen.blueId());
+            everyRepeatedIdentityIsCached &=
+                    first == frozen.blueId();
         }
+
+        // then
+        assertTrue(everyRepeatedIdentityIsCached);
     }
 
     @Test
-    void repeatedResolvedStructuralKeyIsMemoized() {
-        FrozenNode frozen = FrozenNode.fromResolvedNode(new Node()
+    void shouldMemoizeRepeatedResolvedStructuralKey() {
+        // given
+        Node resolved = new Node()
                 .properties("a", new Node().value("b"))
-                .properties("nested", new Node().properties("c", new Node().value("d"))));
+                .properties("nested",
+                        new Node().properties(
+                                "c",
+                                new Node().value("d")));
 
-        assertSame(frozen.resolvedStructuralKey(), frozen.resolvedStructuralKey());
+        // when
+        FrozenNode frozen = FrozenNode.fromResolvedNode(resolved);
+        FrozenNode.ResolvedStructuralKey firstKey =
+                frozen.resolvedStructuralKey();
+        FrozenNode.ResolvedStructuralKey secondKey =
+                frozen.resolvedStructuralKey();
+
+        // then
+        assertSame(firstKey, secondKey);
     }
 
     @Test
-    void lazyResolvedIdentityAndStructuralKeyPublishSafelyAcrossThreads() throws Exception {
+    void shouldPublishLazyResolvedIdentityAndStructuralKeySafelyAcrossThreads() throws Exception {
+        // given
         FrozenNode frozen = FrozenNode.fromResolvedNode(new Node()
                 .properties("a", new Node().value("b"))
                 .properties("nested", new Node().properties("c", new Node().value("d"))));
         ExecutorService pool = Executors.newFixedThreadPool(8);
+
+        // when
+        boolean allIdentitiesSame = true;
+        boolean allKeysSame = true;
         try {
             List<Future<String>> identities = new ArrayList<>();
             List<Future<FrozenNode.ResolvedStructuralKey>> keys = new ArrayList<>();
@@ -191,18 +238,24 @@ class FrozenNodeTest {
             String expectedIdentity = identities.get(0).get();
             FrozenNode.ResolvedStructuralKey expectedKey = keys.get(0).get();
             for (Future<String> identity : identities) {
-                assertSame(expectedIdentity, identity.get());
+                allIdentitiesSame &=
+                        expectedIdentity == identity.get();
             }
             for (Future<FrozenNode.ResolvedStructuralKey> key : keys) {
-                assertSame(expectedKey, key.get());
+                allKeysSame &= expectedKey == key.get();
             }
         } finally {
             pool.shutdownNow();
         }
+
+        // then
+        assertTrue(allIdentitiesSame);
+        assertTrue(allKeysSame);
     }
 
     @Test
-    void strictCanonicalModeDropsEmptyObjectPropertiesLikeMutableCalculator() {
+    void shouldDropEmptyObjectPropertiesInStrictCanonicalModeLikeMutableCalculator() {
+        // given
         Node node = YAML_MAPPER.readValue(
                 "a: 1\n" +
                 "empty: {}\n" +
@@ -210,45 +263,86 @@ class FrozenNodeTest {
                 "  empty: {}\n" +
                 "  label: ok", Node.class);
 
+        // when
         FrozenNode frozen = FrozenNode.fromNode(node);
+        String mutableBlueId =
+                BlueIdCalculator.calculateBlueId(node);
+        FrozenNode emptyProperty = frozen.property("empty");
+        FrozenNode nestedEmptyProperty =
+                frozen.property("nested").property("empty");
+        String materializedBlueId =
+                BlueIdCalculator.calculateBlueId(frozen.toNode());
+        String frozenBlueId = frozen.blueId();
 
-        assertEquals(BlueIdCalculator.calculateBlueId(node), frozen.blueId());
-        assertEquals(null, frozen.property("empty"));
-        assertEquals(null, frozen.property("nested").property("empty"));
-        assertEquals(BlueIdCalculator.calculateBlueId(frozen.toNode()), frozen.blueId());
+        // then
+        assertEquals(mutableBlueId, frozenBlueId);
+        assertNull(emptyProperty);
+        assertNull(nestedEmptyProperty);
+        assertEquals(materializedBlueId, frozenBlueId);
     }
 
     @Test
-    void blueIdMatchesMutableCalculatorForEmptySingletonAndNestedLists() {
+    void shouldMatchMutableBlueIdCalculatorForEmptySingletonAndNestedLists() {
+        // given
         Node empty = YAML_MAPPER.readValue("items: []", Node.class);
         Node singleton = YAML_MAPPER.readValue("items:\n  - one", Node.class);
         Node nested = YAML_MAPPER.readValue("items:\n  - items:\n      - one\n  - two", Node.class);
 
-        assertEquals(BlueIdCalculator.calculateBlueId(empty), FrozenNode.fromNode(empty).blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(singleton), FrozenNode.fromNode(singleton).blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(nested), FrozenNode.fromNode(nested).blueId());
+        // when
+        String mutableEmptyBlueId =
+                BlueIdCalculator.calculateBlueId(empty);
+        String frozenEmptyBlueId =
+                FrozenNode.fromNode(empty).blueId();
+        String mutableSingletonBlueId =
+                BlueIdCalculator.calculateBlueId(singleton);
+        String frozenSingletonBlueId =
+                FrozenNode.fromNode(singleton).blueId();
+        String mutableNestedBlueId =
+                BlueIdCalculator.calculateBlueId(nested);
+        String frozenNestedBlueId =
+                FrozenNode.fromNode(nested).blueId();
+
+        // then
+        assertEquals(mutableEmptyBlueId, frozenEmptyBlueId);
+        assertEquals(mutableSingletonBlueId, frozenSingletonBlueId);
+        assertEquals(mutableNestedBlueId, frozenNestedBlueId);
     }
 
     @Test
-    void directEmptyObjectInsideListIsRejected() {
+    void shouldRejectDirectEmptyObjectInsideList() {
+        // given
         Node withEmptyObject = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - {}", Node.class);
 
-        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(withEmptyObject));
+        // when
+        Throwable failure = captureFailure(
+                () -> FrozenNode.fromNode(withEmptyObject));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void sourceEmptyObjectInsideListNormalizesBeforeFreezing() {
-        Node normalized = new Blue().yamlToNode(
-                "items:\n" +
-                "  - {}");
+    void shouldNormalizeSourceEmptyObjectInsideListBeforeFreezing() {
+        // given
+        Blue blue = new Blue();
+        String source = "items:\n  - {}";
 
-        assertEquals(BlueIdCalculator.calculateBlueId(normalized), FrozenNode.fromNode(normalized).blueId());
+        // when
+        Node normalized = blue.yamlToNode(source);
+        String mutableBlueId =
+                BlueIdCalculator.calculateBlueId(normalized);
+        String frozenBlueId =
+                FrozenNode.fromNode(normalized).blueId();
+
+        // then
+        assertEquals(mutableBlueId, frozenBlueId);
     }
 
     @Test
-    void positionedListsAreRejectedByDirectFrozenBlueIdInput() {
+    void shouldRejectPositionedListsInDirectFrozenBlueIdInput() {
+        // given
         String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
         Node positioned = YAML_MAPPER.readValue(
                 "items:\n" +
@@ -261,12 +355,23 @@ class FrozenNodeTest {
                 "  - $empty: true\n" +
                 "  - value: A", Node.class);
 
-        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(positioned));
-        assertEquals(BlueIdCalculator.calculateBlueId(previous), FrozenNode.fromNode(previous).blueId());
+        // when
+        Throwable positionedFailure = captureFailure(
+                () -> FrozenNode.fromNode(positioned));
+        String mutablePreviousBlueId =
+                BlueIdCalculator.calculateBlueId(previous);
+        String frozenPreviousBlueId =
+                FrozenNode.fromNode(previous).blueId();
+
+        // then
+        assertTrue(positionedFailure
+                instanceof IllegalArgumentException);
+        assertEquals(mutablePreviousBlueId, frozenPreviousBlueId);
     }
 
     @Test
-    void directFrozenBlueIdRejectsPositionControls() {
+    void shouldRejectPositionControlsInDirectFrozenBlueId() {
+        // given
         String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
         Node node = YAML_MAPPER.readValue(
                 "items:\n" +
@@ -278,20 +383,37 @@ class FrozenNodeTest {
                 "  - $pos: 0\n" +
                 "    value: A", Node.class);
 
-        assertEquals(BlueIdCalculator.calculateBlueId(node), FrozenNode.fromNode(node).blueId());
-        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(positioned));
+        // when
+        String mutableBlueId =
+                BlueIdCalculator.calculateBlueId(node);
+        String frozenBlueId = FrozenNode.fromNode(node).blueId();
+        Throwable positionedFailure = captureFailure(
+                () -> FrozenNode.fromNode(positioned));
+
+        // then
+        assertEquals(mutableBlueId, frozenBlueId);
+        assertTrue(positionedFailure
+                instanceof IllegalArgumentException);
     }
 
     @Test
-    void frozenStrictRejectsRootPreviousOnlyNode() {
+    void shouldRejectRootPreviousOnlyNodeInStrictFrozenMode() {
+        // given
         String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        Node previousOnly =
+                new Node().previousBlueId(previousBlueId);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromNode(new Node().previousBlueId(previousBlueId)));
+        // when
+        Throwable failure = captureFailure(
+                () -> FrozenNode.fromNode(previousOnly));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void frozenStrictAllowsPreviousOnlyOnlyAsFirstListElement() {
+    void shouldAllowPreviousOnlyNodeSolelyAsFirstListElementInStrictFrozenMode() {
+        // given
         String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
         Node anchored = YAML_MAPPER.readValue(
                 "items:\n" +
@@ -299,21 +421,36 @@ class FrozenNodeTest {
                 "      blueId: " + previousBlueId + "\n" +
                 "  - value: A", Node.class);
 
-        assertEquals(BlueIdCalculator.calculateBlueId(anchored), FrozenNode.fromNode(anchored).blueId());
+        // when
+        String mutableBlueId =
+                BlueIdCalculator.calculateBlueId(anchored);
+        String frozenBlueId =
+                FrozenNode.fromNode(anchored).blueId();
+
+        // then
+        assertEquals(mutableBlueId, frozenBlueId);
     }
 
     @Test
-    void blueIdMatchesMutableCalculatorForTypedDoubleCanonicalization() {
+    void shouldMatchMutableBlueIdCalculatorForTypedDoubleCanonicalization() {
+        // given
         Node node = YAML_MAPPER.readValue(
                 "type:\n" +
                 "  blueId: " + DOUBLE_TYPE_BLUE_ID + "\n" +
                 "value: 0.33333333333333333333333333333333333333", Node.class);
 
-        assertEquals(BlueIdCalculator.calculateBlueId(node), FrozenNode.fromNode(node).blueId());
+        // when
+        String mutableBlueId =
+                BlueIdCalculator.calculateBlueId(node);
+        String frozenBlueId = FrozenNode.fromNode(node).blueId();
+
+        // then
+        assertEquals(mutableBlueId, frozenBlueId);
     }
 
     @Test
-    void strictCanonicalAllowsContractsAlongsideScalarAndListPayloads() {
+    void shouldAllowContractsAlongsideScalarAndListPayloadsInStrictCanonicalMode() {
+        // given
         Node scalar = YAML_MAPPER.readValue(
                 "value: abc\n" +
                 "contracts:\n" +
@@ -325,85 +462,153 @@ class FrozenNodeTest {
                 "contracts:\n" +
                 "  audit:\n" +
                 "    value: enabled", Node.class);
+        Node invalidObject = new Node()
+                .value("abc")
+                .properties(
+                        "contracts",
+                        new Node().properties(
+                                "audit",
+                                new Node().value("enabled")),
+                        "child",
+                        new Node().value("not allowed"));
 
-        assertEquals(BlueIdCalculator.calculateBlueId(scalar), FrozenNode.fromNode(scalar).blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(list), FrozenNode.fromNode(list).blueId());
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromNode(new Node().value("abc").properties(
-                        "contracts", new Node().properties("audit", new Node().value("enabled")),
-                        "child", new Node().value("not allowed"))));
+        // when
+        String mutableScalarBlueId =
+                BlueIdCalculator.calculateBlueId(scalar);
+        String frozenScalarBlueId =
+                FrozenNode.fromNode(scalar).blueId();
+        String mutableListBlueId =
+                BlueIdCalculator.calculateBlueId(list);
+        String frozenListBlueId =
+                FrozenNode.fromNode(list).blueId();
+        Throwable invalidObjectFailure = captureFailure(
+                () -> FrozenNode.fromNode(invalidObject));
+
+        // then
+        assertEquals(mutableScalarBlueId, frozenScalarBlueId);
+        assertEquals(mutableListBlueId, frozenListBlueId);
+        assertTrue(invalidObjectFailure
+                instanceof IllegalArgumentException);
     }
 
     @Test
-    void strictCanonicalRejectsInvalidReferenceBlueIds() {
-        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(new Node().blueId("invalid")));
-        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(new Node().previousBlueId("invalid")));
+    void shouldRejectInvalidReferenceBlueIdsInStrictCanonicalMode() {
+        // given
+        Node invalidReference = new Node().blueId("invalid");
+        Node invalidPreviousReference =
+                new Node().previousBlueId("invalid");
+
+        // when
+        Throwable referenceFailure = captureFailure(
+                () -> FrozenNode.fromNode(invalidReference));
+        Throwable previousReferenceFailure = captureFailure(
+                () -> FrozenNode.fromNode(invalidPreviousReference));
+
+        // then
+        assertTrue(referenceFailure
+                instanceof IllegalArgumentException);
+        assertTrue(previousReferenceFailure
+                instanceof IllegalArgumentException);
     }
 
     @Test
-    void immutableViewsCannotBeMutatedAndToNodeReturnsFreshMutableCopies() {
+    void shouldPreventImmutableViewMutationAndReturnFreshMutableCopiesFromToNode() {
+        // given
         FrozenNode frozen = FrozenNode.fromNode(YAML_MAPPER.readValue(
                 "a: 1\n" +
                 "list:\n" +
                 "  items:\n" +
                 "    - x", Node.class));
 
-        assertThrows(UnsupportedOperationException.class,
+        // when
+        Throwable propertyMutationFailure = captureFailure(
                 () -> frozen.getProperties().put("b", FrozenNode.empty()));
-        assertThrows(UnsupportedOperationException.class,
+        Throwable itemMutationFailure = captureFailure(
                 () -> frozen.property("list").getItems().add(FrozenNode.empty()));
-
         Node first = frozen.toNode();
         Node second = frozen.toNode();
         first.getProperties().put("mutated", new Node().value(true));
+        String secondIdentity =
+                BlueIdCalculator.calculateBlueId(second);
+        String frozenIdentity = frozen.blueId();
 
+        // then
+        assertTrue(propertyMutationFailure
+                instanceof UnsupportedOperationException);
+        assertTrue(itemMutationFailure
+                instanceof UnsupportedOperationException);
         assertNotSame(first, second);
-        assertEquals(BlueIdCalculator.calculateBlueId(second), frozen.blueId());
+        assertEquals(secondIdentity, frozenIdentity);
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void rawJsonValueContainersAreOwnedImmutableSnapshots() {
+    void shouldOwnRawJsonValueContainersAsImmutableSnapshots() {
+        // given
         List<Object> nested = new ArrayList<>();
         nested.add("before");
         Map<String, Object> raw = new LinkedHashMap<>();
         raw.put("nested", nested);
         String[] array = new String[] {"first", "second"};
         raw.put("array", array);
+
+        // when
         FrozenNode frozen = FrozenNode.fromNode(new Node().value(raw));
         String blueId = frozen.blueId();
-
         nested.set(0, "after");
         array[0] = "after";
         raw.put("extra", true);
-
         Map<String, Object> captured = (Map<String, Object>) frozen.getValue();
         List<Object> capturedNested = (List<Object>) captured.get("nested");
-        assertEquals(Collections.singletonList("before"), capturedNested);
-        assertArrayEquals(new String[] {"first", "second"},
-                (String[]) captured.get("array"));
-        assertFalse(captured.containsKey("extra"));
-        assertEquals(blueId, frozen.blueId());
-        assertThrows(UnsupportedOperationException.class,
+        List<Object> capturedNestedBeforeCallerMutation =
+                new ArrayList<>(capturedNested);
+        String[] capturedArrayBeforeCallerMutation =
+                ((String[]) captured.get("array")).clone();
+        boolean capturedExtraSourceMutation =
+                captured.containsKey("extra");
+        Throwable mapMutationFailure = captureFailure(
                 () -> captured.put("mutation", true));
-        assertThrows(UnsupportedOperationException.class,
+        Throwable listMutationFailure = captureFailure(
                 () -> capturedNested.set(0, "mutation"));
         ((String[]) captured.get("array"))[0] = "caller mutation";
-        assertArrayEquals(new String[] {"first", "second"},
-                (String[]) ((Map<?, ?>) frozen.getValue()).get("array"));
-
+        String[] rereadArray =
+                ((String[]) ((Map<?, ?>) frozen.getValue())
+                        .get("array")).clone();
         Map<String, Object> materialized = (Map<String, Object>) frozen.toNode().getValue();
         ((List<Object>) materialized.get("nested")).set(0, "mutable copy");
         materialized.put("new", true);
-        assertEquals(Collections.singletonList("before"), capturedNested);
-        assertFalse(captured.containsKey("new"));
+        List<Object> capturedNestedAfterMaterialization =
+                new ArrayList<>(capturedNested);
+        boolean capturedNewMaterializedMutation =
+                captured.containsKey("new");
+        String frozenIdentityAfterMutations = frozen.blueId();
+
+        // then
+        assertEquals(Collections.singletonList("before"),
+                capturedNestedBeforeCallerMutation);
+        assertArrayEquals(new String[] {"first", "second"},
+                capturedArrayBeforeCallerMutation);
+        assertFalse(capturedExtraSourceMutation);
+        assertTrue(mapMutationFailure
+                instanceof UnsupportedOperationException);
+        assertTrue(listMutationFailure
+                instanceof UnsupportedOperationException);
+        assertArrayEquals(new String[] {"first", "second"},
+                rereadArray);
+        assertEquals(Collections.singletonList("before"),
+                capturedNestedAfterMaterialization);
+        assertFalse(capturedNewMaterializedMutation);
+        assertEquals(blueId, frozenIdentityAfterMutations);
     }
 
     @Test
-    void rawJsonValueContainersRejectNestedNonFiniteNumbers() {
+    void shouldRejectNestedNonFiniteNumbersInRawJsonValueContainers() {
+        // given
         Map<String, Object> nested = new LinkedHashMap<>();
+        // when
         nested.put("values", Arrays.<Object>asList(1, Float.NaN));
 
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> FrozenNode.fromNode(new Node().value(nested)));
         assertThrows(IllegalArgumentException.class,
@@ -420,7 +625,8 @@ class FrozenNodeTest {
     }
 
     @Test
-    void rawArraysPreserveLegacyTypeBytesAndRemainOwnedAcrossAccessors() {
+    void shouldPreserveLegacyRawArrayTypeBytesAndOwnershipAcrossAccessors() {
+        // given
         byte[] source = new byte[] {1, 2};
         FrozenNode frozen = FrozenNode.fromNode(new Node().value(source));
         String expected = BlueIdCalculator.calculateBlueId(
@@ -430,8 +636,10 @@ class FrozenNodeTest {
         byte[] exposed = (byte[]) frozen.getValue();
         exposed[1] = 9;
         byte[] materialized = (byte[]) frozen.toNode().getValue();
+        // when
         materialized[0] = 8;
 
+        // then
         assertEquals(expected, frozen.blueId());
         assertArrayEquals(new byte[] {1, 2}, (byte[]) frozen.getValue());
         assertArrayEquals(new byte[] {1, 2}, (byte[]) frozen.toNode().getValue());
@@ -444,14 +652,17 @@ class FrozenNodeTest {
     }
 
     @Test
-    void charactersAndCharacterArraysRetainLegacyRepresentationAndRuntimeType() {
+    void shouldRetainLegacyRepresentationAndRuntimeTypeForCharactersAndCharacterArrays() {
+        // given
         List<Node> cases = Arrays.asList(
                 new Node().value(Character.valueOf('x')),
                 new Node().value(new Character[] {'x', null, '\u20ac'}),
                 new Node().value(new char[] {'x', '\u20ac'}));
 
+        // when
         for (Node authored : cases) {
             FrozenNode frozen = FrozenNode.fromNode(authored);
+            // then
             assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
             assertEquals(authored.getValue().getClass(), frozen.getValue().getClass());
             assertEquals(authored.getValue().getClass(), frozen.toNode().getValue().getClass());
@@ -464,7 +675,8 @@ class FrozenNodeTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void enumValuesRemainImmutableAndPreserveLegacyWireIdentity() {
+    void shouldKeepEnumValuesImmutableAndPreserveLegacyWireIdentity() {
+        // given
         Map<String, Object> raw = new LinkedHashMap<>();
         raw.put("default", DefaultWireEnum.DEFAULT_VALUE);
         raw.put("annotated", AnnotatedWireEnum.ANNOTATED_VALUE);
@@ -472,8 +684,10 @@ class FrozenNodeTest {
 
         FrozenNode frozen = FrozenNode.fromNode(authored);
         Map<String, Object> captured = (Map<String, Object>) frozen.getValue();
+        // when
         Map<String, Object> materialized = (Map<String, Object>) frozen.toNode().getRawValue();
 
+        // then
         assertSame(DefaultWireEnum.DEFAULT_VALUE, captured.get("default"));
         assertSame(AnnotatedWireEnum.ANNOTATED_VALUE, captured.get("annotated"));
         assertSame(DefaultWireEnum.DEFAULT_VALUE, materialized.get("default"));
@@ -485,7 +699,8 @@ class FrozenNodeTest {
 
     @Test
     @SuppressWarnings({"rawtypes", "unchecked"})
-    void concreteAndInterfaceContainerArraysCloneAndFreezeWithoutArrayStore() {
+    void shouldCloneAndFreezeConcreteAndInterfaceContainerArraysWithoutArrayStore() {
+        // given
         TreeMap<String, Object> tree = new TreeMap<>();
         tree.put("key", "tree");
         List<Object> arrays = Arrays.asList(
@@ -500,17 +715,14 @@ class FrozenNodeTest {
                         new HashMap<>(Collections.singletonMap("key", "object-map"))
                 });
 
+        // when
+        List<ContainerArrayOwnershipObservation> observations =
+                new ArrayList<>();
         for (Object array : arrays) {
             Node authored = new Node().value(array);
-            Node cloned = assertDoesNotThrow(authored::clone);
-            assertEquals(array.getClass(), cloned.getValue().getClass());
-
-            FrozenNode frozen = assertDoesNotThrow(() -> FrozenNode.fromNode(authored));
+            Node cloned = authored.clone();
+            FrozenNode frozen = FrozenNode.fromNode(authored);
             String identity = frozen.blueId();
-            assertEquals(BlueIdCalculator.calculateBlueId(authored), identity);
-            assertEquals(array.getClass(), frozen.getValue().getClass());
-            assertEquals(array.getClass(), frozen.toNode().getValue().getClass());
-
             Object exposed = frozen.getValue();
             Object first = Array.get(exposed, 0);
             if (first instanceof List) {
@@ -518,13 +730,40 @@ class FrozenNodeTest {
             } else if (first instanceof Map) {
                 ((Map) first).put("caller", "mutation");
             }
-            assertEquals(identity, frozen.blueId());
+            observations.add(
+                    new ContainerArrayOwnershipObservation(
+                            array.getClass(),
+                            cloned.getValue().getClass(),
+                            frozen.getValue().getClass(),
+                            frozen.toNode()
+                                    .getValue()
+                                    .getClass(),
+                            BlueIdCalculator
+                                    .calculateBlueId(authored),
+                            identity,
+                            frozen.blueId()));
+        }
+
+        // then
+        for (ContainerArrayOwnershipObservation observation
+                : observations) {
+            assertEquals(observation.sourceType,
+                    observation.clonedType);
+            assertEquals(observation.sourceType,
+                    observation.frozenType);
+            assertEquals(observation.sourceType,
+                    observation.materializedType);
+            assertEquals(observation.expectedIdentity,
+                    observation.initialIdentity);
+            assertEquals(observation.initialIdentity,
+                    observation.identityAfterCallerMutation);
         }
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void unhandledConcreteContainerArraysFallBackToOwnedObjectArrays() {
+    void shouldFallBackToOwnedObjectArraysForUnhandledConcreteContainerArrays() {
+        // given
         List<Object> customNested = new ArrayList<>(Collections.<Object>singletonList("custom-before"));
         CustomJsonList custom = new CustomJsonList();
         custom.add(customNested);
@@ -535,54 +774,92 @@ class FrozenNodeTest {
         Object singletonArray = Array.newInstance(singleton.getClass(), 1);
         Array.set(singletonArray, 0, singleton);
 
+        // when
+        List<FallbackArrayObservation> observations =
+                new ArrayList<>();
         for (Object sourceArray : Arrays.asList(customArray, singletonArray)) {
             Node authored = new Node().value(sourceArray);
             String expectedBlueId = BlueIdCalculator.calculateBlueId(authored);
-
-            Node cloned = assertDoesNotThrow(authored::clone);
-            FrozenNode frozen = assertDoesNotThrow(() -> FrozenNode.fromNode(authored));
-
-            assertEquals(Object[].class, cloned.getRawValue().getClass());
-            assertEquals(Object[].class, frozen.getValue().getClass());
-            assertEquals(Object[].class, frozen.toNode().getRawValue().getClass());
-            assertEquals(expectedBlueId, BlueIdCalculator.calculateBlueId(cloned));
-            assertEquals(expectedBlueId, frozen.blueId());
+            Node cloned = authored.clone();
+            FrozenNode frozen = FrozenNode.fromNode(authored);
+            observations.add(new FallbackArrayObservation(
+                    cloned.getRawValue().getClass(),
+                    frozen.getValue().getClass(),
+                    frozen.toNode().getRawValue().getClass(),
+                    expectedBlueId,
+                    BlueIdCalculator.calculateBlueId(cloned),
+                    frozen.blueId()));
         }
-
         customNested.set(0, "custom-after");
         singletonNested.set(0, "singleton-after");
-
         Node customClone = new Node().value(customArray).clone();
         FrozenNode singletonFrozen = FrozenNode.fromNode(new Node().value(singletonArray));
         customNested.set(0, "custom-later");
         singletonNested.set(0, "singleton-later");
-
         List<Object> clonedCustom = (List<Object>) ((List<?>)
                 ((Object[]) customClone.getRawValue())[0]).get(0);
-        assertEquals(Collections.<Object>singletonList("custom-after"), clonedCustom);
-
+        List<Object> clonedCustomSnapshot =
+                new ArrayList<>(clonedCustom);
         Object[] exposed = (Object[]) singletonFrozen.getValue();
         List<Object> exposedNested = (List<Object>) ((List<?>) exposed[0]).get(0);
-        assertEquals(Collections.<Object>singletonList("singleton-after"), exposedNested);
+        List<Object> exposedNestedSnapshot =
+                new ArrayList<>(exposedNested);
         exposedNested.set(0, "caller-mutation");
-        assertEquals("singleton-after", ((List<?>) ((List<?>)
-                ((Object[]) singletonFrozen.getValue())[0]).get(0)).get(0));
+        Object rereadNestedValue = ((List<?>) ((List<?>)
+                ((Object[]) singletonFrozen.getValue())[0])
+                .get(0)).get(0);
+
+        // then
+        for (FallbackArrayObservation observation
+                : observations) {
+            assertEquals(Object[].class,
+                    observation.clonedType);
+            assertEquals(Object[].class,
+                    observation.frozenType);
+            assertEquals(Object[].class,
+                    observation.materializedType);
+            assertEquals(observation.expectedIdentity,
+                    observation.clonedIdentity);
+            assertEquals(observation.expectedIdentity,
+                    observation.frozenIdentity);
+        }
+        assertEquals(Collections.<Object>singletonList(
+                        "custom-after"),
+                clonedCustomSnapshot);
+        assertEquals(Collections.<Object>singletonList(
+                        "singleton-after"),
+                exposedNestedSnapshot);
+        assertEquals("singleton-after",
+                rereadNestedValue);
     }
 
     @Test
-    void frozenNodesRejectNonJsonMutableValueObjectsAndCyclicContainers() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromResolvedNode(new Node().value(new StringBuilder("mutable"))));
-
+    void shouldRejectNonJsonMutableValueObjectsAndCyclicContainersInFrozenNodes() {
+        // given
         List<Object> cyclic = new ArrayList<>();
         cyclic.add(cyclic);
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromResolvedNode(new Node().value(cyclic)));
-
         Object[] cyclicArray = new Object[1];
         cyclicArray[0] = cyclicArray;
-        assertThrows(IllegalArgumentException.class,
+
+        // when
+        Throwable mutableValueFailure = captureFailure(
+                () -> FrozenNode.fromResolvedNode(
+                        new Node().value(
+                                new StringBuilder(
+                                        "mutable"))));
+        Throwable cyclicListFailure = captureFailure(
+                () -> FrozenNode.fromResolvedNode(
+                        new Node().value(cyclic)));
+        Throwable cyclicArrayFailure = captureFailure(
                 () -> FrozenNode.fromResolvedNode(new Node().value(cyclicArray)));
+
+        // then
+        assertTrue(mutableValueFailure
+                instanceof IllegalArgumentException);
+        assertTrue(cyclicListFailure
+                instanceof IllegalArgumentException);
+        assertTrue(cyclicArrayFailure
+                instanceof IllegalArgumentException);
     }
 
     private static final class CustomJsonList extends ArrayList<Object> {
@@ -599,50 +876,92 @@ class FrozenNodeTest {
     }
 
     @Test
-    void pathIndexAndAtResolveObjectAndListPointersWithoutMaterializingWholeTree() {
-        FrozenNode frozen = FrozenNode.fromNode(YAML_MAPPER.readValue(
+    void shouldResolveObjectAndListPointersWithoutMaterializingWholeTree() {
+        // given
+        Node source = YAML_MAPPER.readValue(
                 "profile:\n" +
                 "  label: Ana\n" +
                 "rows:\n" +
                 "  - id: a\n" +
-                "  - id: b", Node.class));
+                "  - id: b", Node.class);
 
-        assertEquals(frozen.property("profile").property("label"), frozen.at("/profile/label"));
-        assertEquals(frozen.property("rows").item(1).property("id"), frozen.at("/rows/1/id"));
-        assertEquals(frozen.at("/rows/1/id"), frozen.pathIndex().get("/rows/1/id"));
-        assertEquals(null, frozen.at("/rows/nope"));
-        assertEquals(null, frozen.at("/rows/9"));
+        // when
+        FrozenNode frozen = FrozenNode.fromNode(source);
+        FrozenNode profileLabel =
+                frozen.property("profile").property("label");
+        FrozenNode resolvedProfileLabel =
+                frozen.at("/profile/label");
+        FrozenNode secondRowId =
+                frozen.property("rows").item(1).property("id");
+        FrozenNode resolvedSecondRowId =
+                frozen.at("/rows/1/id");
+        FrozenNode indexedSecondRowId =
+                frozen.pathIndex().get("/rows/1/id");
+        FrozenNode invalidListProperty =
+                frozen.at("/rows/nope");
+        FrozenNode missingListItem = frozen.at("/rows/9");
+
+        // then
+        assertEquals(profileLabel, resolvedProfileLabel);
+        assertEquals(secondRowId, resolvedSecondRowId);
+        assertEquals(resolvedSecondRowId, indexedSecondRowId);
+        assertNull(invalidListProperty);
+        assertNull(missingListItem);
     }
 
     @Test
-    void pathIndexAndAtUseJsonPointerEscapingForSlashAndTildeKeys() throws Exception {
-        FrozenNode frozen = FrozenNode.fromNode(YAML_MAPPER.readValue(
+    void shouldUseJsonPointerEscapingForSlashAndTildeKeysInPathLookup() throws Exception {
+        // given
+        Node source = YAML_MAPPER.readValue(
                 "\"a/b\": slash\n" +
                 "\"a~b\": tilde\n" +
                 "nested:\n" +
-                "  \"x/y\": value", Node.class));
+                "  \"x/y\": value", Node.class);
 
-        assertEquals("slash", frozen.at("/a~1b").getValue());
-        assertEquals("tilde", frozen.at("/a~0b").getValue());
-        assertEquals("value", frozen.at("/nested/x~1y").getValue());
-        assertEquals(frozen.property("a/b"), frozen.pathIndex().get("/a~1b"));
-        assertEquals(frozen.property("a~b"), frozen.pathIndex().get("/a~0b"));
-        assertEquals(frozen.property("nested").property("x/y"), frozen.pathIndex().get("/nested/x~1y"));
+        // when
+        FrozenNode frozen = FrozenNode.fromNode(source);
+        Object slashValue = frozen.at("/a~1b").getValue();
+        Object tildeValue = frozen.at("/a~0b").getValue();
+        Object nestedSlashValue =
+                frozen.at("/nested/x~1y").getValue();
+        FrozenNode slashProperty = frozen.property("a/b");
+        FrozenNode indexedSlashProperty =
+                frozen.pathIndex().get("/a~1b");
+        FrozenNode tildeProperty = frozen.property("a~b");
+        FrozenNode indexedTildeProperty =
+                frozen.pathIndex().get("/a~0b");
+        FrozenNode nestedSlashProperty =
+                frozen.property("nested").property("x/y");
+        FrozenNode indexedNestedSlashProperty =
+                frozen.pathIndex().get("/nested/x~1y");
+
+        // then
+        assertEquals("slash", slashValue);
+        assertEquals("tilde", tildeValue);
+        assertEquals("value", nestedSlashValue);
+        assertEquals(slashProperty, indexedSlashProperty);
+        assertEquals(tildeProperty, indexedTildeProperty);
+        assertEquals(nestedSlashProperty,
+                indexedNestedSlashProperty);
     }
 
     @Test
-    void listBlueIdUsesCachedElementHashes() {
+    void shouldUseCachedElementHashesForListBlueId() {
+        // given
         FrozenNode one = FrozenNode.fromNode(new Node().value("one"));
         FrozenNode two = FrozenNode.fromNode(new Node().value("two"));
         String frozenListId = FrozenNode.calculateBlueId(Arrays.asList(one, two));
+        // when
         String mutableListId = BlueIdCalculator.calculateBlueId(Arrays.asList(one.toNode(), two.toNode()));
 
+        // then
         assertEquals(mutableListId, frozenListId);
         assertEquals(BlueIdCalculator.calculateBlueId(Collections.emptyList()), FrozenNode.calculateBlueId(Collections.emptyList()));
     }
 
     @Test
-    void cachedListFoldPreservesPreviousEmptyAndNestedListIdentity() {
+    void shouldPreservePreviousEmptyAndNestedListIdentityInCachedListFold() {
+        // given
         String previousBlueId = BlueIdCalculator.calculateBlueId(Collections.emptyList());
         String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node list = new Node().items(
@@ -654,23 +973,28 @@ class FrozenNodeTest {
                 new Node().schema(new Schema().required(true)),
                 new Node().value("contracted").contracts(
                         new Node().properties("audit", new Node().value(true))));
+        // when
         FrozenNode frozen = FrozenNode.fromNode(list);
 
+        // then
         assertEquals(BlueIdCalculator.calculateBlueId(list.getItems()),
                 FrozenNode.calculateBlueId(frozen.getItems()));
         assertEquals(BlueIdCalculator.calculateBlueId(list), frozen.blueId());
     }
 
     @Test
-    void cachedListFoldFallsBackToListContextValidation() {
+    void shouldFallBackToListContextValidationInCachedListFold() {
+        // given
         FrozenNode invalidEmptyMarker = FrozenNode.fromNode(new Node().properties(
                 "$empty", new Node().value(false)));
         FrozenNode emptyObject = FrozenNode.empty();
         String previousBlueId = BlueIdCalculator.calculateBlueId(Collections.emptyList());
+        // when
         FrozenNode anchored = FrozenNode.fromNode(new Node().items(
                 new Node().previousBlueId(previousBlueId),
                 new Node().value("value")));
 
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> FrozenNode.calculateBlueId(Collections.singletonList(invalidEmptyMarker)));
         assertThrows(IllegalArgumentException.class,
@@ -680,7 +1004,8 @@ class FrozenNodeTest {
     }
 
     @Test
-    void frozenObjectOverlayRetainsUnchangedChildrenAndMatchesMutableIdentity() {
+    void shouldRetainUnchangedChildrenAndMatchMutableIdentityInFrozenObjectOverlay() {
+        // given
         Schema originalSchema = new Schema().required(true);
         Schema overlaySchema = new Schema().maxFields(4);
         Node original = new Node()
@@ -699,14 +1024,24 @@ class FrozenNodeTest {
         FrozenNode frozenOriginal = FrozenNode.fromNode(original);
         FrozenNode frozenOverlay = FrozenNode.fromNode(overlay);
 
+        // when
         FrozenNode merged = frozenOriginal.overlayObject(frozenOverlay);
-
         Node expected = original.clone()
                 .name("Overlay")
                 .schema(overlaySchema.clone())
                 .contracts(overlay.getContracts().clone())
                 .properties("replace", overlay.getProperties().get("replace").clone())
                 .properties("add", overlay.getProperties().get("add").clone());
+        String expectedIdentity =
+                BlueIdCalculator.calculateBlueId(expected);
+        FrozenNode scalar = FrozenNode.fromNode(
+                new Node().value("replacement"));
+        FrozenNode scalarOverlay =
+                frozenOriginal.overlayObject(scalar);
+        FrozenNode nullOverlay =
+                frozenOriginal.overlayObject(null);
+
+        // then
         assertSame(frozenOriginal.property("keep"), merged.property("keep"));
         assertSame(frozenOverlay.property("replace"), merged.property("replace"));
         assertSame(frozenOverlay.getContracts(), merged.getContracts());
@@ -714,33 +1049,41 @@ class FrozenNodeTest {
         assertEquals("kept", merged.getDescription());
         assertNull(merged.getSchema().getRequired());
         assertEquals(BigInteger.valueOf(4), merged.getSchema().getMaxFieldsExact());
-        assertEquals(BlueIdCalculator.calculateBlueId(expected), merged.blueId());
-
-        FrozenNode scalar = FrozenNode.fromNode(new Node().value("replacement"));
-        assertSame(scalar, frozenOriginal.overlayObject(scalar));
-        assertNull(frozenOriginal.overlayObject(null));
+        assertEquals(expectedIdentity, merged.blueId());
+        assertSame(scalar, scalarOverlay);
+        assertNull(nullOverlay);
     }
 
     @Test
-    void frozenSchemaIsClonedExactlyAtTheImmutableBoundary() {
+    void shouldCloneFrozenSchemaExactlyAtImmutableBoundary() {
+        // given
         AtomicInteger cloneCalls = new AtomicInteger();
         CountingSchema source = new CountingSchema(cloneCalls);
         source.required(true);
-        FrozenNode frozen = FrozenNode.fromResolvedNode(new Node().schema(source));
 
-        assertEquals(1, cloneCalls.get());
+        // when
+        FrozenNode frozen = FrozenNode.fromResolvedNode(new Node().schema(source));
+        int cloneCallsAfterFreeze = cloneCalls.get();
         source.required(false);
         Schema returned = frozen.getSchema();
         returned.required(false);
+        boolean frozenRequired =
+                frozen.getSchema().getRequiredValue();
+        boolean returnedRequired =
+                returned.getRequiredValue();
+        int totalCloneCalls = cloneCalls.get();
 
-        assertTrue(frozen.getSchema().getRequiredValue());
-        assertFalse(returned.getRequiredValue());
-        assertEquals(3, cloneCalls.get());
+        // then
+        assertEquals(1, cloneCallsAfterFreeze);
+        assertTrue(frozenRequired);
+        assertFalse(returnedRequired);
+        assertEquals(3, totalCloneCalls);
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void frozenSchemaDeeplyOwnsRawJsonValuesAcrossMutableBoundaries() {
+    void shouldDeeplyOwnRawJsonValuesAcrossFrozenSchemaBoundaries() {
+        // given
         Map<String, Object> raw = new LinkedHashMap<>();
         raw.put("label", "before");
         Schema source = new Schema().enumValues(Collections.singletonList(
@@ -750,72 +1093,120 @@ class FrozenNodeTest {
 
         raw.put("label", "after");
         raw.put("extra", true);
+
+        // when
         Map<String, Object> returned = (Map<String, Object>) frozen.getSchema()
                 .getEnum().get(0).getValue();
-        assertEquals("before", returned.get("label"));
-        assertFalse(returned.containsKey("extra"));
-
+        Object returnedLabelBeforeMutation =
+                returned.get("label");
+        boolean returnedContainsExtra =
+                returned.containsKey("extra");
         returned.put("label", "caller mutation");
         Map<String, Object> reread = (Map<String, Object>) frozen.getSchema()
                 .getEnum().get(0).getValue();
-        assertEquals("before", reread.get("label"));
-        assertEquals(blueId, frozen.blueId());
-
+        Object rereadLabel = reread.get("label");
+        String identityAfterReturnedMutation =
+                frozen.blueId();
         Map<String, Object> materialized = (Map<String, Object>) frozen.toNode()
                 .getSchema().getEnum().get(0).getValue();
         materialized.put("label", "materialized mutation");
-        assertEquals("before", ((Map<?, ?>) frozen.getSchema()
-                .getEnum().get(0).getValue()).get("label"));
+        Object labelAfterMaterializedMutation =
+                ((Map<?, ?>) frozen.getSchema()
+                        .getEnum().get(0).getValue())
+                        .get("label");
+
+        // then
+        assertEquals("before", returnedLabelBeforeMutation);
+        assertFalse(returnedContainsExtra);
+        assertEquals("before", rereadLabel);
+        assertEquals(blueId, identityAfterReturnedMutation);
+        assertEquals("before",
+                labelAfterMaterializedMutation);
     }
 
     @Test
-    void rejectsInvalidCanonicalPayloadShapes() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromNode(new Node().value("x").properties("y", new Node().value(1))));
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromNode(new Node().blueId("ref").properties("y", new Node().value(1))));
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromNode(new Node().previousBlueId("prev").value("x")));
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.fromNode(new Node().position(1)));
+    void shouldRejectInvalidCanonicalPayloadShapes() {
+        // given
+        Node valueAndProperties = new Node()
+                .value("x")
+                .properties("y", new Node().value(1));
+        Node referenceAndProperties = new Node()
+                .blueId("ref")
+                .properties("y", new Node().value(1));
+        Node previousReferenceAndValue = new Node()
+                .previousBlueId("prev")
+                .value("x");
+        Node positionedRoot = new Node().position(1);
+
+        // when
+        Throwable valueAndPropertiesFailure = captureFailure(
+                () -> FrozenNode.fromNode(valueAndProperties));
+        Throwable referenceAndPropertiesFailure = captureFailure(
+                () -> FrozenNode.fromNode(referenceAndProperties));
+        Throwable previousReferenceAndValueFailure = captureFailure(
+                () -> FrozenNode.fromNode(previousReferenceAndValue));
+        Throwable positionedRootFailure = captureFailure(
+                () -> FrozenNode.fromNode(positionedRoot));
+
+        // then
+        assertTrue(valueAndPropertiesFailure
+                instanceof IllegalArgumentException);
+        assertTrue(referenceAndPropertiesFailure
+                instanceof IllegalArgumentException);
+        assertTrue(previousReferenceAndValueFailure
+                instanceof IllegalArgumentException);
+        assertTrue(positionedRootFailure
+                instanceof IllegalArgumentException);
     }
 
     @Test
-    void strictCanonicalModeRejectsBlueDirective() {
+    void shouldRejectBlueDirectiveInStrictCanonicalMode() {
+        // given
         Node node = YAML_MAPPER.readValue(
                 "blue:\n" +
                 "  items: []\n" +
                 "value: hello", Node.class);
 
-        assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(node));
+        // when
+        Throwable failure = captureFailure(
+                () -> FrozenNode.fromNode(node));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void rejectsInvalidListControlFormsDuringHashing() {
+    void shouldRejectInvalidListControlFormsDuringHashing() {
+        // given
         Node duplicatePosition = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - $pos: 1\n" +
                 "    value: A\n" +
                 "  - $pos: 1\n" +
                 "    value: B", Node.class);
+        // when
         Node previousNotFirst = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - value: A\n" +
                 "  - $previous:\n" +
                 "      blueId: PrevListHash", Node.class);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(duplicatePosition));
         assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(previousNotFirst));
     }
 
     @Test
-    void resolvedModeAllowsExpandedBlueIdMetadataButCanonicalModeRejectsIt() {
+    void shouldAllowExpandedBlueIdMetadataOnlyInResolvedMode() {
+        // given
         Node resolvedLike = new Node()
                 .blueId("ReferenceMetadata")
                 .name("Expanded node");
 
+        // when
         FrozenNode resolved = FrozenNode.fromResolvedNode(resolvedLike);
 
+        // then
         assertEquals(BlueIdCalculator.INSTANCE.calculate(Collections.singletonMap("name", "Expanded node")), resolved.blueId());
         assertThrows(IllegalArgumentException.class, () -> BlueIdCalculator.calculateBlueId(resolved.toNode()));
         assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(resolvedLike));
@@ -851,6 +1242,58 @@ class FrozenNodeTest {
     private boolean expectsError(JsonNode fixture) {
         return fixture.path("expectError").asBoolean(false)
                 || fixture.has("expectedErrorCategory");
+    }
+
+    private static final class ContainerArrayOwnershipObservation {
+        private final Class<?> sourceType;
+        private final Class<?> clonedType;
+        private final Class<?> frozenType;
+        private final Class<?> materializedType;
+        private final String expectedIdentity;
+        private final String initialIdentity;
+        private final String identityAfterCallerMutation;
+
+        private ContainerArrayOwnershipObservation(
+                Class<?> sourceType,
+                Class<?> clonedType,
+                Class<?> frozenType,
+                Class<?> materializedType,
+                String expectedIdentity,
+                String initialIdentity,
+                String identityAfterCallerMutation) {
+            this.sourceType = sourceType;
+            this.clonedType = clonedType;
+            this.frozenType = frozenType;
+            this.materializedType = materializedType;
+            this.expectedIdentity = expectedIdentity;
+            this.initialIdentity = initialIdentity;
+            this.identityAfterCallerMutation =
+                    identityAfterCallerMutation;
+        }
+    }
+
+    private static final class FallbackArrayObservation {
+        private final Class<?> clonedType;
+        private final Class<?> frozenType;
+        private final Class<?> materializedType;
+        private final String expectedIdentity;
+        private final String clonedIdentity;
+        private final String frozenIdentity;
+
+        private FallbackArrayObservation(
+                Class<?> clonedType,
+                Class<?> frozenType,
+                Class<?> materializedType,
+                String expectedIdentity,
+                String clonedIdentity,
+                String frozenIdentity) {
+            this.clonedType = clonedType;
+            this.frozenType = frozenType;
+            this.materializedType = materializedType;
+            this.expectedIdentity = expectedIdentity;
+            this.clonedIdentity = clonedIdentity;
+            this.frozenIdentity = frozenIdentity;
+        }
     }
 
     private static final class CountingSchema extends Schema {

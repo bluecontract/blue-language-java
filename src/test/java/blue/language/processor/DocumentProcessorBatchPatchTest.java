@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -26,7 +27,8 @@ class DocumentProcessorBatchPatchTest {
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
-    void processorExecutionContextApplyPatchesWorksInsideHandler() {
+    void shouldApplyPatchesThroughProcessorExecutionContextInsideHandler() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new ApplyBatchPatchContractProcessor());
         Node original = blue.yamlToNode(
@@ -40,19 +42,23 @@ class DocumentProcessorBatchPatchTest {
                 "    type:\n" +
                 "      blueId: AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw\n");
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
 
+        // then
         assertEquals("one", result.document().getAsText("/a"));
         assertEquals("two", result.document().getAsText("/b"));
     }
 
     @Test
-    void boundaryViolationInSecondPatchRollsBackWholeInvocation() {
+    void shouldRollBackWholeInvocationWhenSecondPatchViolatesBoundary() {
+        // given
         Node document = new Node();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        assertThrows(RunTerminationException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> execution.handlePatches(
                         "/foo", bundle, Arrays.asList(
                                 JsonPatch.add(
@@ -68,8 +74,10 @@ class DocumentProcessorBatchPatchTest {
                                         new Node().value(
                                                 "tentative-third"))
                         ), false));
-
         DocumentProcessingResult result = execution.result();
+
+        // then
+        assertTrue(failure instanceof RunTerminationException);
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
         assertFalse(result.commits());
@@ -81,13 +89,15 @@ class DocumentProcessorBatchPatchTest {
     }
 
     @Test
-    void reservedKeyViolationInSecondPatchRollsBackWholeInvocation() {
+    void shouldRollBackWholeInvocationWhenSecondPatchWritesReservedKey() {
+        // given
         Node document = new Node().properties("foo", new Node());
         String exactInput = document.toString();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        assertThrows(RunTerminationException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> execution.handlePatches(
                         "/foo", bundle, Arrays.asList(
                                 JsonPatch.add(
@@ -99,8 +109,10 @@ class DocumentProcessorBatchPatchTest {
                                         new Node().value(
                                                 "reserved"))
                         ), false));
-
         DocumentProcessingResult result = execution.result();
+
+        // then
+        assertTrue(failure instanceof RunTerminationException);
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
         assertFalse(result.commits());
@@ -115,13 +127,15 @@ class DocumentProcessorBatchPatchTest {
     }
 
     @Test
-    void invalidSecondPatchRollsBackAllTentativePatches() {
+    void shouldRollBackAllTentativePatchesWhenSecondPatchIsInvalid() {
+        // given
         Node document = new Node().properties("foo", new Node());
         String exactInput = document.toString();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
-        assertThrows(RunTerminationException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> execution.handlePatches(
                         "/foo", bundle, Arrays.asList(
                                 JsonPatch.add(
@@ -135,22 +149,25 @@ class DocumentProcessorBatchPatchTest {
                                         new Node().value(
                                                 "tentative-third"))
                         ), false));
-
         DocumentProcessingResult result = execution.result();
+        Node foo = result.document().getAsNode("/foo");
+
+        // then
+        assertTrue(failure instanceof RunTerminationException);
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
         assertFalse(result.commits());
         assertTrue(result.events().isEmpty());
         assertEquals(exactInput,
                 result.document().toString());
-        Node foo = result.document().getAsNode("/foo");
         assertFalse(hasProperty(foo, "a"));
         assertFalse(hasProperty(foo, "c"));
         assertTrue(execution.runtime().isRunTerminated());
     }
 
     @Test
-    void cyclicMemberTraversalInLaterPatchRollsBackWholeInvocation() {
+    void shouldRollBackWholeInvocationWhenLaterPatchTraversesCyclicMember() {
+        // given
         Node document = new Node().properties(
                 "foo",
                 new Node().properties(
@@ -160,7 +177,8 @@ class DocumentProcessorBatchPatchTest {
         ProcessorEngine.Execution execution =
                 new ProcessorEngine.Execution(new DocumentProcessor(), document);
 
-        assertThrows(RunTerminationException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> execution.handlePatches(
                         "/foo",
                         ContractBundle.builder().build(),
@@ -172,8 +190,10 @@ class DocumentProcessorBatchPatchTest {
                                         "/foo/cyclic/member",
                                         new Node().value("forbidden"))),
                         false));
-
         DocumentProcessingResult result = execution.result();
+
+        // then
+        assertTrue(failure instanceof RunTerminationException);
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
                 diagnosticCategory(result));
@@ -184,7 +204,8 @@ class DocumentProcessorBatchPatchTest {
     }
 
     @Test
-    void documentUpdateChannelsReceiveBatchUpdatesInPatchOrder() {
+    void shouldDeliverBatchUpdatesToDocumentUpdateChannelsInPatchOrder() {
+        // given
         RecordDocumentUpdateContractProcessor recorder = new RecordDocumentUpdateContractProcessor();
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new ApplyBatchPatchContractProcessor());
@@ -216,13 +237,16 @@ class DocumentProcessorBatchPatchTest {
                 "    type:\n" +
                 "      blueId: qLb75fi7BHJf8HvxXNTJP8Zo2fCsA3t6Lz5R269qUiC\n");
 
+        // when
         blue.initializeDocument(original);
 
+        // then
         assertEquals(Arrays.asList("/a", "/b"), recorder.paths());
     }
 
     @Test
-    void unmatchedDocumentUpdateChannelDoesNotMaterializeUpdateNodes() {
+    void shouldNotMaterializeUpdateNodesForUnmatchedDocumentUpdateChannel() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(
                 "name: Lazy Update Doc\n" +
@@ -234,16 +258,19 @@ class DocumentProcessorBatchPatchTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         execution.preflightScope("/");
 
+        // when
         execution.handlePatches("/", execution.bundleForScope("/"), Collections.singletonList(
                 JsonPatch.add("/a", new Node().value("one"))
         ), false);
 
+        // then
         assertEquals(0, execution.runtime().documentUpdateBeforeNodeMaterializationsForTest());
         assertEquals(0, execution.runtime().documentUpdateAfterNodeMaterializationsForTest());
     }
 
     @Test
-    void matchingDocumentUpdateChannelMaterializesUpdateNodes() {
+    void shouldMaterializeUpdateNodesForMatchingDocumentUpdateChannel() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(
                 "name: Lazy Update Doc\n" +
@@ -256,10 +283,12 @@ class DocumentProcessorBatchPatchTest {
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         execution.preflightScope("/");
 
+        // when
         execution.handlePatches("/", execution.bundleForScope("/"), Collections.singletonList(
                 JsonPatch.replace("/a", new Node().value("new"))
         ), false);
 
+        // then
         assertEquals(1, execution.runtime().documentUpdateBeforeNodeMaterializationsForTest());
         assertEquals(1, execution.runtime().documentUpdateAfterNodeMaterializationsForTest());
     }

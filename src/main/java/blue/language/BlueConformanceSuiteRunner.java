@@ -1,17 +1,26 @@
 package blue.language;
 
 import blue.language.model.Node;
+import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.CyclicAwareNodeProvider;
+import blue.language.provider.CyclicSetProof;
+import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.DirectNodeManifest;
+import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.ProviderEvidenceVerifier;
 import blue.language.provider.ProviderMode;
+import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.SourceProviderEnvironment;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.utils.JsonPointer;
+import blue.language.utils.NodePathAccessor;
+import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.Nodes;
 import blue.language.utils.Properties;
@@ -45,87 +54,329 @@ import java.util.Set;
  */
 public final class BlueConformanceSuiteRunner {
 
+    /**
+     * Canonical names of operations understood by the fixture DSL.
+     *
+     * <p>Keeping the operation vocabulary in one owner prevents the manifest
+     * allow-list and dispatcher from drifting apart.</p>
+     */
+    private static final class FixtureOperation {
+
+        private static final String ASSERT_VIEW_PATH = "assertViewPath";
+        private static final String CALCULATE_BLUE_ID = "calculateBlueId";
+        private static final String CALCULATE_BLUE_ID_PAIR = "calculateBlueIdPair";
+        private static final String CALCULATE_CIRCULAR_SET_BLUE_IDS =
+                "calculateCircularSetBlueIds";
+        private static final String CANONICALIZE = "canonicalize";
+        private static final String CANONICALIZE_LIMITED_RESULT =
+                "canonicalizeLimitedResult";
+        private static final String CHANGING_REGISTRY_DESCRIPTION_CHANGES_BLUE_ID =
+                "changingRegistryDescriptionChangesBlueId";
+        private static final String COLLAPSE = "collapse";
+        private static final String COMPARE_CONTENT_AND_DIRECT_RESOLVED_BLUE_ID =
+                "compareContentAndDirectResolvedBlueId";
+        private static final String COMPARE_EXPANSION_STRATEGIES =
+                "compareExpansionStrategies";
+        private static final String COMPARE_GRAPH_EQUIVALENT_INPUTS =
+                "compareGraphEquivalentInputs";
+        private static final String COMPARE_LIMITED_AND_COMPLETE_RESOLUTION =
+                "compareLimitedAndCompleteResolution";
+        private static final String EXPAND = "expand";
+        private static final String EXPAND_CYCLIC_MEMBER = "expandCyclicMember";
+        private static final String EXPAND_LIMITED = "expandLimited";
+        private static final String EXPAND_THEN_COLLAPSE = "expandThenCollapse";
+        private static final String EXPAND_VARIANTS = "expandVariants";
+        private static final String LINT_PUBLISHABLE_DOCUMENTATION =
+                "lintPublishableDocumentation";
+        private static final String MATCH = "match";
+        private static final String MINIMIZE_AND_RESOLVE = "minimizeAndResolve";
+        private static final String PARSE_BLUE_ID_INPUT = "parseBlueIdInput";
+        private static final String PARSE_SOURCE = "parseSource";
+        private static final String PREPROCESS = "preprocess";
+        private static final String REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID =
+                "registryNodeHashesToPublishedBlueId";
+        private static final String RESOLVE = "resolve";
+        private static final String RESOLVE_LIMITED = "resolveLimited";
+        private static final String RESOLVE_VARIANTS = "resolveVariants";
+        private static final String RETRIEVE_DIRECT_LIST = "retrieveDirectList";
+        private static final String SEMANTIC_EXISTS = "semanticExists";
+        private static final String SPLIT_EXACT_GRAPH_FRAGMENTS =
+                "splitExactGraphFragments";
+        private static final String SUITE_ASSERTION = "suiteAssertion";
+        private static final String VALIDATE = "validate";
+        private static final String VALIDATE_VARIANTS = "validateVariants";
+        private static final String VERIFY_DIRECT_LIST = "verifyDirectList";
+        private static final String VERIFY_DIRECT_NODE = "verifyDirectNode";
+        private static final String VERIFY_OPAQUE_CYCLIC_FRAGMENT =
+                "verifyOpaqueCyclicFragment";
+
+        private FixtureOperation() {
+        }
+    }
+
+    /**
+     * Shared field names used by fixture envelopes and their nested DSL
+     * structures.
+     *
+     * <p>Fields used only once to declare the top-level schema remain inline
+     * in {@link #ALLOWED_FIXTURE_FIELDS}; every field shared with executable
+     * fixture handling is named here.</p>
+     */
+    private static final class FixtureField {
+
+        private static final String ALSO_DIFFERENT_FROM = "alsoDifferentFrom";
+        private static final String ALSO_EQUIVALENT_TO = "alsoEquivalentTo";
+        private static final String ASSERTIONS = "assertions";
+        private static final String BASE = "base";
+        private static final String CANDIDATE = "candidate";
+        private static final String CATEGORY = "category";
+        private static final String CUTS = "cuts";
+        private static final String DIRECT_ELEMENT_IDENTITIES_ONLY =
+                "directElementIdentitiesOnly";
+        private static final String DIRECT_NODE = "directNode";
+        private static final String DOCUMENT = "document";
+        private static final String DOCUMENTS = "documents";
+        private static final String EXPECT_BLUE_ID_CHANGED = "expectBlueIdChanged";
+        private static final String EXPECT_ERROR = "expectError";
+        private static final String EXPECTED = "expected";
+        private static final String EXPECTED_ABSENT = "expectedAbsent";
+        private static final String EXPECTED_BLUE_IDS = "expectedBlueIds";
+        private static final String EXPECTED_CANONICAL_CONTAINS_CONTROLS =
+                "expectedCanonicalContainsControls";
+        private static final String EXPECTED_CANONICAL_ITEMS =
+                "expectedCanonicalItems";
+        private static final String EXPECTED_CANONICAL_OVERLAY =
+                "expectedCanonicalOverlay";
+        private static final String EXPECTED_CANONICALIZATION_ERROR_CATEGORY =
+                "expectedCanonicalizationErrorCategory";
+        private static final String EXPECTED_COLLAPSED = "expectedCollapsed";
+        private static final String EXPECTED_COLLAPSED_ROOT =
+                "expectedCollapsedRoot";
+        private static final String
+                EXPECTED_CONTENT_BLUE_ID_EQUALS_CANONICAL_IDENTITY_INPUT =
+                "expectedContentBlueIdEqualsCanonicalIdentityInput";
+        private static final String EXPECTED_DEFENSIVE_COPIES =
+                "expectedDefensiveCopies";
+        private static final String EXPECTED_DESCENDANT_REQUESTS =
+                "expectedDescendantRequests";
+        private static final String EXPECTED_DIRECT_RESOLVED_BLUE_ID_MAY_DIFFER =
+                "expectedDirectResolvedBlueIdMayDiffer";
+        private static final String
+                EXPECTED_DIRECT_RESULT_STILL_CONTAINS_ALL_ORDERED_ELEMENT_IDENTITIES =
+                "expectedDirectResultStillContainsAllOrderedElementIdentities";
+        private static final String EXPECTED_EFFECTIVE_TYPE =
+                "expectedEffectiveType";
+        private static final String EXPECTED_EFFECTIVE_TYPES =
+                "expectedEffectiveTypes";
+        private static final String EXPECTED_ELEMENT_BODY_REQUESTS =
+                "expectedElementBodyRequests";
+        private static final String EXPECTED_EQUAL = "expectedEqual";
+        private static final String EXPECTED_ERROR_CATEGORY =
+                "expectedErrorCategory";
+        private static final String EXPECTED_EXPANDED = "expectedExpanded";
+        private static final String EXPECTED_EXPANDED_DESCENDANT_REQUESTS =
+                "expectedExpandedDescendantRequests";
+        private static final String EXPECTED_FIELD_COUNT = "expectedFieldCount";
+        private static final String EXPECTED_FRAGMENT_BLUE_IDS =
+                "expectedFragmentBlueIds";
+        private static final String EXPECTED_FRAGMENT_COUNT =
+                "expectedFragmentCount";
+        private static final String EXPECTED_IDENTITY_EQUAL =
+                "expectedIdentityEqual";
+        private static final String EXPECTED_LOCAL_PROVIDER_OUTCOME =
+                "expectedLocalProviderOutcome";
+        private static final String EXPECTED_MATCH = "expectedMatch";
+        private static final String EXPECTED_MERGE_POLICY =
+                "expectedMergePolicy";
+        private static final String EXPECTED_MINIMIZED_MAY_CONTAIN =
+                "expectedMinimizedMayContain";
+        private static final String EXPECTED_NODE_BLUE_ID = "expectedNodeBlueId";
+        private static final String EXPECTED_NOT_REQUESTED_BLUE_IDS =
+                "expectedNotRequestedBlueIds";
+        private static final String EXPECTED_OPAQUE_EDGES =
+                "expectedOpaqueEdges";
+        private static final String EXPECTED_OUTCOME = "expectedOutcome";
+        private static final String EXPECTED_OUTSTANDING_BLUE_IDS =
+                "expectedOutstandingBlueIds";
+        private static final String EXPECTED_PARSED = "expectedParsed";
+        private static final String EXPECTED_PREPROCESSED =
+                "expectedPreprocessed";
+        private static final String EXPECTED_PROVIDER_OUTCOME =
+                "expectedProviderOutcome";
+        private static final String EXPECTED_PUBLISHED_BLUE_ID =
+                "expectedPublishedBlueId";
+        private static final String EXPECTED_REASON = "expectedReason";
+        private static final String EXPECTED_REFERENCE_PATHS =
+                "expectedReferencePaths";
+        private static final String EXPECTED_REQUESTED_BLUE_IDS =
+                "expectedRequestedBlueIds";
+        private static final String EXPECTED_RESOLUTION_OUTCOME =
+                "expectedResolutionOutcome";
+        private static final String EXPECTED_RESOLVED = "expectedResolved";
+        private static final String EXPECTED_RESOLVED_ITEMS =
+                "expectedResolvedItems";
+        private static final String EXPECTED_ROUND_TRIP_EQUAL =
+                "expectedRoundTripEqual";
+        private static final String EXPECTED_ROUND_TRIP_ITEMS =
+                "expectedRoundTripItems";
+        private static final String EXPECTED_SAME_AS_COMPLETE_RESOLUTION =
+                "expectedSameAsCompleteResolution";
+        private static final String EXPECTED_SAME_NODE_BLUE_ID =
+                "expectedSameNodeBlueId";
+        private static final String EXPECTED_SAME_ROOT_NODE_BLUE_ID =
+                "expectedSameRootNodeBlueId";
+        private static final String EXPECTED_SAME_SEMANTIC_COVERAGE =
+                "expectedSameSemanticCoverage";
+        private static final String EXPECTED_SAME_SEMANTIC_RESULT =
+                "expectedSameSemanticResult";
+        private static final String
+                EXPECTED_SOURCE_REFERENCE_PRESERVED_BY_CANONICALIZATION =
+                "expectedSourceReferencePreservedByCanonicalization";
+        private static final String EXPECTED_VALID = "expectedValid";
+        private static final String EXPECTED_VALUE = "expectedValue";
+        private static final String EXPECTED_VERIFIED = "expectedVerified";
+        private static final String EXPECTED_WITH_VERIFIED_SET_CONTEXT =
+                "expectedWithVerifiedSetContext";
+        private static final String
+                EXPECTED_WITHOUT_SET_CONTEXT_ERROR_CATEGORY =
+                "expectedWithoutSetContextErrorCategory";
+        private static final String FIELD_DECLARATION = "fieldDeclaration";
+        private static final String FORBIDDEN_JOINED_TERMS =
+                "forbiddenJoinedTerms";
+        private static final String FULL_LIST = "fullList";
+        private static final String ID = "id";
+        private static final String INPUT = "input";
+        private static final String LEFT = "left";
+        private static final String LIMITS = "limits";
+        private static final String MATCH_RULE = "matchRule";
+        private static final String MAX_REFERENCE_EXPANSIONS =
+                "maxReferenceExpansions";
+        private static final String MUTATION = "mutation";
+        private static final String NEXT = "next";
+        private static final String NODE = "node";
+        private static final String OPERATION = "operation";
+        private static final String OUTCOME = "outcome";
+        private static final String PARENT = "parent";
+        private static final String PATH = "path";
+        private static final String PATTERN = "pattern";
+        private static final String PROVIDER = "provider";
+        private static final String PROVIDER_NODE = "providerNode";
+        private static final String PROVIDER_RESULT = "providerResult";
+        private static final String PUBLISHABLE_FILES = "publishableFiles";
+        private static final String REGISTRY_KEY = "registryKey";
+        private static final String REGISTRY_KIND = "registryKind";
+        private static final String REQUESTED_BLUE_ID = "requestedBlueId";
+        private static final String REQUIRED_HEADINGS = "requiredHeadings";
+        private static final String REQUIRES_VECTOR_PREFIXES =
+                "requiresVectorPrefixes";
+        private static final String RESOLVED_ITEMS = "resolvedItems";
+        private static final String RETURNED_NODE = "returnedNode";
+        private static final String RIGHT = "right";
+        private static final String SEMANTIC_DESCRIPTION_IDENTITY_BEARING =
+                "semanticDescriptionIdentityBearing";
+        private static final String SOURCE = "source";
+        private static final String STORED_OPTIMIZATION = "storedOptimization";
+        private static final String VARIANTS = "variants";
+
+        private FixtureField() {
+        }
+    }
+
     private static final String FIXTURE_ROOT = "blue-language-1.0/fixtures/";
     private static final String MANIFEST_RESOURCE = FIXTURE_ROOT + "manifest.yaml";
 
     private static final Set<String> OPERATIONS = immutableSet(
-            "assertViewPath",
-            "calculateBlueId",
-            "calculateBlueIdPair",
-            "calculateCircularSetBlueIds",
-            "canonicalize",
-            "canonicalizeLimitedResult",
-            "changingRegistryDescriptionChangesBlueId",
-            "collapse",
-            "compareContentAndDirectResolvedBlueId",
-            "compareExpansionStrategies",
-            "compareGraphEquivalentInputs",
-            "compareLimitedAndCompleteResolution",
-            "expand",
-            "expandCyclicMember",
-            "expandLimited",
-            "expandThenCollapse",
-            "expandVariants",
-            "lintPublishableDocumentation",
-            "match",
-            "minimizeAndResolve",
-            "parseBlueIdInput",
-            "parseSource",
-            "preprocess",
-            "registryNodeHashesToPublishedBlueId",
-            "resolve",
-            "resolveLimited",
-            "resolveVariants",
-            "retrieveDirectList",
-            "semanticExists",
-            "suiteAssertion",
-            "validate",
-            "validateVariants",
-            "verifyDirectList",
-            "verifyDirectNode"
+            FixtureOperation.ASSERT_VIEW_PATH,
+            FixtureOperation.CALCULATE_BLUE_ID,
+            FixtureOperation.CALCULATE_BLUE_ID_PAIR,
+            FixtureOperation.CALCULATE_CIRCULAR_SET_BLUE_IDS,
+            FixtureOperation.CANONICALIZE,
+            FixtureOperation.CANONICALIZE_LIMITED_RESULT,
+            FixtureOperation.CHANGING_REGISTRY_DESCRIPTION_CHANGES_BLUE_ID,
+            FixtureOperation.COLLAPSE,
+            FixtureOperation.COMPARE_CONTENT_AND_DIRECT_RESOLVED_BLUE_ID,
+            FixtureOperation.COMPARE_EXPANSION_STRATEGIES,
+            FixtureOperation.COMPARE_GRAPH_EQUIVALENT_INPUTS,
+            FixtureOperation.COMPARE_LIMITED_AND_COMPLETE_RESOLUTION,
+            FixtureOperation.EXPAND,
+            FixtureOperation.EXPAND_CYCLIC_MEMBER,
+            FixtureOperation.EXPAND_LIMITED,
+            FixtureOperation.EXPAND_THEN_COLLAPSE,
+            FixtureOperation.EXPAND_VARIANTS,
+            FixtureOperation.LINT_PUBLISHABLE_DOCUMENTATION,
+            FixtureOperation.MATCH,
+            FixtureOperation.MINIMIZE_AND_RESOLVE,
+            FixtureOperation.PARSE_BLUE_ID_INPUT,
+            FixtureOperation.PARSE_SOURCE,
+            FixtureOperation.PREPROCESS,
+            FixtureOperation.REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID,
+            FixtureOperation.RESOLVE,
+            FixtureOperation.RESOLVE_LIMITED,
+            FixtureOperation.RESOLVE_VARIANTS,
+            FixtureOperation.RETRIEVE_DIRECT_LIST,
+            FixtureOperation.SEMANTIC_EXISTS,
+            FixtureOperation.SPLIT_EXACT_GRAPH_FRAGMENTS,
+            FixtureOperation.SUITE_ASSERTION,
+            FixtureOperation.VALIDATE,
+            FixtureOperation.VALIDATE_VARIANTS,
+            FixtureOperation.VERIFY_DIRECT_LIST,
+            FixtureOperation.VERIFY_DIRECT_NODE,
+            FixtureOperation.VERIFY_OPAQUE_CYCLIC_FRAGMENT
     );
 
     private static final Set<String> ALLOWED_FIXTURE_FIELDS = immutableSet(
-            "alsoDifferentFrom", "alsoEquivalentTo", "assertions", "base",
-            "candidate", "category", "description", "directElementIdentitiesOnly",
-            "directNode", "document", "documents", "expectBlueIdChanged",
-            "expectError", "expected", "expectedAbsent", "expectedBlueIds",
-            "expectedCanonicalContainsControls", "expectedCanonicalItems",
-            "expectedCanonicalOverlay", "expectedCanonicalizationErrorCategory",
-            "expectedCollapsed", "expectedCollapsedRoot",
-            "expectedContentBlueIdEqualsCanonicalIdentityInput",
-            "expectedDescendantRequests", "expectedDirectResolvedBlueIdMayDiffer",
-            "expectedDirectResultStillContainsAllOrderedElementIdentities",
-            "expectedEffectiveType", "expectedEffectiveTypes",
-            "expectedElementBodyRequests", "expectedEqual", "expectedErrorCategory",
-            "expectedExpanded", "expectedExpandedDescendantRequests",
-            "expectedFieldCount", "expectedIdentityEqual", "expectedMatch",
-            "expectedMergePolicy", "expectedMinimizedMayContain",
-            "expectedNodeBlueId", "expectedNotRequestedBlueIds",
-            "expectedOutcome", "expectedOutstandingBlueIds",
-            "expectedParsed", "expectedPreprocessed", "expectedProviderOutcome",
-            "expectedPublishedBlueId", "expectedReason",
-            "expectedRequestedBlueIds", "expectedResolutionOutcome",
-            "expectedResolved", "expectedResolvedItems", "expectedRoundTripEqual",
-            "expectedRoundTripItems", "expectedSameAsCompleteResolution",
-            "expectedSameNodeBlueId", "expectedSameRootNodeBlueId",
-            "expectedSameSemanticCoverage", "expectedSameSemanticResult",
-            "expectedSourceReferencePreservedByCanonicalization",
-            "expectedValid", "expectedValue", "expectedVerified",
-            "expectedWithVerifiedSetContext",
-            "expectedWithoutSetContextErrorCategory", "fieldDeclaration",
-            "forbiddenJoinedTerms", "fullList", "id", "input", "left",
-            "limits", "matchRule", "mutation", "note", "operation", "parent",
-            "path", "pattern", "provider", "providerNode", "providerResult",
-            "publishableFiles", "registryKey", "registryKind",
-            "requestedBlueId", "requiredHeadings", "requiresVectorPrefixes",
-            "resolvedItems", "right", "semanticDescriptionIdentityBearing",
-            "source", "storedOptimization", "variants"
+            FixtureField.ALSO_DIFFERENT_FROM, FixtureField.ALSO_EQUIVALENT_TO, FixtureField.ASSERTIONS, FixtureField.BASE,
+            FixtureField.CANDIDATE, FixtureField.CATEGORY, "description", FixtureField.DIRECT_ELEMENT_IDENTITIES_ONLY,
+            FixtureField.DIRECT_NODE, FixtureField.DOCUMENT, FixtureField.DOCUMENTS, FixtureField.EXPECT_BLUE_ID_CHANGED,
+            FixtureField.EXPECT_ERROR, FixtureField.EXPECTED, FixtureField.EXPECTED_ABSENT, FixtureField.EXPECTED_BLUE_IDS,
+            FixtureField.EXPECTED_CANONICAL_CONTAINS_CONTROLS, FixtureField.EXPECTED_CANONICAL_ITEMS,
+            FixtureField.EXPECTED_CANONICAL_OVERLAY, FixtureField.EXPECTED_CANONICALIZATION_ERROR_CATEGORY,
+            FixtureField.EXPECTED_COLLAPSED, FixtureField.EXPECTED_COLLAPSED_ROOT,
+            FixtureField.EXPECTED_CONTENT_BLUE_ID_EQUALS_CANONICAL_IDENTITY_INPUT,
+            FixtureField.EXPECTED_DESCENDANT_REQUESTS, FixtureField.EXPECTED_DIRECT_RESOLVED_BLUE_ID_MAY_DIFFER,
+            FixtureField.EXPECTED_DIRECT_RESULT_STILL_CONTAINS_ALL_ORDERED_ELEMENT_IDENTITIES,
+            FixtureField.EXPECTED_EFFECTIVE_TYPE, FixtureField.EXPECTED_EFFECTIVE_TYPES,
+            FixtureField.EXPECTED_ELEMENT_BODY_REQUESTS, FixtureField.EXPECTED_EQUAL, FixtureField.EXPECTED_ERROR_CATEGORY,
+            FixtureField.EXPECTED_EXPANDED, FixtureField.EXPECTED_EXPANDED_DESCENDANT_REQUESTS,
+            FixtureField.EXPECTED_FIELD_COUNT, FixtureField.EXPECTED_FRAGMENT_BLUE_IDS,
+            FixtureField.EXPECTED_FRAGMENT_COUNT, FixtureField.EXPECTED_IDENTITY_EQUAL,
+            FixtureField.EXPECTED_LOCAL_PROVIDER_OUTCOME, FixtureField.EXPECTED_MATCH,
+            FixtureField.EXPECTED_MERGE_POLICY, FixtureField.EXPECTED_MINIMIZED_MAY_CONTAIN,
+            FixtureField.EXPECTED_NODE_BLUE_ID, FixtureField.EXPECTED_NOT_REQUESTED_BLUE_IDS,
+            FixtureField.EXPECTED_OPAQUE_EDGES,
+            FixtureField.EXPECTED_OUTCOME, FixtureField.EXPECTED_OUTSTANDING_BLUE_IDS,
+            FixtureField.EXPECTED_PARSED, FixtureField.EXPECTED_PREPROCESSED, FixtureField.EXPECTED_PROVIDER_OUTCOME,
+            FixtureField.EXPECTED_PUBLISHED_BLUE_ID, FixtureField.EXPECTED_REASON,
+            FixtureField.EXPECTED_REFERENCE_PATHS,
+            FixtureField.EXPECTED_REQUESTED_BLUE_IDS, FixtureField.EXPECTED_RESOLUTION_OUTCOME,
+            FixtureField.EXPECTED_RESOLVED, FixtureField.EXPECTED_RESOLVED_ITEMS, FixtureField.EXPECTED_ROUND_TRIP_EQUAL,
+            FixtureField.EXPECTED_ROUND_TRIP_ITEMS, FixtureField.EXPECTED_SAME_AS_COMPLETE_RESOLUTION,
+            FixtureField.EXPECTED_SAME_NODE_BLUE_ID, FixtureField.EXPECTED_SAME_ROOT_NODE_BLUE_ID,
+            FixtureField.EXPECTED_SAME_SEMANTIC_COVERAGE, FixtureField.EXPECTED_SAME_SEMANTIC_RESULT,
+            FixtureField.EXPECTED_SOURCE_REFERENCE_PRESERVED_BY_CANONICALIZATION,
+            FixtureField.EXPECTED_VALID, FixtureField.EXPECTED_VALUE, FixtureField.EXPECTED_VERIFIED,
+            FixtureField.EXPECTED_DEFENSIVE_COPIES,
+            FixtureField.EXPECTED_WITH_VERIFIED_SET_CONTEXT,
+            FixtureField.EXPECTED_WITHOUT_SET_CONTEXT_ERROR_CATEGORY, FixtureField.FIELD_DECLARATION,
+            FixtureField.FORBIDDEN_JOINED_TERMS, FixtureField.FULL_LIST, FixtureField.ID, FixtureField.INPUT, FixtureField.LEFT,
+            FixtureField.CUTS, FixtureField.LIMITS, FixtureField.MATCH_RULE, FixtureField.MUTATION, "note",
+            FixtureField.OPERATION, FixtureField.PARENT,
+            FixtureField.PATH, FixtureField.PATTERN, FixtureField.PROVIDER, FixtureField.PROVIDER_NODE, FixtureField.PROVIDER_RESULT,
+            FixtureField.PUBLISHABLE_FILES, FixtureField.REGISTRY_KEY, FixtureField.REGISTRY_KIND,
+            FixtureField.REQUESTED_BLUE_ID, FixtureField.REQUIRED_HEADINGS, FixtureField.REQUIRES_VECTOR_PREFIXES,
+            FixtureField.RESOLVED_ITEMS, FixtureField.RIGHT, FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING,
+            FixtureField.SOURCE, FixtureField.STORED_OPTIMIZATION, FixtureField.VARIANTS
     );
 
     private BlueConformanceSuiteRunner() {
     }
 
+    /**
+     * Executes every bundled Blue Language fixture.
+     *
+     * @param blue runtime under test
+     * @return complete conformance report
+     */
     public static BlueConformanceReport run(Blue blue) {
         BlueConformanceReport metadata = blue.conformanceReport();
         List<FixtureEntry> entries = fixtureEntries();
@@ -150,29 +401,50 @@ public final class BlueConformanceSuiteRunner {
                 failures);
     }
 
+    /**
+
+     * Returns supported fixture operations.
+
+     *
+
+     * @return immutable operation set
+
+     */
     public static Set<String> knownOperations() {
         return OPERATIONS;
     }
 
+    /**
+     * Validates fixture metadata for focused tests.
+     *
+     * @param spec parsed fixture envelope
+     * @throws IllegalArgumentException when metadata is invalid
+     */
     public static void validateFixtureMetadataForTest(JsonNode spec) {
         validateFixtureMetadata(spec);
     }
 
+    /**
+     * Executes one parsed fixture for focused tests.
+     *
+     * @param spec parsed fixture envelope
+     * @throws AssertionError when a fixture assertion fails
+     */
     public static void runFixtureForTest(JsonNode spec) {
         validateFixtureMetadata(spec);
-        String operation = requireText(spec, "operation");
+        String operation = requireText(spec, FixtureField.OPERATION);
         if (expectsTopLevelError(spec, operation)) {
             try {
                 runOperation(spec, operation, fixtureEntries());
             } catch (RuntimeException expected) {
-                if (spec.hasNonNull("expectedErrorCategory")) {
+                if (spec.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY)) {
                     assertExpectedErrorCategory(
-                            spec, "expectedErrorCategory", expected);
+                            spec, FixtureField.EXPECTED_ERROR_CATEGORY, expected);
                 }
                 return;
             }
             throw new AssertionError("Fixture expected an error but operation succeeded: "
-                    + requireText(spec, "id"));
+                    + requireText(spec, FixtureField.ID));
         }
         runOperation(spec, operation, fixtureEntries());
     }
@@ -181,18 +453,18 @@ public final class BlueConformanceSuiteRunner {
                                    List<FixtureEntry> allFixtures) {
         JsonNode spec = readYamlResource(FIXTURE_ROOT + fixture.path);
         validateFixtureMetadata(spec);
-        assertEquals(fixture.id, requireText(spec, "id"));
+        assertEquals(fixture.id, requireText(spec, FixtureField.ID));
         assertEquals(fixture.category,
-                BlueFixtureCategory.fromLabel(requireText(spec, "category")));
+                BlueFixtureCategory.fromLabel(requireText(spec, FixtureField.CATEGORY)));
 
-        String operation = requireText(spec, "operation");
+        String operation = requireText(spec, FixtureField.OPERATION);
         if (expectsTopLevelError(spec, operation)) {
             try {
                 runOperation(spec, operation, allFixtures);
             } catch (RuntimeException expected) {
-                if (spec.hasNonNull("expectedErrorCategory")) {
+                if (spec.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY)) {
                     assertExpectedErrorCategory(
-                            spec, "expectedErrorCategory", expected);
+                            spec, FixtureField.EXPECTED_ERROR_CATEGORY, expected);
                 }
                 return;
             }
@@ -203,122 +475,128 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static boolean expectsTopLevelError(JsonNode spec, String operation) {
-        if ("resolveVariants".equals(operation)
-                || "validateVariants".equals(operation)
-                || "canonicalizeLimitedResult".equals(operation)
-                || "expandCyclicMember".equals(operation)
-                || "expandVariants".equals(operation)) {
+        if (FixtureOperation.RESOLVE_VARIANTS.equals(operation)
+                || FixtureOperation.VALIDATE_VARIANTS.equals(operation)
+                || FixtureOperation.CANONICALIZE_LIMITED_RESULT.equals(operation)
+                || FixtureOperation.EXPAND_CYCLIC_MEMBER.equals(operation)
+                || FixtureOperation.EXPAND_VARIANTS.equals(operation)) {
             return false;
         }
-        return spec.path("expectError").asBoolean(false)
-                || spec.hasNonNull("expectedErrorCategory");
+        return spec.path(FixtureField.EXPECT_ERROR).asBoolean(false)
+                || spec.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY);
     }
 
     private static void runOperation(JsonNode spec,
                                      String operation,
                                      List<FixtureEntry> allFixtures) {
         switch (operation) {
-            case "assertViewPath":
+            case FixtureOperation.ASSERT_VIEW_PATH:
                 runAssertViewPath(spec);
                 return;
-            case "calculateBlueId":
+            case FixtureOperation.CALCULATE_BLUE_ID:
                 runCalculateBlueId(spec);
                 return;
-            case "calculateBlueIdPair":
+            case FixtureOperation.CALCULATE_BLUE_ID_PAIR:
                 runCalculateBlueIdPair(spec);
                 return;
-            case "calculateCircularSetBlueIds":
+            case FixtureOperation.CALCULATE_CIRCULAR_SET_BLUE_IDS:
                 runCalculateCircularSetBlueIds(spec);
                 return;
-            case "canonicalize":
+            case FixtureOperation.CANONICALIZE:
                 runCanonicalize(spec);
                 return;
-            case "canonicalizeLimitedResult":
+            case FixtureOperation.CANONICALIZE_LIMITED_RESULT:
                 runCanonicalizeLimitedResult(spec);
                 return;
-            case "changingRegistryDescriptionChangesBlueId":
+            case FixtureOperation.CHANGING_REGISTRY_DESCRIPTION_CHANGES_BLUE_ID:
                 runChangingRegistryDescriptionChangesBlueId(spec);
                 return;
-            case "collapse":
+            case FixtureOperation.COLLAPSE:
                 runCollapse(spec);
                 return;
-            case "compareContentAndDirectResolvedBlueId":
+            case FixtureOperation.COMPARE_CONTENT_AND_DIRECT_RESOLVED_BLUE_ID:
                 runCompareContentAndDirectResolvedBlueId(spec);
                 return;
-            case "compareExpansionStrategies":
+            case FixtureOperation.COMPARE_EXPANSION_STRATEGIES:
                 runCompareExpansionStrategies(spec);
                 return;
-            case "compareGraphEquivalentInputs":
+            case FixtureOperation.COMPARE_GRAPH_EQUIVALENT_INPUTS:
                 runCompareGraphEquivalentInputs(spec);
                 return;
-            case "compareLimitedAndCompleteResolution":
+            case FixtureOperation.COMPARE_LIMITED_AND_COMPLETE_RESOLUTION:
                 runCompareLimitedAndCompleteResolution(spec);
                 return;
-            case "expand":
+            case FixtureOperation.EXPAND:
                 runExpand(spec);
                 return;
-            case "expandCyclicMember":
+            case FixtureOperation.EXPAND_CYCLIC_MEMBER:
                 runExpandCyclicMember(spec);
                 return;
-            case "expandLimited":
+            case FixtureOperation.EXPAND_LIMITED:
                 runExpandLimited(spec);
                 return;
-            case "expandThenCollapse":
+            case FixtureOperation.EXPAND_THEN_COLLAPSE:
                 runExpandThenCollapse(spec);
                 return;
-            case "expandVariants":
+            case FixtureOperation.EXPAND_VARIANTS:
                 runExpandVariants(spec);
                 return;
-            case "lintPublishableDocumentation":
+            case FixtureOperation.LINT_PUBLISHABLE_DOCUMENTATION:
                 runLintPublishableDocumentation(spec);
                 return;
-            case "match":
+            case FixtureOperation.MATCH:
                 runMatch(spec);
                 return;
-            case "minimizeAndResolve":
+            case FixtureOperation.MINIMIZE_AND_RESOLVE:
                 runMinimizeAndResolve(spec);
                 return;
-            case "parseBlueIdInput":
+            case FixtureOperation.PARSE_BLUE_ID_INPUT:
                 runParseBlueIdInput(spec);
                 return;
-            case "parseSource":
+            case FixtureOperation.PARSE_SOURCE:
                 runParseSource(spec);
                 return;
-            case "preprocess":
+            case FixtureOperation.PREPROCESS:
                 runPreprocess(spec);
                 return;
-            case "registryNodeHashesToPublishedBlueId":
+            case FixtureOperation.REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID:
                 runRegistryNodeHashesToPublishedBlueId(spec);
                 return;
-            case "resolve":
+            case FixtureOperation.RESOLVE:
                 runResolve(spec);
                 return;
-            case "resolveLimited":
+            case FixtureOperation.RESOLVE_LIMITED:
                 runResolveLimited(spec);
                 return;
-            case "resolveVariants":
+            case FixtureOperation.RESOLVE_VARIANTS:
                 runResolveVariants(spec);
                 return;
-            case "retrieveDirectList":
+            case FixtureOperation.RETRIEVE_DIRECT_LIST:
                 runRetrieveDirectList(spec);
                 return;
-            case "semanticExists":
+            case FixtureOperation.SEMANTIC_EXISTS:
                 runSemanticExists(spec);
                 return;
-            case "suiteAssertion":
+            case FixtureOperation.SPLIT_EXACT_GRAPH_FRAGMENTS:
+                runSplitExactGraphFragments(spec);
+                return;
+            case FixtureOperation.SUITE_ASSERTION:
                 runSuiteAssertion(spec, allFixtures);
                 return;
-            case "validate":
+            case FixtureOperation.VALIDATE:
                 runValidate(spec);
                 return;
-            case "validateVariants":
+            case FixtureOperation.VALIDATE_VARIANTS:
                 runValidateVariants(spec);
                 return;
-            case "verifyDirectList":
+            case FixtureOperation.VERIFY_DIRECT_LIST:
                 runVerifyDirectList(spec);
                 return;
-            case "verifyDirectNode":
+            case FixtureOperation.VERIFY_DIRECT_NODE:
                 runVerifyDirectNode(spec);
+                return;
+            case FixtureOperation.VERIFY_OPAQUE_CYCLIC_FRAGMENT:
+                runVerifyOpaqueCyclicFragment(spec);
                 return;
             default:
                 throw new IllegalArgumentException(
@@ -327,38 +605,38 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static void runCalculateBlueId(JsonNode spec) {
-        String actual = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, "input")));
-        if (spec.has("expectedNodeBlueId")) {
-            assertEquals(requireText(spec, "expectedNodeBlueId"), actual);
+        String actual = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.INPUT)));
+        if (spec.has(FixtureField.EXPECTED_NODE_BLUE_ID)) {
+            assertEquals(requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID), actual);
         }
-        assertEquivalentInputs(actual, spec.get("alsoEquivalentTo"));
-        assertDifferentInputs(actual, spec.get("alsoDifferentFrom"));
+        assertEquivalentInputs(actual, spec.get(FixtureField.ALSO_EQUIVALENT_TO));
+        assertDifferentInputs(actual, spec.get(FixtureField.ALSO_DIFFERENT_FROM));
     }
 
     private static void runCalculateBlueIdPair(JsonNode spec) {
-        String left = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, "left")));
-        String right = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, "right")));
-        assertEquals(requirePresent(spec, "expectedEqual").asBoolean(), left.equals(right));
+        String left = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.LEFT)));
+        String right = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.RIGHT)));
+        assertEquals(requirePresent(spec, FixtureField.EXPECTED_EQUAL).asBoolean(), left.equals(right));
     }
 
     private static void runCalculateCircularSetBlueIds(JsonNode spec) {
-        Node documents = readNode(requirePresent(spec, "documents"));
+        Node documents = readNode(requirePresent(spec, FixtureField.DOCUMENTS));
         if (documents == null || documents.getItems() == null) {
             throw new IllegalArgumentException(
                     "calculateCircularSetBlueIds requires a documents list.");
         }
         List<String> actual = CircularBlueIdCalculator.calculateCircularSetBlueIds(
                 documents.getItems());
-        assertTextList(requirePresent(spec, "expectedBlueIds"), actual);
+        assertTextList(requirePresent(spec, FixtureField.EXPECTED_BLUE_IDS), actual);
     }
 
     private static void runParseBlueIdInput(JsonNode spec) {
         Blue blue = new Blue();
         Node actual = blue.parseBlueIdInputYaml(
                 UncheckedObjectMapper.YAML_MAPPER.writeValueAsString(
-                        requirePresent(spec, "input")));
-        if (spec.has("expectedParsed")) {
-            assertNodeEquals(readNode(spec.get("expectedParsed")), actual);
+                        requirePresent(spec, FixtureField.INPUT)));
+        if (spec.has(FixtureField.EXPECTED_PARSED)) {
+            assertNodeEquals(readNode(spec.get(FixtureField.EXPECTED_PARSED)), actual);
         }
     }
 
@@ -366,16 +644,16 @@ public final class BlueConformanceSuiteRunner {
         Blue blue = new Blue();
         Node actual = blue.parseSourceYaml(
                 UncheckedObjectMapper.YAML_MAPPER.writeValueAsString(
-                        requirePresent(spec, "source")));
-        assertExpectedNodeIfPresent(spec, "expectedParsed", actual);
+                        requirePresent(spec, FixtureField.SOURCE)));
+        assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_PARSED, actual);
     }
 
     private static void runPreprocess(JsonNode spec) {
         ProviderContext provider = providerContext(spec, null);
         Blue blue = new Blue(provider.provider);
-        Node actual = blue.preprocess(readNode(requirePresent(spec, "source")));
-        assertExpectedNodeIfPresent(spec, "expectedPreprocessed", actual);
-        assertEffectiveTypes(spec.get("expectedEffectiveTypes"), actual);
+        Node actual = blue.preprocess(readNode(requirePresent(spec, FixtureField.SOURCE)));
+        assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_PREPROCESSED, actual);
+        assertEffectiveTypes(spec.get(FixtureField.EXPECTED_EFFECTIVE_TYPES), actual);
     }
 
     private static void runResolve(JsonNode spec) {
@@ -397,12 +675,12 @@ public final class BlueConformanceSuiteRunner {
         Blue blue = new Blue(provider.provider);
         Node source = sourceWithParent(spec);
         Node actual = blue.canonicalize(source);
-        assertExpectedNodeIfPresent(spec, "expectedCanonicalOverlay", actual);
-        if (spec.has("expectedCanonicalItems")) {
-            assertItemValues(spec.get("expectedCanonicalItems"), actual.getItems());
+        assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_CANONICAL_OVERLAY, actual);
+        if (spec.has(FixtureField.EXPECTED_CANONICAL_ITEMS)) {
+            assertItemValues(spec.get(FixtureField.EXPECTED_CANONICAL_ITEMS), actual.getItems());
         }
-        if (spec.has("expectedCanonicalContainsControls")) {
-            assertEquals(spec.get("expectedCanonicalContainsControls").asBoolean(),
+        if (spec.has(FixtureField.EXPECTED_CANONICAL_CONTAINS_CONTROLS)) {
+            assertEquals(spec.get(FixtureField.EXPECTED_CANONICAL_CONTAINS_CONTROLS).asBoolean(),
                     containsListControls(actual));
         }
         BlueIdCalculator.calculateBlueId(actual);
@@ -410,10 +688,10 @@ public final class BlueConformanceSuiteRunner {
 
     private static void runCollapse(JsonNode spec) {
         Blue blue = new Blue();
-        Node source = readNode(requirePresent(spec, "source"));
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         Node actual = blue.collapse(source);
-        assertExpectedNodeIfPresent(spec, "expectedCollapsed", actual);
-        String expectedId = requireText(spec, "expectedNodeBlueId");
+        assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_COLLAPSED, actual);
+        String expectedId = requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID);
         assertEquals(expectedId, actual.getBlueId());
         assertEquals(expectedId, BlueIdCalculator.calculateBlueId(source));
         assertTrue(actual.isReferenceOnly(), "Collapse must emit a pure reference.");
@@ -422,11 +700,11 @@ public final class BlueConformanceSuiteRunner {
     private static void runExpand(JsonNode spec) {
         ProviderContext provider = providerContext(spec, null);
         Blue blue = new Blue(provider.provider);
-        Node source = readNode(requirePresent(spec, "source"));
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         Node actual = blue.expand(source);
-        assertExpectedNodeIfPresent(spec, "expectedExpanded", actual);
-        if (spec.has("expectedNodeBlueId")) {
-            String expected = requireText(spec, "expectedNodeBlueId");
+        assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_EXPANDED, actual);
+        if (spec.has(FixtureField.EXPECTED_NODE_BLUE_ID)) {
+            String expected = requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID);
             assertEquals(expected, BlueIdCalculator.calculateBlueId(source));
             assertEquals(expected, BlueIdCalculator.calculateBlueId(actual));
         }
@@ -437,12 +715,12 @@ public final class BlueConformanceSuiteRunner {
         Blue blue = new Blue(provider.provider);
         BlueOperationLimits limits = operationLimits(spec);
         BlueOperationResult<Node> result = blue.expandLimited(
-                readNode(requirePresent(spec, "source")), limits);
-        assertOutcome(spec, "expectedOutcome", result.outcome());
+                readNode(requirePresent(spec, FixtureField.SOURCE)), limits);
+        assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
         assertDemandedValue(spec, result, limits);
-        assertRequestedIds(spec.get("expectedRequestedBlueIds"),
+        assertRequestedIds(spec.get(FixtureField.EXPECTED_REQUESTED_BLUE_IDS),
                 provider.provider.requestedBlueIds, true);
-        assertRequestedIds(spec.get("expectedNotRequestedBlueIds"),
+        assertRequestedIds(spec.get(FixtureField.EXPECTED_NOT_REQUESTED_BLUE_IDS),
                 provider.provider.requestedBlueIds, false);
     }
 
@@ -451,17 +729,17 @@ public final class BlueConformanceSuiteRunner {
         Blue blue = new Blue(provider.provider);
         BlueOperationLimits limits = operationLimits(spec);
         BlueOperationResult<Node> result = blue.resolveLimited(
-                readNode(requirePresent(spec, "source")), limits);
-        assertOutcome(spec, "expectedOutcome", result.outcome());
-        if (spec.has("expectedAbsent")) {
-            assertEquals(spec.get("expectedAbsent").asBoolean(), result.isAbsent());
+                readNode(requirePresent(spec, FixtureField.SOURCE)), limits);
+        assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
+        if (spec.has(FixtureField.EXPECTED_ABSENT)) {
+            assertEquals(spec.get(FixtureField.EXPECTED_ABSENT).asBoolean(), result.isAbsent());
         }
-        if (spec.has("expectedOutstandingBlueIds")) {
-            assertTextSet(spec.get("expectedOutstandingBlueIds"),
+        if (spec.has(FixtureField.EXPECTED_OUTSTANDING_BLUE_IDS)) {
+            assertTextSet(spec.get(FixtureField.EXPECTED_OUTSTANDING_BLUE_IDS),
                     result.outstandingBlueIds());
         }
-        if (spec.has("expectedProviderOutcome")) {
-            assertEquals(providerOutcome(requireText(spec, "expectedProviderOutcome")),
+        if (spec.has(FixtureField.EXPECTED_PROVIDER_OUTCOME)) {
+            assertEquals(providerOutcome(requireText(spec, FixtureField.EXPECTED_PROVIDER_OUTCOME)),
                     result.providerOutcome().orElse(null));
         }
     }
@@ -469,13 +747,13 @@ public final class BlueConformanceSuiteRunner {
     private static void runCanonicalizeLimitedResult(JsonNode spec) {
         Blue blue = new Blue(providerContext(spec, null).provider);
         BlueOperationResult<Node> limited = blue.resolveLimited(
-                readNode(requirePresent(spec, "source")), operationLimits(spec));
-        assertOutcome(spec, "expectedResolutionOutcome", limited.outcome());
+                readNode(requirePresent(spec, FixtureField.SOURCE)), operationLimits(spec));
+        assertOutcome(spec, FixtureField.EXPECTED_RESOLUTION_OUTCOME, limited.outcome());
         try {
             blue.canonicalize(limited);
         } catch (RuntimeException expected) {
             assertExpectedErrorCategory(
-                    spec, "expectedCanonicalizationErrorCategory", expected);
+                    spec, FixtureField.EXPECTED_CANONICALIZATION_ERROR_CATEGORY, expected);
             return;
         }
         throw new AssertionError("Incomplete result was accepted for canonicalization.");
@@ -487,27 +765,27 @@ public final class BlueConformanceSuiteRunner {
         Blue limitedBlue = new Blue(limitedProvider.provider);
         Blue completeBlue = new Blue(completeProvider.provider);
         BlueOperationLimits limits = operationLimits(spec);
-        Node source = readNode(requirePresent(spec, "source"));
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         BlueOperationResult<Node> limited = limitedBlue.resolveLimited(source, limits);
-        assertOutcome(spec, "expectedOutcome", limited.outcome());
+        assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, limited.outcome());
         Node complete = completeBlue.resolve(completeBlue.preprocess(source.clone()));
         for (String path : limits.demandedPaths()) {
             Node limitedValue = BlueViewPath.select(limited.requireEstablished(), path);
             Node completeValue = BlueViewPath.select(complete, path);
             assertNodeEquals(completeValue, limitedValue);
-            if (spec.has("expectedValue")) {
-                assertSemanticScalar(spec.get("expectedValue"), limitedValue);
+            if (spec.has(FixtureField.EXPECTED_VALUE)) {
+                assertSemanticScalar(spec.get(FixtureField.EXPECTED_VALUE), limitedValue);
             }
         }
-        assertTrue(requirePresent(spec, "expectedSameAsCompleteResolution").asBoolean(),
+        assertTrue(requirePresent(spec, FixtureField.EXPECTED_SAME_AS_COMPLETE_RESOLUTION).asBoolean(),
                 "Fixture must require complete-resolution parity.");
     }
 
     private static void runCompareGraphEquivalentInputs(JsonNode spec) {
-        JsonNode variants = requireArray(spec, "variants");
+        JsonNode variants = requireArray(spec, FixtureField.VARIANTS);
         Map<String, NodeProviderResult> derived = new LinkedHashMap<>(globalProviderCatalog());
         for (JsonNode variant : variants) {
-            Node source = readNode(requirePresent(variant, "source"));
+            Node source = readNode(requirePresent(variant, FixtureField.SOURCE));
             if (!source.isReferenceOnly()) {
                 derived.put(BlueIdCalculator.calculateBlueId(source),
                         NodeProviderResult.found(Collections.singletonList(source)));
@@ -519,24 +797,24 @@ public final class BlueConformanceSuiteRunner {
         List<String> rootIds = new ArrayList<>();
         for (JsonNode variant : variants) {
             ProviderContext provider = providerContextWithoutFixtureProvider(derived);
-            Node source = readNode(requirePresent(variant, "source"));
+            Node source = readNode(requirePresent(variant, FixtureField.SOURCE));
             BlueOperationResult<Node> result =
                     new Blue(provider.provider).expandLimited(source, limits);
             results.add(result);
-            assertOutcome(spec, "expectedOutcome", result.outcome());
+            assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
             selected.add(selectFirstDemand(result.requireEstablished(), limits));
             rootIds.add(BlueIdCalculator.calculateBlueId(source));
         }
         assertAllNodeEqual(selected);
         assertAllEqual(rootIds);
-        assertEquals(requireText(spec, "expectedSameRootNodeBlueId"), rootIds.get(0));
-        assertSemanticScalar(spec.get("expectedValue"), selected.get(0));
-        assertTrue(spec.path("expectedSameSemanticResult").asBoolean(false),
+        assertEquals(requireText(spec, FixtureField.EXPECTED_SAME_ROOT_NODE_BLUE_ID), rootIds.get(0));
+        assertSemanticScalar(spec.get(FixtureField.EXPECTED_VALUE), selected.get(0));
+        assertTrue(spec.path(FixtureField.EXPECTED_SAME_SEMANTIC_RESULT).asBoolean(false),
                 "Fixture must require semantic-result parity.");
     }
 
     private static void runCompareExpansionStrategies(JsonNode spec) {
-        JsonNode variants = requireArray(spec, "variants");
+        JsonNode variants = requireArray(spec, FixtureField.VARIANTS);
         BlueOperationLimits limits = operationLimits(spec);
         List<Node> selected = new ArrayList<>();
         List<String> rootIds = new ArrayList<>();
@@ -548,50 +826,54 @@ public final class BlueConformanceSuiteRunner {
                     provider.provider.fetchResultByBlueId(blueId.asText());
                 }
             }
-            Node source = readNode(requirePresent(spec, "source"));
+            Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
             BlueOperationResult<Node> result =
                     new Blue(provider.provider).expandLimited(source, limits);
-            assertOutcome(spec, "expectedOutcome", result.outcome());
+            assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
             selected.add(selectFirstDemand(result.requireEstablished(), limits));
             rootIds.add(BlueIdCalculator.calculateBlueId(source));
         }
         assertAllNodeEqual(selected);
         assertAllEqual(rootIds);
-        assertSemanticScalar(spec.get("expectedValue"), selected.get(0));
-        assertEquals(requireText(spec, "expectedSameNodeBlueId"), rootIds.get(0));
-        assertTrue(spec.path("expectedSameSemanticCoverage").asBoolean(false),
+        assertSemanticScalar(spec.get(FixtureField.EXPECTED_VALUE), selected.get(0));
+        assertEquals(requireText(spec, FixtureField.EXPECTED_SAME_NODE_BLUE_ID), rootIds.get(0));
+        assertTrue(spec.path(FixtureField.EXPECTED_SAME_SEMANTIC_COVERAGE).asBoolean(false),
                 "Fixture must require semantic-coverage parity.");
     }
 
     private static void runExpandThenCollapse(JsonNode spec) {
         ProviderContext provider = providerContext(spec, globalProviderCatalog());
         Blue blue = new Blue(provider.provider);
-        Node source = readNode(requirePresent(spec, "source"));
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         BlueOperationResult<Node> expanded =
                 blue.expandLimited(source, operationLimits(spec));
         Node collapsed = blue.collapse(expanded.requireEstablished());
-        assertExpectedNodeIfPresent(spec, "expectedCollapsedRoot", collapsed);
+        assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_COLLAPSED_ROOT, collapsed);
         List<String> descendants = new ArrayList<>(provider.provider.requestedBlueIds);
         descendants.remove(source.getBlueId());
-        assertTextList(requirePresent(spec, "expectedExpandedDescendantRequests"),
+        assertTextList(requirePresent(spec, FixtureField.EXPECTED_EXPANDED_DESCENDANT_REQUESTS),
                 descendants);
-        assertRequestedIds(spec.get("expectedNotRequestedBlueIds"),
+        assertRequestedIds(spec.get(FixtureField.EXPECTED_NOT_REQUESTED_BLUE_IDS),
                 provider.provider.requestedBlueIds, false);
     }
 
     private static void runExpandCyclicMember(JsonNode spec) {
-        String illustrativeRequested = requireText(spec, "requestedBlueId");
-        int memberSeparator = illustrativeRequested.lastIndexOf('#');
+        String illustrativeRequested = requireText(spec, FixtureField.REQUESTED_BLUE_ID);
+        int memberSeparator = illustrativeRequested.lastIndexOf(
+                BlueIds.CYCLIC_MEMBER_SEPARATOR);
         if (memberSeparator < 0) {
             throw new IllegalArgumentException(
                     "Illustrative cyclic member BlueId must select a member.");
         }
         int requestedMember = Integer.parseInt(
                 illustrativeRequested.substring(memberSeparator + 1));
-        Node content = readNode(requirePresent(spec, "providerNode"));
+        Node content = readNode(requirePresent(spec, FixtureField.PROVIDER_NODE));
         Node companion = new Node()
                 .name("generated fixture companion")
-                .properties("peer", new Node().blueId("this#0"));
+                .properties(
+                        "peer",
+                        new Node().blueId(
+                                BlueIds.indexedThisPlaceholder(0)));
         List<Node> members = Arrays.asList(content, companion);
         List<String> calculated = CircularBlueIdCalculator
                 .calculateCircularSetBlueIds(members);
@@ -608,24 +890,30 @@ public final class BlueConformanceSuiteRunner {
                     "Cyclic member verification succeeded without verified set context.");
         } catch (RuntimeException expected) {
             assertExpectedErrorCategory(
-                    spec, "expectedWithoutSetContextErrorCategory", expected);
+                    spec, FixtureField.EXPECTED_WITHOUT_SET_CONTEXT_ERROR_CATEGORY, expected);
         }
 
         Node verifiedContent = content.clone();
         replaceThisReferences(verifiedContent, calculated);
         VerifiedCyclicFixtureProvider verified =
-                new VerifiedCyclicFixtureProvider(requested, verifiedContent);
+                new VerifiedCyclicFixtureProvider(
+                        requested, verifiedContent, members);
         List<Node> nodes = new VerifyingNodeProvider(verified).fetchByBlueId(requested);
         assertTrue(nodes != null && nodes.size() == 1,
                 "Verified cyclic-set context did not return the member.");
-        assertEquals("success", requireText(spec, "expectedWithVerifiedSetContext"));
+        assertEquals("success", requireText(spec, FixtureField.EXPECTED_WITH_VERIFIED_SET_CONTEXT));
     }
 
     private static void replaceThisReferences(Node node, List<String> memberBlueIds) {
         if (node == null) return;
         String blueId = node.getBlueId();
-        if (blueId != null && blueId.startsWith("this#")) {
-            int index = Integer.parseInt(blueId.substring("this#".length()));
+        if (blueId != null
+                && blueId.startsWith(
+                BlueIds.THIS_MEMBER_PREFIX)) {
+            int index = Integer.parseInt(
+                    blueId.substring(
+                            BlueIds.THIS_MEMBER_PREFIX
+                                    .length()));
             if (index < 0 || index >= memberBlueIds.size()) {
                 throw new IllegalArgumentException(
                         "Cyclic fixture reference points outside the generated set.");
@@ -670,10 +958,267 @@ public final class BlueConformanceSuiteRunner {
         }
     }
 
+    private static void runSplitExactGraphFragments(JsonNode spec) {
+        Node input = readNode(requirePresent(spec, FixtureField.INPUT));
+        List<ExactNodeGraphFragments> graphs = new ArrayList<>();
+        graphs.add(ExactNodeGraphFragments.split(
+                input, textValues(requireArray(spec, FixtureField.CUTS))));
+
+        JsonNode variants = spec.get(FixtureField.VARIANTS);
+        if (variants != null) {
+            if (!variants.isArray()) {
+                throw new IllegalArgumentException(
+                        "Exact graph fragment variants must be a list.");
+            }
+            for (JsonNode variant : variants) {
+                graphs.add(ExactNodeGraphFragments.split(
+                        input,
+                        textValues(requireArray(variant, FixtureField.CUTS))));
+            }
+        }
+
+        String inputBlueId = BlueIdCalculator.calculateBlueId(input);
+        for (ExactNodeGraphFragments graph : graphs) {
+            assertFragmentRootIdentity(spec, graph, inputBlueId);
+            assertExpectedReferencePaths(spec, graph);
+        }
+
+        ExactNodeGraphFragments primary = graphs.get(0);
+        if (spec.has(FixtureField.EXPECTED_FRAGMENT_COUNT)) {
+            assertEquals(spec.get(FixtureField.EXPECTED_FRAGMENT_COUNT).asInt(),
+                    primary.fragments().size());
+        }
+        if (spec.has(FixtureField.EXPECTED_FRAGMENT_BLUE_IDS)) {
+            assertTextList(spec.get(FixtureField.EXPECTED_FRAGMENT_BLUE_IDS),
+                    primary.blueIds());
+        }
+        if (spec.has(FixtureField.EXPECTED_LOCAL_PROVIDER_OUTCOME)) {
+            assertLocalProviderOutcomes(
+                    spec.get(FixtureField.EXPECTED_LOCAL_PROVIDER_OUTCOME), primary);
+        }
+        if (spec.has(FixtureField.EXPECTED_DEFENSIVE_COPIES)) {
+            assertEquals(spec.get(FixtureField.EXPECTED_DEFENSIVE_COPIES).asBoolean(),
+                    hasDefensiveFragmentCopies(primary));
+        }
+
+        List<Node> roundTrips = new ArrayList<>(graphs.size());
+        for (ExactNodeGraphFragments graph : graphs) {
+            roundTrips.add(expandFragmentRoot(graph));
+        }
+        if (spec.path(FixtureField.EXPECTED_ROUND_TRIP_EQUAL).asBoolean(false)) {
+            for (Node roundTrip : roundTrips) {
+                assertNodeEquals(input, roundTrip);
+            }
+        }
+        if (spec.path(FixtureField.EXPECTED_SAME_SEMANTIC_RESULT).asBoolean(false)) {
+            assertAllNodeEqual(roundTrips);
+            for (int index = 1; index < graphs.size(); index++) {
+                assertEquals(primary.blueIds(),
+                        graphs.get(index).blueIds());
+            }
+        }
+    }
+
+    private static void runVerifyOpaqueCyclicFragment(JsonNode spec) {
+        Node input = readNode(requirePresent(spec, FixtureField.INPUT));
+        ExactNodeGraphFragments graph = ExactNodeGraphFragments.split(
+                input, textValues(requireArray(spec, FixtureField.CUTS)));
+        assertFragmentRootIdentity(
+                spec, graph, BlueIdCalculator.calculateBlueId(input));
+        assertLocalProviderOutcomes(
+                requirePresent(spec, FixtureField.EXPECTED_LOCAL_PROVIDER_OUTCOME), graph);
+
+        Set<String> opaqueBlueIds = new LinkedHashSet<>();
+        for (JsonNode expected
+                : requireArray(spec, FixtureField.EXPECTED_OPAQUE_EDGES)) {
+            String path = requireString(expected, FixtureField.PATH);
+            String blueId = requireText(expected, Properties.OBJECT_BLUE_ID);
+            Node edge = selectFragmentReference(graph, path);
+            assertTrue(edge != null && edge.isReferenceOnly(),
+                    "Expected an opaque pure-reference edge at " + path + ".");
+            assertEquals(blueId, edge.getBlueId());
+            assertTrue(!graph.fragments().containsKey(blueId),
+                    "Ordinary exact fragments must not claim cyclic member "
+                            + blueId + ".");
+            opaqueBlueIds.add(blueId);
+        }
+
+        for (String opaqueBlueId : opaqueBlueIds) {
+            try {
+                new Blue(graph.provider()).expand(
+                        new Node().blueId(opaqueBlueId));
+                throw new AssertionError(
+                        "Opaque cyclic member expanded without set proof: "
+                                + opaqueBlueId);
+            } catch (RuntimeException unavailable) {
+                assertExpectedErrorCategory(
+                        spec,
+                        FixtureField.EXPECTED_WITHOUT_SET_CONTEXT_ERROR_CATEGORY,
+                        unavailable);
+            }
+        }
+
+        BasicNodeProvider cyclicProof = fragmentCyclicProof();
+        String verifiedMemberBlueId = cyclicProof.getBlueIdByName(
+                "Fragment Cyclic A");
+        ExactNodeGraphFragments proofBoundary =
+                ExactNodeGraphFragments.split(
+                        new Node().properties(
+                                "member",
+                                new Node().blueId(
+                                        verifiedMemberBlueId)),
+                        Collections.<String>emptyList());
+        assertEquals(NodeProviderOutcome.NOT_FOUND,
+                proofBoundary.provider()
+                        .fetchResultByBlueId(verifiedMemberBlueId)
+                        .outcome());
+        NodeProvider composed = NodeProviderWrapper.wrap(
+                new SequentialNodeProvider(
+                        proofBoundary.provider(), cyclicProof));
+        NodeProviderResult verified =
+                composed.fetchResultByBlueId(verifiedMemberBlueId);
+        assertEquals(
+                spec.get(FixtureField.EXPECTED_WITH_VERIFIED_SET_CONTEXT)
+                        .asBoolean(false),
+                verified.outcome() == NodeProviderOutcome.FOUND);
+    }
+
+    private static void assertFragmentRootIdentity(
+            JsonNode spec,
+            ExactNodeGraphFragments graph,
+            String expectedBlueId) {
+        if (!spec.path(FixtureField.EXPECTED_SAME_ROOT_NODE_BLUE_ID)
+                .asBoolean(false)) {
+            return;
+        }
+        ExactNodeGraphFragments.RootRepresentation root =
+                graph.roots().get(0);
+        assertEquals(expectedBlueId, root.blueId());
+        assertEquals(expectedBlueId,
+                BlueIdCalculator.calculateBlueId(root.original()));
+        assertEquals(expectedBlueId,
+                BlueIdCalculator.calculateBlueId(
+                        root.directFragment()));
+        assertEquals(expectedBlueId,
+                root.pureReference().getBlueId());
+    }
+
+    private static void assertExpectedReferencePaths(
+            JsonNode spec,
+            ExactNodeGraphFragments graph) {
+        JsonNode paths = spec.get(FixtureField.EXPECTED_REFERENCE_PATHS);
+        if (paths == null) {
+            return;
+        }
+        for (JsonNode path : paths) {
+            Node reference = selectFragmentReference(
+                    graph, path.asText());
+            assertTrue(reference != null
+                            && reference.isReferenceOnly(),
+                    "Expected exact fragment reference at "
+                            + path.asText() + ".");
+        }
+    }
+
+    private static Node selectFragmentReference(
+            ExactNodeGraphFragments graph,
+            String path) {
+        Object selected = NodePathAccessor.get(
+                graph.roots().get(0).directFragment(),
+                path,
+                node -> {
+                    if (node == null || !node.isReferenceOnly()) {
+                        return node;
+                    }
+                    List<Node> fragments = graph.provider()
+                            .fetchByBlueId(node.getBlueId());
+                    if (fragments == null || fragments.isEmpty()) {
+                        throw new IllegalArgumentException(
+                                "No local exact fragment for "
+                                        + node.getBlueId()
+                                        + " while traversing " + path + ".");
+                    }
+                    return fragments.get(0);
+                },
+                false);
+        return selected instanceof Node ? (Node) selected : null;
+    }
+
+    private static Node expandFragmentRoot(
+            ExactNodeGraphFragments graph) {
+        return new Blue(graph.provider()).expand(
+                graph.roots().get(0).pureReference());
+    }
+
+    private static void assertLocalProviderOutcomes(
+            JsonNode expected,
+            ExactNodeGraphFragments graph) {
+        if (expected == null || !expected.isObject()) {
+            throw new IllegalArgumentException(
+                    "expectedLocalProviderOutcome must be an object.");
+        }
+        expected.fields().forEachRemaining(entry ->
+                assertEquals(
+                        providerOutcome(entry.getValue().asText()),
+                        graph.provider()
+                                .fetchResultByBlueId(entry.getKey())
+                                .outcome()));
+    }
+
+    private static boolean hasDefensiveFragmentCopies(
+            ExactNodeGraphFragments graph) {
+        String blueId = graph.blueIds().get(0);
+        Node firstSnapshot = graph.fragments().get(blueId);
+        Node secondSnapshot = graph.fragments().get(blueId);
+        if (firstSnapshot == secondSnapshot) {
+            return false;
+        }
+        firstSnapshot.name("mutated fixture snapshot");
+        if (!blueId.equals(BlueIdCalculator.calculateBlueId(
+                graph.fragments().get(blueId)))) {
+            return false;
+        }
+
+        List<Node> firstFetch =
+                graph.provider().fetchByBlueId(blueId);
+        List<Node> secondFetch =
+                graph.provider().fetchByBlueId(blueId);
+        if (firstFetch == null || secondFetch == null
+                || firstFetch.isEmpty() || secondFetch.isEmpty()
+                || firstFetch.get(0) == secondFetch.get(0)) {
+            return false;
+        }
+        firstFetch.get(0).name("mutated fixture provider result");
+        return blueId.equals(BlueIdCalculator.calculateBlueId(
+                graph.provider().fetchByBlueId(blueId).get(0)));
+    }
+
+    private static BasicNodeProvider fragmentCyclicProof() {
+        return new BasicNodeProvider(new Node().items(
+                new Node()
+                        .name("Fragment Cyclic A")
+                        .properties(
+                                FixtureField.NEXT,
+                                new Node().type(
+                                        new Node().blueId(
+                                                BlueIds
+                                                        .indexedThisPlaceholder(
+                                                                1)))),
+                new Node()
+                        .name("Fragment Cyclic B")
+                        .properties(
+                                FixtureField.NEXT,
+                                new Node().type(
+                                        new Node().blueId(
+                                                BlueIds
+                                                        .indexedThisPlaceholder(
+                                                                0))))));
+    }
+
     private static void runExpandVariants(JsonNode spec) {
-        String requested = requireText(spec, "requestedBlueId");
-        Node providerNode = readNode(requirePresent(spec, "providerNode"));
-        for (JsonNode variant : requireArray(spec, "variants")) {
+        String requested = requireText(spec, FixtureField.REQUESTED_BLUE_ID);
+        Node providerNode = readNode(requirePresent(spec, FixtureField.PROVIDER_NODE));
+        for (JsonNode variant : requireArray(spec, FixtureField.VARIANTS)) {
             String mode = requireText(variant, "providerMode");
             if ("BlueIdInput".equals(mode)) {
                 try {
@@ -681,7 +1226,7 @@ public final class BlueConformanceSuiteRunner {
                             ProviderMode.BLUE_ID_INPUT, new Blue(), null);
                 } catch (RuntimeException expected) {
                     assertExpectedErrorCategory(
-                            variant, "expectedErrorCategory", expected);
+                            variant, FixtureField.EXPECTED_ERROR_CATEGORY, expected);
                     continue;
                 }
                 throw new AssertionError("BlueIdInput mode accepted Source evidence.");
@@ -718,7 +1263,7 @@ public final class BlueConformanceSuiteRunner {
 
     private static void runCompareContentAndDirectResolvedBlueId(JsonNode spec) {
         Blue blue = new Blue(providerContext(spec, null).provider);
-        Node source = readNode(requirePresent(spec, "source"));
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         Node resolved = blue.resolve(blue.preprocess(source.clone()));
         Node canonical = blue.canonicalize(source);
         String contentBlueId = blue.calculateSemanticBlueId(source);
@@ -726,10 +1271,10 @@ public final class BlueConformanceSuiteRunner {
                 BlueIdCalculator.calculateBlueId(canonical);
         String directResolvedBlueId = BlueIdCalculator.calculateBlueId(resolved);
         assertEquals(spec.path(
-                        "expectedContentBlueIdEqualsCanonicalIdentityInput")
+                        FixtureField.EXPECTED_CONTENT_BLUE_ID_EQUALS_CANONICAL_IDENTITY_INPUT)
                         .asBoolean(false),
                 contentBlueId.equals(canonicalIdentityInputBlueId));
-        assertEquals(spec.path("expectedDirectResolvedBlueIdMayDiffer")
+        assertEquals(spec.path(FixtureField.EXPECTED_DIRECT_RESOLVED_BLUE_ID_MAY_DIFFER)
                         .asBoolean(false),
                 !directResolvedBlueId.equals(contentBlueId));
     }
@@ -739,10 +1284,10 @@ public final class BlueConformanceSuiteRunner {
         Blue blue = new Blue(provider.provider);
         Node originalResolved;
         Node minimized;
-        if (spec.has("source")) {
-            Node source = readNode(spec.get("source"));
+        if (spec.has(FixtureField.SOURCE)) {
+            Node source = readNode(spec.get(FixtureField.SOURCE));
             originalResolved = blue.resolve(blue.preprocess(source));
-            assertExpectedResolvedIfPresent(spec, "expectedResolved",
+            assertExpectedResolvedIfPresent(spec, FixtureField.EXPECTED_RESOLVED,
                     originalResolved, blue);
             minimized = blue.minimize(source.clone());
         } else {
@@ -751,25 +1296,25 @@ public final class BlueConformanceSuiteRunner {
             // an append-only $previous anchor identifies inherited typed
             // items, not their pre-inference source spelling.
             Node parent = blue.preprocess(
-                    readNode(requirePresent(spec, "parent")));
+                    readNode(requirePresent(spec, FixtureField.PARENT)));
             Node desired = blue.preprocess(
-                    readNode(requirePresent(spec, "resolvedItems")));
+                    readNode(requirePresent(spec, FixtureField.RESOLVED_ITEMS)));
             Node completeOverlay = sourceForResolvedItems(
                     parent, desired.getItems());
             originalResolved = blue.resolve(blue.preprocess(completeOverlay));
             minimized = blue.minimize(completeOverlay.clone());
         }
         Node roundTrip = blue.resolve(blue.preprocess(minimized.clone()));
-        if (spec.path("expectedRoundTripEqual").asBoolean(false)) {
+        if (spec.path(FixtureField.EXPECTED_ROUND_TRIP_EQUAL).asBoolean(false)) {
             assertNodeEquals(originalResolved, roundTrip);
         }
-        if (spec.has("expectedRoundTripItems")) {
-            assertItemValues(spec.get("expectedRoundTripItems"),
+        if (spec.has(FixtureField.EXPECTED_ROUND_TRIP_ITEMS)) {
+            assertItemValues(spec.get(FixtureField.EXPECTED_ROUND_TRIP_ITEMS),
                     roundTrip.getItems());
         }
-        if (spec.has("expectedMinimizedMayContain")) {
+        if (spec.has(FixtureField.EXPECTED_MINIMIZED_MAY_CONTAIN)) {
             assertOnlyAllowedMinimizationControls(
-                    minimized, textValues(spec.get("expectedMinimizedMayContain")));
+                    minimized, textValues(spec.get(FixtureField.EXPECTED_MINIMIZED_MAY_CONTAIN)));
         }
     }
 
@@ -823,9 +1368,9 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static void runResolveVariants(JsonNode spec) {
-        for (JsonNode variant : requireArray(spec, "variants")) {
-            Node source = variant.has("source")
-                    ? readNode(variant.get("source"))
+        for (JsonNode variant : requireArray(spec, FixtureField.VARIANTS)) {
+            Node source = variant.has(FixtureField.SOURCE)
+                    ? readNode(variant.get(FixtureField.SOURCE))
                     : readNode(requirePresent(variant, "overlay"));
             attachBaselineType(source, spec);
             runExpectedVariant(spec, variant, source);
@@ -835,26 +1380,26 @@ public final class BlueConformanceSuiteRunner {
     private static void runValidate(JsonNode spec) {
         ProviderContext provider = providerContext(spec, null);
         Blue blue = new Blue(provider.provider);
-        Node source = readNode(requirePresent(spec, "source"));
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         Node resolved = blue.resolve(blue.preprocess(source));
-        if (spec.has("expectedValid")) {
-            assertEquals(spec.get("expectedValid").asBoolean(), true);
+        if (spec.has(FixtureField.EXPECTED_VALID)) {
+            assertEquals(spec.get(FixtureField.EXPECTED_VALID).asBoolean(), true);
         }
-        if (spec.has("expectedFieldCount")) {
+        if (spec.has(FixtureField.EXPECTED_FIELD_COUNT)) {
             int fieldCount = resolved.getProperties() == null
                     ? 0 : resolved.getProperties().size();
-            assertEquals(spec.get("expectedFieldCount").asInt(), fieldCount);
+            assertEquals(spec.get(FixtureField.EXPECTED_FIELD_COUNT).asInt(), fieldCount);
         }
-        if (spec.has("alsoEquivalentTo")) {
-            Node equivalent = readNode(spec.get("alsoEquivalentTo"));
+        if (spec.has(FixtureField.ALSO_EQUIVALENT_TO)) {
+            Node equivalent = readNode(spec.get(FixtureField.ALSO_EQUIVALENT_TO));
             Node equivalentResolved = blue.resolve(blue.preprocess(equivalent));
             assertNodeEquals(resolved, equivalentResolved);
         }
     }
 
     private static void runValidateVariants(JsonNode spec) {
-        for (JsonNode variant : requireArray(spec, "variants")) {
-            Node source = readNode(requirePresent(variant, "source"));
+        for (JsonNode variant : requireArray(spec, FixtureField.VARIANTS)) {
+            Node source = readNode(requirePresent(variant, FixtureField.SOURCE));
             attachBaselineType(source, spec);
             runExpectedVariant(spec, variant, source);
         }
@@ -868,76 +1413,76 @@ public final class BlueConformanceSuiteRunner {
         try {
             blue.resolve(blue.preprocess(source));
         } catch (RuntimeException failure) {
-            if (!variant.hasNonNull("expectedErrorCategory")) {
+            if (!variant.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY)) {
                 throw failure;
             }
             assertExpectedErrorCategory(
-                    variant, "expectedErrorCategory", failure);
+                    variant, FixtureField.EXPECTED_ERROR_CATEGORY, failure);
             return;
         }
-        if (variant.hasNonNull("expectedErrorCategory")) {
+        if (variant.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY)) {
             throw new AssertionError("Variant expected an error but succeeded.");
         }
-        assertTrue(variant.path("expectedValid").asBoolean(false),
+        assertTrue(variant.path(FixtureField.EXPECTED_VALID).asBoolean(false),
                 "Successful variant must declare expectedValid: true.");
     }
 
     private static void runMatch(JsonNode spec) {
         Blue blue = new Blue(providerContext(spec, null).provider);
-        Node pattern = readNode(requirePresent(spec, "pattern"));
-        Node candidate = readNode(requirePresent(spec, "candidate"));
+        Node pattern = readNode(requirePresent(spec, FixtureField.PATTERN));
+        Node candidate = readNode(requirePresent(spec, FixtureField.CANDIDATE));
         boolean matches = blue.nodeMatchesType(candidate, pattern);
-        assertEquals(spec.get("expectedMatch").asBoolean(), matches);
+        assertEquals(spec.get(FixtureField.EXPECTED_MATCH).asBoolean(), matches);
         boolean identityEqual = BlueIdCalculator.calculateBlueId(pattern)
                 .equals(BlueIdCalculator.calculateBlueId(candidate));
-        assertEquals(spec.get("expectedIdentityEqual").asBoolean(), identityEqual);
+        assertEquals(spec.get(FixtureField.EXPECTED_IDENTITY_EQUAL).asBoolean(), identityEqual);
     }
 
     private static void runSemanticExists(JsonNode spec) {
         BlueOperationResult<Node> result;
-        if (spec.has("providerResult")) {
-            JsonNode providerResult = spec.get("providerResult");
+        if (spec.has(FixtureField.PROVIDER_RESULT)) {
+            JsonNode providerResult = spec.get(FixtureField.PROVIDER_RESULT);
             Node partial = readNode(requirePresent(providerResult, "partialObject"));
             boolean complete = providerResult.path(
                     "completeDirectManifest").asBoolean(false);
             DirectNodeManifest manifest = complete
                     ? DirectNodeManifest.complete(partial)
                     : DirectNodeManifest.partial(partial);
-            result = manifest.semanticSelect(requireText(spec, "path"));
+            result = manifest.semanticSelect(requireText(spec, FixtureField.PATH));
         } else {
             ProviderContext provider = providerContext(spec, null);
             Blue blue = new Blue(provider.provider);
-            Node source = readNode(requirePresent(spec, "source"));
+            Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
             result = DirectNodeManifest.complete(source)
-                    .semanticSelect(requireText(spec, "path"));
+                    .semanticSelect(requireText(spec, FixtureField.PATH));
         }
-        assertOutcome(spec, "expectedOutcome", result.outcome());
-        if (spec.has("expectedAbsent")) {
-            assertEquals(spec.get("expectedAbsent").asBoolean(), result.isAbsent());
+        assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
+        if (spec.has(FixtureField.EXPECTED_ABSENT)) {
+            assertEquals(spec.get(FixtureField.EXPECTED_ABSENT).asBoolean(), result.isAbsent());
         }
-        if (spec.has("expectedReason")) {
-            assertEquals(requireText(spec, "expectedReason"),
+        if (spec.has(FixtureField.EXPECTED_REASON)) {
+            assertEquals(requireText(spec, FixtureField.EXPECTED_REASON),
                     result.reason().orElse(null));
         }
     }
 
     private static void runVerifyDirectNode(JsonNode spec) {
-        Node direct = readNode(requirePresent(spec, "directNode"));
+        Node direct = readNode(requirePresent(spec, FixtureField.DIRECT_NODE));
         DirectNodeManifest manifest = DirectNodeManifest.complete(direct);
         BlueOperationResult<Node> result =
-                manifest.verify(requireText(spec, "requestedBlueId"));
-        assertEquals(spec.get("expectedVerified").asBoolean(),
+                manifest.verify(requireText(spec, FixtureField.REQUESTED_BLUE_ID));
+        assertEquals(spec.get(FixtureField.EXPECTED_VERIFIED).asBoolean(),
                 result.isEstablished());
-        assertEquals(requireText(spec, "expectedNodeBlueId"),
+        assertEquals(requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID),
                 BlueIdCalculator.calculateBlueId(direct));
-        assertTextList(requirePresent(spec, "expectedDescendantRequests"),
+        assertTextList(requirePresent(spec, FixtureField.EXPECTED_DESCENDANT_REQUESTS),
                 Collections.<String>emptyList());
     }
 
     private static void runVerifyDirectList(JsonNode spec) {
-        assertTrue(requirePresent(spec, "directElementIdentitiesOnly").asBoolean(),
+        assertTrue(requirePresent(spec, FixtureField.DIRECT_ELEMENT_IDENTITIES_ONLY).asBoolean(),
                 "Direct list verification fixture must use element identities only.");
-        Node list = readNode(requirePresent(spec, "fullList"));
+        Node list = readNode(requirePresent(spec, FixtureField.FULL_LIST));
         List<Node> directIdentities = new ArrayList<>();
         for (Node item : list.getItems()) {
             directIdentities.add(new Node().blueId(
@@ -951,16 +1496,16 @@ public final class BlueConformanceSuiteRunner {
                 new Node().items(directIdentities));
         BlueOperationResult<List<String>> identities =
                 manifest.orderedListElementIdentities();
-        assertEquals(spec.get("expectedVerified").asBoolean(),
+        assertEquals(spec.get(FixtureField.EXPECTED_VERIFIED).asBoolean(),
                 identities.isEstablished());
         assertEquals(list.getItems().size(),
                 identities.requireEstablished().size());
-        assertTextList(requirePresent(spec, "expectedElementBodyRequests"),
+        assertTextList(requirePresent(spec, FixtureField.EXPECTED_ELEMENT_BODY_REQUESTS),
                 Collections.<String>emptyList());
     }
 
     private static void runRetrieveDirectList(JsonNode spec) {
-        JsonNode optimization = requirePresent(spec, "storedOptimization");
+        JsonNode optimization = requirePresent(spec, FixtureField.STORED_OPTIMIZATION);
         assertTrue(optimization.path("prefixFoldAvailable").asBoolean(false),
                 "Fixture requires a stored prefix fold.");
         int known = optimization.path("appendedElementIdentities").asInt();
@@ -974,25 +1519,25 @@ public final class BlueConformanceSuiteRunner {
         boolean requiresCompleteManifest =
                 result.outcome() == BlueOperationOutcome.INCOMPLETE;
         assertEquals(spec.path(
-                        "expectedDirectResultStillContainsAllOrderedElementIdentities")
+                        FixtureField.EXPECTED_DIRECT_RESULT_STILL_CONTAINS_ALL_ORDERED_ELEMENT_IDENTITIES)
                         .asBoolean(false),
                 requiresCompleteManifest);
     }
 
     private static void runRegistryNodeHashesToPublishedBlueId(JsonNode spec) {
         requireRegistryKind(spec);
-        String key = requireText(spec, "registryKey");
-        String expected = requireText(spec, "expectedPublishedBlueId");
+        String key = requireText(spec, FixtureField.REGISTRY_KEY);
+        String expected = requireText(spec, FixtureField.EXPECTED_PUBLISHED_BLUE_ID);
         BlueCoreTypeRegistry registry = BlueCoreTypeRegistry.INSTANCE;
         Node registryNode = registry.node(key);
         assertEquals(expected, BlueIdCalculator.calculateBlueId(registryNode));
         assertEquals(expected, registry.blueId(key));
         assertEquals(expected, Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(key));
-        if (spec.has("semanticDescriptionIdentityBearing")) {
+        if (spec.has(FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING)) {
             Node withoutDescription = registryNode.clone().description(null);
             boolean identityBearing = !BlueIdCalculator.calculateBlueId(withoutDescription)
                     .equals(BlueIdCalculator.calculateBlueId(registryNode));
-            assertEquals(spec.get("semanticDescriptionIdentityBearing").asBoolean(),
+            assertEquals(spec.get(FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING).asBoolean(),
                     identityBearing);
         }
     }
@@ -1000,10 +1545,11 @@ public final class BlueConformanceSuiteRunner {
     private static void runChangingRegistryDescriptionChangesBlueId(JsonNode spec) {
         requireRegistryKind(spec);
         Node original = BlueCoreTypeRegistry.INSTANCE.node(
-                requireText(spec, "registryKey"));
+                requireText(spec, FixtureField.REGISTRY_KEY));
         Node mutated = original.clone();
-        JsonNode mutation = requirePresent(spec, "mutation");
-        if (!"description".equals(requireText(mutation, "field"))) {
+        JsonNode mutation = requirePresent(spec, FixtureField.MUTATION);
+        if (!Properties.OBJECT_DESCRIPTION.equals(
+                requireText(mutation, "field"))) {
             throw new IllegalArgumentException(
                     "Unsupported registry mutation field.");
         }
@@ -1012,13 +1558,13 @@ public final class BlueConformanceSuiteRunner {
                 + requireText(mutation, "append"));
         boolean changed = !BlueIdCalculator.calculateBlueId(original)
                 .equals(BlueIdCalculator.calculateBlueId(mutated));
-        assertEquals(spec.get("expectBlueIdChanged").asBoolean(), changed);
+        assertEquals(spec.get(FixtureField.EXPECT_BLUE_ID_CHANGED).asBoolean(), changed);
     }
 
     private static void runAssertViewPath(JsonNode spec) {
-        Node document = readNode(requirePresent(spec, "document"));
-        for (JsonNode assertion : requireArray(spec, "assertions")) {
-            String path = requireString(assertion, "path");
+        Node document = readNode(requirePresent(spec, FixtureField.DOCUMENT));
+        for (JsonNode assertion : requireArray(spec, FixtureField.ASSERTIONS)) {
+            String path = requireString(assertion, FixtureField.PATH);
             Node selected = BlueViewPath.select(document, path);
             if (assertion.path("expectedRoot").asBoolean(false)) {
                 assertNodeEquals(document, selected);
@@ -1030,17 +1576,17 @@ public final class BlueConformanceSuiteRunner {
     private static void runLintPublishableDocumentation(JsonNode spec) {
         assertEquals(
                 "Join tokens with the listed joiner and reject any case-sensitive match in publishableFiles.",
-                requireText(spec, "matchRule").replace('\n', ' '));
-        for (JsonNode file : requireArray(spec, "publishableFiles")) {
+                requireText(spec, FixtureField.MATCH_RULE).replace('\n', ' '));
+        for (JsonNode file : requireArray(spec, FixtureField.PUBLISHABLE_FILES)) {
             String content = readPublishableResource(file.asText());
-            JsonNode headings = spec.get("requiredHeadings");
+            JsonNode headings = spec.get(FixtureField.REQUIRED_HEADINGS);
             if (headings != null) {
                 for (JsonNode heading : headings) {
                     assertTrue(content.contains(heading.asText()),
                             "Missing required heading in " + file.asText());
                 }
             }
-            JsonNode forbidden = spec.get("forbiddenJoinedTerms");
+            JsonNode forbidden = spec.get(FixtureField.FORBIDDEN_JOINED_TERMS);
             if (forbidden != null) {
                 for (JsonNode entry : forbidden) {
                     StringBuilder term = new StringBuilder();
@@ -1060,7 +1606,7 @@ public final class BlueConformanceSuiteRunner {
     private static void runSuiteAssertion(JsonNode spec,
                                           List<FixtureEntry> allFixtures) {
         List<String> prefixes = textValues(
-                requirePresent(spec, "requiresVectorPrefixes"));
+                requirePresent(spec, FixtureField.REQUIRES_VECTOR_PREFIXES));
         int executed = 0;
         for (FixtureEntry entry : allFixtures) {
             boolean required = false;
@@ -1073,29 +1619,29 @@ public final class BlueConformanceSuiteRunner {
         }
         assertTrue(executed > 0,
                 "suiteAssertion did not select any behavior fixtures.");
-        assertEquals("pass", requireText(spec, "expected"));
+        assertEquals("pass", requireText(spec, FixtureField.EXPECTED));
     }
 
     private static void assertResolutionExpectations(JsonNode spec,
                                                      Node actual,
                                                      Blue blue,
                                                      Node source) {
-        assertExpectedResolvedIfPresent(spec, "expectedResolved", actual, blue);
-        if (spec.has("expectedResolvedItems")) {
-            assertItemValues(spec.get("expectedResolvedItems"),
+        assertExpectedResolvedIfPresent(spec, FixtureField.EXPECTED_RESOLVED, actual, blue);
+        if (spec.has(FixtureField.EXPECTED_RESOLVED_ITEMS)) {
+            assertItemValues(spec.get(FixtureField.EXPECTED_RESOLVED_ITEMS),
                     actual.getItems());
         }
-        if (spec.has("expectedMergePolicy")) {
+        if (spec.has(FixtureField.EXPECTED_MERGE_POLICY)) {
             String effective = actual.getMergePolicy() == null
                     ? Properties.LIST_MERGE_POLICY_POSITIONAL
                     : actual.getMergePolicy();
-            assertEquals(requireText(spec, "expectedMergePolicy"), effective);
+            assertEquals(requireText(spec, FixtureField.EXPECTED_MERGE_POLICY), effective);
         }
         assertEffectiveTypes(singletonPathMap(
-                spec, "expectedEffectiveType"), actual);
-        assertExpectedValues(spec.get("expectedValue"), actual);
+                spec, FixtureField.EXPECTED_EFFECTIVE_TYPE), actual);
+        assertExpectedValues(spec.get(FixtureField.EXPECTED_VALUE), actual);
         if (spec.path(
-                "expectedSourceReferencePreservedByCanonicalization")
+                FixtureField.EXPECTED_SOURCE_REFERENCE_PRESERVED_BY_CANONICALIZATION)
                 .asBoolean(false)) {
             Node canonical = blue.canonicalize(source);
             assertEquals(source.getContracts().getBlueId(),
@@ -1110,19 +1656,19 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static Node sourceWithParent(JsonNode spec) {
-        Node source = readNode(requirePresent(spec, "source"));
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         attachBaselineType(source, spec);
         return source;
     }
 
     private static void attachBaselineType(Node source, JsonNode fixture) {
         Node baseline = null;
-        if (fixture.has("parent")) {
-            baseline = readNode(fixture.get("parent"));
-        } else if (fixture.has("base")) {
-            baseline = readNode(fixture.get("base"));
-        } else if (fixture.has("fieldDeclaration")) {
-            baseline = readNode(fixture.get("fieldDeclaration"));
+        if (fixture.has(FixtureField.PARENT)) {
+            baseline = readNode(fixture.get(FixtureField.PARENT));
+        } else if (fixture.has(FixtureField.BASE)) {
+            baseline = readNode(fixture.get(FixtureField.BASE));
+        } else if (fixture.has(FixtureField.FIELD_DECLARATION)) {
+            baseline = readNode(fixture.get(FixtureField.FIELD_DECLARATION));
         }
         if (baseline == null) return;
         if (source.getType() == null) {
@@ -1139,9 +1685,9 @@ public final class BlueConformanceSuiteRunner {
     private static void assertDemandedValue(JsonNode spec,
                                             BlueOperationResult<Node> result,
                                             BlueOperationLimits limits) {
-        if (!spec.has("expectedValue")) return;
+        if (!spec.has(FixtureField.EXPECTED_VALUE)) return;
         Node selected = selectFirstDemand(result.requireEstablished(), limits);
-        assertSemanticScalar(spec.get("expectedValue"), selected);
+        assertSemanticScalar(spec.get(FixtureField.EXPECTED_VALUE), selected);
     }
 
     private static Node selectFirstDemand(Node root,
@@ -1231,11 +1777,16 @@ public final class BlueConformanceSuiteRunner {
 
     private static void collectControls(Node node, Set<String> controls) {
         if (node == null) return;
-        if (node.getPreviousBlueId() != null) controls.add("$previous");
-        if (node.getPosition() != null) controls.add("$pos");
+        if (node.getPreviousBlueId() != null) {
+            controls.add(Properties.LIST_CONTROL_PREVIOUS);
+        }
+        if (node.getPosition() != null) {
+            controls.add(Properties.LIST_CONTROL_POS);
+        }
         if (node.getProperties() != null) {
-            if (node.getProperties().containsKey("$replace")) {
-                controls.add("$replace");
+            if (node.getProperties().containsKey(
+                    Properties.LIST_CONTROL_REPLACE)) {
+                controls.add(Properties.LIST_CONTROL_REPLACE);
             }
             for (Node child : node.getProperties().values()) {
                 collectControls(child, controls);
@@ -1264,11 +1815,13 @@ public final class BlueConformanceSuiteRunner {
 
     private static NodeProviderOutcome providerOutcome(String value) {
         return NodeProviderOutcome.valueOf(
-                value.replace("-", "_").toUpperCase(java.util.Locale.ROOT));
+                value.replaceAll("([a-z0-9])([A-Z])", "$1_$2")
+                        .replace("-", "_")
+                        .toUpperCase(java.util.Locale.ROOT));
     }
 
     private static BlueOperationLimits operationLimits(JsonNode spec) {
-        JsonNode limits = requirePresent(spec, "limits");
+        JsonNode limits = requirePresent(spec, FixtureField.LIMITS);
         List<String> demanded = new ArrayList<>();
         JsonNode paths = limits.get("demandedPaths");
         if (paths == null || !paths.isArray() || paths.size() == 0) {
@@ -1276,8 +1829,8 @@ public final class BlueConformanceSuiteRunner {
         } else {
             for (JsonNode path : paths) demanded.add(path.asText());
         }
-        int max = limits.has("maxReferenceExpansions")
-                ? limits.get("maxReferenceExpansions").asInt()
+        int max = limits.has(FixtureField.MAX_REFERENCE_EXPANSIONS)
+                ? limits.get(FixtureField.MAX_REFERENCE_EXPANSIONS).asInt()
                 : Integer.MAX_VALUE;
         return new BlueOperationLimits(demanded, max);
     }
@@ -1384,7 +1937,7 @@ public final class BlueConformanceSuiteRunner {
                     "Object field mismatch at " + path);
             for (String field : expectedFields) {
                 assertJsonNodeEquals(expected.get(field), actual.get(field),
-                        path + "/" + field.replace("~", "~0").replace("/", "~1"));
+                        JsonPointer.append(path, field));
             }
             return;
         }
@@ -1414,11 +1967,11 @@ public final class BlueConformanceSuiteRunner {
     private static ProviderContext providerContext(
             JsonNode spec, Map<String, NodeProviderResult> absentProviderFallback) {
         Map<String, NodeProviderResult> entries = new LinkedHashMap<>();
-        if (!spec.has("provider")) {
+        if (!spec.has(FixtureField.PROVIDER)) {
             entries.putAll(absentProviderFallback == null
                     ? globalProviderCatalog() : absentProviderFallback);
         } else {
-            JsonNode provider = spec.get("provider");
+            JsonNode provider = spec.get(FixtureField.PROVIDER);
             if (!provider.isArray()) {
                 throw new IllegalArgumentException(
                         "Fixture provider must be a list.");
@@ -1436,8 +1989,8 @@ public final class BlueConformanceSuiteRunner {
      * keying behavior to the fixture ID or to hard-coded replacement values.
      */
     private static SymbolicTypeCycle symbolicTypeCycle(JsonNode spec) {
-        JsonNode sourceNode = spec.get("source");
-        JsonNode providerNode = spec.get("provider");
+        JsonNode sourceNode = spec.get(FixtureField.SOURCE);
+        JsonNode providerNode = spec.get(FixtureField.PROVIDER);
         if (sourceNode == null || providerNode == null || !providerNode.isArray()) {
             return null;
         }
@@ -1450,12 +2003,12 @@ public final class BlueConformanceSuiteRunner {
         List<Node> documents = new ArrayList<>();
         Map<String, Integer> indexBySymbol = new LinkedHashMap<>();
         for (JsonNode entry : providerNode) {
-            if (entry.has("outcome")) return null;
-            String symbolic = entry.has("requestedBlueId")
-                    ? requireText(entry, "requestedBlueId")
-                    : requireText(entry, "blueId");
-            JsonNode returned = entry.has("node")
-                    ? entry.get("node") : entry.get("returnedNode");
+            if (entry.has(FixtureField.OUTCOME)) return null;
+            String symbolic = entry.has(FixtureField.REQUESTED_BLUE_ID)
+                    ? requireText(entry, FixtureField.REQUESTED_BLUE_ID)
+                    : requireText(entry, Properties.OBJECT_BLUE_ID);
+            JsonNode returned = entry.has(FixtureField.NODE)
+                    ? entry.get(FixtureField.NODE) : entry.get(FixtureField.RETURNED_NODE);
             if (returned == null) return null;
             Node document = readNode(returned);
             if (document.getType() == null
@@ -1476,7 +2029,8 @@ public final class BlueConformanceSuiteRunner {
             Integer target = indexBySymbol.get(
                     placeholder.getType().getBlueId());
             if (target == null) return null;
-            placeholder.getType().blueId("this#" + target);
+            placeholder.getType().blueId(
+                    BlueIds.indexedThisPlaceholder(target));
             placeholders.add(placeholder);
         }
         List<String> calculated =
@@ -1495,7 +2049,8 @@ public final class BlueConformanceSuiteRunner {
         }
         return new SymbolicTypeCycle(
                 materialized.get(rootIndex),
-                new VerifiedCyclicFixtureProvider(verifiedEntries));
+                new VerifiedCyclicFixtureProvider(
+                        verifiedEntries, placeholders));
     }
 
     private static ProviderContext providerContextWithoutFixtureProvider(
@@ -1506,11 +2061,11 @@ public final class BlueConformanceSuiteRunner {
 
     private static void addProviderEntry(
             Map<String, NodeProviderResult> entries, JsonNode entry) {
-        String requested = entry.has("requestedBlueId")
-                ? entry.get("requestedBlueId").asText()
-                : requireText(entry, "blueId");
-        if (entry.has("outcome")) {
-            String outcome = entry.get("outcome").asText();
+        String requested = entry.has(FixtureField.REQUESTED_BLUE_ID)
+                ? entry.get(FixtureField.REQUESTED_BLUE_ID).asText()
+                : requireText(entry, Properties.OBJECT_BLUE_ID);
+        if (entry.has(FixtureField.OUTCOME)) {
+            String outcome = entry.get(FixtureField.OUTCOME).asText();
             if ("NotFound".equals(outcome)) {
                 entries.put(requested, NodeProviderResult.notFound());
             } else if ("Unavailable".equals(outcome)) {
@@ -1528,8 +2083,8 @@ public final class BlueConformanceSuiteRunner {
             }
             return;
         }
-        JsonNode node = entry.has("returnedNode")
-                ? entry.get("returnedNode") : entry.get("node");
+        JsonNode node = entry.has(FixtureField.RETURNED_NODE)
+                ? entry.get(FixtureField.RETURNED_NODE) : entry.get(FixtureField.NODE);
         if (node == null) {
             throw new IllegalArgumentException(
                     "Provider entry requires node/returnedNode or outcome.");
@@ -1548,15 +2103,15 @@ public final class BlueConformanceSuiteRunner {
             Map<String, NodeProviderResult> discovered = new LinkedHashMap<>();
             for (FixtureEntry fixture : fixtureEntries()) {
                 JsonNode spec = readYamlResource(FIXTURE_ROOT + fixture.path);
-                JsonNode provider = spec.get("provider");
+                JsonNode provider = spec.get(FixtureField.PROVIDER);
                 if (provider == null || !provider.isArray()) continue;
                 for (JsonNode entry : provider) {
-                    if (entry.has("outcome")) continue;
-                    String requested = entry.has("requestedBlueId")
-                            ? entry.get("requestedBlueId").asText()
+                    if (entry.has(FixtureField.OUTCOME)) continue;
+                    String requested = entry.has(FixtureField.REQUESTED_BLUE_ID)
+                            ? entry.get(FixtureField.REQUESTED_BLUE_ID).asText()
                             : null;
-                    JsonNode node = entry.has("node")
-                            ? entry.get("node") : entry.get("returnedNode");
+                    JsonNode node = entry.has(FixtureField.NODE)
+                            ? entry.get(FixtureField.NODE) : entry.get(FixtureField.RETURNED_NODE);
                     if (requested == null || node == null) continue;
                     try {
                         Node content = readNode(node);
@@ -1581,15 +2136,15 @@ public final class BlueConformanceSuiteRunner {
         JsonNode manifest = readYamlResource(MANIFEST_RESOURCE);
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 manifest.path("packageIdentity").asText());
-        assertEquals(125, manifest.path("behaviorFixtureCount").asInt());
-        assertEquals(125,
+        assertEquals(128, manifest.path("behaviorFixtureCount").asInt());
+        assertEquals(128,
                 BlueConformanceReport.requiredFixtureIdsForBlueLanguage10().size());
         JsonNode files = requireArray(manifest, "files");
         List<FixtureEntry> result = new ArrayList<>();
         String previousPath = null;
         Set<String> ids = new LinkedHashSet<>();
         for (JsonNode file : files) {
-            String path = requireText(file, "path");
+            String path = requireText(file, FixtureField.PATH);
             validateRelativePath(path);
             if (previousPath != null && previousPath.compareTo(path) >= 0) {
                 throw new IllegalStateException(
@@ -1610,16 +2165,16 @@ public final class BlueConformanceSuiteRunner {
             JsonNode fixture = UncheckedObjectMapper.YAML_MAPPER.readTree(
                     new String(bytes, StandardCharsets.UTF_8));
             validateFixtureMetadata(fixture);
-            String id = requireText(fixture, "id");
+            String id = requireText(fixture, FixtureField.ID);
             if (!ids.add(id)) {
                 throw new IllegalStateException(
                         "Duplicate Language fixture id: " + id);
             }
             result.add(new FixtureEntry(id,
                     BlueFixtureCategory.fromLabel(
-                            requireText(fixture, "category")), path));
+                            requireText(fixture, FixtureField.CATEGORY)), path));
         }
-        assertEquals(125, result.size());
+        assertEquals(128, result.size());
         return Collections.unmodifiableList(result);
     }
 
@@ -1634,9 +2189,9 @@ public final class BlueConformanceSuiteRunner {
                         "Unknown Language fixture field: " + field);
             }
         });
-        requireText(spec, "id");
-        BlueFixtureCategory.fromLabel(requireText(spec, "category"));
-        String operation = requireText(spec, "operation");
+        requireText(spec, FixtureField.ID);
+        BlueFixtureCategory.fromLabel(requireText(spec, FixtureField.CATEGORY));
+        String operation = requireText(spec, FixtureField.OPERATION);
         if (!OPERATIONS.contains(operation)) {
             throw new IllegalArgumentException(
                     "Unsupported fixture operation: " + operation);
@@ -1645,26 +2200,26 @@ public final class BlueConformanceSuiteRunner {
             throw new IllegalArgumentException(
                     "Language fixtures use category, not profile.");
         }
-        if (spec.has("expectedErrorCategory")) {
+        if (spec.has(FixtureField.EXPECTED_ERROR_CATEGORY)) {
             BlueLanguageErrorCategory.valueOf(
-                    requireText(spec, "expectedErrorCategory"));
+                    requireText(spec, FixtureField.EXPECTED_ERROR_CATEGORY));
         }
-        boolean hasAssertion = spec.path("expectError").asBoolean(false);
+        boolean hasAssertion = spec.path(FixtureField.EXPECT_ERROR).asBoolean(false);
         java.util.Iterator<String> fields = spec.fieldNames();
         while (fields.hasNext()) {
             String field = fields.next();
-            hasAssertion |= field.startsWith("expected")
+            hasAssertion |= field.startsWith(FixtureField.EXPECTED)
                     || field.startsWith("also")
-                    || "assertions".equals(field)
-                    || "variants".equals(field)
-                    || "requiredHeadings".equals(field)
-                    || "forbiddenJoinedTerms".equals(field)
-                    || "expectBlueIdChanged".equals(field);
+                    || FixtureField.ASSERTIONS.equals(field)
+                    || FixtureField.VARIANTS.equals(field)
+                    || FixtureField.REQUIRED_HEADINGS.equals(field)
+                    || FixtureField.FORBIDDEN_JOINED_TERMS.equals(field)
+                    || FixtureField.EXPECT_BLUE_ID_CHANGED.equals(field);
         }
         if (!hasAssertion) {
             throw new IllegalArgumentException(
                     "Fixture has no expected result assertion: "
-                            + requireText(spec, "id"));
+                            + requireText(spec, FixtureField.ID));
         }
     }
 
@@ -1673,7 +2228,7 @@ public final class BlueConformanceSuiteRunner {
         String operation = null;
         try {
             operation = requireText(
-                    readYamlResource(FIXTURE_ROOT + fixture.path), "operation");
+                    readYamlResource(FIXTURE_ROOT + fixture.path), FixtureField.OPERATION);
         } catch (RuntimeException ignored) {
             // Keep manifest-level failure details.
         }
@@ -1685,7 +2240,7 @@ public final class BlueConformanceSuiteRunner {
 
     private static void requireRegistryKind(JsonNode spec) {
         assertEquals("Blue Language core type registry",
-                requireText(spec, "registryKind"));
+                requireText(spec, FixtureField.REGISTRY_KIND));
     }
 
     private static JsonNode readYamlResource(String resource) {
@@ -1919,23 +2474,33 @@ public final class BlueConformanceSuiteRunner {
     private static final class VerifiedCyclicFixtureProvider
             extends FixtureProvider implements CyclicAwareNodeProvider {
         private final Set<String> verifiedBlueIds;
+        private final CyclicSetProof proof;
 
-        private VerifiedCyclicFixtureProvider(String blueId, Node content) {
+        private VerifiedCyclicFixtureProvider(
+                String blueId,
+                Node content,
+                List<Node> placeholders) {
             this(Collections.singletonMap(
                     blueId, NodeProviderResult.found(
-                            Collections.singletonList(content))));
+                            Collections.singletonList(content))),
+                    placeholders);
         }
 
         private VerifiedCyclicFixtureProvider(
-                Map<String, NodeProviderResult> entries) {
+                Map<String, NodeProviderResult> entries,
+                List<Node> placeholders) {
             super(entries);
             this.verifiedBlueIds =
                     Collections.unmodifiableSet(new LinkedHashSet<>(entries.keySet()));
+            this.proof = CyclicSetProof.fromDeclaredPlaceholderSet(
+                    placeholders);
         }
 
         @Override
-        public boolean hasVerifiedContentForBlueId(String blueId) {
-            return verifiedBlueIds.contains(blueId);
+        public CyclicSetProofResult cyclicSetProofFor(String blueId) {
+            return verifiedBlueIds.contains(blueId)
+                    ? CyclicSetProofResult.found(proof)
+                    : CyclicSetProofResult.notFound();
         }
     }
 }

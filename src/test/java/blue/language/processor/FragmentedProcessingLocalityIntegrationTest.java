@@ -58,32 +58,44 @@ final class FragmentedProcessingLocalityIntegrationTest {
                     8080, "fragmented-golden", 1));
 
     @Test
-    void exactRootAndEventFragmentsHaveIdenticalSemanticsAcrossMatrix() {
+    void shouldVerifyExactRootAndEventFragmentsHaveIdenticalSemanticsAcrossMatrix() {
+        // given
         Scenario scenario = Scenario.create();
-        SemanticProjection baseline = null;
+        List<Variant> variants =
+                Variant.requiredMatrix();
 
-        for (Variant variant : Variant.requiredMatrix()) {
-            Run run = execute(scenario, variant);
+        // when
+        List<Run> runs = new ArrayList<>(variants.size());
+        List<SemanticProjection> projections =
+                new ArrayList<>(variants.size());
+        for (Variant variant : variants) {
+            runs.add(execute(scenario, variant));
+        }
+        for (Run run : runs) {
+            projections.add(
+                    SemanticProjection.of(run.debug));
+        }
+        SemanticProjection baseline = projections.get(0);
+
+        // then
+        for (int index = 0; index < runs.size(); index++) {
+            Run run = runs.get(index);
             assertGoldenLocality(run);
-            SemanticProjection projection =
-                    SemanticProjection.of(run.debug);
-            if (baseline == null) {
-                baseline = projection;
-            } else {
+            if (index > 0) {
                 assertEquals(
                         baseline,
-                        projection,
-                        "semantic drift for " + variant);
+                        projections.get(index),
+                        "semantic drift for " + run.variant);
             }
         }
-
         assertNotNull(baseline);
         assertEquals(ProcessorStatus.SUCCESS, baseline.status);
-        assertEquals(8, Variant.requiredMatrix().size());
+        assertEquals(8, variants.size());
     }
 
     @Test
-    void resultingRootCollapsesAndExpandsThroughExactFragments() {
+    void shouldVerifyResultingRootCollapsesAndExpandsThroughExactFragments() {
+        // given
         Scenario scenario = Scenario.create();
         Run run = execute(
                 scenario,
@@ -104,6 +116,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                 scenario.forbiddenFragments);
         roundTripFragments.putAll(
                 resultingFragments.fragments());
+        // when
         Node domain = checkpointDomainNode(
                 MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL,
                 Collections.singletonList(
@@ -114,13 +127,9 @@ final class FragmentedProcessingLocalityIntegrationTest {
                                         .get(
                                                 SELECTED_CHANNEL))),
                 CHECKPOINT_DISCRIMINATOR);
-        assertEquals(
-                scenario.selectedCheckpointDomain,
-                BlueIdCalculator.calculateBlueId(domain));
         roundTripFragments.put(
                 scenario.selectedCheckpointDomain,
                 domain);
-
         NodeProvider roundTripProvider = blueId -> {
             Node fragment =
                     roundTripFragments.get(blueId);
@@ -129,33 +138,41 @@ final class FragmentedProcessingLocalityIntegrationTest {
                             fragment.clone())
                     : null;
         };
+        boolean collapsedReferenceOnly;
+        String collapsedBlueId;
+        String expandedBlueId;
+        String recollapsedBlueId;
+        Object expandedValue;
+        Object expandedFromRootValue;
         try (Blue roundTripBlue =
                      new Blue(roundTripProvider)) {
             Node collapsed =
                     roundTripBlue.collapse(
                             resultingRoot);
-            assertTrue(collapsed.isReferenceOnly());
-            assertEquals(
-                    resultingRootBlueId,
-                    collapsed.getBlueId());
-
             Node expanded =
                     roundTripBlue.expand(collapsed);
-            assertEquals(
-                    resultingRootBlueId,
-                    BlueIdCalculator.calculateBlueId(
-                            expanded));
-            assertEquals(
-                    resultingRootBlueId,
-                    roundTripBlue.collapse(expanded)
-                            .getBlueId());
-            assertEquals(
-                    NodeToMapListOrValue.get(
-                            expanded),
+            collapsedReferenceOnly = collapsed.isReferenceOnly();
+            collapsedBlueId = collapsed.getBlueId();
+            expandedBlueId =
+                    BlueIdCalculator.calculateBlueId(expanded);
+            recollapsedBlueId =
+                    roundTripBlue.collapse(expanded).getBlueId();
+            expandedValue = NodeToMapListOrValue.get(expanded);
+            expandedFromRootValue =
                     NodeToMapListOrValue.get(
                             roundTripBlue.expand(
-                                    resultingRoot.clone())));
+                                    resultingRoot.clone()));
         }
+
+        // then
+        assertEquals(
+                scenario.selectedCheckpointDomain,
+                BlueIdCalculator.calculateBlueId(domain));
+        assertTrue(collapsedReferenceOnly);
+        assertEquals(resultingRootBlueId, collapsedBlueId);
+        assertEquals(resultingRootBlueId, expandedBlueId);
+        assertEquals(resultingRootBlueId, recollapsedBlueId);
+        assertEquals(expandedValue, expandedFromRootValue);
     }
 
     private static Run execute(
@@ -814,7 +831,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                                     RuntimeBlueIds
                                             .PROCESSING_INITIALIZED_MARKER))
                             .properties(
-                                    "documentId",
+                                    "document",
                                     new Node().value(
                                             "fragmented-golden")));
             Node selectedChannel = channel(

@@ -22,6 +22,14 @@ public final class NodePathSelector {
     private NodePathSelector() {
     }
 
+    /**
+     * Selects matching concrete paths in deterministic encounter order.
+     *
+     * @param root node graph to search
+     * @param patterns pointer patterns to expand
+     * @param predicate condition applied to nodes at matched paths
+     * @return selected canonical paths without duplicates
+     */
     public static List<String> select(Node root, Collection<String> patterns, Predicate<Node> predicate) {
         if (root == null || patterns == null || patterns.isEmpty()) {
             return new ArrayList<>();
@@ -88,7 +96,7 @@ public final class NodePathSelector {
             }
         }
         if (current.getContracts() != null) {
-            currentPath.add("contracts");
+            currentPath.add(Properties.OBJECT_CONTRACTS);
             select(current.getContracts(), pattern, index + 1, currentPath, predicate, selected);
             currentPath.remove(currentPath.size() - 1);
         }
@@ -111,22 +119,22 @@ public final class NodePathSelector {
     }
 
     private static Node childAtOrNull(Node node, String segment) {
-        if ("type".equals(segment)) {
+        if (Properties.OBJECT_TYPE.equals(segment)) {
             return node.getType();
         }
-        if ("itemType".equals(segment)) {
+        if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
             return node.getItemType();
         }
-        if ("keyType".equals(segment)) {
+        if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
             return node.getKeyType();
         }
-        if ("valueType".equals(segment)) {
+        if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
             return node.getValueType();
         }
-        if ("blue".equals(segment)) {
+        if (Properties.OBJECT_BLUE.equals(segment)) {
             return node.getBlue();
         }
-        if ("contracts".equals(segment)) {
+        if (Properties.OBJECT_CONTRACTS.equals(segment)) {
             return node.getContracts();
         }
         if (node.getItems() != null && isListIndex(segment)) {

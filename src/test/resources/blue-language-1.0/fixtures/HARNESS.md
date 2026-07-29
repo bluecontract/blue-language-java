@@ -182,3 +182,23 @@ sha256(
 ```
 
 The manifest's `files` list is itself identity-bearing and is sorted by relative path. A fixture or support file that is added, removed, renamed, or changed requires a new manifest and fixture-package identity. The registry manifest binds this fixture package informationally; its own package identity deliberately excludes that reverse binding to avoid an identity cycle.
+
+## 11. Exact graph fragment operations
+
+### `splitExactGraphFragments`
+
+Admit the exact Root, apply every RFC 6901 cut in `cuts`, and produce ordinary Blue fragments. A cut materializes its selected node and replaces complete cut children by pure references to their exact Node BlueIds. The harness MUST:
+
+- calculate and verify every fragment identity;
+- preserve canonical direct-child order;
+- expose original, direct-fragment, and pure-reference Root representations;
+- prove all Root representations have the same exact Root Node BlueId;
+- expand the fragment graph back to the original exact Root;
+- serve defensive copies from the local exact-node provider;
+- return `NotFound` for every identity not admitted by that provider.
+
+This is a conformance utility over ordinary expansion and collapse. It does not define a new node form or partial identity.
+
+### `verifyOpaqueCyclicFragment`
+
+Admit an ordinary exact Root containing one or more finalized cyclic member references of the form `MASTER#index`. The fragmenter MUST preserve each member identity as an opaque edge, MUST NOT hash a member body independently, and MUST return `NotFound` from the ordinary local fragment provider for the member identity. Expansion may succeed only when a composed cyclic-aware provider supplies complete owning-set proof.

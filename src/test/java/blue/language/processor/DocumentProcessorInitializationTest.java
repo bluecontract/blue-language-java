@@ -23,6 +23,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.processor.util.ProcessorContractConstants.KEY_CHECKPOINT;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_DOCUMENT;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_INITIALIZED;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorInitializationTest {
@@ -31,7 +34,8 @@ class DocumentProcessorInitializationTest {
             "n1dTwJjYLh4mvRbrBiQ56fLj8skq8pGo8eyPhmTtBJH";
 
     @Test
-    void initializeDocumentKeepsProcessorLifecycleLocalAndWritesMarker() {
+    void shouldKeepProcessorLifecycleLocalAndWriteMarkerWhenInitializingDocument() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node original = blue.yamlToNode("name: Minimal Doc\n" +
                 "contracts: {}\n");
@@ -39,26 +43,28 @@ class DocumentProcessorInitializationTest {
                 blue.resolveToSnapshot(original.clone())
                         .blueId();
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
+        Node markerDocument = result.document()
+                .getContracts()
+                .getProperties()
+                .get(KEY_INITIALIZED)
+                .getProperties()
+                .get(KEY_DOCUMENT);
 
+        // then
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertNull(diagnosticCategory(result), diagnosticMessage(result));
         assertTrue(blue.isInitialized(result.document()));
         assertProcessorLifecycleIsLocal(result);
-
-        Node markerDocId = result.document()
-                .getContracts()
-                .getProperties()
-                .get("initialized")
-                .getProperties()
-                .get("documentId");
-        assertNotNull(markerDocId);
+        assertNotNull(markerDocument);
         assertEquals(expectedDocumentId,
-                markerDocId.getValue());
+                BlueIdCalculator.calculateBlueId(markerDocument));
     }
 
     @Test
-    void initializationMarkerUsesDirectWriteWithoutApplicationPatchMetrics() {
+    void shouldVerifyInitializationMarkerUsesDirectWriteWithoutApplicationPatchMetrics() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -67,20 +73,22 @@ class DocumentProcessorInitializationTest {
         ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
         String expectedDocumentId = preInitialization.frozenCanonicalRoot().blueId();
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
-
-        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node initialized = result.document()
                 .getContracts()
                 .getProperties()
-                .get("initialized");
+                .get(KEY_INITIALIZED);
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+
+        // then
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertEquals(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
                 initialized.getType().getBlueId());
         assertEquals(expectedDocumentId,
-                initialized.getProperties().get("documentId").getValue());
+                BlueIdCalculator.calculateBlueId(
+                        initialized.getProperties().get(KEY_DOCUMENT)));
         assertProcessorLifecycleIsLocal(result);
-
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(0L, snapshot.counter(
                 "mutablePatchValuesFrozenBySource.PROCESSOR_INITIALIZATION_MARKER"), snapshot.toString());
@@ -89,12 +97,13 @@ class DocumentProcessorInitializationTest {
         assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
         assertEquals(0L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
-    void snapshotBackedInitializationMarkerUsesDirectWriteWithoutPatchResolution() {
+    void shouldVerifySnapshotBackedInitializationMarkerUsesDirectWriteWithoutPatchResolution() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -102,11 +111,13 @@ class DocumentProcessorInitializationTest {
                 "name: Snapshot Minimal Doc\n" +
                         "contracts: {}\n"));
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(preInitialization);
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
 
+        // then
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertProcessorLifecycleIsLocal(result);
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(0L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
         assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
@@ -114,12 +125,13 @@ class DocumentProcessorInitializationTest {
         assertEquals(0L, snapshot.counter("processorManagedMarkerIncrementalResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("incrementalSnapshotResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
-        assertEquals(1L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
         assertEquals(0L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
-    void initializationDocumentIdUsesContentBlueIdWhenUncheckedIdentityDiffers() {
+    void shouldVerifyInitializationDocumentUsesVerifiedExactIdentityWhenUncheckedIdentityDiffers() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -132,19 +144,21 @@ class DocumentProcessorInitializationTest {
                         "contracts: {}\n");
         ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
         String canonical = preInitialization.frozenCanonicalRoot().blueId();
+
+        // when
         String unchecked = uncheckedInitializationId(preInitialization.frozenCanonicalRoot());
+        DocumentProcessingResult result = blue.initializeDocument(original);
+        String markerDocumentId = markerDocumentId(result.document(), "/");
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+
+        // then
         assertNotEquals(canonical, unchecked,
                 "canonical=" + canonical + ", unchecked=" + unchecked);
-
-        DocumentProcessingResult result = blue.initializeDocument(original);
-
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
-        String markerDocumentId = markerDocumentId(result.document(), "/");
         assertEquals(canonical, markerDocumentId,
                 "canonical=" + canonical + ", unchecked=" + unchecked);
         assertProcessorLifecycleIsLocal(result);
         assertNotEquals(unchecked, markerDocumentId);
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(0L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
         assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
@@ -153,93 +167,53 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void initializationDocumentIdUsesContentBlueIdAcrossIdentityShapes() {
+    void shouldVerifyInitializationIdentityForScalarAndPayloadShapes() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
-        List<String> fixtures = new ArrayList<>(Arrays.asList(
-                "name: Simple Object Shape\n" +
-                        "status: draft\n" +
-                        "contracts: {}\n",
-                "name: Simple Scalar Fields Shape\n" +
-                        "count: 7\n" +
-                        "active: true\n" +
-                        "label: text\n" +
-                        "contracts: {}\n",
-                "name: Payload Only List Shape\n" +
-                        "payload:\n" +
-                        "  - alpha\n" +
-                        "  - beta\n" +
-                        "contracts: {}\n",
-                "name: Nested Payload Only List Shape\n" +
-                        "payload:\n" +
-                        "  - - alpha\n" +
-                        "    - beta\n" +
-                        "  - gamma\n" +
-                        "contracts: {}\n",
-                "name: Metadata Bearing List Shape\n" +
-                        "payload:\n" +
-                        "  name: Metadata Bearing List\n" +
-                        "  type:\n" +
-                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
-                        "  items:\n" +
-                        "    - alpha\n" +
-                        "    - beta\n" +
-                        "contracts: {}\n",
-                "name: Object Elements List Shape\n" +
-                        "rows:\n" +
-                        "  - id: one\n" +
-                        "    amount: 1\n" +
-                        "  - id: two\n" +
-                        "    amount: 2\n" +
-                        "contracts: {}\n",
-                "name: Scalar Elements List Shape\n" +
-                        "scalars: [one, 2, true]\n" +
-                        "contracts: {}\n",
-                "name: Typed Scalar Elements List Shape\n" +
-                        "typedScalars:\n" +
-                        "  items:\n" +
-                        "    - type: Integer\n" +
-                        "      value: 1\n" +
-                        "    - type: Text\n" +
-                        "      value: two\n" +
-                        "contracts: {}\n",
-                "name: Empty List Control Shape\n" +
-                        "emptyControl:\n" +
-                        "  items:\n" +
-                        "    - $empty: true\n" +
-                        "    - value: tail\n" +
-                        "contracts: {}\n",
-                "name: BEX Operator Map Shape\n" +
-                        "bex:\n" +
-                        "  do:\n" +
-                        "    - \"$get\": [/invoice/status]\n" +
-                        "    - \"$literal\":\n" +
-                        "        - [accepted, pending]\n" +
-                        "contracts: {}\n",
-                "name: Contracts Containing Lists Shape\n" +
-                        "contracts:\n" +
-                        "  lifecycleWithList:\n" +
-                        "    type:\n" +
-                        "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                        "    values:\n" +
-                        "      - [a, b]\n" +
-                        "      - {kind: c}\n",
-                "name: Embedded Documents Containing Lists Shape\n" +
-                        "child:\n" +
-                        "  name: Embedded List Child\n" +
-                        "  values:\n" +
-                        "    - [a, b]\n" +
-                        "  contracts: {}\n" +
-                        "contracts:\n" +
-                        "  embedded:\n" +
-                        "    type:\n" +
-                        "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
-                        "    paths:\n" +
-                        "      - /child\n"));
+        List<String> fixtures =
+                identityShapeFixtures().subList(0, 4);
 
-        for (String yaml : fixtures) {
-            assertInitializationUsesContentBlueIdAndReloads(blue, yaml);
-        }
+        // when
+        List<InitializationIdentityObservation> observations =
+                initializeAndReload(blue, fixtures);
 
+        // then
+        assertInitializationIdentities(observations);
+    }
+
+    @Test
+    void shouldVerifyInitializationIdentityForTypedAndObjectListShapes() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        List<String> fixtures =
+                identityShapeFixtures().subList(4, 9);
+
+        // when
+        List<InitializationIdentityObservation> observations =
+                initializeAndReload(blue, fixtures);
+
+        // then
+        assertInitializationIdentities(observations);
+    }
+
+    @Test
+    void shouldVerifyInitializationIdentityForContractAndEmbeddedShapes() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        List<String> fixtures =
+                identityShapeFixtures().subList(9, 12);
+
+        // when
+        List<InitializationIdentityObservation> observations =
+                initializeAndReload(blue, fixtures);
+
+        // then
+        assertInitializationIdentities(observations);
+    }
+
+    @Test
+    void shouldVerifyInitializationIdentityForPreviousListShape() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Blue previousBlue = ProcessorTestSupport.blue(provider);
         Node previous = previousBlue.yamlToNode(
@@ -247,22 +221,30 @@ class DocumentProcessorInitializationTest {
                         "  - previous-a\n" +
                         "  - previous-b\n");
         String previousBlueId = BlueIdCalculator.calculateBlueId(previous.getItems());
+        String fixture =
+                "name: Previous List Control Shape\n"
+                        + "history:\n"
+                        + "  type:\n"
+                        + "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n"
+                        + "  mergePolicy: append-only\n"
+                        + "  items:\n"
+                        + "    - $previous:\n"
+                        + "        blueId: " + previousBlueId + "\n"
+                        + "    - after\n"
+                        + "contracts: {}\n";
+
+        // when
         provider.addListAndItsItems(previous.getItems());
-        assertInitializationUsesContentBlueIdAndReloads(previousBlue,
-                "name: Previous List Control Shape\n" +
-                        "history:\n" +
-                        "  type:\n" +
-                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
-                        "  mergePolicy: append-only\n" +
-                        "  items:\n" +
-                        "    - $previous:\n" +
-                        "        blueId: " + previousBlueId + "\n" +
-                        "    - after\n" +
-                        "contracts: {}\n");
+        InitializationIdentityObservation observation =
+                initializeAndReload(previousBlue, fixture);
+
+        // then
+        assertInitializationIdentity(observation);
     }
 
     @Test
-    void bexShapedNestedListsUseContentBlueIdInitializationIdentity() {
+    void shouldVerifyBexShapedNestedListsUseVerifiedExactInitializationIdentity() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         List<String> fixtures = Arrays.asList(
                 "name: Compute Do Payload List\n" +
@@ -308,13 +290,17 @@ class DocumentProcessorInitializationTest {
                         "  - - - - deep\n" +
                         "contracts: {}\n");
 
-        for (String yaml : fixtures) {
-            assertInitializationUsesContentBlueIdAndReloads(blue, yaml);
-        }
+        // when
+        List<InitializationIdentityObservation> observations =
+                initializeAndReload(blue, fixtures);
+
+        // then
+        assertInitializationIdentities(observations);
     }
 
     @Test
-    void embeddedScopeInitializationDocumentIdsUseTheirOwnContentPreInitializationIdentity() {
+    void shouldVerifyEmbeddedScopeInitializationDocumentsUseTheirOwnExactPreInitializationIdentity() {
+        // given
         BasicNodeProvider identityProvider = new BasicNodeProvider();
         identityProvider.addSingleNodes(new Node().name("CaptureLifecycleDocumentId"));
         Blue blue = ProcessorTestSupport.blue(identityProvider);
@@ -322,7 +308,6 @@ class DocumentProcessorInitializationTest {
                 new Node().name("CaptureLifecycleDocumentId"),
                 new CaptureLifecycleDocumentIdProcessor());
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
         Node original = blue.yamlToNode(
                 "name: Embedded Nested List\n" +
                         "child:\n" +
@@ -357,37 +342,36 @@ class DocumentProcessorInitializationTest {
         Node standaloneChildBeforeLifecycle = original.getAsNode("/child").clone();
         ResolvedSnapshot childPreInitialization = blue.resolveToSnapshot(standaloneChildBeforeLifecycle);
         String childContentBlueId = childPreInitialization.blueId();
+        String rootDocumentBlueId =
+                rootDocumentIdentityAtInitialization(blue, original);
+        blue.getDocumentProcessor().processingMetricsSink(metrics);
+
+        // when
         String childUnchecked = uncheckedInitializationId(childPreInitialization.frozenCanonicalRoot());
+        DocumentProcessingResult result = blue.initializeDocument(original);
+        Node initialized = result.document();
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+
+        // then
         assertNotEquals(childContentBlueId, childUnchecked,
                 "canonical=" + childContentBlueId + ", unchecked=" + childUnchecked);
-
-        Node rootAfterChildPhase1 = original.clone();
-        Node childAfterPhase1 = rootAfterChildPhase1.getAsNode("/child");
-        childAfterPhase1.properties("childLifecycleDocumentId", new Node().value(childContentBlueId));
-        childAfterPhase1.getContracts().properties(
-                "initialized", ProcessorMarkerFactory.initialized(childContentBlueId).toNode());
-        String rootContentBlueId = blue.calculateSemanticBlueId(rootAfterChildPhase1);
-
-        DocumentProcessingResult result = blue.initializeDocument(original);
-
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
-        Node initialized = result.document();
-        assertEquals(rootContentBlueId, markerDocumentId(initialized, "/"));
+        assertEquals(rootDocumentBlueId, markerDocumentId(initialized, "/"));
         assertEquals(childContentBlueId, markerDocumentId(initialized, "/child"));
-        assertEquals(rootContentBlueId, initialized.getAsText("/rootLifecycleDocumentId"));
+        assertEquals(rootDocumentBlueId, initialized.getAsText("/rootLifecycleDocumentId"));
         assertEquals(childContentBlueId, initialized.getAsText("/child/childLifecycleDocumentId"));
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(2L, snapshot.counter("frozenPatchValuesAccepted"), snapshot.toString());
         assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbackReason.CONTRACTS_CHANGED"), snapshot.toString());
-        assertEquals(2L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
+        assertEquals(0L, snapshot.counter("initializationDocumentIdContentBlueIdCalculations"), snapshot.toString());
         assertEquals(0L, snapshot.counter("initializationDocumentIdCanonicalMaterializations"), snapshot.toString());
     }
 
     @Test
-    void nonObjectEmbeddedChildTerminatesDuringPhase1WithoutInitialization() {
+    void shouldVerifyNonObjectEmbeddedChildTerminatesDuringPhase1WithoutInitialization() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -404,8 +388,11 @@ class DocumentProcessorInitializationTest {
                         "    paths:\n" +
                         "      - /child\n");
         String exactInput = original.toString();
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
 
+        // then
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
         assertFalse(result.commits());
@@ -413,50 +400,28 @@ class DocumentProcessorInitializationTest {
                 diagnosticCategory(result));
         assertEquals(exactInput,
                 result.document().toString());
-        assertNull(result.document().getContracts().getProperties().get("initialized"));
+        assertNull(result.document().getContracts().getProperties()
+                .get(KEY_INITIALIZED));
         assertTrue(result.events().isEmpty());
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
         assertEquals(0L, snapshot.counter("patchImpactProcessorManagedState"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorManagedMarkerPatches"), snapshot.toString());
     }
 
     @Test
-    void initializesDocumentAndExecutesHandlersInOrder() {
-        String yaml = "name: Sample Doc\n" +
-                "contracts:\n" +
-                "  lifecycleChannel:\n" +
-                "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                "  setX:\n" +
-                "    channel: lifecycleChannel\n" +
-                "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "    event:\n" +
-                "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "    propertyKey: /x\n" +
-                "    propertyValue: 5\n" +
-                "  setXLater:\n" +
-                "    order: 1\n" +
-                "    channel: lifecycleChannel\n" +
-                "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "    event:\n" +
-                "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "    propertyKey: /x\n" +
-                "    propertyValue: 10\n";
+    void shouldRejectProcessingBeforeInitialization() {
+        // given
+        Blue blue = orderedInitializationBlue();
+        Node original = orderedInitializationDocument(blue);
 
-        Blue blue = ProcessorTestSupport.blue();
-        blue.registerContractProcessor(new SetPropertyContractProcessor());
-        Node original = blue.yamlToNode(yaml);
-        assertFalse(blue.isInitialized(original));
-
+        // when
         DocumentProcessingResult uninitializedProcessResult =
                 blue.processDocument(
                         original.clone(),
                         new Node().value("external"));
+
+        // then
+        assertFalse(blue.isInitialized(original));
         assertEquals(ProcessorStatus.NO_MATCH,
                 uninitializedProcessResult.status());
         assertFalse(uninitializedProcessResult.commits());
@@ -465,61 +430,94 @@ class DocumentProcessorInitializationTest {
         assertTrue(uninitializedProcessResult.events().isEmpty());
         assertEquals(original.toString(),
                 uninitializedProcessResult.document().toString());
+    }
 
+    @Test
+    void shouldExecuteInitializationHandlersInOrder() {
+        // given
+        Blue blue = orderedInitializationBlue();
+        Node original = orderedInitializationDocument(blue);
+
+        // when
         DocumentProcessingResult initResult = blue.initializeDocument(original);
         Node initialized = initResult.document();
-
-        assertTrue(blue.isInitialized(initialized));
-
-        assertProcessorLifecycleIsLocal(initResult);
-        Node markerDocId = initialized.getContracts()
+        Node markerDocument = initialized.getContracts()
                 .getProperties()
-                .get("initialized")
+                .get(KEY_INITIALIZED)
                 .getProperties()
-                .get("documentId");
-        assertNotNull(markerDocId);
-
+                .get(KEY_DOCUMENT);
         Map<String, Node> initializedProps = initialized.getProperties();
-        assertNotNull(initializedProps);
-
         Node xNode = initializedProps.get("x");
+        Node contractsNode = initialized.getContracts();
+        Node initializedNode = contractsNode.getProperties()
+                .get(KEY_INITIALIZED);
+        Node initType = initializedNode.getType();
+        Node initializedMarkerDocument =
+                initializedNode.getProperties().get(KEY_DOCUMENT);
+        Node checkpointNode = contractsNode.getProperties()
+                .get(KEY_CHECKPOINT);
+
+        // then
+        assertTrue(blue.isInitialized(initialized));
+        assertProcessorLifecycleIsLocal(initResult);
+        assertNotNull(markerDocument);
+        assertNotNull(initializedProps);
         assertNotNull(xNode, "x should be present after initialization");
         assertEquals(new BigInteger("10"), xNode.getValue());
-
-        Node contractsNode = initialized.getContracts();
         assertNotNull(contractsNode);
-        Node initializedNode = contractsNode.getProperties().get("initialized");
         assertNotNull(initializedNode, "Initialization marker should be present");
-        Node initType = initializedNode.getType();
         assertNotNull(initType);
         assertEquals(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER, initType.getBlueId());
-        Node initializedMarkerDocId = initializedNode.getProperties().get("documentId");
-        assertNotNull(initializedMarkerDocId);
-
-        Node checkpointNode = contractsNode.getProperties().get("checkpoint");
+        assertNotNull(initializedMarkerDocument);
         assertNull(checkpointNode, "Checkpoint marker should not be present before any external event");
+        assertNull(original.getProperties() != null ? original.getProperties().get("x") : null);
+    }
 
-        assertThrows(IllegalStateException.class, () -> blue.initializeDocument(initialized));
+    @Test
+    void shouldRejectInitializingAnAlreadyInitializedDocument() {
+        // given
+        Blue blue = orderedInitializationBlue();
+        Node initialized =
+                blue.initializeDocument(orderedInitializationDocument(blue))
+                        .document();
 
+        // when
+        Throwable failure = FailureCapture.captureFailure(
+                () -> blue.initializeDocument(initialized));
+
+        // then
+        assertTrue(failure instanceof IllegalStateException);
+    }
+
+    @Test
+    void shouldKeepInitializedDocumentUnchangedWhenExternalEventDoesNotMatch() {
+        // given
+        Blue blue = orderedInitializationBlue();
+        Node initialized =
+                blue.initializeDocument(orderedInitializationDocument(blue))
+                        .document();
+
+        // when
         DocumentProcessingResult postInitProcessResult =
                 blue.processDocument(
                         initialized,
                         new Node().value("external"));
+        Node processed = postInitProcessResult.document();
+
+        // then
         assertEquals(ProcessorStatus.NO_MATCH,
                 postInitProcessResult.status());
         assertFalse(postInitProcessResult.commits());
-        Node processed = postInitProcessResult.document();
         assertEquals(new BigInteger("10"), processed.getProperties().get("x").getValue());
         assertEquals(initialized.toString(),
                 processed.toString());
 
         assertTrue(postInitProcessResult.events().isEmpty());
-
-        assertNull(original.getProperties() != null ? original.getProperties().get("x") : null);
     }
 
     @Test
-    void initializationHandlesCustomPaths() {
+    void shouldVerifyInitializationHandlesCustomPaths() {
+        // given
         String yaml = "name: Custom Path Doc\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
@@ -531,7 +529,7 @@ class DocumentProcessorInitializationTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 3\n" +
                 "  setNested:\n" +
@@ -542,7 +540,7 @@ class DocumentProcessorInitializationTest {
                 "    path: /nested/branch/\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 7\n" +
                 "  setExplicit:\n" +
@@ -553,7 +551,7 @@ class DocumentProcessorInitializationTest {
                 "    path: a/x\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 11\n";
 
@@ -561,24 +559,24 @@ class DocumentProcessorInitializationTest {
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult initResult = blue.initializeDocument(original);
         Node processed = initResult.document();
-
-        assertEquals(new BigInteger("3"), processed.getProperties().get("x").getValue());
-
         Node nested = processed.getProperties().get("nested");
-        assertNotNull(nested);
         Node branch = nested.getProperties().get("branch");
-        assertNotNull(branch);
         Node nestedX = branch.getProperties().get("x");
+        Node aNode = processed.getProperties().get("a");
+        Node firstX = aNode.getProperties().get("x");
+        Node explicit = firstX.getProperties().get("x");
+
+        // then
+        assertEquals(new BigInteger("3"), processed.getProperties().get("x").getValue());
+        assertNotNull(nested);
+        assertNotNull(branch);
         assertNotNull(nestedX);
         assertEquals(new BigInteger("7"), nestedX.getValue());
-
-        Node aNode = processed.getProperties().get("a");
         assertNotNull(aNode);
-        Node firstX = aNode.getProperties().get("x");
         assertNotNull(firstX);
-        Node explicit = firstX.getProperties().get("x");
         assertNotNull(explicit);
         assertEquals(new BigInteger("11"), explicit.getValue());
 
@@ -586,7 +584,8 @@ class DocumentProcessorInitializationTest {
 
 
     @Test
-    void capabilityFailureWhenContractProcessorMissing() {
+    void shouldVerifyCapabilityFailureWhenContractProcessorMissing() {
+        // given
         String yaml = "name: Sample Doc\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
@@ -603,7 +602,10 @@ class DocumentProcessorInitializationTest {
         Node original = blue.yamlToNode(yaml);
         String originalJson = blue.nodeToJson(original.clone());
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
+
+        // then
         assertTrue(isCapabilityFailure(result), "Initialization should fail with must-understand");
         assertEquals(0L, result.totalGas());
         assertTrue(result.events().isEmpty());
@@ -611,7 +613,8 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void incompatibleInitializationMarkerOutsideParticipatingClosureKeepsNoMatch() {
+    void shouldVerifyIncompatibleInitializationMarkerOutsideParticipatingClosureKeepsNoMatch() {
+        // given
         String yaml = "name: Bad Doc\n" +
                 "contracts:\n" +
                 "  initialized:\n" +
@@ -621,11 +624,13 @@ class DocumentProcessorInitializationTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult result =
                 blue.processDocument(
                         document,
                         new Node().value("event"));
 
+        // then
         assertEquals(ProcessorStatus.NO_MATCH,
                 result.status());
         assertFalse(result.commits());
@@ -636,7 +641,8 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void initializeDocumentFailsWhenInitializationKeyOccupiedIncorrectly() {
+    void shouldFailInitializationWhenInitializationKeyIsOccupiedIncorrectly() {
+        // given
         String yaml = "name: Bad Init Doc\n" +
                 "contracts:\n" +
                 "  initialized:\n" +
@@ -646,13 +652,18 @@ class DocumentProcessorInitializationTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        Throwable failure = FailureCapture.captureFailure(
                 () -> blue.initializeDocument(document));
-        assertTrue(ex.getMessage().contains("Processing Initialized Marker"));
+
+        // then
+        assertTrue(failure instanceof IllegalStateException);
+        assertTrue(failure.getMessage().contains("Processing Initialized Marker"));
     }
 
     @Test
-    void isInitializedThrowsWhenReservedKeyIsMisused() {
+    void shouldVerifyIsInitializedThrowsWhenReservedKeyIsMisused() {
+        // given
         String yaml = "name: Bad Check Doc\n" +
                 "contracts:\n" +
                 "  initialized:\n" +
@@ -662,13 +673,18 @@ class DocumentProcessorInitializationTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        Throwable failure = FailureCapture.captureFailure(
                 () -> blue.isInitialized(document));
-        assertTrue(ex.getMessage().contains("Processing Initialized Marker"));
+
+        // then
+        assertTrue(failure instanceof IllegalStateException);
+        assertTrue(failure.getMessage().contains("Processing Initialized Marker"));
     }
 
     @Test
-    void removePatchDeletesPropertyDuringInitialization() {
+    void shouldDeletePropertyWithRemovePatchDuringInitialization() {
+        // given
         String yaml = "name: Remove Doc\n" +
                 "x:\n" +
                 "  type:\n" +
@@ -683,18 +699,21 @@ class DocumentProcessorInitializationTest {
                 "      blueId: 2REa15BDY5EWq4tJsbUaBwhhTG2xSdk2ZyFL1aCpqTVF\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: /x\n";
 
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new RemovePropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
+        boolean hadPropertyBeforeInitialization =
+                original.getProperties().containsKey("x");
 
-        assertTrue(original.getProperties().containsKey("x"));
-
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node processed = result.document();
 
+        // then
+        assertTrue(hadPropertyBeforeInitialization);
         assertFalse(processed.getProperties() != null && processed.getProperties().containsKey("x"));
         assertProcessorLifecycleIsLocal(result);
 
@@ -702,7 +721,8 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void checkpointBeforeInitializationIsRejected() {
+    void shouldVerifyCheckpointBeforeInitializationIsRejected() {
+        // given
         String yaml = "name: Invalid Doc\n" +
                 "contracts:\n" +
                 "  checkpoint:\n" +
@@ -712,11 +732,17 @@ class DocumentProcessorInitializationTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
-        assertThrows(IllegalStateException.class, () -> blue.initializeDocument(document));
+        // when
+        Throwable failure = FailureCapture.captureFailure(
+                () -> blue.initializeDocument(document));
+
+        // then
+        assertTrue(failure instanceof IllegalStateException);
     }
 
     @Test
-    void initializationFailsWhenCheckpointHasWrongType() {
+    void shouldVerifyInitializationFailsWhenCheckpointHasWrongType() {
+        // given
         String yaml = "name: Wrong Checkpoint Doc\n" +
                 "contracts:\n" +
                 "  checkpoint:\n" +
@@ -726,13 +752,18 @@ class DocumentProcessorInitializationTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        Throwable failure = FailureCapture.captureFailure(
                 () -> blue.initializeDocument(document));
-        assertTrue(ex.getMessage().contains("Channel Event Checkpoint"));
+
+        // then
+        assertTrue(failure instanceof IllegalStateException);
+        assertTrue(failure.getMessage().contains("Channel Event Checkpoint"));
     }
 
     @Test
-    void initializationFailsWhenMultipleCheckpointsPresent() {
+    void shouldVerifyInitializationFailsWhenMultipleCheckpointsPresent() {
+        // given
         String yaml = "name: Duplicate Checkpoint Doc\n" +
                 "contracts:\n" +
                 "  checkpoint:\n" +
@@ -745,13 +776,18 @@ class DocumentProcessorInitializationTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        Throwable failure = FailureCapture.captureFailure(
                 () -> blue.initializeDocument(document));
-        assertTrue(ex.getMessage().contains("Channel Event Checkpoint"));
+
+        // then
+        assertTrue(failure instanceof IllegalStateException);
+        assertTrue(failure.getMessage().contains("Channel Event Checkpoint"));
     }
 
     @Test
-    void lifecycleEventsDoNotDriveTriggeredHandlers() {
+    void shouldVerifyLifecycleEventsDoNotDriveTriggeredHandlers() {
+        // given
         String yaml = "name: Lifecycle Trigger Isolation\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
@@ -766,7 +802,7 @@ class DocumentProcessorInitializationTest {
                 "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "    propertyKey: /lifecycle\n" +
                 "    propertyValue: 1\n" +
                 "  triggeredHandler:\n" +
@@ -780,16 +816,19 @@ class DocumentProcessorInitializationTest {
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node initialized = result.document();
 
+        // then
         assertNotNull(initialized.getProperties().get("lifecycle"));
         assertNull(initialized.getProperties().get("triggered"),
                 "Triggered handler should not run from lifecycle emission");
     }
 
     @Test
-    void processorGeneratedChildLifecycleIsNotBridgedToParent() {
+    void shouldVerifyProcessorGeneratedChildLifecycleIsNotBridgedToParent() {
+        // given
         String yaml = "name: Embedded Lifecycle\n" +
                 "child:\n" +
                 "  name: Inner\n" +
@@ -815,37 +854,233 @@ class DocumentProcessorInitializationTest {
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node initialized = result.document();
+        Node childLifecycle = initialized.getProperties()
+                .get("childLifecycle");
 
-        Node childLifecycle = initialized.getProperties().get("childLifecycle");
+        // then
         assertNull(childLifecycle,
                 "processor-generated child lifecycle delivery is local");
     }
 
-    private static void assertInitializationUsesContentBlueIdAndReloads(Blue blue, String yaml) {
-        Node original = blue.yamlToNode(yaml);
-        String contentBlueId = independentRootInitializationContentBlueId(blue, original);
-
-        DocumentProcessingResult result = blue.initializeDocument(original);
-
-        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
-        Node canonicalDocument = result.document();
-        assertNotNull(canonicalDocument, yaml);
-        assertEquals(contentBlueId, markerDocumentId(canonicalDocument, "/"), yaml);
-        assertProcessorLifecycleIsLocal(result);
-        ResolvedSnapshot finalSnapshot = blue.resolveToSnapshot(canonicalDocument.clone());
-        ResolvedSnapshot reloaded = blue.resolveToSnapshot(
-                blue.jsonToNode(blue.nodeToJson(canonicalDocument)));
-        assertEquals(finalSnapshot.blueId(), reloaded.blueId(), yaml);
-        assertEquals(blue.nodeToJson(finalSnapshot.canonicalRoot()),
-                blue.nodeToJson(reloaded.canonicalRoot()), yaml);
-        assertEquals(blue.nodeToJson(finalSnapshot.resolvedRoot()),
-                blue.nodeToJson(reloaded.resolvedRoot()), yaml);
+    private static Blue orderedInitializationBlue() {
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        return blue;
     }
 
-    private static String independentRootInitializationContentBlueId(Blue blue, Node original) {
-        Node preRootLifecycle = original.clone();
+    private static Node orderedInitializationDocument(Blue blue) {
+        return blue.yamlToNode(
+                "name: Sample Doc\n" +
+                        "contracts:\n" +
+                        "  lifecycleChannel:\n" +
+                        "    type:\n" +
+                        "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                        "  setX:\n" +
+                        "    channel: lifecycleChannel\n" +
+                        "    type:\n" +
+                        "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                        "    event:\n" +
+                        "      type:\n" +
+                        "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                        "    propertyKey: /x\n" +
+                        "    propertyValue: 5\n" +
+                        "  setXLater:\n" +
+                        "    order: 1\n" +
+                        "    channel: lifecycleChannel\n" +
+                        "    type:\n" +
+                        "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                        "    event:\n" +
+                        "      type:\n" +
+                        "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                        "    propertyKey: /x\n" +
+                        "    propertyValue: 10\n");
+    }
+
+    private static List<String> identityShapeFixtures() {
+        return Arrays.asList(
+                "name: Simple Object Shape\n"
+                        + "status: draft\n"
+                        + "contracts: {}\n",
+                "name: Simple Scalar Fields Shape\n"
+                        + "count: 7\n"
+                        + "active: true\n"
+                        + "label: text\n"
+                        + "contracts: {}\n",
+                "name: Payload Only List Shape\n"
+                        + "payload:\n"
+                        + "  - alpha\n"
+                        + "  - beta\n"
+                        + "contracts: {}\n",
+                "name: Nested Payload Only List Shape\n"
+                        + "payload:\n"
+                        + "  - - alpha\n"
+                        + "    - beta\n"
+                        + "  - gamma\n"
+                        + "contracts: {}\n",
+                "name: Metadata Bearing List Shape\n"
+                        + "payload:\n"
+                        + "  name: Metadata Bearing List\n"
+                        + "  type:\n"
+                        + "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n"
+                        + "  items:\n"
+                        + "    - alpha\n"
+                        + "    - beta\n"
+                        + "contracts: {}\n",
+                "name: Object Elements List Shape\n"
+                        + "rows:\n"
+                        + "  - id: one\n"
+                        + "    amount: 1\n"
+                        + "  - id: two\n"
+                        + "    amount: 2\n"
+                        + "contracts: {}\n",
+                "name: Scalar Elements List Shape\n"
+                        + "scalars: [one, 2, true]\n"
+                        + "contracts: {}\n",
+                "name: Typed Scalar Elements List Shape\n"
+                        + "typedScalars:\n"
+                        + "  items:\n"
+                        + "    - type: Integer\n"
+                        + "      value: 1\n"
+                        + "    - type: Text\n"
+                        + "      value: two\n"
+                        + "contracts: {}\n",
+                "name: Empty List Control Shape\n"
+                        + "emptyControl:\n"
+                        + "  items:\n"
+                        + "    - $empty: true\n"
+                        + "    - value: tail\n"
+                        + "contracts: {}\n",
+                "name: BEX Operator Map Shape\n"
+                        + "bex:\n"
+                        + "  do:\n"
+                        + "    - \"$get\": [/invoice/status]\n"
+                        + "    - \"$literal\":\n"
+                        + "        - [accepted, pending]\n"
+                        + "contracts: {}\n",
+                "name: Contracts Containing Lists Shape\n"
+                        + "contracts:\n"
+                        + "  lifecycleWithList:\n"
+                        + "    type:\n"
+                        + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                        + "    values:\n"
+                        + "      - [a, b]\n"
+                        + "      - {kind: c}\n",
+                "name: Embedded Documents Containing Lists Shape\n"
+                        + "child:\n"
+                        + "  name: Embedded List Child\n"
+                        + "  values:\n"
+                        + "    - [a, b]\n"
+                        + "  contracts: {}\n"
+                        + "contracts:\n"
+                        + "  embedded:\n"
+                        + "    type:\n"
+                        + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                        + "    paths:\n"
+                        + "      - /child\n");
+    }
+
+    private static List<InitializationIdentityObservation>
+    initializeAndReload(
+            Blue blue,
+            List<String> fixtures) {
+        List<InitializationIdentityObservation> observations =
+                new ArrayList<>(fixtures.size());
+        for (String fixture : fixtures) {
+            observations.add(initializeAndReload(blue, fixture));
+        }
+        return observations;
+    }
+
+    private static InitializationIdentityObservation initializeAndReload(
+            Blue blue,
+            String yaml) {
+        Node original = blue.yamlToNode(yaml);
+        String documentBlueId =
+                rootDocumentIdentityAtInitialization(blue, original);
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+        Node canonicalDocument = result.document();
+        if (canonicalDocument == null
+                || isCapabilityFailure(result)) {
+            return new InitializationIdentityObservation(
+                    yaml,
+                    documentBlueId,
+                    result,
+                    canonicalDocument,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+        }
+        ResolvedSnapshot finalSnapshot =
+                blue.resolveToSnapshot(canonicalDocument.clone());
+        ResolvedSnapshot reloaded =
+                blue.resolveToSnapshot(
+                        blue.jsonToNode(
+                                blue.nodeToJson(canonicalDocument)));
+        return new InitializationIdentityObservation(
+                yaml,
+                documentBlueId,
+                result,
+                canonicalDocument,
+                markerDocumentId(canonicalDocument, "/"),
+                finalSnapshot.blueId(),
+                reloaded.blueId(),
+                blue.nodeToJson(finalSnapshot.canonicalRoot()),
+                blue.nodeToJson(reloaded.canonicalRoot()),
+                blue.nodeToJson(finalSnapshot.resolvedRoot()),
+                blue.nodeToJson(reloaded.resolvedRoot()));
+    }
+
+    private static void assertInitializationIdentities(
+            List<InitializationIdentityObservation> observations) {
+        for (InitializationIdentityObservation observation :
+                observations) {
+            assertInitializationIdentity(observation);
+        }
+    }
+
+    private static void assertInitializationIdentity(
+            InitializationIdentityObservation observation) {
+        assertFalse(
+                isCapabilityFailure(observation.result),
+                diagnosticMessage(observation.result));
+        assertNotNull(
+                observation.canonicalDocument,
+                observation.yaml);
+        assertEquals(
+                observation.expectedDocumentBlueId,
+                observation.markerDocumentBlueId,
+                observation.yaml);
+        assertProcessorLifecycleIsLocal(observation.result);
+        assertEquals(
+                observation.finalBlueId,
+                observation.reloadedBlueId,
+                observation.yaml);
+        assertEquals(
+                observation.finalCanonicalJson,
+                observation.reloadedCanonicalJson,
+                observation.yaml);
+        assertEquals(
+                observation.finalResolvedJson,
+                observation.reloadedResolvedJson,
+                observation.yaml);
+    }
+
+    private static String uncheckedInitializationId(FrozenNode node) {
+        return BlueIdCalculator.calculateUncheckedBlueId(node.toNode());
+    }
+
+    private static String rootDocumentIdentityAtInitialization(
+            Blue blue,
+            Node original) {
+        Node immediatelyBeforeRootInitialization = original.clone();
         Node contracts = original.getContracts();
         Node embedded = contracts != null && contracts.getProperties() != null
                 ? contracts.getProperties().get("embedded")
@@ -856,34 +1091,88 @@ class DocumentProcessorInitializationTest {
         if (paths != null && paths.getItems() != null) {
             for (Node pathNode : paths.getItems()) {
                 String childPath = String.valueOf(pathNode.getValue());
-                Node childSource = original.getAsNode(childPath).clone();
-                String childContentBlueId = blue.calculateSemanticBlueId(childSource);
-                Node childAfterPhase1 = preRootLifecycle.getAsNode(childPath);
-                if (childAfterPhase1.getContracts() == null) {
-                    childAfterPhase1.contracts(new Node());
+                Node child = original.getAsNode(childPath);
+                if (child == null) {
+                    continue;
                 }
-                childAfterPhase1.getContracts().properties(
-                        "initialized", ProcessorMarkerFactory.initialized(childContentBlueId).toNode());
+                DocumentProcessingResult childInitialization =
+                        blue.initializeDocument(child.clone());
+                if (isCapabilityFailure(childInitialization)) {
+                    throw new IllegalStateException(
+                            diagnosticMessage(childInitialization));
+                }
+                Node selectedChild =
+                        immediatelyBeforeRootInitialization.getAsNode(childPath);
+                if (selectedChild == null) {
+                    throw new IllegalStateException(
+                            "Embedded initialization path is absent: "
+                                    + childPath);
+                }
+                selectedChild.replaceWith(childInitialization.document());
             }
         }
-        return blue.calculateSemanticBlueId(preRootLifecycle);
+        return blue.resolveToSnapshot(immediatelyBeforeRootInitialization)
+                .frozenCanonicalRoot()
+                .blueId();
     }
 
-    private static String uncheckedInitializationId(FrozenNode node) {
-        return BlueIdCalculator.calculateUncheckedBlueId(node.toNode());
+    private static final class InitializationIdentityObservation {
+        private final String yaml;
+        private final String expectedDocumentBlueId;
+        private final DocumentProcessingResult result;
+        private final Node canonicalDocument;
+        private final String markerDocumentBlueId;
+        private final String finalBlueId;
+        private final String reloadedBlueId;
+        private final String finalCanonicalJson;
+        private final String reloadedCanonicalJson;
+        private final String finalResolvedJson;
+        private final String reloadedResolvedJson;
+
+        private InitializationIdentityObservation(
+                String yaml,
+                String expectedDocumentBlueId,
+                DocumentProcessingResult result,
+                Node canonicalDocument,
+                String markerDocumentBlueId,
+                String finalBlueId,
+                String reloadedBlueId,
+                String finalCanonicalJson,
+                String reloadedCanonicalJson,
+                String finalResolvedJson,
+                String reloadedResolvedJson) {
+            this.yaml = yaml;
+            this.expectedDocumentBlueId =
+                    expectedDocumentBlueId;
+            this.result = result;
+            this.canonicalDocument = canonicalDocument;
+            this.markerDocumentBlueId = markerDocumentBlueId;
+            this.finalBlueId = finalBlueId;
+            this.reloadedBlueId = reloadedBlueId;
+            this.finalCanonicalJson = finalCanonicalJson;
+            this.reloadedCanonicalJson =
+                    reloadedCanonicalJson;
+            this.finalResolvedJson = finalResolvedJson;
+            this.reloadedResolvedJson = reloadedResolvedJson;
+        }
     }
 
     private static String markerDocumentId(Node document, String scope) {
         String prefix = "/".equals(scope) ? "" : scope;
-        return document.getAsText(prefix + "/contracts/initialized/documentId");
+        Node initialDocument = document.getAsNode(
+                prefix + "/contracts/initialized/document");
+        return initialDocument != null
+                ? BlueIdCalculator.calculateBlueId(initialDocument)
+                : null;
     }
 
     private static String lifecycleDocumentId(Node event) {
-        Node documentId = event != null && event.getProperties() != null
-                ? event.getProperties().get("documentId")
+        Node document = event != null && event.getProperties() != null
+                ? event.getProperties().get("document")
                 : null;
-        Object value = documentId != null ? documentId.getValue() : null;
-        return value != null ? String.valueOf(value) : null;
+        return document != null
+                ? BlueIdCalculator.calculateBlueId(document)
+                : null;
     }
 
     private static void assertProcessorLifecycleIsLocal(
@@ -916,7 +1205,8 @@ class DocumentProcessorInitializationTest {
         public void execute(CaptureLifecycleDocumentId contract, ProcessorExecutionContext context) {
             String documentId = lifecycleDocumentId(context.event());
             if (documentId == null) {
-                throw new IllegalStateException("Lifecycle event missing documentId");
+                throw new IllegalStateException(
+                        "Lifecycle event missing exact document");
             }
             String propertyKey = contract.getPropertyKey() != null
                     ? contract.getPropertyKey()

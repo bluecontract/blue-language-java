@@ -2,7 +2,7 @@
 
 > **Status.** Final Implementation Baseline. The one-root processing architecture, semantic rules, counter ownership, counter names, formulas, and trace ordering are frozen for implementation. Numerical weights, `MAX_PROCESS_GAS`, and portable limits remain provisional until the calibration corpus is approved. Final public publication MUST bind the calibrated gas manifest, this prose, the canonical runtime registry, machine-readable fixtures, and implementation-conformance evidence in one content-addressed release manifest.
 
-> **Scope.** This document defines deterministic processing for one rooted Blue reality: contracts, channels, handlers, embedded scopes, feeder obligations, external-event ordering, initialization, patches, Document Updates, internal events, checkpoints, lifecycle, termination, gas, and atomic commit behavior. Blue content, BlueId, typing, resolution, expansion, collapse, canonicalization, and minimization are defined by **Blue Language Specification 1.0**. BEX execution is defined by **Blue BEX Specification 2.0**.
+> **Scope.** This document defines deterministic processing for one rooted Blue reality: contracts, channels, handlers, embedded scopes, feeder obligations, external-event ordering, initialization, patches, Document Updates, internal events, checkpoints, lifecycle, termination, gas, and atomic commit behavior. Blue content, BlueId, typing, resolution, expansion, collapse, canonicalization, and minimization are defined by **Blue Language Specification 1.0**. Concrete executable runtimes are separate extensions selected by exact runtime-type BlueId; this specification defines only their generic processor boundary.
 
 Blue Language describes reality. Blue Contracts describe how one exact rooted reality becomes another exact rooted reality when something happens.
 
@@ -12,7 +12,7 @@ The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT**, 
 
 Sections marked **normative** define required behavior. Sections marked **informative** explain intent or implementation guidance.
 
-The term **Language** means Blue Language Specification 1.0. The term **BEX** means Blue BEX Specification 2.0.
+The term **Language** means Blue Language Specification 1.0.
 
 ---
 
@@ -62,7 +62,7 @@ The managing feeder connects external time to deterministic processing.
 Feeder:
   observes every active external channel declared by Root and embedded scopes;
   maintains a revision-complete incremental subscription index;
-  obtains Timeline entries and completeness evidence;
+  obtains externally ordered entries and source-completeness evidence;
   orders external events deterministically;
   derives the exact channel-occurrence snapshot for the next event;
   makes the selected graph branches and verified nodes available;
@@ -163,7 +163,7 @@ This specification does not define:
 
 - Blue Language identity or resolution algorithms;
 - authentication, signatures, authorization, or mandate eligibility;
-- Timeline Provider transport or cryptographic proof formats;
+- concrete source-provider transport or cryptographic proof formats;
 - database schemas, cache layouts, or provider transport;
 - user-interface behavior;
 - consensus among independent platforms;
@@ -178,7 +178,7 @@ This document defines **Blue Contracts and Processor 1.0**, the first public-ver
 
 The first public release begins at 1.0 because internal working drafts did not establish an interoperability or compatibility surface. Implementations MUST treat this specification, its canonical runtime registry, gas manifest, and fixture package as one release unit.
 
-A document does not carry a required `contractsVersion`, `processorVersion`, or `bexVersion`. The managed execution environment selects Contracts 1.0 before processing. Concrete runtime semantics are selected by exact runtime-type BlueId. A type registered as `Compute 2.0`, for example, selects Blue BEX 2.0 semantics and gas.
+A document does not carry a required `contractsVersion` or `processorVersion`. The managed execution environment selects Contracts 1.0 before processing. Concrete runtime semantics are selected by exact runtime-type BlueId and the separately published specification bound to that type.
 
 After a runtime-type BlueId is published, that exact BlueId MUST never acquire different semantics, dispatch fields, subscription extraction, or gas weights.
 
@@ -203,7 +203,7 @@ Registry source, calculated BlueIds, prose, fixtures, and gas manifest MUST agre
 The implementation-baseline runtime registry package identity is:
 
 ```text
-sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366
+sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8
 ```
 
 The machine-readable `blue-contracts/gas/1.0` manifest is normative for counter names, weights, formulas, and portable limits. Its implementation-baseline package identity is:
@@ -244,7 +244,7 @@ A higher-level API MAY accept Source syntax and preprocess it before `PROCESS`. 
 
 `event` is an admitted exact immutable Blue node. Its exact Node BlueId MUST be established before semantic execution. A higher-level API MAY preprocess Source-event syntax before `PROCESS`.
 
-The event is never rewritten to contain a target path or delivery occurrence. Exact identity, signatures, timeline links, and checkpoint subjects therefore remain stable.
+The event is never rewritten to contain a target path or delivery occurrence. Exact identity, signatures, source-chain links, and checkpoint subjects therefore remain stable.
 
 ### 2.3 Processing environment
 
@@ -268,6 +268,12 @@ shared gas limit
 This environment is not Blue content. It MUST be fixed for the attempt and auditably bound to the managed-root revision.
 
 An implementation MAY pass the canonical delivery plan to an internal processor API. The plan is a derived accelerator. It is conforming only when it equals the unique plan defined by §3. It does not change the two-input semantic operation.
+
+### 2.3.1 Cyclic-member processing boundary
+
+A final cyclic-set member identity `MASTER#index` may appear as an opaque edge inside an ordinary Root or event. It is not independently hash-verifiable and therefore MUST NOT be admitted as the top-level mutable Root or top-level event of `PROCESS`. Those inputs fail before provider demand.
+
+A `Process Embedded` path MUST NOT terminate at or traverse through an opaque cyclic-member edge. Structural access to an ordinary opaque member requires a cyclic-aware provider with complete set proof. Carrying an untouched opaque edge and replacing the whole edge with another admitted exact value remain valid.
 
 ### 2.4 ProcessResult
 
@@ -348,7 +354,7 @@ The managing feeder MUST:
 - derive the active external subscription surface from Root and transitively declared embedded scopes;
 - maintain that surface incrementally for each committed Root revision;
 - observe every active source identified by that surface;
-- obtain Timeline Provider completeness evidence;
+- obtain the completeness evidence required by each concrete external-source specification;
 - select the chronologically next eligible external event;
 - derive and retain the canonical delivery snapshot;
 - ensure one event reaches a terminal progress record before a later external event begins;
@@ -370,6 +376,8 @@ ExternalChannelSnapshot {
     dispatchHeader
     subscriptionKeys
     checkpointDomainBlueId
+    declaredSameScopeChannelDependencies
+    sameScopeChannelCatalogIdentity?
 }
 ```
 
@@ -385,10 +393,13 @@ Each portable External Channel runtime type MUST define exact deterministic func
 CHANNEL_KEYS(snapshot) -> finite ordered set of subscription keys
 EVENT_KEYS(event) -> finite ordered set of event keys
 PRESELECTS(snapshot, event) -> Boolean
-ACCEPTS(snapshot, event) -> Boolean
-PAYLOAD(snapshot, event) -> exact channelized Blue node, when accepted
-CHECKPOINT_DOMAIN(snapshot) -> exact BlueId
-CHECKPOINT_SUBJECT(snapshot, event, payload) -> exact node identity
+ACCEPTS(snapshot, event, context) -> Boolean
+PAYLOAD(snapshot, event, context) -> exact channelized Blue node, when accepted
+CHECKPOINT_DOMAIN(snapshot, context) -> exact BlueId
+CHECKPOINT_SUBJECT(snapshot, event, payload, context) -> exact node identity
+DECLARE_CHANNEL_DEPENDENCIES(snapshot, context) -> exact keys or bounded whole-catalog declaration
+HANDLER_CHANNEL_KEY(snapshot, event, payload, context) -> same-scope Channel key
+LOGICAL_DELIVERY_KEY(snapshot, event, payload, context) -> deterministic Text
 ```
 
 The following laws are normative:
@@ -401,6 +412,78 @@ The following laws are normative:
 6. The functions are representation-blind and bounded by the portable limits.
 
 A channel that cannot provide finite subscription keys is not a portable External Channel under Contracts 1.0.
+
+#### 3.3.1 Same-scope Channel dependencies
+
+An External Channel may need immutable headers from another same-scope Channel in order to classify an accepted event. This is a generic Contracts capability; it does not imply that the peer Channel is an external source for the event.
+
+During subscription/header evaluation the runtime MUST declare either:
+
+```text
+one or more exact same-scope Channel keys
+or
+one bounded complete same-scope Channel catalog
+```
+
+The retained subscription interval records the declared dependency surface and its exact identity. The complete catalog contains the canonical raw-key membership of the effective `contracts` map and read-only header snapshots for every effective same-scope Contract whose runtime role is External Channel or Processor Channel. It does not include executable bodies.
+
+During event classification the runtime receives a read-only context with exact lookup:
+
+```text
+LOOKUP_CHANNEL(rawKey) -> CHANNEL(snapshot) | ABSENT | NON_CHANNEL
+```
+
+`ABSENT` is valid only when a declared complete catalog establishes that the raw key is semantically absent. `NON_CHANNEL` establishes that an effective Contract exists at the raw key but its runtime role is not a Channel. A lookup outside the declared dependency surface, unavailable evidence, changed contribution identity, or incomplete catalog MUST fail closed; it MUST NOT be converted to `ABSENT`.
+
+A `ChannelMemberSnapshot` contains only:
+
+```text
+raw key
+order
+effective type BlueId
+runtime role
+ordered source-contribution BlueIds
+registered immutable dispatch/header fields
+deterministic dependency BlueIds
+header identity
+```
+
+Reading a peer snapshot MUST NOT evaluate that peer as an External Channel, give it checkpoint authority, run its handlers, or load an executable body.
+
+#### 3.3.2 Source Channel and handler Channel
+
+Every accepted raw External Channel occurrence has two channel identities:
+
+```text
+sourceChannelKey
+handlerChannelKey
+```
+
+The source Channel performed external acceptance and owns checkpoint domain, checkpoint subject, and checkpoint write. `HANDLER_CHANNEL_KEY` defaults to the source key but MAY select another declared same-scope Channel key. The selected target MUST resolve to a `CHANNEL` lookup result. A concrete runtime MAY define ordinary-source fallback for `ABSENT` or `NON_CHANNEL`; the fallback rule is part of that exact runtime type and MUST be deterministic.
+
+The target Channel is not evaluated as another external occurrence and is not checkpointed merely because it is the handler target. Handlers are selected by the frozen `handlerChannelKey`.
+
+#### 3.3.3 Logical delivery grouping
+
+After rejection and stale filtering, accepted-new raw source occurrences are grouped by:
+
+```text
+(scopePath, logicalDeliveryKey)
+```
+
+The default `logicalDeliveryKey` is the raw source key. Every source in one group MUST agree on:
+
+```text
+exact payload identity
+handlerChannelKey
+logical delivery identity
+```
+
+One group executes the target handlers exactly once. Every fresh participating source retains its own checkpoint domain and subject. All participating source checkpoints commit only after the grouped handler execution and caused internal-event drain succeed. Failure, termination before checkpoint, cut-off, gas exhaustion, or rollback commits none of the group's source checkpoints. Rejected and stale sources are not participants.
+
+If fresh sources assigned to one group disagree on payload identity, handler Channel identity, or logical delivery identity, classification fails atomically with `runtime-fatal` and diagnostic category `InconsistentLogicalDelivery`. No initialization, Handler execution, checkpoint, Root event, or document mutation commits.
+
+Logical grouping is run state, not Blue content and not part of `ProcessResult`.
 
 ### 3.4 Revision-complete subscription index
 
@@ -447,17 +530,11 @@ A channel or embedded scope introduced while processing event `E` begins strictl
 
 Removing and later re-adding a channel starts a new interval unless the exact channel runtime type explicitly defines a deterministic checkpoint/cursor migration. Reusing the same contract key does not silently resume a semantically different channel.
 
-### 3.6 Timeline completeness and canonical external order
+### 3.6 External completeness and canonical order
 
-The feeder MUST not process event `E` until it has completeness evidence that no active subscribed source can later produce an eligible event ordered before `E`.
+The feeder MUST not process event `E` until the concrete external-source ecosystem has supplied completeness evidence that no active subscribed source can later produce an eligible event ordered before `E`.
 
-The canonical external order is supplied by the concrete Timeline/channel ecosystem. For Timeline Entries it SHOULD be based on:
-
-```text
-(timestamp, provider/timeline identity, source sequence, entry Node BlueId)
-```
-
-with every tie-breaker exact and deterministic.
+The concrete source specification MUST publish one exact total-order key and completeness rule. Contracts core treats that key as opaque ordered evidence. It does not define clocks, timelines, providers, or source-specific tie-breakers.
 
 No later external event may interleave with the retained deliveries of the current event. The complete canonical delivery set of `E` reaches one terminal progress record before the feeder begins `E2`.
 
@@ -1035,8 +1112,11 @@ For each snapshot entry in canonical order:
 6. charge and evaluate `PRESELECTS` and `ACCEPTS`;
 7. if rejected, record no accepted delivery and continue;
 8. construct and freeze payload, checkpoint domain, and subject;
-9. compare the checkpoint;
-10. record the accepted occurrence as `new` or `stale`.
+9. evaluate declared same-scope Channel dependencies;
+10. freeze `handlerChannelKey` and `logicalDeliveryKey`;
+11. compare the source checkpoint;
+12. record the accepted raw source occurrence as `new` or `stale`;
+13. after all entries are classified, group accepted-new sources under §3.3.3 and reject inconsistent groups before mutation.
 
 This phase is read-only. It does not initialize, execute Handlers, write checkpoints, or mutate Root.
 
@@ -1059,18 +1139,18 @@ Unsupported or malformed runtime structure produces atomic failure before initia
 
 ### 7.5 Phase D — process accepted-new deliveries
 
-Process accepted-new external deliveries in the original canonical delivery order.
+Process accepted-new logical delivery groups in the canonical order of their first participating source occurrence. Raw source occurrences inside one group retain their original canonical order for checkpoint writes.
 
 Before each delivery:
 
 1. skip if its scope is cut off, removed, or under a terminated scope;
 2. initialize every uninitialized active scope on Root-to-target chain in top-down order;
 3. re-check cut-off and termination;
-4. invoke the frozen external Channel delivery and post-initialization Handler snapshot;
+4. invoke the frozen logical delivery using its exact payload and frozen handler Channel;
 5. apply every Handler result;
 6. call `DRAIN_INTERNAL_EVENTS` exactly once to quiescence;
-7. if the delivery scope remains active, nonterminating, and nonterminated, write the frozen checkpoint entry;
-8. call `DRAIN_INTERNAL_EVENTS` again only if checkpoint policy itself is defined by a runtime extension that legitimately emitted events; core checkpoint writes never do.
+7. if the delivery scope remains active, nonterminating, and nonterminated, write every participating source checkpoint in canonical raw-source order;
+8. call `DRAIN_INTERNAL_EVENTS` again only if a registered checkpoint extension legitimately emitted events; core checkpoint writes never do.
 
 If Root terminates, later external deliveries are skipped.
 
@@ -1091,11 +1171,11 @@ A scope initialized earlier in the same invocation is not initialized again.
 
 ### 7.7 One external delivery
 
-For one accepted-new External Channel occurrence:
+For one accepted-new logical delivery group:
 
 ```text
-1. Use the frozen channel and payload snapshot.
-2. Discover current post-initialization same-scope Handlers bound to channelKey.
+1. Use the frozen payload, handler Channel snapshot, and participating raw source snapshots.
+2. Discover current post-initialization same-scope Handlers bound to handlerChannelKey.
 3. Sort and freeze candidates.
 4. For each candidate:
      a. charge and evaluate its matcher;
@@ -1317,6 +1397,8 @@ A larger exact node may still be carried opaquely by BlueId. An operation that n
 
 Core runtime patches MUST NOT enter or structurally modify one member of a cyclic-set identity. A complete cyclic set may be replaced atomically as an already admitted new set. Otherwise processing fails with `CyclicSetMutationUnsupported`.
 
+Opaque cyclic-member edges are valid ordinary content and may remain untouched through copy-on-write reconstruction. They are not independent processing roots, external events, or embedded-scope roots. Admission, embedded-boundary validation, and patch planning MUST reject unsupported cyclic access before demanding a member body.
+
 ---
 
 ## 9. Initialization, Lifecycle, and Termination
@@ -1338,13 +1420,13 @@ capability failure
 
 ### 9.2 Initialization identity
 
-The Document Processing Initiated event records the exact scope Node BlueId as it existed immediately before initialization effects. It does not compute Content BlueId.
+The Document Processing Initiated event carries the exact scope document as it existed immediately before initialization effects. That node may be carried as a pure reference or verified materialization; both forms are the same document and do not change processing or gas. Content BlueId is not computed.
 
 ### 9.3 Initialization algorithm
 
 For one uninitialized active scope:
 
-1. freeze its pre-initialization exact Node BlueId;
+1. freeze its exact pre-initialization scope document and Node BlueId;
 2. mark it `initializing` in run state;
 3. create Document Processing Initiated;
 4. deliver matching Lifecycle Channels and Handlers;
@@ -1785,7 +1867,7 @@ An ordinary API may return only `totalGas`, but a conforming implementation MUST
 
 ### 13.4 Shared live-bounded meter
 
-Processor, semantic Language work, external channels, Handlers, workflows, BEX, and intrinsics share one meter.
+Processor work, semantic Language work, external channels, Handlers, workflows, executable runtimes, and registered intrinsics share one meter.
 
 A runtime child meter receives the exact remaining budget. It admits every child charge live. Its ledger is merged once in original order. A runtime-local gas limit may only lower the available budget; it cannot replenish it.
 
@@ -1915,7 +1997,7 @@ When processor semantics require sorting a candidate set, canonical gas is calcu
 
 Implementations may use another physical algorithm but MUST report this canonical trace.
 
-External Timeline event ordering and index lookup are feeder work and do not use this processor counter.
+External event ordering and subscription-index lookup are feeder work and do not use this processor counter.
 
 ### 13.11 Type, contract, and validation work
 
@@ -1973,13 +2055,13 @@ The fixed list-cons hash input is represented by the fold counter and is not cha
 
 ### 13.14 Runtime ledger composition
 
-Each executable runtime type publishes exact named counters and weights. Blue BEX 2.0 uses the schedule in its specification.
+Each executable runtime type publishes exact named counters and weights in its own specification and runtime registry.
 
 Runtime construction work and semantic identity admission are distinct:
 
 ```text
-BEX creates a 100-member object:
-  BEX charges members produced.
+A concrete compute runtime creates a 100-member object:
+  that runtime charges members produced.
 
 The value crosses a Blue output/patch boundary:
   Contracts/Language charges node identity and direct-container work.
@@ -2026,7 +2108,7 @@ allocation and host copying
 hash-cache lookup
 transport serialization
 subscription-index maintenance/query
-Timeline completeness queries
+external-source completeness queries
 external event sorting
 failed compare-and-swap and recomputation
 ```
@@ -2248,6 +2330,10 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-SND-02.** Nearest-valid type generalization is deterministic and bounded by policy.
 - **C-SND-03.** Generated type writes create Document Updates and are re-recognized.
 - **C-SND-04.** Cyclic-set member mutation is rejected.
+- **C-CYC-01.** A pure cyclic-set member is rejected as an independently mutable processing Root before provider demand.
+- **C-CYC-02.** A pure cyclic-set member is rejected as a top-level processing event before provider demand.
+- **C-CYC-03.** `Process Embedded` cannot terminate at or traverse through an opaque cyclic-member edge.
+- **C-CYC-04.** An ordinary Root can preserve an untouched opaque cyclic-member edge while unrelated selected processing succeeds without opening it.
 - **C-IDX-01.** A new Root with invalid embedded path, cycle, unsupported subscription extraction, or excess limit rolls back.
 - **C-IDX-02.** Valid subscription delta is incremental and new intervals start after the current event.
 - **C-FAIL-01.** Deterministic failure returns input Root, no events, and admitted gas.
@@ -2264,7 +2350,15 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-GAS-04.** Text comparison, Integer limbs, and canonical sorting produce exact traces.
 - **C-GAS-05.** Direct identity blocks charge only new/changed direct identity, never unchanged transitive content.
 - **C-GAS-06.** Runtime child ledgers are live-bounded and merged exactly once.
-- **C-GAS-07.** BEX representation state is unobservable and recursive `estimatedSize` is absent.
+- **C-GAS-07.** Executable-runtime representation state is unobservable and recursive boundary-size charging is absent.
+- **C-ROUTE-01.** The default handler Channel equals the accepted source Channel and preserves existing one-source behavior.
+- **C-ROUTE-02.** A declared peer same-scope Channel may be frozen as handler target without being externally evaluated or checkpointed.
+- **C-ROUTE-03.** Exact absent and present-non-Channel target lookups remain distinguishable; unavailable or undeclared evidence fails closed.
+- **C-ROUTE-04.** Several fresh sources with the same logical delivery key, target, and payload execute handlers once and checkpoint every source only after success.
+- **C-ROUTE-05.** A stale source does not piggyback on a fresh source in the same logical group.
+- **C-ROUTE-06.** Group target or payload disagreement fails atomically before mutation.
+- **C-INIT-06.** The initialization marker and initiated event carry the exact initial scope document; inline and pure-reference forms yield the same Root, lifecycle behavior, gas, and trace.
+- **C-LOOP-01.** An internal event cycle is stopped by the shared gas limit and rolls back Root and Root events.
 - **C-GAS-08.** Provider verification and transport are outside portable gas.
 - **C-E2E-01.** A complete successful Root transition fixture asserts exact status, resulting document, Root event order, named trace, total gas, and semantic demands.
 - **C-E2E-02.** A deep embedded delivery fixture asserts the same complete result dimensions and returns an empty public event sequence when Root emits nothing.
@@ -2305,7 +2399,7 @@ expected:
 The implementation-baseline fixture-package identity is:
 
 ```text
-sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5
+sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca
 ```
 
 The package contains 78 normative vectors, 69 behavior fixtures, and 58 gas fixtures. The behavior-fixture count is not required to equal the vector count because one executable fixture may cover several inseparable normative assertions.
@@ -2320,19 +2414,19 @@ The package contains 78 normative vectors, 69 behavior fixtures, and 58 gas fixt
 ```yaml
 contracts:
   buyerChannel:
-    type: Timeline Channel
-    timeline:
-      blueId: <buyer-timeline>
+    type: Example External Channel
+    source:
+      blueId: <buyer-source>
 
   approve:
-    type: Sequential Workflow Operation
+    type: Example Lazy Operation Handler
     channel: buyerChannel
     operation: approve
     steps:
       blueId: <approve-steps>
 
   cancel:
-    type: Sequential Workflow Operation
+    type: Example Lazy Operation Handler
     channel: buyerChannel
     operation: cancel
     steps:
@@ -2466,7 +2560,7 @@ A later Root replaces the effective channel contributions at `buyer` with semant
 
 ### 16.8 New subscription frontier
 
-Event `A@100` adds a Bob Timeline Channel while Bob's Timeline already contains `B@50`.
+Event `A@100` adds a new external-source Channel while that source already contains `B@50`.
 
 The new interval begins strictly after `A@100`. `B@50` is not delivered retroactively. An initial Root admission that intends historical replay must declare a historical frontier explicitly.
 
@@ -2571,9 +2665,11 @@ Direct processor state at `contracts/initialized`:
 
 ```yaml
 name: Processing Initialized Marker
-documentId:
-  type: Text
-  description: Exact scope Node BlueId immediately before initialization effects.
+document:
+  description: >
+    Exact pre-initialization scope document. This is the initial document for
+    the scope's processing lifecycle. It may be materialized inline or
+    represented as an equivalent pure { blueId: ... } reference.
 ```
 
 ### A.9 Processing Terminated Marker
@@ -2703,8 +2799,10 @@ It is not automatically emitted by the receiving scope.
 Lifecycle event with:
 
 ```text
-documentId exact pre-initialization scope Node BlueId
+document exact pre-initialization scope document
 ```
+
+The document may be inline or an equivalent pure reference.
 
 `$processingEvent` remains the original external event.
 
@@ -2766,6 +2864,9 @@ TypeCompatibilityViolation
 SchemaViolation
 TypeGeneralizationFailure
 CyclicSetMutationUnsupported
+CyclicMemberProcessingRootUnsupported
+CyclicMemberProcessingEventUnsupported
+CyclicSetEmbeddedBoundaryUnsupported
 DirectNodeLimitExceeded
 MatchingDeliveryLimitExceeded
 ParticipatingScopeLimitExceeded

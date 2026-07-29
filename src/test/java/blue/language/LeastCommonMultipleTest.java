@@ -5,19 +5,39 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class LeastCommonMultipleTest {
 
     @Test
-    public void testLCM() {
-        assertEquals(BigDecimal.valueOf(6), LeastCommonMultiple.lcm(BigDecimal.valueOf(2), BigDecimal.valueOf(3)));
-        assertEquals(BigDecimal.valueOf(4), LeastCommonMultiple.lcm(BigDecimal.valueOf(2), BigDecimal.valueOf(4)));
-        assertEquals(BigDecimal.valueOf(12), LeastCommonMultiple.lcm(BigDecimal.valueOf(4), BigDecimal.valueOf(6)));
-        assertEquals(BigDecimal.valueOf(12), LeastCommonMultiple.lcm(BigDecimal.valueOf(4), BigDecimal.valueOf(3)));
-        assertEquals(BigDecimal.valueOf(12), LeastCommonMultiple.lcm(BigDecimal.valueOf(-4), BigDecimal.valueOf(6)));
-        assertEquals(BigDecimal.valueOf(1.2), LeastCommonMultiple.lcm(BigDecimal.valueOf(0.4), BigDecimal.valueOf(0.6)));
-        assertEquals(BigDecimal.ZERO, LeastCommonMultiple.lcm(BigDecimal.valueOf(1), BigDecimal.valueOf(0)));
+    public void shouldCalculateLeastCommonMultiple() {
+        // given
+        BigDecimal[][] inputs = {
+                {BigDecimal.valueOf(2), BigDecimal.valueOf(3)},
+                {BigDecimal.valueOf(2), BigDecimal.valueOf(4)},
+                {BigDecimal.valueOf(4), BigDecimal.valueOf(6)},
+                {BigDecimal.valueOf(4), BigDecimal.valueOf(3)},
+                {BigDecimal.valueOf(-4), BigDecimal.valueOf(6)},
+                {BigDecimal.valueOf(0.4), BigDecimal.valueOf(0.6)},
+                {BigDecimal.ONE, BigDecimal.ZERO}
+        };
+        BigDecimal[] expected = {
+                BigDecimal.valueOf(6),
+                BigDecimal.valueOf(4),
+                BigDecimal.valueOf(12),
+                BigDecimal.valueOf(12),
+                BigDecimal.valueOf(12),
+                BigDecimal.valueOf(1.2),
+                BigDecimal.ZERO
+        };
+
+        // when
+        BigDecimal[] actual = new BigDecimal[inputs.length];
+        for (int index = 0; index < inputs.length; index++) {
+            actual[index] = LeastCommonMultiple.lcm(inputs[index][0], inputs[index][1]);
+        }
+
+        // then
+        assertArrayEquals(expected, actual);
     }
 }

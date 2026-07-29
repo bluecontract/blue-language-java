@@ -1,16 +1,21 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
+import blue.language.Blue;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodePathEditor;
 import blue.language.utils.ParsedJsonPointer;
@@ -28,13 +33,21 @@ import java.util.IdentityHashMap;
 import java.util.function.Supplier;
 
 /**
- * Runtime state holder for a single document-processing invocation.
+ * Mutable state owner for exactly one document-processing invocation.
+ *
+ * <p>Canonical document publication, resolved snapshots, gas, conformance
+ * trace, emissions, and patch commits share this lifetime. Mutation entry
+ * points are atomic: candidate roots and their snapshot metadata are promoted
+ * together or the prior runtime state remains active.</p>
  */
 public final class DocumentProcessingRuntime {
 
     private final MaterializedDocumentView materializedView;
     private final EmissionRegistry emissionRegistry;
     private final GasMeter gasMeter;
+    private final SemanticOutputBoundary.AdmissionMemo
+            semanticOutputAdmissionMemo =
+            new SemanticOutputBoundary.AdmissionMemo();
     private final Map<String, List<String>> executableBodyFieldsByType;
     private final ProcessingConformanceTrace.Builder conformanceTrace =
             new ProcessingConformanceTrace.Builder();
@@ -69,20 +82,63 @@ public final class DocumentProcessingRuntime {
     private long sequenceFallbackPatches;
     private final Set<String> changedPaths = new LinkedHashSet<>();
 
+    /**
+     * Creates a runtime over a caller-owned mutable selected document.
+     *
+     * <p>The supplied root is retained. Successful commits mutate that same
+     * root object, while failed atomic operations restore its prior contents.
+     * This overload has no configured snapshot or conformance service.</p>
+     *
+     * @param document non-null selected document retained for this invocation
+     * @throws NullPointerException if {@code document} is {@code null}
+     */
     public DocumentProcessingRuntime(Node document) {
         this(document, null, null);
     }
 
+    /**
+     * Creates a node-backed runtime with an optional conformance engine.
+     *
+     * @param document non-null selected document retained and mutated on
+     *        successful commits
+     * @param conformanceEngine conformance engine, or {@code null}
+     * @throws NullPointerException if {@code document} is {@code null}
+     */
     public DocumentProcessingRuntime(Node document, ConformanceEngine conformanceEngine) {
         this(document, conformanceEngine, null);
     }
 
+    /**
+     * Creates a node-backed runtime with optional conformance and snapshot
+     * services.
+     *
+     * @param document non-null selected document retained and mutated on
+     *        successful commits
+     * @param conformanceEngine conformance engine, or {@code null}
+     * @param snapshotManager invocation snapshot manager used for resolution
+     *        and cache publication, or {@code null}
+     * @throws NullPointerException if {@code document} is {@code null}
+     */
     public DocumentProcessingRuntime(Node document,
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager) {
         this(document, conformanceEngine, snapshotManager, null);
     }
 
+    /**
+     * Creates a node-backed runtime with optional instrumentation.
+     *
+     * <p>A {@code null} metrics sink selects
+     * {@link ProcessingMetricsSink#NOOP}. The runtime creates and owns one gas
+     * meter for the invocation.</p>
+     *
+     * @param document non-null selected document retained and mutated on
+     *        successful commits
+     * @param conformanceEngine conformance engine, or {@code null}
+     * @param snapshotManager invocation snapshot manager, or {@code null}
+     * @param metrics borrowed thread-safe metrics sink, or {@code null}
+     * @throws NullPointerException if {@code document} is {@code null}
+     */
     public DocumentProcessingRuntime(Node document,
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager,
@@ -90,6 +146,17 @@ public final class DocumentProcessingRuntime {
         this(document, conformanceEngine, null, snapshotManager, metrics);
     }
 
+    /**
+     * Creates a fully configured node-backed runtime.
+     *
+     * @param document non-null selected document retained and mutated on
+     *        successful commits
+     * @param conformanceEngine conformance engine, or {@code null}
+     * @param conformancePlannerOverride optional borrowed planning override
+     * @param snapshotManager invocation snapshot manager, or {@code null}
+     * @param metrics borrowed thread-safe metrics sink, or {@code null}
+     * @throws NullPointerException if {@code document} is {@code null}
+     */
     public DocumentProcessingRuntime(Node document,
                                      ConformanceEngine conformanceEngine,
                                      ConformancePlannerOverride conformancePlannerOverride,
@@ -140,12 +207,33 @@ public final class DocumentProcessingRuntime {
         this.selectedDocumentBacked = true;
     }
 
+    /**
+     * Creates a runtime from an immutable canonical/resolved snapshot.
+     *
+     * <p>The supplied snapshot is not mutated. Frozen lanes are retained and
+     * mutable copies are materialized only when required.</p>
+     *
+     * @param snapshot non-null immutable starting snapshot
+     * @param conformanceEngine conformance engine, or {@code null}
+     * @param snapshotManager invocation snapshot manager, or {@code null}
+     * @throws NullPointerException if {@code snapshot} is {@code null}
+     */
     public DocumentProcessingRuntime(ResolvedSnapshot snapshot,
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager) {
         this(snapshot, conformanceEngine, snapshotManager, null);
     }
 
+    /**
+     * Creates a snapshot-backed runtime with optional instrumentation.
+     *
+     * @param snapshot non-null immutable starting snapshot
+     * @param conformanceEngine conformance engine, or {@code null}
+     * @param snapshotManager invocation snapshot manager, or {@code null}
+     * @param metrics borrowed thread-safe metrics sink, or {@code null} to use
+     *        {@link ProcessingMetricsSink#NOOP}
+     * @throws NullPointerException if {@code snapshot} is {@code null}
+     */
     public DocumentProcessingRuntime(ResolvedSnapshot snapshot,
                                      ConformanceEngine conformanceEngine,
                                      ProcessingSnapshotManager snapshotManager,
@@ -153,6 +241,19 @@ public final class DocumentProcessingRuntime {
         this(snapshot, conformanceEngine, null, snapshotManager, metrics);
     }
 
+    /**
+     * Creates a fully configured snapshot-backed runtime.
+     *
+     * <p>Successful commits replace the runtime's current immutable snapshot;
+     * they never mutate the supplied snapshot instance.</p>
+     *
+     * @param snapshot non-null immutable starting snapshot
+     * @param conformanceEngine conformance engine, or {@code null}
+     * @param conformancePlannerOverride optional borrowed planning override
+     * @param snapshotManager invocation snapshot manager, or {@code null}
+     * @param metrics borrowed thread-safe metrics sink, or {@code null}
+     * @throws NullPointerException if {@code snapshot} is {@code null}
+     */
     public DocumentProcessingRuntime(ResolvedSnapshot snapshot,
                                      ConformanceEngine conformanceEngine,
                                      ConformancePlannerOverride conformancePlannerOverride,
@@ -286,7 +387,7 @@ public final class DocumentProcessingRuntime {
                 new LinkedHashMap<>();
         Deque<String> pending = new ArrayDeque<>();
         Set<String> visited = new LinkedHashSet<>();
-        pending.add("/");
+        pending.add(JsonPointer.ROOT);
         while (!pending.isEmpty()) {
             String scopePath = pending.removeFirst();
             if (!visited.add(scopePath)) {
@@ -437,7 +538,8 @@ public final class DocumentProcessingRuntime {
             }
             FrozenNode paths =
                     contract != null
-                            ? contract.property("paths")
+                            ? contract.property(
+                            ProcessorContractConstants.KEY_PATHS)
                             : null;
             List<FrozenNode> items =
                     paths != null ? paths.getItems() : null;
@@ -478,11 +580,22 @@ public final class DocumentProcessingRuntime {
         List<String> path =
                 new ArrayList<>(
                         JsonPointer.split(scopePath));
-        path.add("contracts");
+        path.add(ProcessorContractConstants.KEY_CONTRACTS);
         path.add(contractKey);
         return JsonPointer.toPointer(path);
     }
 
+    /**
+     * Returns the current authoritative runtime representation.
+     *
+     * <p>Snapshot-backed invocations return the resolved root; selected-node
+     * invocations synchronize pending materialized state first. Snapshot
+     * results are fresh mutable copies; a node-backed result is the live
+     * caller-supplied root and must not be mutated outside runtime
+     * operations.</p>
+     *
+     * @return current resolved document representation
+     */
     public Node document() {
         if (!selectedDocumentBacked && snapshot != null) {
             return snapshot.resolvedRoot();
@@ -499,31 +612,70 @@ public final class DocumentProcessingRuntime {
         return materializedView.root();
     }
 
+    /**
+     * Returns the live invocation-owned scope registry. It must not escape the
+     * invocation or be used as durable document state.
+     *
+     * @return mutable live map keyed by absolute scope path
+     */
     public Map<String, ScopeRuntimeContext> scopes() {
         return emissionRegistry.scopes();
     }
 
+    /**
+     * Returns or creates invocation state for an absolute scope path.
+     *
+     * <p>Callers own path normalization; the supplied spelling is the registry
+     * key. Root-equivalent paths initialize embedded depth to zero.</p>
+     *
+     * @param scopePath absolute processing scope path
+     * @return live invocation-owned scope context
+     * @throws NullPointerException if a new context is requested with a
+     *         {@code null} path
+     */
     public ScopeRuntimeContext scope(String scopePath) {
         ScopeRuntimeContext context = emissionRegistry.scope(scopePath);
-        if ("/".equals(PointerUtils.normalizeScope(scopePath))) {
+        if (JsonPointer.ROOT.equals(
+                PointerUtils.normalizeScope(scopePath))) {
             context.setEmbeddedDepth(0);
         }
         return context;
     }
 
+    /**
+     * Looks up already-created invocation state without creating it.
+     *
+     * @param scopePath exact registry scope key
+     * @return live scope context, or {@code null} when absent
+     */
     public ScopeRuntimeContext existingScope(String scopePath) {
         return emissionRegistry.existingScope(scopePath);
     }
 
+    /**
+     * Returns root emissions in their public FIFO output order.
+     *
+     * @return live invocation-owned mutable list
+     */
     public List<Node> rootEmissions() {
         return emissionRegistry.rootEmissions();
     }
 
+    /**
+     * Admits a root emission after enforcing the published output limit.
+     *
+     * <p>The node is retained by reference after successful admission.</p>
+     *
+     * @param emission non-null root emission
+     * @throws NullPointerException if {@code emission} is {@code null}
+     * @throws PortableLimitExceededException if admitting the emission would
+     *         exceed the portable root-output limit
+     */
     public void recordRootEmission(Node emission) {
         long observed = emissionRegistry.rootEmissions().size() + 1L;
         enforcePortableLimit(
                 ProcessorErrorCategory.InternalEventLimitExceeded,
-                "rootEventsReturned",
+                GasScheduleConstants.PortableLimit.ROOT_EVENTS_RETURNED,
                 observed);
         emissionRegistry.recordRootEmission(emission);
     }
@@ -542,7 +694,7 @@ public final class DocumentProcessingRuntime {
                 emissionRegistry.enqueuedOccurrenceCount() + 1L;
         enforcePortableLimit(
                 ProcessorErrorCategory.InternalEventLimitExceeded,
-                "internalEventOccurrencesPerInvocation",
+                GasScheduleConstants.PortableLimit.INTERNAL_EVENT_OCCURRENCES,
                 observed);
         emissionRegistry.enqueue(occurrence);
     }
@@ -559,37 +711,99 @@ public final class DocumentProcessingRuntime {
         return emissionRegistry.pendingOccurrenceCount();
     }
 
+    /**
+     * Opens a legacy detached child ledger.
+     *
+     * <p>Hosted processor phases should prefer
+     * {@link RuntimeWorkSession#openLedger(String, Map)}, which also enforces
+     * ownership and canonical multi-ledger merge semantics. This detached
+     * ledger snapshots the currently remaining parent budget and copies its
+     * counter catalog. It must later be merged exactly once.</p>
+     *
+     * @param namespace non-empty runtime namespace disjoint from core
+     *        namespaces
+     * @param counterWeights complete counter-to-weight catalog copied by the
+     *        child ledger
+     * @return detached invocation child ledger
+     * @throws NullPointerException if {@code namespace},
+     *         {@code counterWeights}, a counter, or a weight is {@code null}
+     * @throws IllegalArgumentException if the namespace or a counter/weight is
+     *         invalid
+     * @throws PortableLimitExceededException if the counter catalog exceeds
+     *         the portable runtime-ledger kind limit
+     */
     public GasMeter.ChildGasLedger newRuntimeGasLedger(
             String namespace,
             Map<String, Long> counterWeights) {
         long kindLimit = gasMeter.schedule()
-                .portableLimit("runtimeChildLedgerCounterKinds");
+                .portableLimit(GasScheduleConstants.PortableLimit.RUNTIME_CHILD_LEDGER_COUNTER_KINDS);
         if (counterWeights != null && counterWeights.size() > kindLimit) {
             throw new PortableLimitExceededException(
                     ProcessorErrorCategory.RuntimeLedgerLimitExceeded,
-                    "runtimeChildLedgerCounterKinds",
+                    GasScheduleConstants.PortableLimit.RUNTIME_CHILD_LEDGER_COUNTER_KINDS,
                     counterWeights.size(),
                     kindLimit);
         }
         return gasMeter.childLedger(namespace, counterWeights);
     }
 
+    RuntimeWorkSession newRuntimeWorkSession(Blue blue) {
+        RuntimeWorkSession session =
+                new RuntimeWorkSession(
+                        gasMeter,
+                        RuntimeWorkSession.Mode.PROCESSING);
+        if (blue != null) {
+            session.attachSemanticOutputBoundary(
+                    new SemanticOutputBoundary(
+                            session,
+                            blue,
+                            currentSnapshotManager(),
+                            gasMeter.semantic(),
+                            semanticOutputAdmissionMemo));
+        }
+        return session;
+    }
+
     void mergeRuntimeGasLedger(GasMeter.ChildGasLedger ledger) {
         gasMeter.merge(ledger);
     }
 
+    /**
+     * Returns the live gas meter owned by this invocation.
+     *
+     * <p>Charges, semantic gas, child-ledger merges, and the trace share this
+     * single lifecycle. The meter must not be reused by another invocation.</p>
+     *
+     * @return invocation-owned mutable gas meter
+     */
     public GasMeter gasMeter() {
         return gasMeter;
     }
 
+    /**
+     * Returns paths changed by committed writes and patches.
+     *
+     * @return immutable defensive snapshot in first-change order
+     */
     public Set<String> changedPaths() {
         return Collections.unmodifiableSet(new LinkedHashSet<>(changedPaths));
     }
 
+    /**
+     * Builds the current conformance trace including admitted gas entries.
+     *
+     * @return immutable trace snapshot at call time
+     */
     public ProcessingConformanceTrace conformanceTrace() {
         return conformanceTrace.build(gasMeter.trace());
     }
 
+    /**
+     * Records a semantic demand in first-observation order.
+     *
+     * @param demand stable path or BlueId demand; {@code null} and empty
+     *        values are ignored
+     */
     public void recordSemanticDemand(String demand) {
         conformanceTrace.semanticDemand(demand);
     }
@@ -660,158 +874,420 @@ public final class DocumentProcessingRuntime {
         conformanceTrace.record(kind, scopePath, contractKey, logicalPath);
     }
 
+    /**
+     * Returns gas admitted to this invocation's parent ledger.
+     *
+     * @return exact admitted gas total
+     */
     public long totalGas() {
         return gasMeter.totalGas();
     }
 
+    /**
+     * Charges the fixed processing-invocation counter.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeProcessInvocation() {
         gasMeter.chargeProcessInvocation();
     }
 
+    /**
+     * Returns the semantic meter sharing this invocation's gas budget.
+     *
+     * @return invocation-owned semantic gas meter
+     */
     public SemanticGasMeter semanticGas() {
         return gasMeter.semantic();
     }
 
+    /**
+     * Charges one delivery-snapshot entry.
+     *
+     * @param scopePath absolute scope attributed to the charge
+     * @param contractKey scope-local contract key
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeDeliverySnapshotEntry(String scopePath, String contractKey) {
         gasMeter.chargeDeliverySnapshotEntry(scopePath, contractKey);
     }
 
+    /**
+     * Charges entry into one participating scope.
+     *
+     * @param scopePath absolute scope attributed to the charge
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeScopeEntry(String scopePath) {
         gasMeter.chargeScopeEntry(scopePath);
     }
 
+    /**
+     * Charges the admitted participating-scope closure.
+     *
+     * @param quantity non-negative number of scopes
+     * @throws IllegalArgumentException if {@code quantity} is negative
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeParticipatingClosure(long quantity) {
         gasMeter.chargeParticipatingClosure(quantity);
     }
 
+    /**
+     * Charges recognition of one contract header.
+     *
+     * @param scopePath absolute containing scope
+     * @param contractKey scope-local contract key
+     * @param reason stable trace reason
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeContractHeaderRecognized(String scopePath,
                                                String contractKey,
                                                String reason) {
         gasMeter.chargeContractHeaderRecognized(scopePath, contractKey, reason);
     }
 
+    /**
+     * Charges a batch of recognized contract headers.
+     *
+     * @param quantity non-negative number of headers
+     * @param reason stable trace reason
+     * @throws IllegalArgumentException if {@code quantity} is negative
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeContractHeadersRecognized(long quantity, String reason) {
         gasMeter.chargeContractHeadersRecognized(quantity, reason);
     }
 
+    /**
+     * Charges reading one Process Embedded path entry.
+     *
+     * @param scopePath absolute containing scope
+     * @param logicalPath logical embedded path attributed to the charge
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeEmbeddedPathEntryRead(String scopePath, String logicalPath) {
         gasMeter.chargeEmbeddedPathEntryRead(scopePath, logicalPath);
     }
 
+    /**
+     * Charges validated segments of a Process Embedded path.
+     *
+     * @param scopePath absolute containing scope
+     * @param logicalPath logical embedded path
+     * @param quantity non-negative validated segment count
+     * @throws IllegalArgumentException if {@code quantity} is negative
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeEmbeddedPathSegmentsValidated(String scopePath,
                                                     String logicalPath,
                                                     long quantity) {
         gasMeter.chargeEmbeddedPathSegmentsValidated(scopePath, logicalPath, quantity);
     }
 
+    /**
+     * Retains the minimum observed embedded depth for a scope occurrence.
+     *
+     * @param scopePath absolute scope path
+     * @param depth non-negative embedded depth
+     * @throws IllegalArgumentException if {@code depth} is negative
+     */
     public void setScopeEmbeddedDepth(String scopePath, int depth) {
         scope(scopePath).setEmbeddedDepth(depth);
     }
 
+    /**
+     * Returns the retained embedded depth for a scope occurrence.
+     *
+     * <p>The scope context is created if it does not yet exist.</p>
+     *
+     * @param scopePath absolute scope path
+     * @return minimum embedded depth recorded for the occurrence
+     */
     public int scopeEmbeddedDepth(String scopePath) {
         return scope(scopePath).embeddedDepth();
     }
 
+    /**
+     * Charges initialization of one scope.
+     *
+     * @param scopePath absolute initialized scope
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeInitialization(String scopePath) {
         gasMeter.chargeInitialization(scopePath);
     }
 
+    /**
+     * Charges one channel-match attempt.
+     *
+     * @param scopePath absolute containing scope
+     * @param contractKey channel contract key
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeChannelMatchAttempt(String scopePath, String contractKey) {
         gasMeter.chargeChannelMatchAttempt(scopePath, contractKey);
     }
 
+    /**
+     * Charges one accepted channel.
+     *
+     * @param scopePath absolute containing scope
+     * @param contractKey channel contract key
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeChannelAccepted(String scopePath, String contractKey) {
         gasMeter.chargeChannelAccepted(scopePath, contractKey);
     }
 
+    /**
+     * Charges testing one handler candidate.
+     *
+     * @param scopePath absolute containing scope
+     * @param contractKey handler contract key
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeHandlerCandidateTested(String scopePath, String contractKey) {
         gasMeter.chargeHandlerCandidateTested(scopePath, contractKey);
     }
 
+    /**
+     * Charges one handler call overhead.
+     *
+     * @param scopePath absolute containing scope
+     * @param contractKey handler contract key
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeHandlerOverhead(String scopePath, String contractKey) {
         gasMeter.chargeHandlerOverhead(scopePath, contractKey);
     }
 
+    /**
+     * Charges one patch-boundary check.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeBoundaryCheck() {
         gasMeter.chargeBoundaryCheck();
     }
 
+    /**
+     * Charges one mutable add-or-replace patch operation.
+     *
+     * @param value authored patch value used only for operation attribution
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargePatchAddOrReplace(Node value) {
         gasMeter.chargePatchAddOrReplace(value);
     }
 
+    /**
+     * Charges one frozen add-or-replace patch operation.
+     *
+     * @param value immutable authored patch value used for attribution
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeFrozenPatchAddOrReplace(FrozenNode value) {
         gasMeter.chargeFrozenPatchAddOrReplace(value);
     }
 
+    /**
+     * Charges one frozen add-or-replace patch with a precomputed authored
+     * size.
+     *
+     * @param authoredCanonicalSizeBytes non-negative canonical byte size
+     * @throws IllegalArgumentException if the supplied size is negative
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeFrozenPatchAddOrReplace(long authoredCanonicalSizeBytes) {
         gasMeter.chargeFrozenPatchAddOrReplace(authoredCanonicalSizeBytes);
     }
 
+    /**
+     * Charges one remove patch operation.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargePatchRemove() {
         gasMeter.chargePatchRemove();
     }
 
+    /**
+     * Charges delivery of a Document Update to matching scopes.
+     *
+     * @param scopeCount matching delivery count; non-positive values incur no
+     *        charge
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeCascadeRouting(int scopeCount) {
         gasMeter.chargeCascadeRouting(scopeCount);
     }
 
+    /**
+     * Charges admission of one internal event.
+     *
+     * @param event event used only for operation attribution
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeEmitEvent(Node event) {
         gasMeter.chargeEmitEvent(event);
     }
 
+    /**
+     * Charges recording one public root event.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeRootEventRecorded() {
         gasMeter.chargeRootEventRecorded();
     }
 
+    /**
+     * Charges one embedded-event bridge delivery.
+     *
+     * @param event event used only for operation attribution
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeBridge(Node event) {
         gasMeter.chargeBridge(event);
     }
 
+    /**
+     * Charges one triggered-event delivery.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeTriggeredDelivery() {
         gasMeter.chargeTriggeredDelivery();
     }
 
+    /**
+     * Charges draining one internal event occurrence.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeDrainEvent() {
         gasMeter.chargeDrainEvent();
     }
 
+    /**
+     * Charges writing one checkpoint.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeCheckpointUpdate() {
         gasMeter.chargeCheckpointUpdate();
     }
 
+    /**
+     * Charges one checkpoint comparison.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeCheckpointCompared() {
         gasMeter.chargeCheckpointCompared();
     }
 
+    /**
+     * Charges one processor-owned marker write.
+     *
+     * @param reason stable trace reason
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeProcessorMarkerWritten(String reason) {
         gasMeter.chargeProcessorMarkerWritten(reason);
     }
 
+    /**
+     * Charges one termination request.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeTerminationRequest() {
         gasMeter.chargeTerminationRequest();
     }
 
+    /**
+     * Charges writing one termination marker.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeTerminationMarker() {
         gasMeter.chargeTerminationMarker();
     }
 
+    /**
+     * Charges one lifecycle delivery.
+     *
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     */
     public void chargeLifecycleDelivery() {
         gasMeter.chargeLifecycleDelivery();
     }
 
+    /**
+     * Returns whether processing has been terminated for the whole run.
+     *
+     * @return {@code true} after run termination is marked
+     */
     public boolean isRunTerminated() {
         return runTerminated;
     }
 
+    /** Monotonically marks the whole processing run as terminated. */
     public void markRunTerminated() {
         runTerminated = true;
     }
 
+    /**
+     * Returns whether an existing scope occurrence is finally terminated.
+     *
+     * @param scopePath exact scope registry key
+     * @return {@code true} only for an existing terminated scope
+     */
     public boolean isScopeTerminated(String scopePath) {
         return emissionRegistry.isScopeTerminated(scopePath);
     }
 
+    /**
+     * Lazily establishes the current immutable snapshot, if a snapshot manager
+     * is configured. Intermediate creation does not itself commit a patch.
+     *
+     * @return current invocation snapshot, or {@code null} when no snapshot
+     *         exists and no snapshot manager is configured
+     * @throws RuntimeException if provider resolution or snapshot validation
+     *         fails; no patch is committed
+     */
     public ResolvedSnapshot snapshot() {
         if (snapshot == null && snapshotManager != null) {
             snapshot = snapshotFromDocument(materializedView.root());
@@ -822,6 +1298,13 @@ public final class DocumentProcessingRuntime {
         return snapshot;
     }
 
+    /**
+     * Returns the effective resolved node at an absolute pointer.
+     *
+     * @param path absolute or root-equivalent pointer to normalize
+     * @return fresh mutable node copy, or {@code null} when absent
+     * @throws RuntimeException if lazy snapshot resolution fails
+     */
     public Node resolvedNodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
@@ -831,6 +1314,13 @@ public final class DocumentProcessingRuntime {
         return materializedView.nodeAt(normalized);
     }
 
+    /**
+     * Immutable counterpart of {@link #resolvedNodeAt(String)}.
+     *
+     * @param path absolute or root-equivalent pointer to normalize
+     * @return immutable resolved node, or {@code null} when absent
+     * @throws RuntimeException if lazy snapshot resolution fails
+     */
     public FrozenNode resolvedFrozenAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
@@ -889,6 +1379,13 @@ public final class DocumentProcessingRuntime {
                 : resolvedScope;
     }
 
+    /**
+     * Returns the authored canonical node before effective type expansion.
+     *
+     * @param path absolute or root-equivalent pointer to normalize
+     * @return fresh mutable canonical node copy, or {@code null} when absent
+     * @throws RuntimeException if lazy snapshot creation fails
+     */
     public Node canonicalNodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
@@ -898,6 +1395,13 @@ public final class DocumentProcessingRuntime {
         return materializedView.nodeAt(normalized);
     }
 
+    /**
+     * Immutable counterpart of {@link #canonicalNodeAt(String)}.
+     *
+     * @param path absolute or root-equivalent pointer to normalize
+     * @return immutable canonical node, or {@code null} when absent
+     * @throws RuntimeException if lazy snapshot creation fails
+     */
     public FrozenNode canonicalFrozenAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
@@ -909,39 +1413,93 @@ public final class DocumentProcessingRuntime {
     }
 
     /**
-     * Freezes the exact selected scope identity at the initialization protocol
-     * capture point.
+     * Freezes the exact selected scope at the initialization protocol capture
+     * point.
      *
-     * <p>Contracts 1.0 §9.2 requires the direct Node BlueId of the exact scope
-     * as it exists immediately before initialization effects. It explicitly
-     * does not use Content BlueId, resolution, preprocessing, or provider
-     * acquisition.</p>
+     * <p>Contracts 1.0 requires the marker and initiation lifecycle event to
+     * carry the exact scope document as it exists immediately before
+     * initialization effects. This is an identity-preserving Blue node, not a
+     * derived Content BlueId. No provider demand is introduced solely for this
+     * capture: a selected pure reference remains a valid exact
+     * representation.</p>
+     *
+     * @param scopePath absolute processing scope to capture
+     * @return immutable exact canonical scope representation
+     * @throws IllegalStateException if the selected scope is absent
+     * @throws RuntimeException if snapshot establishment fails
      */
-    public String calculatePreInitializationScopeNodeBlueId(String scopePath) {
-        return calculatePreInitializationScopeNodeBlueId(scopePath, null);
-    }
-
-    String calculatePreInitializationScopeNodeBlueId(
-            String scopePath,
-            ProcessingSnapshotManager scopeIdentitySnapshotManager) {
+    public FrozenNode capturePreInitializationScopeDocument(
+            String scopePath) {
         String normalized = PointerUtils.normalizeScope(scopePath);
-        metrics.incrementInitializationDocumentIdContentBlueIdCalculations();
         syncMaterializedView();
         ResolvedSnapshot current = snapshot();
         FrozenNode exactScope = current != null
                 ? current.canonicalAt(normalized)
                 : null;
         if (exactScope != null) {
-            return exactScope.blueId();
+            return exactScope;
         }
         Node selectedScope = materializedView.nodeAt(normalized);
         if (selectedScope == null) {
             throw new IllegalStateException(
                     "Exact selected scope is absent at " + normalized);
         }
-        return BlueIdCalculator.calculateBlueId(selectedScope);
+        return FrozenNode.fromUncheckedCanonicalNode(selectedScope.clone());
     }
 
+    /**
+     * Binary-compatible identity view of the exact initialization capture.
+     *
+     * <p>The Contracts 1.0 marker carries the exact document; this method
+     * derives its ordinary BlueId without restoring the former identifier-only
+     * marker representation.</p>
+     *
+     * @param scopePath absolute processing scope to identify
+     * @return ordinary BlueId of the exact pre-initialization scope
+     * @throws IllegalStateException if the selected scope is absent
+     * @throws RuntimeException if snapshot establishment or identity
+     *         calculation fails
+     */
+    public String calculatePreInitializationScopeNodeBlueId(
+            String scopePath) {
+        String normalized =
+                PointerUtils.normalizeScope(
+                        scopePath);
+        metrics.incrementInitializationDocumentIdContentBlueIdCalculations();
+        syncMaterializedView();
+        ResolvedSnapshot current = snapshot();
+        FrozenNode exactScope =
+                current != null
+                        ? current.canonicalAt(
+                                normalized)
+                        : null;
+        if (exactScope != null) {
+            return exactScope.blueId();
+        }
+        Node selectedScope =
+                materializedView.nodeAt(
+                        normalized);
+        if (selectedScope == null) {
+            throw new IllegalStateException(
+                    "Exact selected scope is absent at "
+                            + normalized);
+        }
+        return BlueIdCalculator.calculateBlueId(
+                selectedScope);
+    }
+
+    /**
+     * Opens a closeable working copy rooted at the supplied origin scope.
+     * Changes remain private until explicitly committed.
+     *
+     * <p>The returned working document owns its mutable copies. Closing it
+     * without a commit discards those changes and does not alter this runtime.
+     * The origin is normalized as an absolute processing scope.</p>
+     *
+     * @param originScopePath scope against which relative patches are resolved
+     * @return invocation-bound closeable working copy
+     * @throws RuntimeException if the initial snapshot cannot be established
+     */
     public WorkingDocument workingDocument(String originScopePath) {
         return workingDocument(originScopePath, PatchSource.LEGACY_PUBLIC_API);
     }
@@ -993,6 +1551,13 @@ public final class DocumentProcessingRuntime {
                 true);
     }
 
+    /**
+     * Returns the current effective node at a pointer without forcing a new
+     * snapshot.
+     *
+     * @param path absolute or root-equivalent pointer to normalize
+     * @return fresh mutable node copy, or {@code null} when absent
+     */
     public Node nodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         if (snapshot != null) {
@@ -1001,10 +1566,24 @@ public final class DocumentProcessingRuntime {
         return materializedView.nodeAt(normalized);
     }
 
+    /**
+     * Tests whether the current effective document contains a node.
+     *
+     * @param path absolute or root-equivalent pointer
+     * @return {@code true} when a node exists at the normalized pointer
+     */
     public boolean contains(String path) {
         return nodeAt(path) != null;
     }
 
+    /**
+     * Validates and reports the processor-owned initialization marker.
+     *
+     * @param scopePath absolute processing scope
+     * @return {@code true} when a valid initialization marker exists
+     * @throws ProcessorFailureException if a present marker has an invalid
+     *         wire shape
+     */
     public boolean hasInitializationMarker(String scopePath) {
         String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
         FrozenNode selected = selectedFrozenAt(pointer);
@@ -1016,6 +1595,14 @@ public final class DocumentProcessingRuntime {
         return true;
     }
 
+    /**
+     * Reads and validates the processor-owned termination marker.
+     *
+     * @param scopePath absolute processing scope
+     * @return validated marker projection, or {@code null} when absent
+     * @throws ProcessorFailureException if a present marker has an invalid
+     *         wire shape
+     */
     public ProcessorEngine.TerminationMarker terminationMarker(String scopePath) {
         String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_TERMINATED);
         FrozenNode selected = selectedFrozenAt(pointer);
@@ -1026,10 +1613,25 @@ public final class DocumentProcessingRuntime {
         return ProcessorEngine.validateTerminationMarker(marker, pointer);
     }
 
+    /**
+     * Tests for a valid processor-owned termination marker.
+     *
+     * @param scopePath absolute processing scope
+     * @return {@code true} when a valid marker exists
+     * @throws ProcessorFailureException if a present marker has an invalid
+     *         wire shape
+     */
     public boolean hasTerminationMarker(String scopePath) {
         return terminationMarker(scopePath) != null;
     }
 
+    /**
+     * Finalizes invocation scope state from its persisted marker, if present.
+     *
+     * @param scopePath absolute processing scope
+     * @throws ProcessorFailureException if a present marker has an invalid
+     *         wire shape
+     */
     public void markScopeTerminatedFromMarker(String scopePath) {
         ProcessorEngine.TerminationMarker marker = terminationMarker(scopePath);
         if (marker == null) {
@@ -1038,6 +1640,25 @@ public final class DocumentProcessingRuntime {
         scope(scopePath).finalizeTermination(marker.reason);
     }
 
+    /**
+     * Atomically writes processor-managed state without emitting an
+     * application Document Update.
+     *
+     * <p>Semantic identity work and mutation-path validation occur before
+     * publication; snapshot and materialized views roll back together on
+     * failure. A non-null value is cloned before publication; {@code null}
+     * removes the addressed node. Gas admitted before a later failure remains
+     * in the invocation ledger.</p>
+     *
+     * @param path absolute processor-managed mutation path
+     * @param value replacement value, or {@code null} to remove the path
+     * @throws ProcessorFailureException if the path crosses a forbidden
+     *         mutation boundary
+     * @throws GasLimitExceededException if semantic or operation gas exceeds
+     *         the remaining invocation budget
+     * @throws RuntimeException if conformance, identity, or snapshot
+     *         resolution fails; document and snapshot state are rolled back
+     */
     public void directWrite(String path, Node value) {
         validateMutationPathWithoutResolution(path);
         chargeSemanticIdentityWork(
@@ -1065,8 +1686,11 @@ public final class DocumentProcessingRuntime {
             if (snapshotPatch == null) {
                 return;
             }
-            planning.canonicalPlanner.plan("/", snapshotPatch);
-            ImmutablePatchPlanner.PatchPlan resolvedPlan = planning.resolvedPlanner.plan("/", snapshotPatch);
+            planning.canonicalPlanner.plan(
+                    JsonPointer.ROOT, snapshotPatch);
+            ImmutablePatchPlanner.PatchPlan resolvedPlan =
+                    planning.resolvedPlanner.plan(
+                            JsonPointer.ROOT, snapshotPatch);
             SnapshotPatchPlan snapshotPatchPlan = prepareSnapshotPatch(planning.baseSnapshot, snapshotPatch);
             commitSnapshotPatch(snapshotPatchPlan, resolvedPlan.root());
             changedPaths.add(PointerUtils.normalizePointer(path));
@@ -1117,7 +1741,8 @@ public final class DocumentProcessingRuntime {
                 return;
             }
             ImmutablePatchPlanner.PatchPlan canonicalPlan =
-                    planning.canonicalPlanner.planWithExactReplacement("/", snapshotPatch);
+                    planning.canonicalPlanner.planWithExactReplacement(
+                            JsonPointer.ROOT, snapshotPatch);
             ResolvedSnapshot next;
             try {
                 next = planning.resolveCanonical(canonicalPlan.root());
@@ -1132,7 +1757,10 @@ public final class DocumentProcessingRuntime {
                 // both immutable lanes without attempting provider resolution a
                 // second time.
                 ImmutablePatchPlanner.PatchPlan resolvedPlan =
-                        planning.resolvedPlanner.planWithExactReplacement("/", snapshotPatch);
+                        planning.resolvedPlanner
+                                .planWithExactReplacement(
+                                        JsonPointer.ROOT,
+                                        snapshotPatch);
                 next = snapshotWithCompleteness(
                         canonicalPlan.root(),
                         resolvedPlan.root(),
@@ -1184,17 +1812,17 @@ public final class DocumentProcessingRuntime {
             return;
         }
         String leaf = segments.get(segments.size() - 1);
-        if ("type".equals(leaf)) {
+        if (Properties.OBJECT_TYPE.equals(leaf)) {
             parent.type((Node) null);
-        } else if ("itemType".equals(leaf)) {
+        } else if (Properties.OBJECT_ITEM_TYPE.equals(leaf)) {
             parent.itemType((Node) null);
-        } else if ("keyType".equals(leaf)) {
+        } else if (Properties.OBJECT_KEY_TYPE.equals(leaf)) {
             parent.keyType((Node) null);
-        } else if ("valueType".equals(leaf)) {
+        } else if (Properties.OBJECT_VALUE_TYPE.equals(leaf)) {
             parent.valueType((Node) null);
-        } else if ("blue".equals(leaf)) {
+        } else if (Properties.OBJECT_BLUE.equals(leaf)) {
             parent.blue(null);
-        } else if ("contracts".equals(leaf)) {
+        } else if (ProcessorContractConstants.KEY_CONTRACTS.equals(leaf)) {
             parent.contracts(null);
         } else if (JsonPointer.isArrayIndexSegment(leaf) && parent.getItems() != null && !"-".equals(leaf)) {
             int index = Integer.parseInt(leaf);
@@ -1206,10 +1834,45 @@ public final class DocumentProcessingRuntime {
         }
     }
 
+    /**
+     * Applies one application patch atomically and returns its exact update
+     * projection, or {@code null} for a null/no-op input.
+     *
+     * <p>The mutable patch value is defensively frozen before planning.
+     * Document and snapshot state roll back together on failure; already
+     * admitted gas remains in the invocation ledger.</p>
+     *
+     * @param originScopePath scope against which the patch path is resolved
+     * @param patch authored mutable patch, or {@code null}
+     * @return committed update projection, or {@code null} for no input or no
+     *         resulting update
+     * @throws ProcessorFailureException if validation or conformance rejects
+     *         the patch
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     * @throws RuntimeException if snapshot resolution or commit preparation
+     *         fails; document and snapshot state are rolled back
+     */
     public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch) {
         return applyPatch(originScopePath, patch, PatchSource.LEGACY_PUBLIC_API);
     }
 
+    /**
+     * Applies one mutable patch atomically with explicit source attribution.
+     *
+     * @param originScopePath scope against which the patch path is resolved
+     * @param patch authored mutable patch, or {@code null}
+     * @param source trace source category; {@code null} becomes the unknown
+     *        internal source
+     * @return committed update projection, or {@code null} for no input or no
+     *         resulting update
+     * @throws ProcessorFailureException if validation or conformance rejects
+     *         the patch
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     * @throws RuntimeException if snapshot resolution or commit preparation
+     *         fails; document and snapshot state are rolled back
+     */
     public DocumentUpdateData applyPatch(String originScopePath, JsonPatch patch, PatchSource source) {
         if (patch == null) {
             return null;
@@ -1218,10 +1881,41 @@ public final class DocumentProcessingRuntime {
         return updates.isEmpty() ? null : updates.get(0);
     }
 
+    /**
+     * Applies an ordered patch list as one rollback-all transaction.
+     *
+     * <p>Mutable values are defensively captured before planning. A
+     * {@code null} or empty list is a no-op.</p>
+     *
+     * @param originScopePath scope against which patch paths are resolved
+     * @param patches ordered mutable patches
+     * @return ordered committed update projections, or an empty list
+     * @throws ProcessorFailureException if any patch fails validation or
+     *         conformance
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     * @throws RuntimeException if planning, resolution, or commit preparation
+     *         fails; the whole document/snapshot transaction is rolled back
+     */
     public List<DocumentUpdateData> applyPatches(String originScopePath, List<JsonPatch> patches) {
         return applyPatches(originScopePath, patches, PatchSource.LEGACY_PUBLIC_API);
     }
 
+    /**
+     * Applies an ordered mutable patch list atomically with source attribution.
+     *
+     * @param originScopePath scope against which patch paths are resolved
+     * @param patches ordered mutable patches, or {@code null}
+     * @param source trace source category; {@code null} becomes the unknown
+     *        internal source
+     * @return ordered committed update projections, or an empty list
+     * @throws ProcessorFailureException if any patch fails validation or
+     *         conformance
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     * @throws RuntimeException if planning, resolution, or commit preparation
+     *         fails; the whole document/snapshot transaction is rolled back
+     */
     public List<DocumentUpdateData> applyPatches(String originScopePath,
                                                  List<JsonPatch> patches,
                                                  PatchSource source) {
@@ -1231,6 +1925,20 @@ public final class DocumentProcessingRuntime {
         return applyPatchInputs(originScopePath, PatchInput.mutableList(patches, source));
     }
 
+    /**
+     * Frozen-value counterpart of {@link #applyPatch(String, JsonPatch)}.
+     *
+     * @param originScopePath scope against which the patch path is resolved
+     * @param patch immutable authored patch, or {@code null}
+     * @return committed update projection, or {@code null} for no input or no
+     *         resulting update
+     * @throws ProcessorFailureException if validation or conformance rejects
+     *         the patch
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     * @throws RuntimeException if planning, resolution, or commit preparation
+     *         fails; document and snapshot state are rolled back
+     */
     public DocumentUpdateData applyFrozenPatch(String originScopePath, FrozenJsonPatch patch) {
         if (patch == null) {
             return null;
@@ -1240,7 +1948,22 @@ public final class DocumentProcessingRuntime {
         return updates.isEmpty() ? null : updates.get(0);
     }
 
-    /** Applies frozen patches as one rollback-all atomic transaction. */
+    /**
+     * Applies frozen patches as one rollback-all atomic transaction.
+     *
+     * <p>Immutable patch objects may be retained during planning; their values
+     * require no additional defensive copy.</p>
+     *
+     * @param originScopePath scope against which patch paths are resolved
+     * @param patches ordered immutable patches, or {@code null}
+     * @return ordered committed update projections, or an empty list
+     * @throws ProcessorFailureException if any patch fails validation or
+     *         conformance
+     * @throws GasLimitExceededException if the remaining budget is
+     *         insufficient
+     * @throws RuntimeException if planning, resolution, or commit preparation
+     *         fails; the whole document/snapshot transaction is rolled back
+     */
     public List<DocumentUpdateData> applyFrozenPatches(String originScopePath,
                                                        List<FrozenJsonPatch> patches) {
         if (patches == null || patches.isEmpty()) {
@@ -1572,15 +2295,17 @@ public final class DocumentProcessingRuntime {
         String limitName;
         if (container.hasItems()) {
             observed = container.getItems().size();
-            limitName = "directListItemsMaterializedOrRebuilt";
+            limitName = GasScheduleConstants.PortableLimit.DIRECT_LIST_ITEMS;
         } else {
             observed = directMemberCount(container);
-            limitName = "directObjectEntriesMaterializedOrRebuilt";
+            limitName = GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES;
         }
         String parent = parentPointer(patchPath);
         if (containerPath.equals(parent)) {
             FrozenNode existing = container.at(
-                    "/" + JsonPointer.escape(lastSegment(patchPath)));
+                    JsonPointer.ROOT
+                            + JsonPointer.escape(
+                                    lastSegment(patchPath)));
             if (operation == JsonPatch.Op.REMOVE && existing != null) {
                 observed--;
             } else if ((operation == JsonPatch.Op.ADD
@@ -1595,11 +2320,11 @@ public final class DocumentProcessingRuntime {
     private void enforceMaterializedContainerLimit(Node node) {
         if (node.getItems() != null) {
             enforcePortableLimit(
-                    "directListItemsMaterializedOrRebuilt",
+                    GasScheduleConstants.PortableLimit.DIRECT_LIST_ITEMS,
                     node.getItems().size());
         } else {
             enforcePortableLimit(
-                    "directObjectEntriesMaterializedOrRebuilt",
+                    GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES,
                     directMemberCount(node));
         }
     }
@@ -1607,11 +2332,11 @@ public final class DocumentProcessingRuntime {
     private void enforceMaterializedContainerLimit(FrozenNode node) {
         if (node.hasItems()) {
             enforcePortableLimit(
-                    "directListItemsMaterializedOrRebuilt",
+                    GasScheduleConstants.PortableLimit.DIRECT_LIST_ITEMS,
                     node.getItems().size());
         } else {
             enforcePortableLimit(
-                    "directObjectEntriesMaterializedOrRebuilt",
+                    GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES,
                     directMemberCount(node));
         }
     }
@@ -1640,7 +2365,7 @@ public final class DocumentProcessingRuntime {
     private String parentPointer(String pointer) {
         List<String> segments = JsonPointer.split(pointer);
         return segments.isEmpty()
-                ? "/"
+                ? JsonPointer.ROOT
                 : JsonPointer.toPointer(
                 segments.subList(0, segments.size() - 1));
     }
@@ -1776,12 +2501,14 @@ public final class DocumentProcessingRuntime {
 
     private UpdateMaterializationMetrics updateMaterializationMetrics() {
         return new UpdateMaterializationMetrics() {
+            /** {@inheritDoc} */
             @Override
             public void recordBeforeNodeMaterialization() {
                 documentUpdateBeforeNodeMaterializations++;
                 metrics.incrementDocumentUpdateBeforeMaterializations();
             }
 
+            /** {@inheritDoc} */
             @Override
             public void recordAfterNodeMaterialization() {
                 documentUpdateAfterNodeMaterializations++;
@@ -1996,7 +2723,9 @@ public final class DocumentProcessingRuntime {
     private Node tentativeSelectedRoot(BatchPatchResult result) {
         FrozenNode tentative = FrozenNode.fromResolvedNode(materializedView.copyRoot());
         for (ImmutableJsonPatch patch : result.requestedPatches()) {
-            tentative = ImmutablePatchPlanner.forFrozen(tentative).plan("/", patch).root();
+            tentative = ImmutablePatchPlanner.forFrozen(tentative)
+                    .plan(JsonPointer.ROOT, patch)
+                    .root();
         }
         Node tentativeSelected = tentative.toNode();
         for (BatchPatchResult.GeneralizationMetadataWrite write : result.generalizationMetadataWrites()) {
@@ -2136,6 +2865,15 @@ public final class DocumentProcessingRuntime {
                             + " provider returned a reference instead of exact content for "
                             + reference.getReferenceBlueId());
         }
+        if (BlueIds.hasCyclicMemberSeparator(
+                reference.getReferenceBlueId())) {
+            /*
+             * The active manager has already required complete cyclic-set
+             * evidence. A MASTER#index member is not an independently
+             * hashable ordinary node.
+             */
+            return materialized;
+        }
         Node exact = materialized.toNode();
         final String actualBlueId;
         try {
@@ -2176,22 +2914,30 @@ public final class DocumentProcessingRuntime {
                                                   ProcessingSnapshotManager manager) {
         long start = System.nanoTime();
         try {
-            Set<String> preservedBodies =
-                    selectedDocumentBacked
-                            ? executableBodyPaths(
-                            document,
-                            scopes().keySet(),
-                            executableBodyFieldsByType,
-                            manager)
-                            : Collections.emptySet();
-            if (!preservedBodies.isEmpty()) {
+            Set<String> preservedPaths = new LinkedHashSet<>();
+            if (selectedDocumentBacked) {
+                preservedPaths.addAll(
+                        executableBodyPaths(
+                                document,
+                                scopes().keySet(),
+                                executableBodyFieldsByType,
+                                manager));
+            }
+            /*
+             * A final cyclic-set member is an opaque exact edge. Ordinary
+             * scope resolution may carry it but must not open it merely
+             * because an unrelated contract or patch needs a snapshot.
+             */
+            preservedPaths.addAll(
+                    opaqueCyclicMemberPaths(document));
+            if (!preservedPaths.isEmpty()) {
                 ResolvedSnapshot preserved =
                         transientResolution
                         ? manager
                         .fromDocumentTransientPreservingPaths(
-                                document, preservedBodies)
+                                document, preservedPaths)
                         : manager.fromDocumentPreservingPaths(
-                                document, preservedBodies);
+                                document, preservedPaths);
                 return forceDeferredResolution(
                         preserved);
             }
@@ -2223,7 +2969,7 @@ public final class DocumentProcessingRuntime {
         Set<String> result = new LinkedHashSet<>();
         Set<String> scopes = openedScopes(openedScopePaths);
         for (String scopePath : scopes) {
-            Node scope = "/".equals(scopePath)
+            Node scope = JsonPointer.ROOT.equals(scopePath)
                     ? document
                     : NodePathEditor.getOrNull(document, scopePath);
             collectExecutableBodyPaths(
@@ -2264,12 +3010,14 @@ public final class DocumentProcessingRuntime {
                 Objects.requireNonNull(manager, "snapshotManager");
         FrozenNode checkedRoot =
                 Objects.requireNonNull(canonicalRoot, "canonicalRoot");
+        Node document = checkedRoot.toNode();
         Set<String> preservedBodies = executableBodyPaths(
-                checkedRoot.toNode(),
+                document,
                 openedScopePaths,
                 executableBodyFieldsByType,
                 checkedManager);
-        Node document = checkedRoot.toNode();
+        preservedBodies.addAll(
+                opaqueCyclicMemberPaths(document));
         if (preservedBodies.isEmpty()) {
             return checkedManager
                     .fromDocumentTransient(document);
@@ -2279,6 +3027,65 @@ public final class DocumentProcessingRuntime {
                         .fromDocumentTransientPreservingPaths(
                                 document,
                                 preservedBodies));
+    }
+
+    private static Set<String> opaqueCyclicMemberPaths(
+            Node document) {
+        Set<String> result = new LinkedHashSet<>();
+        collectOpaqueCyclicMemberPaths(
+                document,
+                JsonPointer.ROOT,
+                result,
+                new IdentityHashMap<Node, Boolean>());
+        return result;
+    }
+
+    private static void collectOpaqueCyclicMemberPaths(
+            Node node,
+            String path,
+            Set<String> result,
+            IdentityHashMap<Node, Boolean> visited) {
+        if (node == null
+                || visited.put(node, Boolean.TRUE) != null) {
+            return;
+        }
+        if (node.isReferenceOnly()) {
+            String blueId = node.getBlueId();
+            if (BlueIds.hasCyclicMemberSeparator(blueId)) {
+                result.add(path);
+            }
+            return;
+        }
+        if (node.getItems() != null) {
+            for (int index = 0;
+                 index < node.getItems().size();
+                 index++) {
+                collectOpaqueCyclicMemberPaths(
+                        node.getItems().get(index),
+                        JsonPointer.append(
+                                path,
+                                String.valueOf(index)),
+                        result,
+                        visited);
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Map.Entry<String, Node> entry
+                    : node.getProperties().entrySet()) {
+                collectOpaqueCyclicMemberPaths(
+                        entry.getValue(),
+                        JsonPointer.append(
+                                path,
+                                entry.getKey()),
+                        result,
+                        visited);
+            }
+        }
+        collectOpaqueCyclicMemberPaths(
+                node.getContracts(),
+                JsonPointer.append(path, ProcessorContractConstants.KEY_CONTRACTS),
+                result,
+                visited);
     }
 
     private static ResolvedSnapshot forceDeferredResolution(
@@ -2297,7 +3104,7 @@ public final class DocumentProcessingRuntime {
     private static Set<String> openedScopes(
             Iterable<String> openedScopePaths) {
         Set<String> scopes = new LinkedHashSet<>();
-        scopes.add("/");
+        scopes.add(JsonPointer.ROOT);
         if (openedScopePaths != null) {
             for (String scopePath : openedScopePaths) {
                 scopes.add(PointerUtils.normalizeScope(scopePath));
@@ -2406,11 +3213,12 @@ public final class DocumentProcessingRuntime {
             Set<String> result) {
         if (contract != null
                 && contract.getProperties() != null
-                && contract.getProperties().containsKey("event")) {
+                && contract.getProperties().containsKey(
+                EffectiveContractSnapshotConstants.DispatchField.EVENT)) {
             addExecutableBodyPath(
                     scopePath,
                     contractKey,
-                    "event",
+                    EffectiveContractSnapshotConstants.DispatchField.EVENT,
                     result);
         }
     }
@@ -2422,11 +3230,12 @@ public final class DocumentProcessingRuntime {
             Set<String> result) {
         if (contract != null
                 && contract.getProperties() != null
-                && contract.getProperties().containsKey("event")) {
+                && contract.getProperties().containsKey(
+                EffectiveContractSnapshotConstants.DispatchField.EVENT)) {
             addExecutableBodyPath(
                     scopePath,
                     contractKey,
-                    "event",
+                    EffectiveContractSnapshotConstants.DispatchField.EVENT,
                     result);
         }
     }
@@ -2438,7 +3247,7 @@ public final class DocumentProcessingRuntime {
             Set<String> result) {
         List<String> bodyPath =
                 new ArrayList<>(scopePath);
-        bodyPath.add("contracts");
+        bodyPath.add(ProcessorContractConstants.KEY_CONTRACTS);
         bodyPath.add(contractKey);
         bodyPath.add(field);
         result.add(JsonPointer.toPointer(bodyPath));
@@ -2616,6 +3425,19 @@ public final class DocumentProcessingRuntime {
         return sequenceFallbackPatches;
     }
 
+    /**
+     * Single-use, invocation-bound transaction cursor for an ordered patch
+     * sequence.
+     *
+     * <p>Each successful {@link #applyNext(int)} consumes one retained patch
+     * and atomically advances the enclosing runtime. Intermediate results stay
+     * in a sequence-local snapshot/cache boundary; the final state is promoted
+     * only during the normal sequence lifecycle. {@link #close()} is
+     * idempotent and mandatory: it discards unused previews and patches,
+     * closes the planning session, restores the previously active transient
+     * manager, promotes eligible final state, and releases sequence-owned
+     * cache state. Instances are mutable and not thread-safe.</p>
+     */
     final class PreparedPatchSequence implements AutoCloseable {
         private final String originScope;
         private final int patchCount;
@@ -2931,6 +3753,7 @@ public final class DocumentProcessingRuntime {
             observedVersion = stateVersion;
         }
 
+        /** {@inheritDoc} */
         @Override
         public void close() {
             if (closed) {
@@ -3005,9 +3828,13 @@ public final class DocumentProcessingRuntime {
         }
     }
 
+    /** Receives lazy before/after document-update materialization events. */
     interface UpdateMaterializationMetrics {
+
+        /** Records materialization of an update's pre-change node. */
         void recordBeforeNodeMaterialization();
 
+        /** Records materialization of an update's post-change node. */
         void recordAfterNodeMaterialization();
     }
 
@@ -3121,6 +3948,15 @@ public final class DocumentProcessingRuntime {
         }
     }
 
+    /**
+     * Immutable patch-planning inputs captured at one authoritative document
+     * state.
+     *
+     * <p>The context keeps canonical and resolved planners aligned with the
+     * same base snapshot and records which scopes and executable-body fields
+     * were already admitted. Callers must replace the context after an
+     * authoritative rebase rather than mutating it.</p>
+     */
     static final class PlanningContext {
         private final ResolvedSnapshot baseSnapshot;
         private final ImmutablePatchPlanner canonicalPlanner;

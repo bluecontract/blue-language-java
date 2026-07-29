@@ -9,8 +9,13 @@ import java.util.List;
 
 import static blue.language.provider.ClasspathBasedNodeProvider.NO_PREPROCESSING;
 
+/**
+ * Singleton provider for the canonical core registry and bundled preprocessing
+ * transformation definitions.
+ */
 public class BootstrapProvider implements NodeProvider {
 
+    /** Shared immutable bootstrap provider. */
     public static final BootstrapProvider INSTANCE = new BootstrapProvider();
 
     private NodeProvider nodeProvider;

@@ -39,14 +39,17 @@ import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 class MaterializedSelectedProcessingDocumentFailFirstTest {
 
     @Test
-    void compactSourceResolvesInheritedFieldsWithoutMutatingSourceShape() {
+    void shouldResolveInheritedFieldsFromCompactSourceWithoutMutatingSourceShape() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
         Node source = fixture.compact();
         String sourceJson = blue.nodeToJson(source);
 
+        // when
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(source);
 
+        // then
         assertEquals(sourceJson, blue.nodeToJson(source));
         assertFalse(hasContract(source, "audit"));
         assertNull(source.getProperties().get("materializedField"));
@@ -57,14 +60,17 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
     }
 
     @Test
-    void redundantAuthoredMaterializationHasNoDistinctSemanticIdentity() {
+    void shouldGiveRedundantAuthoredMaterializationNoDistinctSemanticIdentity() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
 
         ResolvedSnapshot compact = blue.resolveToSnapshot(fixture.compact());
+        // when
         ResolvedSnapshot materialized =
                 blue.resolveToSnapshot(fixture.materializedSource());
 
+        // then
         assertEquals(compact.blueId(), materialized.blueId());
         assertEquals(blue.nodeToJson(compact.canonicalRoot()),
                 blue.nodeToJson(materialized.canonicalRoot()));
@@ -73,7 +79,8 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
     }
 
     @Test
-    void cloneJsonAndYamlTransportsResolveToTheSameMeaning() {
+    void shouldCloneJsonAndYamlTransportsResolveToTheSameMeaning() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
         Node source = fixture.compact();
@@ -84,8 +91,10 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
                 blue.yamlToNode(blue.nodeToYaml(source)));
         ResolvedSnapshot expected = blue.resolveToSnapshot(source);
 
+        // when
         for (Node form : forms) {
             ResolvedSnapshot actual = blue.resolveToSnapshot(form);
+            // then
             assertEquals(expected.blueId(), actual.blueId());
             assertEquals(blue.nodeToJson(expected.resolvedRoot()),
                     blue.nodeToJson(actual.resolvedRoot()));
@@ -93,15 +102,18 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
     }
 
     @Test
-    void resolvedSnapshotAccessorsDoNotExposeMutableSelectionState() {
+    void shouldNotExposeMutableSelectionStateThroughResolvedSnapshotAccessors() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(fixture.compact());
         String identity = snapshot.blueId();
 
         Node returned = snapshot.resolvedRoot();
+        // when
         returned.properties("materializedField", text("changed"));
 
+        // then
         assertEquals(identity, snapshot.blueId());
         assertEquals("materialized",
                 snapshot.resolvedRoot().getAsText("/materializedField"));

@@ -46,6 +46,12 @@ public final class FrozenTypeMatcher {
     private final Function<FrozenNode, FrozenNode>
             verifiedReferenceMaterializer;
 
+    /**
+     * Creates a matcher backed by the runtime's verified type materialization
+     * and cache policy.
+     *
+     * @param blue runtime used for verified type materialization and cache policy
+     */
     public FrozenTypeMatcher(Blue blue) {
         this(blue, true);
     }
@@ -88,6 +94,9 @@ public final class FrozenTypeMatcher {
      * propagate unchanged, and a null, still-reference-only, or identity-
      * mismatched result is rejected. No ambient {@link Blue} runtime, raw
      * provider fallback, or negative-result cache is consulted.</p>
+     *
+     * @param materializer callback that resolves one verified exact reference
+     * @return independent matcher confined to the supplied materializer
      */
     public static FrozenTypeMatcher withVerifiedReferenceMaterializer(
             Function<FrozenNode, FrozenNode> materializer) {
@@ -100,6 +109,16 @@ public final class FrozenTypeMatcher {
                         "materializer"));
     }
 
+    /**
+     * Tests a resolved value against a resolved type/shape pattern.
+     *
+     * <p>A null pattern imposes no constraint. A null candidate matches only
+     * when the pattern does not require presence.</p>
+     *
+     * @param resolvedNode resolved candidate value
+     * @param resolvedTargetType resolved type or shape pattern
+     * @return {@code true} when the candidate satisfies the pattern
+     */
     public boolean matchesType(FrozenNode resolvedNode, FrozenNode resolvedTargetType) {
         if (resolvedTargetType == null) {
             return true;
@@ -110,17 +129,88 @@ public final class FrozenTypeMatcher {
         return matches(resolvedNode, resolvedTargetType);
     }
 
+    /**
+     * Tests one exact type against another using Blue's nominal subtype
+     * rules, with a strict bound on the number of parent-type edges.
+     *
+     * <p>Unlike the structural matching entry point, this method performs
+     * only type-lineage comparison. Missing exact definitions, a cyclic
+     * lineage, and a lineage beyond {@code maximumTypeChainEdges} fail
+     * closed.</p>
+     *
+     * @param candidateType exact candidate type definition or pure reference
+     * @param targetType exact requested base type definition or pure reference
+     * @param maximumTypeChainEdges maximum parent edges that may be traversed
+     * @return whether the candidate is the target type or one of its subtypes
+     */
+    public boolean isSubtypeOrSame(
+            FrozenNode candidateType,
+            FrozenNode targetType,
+            long maximumTypeChainEdges) {
+        Objects.requireNonNull(candidateType, "candidateType");
+        Objects.requireNonNull(targetType, "targetType");
+        if (maximumTypeChainEdges < 0L) {
+            throw new IllegalArgumentException(
+                    "maximumTypeChainEdges must be non-negative");
+        }
+
+        FrozenNode current = candidateType;
+        Set<String> visited = new HashSet<>();
+        long traversedEdges = 0L;
+        boolean matched = false;
+        while (current != null) {
+            String identity = typeIdentity(current);
+            if (!visited.add(identity)) {
+                throw new IllegalStateException(
+                        "Type cycle in exact type hierarchy at "
+                                + identity);
+            }
+            if (typeIdentity(current).equals(
+                    typeIdentity(targetType))) {
+                matched = true;
+            }
+
+            FrozenNode resolved = resolveTypeReference(current);
+            if (resolved == null) {
+                throw new IllegalStateException(
+                        "Exact type definition is unavailable for "
+                                + identity);
+            }
+            FrozenNode parent = resolved.getType();
+            if (parent == null) {
+                return matched;
+            }
+            if (traversedEdges >= maximumTypeChainEdges) {
+                throw new IllegalStateException(
+                        "Exact type hierarchy exceeds "
+                                + maximumTypeChainEdges
+                                + " parent edges");
+            }
+            traversedEdges++;
+            current = parent;
+        }
+        return matched;
+    }
+
     /** Releases every reloadable matching and type-resolution cache entry. */
     public void clearCaches() {
         planCache.clear();
     }
 
-    /** Returns the number of entries retained across all five matcher cache regions. */
+    /**
+     * Returns the number of entries retained across all five matcher cache regions.
+     *
+     * @return current retained cache-entry count
+     */
     public int cacheEntryCount() {
         return planCache.size();
     }
 
-    /** Returns the approximate retained weight across all five matcher cache regions. */
+    /**
+     * Returns the approximate retained weight across all five matcher cache regions.
+     *
+     * @return approximate retained cache weight in bytes
+     */
     public long cacheWeightBytes() {
         return planCache.currentWeightBytes();
     }
@@ -473,7 +563,8 @@ public final class FrozenTypeMatcher {
             }
         }
         if (isBooleanType(targetKeyType)) {
-            return "true".equalsIgnoreCase(key) || "false".equalsIgnoreCase(key);
+            return Properties.BOOLEAN_TEXT_TRUE.equals(key)
+                    || Properties.BOOLEAN_TEXT_FALSE.equals(key);
         }
         return false;
     }
@@ -678,21 +769,13 @@ public final class FrozenTypeMatcher {
         if (node.getValue() == null) {
             return !hasPayload(node);
         }
-        String nodeBlueId = comparableBlueId(node);
+        String nodeBlueId = ScalarNodeIdentity.blueId(node.toNode());
         for (Node enumValue : enumValues) {
-            Node comparable = enumValue.clone();
-            comparable.schema(null);
-            if (nodeBlueId.equals(BlueIdCalculator.calculateBlueId(comparable))) {
+            if (nodeBlueId.equals(ScalarNodeIdentity.blueId(enumValue))) {
                 return true;
             }
         }
         return false;
-    }
-
-    private String comparableBlueId(FrozenNode node) {
-        Node comparable = node.toNode();
-        comparable.schema(null);
-        return BlueIdCalculator.calculateBlueId(comparable);
     }
 
     private boolean hasPayload(FrozenNode node) {
@@ -769,7 +852,8 @@ public final class FrozenTypeMatcher {
                         "Verified reference materializer retained a pure reference for "
                                 + blueId);
             }
-            if (!blueId.equals(materialized.blueId())) {
+            if (!BlueIds.hasCyclicMemberSeparator(blueId)
+                    && !blueId.equals(materialized.blueId())) {
                 throw new IllegalArgumentException(
                         "Verified reference materializer returned mismatched content for "
                                 + blueId);
@@ -1046,7 +1130,7 @@ public final class FrozenTypeMatcher {
         private final long weightBytes;
 
         private CacheEntry(Object value, long weightBytes) {
-            this.value = Objects.requireNonNull(value, "value");
+            this.value = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
             this.weightBytes = weightBytes;
         }
     }

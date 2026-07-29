@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.NodeToMapListOrValue.Strategy.SIMPLE;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,8 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
 public class NodeToMapListOrValueTest {
 
     @Test
-    public void testBasicStandardStrategy() throws Exception {
+    public void shouldSerializeBasicNodeWithStandardStrategy() throws Exception {
 
+        // given
         Node node = new Node()
                 .name("nameA")
                 .description("descriptionA")
@@ -31,23 +33,22 @@ public class NodeToMapListOrValueTest {
                         "b", new Node().value("xyz2").description("descriptionXyz2")
                 );
 
+        // when
         Object object = NodeToMapListOrValue.get(node);
-        assertInstanceOf(Map.class, object);
         Map<String, Object> result = (Map<String, Object>) object;
+        Map<String, Object> type = (Map<String, Object>) result.get("type");
+        Map<String, Object> propertyA = (Map<String, Object>) result.get("a");
+        Map<String, Object> propertyB = (Map<String, Object>) result.get("b");
 
+        // then
+        assertInstanceOf(Map.class, object);
         assertEquals("nameA", result.get("name"));
         assertEquals("descriptionA", result.get("description"));
-
-        Map<String, Object> type = (Map<String, Object>) result.get("type");
         assertNotNull(type);
         assertEquals("nameB", type.get("name"));
         assertEquals("descriptionB", type.get("description"));
-
-        Map<String, Object> propertyA = (Map<String, Object>) result.get("a");
         assertNotNull(propertyA);
         assertEquals("xyz1", propertyA.get("value"));
-
-        Map<String, Object> propertyB = (Map<String, Object>) result.get("b");
         assertNotNull(propertyB);
         assertEquals("xyz2", propertyB.get("value"));
         assertEquals("descriptionXyz2", propertyB.get("description"));
@@ -56,8 +57,9 @@ public class NodeToMapListOrValueTest {
 
 
     @Test
-    public void testBasicDomainMappingStrategy() throws Exception {
+    public void shouldSerializeBasicNodeWithSimpleStrategy() throws Exception {
 
+        // given
         Node node = new Node()
                 .name("nameA")
                 .description("descriptionA")
@@ -67,14 +69,15 @@ public class NodeToMapListOrValueTest {
                         "b", new Node().value("xyz2").description("descriptionXyz2")
                 );
 
+        // when
         Object object = NodeToMapListOrValue.get(node, SIMPLE);
-        assertInstanceOf(Map.class, object);
         Map<String, Object> result = (Map<String, Object>) object;
+        Map<String, Object> type = (Map<String, Object>) result.get("type");
 
+        // then
+        assertInstanceOf(Map.class, object);
         assertEquals("nameA", result.get("name"));
         assertEquals("descriptionA", result.get("description"));
-
-        Map<String, Object> type = (Map<String, Object>) result.get("type");
         assertNotNull(type);
         assertEquals("nameB", type.get("name"));
         assertEquals("descriptionB", type.get("description"));
@@ -85,7 +88,8 @@ public class NodeToMapListOrValueTest {
     }
 
     @Test
-    public void testListStandardStrategy() throws Exception {
+    public void shouldSerializeListNodeWithStandardStrategy() throws Exception {
+        // given
         Node node = new Node()
                 .name("nameA")
                 .description("descriptionA")
@@ -102,40 +106,37 @@ public class NodeToMapListOrValueTest {
                         )
                 );
 
+        // when
         Object object = NodeToMapListOrValue.get(node);
-        assertInstanceOf(Map.class, object);
         Map<String, Object> result = (Map<String, Object>) object;
+        List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("items");
+        Map<String, Object> item1 = items.get(0);
+        Map<String, Object> item2 = items.get(1);
+        Map<String, Object> item3 = items.get(2);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> nestedItems1 = (List<Map<String, Object>>) item3.get("items");
+        Map<String, Object> item4 = items.get(3);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> nestedItems2 = (List<Map<String, Object>>) item4.get("items");
 
+        // then
+        assertInstanceOf(Map.class, object);
         assertEquals("nameA", result.get("name"));
         assertEquals("descriptionA", result.get("description"));
-
-        List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("items");
         assertNotNull(items);
         assertEquals(4, items.size());
-
-        Map<String, Object> item1 = items.get(0);
         assertEquals("el1", item1.get("name"));
         assertNull(item1.get("value"));
         assertNull(item1.get("description"));
         assertNull(item1.get("items"));
-
-        Map<String, Object> item2 = items.get(1);
         assertEquals("value1", item2.get("value"));
         assertNull(item2.get("name"));
         assertNull(item2.get("description"));
         assertNull(item2.get("items"));
-
-        Map<String, Object> item3 = items.get(2);
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> nestedItems1 = (List<Map<String, Object>>) item3.get("items");
         assertNotNull(nestedItems1);
         assertEquals(2, nestedItems1.size());
         assertEquals("x1", nestedItems1.get(0).get("value"));
         assertEquals("x2", nestedItems1.get(1).get("value"));
-
-        Map<String, Object> item4 = items.get(3);
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> nestedItems2 = (List<Map<String, Object>>) item4.get("items");
         assertNotNull(nestedItems2);
         assertEquals(2, nestedItems2.size());
         assertEquals("abc", nestedItems2.get(0).get("name"));
@@ -145,7 +146,8 @@ public class NodeToMapListOrValueTest {
     }
 
     @Test
-    public void testListDomainMappingStrategy() throws Exception {
+    public void shouldSerializeListNodeWithSimpleStrategy() throws Exception {
+        // given
         Node node = new Node()
                 .name("nameA")
                 .description("descriptionA")
@@ -162,32 +164,31 @@ public class NodeToMapListOrValueTest {
                         )
                 );
 
+        // when
         Object object = NodeToMapListOrValue.get(node, SIMPLE);
-        assertInstanceOf(List.class, object);
         List<Object> result = (List<Object>) object;
+        List<?> thirdItemList = (List<?>) result.get(2);
+        List<?> fourthItemList = (List<?>) result.get(3);
 
+        // then
+        assertInstanceOf(List.class, object);
         assertEquals(4, result.size());
-
         assertTrue(result.get(0) instanceof Map);
         assertEquals("el1", ((Map<?, ?>) result.get(0)).get("name"));
-
         assertEquals("value1", result.get(1));
-
         assertTrue(result.get(2) instanceof List);
-        List<?> thirdItemList = (List<?>) result.get(2);
         assertEquals(2, thirdItemList.size());
         assertEquals("x1", thirdItemList.get(0));
         assertEquals("x2", thirdItemList.get(1));
-
         assertTrue(result.get(3) instanceof List);
-        List<?> fourthItemList = (List<?>) result.get(3);
         assertEquals(2, fourthItemList.size());
         assertEquals("y1", fourthItemList.get(0));
         assertEquals("y2", fourthItemList.get(1));
     }
 
     @Test
-    public void testNodeWithSchemaMappingStrategy() throws Exception {
+    public void shouldSerializeSchemaConstraintsWithSimpleStrategy() throws Exception {
+        // given
         Schema schema = new Schema()
                 .required(true)
                 .minLength(
@@ -211,10 +212,12 @@ public class NodeToMapListOrValueTest {
                 .description("descriptionA")
                 .schema(schema);
 
+        // when
         Object object = NodeToMapListOrValue.get(node, SIMPLE);
         Node fromObject = JSON_MAPPER.convertValue(object, Node.class);
         Schema resultSchema = fromObject.getSchema();
 
+        // then
         assertEquals(true, resultSchema.getRequiredValue());
         assertEquals(BigInteger.valueOf(5), resultSchema.getMinLengthExact());
         assertEquals(BigInteger.valueOf(10), resultSchema.getMaxLengthExact());
@@ -233,74 +236,97 @@ public class NodeToMapListOrValueTest {
     }
 
     @Test
-    public void testReferenceOnlyBlueIdSerialization() {
-        Object object = NodeToMapListOrValue.get(new Node().blueId("abc"));
+    public void shouldSerializeReferenceOnlyNodeAsBlueIdMap() {
+        // given
+        Node reference = new Node().blueId("abc");
 
+        // when
+        Object object = NodeToMapListOrValue.get(reference);
+
+        // then
         assertEquals(Collections.singletonMap("blueId", "abc"), object);
     }
 
     @Test
-    public void testListControlSerialization() {
-        Object previous = NodeToMapListOrValue.get(new Node().previousBlueId("prevHash"));
-        Map<String, Object> previousReference = new LinkedHashMap<>();
-        previousReference.put("blueId", "prevHash");
-        assertEquals(Collections.singletonMap("$previous", previousReference), previous);
-
-        Object positioned = NodeToMapListOrValue.get(new Node()
+    public void shouldSerializeListControlFields() {
+        // given
+        Node previousControl = new Node().previousBlueId("prevHash");
+        Node positionedControl = new Node()
                 .position(2)
-                .value("C"));
-        assertEquals(new BigInteger("2"), ((Map<?, ?>) positioned).get("$pos"));
-        assertEquals("C", ((Map<?, ?>) positioned).get("value"));
-
-        Object list = NodeToMapListOrValue.get(new Node()
+                .value("C");
+        Node listControl = new Node()
                 .type(new Node().blueId("8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF"))
                 .mergePolicy("append-only")
-                .items(new Node().value("A")));
+                .items(new Node().value("A"));
+        Map<String, Object> previousReference = new LinkedHashMap<>();
+        previousReference.put("blueId", "prevHash");
+
+        // when
+        Object previous = NodeToMapListOrValue.get(previousControl);
+        Object positioned = NodeToMapListOrValue.get(positionedControl);
+        Object list = NodeToMapListOrValue.get(listControl);
+
+        // then
+        assertEquals(Collections.singletonMap("$previous", previousReference), previous);
+        assertEquals(new BigInteger("2"), ((Map<?, ?>) positioned).get("$pos"));
+        assertEquals("C", ((Map<?, ?>) positioned).get("value"));
         assertEquals("append-only", ((Map<?, ?>) list).get("mergePolicy"));
     }
 
     @Test
-    public void nodeToMapSerializesBlueDirectiveRecursively() {
-        Object object = NodeToMapListOrValue.get(new Node()
+    public void shouldSerializeBlueDirectiveRecursively() {
+        // given
+        Node node = new Node()
                 .blue(new Node().properties("imports", new Node().properties(
                         "Person", new Node().blueId("abc"))))
-                .value("hello"));
+                .value("hello");
 
+        // when
+        Object object = NodeToMapListOrValue.get(node);
         Map<String, Object> result = (Map<String, Object>) object;
-        assertInstanceOf(Map.class, result.get("blue"));
         Map<String, Object> blue = (Map<String, Object>) result.get("blue");
+
+        // then
+        assertInstanceOf(Map.class, result.get("blue"));
         assertInstanceOf(Map.class, blue.get("imports"));
         assertEquals(Collections.singletonMap("blueId", "abc"),
                 ((Map<?, ?>) blue.get("imports")).get("Person"));
     }
 
     @Test
-    public void nodeToMapAllowsContractsAlongsideValueAndItems() {
+    public void shouldAllowContractsAlongsideValueAndItems() {
+        // given
         Node valueWithContracts = new Node()
                 .value("abc")
                 .properties("contracts", new Node().properties("audit", new Node().value("on")));
-        Map<String, Object> valueResult = (Map<String, Object>) NodeToMapListOrValue.get(valueWithContracts);
-        assertEquals("abc", valueResult.get("value"));
-        assertTrue(valueResult.containsKey("contracts"));
-
         Node itemsWithContracts = new Node()
                 .items(new Node().value("abc"))
                 .properties("contracts", new Node().properties("audit", new Node().value("on")));
+
+        // when
+        Map<String, Object> valueResult = (Map<String, Object>) NodeToMapListOrValue.get(valueWithContracts);
         Map<String, Object> itemsResult = (Map<String, Object>) NodeToMapListOrValue.get(itemsWithContracts);
+
+        // then
+        assertEquals("abc", valueResult.get("value"));
+        assertTrue(valueResult.containsKey("contracts"));
         assertTrue(itemsResult.containsKey("items"));
         assertTrue(itemsResult.containsKey("contracts"));
     }
 
     @Test
-    public void canonicalSchemaSerializationEmitsEnumAndNoInvalidOptionsKey() throws Exception {
+    public void shouldEmitEnumWithoutInvalidOptionsKeyDuringCanonicalSchemaSerialization() throws Exception {
+        // given
         Node node = new Blue().yamlToNode(
                 "schema:\n" +
                 "  enum:\n" +
                 "    - red\n" +
                 "    - blue");
 
+        // when
         String json = JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
 
+        // then
         assertTrue(json.contains("\"enum\""));
         assertFalse(json.contains("\"options\""));
         assertEquals("red", node.getSchema().getEnum().get(0).getValue());
@@ -308,48 +334,72 @@ public class NodeToMapListOrValueTest {
     }
 
     @Test
-    public void schemaToMapPlainScalarDoesNotIgnoreContracts() {
+    public void shouldPreserveContractsOnPlainScalarSchemaValues() {
+        // given
         Node node = new Node().schema(new Schema().enumValues(Collections.singletonList(
                 new Node()
                         .value("red")
                         .contracts(new Node().properties("audit", new Node().value(true))))));
 
+        // when
         Map<String, Object> result = (Map<String, Object>) NodeToMapListOrValue.get(node);
         Map<String, Object> schema = (Map<String, Object>) result.get("schema");
         List<Object> enumValues = (List<Object>) schema.get("enum");
 
+        // then
         assertInstanceOf(Map.class, enumValues.get(0));
         assertTrue(((Map<String, Object>) enumValues.get(0)).containsKey("contracts"));
     }
 
     @Test
-    public void testInvalidProgrammaticPreviousControlSerializationIsRejected() {
+    public void shouldRejectInvalidProgrammaticPreviousControlSerialization() {
+        // given
         Node invalid = new Node()
                 .previousBlueId("prevHash")
                 .value("C");
 
-        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalid));
+        // when
+        Throwable failure = captureFailure(() ->
+                NodeToMapListOrValue.get(invalid));
+
+        // then
+        assertEquals(IllegalArgumentException.class, failure.getClass());
     }
 
     @Test
-    public void testInvalidProgrammaticPositionControlSerializationIsRejected() {
+    public void shouldRejectInvalidProgrammaticPositionControlSerialization() {
+        // given
         Node invalid = new Node().position(0);
 
-        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalid));
+        // when
+        Throwable failure = captureFailure(() ->
+                NodeToMapListOrValue.get(invalid));
+
+        // then
+        assertEquals(IllegalArgumentException.class, failure.getClass());
     }
 
     @Test
-    public void testProgrammaticPayloadKindExclusivity() {
+    public void shouldRejectProgrammaticNodesWithMultiplePayloadKinds() {
+        // given
         Node invalidValueAndProperties = new Node()
                 .value("abc")
                 .properties("child", new Node().value("def"));
-
         Node invalidItemsAndProperties = new Node()
                 .items(new Node().value("abc"))
                 .properties("child", new Node().value("def"));
 
-        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalidValueAndProperties));
-        assertThrows(IllegalArgumentException.class, () -> NodeToMapListOrValue.get(invalidItemsAndProperties));
+        // when
+        Throwable valueAndPropertiesFailure = captureFailure(() ->
+                NodeToMapListOrValue.get(invalidValueAndProperties));
+        Throwable itemsAndPropertiesFailure = captureFailure(() ->
+                NodeToMapListOrValue.get(invalidItemsAndProperties));
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                valueAndPropertiesFailure.getClass());
+        assertEquals(IllegalArgumentException.class,
+                itemsAndPropertiesFailure.getClass());
     }
 
 }

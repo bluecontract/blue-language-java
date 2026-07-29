@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class ListItemsTypeCheckerTest {
 
     @Test
-    public void testSuccess() throws Exception {
+    public void shouldAcceptCompatibleListItemTypes() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Node a = new Node().name("A");
         nodeProvider.addSingleNodes(a);
@@ -55,15 +56,18 @@ public class ListItemsTypeCheckerTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node node = new Node();
+        // when
         merger.merge(node, nodeProvider.fetchByBlueId(
                 nodeProvider.getBlueIdByName("Y")).get(0), Limits.NO_LIMITS);
 
+        // then
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
 
 
     @Test
-    public void testFailure() throws Exception {
+    public void shouldRejectIncompatibleListItemTypes() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Node a = new Node().name("A");
         nodeProvider.addSingleNodes(a);
@@ -97,8 +101,10 @@ public class ListItemsTypeCheckerTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
+        // when
         Node node = new Node();
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> {
             merger.merge(node, nodeProvider.fetchByBlueId(
                     nodeProvider.getBlueIdByName("Y")).get(0), Limits.NO_LIMITS);

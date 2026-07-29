@@ -8,13 +8,17 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessorHandlerFailureTest {
@@ -24,16 +28,21 @@ class DocumentProcessorHandlerFailureTest {
     private static final String FAILURE_STEP =
             "handlerStep";
     private static final long FAILURE_STEP_WEIGHT = 7L;
+    private static final String EXISTING_DOCUMENT_BLUE_ID =
+            BlueIdCalculator.calculateBlueId(
+                    new Node().value("existing"));
 
     @Test
-    void handlerRuntimeExceptionRollsBackWithoutTerminationMarker() {
+    void shouldVerifyHandlerRuntimeExceptionRollsBackWithoutTerminationMarker() {
+        // given
         Blue blue = blueWithThrowingProcessor();
         Node document = blue.yamlToNode("name: Handler Failure\n" +
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
                 "      blueId: " + RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER + "\n" +
-                "    documentId: existing\n" +
+                "    document:\n" +
+                "      blueId: " + EXISTING_DOCUMENT_BLUE_ID + "\n" +
                 "  events:\n" +
                 "    type:\n" +
                 "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
@@ -44,6 +53,7 @@ class DocumentProcessorHandlerFailureTest {
                 "    propertyKey: /throwWithoutPatch\n" +
                 "    propertyValue: 1\n");
 
+        // when
         String input = document.toString();
         ProcessingDebugResult debug =
                 blue.getDocumentProcessor()
@@ -53,6 +63,7 @@ class DocumentProcessorHandlerFailureTest {
         DocumentProcessingResult result =
                 debug.processResult();
 
+        // then
         assertFalse(isCapabilityFailure(result));
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
@@ -68,14 +79,16 @@ class DocumentProcessorHandlerFailureTest {
     }
 
     @Test
-    void handlerThrowAfterBufferingPatchDoesNotApplyBufferedPatch() {
+    void shouldVerifyHandlerThrowAfterBufferingPatchDoesNotApplyBufferedPatch() {
+        // given
         Blue blue = blueWithThrowingProcessor();
         Node document = blue.yamlToNode("name: Handler Buffer Failure\n" +
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
                 "      blueId: " + RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER + "\n" +
-                "    documentId: existing\n" +
+                "    document:\n" +
+                "      blueId: " + EXISTING_DOCUMENT_BLUE_ID + "\n" +
                 "  events:\n" +
                 "    type:\n" +
                 "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
@@ -86,6 +99,7 @@ class DocumentProcessorHandlerFailureTest {
                 "    propertyKey: /shouldNotApply\n" +
                 "    propertyValue: 2\n");
 
+        // when
         String input = document.toString();
         ProcessingDebugResult debug =
                 blue.getDocumentProcessor()
@@ -95,6 +109,7 @@ class DocumentProcessorHandlerFailureTest {
         DocumentProcessingResult result =
                 debug.processResult();
 
+        // then
         assertFalse(isCapabilityFailure(result));
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
@@ -109,7 +124,8 @@ class DocumentProcessorHandlerFailureTest {
     }
 
     @Test
-    void admittedRuntimeLedgerSurvivesLaterPatchFailure() {
+    void shouldVerifyAdmittedRuntimeLedgerSurvivesLaterPatchFailure() {
+        // given
         Blue blue = blueWithThrowingProcessor();
         Node document = blue.yamlToNode(
                 "name: Handler Patch Failure\n"
@@ -119,7 +135,10 @@ class DocumentProcessorHandlerFailureTest {
                         + "      blueId: "
                         + RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER
                         + "\n"
-                        + "    documentId: existing\n"
+                        + "    document:\n"
+                        + "      blueId: "
+                        + EXISTING_DOCUMENT_BLUE_ID
+                        + "\n"
                         + "  events:\n"
                         + "    type:\n"
                         + "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n"
@@ -131,6 +150,7 @@ class DocumentProcessorHandlerFailureTest {
                         + "    propertyValue: -999\n");
         String input = document.toString();
 
+        // when
         ProcessingDebugResult debug =
                 blue.getDocumentProcessor()
                         .processDocumentWithTrace(
@@ -138,7 +158,26 @@ class DocumentProcessorHandlerFailureTest {
                                 event("evt-patch-fail"));
         DocumentProcessingResult result =
                 debug.processResult();
+        long runtimeSequence =
+                debug.trace().gas().stream()
+                        .filter(entry ->
+                                FAILURE_RUNTIME.equals(
+                                        entry.namespace()))
+                        .findFirst()
+                        .map(GasTraceEntry::sequence)
+                        .orElse(-1L);
+        boolean runtimePrecedesApplicationWork =
+                debug.trace().gas().stream()
+                        .filter(entry ->
+                                "processor".equals(entry.namespace())
+                                        && ("patchBoundaryChecked".equals(
+                                        entry.counter())
+                                        || "patchAddOrReplace".equals(
+                                        entry.counter())))
+                        .allMatch(entry ->
+                                runtimeSequence < entry.sequence());
 
+        // then
         assertEquals(
                 ProcessorStatus.RUNTIME_FATAL,
                 result.status());
@@ -149,37 +188,22 @@ class DocumentProcessorHandlerFailureTest {
                 result.document(),
                 "/contracts/checkpoint"));
         assertRuntimeLedgerPreserved(debug);
-
-        long runtimeSequence =
-                debug.trace().gas().stream()
-                        .filter(entry ->
-                                FAILURE_RUNTIME.equals(
-                                        entry.namespace()))
-                        .findFirst()
-                        .orElseThrow(AssertionError::new)
-                        .sequence();
-        debug.trace().gas().stream()
-                .filter(entry ->
-                        "processor".equals(entry.namespace())
-                                && ("patchBoundaryChecked".equals(
-                                        entry.counter())
-                                || "patchAddOrReplace".equals(
-                                        entry.counter())))
-                .forEach(entry ->
-                        assertTrue(
-                                runtimeSequence < entry.sequence(),
-                                "runtime ledger must precede application-effect work"));
+        assertTrue(runtimeSequence >= 0L);
+        assertTrue(runtimePrecedesApplicationWork,
+                "runtime ledger must precede application-effect work");
     }
 
     @Test
-    void handlerFailureRollsBackPriorHandlerEffects() {
+    void shouldVerifyHandlerFailureRollsBackPriorHandlerEffects() {
+        // given
         Blue blue = blueWithThrowingProcessor();
         Node document = blue.yamlToNode("name: Handler Prior Effects\n" +
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
                 "      blueId: " + RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER + "\n" +
-                "    documentId: existing\n" +
+                "    document:\n" +
+                "      blueId: " + EXISTING_DOCUMENT_BLUE_ID + "\n" +
                 "  events:\n" +
                 "    type:\n" +
                 "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
@@ -198,12 +222,14 @@ class DocumentProcessorHandlerFailureTest {
                 "    propertyKey: /shouldNotApply\n" +
                 "    propertyValue: 9\n");
 
+        // when
         String input = document.toString();
         DocumentProcessingResult result =
                 blue.processDocument(
                         document,
                         event("evt-prior-preserved"));
 
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
         assertFalse(result.commits());
@@ -213,6 +239,133 @@ class DocumentProcessorHandlerFailureTest {
         assertFalse(result.document().getContracts()
                 .getProperties().containsKey("terminated"));
         assertTrue(result.events().isEmpty());
+    }
+
+    @Test
+    void shouldVerifyHostedChildExhaustionUsesCanonicalStatusAndRetainsExactPrefix() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport
+                        .testEventChannelProcessor());
+        blue.registerContractProcessor(
+                new ExhaustingSetPropertyProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
+        Node document = blue.yamlToNode(
+                "name: Hosted Gas Exhaustion\n"
+                        + "contracts:\n"
+                        + "  initialized:\n"
+                        + "    type:\n"
+                        + "      blueId: "
+                        + RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER
+                        + "\n"
+                        + "    document:\n"
+                        + "      blueId: "
+                        + EXISTING_DOCUMENT_BLUE_ID
+                        + "\n"
+                        + "  events:\n"
+                        + "    type:\n"
+                        + "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n"
+                        + "  exhaust:\n"
+                        + "    channel: events\n"
+                        + "    type:\n"
+                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "    propertyKey: /neverApplied\n"
+                        + "    propertyValue: 1\n");
+        String input = document.toString();
+
+        // when
+        ProcessingDebugResult first =
+                blue.getDocumentProcessor()
+                        .processDocumentWithTrace(
+                                document.clone(),
+                                event("evt-hosted-gas"));
+        ProcessingDebugResult second =
+                blue.getDocumentProcessor()
+                        .processDocumentWithTrace(
+                                document.clone(),
+                                event("evt-hosted-gas"));
+        List<GasTraceEntry> hosted =
+                first.trace().gas().stream()
+                        .filter(entry ->
+                                "hosted-exhaustion"
+                                        .equals(
+                                                entry.namespace()))
+                        .collect(Collectors.toList());
+        GasTraceEntry admitted = hosted.size() == 1
+                ? hosted.get(0) : null;
+        String admittedCounter = admitted == null
+                ? null : admitted.counter();
+        long admittedQuantity = admitted == null
+                ? -1L : admitted.quantity();
+        long admittedSubtotal = admitted == null
+                ? -1L : admitted.subtotal();
+        ProcessorDiagnostic diagnostic =
+                first.processResult().diagnostic();
+
+        // then
+        assertEquals(
+                ProcessorStatus.GAS_LIMIT_EXCEEDED,
+                first.processResult().status());
+        assertFalse(first.processResult().commits());
+        assertEquals(
+                input,
+                first.processResult()
+                        .document().toString());
+        assertTrue(
+                first.processResult()
+                        .events().isEmpty());
+        assertNull(nodeAt(
+                first.processResult().document(),
+                "/neverApplied"));
+        assertEquals(
+                first.processResult().totalGas(),
+                first.trace().gas().stream()
+                        .mapToLong(
+                                GasTraceEntry::subtotal)
+                        .sum());
+        assertEquals(1, hosted.size());
+        assertEquals(
+                "iteration",
+                admittedCounter);
+        assertTrue(admittedQuantity > 0L);
+        assertNotNull(diagnostic);
+        assertEquals(
+                "hosted-exhaustion",
+                diagnostic.details()
+                        .get("namespace"));
+        assertEquals(
+                "iteration",
+                diagnostic.details()
+                        .get("counter"));
+        assertEquals(
+                "1",
+                diagnostic.details()
+                        .get("quantity"));
+        assertEquals(
+                "1",
+                diagnostic.details()
+                        .get("weight"));
+        assertEquals(
+                Long.toString(
+                        admittedSubtotal),
+                diagnostic.details()
+                        .get("admittedGas"));
+        assertEquals(
+                diagnostic.details().get(
+                        "gasLimit"),
+                diagnostic.details().get(
+                        "effectiveBudget"));
+
+        assertEquals(
+                first.processResult().status(),
+                second.processResult().status());
+        assertEquals(
+                first.processResult().totalGas(),
+                second.processResult().totalGas());
+        assertEquals(
+                traceFingerprint(first.trace().gas()),
+                traceFingerprint(second.trace().gas()));
     }
 
     private Blue blueWithThrowingProcessor() {
@@ -264,6 +417,22 @@ class DocumentProcessorHandlerFailureTest {
                 debug.processResult().totalGas());
     }
 
+    private List<String> traceFingerprint(
+            List<GasTraceEntry> trace) {
+        return trace.stream()
+                .map(entry ->
+                        entry.namespace()
+                                + "|"
+                                + entry.counter()
+                                + "|"
+                                + entry.quantity()
+                                + "|"
+                                + entry.weight()
+                                + "|"
+                                + entry.reason())
+                .collect(Collectors.toList());
+    }
+
     private static final class ConditionalThrowingSetPropertyProcessor implements HandlerProcessor<SetProperty> {
         @Override
         public Class<SetProperty> contractType() {
@@ -301,6 +470,45 @@ class DocumentProcessorHandlerFailureTest {
             if ("/shouldNotApply".equals(propertyKey)) {
                 throw new IllegalArgumentException("handler failed after buffering effects");
             }
+        }
+    }
+
+    private static final class ExhaustingSetPropertyProcessor
+            implements HandlerProcessor<SetProperty> {
+        @Override
+        public Class<SetProperty> contractType() {
+            return SetProperty.class;
+        }
+
+        @Override
+        public void execute(
+                SetProperty contract,
+                ProcessorExecutionContext context) {
+            GasMeter.ChildGasLedger ledger =
+                    context.runtimeWorkSession()
+                            .openLedger(
+                                    "hosted-exhaustion",
+                                    Collections.singletonMap(
+                                            "iteration", 1L));
+            ledger.charge(
+                    "iteration",
+                    ledger.effectiveBudget(),
+                    GasChargeContext.reason(
+                            "admitted-prefix"));
+            try {
+                ledger.charge(
+                        "iteration",
+                        1L,
+                        GasChargeContext.reason(
+                                "rejected"));
+            } catch (GasLimitExceededException exhaustion) {
+                context.runtimeWorkSession()
+                        .propagateGasExhaustion(
+                                RuntimeGasExhaustion
+                                        .from(exhaustion));
+            }
+            throw new AssertionError(
+                    "work continued after rejected hosted charge");
         }
     }
 }

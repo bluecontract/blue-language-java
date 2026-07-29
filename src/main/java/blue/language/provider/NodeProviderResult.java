@@ -9,7 +9,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Transport-neutral provider conclusion for one requested BlueId.
+ * Transport-neutral, immutable provider conclusion for one requested BlueId.
+ *
+ * <p>Found content is defensively copied on construction and every read.
+ * Non-found outcomes cannot carry nodes.</p>
  */
 public final class NodeProviderResult {
 
@@ -37,26 +40,60 @@ public final class NodeProviderResult {
         }
     }
 
+    /**
+     * Creates a found result containing defensively copied content.
+     *
+     * @param nodes non-empty candidate list
+     * @return found result
+     * @throws IllegalArgumentException when the list is null or empty
+     */
     public static NodeProviderResult found(List<Node> nodes) {
         return new NodeProviderResult(NodeProviderOutcome.FOUND, nodes, null);
     }
 
+    /**
+     * Creates a definitive provider miss.
+     *
+     * @return provider-miss result
+     */
     public static NodeProviderResult notFound() {
         return new NodeProviderResult(NodeProviderOutcome.NOT_FOUND, null, null);
     }
 
+    /**
+     * Creates a transiently unavailable result.
+     *
+     * @param diagnostic optional provider diagnostic
+     * @return unavailable result
+     */
     public static NodeProviderResult unavailable(String diagnostic) {
         return new NodeProviderResult(NodeProviderOutcome.UNAVAILABLE, null, diagnostic);
     }
 
+    /**
+     * Creates an invalid-evidence result.
+     *
+     * @param diagnostic optional verification diagnostic
+     * @return invalid-evidence result
+     */
     public static NodeProviderResult invalidEvidence(String diagnostic) {
         return new NodeProviderResult(NodeProviderOutcome.INVALID_EVIDENCE, null, diagnostic);
     }
 
+    /**
+     * Returns the provider's exhaustive conclusion.
+     *
+     * @return exhaustive provider outcome
+     */
     public NodeProviderOutcome outcome() {
         return outcome;
     }
 
+    /**
+     * Returns fresh mutable copies of retained content.
+     *
+     * @return mutable node copies in provider order
+     */
     public List<Node> nodes() {
         List<Node> copies = new ArrayList<>(nodes.size());
         for (Node node : nodes) {
@@ -65,6 +102,11 @@ public final class NodeProviderResult {
         return copies;
     }
 
+    /**
+     * Returns the optional provider diagnostic.
+     *
+     * @return provider diagnostic, if supplied
+     */
     public Optional<String> diagnostic() {
         return Optional.ofNullable(diagnostic);
     }

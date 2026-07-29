@@ -1,5 +1,7 @@
 package blue.language.processor.conformance;
 
+import blue.language.utils.Properties;
+
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,39 +16,69 @@ import java.util.Set;
 
 /**
  * Exact allow-list of observable conformance projections.
+ *
+ * <p>The catalog is loaded once per instance from a closed packaged resource.
+ * It validates assertion paths only and never reads or alters execution
+ * output.</p>
  */
 public final class ContractsProjectionCatalog {
 
+    /** Classpath location of the closed projection allow-list. */
     public static final String RESOURCE =
             "blue-contracts-1.0/fixtures/projection-catalog.yaml";
 
     private final Set<String> paths;
 
+    /**
+     * Loads and validates the bundled projection catalog.
+     *
+     * @throws IllegalStateException if the catalog is absent or malformed
+     */
     public ContractsProjectionCatalog() {
         this.paths = Collections.unmodifiableSet(load());
     }
 
+    /**
+     * Returns declared observable projection paths.
+     *
+     * @return immutable paths in catalog order
+     */
     public Set<String> paths() {
         return paths;
     }
 
+    /**
+     * Verifies that every actual and expected-projection path used by a
+     * fixture assertion is declared in the catalog.
+     *
+     * @param fixture fixture whose assertion paths are checked
+     * @throws IllegalArgumentException when an assertion references an
+     *         undeclared path
+     */
     public void validateFixtureAssertions(JsonNode fixture) {
-        JsonNode assertions = fixture.path("expected").path("assertions");
+        JsonNode assertions = fixture.path(ContractsFixtureConstants.Field.EXPECTED).path(ContractsFixtureConstants.Field.ASSERTIONS);
         if (!assertions.isArray()) {
             return;
         }
         int index = 0;
         for (JsonNode assertion : assertions) {
             String base = "$.expected.assertions[" + index++ + "]";
-            String actual = assertion.path("actual").asText(null);
+            String actual = assertion.path(ContractsFixtureConstants.Field.ACTUAL).asText(null);
             requireDeclared(actual, base + ".actual");
-            if (assertion.has("expectedProjection")) {
-                requireDeclared(assertion.path("expectedProjection").asText(null),
+            if (assertion.has(ContractsFixtureConstants.Field.EXPECTED_PROJECTION)) {
+                requireDeclared(assertion.path(ContractsFixtureConstants.Field.EXPECTED_PROJECTION).asText(null),
                         base + ".expectedProjection");
             }
         }
     }
 
+    /**
+     * Rejects a projection path that is not part of the closed allow-list.
+     *
+     * @param path projection path to check
+     * @param source diagnostic location that declared the path
+     * @throws IllegalArgumentException when {@code path} is null or undeclared
+     */
     public void requireDeclared(String path, String source) {
         if (path == null || !paths.contains(path)) {
             throw new IllegalArgumentException(
@@ -68,7 +100,7 @@ public final class ContractsProjectionCatalog {
             if (!catalog.isObject()
                     || catalog.size() != 2
                     || !"blue-contracts-projection-catalog/2.0".equals(
-                    catalog.path("schema").asText())) {
+                    catalog.path(Properties.OBJECT_SCHEMA).asText())) {
                 throw new IllegalStateException("Invalid Contracts projection catalog envelope");
             }
             JsonNode entries = catalog.get("entries");
@@ -79,21 +111,39 @@ public final class ContractsProjectionCatalog {
             int index = 0;
             for (JsonNode entry : entries) {
                 String source = "projection-catalog.entries[" + index++ + "]";
-                if (!entry.isObject() || entry.size() != 3) {
-                    throw new IllegalStateException(source + " must contain path, type, definition");
+                if (!entry.isObject()
+                        || entry.size() < 2
+                        || entry.size() > 3) {
+                    throw new IllegalStateException(
+                            source + " must contain path and definition, "
+                                    + "with optional type");
                 }
                 Set<String> fields = new LinkedHashSet<>();
                 for (Iterator<String> it = entry.fieldNames(); it.hasNext(); ) {
                     fields.add(it.next());
                 }
-                if (!fields.equals(set("path", "type", "definition"))) {
+                if (!fields.equals(
+                        set("path", "definition"))
+                        && !fields.equals(
+                        set("path", Properties.OBJECT_TYPE, "definition"))) {
                     throw new IllegalStateException(source + " has unknown fields");
                 }
                 String path = requiredText(entry, "path", source);
-                String type = requiredText(entry, "type", source);
-                if (!set("scalar-or-node", "integer", "boolean", "value", "sequence-or-value")
-                        .contains(type)) {
-                    throw new IllegalStateException(source + " has unsupported projection type " + type);
+                if (entry.has(Properties.OBJECT_TYPE)) {
+                    String type = requiredText(
+                            entry, Properties.OBJECT_TYPE, source);
+                    if (!set(
+                            "scalar-or-node",
+                            "integer",
+                            "boolean",
+                            Properties.OBJECT_VALUE,
+                            "sequence-or-value")
+                            .contains(type)) {
+                        throw new IllegalStateException(
+                                source
+                                        + " has unsupported projection type "
+                                        + type);
+                    }
                 }
                 requiredText(entry, "definition", source);
                 if (!paths.add(path)) {

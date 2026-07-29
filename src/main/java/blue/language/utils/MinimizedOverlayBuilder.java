@@ -13,6 +13,19 @@ import java.util.Objects;
  */
 public final class MinimizedOverlayBuilder {
 
+    /**
+     * Creates a minimized author-facing overlay builder.
+     */
+    public MinimizedOverlayBuilder() {
+    }
+
+    /**
+     * Returns a new minimized author-facing overlay.
+     *
+     * @param resolvedNode completed resolved node to reconstruct
+     * @return new minimized overlay
+     * @throws NullPointerException if {@code resolvedNode} is {@code null}
+     */
     public Node build(Node resolvedNode) {
         Objects.requireNonNull(resolvedNode, "resolvedNode");
         return new OverlayReconstruction().minimizedOverlay(resolvedNode);

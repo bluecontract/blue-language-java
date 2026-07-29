@@ -26,52 +26,96 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueConformanceReportTest {
     @Test
-    void languageVersionIsBlueLanguage10() {
-        assertEquals("1.0", new Blue().languageVersion());
-    }
-
-    @Test
-    void conformanceReportHasNoProfiles() {
-        for (Method method : Blue.class.getMethods()) {
-            assertFalse(method.getName().toLowerCase().contains("profile"));
-        }
-        for (Method method : BlueConformanceReport.class.getMethods()) {
-            assertFalse(method.getName().toLowerCase().contains("profile"));
-        }
-    }
-
-    @Test
-    void conformanceReportLoadsFixtureIdentity() {
+    void shouldReportBlueLanguage10Version() {
+        // given
         Blue blue = new Blue();
-        BlueConformanceReport report = blue.conformanceReport();
 
-        assertEquals(BlueConformanceReport.computeFixturePackageIdentity(), report.getFixturePackageIdentity());
+        // when
+        String languageVersion = blue.languageVersion();
+
+        // then
+        assertEquals("1.0", languageVersion);
+    }
+
+    @Test
+    void shouldExposeNoConformanceProfiles() {
+        // given
+        Method[] blueMethods = Blue.class.getMethods();
+        Method[] reportMethods = BlueConformanceReport.class.getMethods();
+
+        // when
+        List<String> profileMethods = Stream.concat(
+                        Arrays.stream(blueMethods),
+                        Arrays.stream(reportMethods))
+                .map(Method::getName)
+                .filter(name -> name.toLowerCase().contains("profile"))
+                .collect(Collectors.toList());
+
+        // then
+        assertTrue(profileMethods.isEmpty(), profileMethods.toString());
+    }
+
+    @Test
+    void shouldLoadFixtureIdentityIntoConformanceReport() {
+        // given
+        Blue blue = new Blue();
+
+        // when
+        BlueConformanceReport report = blue.conformanceReport();
+        String computedIdentity =
+                BlueConformanceReport.computeFixturePackageIdentity();
+        String reportedIdentity = report.getFixturePackageIdentity();
+        boolean releaseGradeIdentity =
+                report.isReleaseGradeFixtureIdentity();
+        boolean fixtureFilesMatchIdentity =
+                BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles();
+
+        // then
+        assertEquals(computedIdentity, reportedIdentity);
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
-                report.getFixturePackageIdentity());
+                reportedIdentity);
+        assertEquals(
+                "sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5",
+                reportedIdentity);
         assertEquals("blue-language-1.0-final-implementation-baseline",
                 BlueConformanceReport.BLUE_SPEC_SOURCE);
-        assertTrue(report.isReleaseGradeFixtureIdentity());
-        assertTrue(BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles());
+        assertTrue(releaseGradeIdentity);
+        assertTrue(fixtureFilesMatchIdentity);
     }
 
     @Test
-    void conformanceReportListsPassedAndFailedFixtureIds() {
+    void shouldListPassedAndFailedFixtureIdsInConformanceReport() {
+        // given
+        List<String> fixtureIds =
+                Arrays.asList("B_root_scalar", "B_root_list");
+        List<String> passedFixtureIds =
+                Collections.singletonList("B_root_scalar");
+        List<String> failedFixtureIds =
+                Collections.singletonList("B_root_list");
+        Map<String, BlueFixtureCategory> fixtureCategories =
+                Collections.singletonMap(
+                        "B_root_scalar",
+                        BlueFixtureCategory.BLUE_ID);
+
+        // when
         BlueConformanceReport report = new BlueConformanceReport(
                 "1.0",
                 Collections.emptyMap(),
                 "blue-language-1.0-fixtures:test",
-                Arrays.asList("B_root_scalar", "B_root_list"),
-                Collections.singletonList("B_root_scalar"),
-                Collections.singletonList("B_root_list"),
-                Collections.singletonMap("B_root_scalar", BlueFixtureCategory.BLUE_ID));
+                fixtureIds,
+                passedFixtureIds,
+                failedFixtureIds,
+                fixtureCategories);
 
-        assertEquals(Collections.singletonList("B_root_scalar"), report.getPassedFixtureIds());
-        assertEquals(Collections.singletonList("B_root_list"), report.getFailedFixtureIds());
+        // then
+        assertEquals(passedFixtureIds, report.getPassedFixtureIds());
+        assertEquals(failedFixtureIds, report.getFailedFixtureIds());
         assertTrue(report.getFailures().isEmpty());
     }
 
     @Test
-    void conformanceReportExposesDetailedFailureMetadata() {
+    void shouldExposeDetailedFailureMetadataInConformanceReport() {
+        // given
         BlueConformanceFailure failure = new BlueConformanceFailure(
                 "B_bad",
                 BlueFixtureCategory.BLUE_ID,
@@ -79,6 +123,7 @@ class BlueConformanceReportTest {
                 IllegalArgumentException.class.getName(),
                 "bad fixture",
                 BlueLanguageErrorCategory.InvalidBlueIdInput);
+        // when
         BlueConformanceReport report = new BlueConformanceReport(
                 "1.0",
                 Collections.emptyMap(),
@@ -89,6 +134,7 @@ class BlueConformanceReportTest {
                 Collections.singletonMap("B_bad", BlueFixtureCategory.BLUE_ID),
                 Collections.singletonList(failure));
 
+        // then
         assertEquals(Collections.singletonList("B_bad"), report.getFailedFixtureIds());
         assertEquals("B_bad", report.getFailures().get(0).getFixtureId());
         assertEquals("calculateBlueId", report.getFailures().get(0).getOperation());
@@ -97,9 +143,14 @@ class BlueConformanceReportTest {
     }
 
     @Test
-    void conformanceReportLoadsFixtureIdsAndCategories() {
-        BlueConformanceReport report = new Blue().conformanceReport();
+    void shouldLoadFixtureIdsAndCategoriesIntoConformanceReport() {
+        // given
+        Blue blue = new Blue();
 
+        // when
+        BlueConformanceReport report = blue.conformanceReport();
+
+        // then
         assertTrue(report.getFixtureIds().contains("B_root_scalar"));
         assertTrue(report.getFixtureIds().contains("F_provider_wrong_blueid_rejected"));
         assertEquals(BlueFixtureCategory.BLUE_ID, report.getFixtureCategories().get("B_root_scalar"));
@@ -107,9 +158,14 @@ class BlueConformanceReportTest {
     }
 
     @Test
-    void runConformanceSuitePopulatesPassedAndFailedFixtureIds() {
-        BlueConformanceReport report = new Blue().runConformanceSuite();
+    void shouldPopulatePassedAndFailedFixtureIdsWhenRunningConformanceSuite() {
+        // given
+        Blue blue = new Blue();
 
+        // when
+        BlueConformanceReport report = blue.runConformanceSuite();
+
+        // then
         assertEquals(report.getFixtureIds(), report.getPassedFixtureIds(), report.getFailures().toString());
         assertTrue(report.getFailedFixtureIds().isEmpty());
         assertTrue(report.getFailures().isEmpty());
@@ -117,9 +173,14 @@ class BlueConformanceReportTest {
     }
 
     @Test
-    void staticConformanceReportDoesNotPretendFixturesPassed() {
-        BlueConformanceReport report = new Blue().conformanceReport();
+    void shouldNotMarkFixturesPassedInStaticConformanceReport() {
+        // given
+        Blue blue = new Blue();
 
+        // when
+        BlueConformanceReport report = blue.conformanceReport();
+
+        // then
         assertTrue(report.getPassedFixtureIds().isEmpty());
         assertTrue(report.getFailedFixtureIds().isEmpty());
         assertTrue(report.getFailures().isEmpty());
@@ -127,38 +188,79 @@ class BlueConformanceReportTest {
     }
 
     @Test
-    void fixtureCategoriesAreNotConformanceProfiles() {
-        assertEquals(BlueFixtureCategory.BLUE_ID, BlueFixtureCategory.fromLabel("BlueId"));
-        assertEquals(BlueFixtureCategory.RESOLUTION, BlueFixtureCategory.fromLabel("Resolution"));
-        assertEquals("BlueId", BlueFixtureCategory.BLUE_ID.getLabel());
+    void shouldNotTreatFixtureCategoriesAsConformanceProfiles() {
+        // given
+        String blueIdLabel = "BlueId";
+        String resolutionLabel = "Resolution";
+
+        // when
+        BlueFixtureCategory blueIdCategory =
+                BlueFixtureCategory.fromLabel(blueIdLabel);
+        BlueFixtureCategory resolutionCategory =
+                BlueFixtureCategory.fromLabel(resolutionLabel);
+        String reportedBlueIdLabel =
+                BlueFixtureCategory.BLUE_ID.getLabel();
+
+        // then
+        assertEquals(BlueFixtureCategory.BLUE_ID, blueIdCategory);
+        assertEquals(BlueFixtureCategory.RESOLUTION,
+                resolutionCategory);
+        assertEquals(blueIdLabel, reportedBlueIdLabel);
     }
 
     @Test
-    void releaseGradeFixtureIdentityRejectsLocalDevPendingUnavailableAndBlank() {
-        assertFalse(BlueConformanceReport.isReleaseGradeFixtureIdentity("blue-language-1.0-fixtures:local-dev"));
-        assertFalse(BlueConformanceReport.isReleaseGradeFixtureIdentity("blue-language-1.0-fixtures:pending"));
-        assertFalse(BlueConformanceReport.isReleaseGradeFixtureIdentity("blue-language-1.0-fixtures:unavailable"));
-        assertFalse(BlueConformanceReport.isReleaseGradeFixtureIdentity(""));
-        assertFalse(BlueConformanceReport.isReleaseGradeFixtureIdentity(null));
-        assertFalse(BlueConformanceReport.isReleaseGradeFixtureIdentity("sha256:bad"));
-        assertTrue(BlueConformanceReport.isReleaseGradeFixtureIdentity(
-                "sha256:e579c14256b470ef5c987c282c760dff8865d68ecd55bce0dc1bbdb5cdb19a50"));
-        assertTrue(BlueConformanceReport.isReleaseGradeFixtureIdentity("blueId:B123"));
+    void shouldRejectInvalidReleaseGradeFixtureIdentities() {
+        // given
+        List<String> invalidIdentities = Arrays.asList(
+                "blue-language-1.0-fixtures:local-dev",
+                "blue-language-1.0-fixtures:pending",
+                "blue-language-1.0-fixtures:unavailable",
+                "",
+                null,
+                "sha256:bad");
+        List<Boolean> expectedInvalidResults =
+                Arrays.asList(false, false, false, false, false, false);
+        String sha256Identity =
+                "sha256:e579c14256b470ef5c987c282c760dff8865d68ecd55bce0dc1bbdb5cdb19a50";
+        String blueIdIdentity = "blueId:B123";
+
+        // when
+        List<Boolean> invalidResults = invalidIdentities.stream()
+                .map(BlueConformanceReport::isReleaseGradeFixtureIdentity)
+                .collect(Collectors.toList());
+        boolean sha256IdentityAccepted =
+                BlueConformanceReport.isReleaseGradeFixtureIdentity(
+                        sha256Identity);
+        boolean blueIdIdentityAccepted =
+                BlueConformanceReport.isReleaseGradeFixtureIdentity(
+                        blueIdIdentity);
+
+        // then
+        assertEquals(expectedInvalidResults, invalidResults);
+        assertTrue(sha256IdentityAccepted);
+        assertTrue(blueIdIdentityAccepted);
     }
 
     @Test
-    void requiredFixtureCoverageChecksAllLanguageFixtures() {
-        BlueConformanceReport report = new Blue().conformanceReport();
+    void shouldCheckAllLanguageFixturesForRequiredCoverage() {
+        // given
+        Blue blue = new Blue();
 
+        // when
+        BlueConformanceReport report = blue.conformanceReport();
+
+        // then
         assertTrue(report.hasRequiredFixtureCoverage());
     }
 
     @Test
-    void requiredFixtureCoveragePassesOnlyWhenAllLanguageFixturesArePresent() {
+    void shouldPassRequiredCoverageOnlyWhenAllLanguageFixturesArePresent() {
+        // given
         Map<String, BlueFixtureCategory> categories = new LinkedHashMap<>();
         for (String id : BlueConformanceReport.requiredFixtureIdsForBlueLanguage10()) {
             categories.put(id, BlueFixtureCategory.BLUE_ID);
         }
+        // when
         BlueConformanceReport complete = new BlueConformanceReport(
                 "1.0",
                 Collections.emptyMap(),
@@ -168,15 +270,18 @@ class BlueConformanceReportTest {
                 Collections.emptyList(),
                 categories);
 
+        // then
         assertTrue(complete.hasRequiredFixtureCoverage());
     }
 
     @Test
-    void exactRequiredFixtureSetRejectsExtraOrMissing() {
+    void shouldRejectExtraOrMissingFixturesFromExactRequiredSet() {
+        // given
         Map<String, BlueFixtureCategory> categories = new LinkedHashMap<>();
         for (String id : BlueConformanceReport.requiredFixtureIdsForBlueLanguage10()) {
             categories.put(id, BlueFixtureCategory.BLUE_ID);
         }
+        // when
         BlueConformanceReport exact = new BlueConformanceReport(
                 "1.0",
                 Collections.emptyMap(),
@@ -185,10 +290,6 @@ class BlueConformanceReportTest {
                 Collections.emptyList(),
                 Collections.emptyList(),
                 categories);
-
-        assertTrue(exact.hasRequiredFixtureCoverage());
-        assertTrue(exact.hasExactRequiredFixtureSet());
-
         List<String> withExtra = new java.util.ArrayList<>(exact.getFixtureIds());
         withExtra.add("EXTRA_fixture");
         BlueConformanceReport extra = new BlueConformanceReport(
@@ -199,9 +300,6 @@ class BlueConformanceReportTest {
                 Collections.emptyList(),
                 Collections.emptyList(),
                 categories);
-        assertTrue(extra.hasRequiredFixtureCoverage());
-        assertFalse(extra.hasExactRequiredFixtureSet());
-
         BlueConformanceReport missing = new BlueConformanceReport(
                 "1.0",
                 Collections.emptyMap(),
@@ -210,53 +308,87 @@ class BlueConformanceReportTest {
                 Collections.emptyList(),
                 Collections.emptyList(),
                 categories);
+
+        // then
+        assertTrue(exact.hasRequiredFixtureCoverage());
+        assertTrue(exact.hasExactRequiredFixtureSet());
+        assertTrue(extra.hasRequiredFixtureCoverage());
+        assertFalse(extra.hasExactRequiredFixtureSet());
         assertFalse(missing.hasRequiredFixtureCoverage());
         assertFalse(missing.hasExactRequiredFixtureSet());
     }
 
     @Test
-    void conformanceManifestAndRequiredFixtureSetAreAligned() throws Exception {
-        URL resource = getClass().getClassLoader().getResource("blue-language-1.0/fixtures");
-        assertTrue(resource != null);
+    void shouldAlignConformanceManifestWithRequiredFixtureSet() throws Exception {
+        // given
+        String fixtureResourcePath = "blue-language-1.0/fixtures";
+
+        // when
+        URL resource = getClass().getClassLoader()
+                .getResource(fixtureResourcePath);
         Path fixtureRoot = Paths.get(resource.toURI());
         com.fasterxml.jackson.databind.JsonNode manifest = YAML_MAPPER.readTree(
                 new String(Files.readAllBytes(fixtureRoot.resolve("manifest.yaml"))));
-        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
-                manifest.get("packageIdentity").asText());
-        assertEquals(125, manifest.get("behaviorFixtureCount").asInt());
         Set<String> manifestIds = new LinkedHashSet<>();
         Set<Path> manifestPaths = new LinkedHashSet<>();
+        List<String> manifestViolations = new java.util.ArrayList<>();
         for (com.fasterxml.jackson.databind.JsonNode file : manifest.get("files")) {
-            assertTrue(file.hasNonNull("path"));
-            assertTrue(file.hasNonNull("role"));
-            assertTrue(file.hasNonNull("sha256"));
-            assertTrue(file.hasNonNull("bytes"));
+            if (!file.hasNonNull("path")) {
+                manifestViolations.add("missing path: " + file);
+            }
+            if (!file.hasNonNull("role")) {
+                manifestViolations.add("missing role: " + file);
+            }
+            if (!file.hasNonNull("sha256")) {
+                manifestViolations.add("missing sha256: " + file);
+            }
+            if (!file.hasNonNull("bytes")) {
+                manifestViolations.add("missing bytes: " + file);
+            }
             Path fixturePath = fixtureRoot.resolve(file.get("path").asText()).normalize();
-            assertTrue(Files.isRegularFile(fixturePath), "Missing fixture file: " + fixturePath);
+            if (!Files.isRegularFile(fixturePath)) {
+                manifestViolations.add("missing fixture file: " + fixturePath);
+            }
             manifestPaths.add(fixturePath.toAbsolutePath().normalize());
             if (!"behavior-fixture".equals(file.get("role").asText())) {
-                assertEquals("support", file.get("role").asText());
+                if (!"support".equals(file.get("role").asText())) {
+                    manifestViolations.add(
+                            "unexpected role: " + file.get("role").asText());
+                }
                 continue;
             }
 
             com.fasterxml.jackson.databind.JsonNode fixtureContent = YAML_MAPPER.readTree(
                     new String(Files.readAllBytes(fixturePath)));
-            assertFalse(fixtureContent.has("profile"), "Fixture metadata must use category, not profile: " + fixturePath);
-            assertTrue(fixtureContent.hasNonNull("id"), "Fixture missing id: " + fixturePath);
-            assertTrue(fixtureContent.hasNonNull("category"), "Fixture missing category: " + fixturePath);
-            assertTrue(manifestIds.add(fixtureContent.get("id").asText()),
-                    "Duplicate fixture id: " + fixtureContent.get("id").asText());
+            if (fixtureContent.has("profile")) {
+                manifestViolations.add(
+                        "fixture metadata uses profile: " + fixturePath);
+            }
+            if (!fixtureContent.hasNonNull("id")) {
+                manifestViolations.add("fixture missing id: " + fixturePath);
+            }
+            if (!fixtureContent.hasNonNull("category")) {
+                manifestViolations.add(
+                        "fixture missing category: " + fixturePath);
+            }
+            if (!manifestIds.add(fixtureContent.get("id").asText())) {
+                manifestViolations.add(
+                        "duplicate fixture id: "
+                                + fixtureContent.get("id").asText());
+            }
             BlueFixtureCategory.fromLabel(fixtureContent.get("category").asText());
-            assertTrue(fixtureContent.hasNonNull("operation"), "Fixture missing operation: " + fixturePath);
-            assertTrue(BlueConformanceSuiteRunner.knownOperations()
-                            .contains(fixtureContent.get("operation").asText()),
-                    "Unknown fixture operation in " + fixturePath + ": " + fixtureContent.get("operation").asText());
+            if (!fixtureContent.hasNonNull("operation")) {
+                manifestViolations.add(
+                        "fixture missing operation: " + fixturePath);
+            } else if (!BlueConformanceSuiteRunner.knownOperations()
+                    .contains(fixtureContent.get("operation").asText())) {
+                manifestViolations.add(
+                        "unknown fixture operation in "
+                                + fixturePath + ": "
+                                + fixtureContent.get("operation").asText());
+            }
             BlueConformanceSuiteRunner.validateFixtureMetadataForTest(fixtureContent);
         }
-
-        assertEquals(BlueConformanceReport.requiredFixtureIdsForBlueLanguage10(), manifestIds);
-        assertTrue(BlueConformanceReport.fixturePackageIdentityMatchesFixtureFiles());
-
         List<Path> fixtureFiles;
         try (Stream<Path> paths = Files.walk(fixtureRoot)) {
             fixtureFiles = paths
@@ -265,24 +397,40 @@ class BlueConformanceReportTest {
                     .map(path -> path.toAbsolutePath().normalize())
                     .collect(Collectors.toList());
         }
+        boolean fixtureIdentityMatches =
+                BlueConformanceReport
+                        .fixturePackageIdentityMatchesFixtureFiles();
+
+        // then
+        assertTrue(resource != null);
+        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
+                manifest.get("packageIdentity").asText());
+        assertEquals(128, manifest.get("behaviorFixtureCount").asInt());
+        assertTrue(manifestViolations.isEmpty(),
+                manifestViolations.toString());
+        assertEquals(BlueConformanceReport.requiredFixtureIdsForBlueLanguage10(), manifestIds);
+        assertTrue(fixtureIdentityMatches);
         assertEquals(manifestPaths, new LinkedHashSet<>(fixtureFiles));
     }
 
     @Test
-    void machineReadableReportHasOneExactResultPerLanguageFixture() {
+    void shouldIncludeOneExactResultPerLanguageFixtureInMachineReadableReport() {
+        // given
         BlueConformanceReport report = new Blue().runConformanceSuite();
+        // when
         Map<String, Object> encoded = report.toMachineReadableMap();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> results =
+                (List<Map<String, Object>>) encoded.get("results");
 
+        // then
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 encoded.get("fixturePackageIdentity"));
         assertEquals("sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
                 encoded.get("registryPackageIdentity"));
-        assertEquals(125, encoded.get("fixtureCount"));
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> results =
-                (List<Map<String, Object>>) encoded.get("results");
-        assertEquals(125, results.size());
-        assertEquals(125, results.stream()
+        assertEquals(128, encoded.get("fixtureCount"));
+        assertEquals(128, results.size());
+        assertEquals(128, results.stream()
                 .map(result -> result.get("id"))
                 .collect(Collectors.toSet()).size());
         assertTrue(results.stream().allMatch(result ->
@@ -291,8 +439,10 @@ class BlueConformanceReportTest {
     }
 
     @Test
-    void mainResourcesDoNotContainTodoDescriptions() throws Exception {
+    void shouldNotContainTodoDescriptionsInMainResources() throws Exception {
+        // given
         Path resourceRoot = Paths.get("src/main/resources");
+        // when
         try (Stream<Path> paths = Files.walk(resourceRoot)) {
             List<Path> incomplete = paths
                     .filter(Files::isRegularFile)
@@ -306,20 +456,30 @@ class BlueConformanceReportTest {
                         }
                     })
                     .collect(Collectors.toList());
+            // then
             assertEquals(Collections.emptyList(), incomplete);
         }
     }
 
     @Test
-    void readmeLinksPointToExistingFiles() throws Exception {
+    void shouldResolveReadmeLinksToExistingFiles() throws Exception {
+        // given
         Path readme = Paths.get("README.md");
         String content = new String(Files.readAllBytes(readme));
         Matcher matcher = Pattern.compile("\\[[^\\]]+]\\((docs/[^)]+\\.md)\\)").matcher(content);
+        // when
+        List<String> missingTargets = new java.util.ArrayList<>();
         while (matcher.find()) {
             Path target = readme.getParent() == null
                     ? Paths.get(matcher.group(1))
                     : readme.getParent().resolve(matcher.group(1));
-            assertTrue(Files.isRegularFile(target), "README link target is missing: " + matcher.group(1));
+            if (!Files.isRegularFile(target)) {
+                missingTargets.add(matcher.group(1));
+            }
         }
+
+        // then
+        assertTrue(missingTargets.isEmpty(),
+                "README link targets are missing: " + missingTargets);
     }
 }

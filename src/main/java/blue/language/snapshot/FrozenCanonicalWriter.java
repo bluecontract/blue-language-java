@@ -1,7 +1,9 @@
 package blue.language.snapshot;
 
-import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.model.Schema;
+import blue.language.utils.BlueNumbers;
+import blue.language.utils.Properties;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.NumberToJSON;
 import org.erdtman.jcs.JsonCanonicalizer;
@@ -22,6 +24,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import static blue.language.utils.Properties.*;
+import static blue.language.utils.SchemaPropertyConstants.*;
 
 /**
  * Writes the exact JCS byte representation of a frozen node's direct BlueId
@@ -37,12 +40,10 @@ public final class FrozenCanonicalWriter {
     private static final byte[] TRUE = ascii("true");
     private static final byte[] FALSE = ascii("false");
     private static final byte[] NULL = ascii("null");
-    private static final BigInteger MIN_SAFE_INTEGER = BigInteger.valueOf(-9007199254740991L);
-    private static final BigInteger MAX_SAFE_INTEGER = BigInteger.valueOf(9007199254740991L);
     private static final int MAX_PLAIN_VALUE_DEPTH = 100;
     private static final int MAX_PLAIN_MAP_FIELDS = 256;
     private static final Class<?> SINGLETON_MAP_CLASS =
-            Collections.singletonMap("key", "value").getClass();
+            Collections.singletonMap("key", Properties.OBJECT_VALUE).getClass();
     private static final ThreadLocal<Set<String>> MAP_KEYS = new ThreadLocal<Set<String>>() {
         @Override
         protected Set<String> initialValue() {
@@ -81,7 +82,12 @@ public final class FrozenCanonicalWriter {
         writeNode(node, sink, Context.ROOT, -1, Mode.OFFICIAL);
     }
 
-    /** Exact byte count for the official authored representation used by gas. */
+    /**
+     * Computes the exact byte count of the official authored representation used by gas.
+     *
+     * @param node frozen node to measure, or {@code null}
+     * @return canonical byte count, or zero for a null node
+     */
     public static long officialCanonicalSize(FrozenNode node) {
         if (node == null) return 0L;
         CountingSink sink = new CountingSink();
@@ -98,6 +104,9 @@ public final class FrozenCanonicalWriter {
      * that accept arbitrary Jackson-serializable objects should first use
      * {@link #supportsCanonicalValue(Object)} and retain their compatibility
      * fallback for unsupported values.</p>
+     *
+     * @param value JSON-compatible scalar, map, list, or supported array value
+     * @return exact RFC 8785 representation of the value
      */
     public static byte[] canonicalValueBytes(Object value) {
         ByteArraySink sink = new ByteArraySink();
@@ -130,7 +139,8 @@ public final class FrozenCanonicalWriter {
         }
         if (value instanceof BigInteger) {
             BigInteger integer = (BigInteger) value;
-            if (integer.compareTo(MIN_SAFE_INTEGER) < 0 || integer.compareTo(MAX_SAFE_INTEGER) > 0) {
+            if (integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                    || integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
                 // UncheckedObjectMapper's registered BigInteger serializer uses
                 // a JSON string outside the interoperable integer range.
                 writeString(integer.toString(), sink);
@@ -180,6 +190,12 @@ public final class FrozenCanonicalWriter {
         throw new UnsupportedCanonicalValueException(value.getClass());
     }
 
+    /**
+     * Tests whether a value can use the allocation-friendly canonical writer.
+     *
+     * @param value value to inspect
+     * @return {@code true} when the canonical writer supports the value directly
+     */
     public static boolean supportsCanonicalValue(Object value) {
         return supportsCanonicalValue(value, 0);
     }
@@ -399,20 +415,20 @@ public final class FrozenCanonicalWriter {
                                     CanonicalByteSink sink,
                                     Mode mode) {
         List<String> keys = new ArrayList<>();
-        if (schema.getRequired() != null && schema.getRequiredValue() != null) keys.add("required");
-        if (schema.getMinLength() != null && schema.getMinLength().getValue() != null) keys.add("minLength");
-        if (schema.getMaxLength() != null && schema.getMaxLength().getValue() != null) keys.add("maxLength");
-        if (schema.getMinimum() != null) keys.add("minimum");
-        if (schema.getMaximum() != null) keys.add("maximum");
-        if (schema.getExclusiveMinimum() != null) keys.add("exclusiveMinimum");
-        if (schema.getExclusiveMaximum() != null) keys.add("exclusiveMaximum");
-        if (schema.getMultipleOf() != null) keys.add("multipleOf");
-        if (schema.getMinItems() != null && schema.getMinItems().getValue() != null) keys.add("minItems");
-        if (schema.getMaxItems() != null && schema.getMaxItems().getValue() != null) keys.add("maxItems");
-        if (schema.getUniqueItems() != null && schema.getUniqueItemsValue() != null) keys.add("uniqueItems");
-        if (schema.getMinFields() != null && schema.getMinFields().getValue() != null) keys.add("minFields");
-        if (schema.getMaxFields() != null && schema.getMaxFields().getValue() != null) keys.add("maxFields");
-        if (schema.getEnum() != null) keys.add("enum");
+        if (schema.getRequired() != null && schema.getRequiredValue() != null) keys.add(KEY_REQUIRED);
+        if (schema.getMinLength() != null && schema.getMinLength().getValue() != null) keys.add(KEY_MIN_LENGTH);
+        if (schema.getMaxLength() != null && schema.getMaxLength().getValue() != null) keys.add(KEY_MAX_LENGTH);
+        if (schema.getMinimum() != null) keys.add(KEY_MINIMUM);
+        if (schema.getMaximum() != null) keys.add(KEY_MAXIMUM);
+        if (schema.getExclusiveMinimum() != null) keys.add(KEY_EXCLUSIVE_MINIMUM);
+        if (schema.getExclusiveMaximum() != null) keys.add(KEY_EXCLUSIVE_MAXIMUM);
+        if (schema.getMultipleOf() != null) keys.add(KEY_MULTIPLE_OF);
+        if (schema.getMinItems() != null && schema.getMinItems().getValue() != null) keys.add(KEY_MIN_ITEMS);
+        if (schema.getMaxItems() != null && schema.getMaxItems().getValue() != null) keys.add(KEY_MAX_ITEMS);
+        if (schema.getUniqueItems() != null && schema.getUniqueItemsValue() != null) keys.add(KEY_UNIQUE_ITEMS);
+        if (schema.getMinFields() != null && schema.getMinFields().getValue() != null) keys.add(KEY_MIN_FIELDS);
+        if (schema.getMaxFields() != null && schema.getMaxFields().getValue() != null) keys.add(KEY_MAX_FIELDS);
+        if (schema.getEnum() != null) keys.add(KEY_ENUM);
         String[] sorted = keys.toArray(new String[0]);
         Arrays.sort(sorted);
 
@@ -431,33 +447,33 @@ public final class FrozenCanonicalWriter {
                                          String key,
                                          CanonicalByteSink sink,
                                          Mode mode) {
-        if ("required".equals(key)) {
+        if (KEY_REQUIRED.equals(key)) {
             writeCanonicalValue(schema.getRequiredValue(), sink);
-        } else if ("minLength".equals(key)) {
+        } else if (KEY_MIN_LENGTH.equals(key)) {
             writeCanonicalValue(schema.getMinLength().getValue(), sink);
-        } else if ("maxLength".equals(key)) {
+        } else if (KEY_MAX_LENGTH.equals(key)) {
             writeCanonicalValue(schema.getMaxLength().getValue(), sink);
-        } else if ("minimum".equals(key)) {
+        } else if (KEY_MINIMUM.equals(key)) {
             writeSchemaNumeric(schema.getMinimum(), sink, mode);
-        } else if ("maximum".equals(key)) {
+        } else if (KEY_MAXIMUM.equals(key)) {
             writeSchemaNumeric(schema.getMaximum(), sink, mode);
-        } else if ("exclusiveMinimum".equals(key)) {
+        } else if (KEY_EXCLUSIVE_MINIMUM.equals(key)) {
             writeSchemaNumeric(schema.getExclusiveMinimum(), sink, mode);
-        } else if ("exclusiveMaximum".equals(key)) {
+        } else if (KEY_EXCLUSIVE_MAXIMUM.equals(key)) {
             writeSchemaNumeric(schema.getExclusiveMaximum(), sink, mode);
-        } else if ("multipleOf".equals(key)) {
+        } else if (KEY_MULTIPLE_OF.equals(key)) {
             writeSchemaNumeric(schema.getMultipleOf(), sink, mode);
-        } else if ("minItems".equals(key)) {
+        } else if (KEY_MIN_ITEMS.equals(key)) {
             writeCanonicalValue(schema.getMinItems().getValue(), sink);
-        } else if ("maxItems".equals(key)) {
+        } else if (KEY_MAX_ITEMS.equals(key)) {
             writeCanonicalValue(schema.getMaxItems().getValue(), sink);
-        } else if ("uniqueItems".equals(key)) {
+        } else if (KEY_UNIQUE_ITEMS.equals(key)) {
             writeCanonicalValue(schema.getUniqueItemsValue(), sink);
-        } else if ("minFields".equals(key)) {
+        } else if (KEY_MIN_FIELDS.equals(key)) {
             writeCanonicalValue(schema.getMinFields().getValue(), sink);
-        } else if ("maxFields".equals(key)) {
+        } else if (KEY_MAX_FIELDS.equals(key)) {
             writeCanonicalValue(schema.getMaxFields().getValue(), sink);
-        } else if ("enum".equals(key)) {
+        } else if (KEY_ENUM.equals(key)) {
             sink.writeByte('[');
             for (int index = 0; index < schema.getEnum().size(); index++) {
                 if (index > 0) sink.writeByte(',');

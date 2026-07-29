@@ -25,12 +25,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorBoundaryTest {
 
     @Test
-    void processorRegistryViewRemainsLiveAndUnmodifiableAcrossRegistration() {
+    void shouldKeepProcessorRegistryViewLiveAndUnmodifiableAcrossRegistration() {
+        // given
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         Map<String, ContractProcessor<? extends blue.language.processor.model.Contract>> view =
                 registry.processors();
@@ -38,17 +40,21 @@ class DocumentProcessorBoundaryTest {
                 view.entrySet();
         SetPropertyContractProcessor processor = new SetPropertyContractProcessor();
 
+        // when
         registry.register("retained-live-view", processor);
+        Throwable mutationFailure = captureFailure(view::clear);
 
+        // then
         assertSame(processor, view.get("retained-live-view"));
         assertEquals(1, entries.size());
         assertTrue(entries.stream().anyMatch(entry ->
                 entry.getKey().equals("retained-live-view") && entry.getValue() == processor));
-        assertThrows(UnsupportedOperationException.class, view::clear);
+        assertTrue(mutationFailure instanceof UnsupportedOperationException);
     }
 
     @Test
-    void sharedConfigurationReadWaitsForCompositeRegistrationAcrossProcessors() throws Exception {
+    void shouldWaitForCompositeRegistrationAcrossProcessorsDuringSharedConfigurationRead() throws Exception {
+        // given
         String blueId = exactTypeId(
                 "shared-composite-registration");
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
@@ -58,29 +64,46 @@ class DocumentProcessorBoundaryTest {
         SetPropertyContractProcessor contractProcessor = new SetPropertyContractProcessor();
         ExecutorService executor = daemonExecutor(2);
 
+        // when
         try {
             Future<?> registration = executor.submit(
                     () -> registeringProcessor.registerContractProcessor(blueId, contractProcessor));
-
-            assertTrue(resolver.awaitRegistrationPause(5, TimeUnit.SECONDS),
-                    "registration did not reach the registry/resolver boundary");
-            assertSame(contractProcessor, registry.processors().get(blueId),
-                    "the registry mutation must precede resolver publication");
-
+            boolean registrationPaused =
+                    resolver.awaitRegistrationPause(
+                            5,
+                            TimeUnit.SECONDS);
+            ContractProcessor<? extends blue.language.processor.model.Contract>
+                    registeredProcessor =
+                    registry.processors().get(blueId);
             CountDownLatch readStarted = new CountDownLatch(1);
             Future<Boolean> read = executor.submit(() -> {
                 readStarted.countDown();
                 return readingProcessor.isInitialized(new Node());
             });
-            assertTrue(readStarted.await(5, TimeUnit.SECONDS), "shared read did not start");
-            assertThrows(TimeoutException.class,
-                    () -> read.get(200, TimeUnit.MILLISECONDS),
-                    "a shared read must not observe the half-published configuration");
-
+            boolean sharedReadStarted =
+                    readStarted.await(5, TimeUnit.SECONDS);
+            Throwable prematureReadFailure = captureFailure(
+                    () -> read.get(
+                            200,
+                            TimeUnit.MILLISECONDS));
             resolver.releaseRegistration();
             registration.get(5, TimeUnit.SECONDS);
-            assertFalse(read.get(5, TimeUnit.SECONDS));
-            assertEquals(SetProperty.class, resolver.resolveClass(blueId));
+            boolean initialized =
+                    read.get(5, TimeUnit.SECONDS);
+            Class<?> resolvedClass =
+                    resolver.resolveClass(blueId);
+
+            // then
+            assertTrue(registrationPaused,
+                    "registration did not reach the registry/resolver boundary");
+            assertSame(contractProcessor, registeredProcessor,
+                    "the registry mutation must precede resolver publication");
+            assertTrue(sharedReadStarted,
+                    "shared read did not start");
+            assertTrue(prematureReadFailure instanceof TimeoutException,
+                    "a shared read must not observe the half-published configuration");
+            assertFalse(initialized);
+            assertEquals(SetProperty.class, resolvedClass);
         } finally {
             resolver.releaseRegistration();
             executor.shutdownNow();
@@ -88,7 +111,8 @@ class DocumentProcessorBoundaryTest {
     }
 
     @Test
-    void crossProcessorRegistrationFromSharedReadCallbackFailsInsteadOfDeadlocking() throws Exception {
+    void shouldFailCrossProcessorRegistrationFromSharedReadCallbackWithoutDeadlocking() throws Exception {
+        // given
         Node existingType = new Node().name("shared-read-callback");
         String existingBlueId = BlueIdCalculator.calculateBlueId(existingType);
         String reentrantBlueId = exactTypeId(
@@ -106,22 +130,34 @@ class DocumentProcessorBoundaryTest {
         Node scope = new Node().contracts(new Node().properties("handler",
                 new Node().type(new Node().blueId(existingBlueId))));
         ExecutorService executor = daemonExecutor(1);
-        try {
-            Future<IllegalStateException> result = executor.submit(() -> assertThrows(
-                    IllegalStateException.class,
-                    () -> readingProcessor.markersFor(scope, "/")));
 
-            IllegalStateException failure = getWithoutDeadlock(result);
-            assertEquals("Document processor configuration cannot change during active processing",
-                    failure.getMessage());
-            assertFalse(registry.processors().containsKey(reentrantBlueId));
+        // when
+        IllegalStateException failure;
+        boolean reentrantRegistrationVisible;
+        try {
+            Future<IllegalStateException> result =
+                    executor.submit(() -> captureFailure(
+                            () -> readingProcessor.markersFor(
+                                    scope, "/")));
+            failure = getWithoutDeadlock(result);
+            reentrantRegistrationVisible =
+                    registry.processors()
+                            .containsKey(reentrantBlueId);
         } finally {
             executor.shutdownNow();
         }
+
+        // then
+        assertEquals(IllegalStateException.class,
+                failure.getClass());
+        assertEquals("Document processor configuration cannot change during active processing",
+                failure.getMessage());
+        assertFalse(reentrantRegistrationVisible);
     }
 
     @Test
-    void registrationWaitingForSharedWriteDoesNotBlockCrossProcessorClose() throws Exception {
+    void shouldNotBlockCrossProcessorCloseWhileRegistrationWaitsForSharedWrite() throws Exception {
+        // given
         Node existingType = new Node().name("shared-close-callback");
         String existingBlueId = BlueIdCalculator.calculateBlueId(existingType);
         SignallingRegistry registry = new SignallingRegistry();
@@ -146,37 +182,59 @@ class DocumentProcessorBoundaryTest {
                         .type(new Node().blueId(existingBlueId))
                         .properties("channel", new Node().value("absent-channel"))));
         ExecutorService executor = daemonExecutor(2);
+
+        // when
+        boolean callbackObserved;
+        boolean writeAttemptObserved;
+        boolean readEmpty;
+        ExecutionException failure;
+        boolean closed;
         try {
             Future<Map<String, blue.language.processor.model.MarkerContract>> read =
                     executor.submit(() -> readingProcessor.markersFor(scope, "/"));
-            assertTrue(callbackEntered.await(5, TimeUnit.SECONDS));
+            callbackObserved =
+                    callbackEntered.await(5, TimeUnit.SECONDS);
             Future<?> registration = executor.submit(() -> closingProcessor
                     .registerContractProcessor("after-close", new SetPropertyContractProcessor()));
-            assertTrue(registry.awaitWriteAttempt(5, TimeUnit.SECONDS),
-                    "registration did not reach the shared configuration write gate");
+            writeAttemptObserved =
+                    registry.awaitWriteAttempt(
+                            5, TimeUnit.SECONDS);
 
             allowClose.countDown();
 
-            assertTrue(read.get(5, TimeUnit.SECONDS).isEmpty());
-            ExecutionException failure = assertThrows(
-                    ExecutionException.class,
+            readEmpty =
+                    read.get(5, TimeUnit.SECONDS).isEmpty();
+            failure = captureFailure(
                     () -> registration.get(5, TimeUnit.SECONDS));
-            assertTrue(failure.getCause() instanceof IllegalStateException);
-            assertEquals("Document processor is closed", failure.getCause().getMessage());
-            assertTrue(closingProcessor.isClosed());
+            closed = closingProcessor.isClosed();
         } finally {
             allowClose.countDown();
             executor.shutdownNow();
         }
+
+        // then
+        assertTrue(callbackObserved);
+        assertTrue(writeAttemptObserved,
+                "registration did not reach the shared configuration write gate");
+        assertTrue(readEmpty);
+        assertEquals(ExecutionException.class,
+                failure.getClass());
+        assertTrue(failure.getCause()
+                instanceof IllegalStateException);
+        assertEquals("Document processor is closed",
+                failure.getCause().getMessage());
+        assertTrue(closed);
     }
 
     @Test
-    void rejectsEmptyPointerSegments() {
+    void shouldRejectEmptyPointerSegments() {
+        // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
+        // when
         expectRunTermination(() -> execution.handlePatch(
                 "/foo",
                 bundle,
@@ -185,18 +243,21 @@ class DocumentProcessorBoundaryTest {
                         new Node().value("ok")),
                 false));
 
+        // then
         assertAtomicFailure(execution, document);
         assertFalse(execution.runtime()
                 .isScopeTerminated("/foo"));
     }
 
     @Test
-    void deniesPatchingOutsideScope() {
+    void shouldDenyPatchingOutsideScope() {
+        // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
+        // when
         expectRunTermination(() -> execution.handlePatch(
                 "/foo",
                 bundle,
@@ -205,13 +266,15 @@ class DocumentProcessorBoundaryTest {
                         new Node().value("oops")),
                 false));
 
+        // then
         assertAtomicFailure(execution, document);
         assertFalse(execution.runtime()
                 .isScopeTerminated("/foo"));
     }
 
     @Test
-    void parentCannotModifyEmbeddedChildInterior() {
+    void shouldPreventParentFromModifyingEmbeddedChildInterior() {
+        // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
@@ -220,6 +283,7 @@ class DocumentProcessorBoundaryTest {
                 .setEmbedded(embedded)
                 .build();
 
+        // when
         expectRunTermination(() -> execution.handlePatch(
                 "/foo",
                 bundle,
@@ -228,13 +292,15 @@ class DocumentProcessorBoundaryTest {
                         new Node().value("nope")),
                 false));
 
+        // then
         assertAtomicFailure(execution, document);
         assertFalse(execution.runtime()
                 .isScopeTerminated("/foo"));
     }
 
     @Test
-    void parentMayReplaceEntireEmbeddedChild() {
+    void shouldAllowParentToReplaceEntireEmbeddedChild() {
+        // given
         Node child = new Node().properties("value", new Node().value("old"));
         Node parent = new Node().properties("child", child);
         Node document = new Node().properties("foo", parent);
@@ -246,16 +312,19 @@ class DocumentProcessorBoundaryTest {
                 .setEmbedded(embedded)
                 .build();
 
+        // when
         execution.handlePatch("/foo", bundle, JsonPatch.replace("/foo/child", new Node().properties("next", new Node().value("fresh"))), false);
-
         Node foo = getProperty(document, "foo");
         Node replacedChild = getProperty(foo, "child");
         Node next = getProperty(replacedChild, "next");
+
+        // then
         assertEquals("fresh", next.getValue());
     }
 
     @Test
-    void parentMayRemoveEntireEmbeddedChild() {
+    void shouldAllowParentToRemoveEntireEmbeddedChild() {
+        // given
         Node child = new Node().properties("value", new Node().value("old"));
         Node parent = new Node().properties("child", child);
         Node document = new Node().properties("foo", parent);
@@ -267,20 +336,24 @@ class DocumentProcessorBoundaryTest {
                 .setEmbedded(embedded)
                 .build();
 
+        // when
         execution.handlePatch("/foo", bundle, JsonPatch.remove("/foo/child"), false);
-
         Node foo = getProperty(document, "foo");
         Map<String, Node> props = foo.getProperties();
+
+        // then
         assertTrue(props == null || !props.containsKey("child"));
     }
 
     @Test
-    void scopeCannotMutateItsOwnRoot() {
+    void shouldPreventScopeFromMutatingItsOwnRoot() {
+        // given
         Node document = new Node().properties("foo", new Node().properties("value", new Node().value("existing")));
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
+        // when
         expectRunTermination(() -> execution.handlePatch(
                 "/foo",
                 bundle,
@@ -288,55 +361,64 @@ class DocumentProcessorBoundaryTest {
                         "/foo",
                         new Node().value("new")),
                 false));
-
-        assertAtomicFailure(execution, document);
-        assertFalse(execution.runtime()
-                .isScopeTerminated("/foo"));
         Node foo = execution.result()
                 .document().getAsNode("/foo");
         Node value = foo.getProperties().get("value");
+
+        // then
+        assertAtomicFailure(execution, document);
+        assertFalse(execution.runtime()
+                .isScopeTerminated("/foo"));
         assertEquals("existing", value.getValue());
     }
 
     @Test
-    void rootPatchTargetIsFatal() {
+    void shouldTreatRootPatchTargetAsFatal() {
+        // given
         Node document = new Node().properties("foo", new Node().value("ok"));
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
+        // when
         expectRunTermination(() -> execution.handlePatch("/", bundle, JsonPatch.remove("/"), false));
+        Node foo = execution.result().document()
+                .getProperties().get("foo");
 
+        // then
         assertAtomicFailure(execution, document);
         assertFalse(execution.runtime()
                 .isScopeTerminated("/"));
-        Node foo = execution.result().document()
-                .getProperties().get("foo");
         assertEquals("ok", foo.getValue());
     }
 
     @Test
-    void reservedRootContractsAreWriteProtected() {
+    void shouldWriteProtectReservedRootContracts() {
+        // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
+        // when
         expectRunTermination(() -> execution.handlePatch("/", bundle,
                 JsonPatch.add("/contracts/checkpoint", new Node().value("forbidden")), false));
 
+        // then
         assertAtomicFailure(execution, document);
         assertFalse(execution.runtime()
                 .isScopeTerminated("/"));
     }
 
     @Test
-    void reservedContractsWithinScopeAreWriteProtected() {
+    void shouldWriteProtectReservedContractsWithinScope() {
+        // given
         Node document = new Node().properties("foo", new Node());
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
+        // when
         expectRunTermination(() -> execution.handlePatch(
                 "/foo",
                 bundle,
@@ -344,18 +426,20 @@ class DocumentProcessorBoundaryTest {
                         "/foo/contracts/initialized",
                         new Node().value("bad")),
                 false));
+        Node fooNode = execution.result().document()
+                .getProperties().get("foo");
 
+        // then
         assertAtomicFailure(execution, document);
         assertFalse(execution.runtime()
                 .isScopeTerminated("/foo"));
-        Node fooNode = execution.result().document()
-                .getProperties().get("foo");
         assertNotNull(fooNode);
         assertNull(fooNode.getContracts());
     }
 
     @Test
-    void frozenAndMutableIdenticalContractsReplacementPreserveReservedEmbeddedMarker() {
+    void shouldPreserveReservedEmbeddedMarkerWhenFrozenAndMutableContractsReplacementIsIdentical() {
+        // given
         Node embedded = new Node()
                 .type(new Node().blueId(
                         "D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr"))
@@ -369,6 +453,7 @@ class DocumentProcessorBoundaryTest {
         mutableExecution.handlePatch("/scope", bundle,
                 JsonPatch.replace("/scope/contracts", contracts.clone()), false);
 
+        // when
         ProcessorEngine.Execution frozenExecution =
                 new ProcessorEngine.Execution(new DocumentProcessor(), source.clone());
         frozenExecution.handlePatchInputs("/scope", bundle,
@@ -377,6 +462,7 @@ class DocumentProcessorBoundaryTest {
                 false,
                 null);
 
+        // then
         assertFalse(mutableExecution.runtime().isScopeTerminated("/scope"));
         assertFalse(frozenExecution.runtime().isScopeTerminated("/scope"));
         assertEquals(

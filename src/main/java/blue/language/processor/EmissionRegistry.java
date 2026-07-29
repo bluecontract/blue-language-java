@@ -11,7 +11,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Tracks emissions and per-scope runtime contexts.
+ * Invocation-local owner of scope state and pending event occurrences.
+ *
+ * <p>The deque is the single global FIFO across scopes. Root emissions retain
+ * public output order separately, and removing a scope never rewrites already
+ * queued occurrence order.</p>
  */
 final class EmissionRegistry {
 

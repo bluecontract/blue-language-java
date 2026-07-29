@@ -3,7 +3,11 @@ package blue.language.processor;
 import java.util.Objects;
 
 /**
- * One admitted canonical gas charge.
+ * One immutable admitted charge in the canonical gas trace.
+ *
+ * <p>Sequence is assigned only when the owning meter merges the entry.
+ * Quantity, weight, and subtotal are retained independently so diagnostics can
+ * verify the schedule calculation without re-executing work.</p>
  */
 public final class GasTraceEntry {
 
@@ -31,42 +35,92 @@ public final class GasTraceEntry {
         this.context = context != null ? context : GasChargeContext.empty();
     }
 
+    /**
+     * Returns the sequence assigned when the owning meter admitted this entry.
+     *
+     * @return owning-meter merge sequence
+     */
     public long sequence() {
         return sequence;
     }
 
+    /**
+     * Returns the schedule namespace that owns the charged counter.
+     *
+     * @return charged namespace
+     */
     public String namespace() {
         return namespace;
     }
 
+    /**
+     * Returns the schedule counter that was charged.
+     *
+     * @return charged counter
+     */
     public String counter() {
         return counter;
     }
 
+    /**
+     * Returns the non-negative counter quantity admitted by the meter.
+     *
+     * @return admitted counter quantity
+     */
     public long quantity() {
         return quantity;
     }
 
+    /**
+     * Returns the schedule weight applied to each unit.
+     *
+     * @return schedule weight per unit
+     */
     public long weight() {
         return weight;
     }
 
+    /**
+     * Returns the exact admitted product of quantity and weight.
+     *
+     * @return exact admitted subtotal
+     */
     public long subtotal() {
         return subtotal;
     }
 
+    /**
+     * Returns the scope to which the charge was attributed.
+     *
+     * @return attributed scope, or {@code null}
+     */
     public String scopePath() {
         return context.scopePath();
     }
 
+    /**
+     * Returns the contract to which the charge was attributed.
+     *
+     * @return attributed contract key, or {@code null}
+     */
     public String contractKey() {
         return context.contractKey();
     }
 
+    /**
+     * Returns the logical path to which the charge was attributed.
+     *
+     * @return attributed logical path, or {@code null}
+     */
     public String logicalPath() {
         return context.logicalPath();
     }
 
+    /**
+     * Returns the stable reason recorded for the charge.
+     *
+     * @return non-null deterministic charge reason
+     */
     public String reason() {
         return context.reason();
     }

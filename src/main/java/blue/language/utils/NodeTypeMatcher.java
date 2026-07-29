@@ -13,20 +13,48 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Stack;
 
+/**
+ * Compatibility facade that resolves mutable candidates before delegating to
+ * immutable structural/type matching.
+ *
+ * <p>Matching is fail-closed: preprocessing, resolution, lookup, or validation
+ * failures produce {@code false}. Caller limits are intersected with the
+ * target pattern so unrelated graph branches are not expanded.</p>
+ */
 public class NodeTypeMatcher {
 
     private final Blue blue;
     private final FrozenTypeMatcher frozenMatcher;
 
+    /**
+     * Creates a matcher bound to one Language runtime.
+     *
+     * @param blue runtime used for preprocessing, resolution, and type lookup
+     */
     public NodeTypeMatcher(Blue blue) {
-        this.blue = Objects.requireNonNull(blue, "blue");
+        this.blue = Objects.requireNonNull(blue, Properties.OBJECT_BLUE);
         this.frozenMatcher = new FrozenTypeMatcher(blue);
     }
 
+    /**
+     * Tests a mutable candidate against a mutable target pattern without global limits.
+     *
+     * @param node mutable candidate
+     * @param targetType mutable target type or shape pattern
+     * @return {@code true} when the resolved candidate satisfies the pattern
+     */
     public boolean matchesType(Node node, Node targetType) {
         return matchesType(node, targetType, Limits.NO_LIMITS);
     }
 
+    /**
+     * Tests a mutable candidate subject to both target-driven and caller limits.
+     *
+     * @param node mutable candidate
+     * @param targetType mutable target type or shape pattern
+     * @param globalLimits caller-supplied resolution limits
+     * @return {@code true} when the resolved candidate satisfies the pattern
+     */
     public boolean matchesType(Node node, Node targetType, Limits globalLimits) {
         if (targetType == null) {
             return true;
@@ -46,10 +74,25 @@ public class NodeTypeMatcher {
         }
     }
 
+    /**
+     * Tests two already-resolved immutable nodes without another resolve pass.
+     *
+     * @param resolvedNode resolved candidate
+     * @param resolvedTargetType resolved target type or shape pattern
+     * @return {@code true} when the candidate satisfies the pattern
+     */
     public boolean matchesResolvedType(FrozenNode resolvedNode, FrozenNode resolvedTargetType) {
         return frozenMatcher.matchesType(resolvedNode, resolvedTargetType);
     }
 
+    /**
+     * Tests the resolved node at a pointer within a completed snapshot.
+     *
+     * @param snapshot completed immutable snapshot
+     * @param pointer pointer selecting the candidate node
+     * @param resolvedTargetType resolved target type or shape pattern
+     * @return {@code true} when the selected candidate satisfies the pattern
+     */
     public boolean matchesResolvedType(ResolvedSnapshot snapshot, String pointer, FrozenNode resolvedTargetType) {
         if (snapshot == null) {
             return false;

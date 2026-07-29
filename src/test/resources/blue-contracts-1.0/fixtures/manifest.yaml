@@ -1,15 +1,15 @@
 fixturePackage: blue-contracts-conformance
 specificationVersion: '1.0'
 schemaVersion: blue-contracts-fixture/1.0
-registryPackageIdentity: sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366
-vectorCount: 78
-behaviorFixtureCount: 69
+registryPackageIdentity: sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8
+vectorCount: 90
+behaviorFixtureCount: 82
 gasFixtureCount: 58
 files:
 - path: CONTROL-LANGUAGE.md
   role: support
-  sha256: 0450ac51356d2c219a63ac923c979b878c1de8088f68f27058b69b26b0e1ccba
-  bytes: 9660
+  sha256: def4ca71a115edd6ea687eddeb3da1fc00731cdb0bac2c40d6d75e61567bebb9
+  bytes: 11337
 - path: HARNESS.md
   role: support
   sha256: 01775b46b163a2f6f34c455637c6a154927a3edb545cb3a812ff50fe50b417dc
@@ -24,172 +24,208 @@ files:
   bytes: 2900
 - path: chk/c-chk-01.yaml
   role: behavior-fixture
-  sha256: b2fe931b3710f73f5fea603d974030fe6666bcf6ccc23587ceed9457671dfcbc
-  bytes: 1308
+  sha256: b233c1ae37544b2e468fa6768ffd3109db5baf2e4c51ed8e0cbd8a28ff1b615f
+  bytes: 1307
 - path: chk/c-chk-02.yaml
   role: behavior-fixture
-  sha256: 4b3c75a1c4b515f13f9bff740be5be59f683d616adccdf07831d5583e30bf0e7
-  bytes: 1294
+  sha256: 76b8b96514cb33ecf2ba98946a54fc9b6228d8ab63c8b5606eeffbe32b968c66
+  bytes: 1293
 - path: chk/c-chk-03.yaml
   role: behavior-fixture
-  sha256: e07af5cc57cee0c5a2b2e9b5641c0c247db484b2cb11af7cac98cb637ec5be02
-  bytes: 1355
+  sha256: 9762022540ca44e0bc4571308d1eaee77185179de7b2688a178ac58d7e518ec9
+  bytes: 1354
 - path: chk/c-chk-04.yaml
   role: behavior-fixture
-  sha256: 1abf15907fdbe07d3c3208c2784626af614d4e04b50a1767a010df07e5f83f71
-  bytes: 1480
+  sha256: 6fa600a74f774577ee6f383f9403dc7307a911ecc59f098a0fc87af5ac133b9d
+  bytes: 1479
 - path: chk/c-chk-05.yaml
   role: behavior-fixture
-  sha256: 716d5a062a152baf898b890585c909d3ae88938ff11337897c0de27de1415a41
-  bytes: 1509
+  sha256: 82bcb5da376d2fda0fad92044b751fc0beae97466e763983942a9a887742f372
+  bytes: 1508
 - path: chk/c-chk-06.yaml
   role: behavior-fixture
-  sha256: 9b4ed50b4b1ffea35059d51f4c306056a6280ce729088760ab4170e653a3850a
-  bytes: 1497
+  sha256: 70807f500589c4e6e2a7990f7f800989bad987c360c9364865c72afccaa4723f
+  bytes: 1496
 - path: chk/c-chk-07.yaml
   role: behavior-fixture
-  sha256: 3aee251b2c5cf06be2f793b4abdaec0761a5629efe8901eef559aee96130abbd
-  bytes: 2283
+  sha256: 6d180a8e5dd7d510d08d5e30a3f218a28b1d6a52f6def0118869b55be224abcc
+  bytes: 2294
 - path: disc/c-disc-01.yaml
   role: behavior-fixture
   sha256: 7263181d5a8cc15f3c9470a0cbf81bddb60577a09757750be150e19df2f2d0a2
   bytes: 1001
 - path: disc/c-disc-02.yaml
   role: behavior-fixture
-  sha256: fd3322de62a207dccd2a317269a19321757a8453526e58bbd79c644c028cb6df
-  bytes: 1925
+  sha256: 7841ea081fa1c805e733420c8f564a91a4222ab549ec0c8401a9e7dc7e03de0e
+  bytes: 1923
 - path: disc/c-disc-03.yaml
   role: behavior-fixture
-  sha256: e9daedcc65dd20534b9a1ab82be3a39da759009683cd0ab9c90e0101cb03a2ed
-  bytes: 1483
+  sha256: 0b54d8782f54373598e03eaa888e64d588505602f8618e5b5331540567c58b8b
+  bytes: 1482
 - path: disc/c-disc-04.yaml
   role: behavior-fixture
-  sha256: db88d51f3eb5cc81d18c1ee59ddcfcde510cd8874a895c9f514ba74454091c2b
-  bytes: 1681
+  sha256: 0918119c773129cf1277ca779c061324fdd0ceebe26fe473f837bd478698fbf2
+  bytes: 1680
 - path: disc/c-disc-05.yaml
   role: behavior-fixture
-  sha256: b73118a87b0c707573f711ff2d268f059d2a541808818f6699e4b6c74b91d3d8
-  bytes: 1558
+  sha256: b19763e8b11df153a8232869ff52f307cde87133f597217c7d1c32131f607ccd
+  bytes: 1557
 - path: disc/c-disc-06.yaml
   role: behavior-fixture
-  sha256: 60fac5d79fa61cb1ef19049327a98ac93bcd128faef765860b4218e921a8d7a2
-  bytes: 1584
+  sha256: 358b5501e90648b0f613a2d9978cbb6fc299c50a8b9f3da776f2160ab272223d
+  bytes: 1583
 - path: e2e/c-e2e-01.yaml
   role: behavior-fixture
-  sha256: eb6cf84d8200447dcc79a1fd6998bd0b2bb5e384c28530dc9079dead40016564
-  bytes: 2256
+  sha256: 4b1d78d8869737f93ea64ab6384b15fca3bb071e2f93b22991626ae0517e3c19
+  bytes: 2255
 - path: e2e/c-e2e-02.yaml
   role: behavior-fixture
-  sha256: 81c5bb317dcbc1cf7700d5a355c41f5cf34e326f913060daba77fedb08340256
-  bytes: 3256
+  sha256: f549cc8631feaa03dcb490fdd5dae9d64def9952b05483d68c0a41f3eeb5752b
+  bytes: 3255
 - path: e2e/c-e2e-03.yaml
   role: behavior-fixture
-  sha256: fa21284e6d2d0249566cdec0f520d298bfc58e9318f161d1fadbad235da08741
-  bytes: 1529
+  sha256: 83a3cd623debcbfb031f0dd7c6e5bc108982770ffba20290112deac1e7712410
+  bytes: 1528
+- path: emb/c-cyc-03.yaml
+  role: behavior-fixture
+  sha256: 227ab61b661f0ad67a08895df7c2233c656669b99240a854ed23d3ecbadbb3cf
+  bytes: 1233
 - path: emb/c-emb-01.yaml
   role: behavior-fixture
-  sha256: e5497288a17ce08c6d0a4879df573b7c2676851b343634bbf694888dfbd1490b
-  bytes: 2172
+  sha256: 691cf3d11576aa9873584af8bfc87d2036526546bf3dde2a9cf1130b28f1b55b
+  bytes: 2169
 - path: emb/c-emb-02.yaml
   role: behavior-fixture
-  sha256: 0809a6650ca4fdef4e27fffb9f140e23f4894dca73bd786abb607ac8bfc9e38e
-  bytes: 2139
+  sha256: f83416fa85fdf1de83f503bc418e623c48e634d9b4d4e02645dc52a4d94f997e
+  bytes: 2137
 - path: emb/c-emb-03.yaml
   role: behavior-fixture
-  sha256: 5f0f8fc1e75cfeac3a185345af99cecec6807ac16d2ea18a32c68ac21547949b
-  bytes: 1526
+  sha256: 5b0539ab55116fb32f80331e68d98a0f63cf12522869fc97c3c7ade125fdf442
+  bytes: 1525
 - path: emb/c-emb-04.yaml
   role: behavior-fixture
-  sha256: 6c4b25ecd7eecfc65d223be4f19ba69d01d4dde372dd899c3de55f7be014865d
-  bytes: 1643
+  sha256: 61d0cc60e74ab73a23896391cf5fb982358b0d1bae75e043848bad566f546f52
+  bytes: 1642
 - path: emb/c-emb-05.yaml
   role: behavior-fixture
-  sha256: 88b7825e32eb92cb1e8d239c4bc69c6efd7c12676aeb2eb92620f6d37af8a43b
-  bytes: 1610
+  sha256: 29da146f43d13f784e3625a0f28956254449ad3c303027ea51308d1635097f43
+  bytes: 1609
 - path: emb/c-emb-06.yaml
   role: behavior-fixture
-  sha256: ba35d3a42d3ab6b52585a4a728e5f01d529e6fff624bbcf2db0932d2cf9a8c6c
-  bytes: 1735
+  sha256: 1f41eed37cfa6eead2a64d4cfbcb5582f388a22a9a0446c97644dd9c2ebfe0c0
+  bytes: 1734
 - path: emb/c-emb-07.yaml
   role: behavior-fixture
-  sha256: 8c06f4c5026e35e41b5331ccf9d454ddb003d71a1a1e4433ac76296582f6a5b2
-  bytes: 2660
+  sha256: b1e44b887c085ea2f0b1eee2e5bd205f7ee5f89d8da624e7684fb0546dde9843
+  bytes: 2658
 - path: evt/c-evt-01.yaml
   role: behavior-fixture
-  sha256: c8cff91014ac2969835dc9a00063f48cfe3214c171c5003372066b6bf245414e
-  bytes: 2100
+  sha256: 216dfe3187a38d71b3686efdcd01009b3726a612780faad27415afce83bb77b7
+  bytes: 2099
 - path: evt/c-evt-02.yaml
   role: behavior-fixture
-  sha256: 88aacbcb58b899c8e5a12d1b6d81cdf89e58eb0deb0e2875872faf2ee54c431e
-  bytes: 1424
+  sha256: 44b94b0153f4ec520d20b842bcf75348593107f8c8be91df0aa76adc7b22aaf2
+  bytes: 1423
 - path: evt/c-evt-03.yaml
   role: behavior-fixture
-  sha256: 72eb3ada43e0428b1b3b89d9cfe6a3e29ade661229a62d982bc4ae0c183f1b48
-  bytes: 1408
+  sha256: e29d03dc66152dec5235f1cc893f472b3d7f5f0890cad9c6090d7cea7a3596c7
+  bytes: 1407
 - path: evt/c-evt-04.yaml
   role: behavior-fixture
-  sha256: 17013bbd6ebea90f4e2d76fe526fe2cfbc8bb76ca694f1f2f77d30a0a4e503f6
-  bytes: 1424
+  sha256: 2b7879dc6388a9a1e4fbfe1bda1e5c34b86bb50d4b93e63845153ae23c7399ff
+  bytes: 1423
 - path: evt/c-evt-05.yaml
   role: behavior-fixture
-  sha256: 4debfadc899efd5c6c288dfd2327226bef4e7cc904af8072daaacbe69109e073
-  bytes: 1363
+  sha256: 0edeca37c1e4e2edb5a516de85177e1241518b959a458f54fd9953f809b1c109
+  bytes: 1362
 - path: fail/c-fail-01.yaml
   role: behavior-fixture
-  sha256: 363e85097e9dd97a92379fbcaa3a13ae06aef1b6302af5c62da7cc99bd95d9de
-  bytes: 1480
+  sha256: 7fce967856f0a431b23e9e2c157a996e8f3a859de25479a7a6476b0e78a52f5f
+  bytes: 1479
 - path: fail/c-fail-02.yaml
   role: behavior-fixture
-  sha256: 7b3ae8e464583ad2ee79a0a805b3dce0bc0fe91b5bafe3f810049d488e8e95af
-  bytes: 1589
+  sha256: a2f3948de1dfdb5cd671b6237ea332524cd2ec87254e4dfcafcbcde8fb9f1aaa
+  bytes: 1588
 - path: fail/c-fail-03.yaml
   role: behavior-fixture
-  sha256: 8d85215a0698901f6d00bcf44aea27a80742fc586ec281b05b460cf68b6c72aa
-  bytes: 1529
+  sha256: 12d48234ad77a4fff6c0183139bb78ebf026bca3e01775d554bc83f3ec2eebfd
+  bytes: 1528
 - path: fail/c-fail-04.yaml
   role: behavior-fixture
-  sha256: 744a1eafd49f0b867b05f94fa597fa7afb14af73915b977bbedaa26e0c7ef906
-  bytes: 1437
+  sha256: 800dd473402ffa702288251d220e3c804e9ef137d3ea98df9a7363f0445d57a9
+  bytes: 1436
+- path: fail/c-fail-05.yaml
+  role: behavior-fixture
+  sha256: e92405d87cee4bad10ecf96e0a02be63ebc5fadb8e936e6abed8dcc06c9a4203
+  bytes: 2175
 - path: feed/c-feed-01.yaml
   role: behavior-fixture
-  sha256: 7ebbc6c34991768468b176deaa934e20f33a1e0fe9502ac2d08867722be1c252
-  bytes: 1356
+  sha256: fd2436db859e7f068db4ed4bef3450bdeb002b9125b2e7db7e1bd7a9dc730b63
+  bytes: 1355
 - path: feed/c-feed-02.yaml
   role: behavior-fixture
-  sha256: e9b58a78938ead5b5519a0ee851ce093e1ed09dbac8cb15c3d57092fa335012d
-  bytes: 1469
+  sha256: 667ed9c4e804fd6d806ce281dc2c2d679bc7d30e228b0744dd2e1362e6c9829b
+  bytes: 1468
 - path: feed/c-feed-03.yaml
   role: behavior-fixture
-  sha256: 8479aa38dbf2e84d986ad0cedae3ae324e4c58c5d6ae3c9c8eac9b8d01a19cc5
-  bytes: 1330
+  sha256: c205d277dc23f18cee83d27881420852b53a1384cbbb29602175b39bde9aae93
+  bytes: 1329
 - path: feed/c-feed-04.yaml
   role: behavior-fixture
-  sha256: 4ac9b632c3c07bb5e31336bd58afd0bf00d8cd9ed83627662502c12af8eec4a7
-  bytes: 1380
+  sha256: d69661279388b247a337324a66a29e7afcf6416ec97031b0ca5781da7b1834a3
+  bytes: 1379
 - path: feed/c-feed-05.yaml
   role: behavior-fixture
-  sha256: 02d4c4908cf379f2cf7e1dc9d433d77ae4d9256f3ded3385982df54a55849d37
-  bytes: 1240
+  sha256: de82e5ff91f6f8b627fbb60576fda88e615d370f4df6a9c202964a475c65161b
+  bytes: 1239
 - path: feed/c-feed-06.yaml
   role: behavior-fixture
-  sha256: 56cd9425ed8871bd7cbacdd89cdeef99e2c4eba7d21b9c416b3241f2a591850b
-  bytes: 1419
+  sha256: 29dab9d09f2ee8094efb190f6614e3fb446ee613cbb50d5560955df88399b2c8
+  bytes: 1418
 - path: feed/c-feed-07.yaml
   role: behavior-fixture
-  sha256: 8381906943fce75ac4d5cbf8c1025294e31fc47a2d7b58d626ad3c0f2e3299d6
-  bytes: 1434
+  sha256: 3b27dda57255a9d409a88b7c526ea17186c423469abbd9be8f39440eec2a6c88
+  bytes: 1433
 - path: feed/c-feed-08.yaml
   role: behavior-fixture
-  sha256: 5828b14a04f08573eb7a36ddd3a254521f841b491412a006f941fb7fdf81c009
-  bytes: 1426
+  sha256: 1331d4c1dcff0d21c996c84a14da43f81342e60e2a95ed1b1dec07567b9843a4
+  bytes: 1425
 - path: feed/c-feed-09.yaml
   role: behavior-fixture
-  sha256: 1dc8d0a9b8c976c2a7ccd94857971e11d02d3d16b4f43b1fb5e7f5671093e170
-  bytes: 1392
+  sha256: 11036a9fb6bc87c45c624bd1146a2de4f3ebf939f50acf49e056b7fc782580cc
+  bytes: 1391
 - path: feed/c-feed-10.yaml
   role: behavior-fixture
-  sha256: 18725c96f5eec8a81e58467a0505694481ecda4da41a1da2a7cd04e22fa658a8
-  bytes: 1391
+  sha256: 508fe217309d33b20f58a720550508311dc74951fec1092bb5f95ea07846f465
+  bytes: 1390
+- path: feed/c-feed-11.yaml
+  role: behavior-fixture
+  sha256: d39ed2d1907df8f0f97a95ccff1b4c31bbff3870c25e90dc145ff5bd9d8526a9
+  bytes: 2011
+- path: feed/c-feed-12.yaml
+  role: behavior-fixture
+  sha256: e95c054e6a5f25df2b8d5460dbecb1cb4010c27f6c219dd17d4e348717ad68db
+  bytes: 1738
+- path: feed/c-feed-13.yaml
+  role: behavior-fixture
+  sha256: 941bed9c7580dac6ad948d27ed1ecd50cb1334ebd923bdda930d18db85466bc3
+  bytes: 1925
+- path: feed/c-feed-14.yaml
+  role: behavior-fixture
+  sha256: d5d4b24d0c80cbb49cecef9dc06285802237ede4dabeff70522bf81c5ef17f91
+  bytes: 2547
+- path: feed/c-feed-15.yaml
+  role: behavior-fixture
+  sha256: 539ece353c176f18d30125f9f3ddc5659d8280623bd3f7056526573a749cb466
+  bytes: 2526
+- path: feed/c-feed-16.yaml
+  role: behavior-fixture
+  sha256: 264469e3da94236ab82e57b2fc2267abf9e6778dfe38996aaef0983a9ab6630f
+  bytes: 1577
+- path: feed/c-feed-17.yaml
+  role: behavior-fixture
+  sha256: 6d454ba1217abdf757c00e66a2fa29dcbdf4d2fe04a62e259f726f72e6ced533
+  bytes: 2670
 - path: fixture-schema.yaml
   role: support
   sha256: 561d12ebac220bb7dc1c13e424de2cf34e7b8536f5a4108e3be4ef77ea94308e
@@ -396,158 +432,174 @@ files:
   bytes: 400
 - path: gas/c-gas-01.yaml
   role: gas-fixture
-  sha256: 20d1bba5ef713d3f391b6b7cb699f05a886e407ddaa0dab37ee40b04017aa99c
-  bytes: 1291
+  sha256: c40350387c4ea974c8d5bd12448e2d5143d9a110bba428b76242e53dee17e405
+  bytes: 1290
 - path: gas/c-gas-02.yaml
   role: gas-fixture
-  sha256: a6ad45c36abc3ff1803696bec112cfeb6fe5115a7db4414262e642b9a4f95419
-  bytes: 1356
+  sha256: ca773f080f150153124ae1b15d1fa043b9f42025b32c4511c5bfc4236d323926
+  bytes: 1355
 - path: gas/c-gas-03.yaml
   role: gas-fixture
-  sha256: 581b6cb9fabd1374a29d8544ff38270966ebc3268b7f2987ab3d62bbd08aa9cf
-  bytes: 1365
+  sha256: 680ce52252f4277c24f6a93860d5d3c69bb26eeaff32e3ee00f12be608284ed0
+  bytes: 1364
 - path: gas/c-gas-04.yaml
   role: gas-fixture
-  sha256: 30c5f677d9dc50f1ddd69d0fe032c062d95809d2b2c075e23ee1e73406a66a62
-  bytes: 1368
+  sha256: b2d493e72d9fce8e3f60db04088586e87e03a0658c9dc40f50c105b9ba879ee6
+  bytes: 1367
 - path: gas/c-gas-05.yaml
   role: gas-fixture
-  sha256: 634f890acf0fb2686bb1d63ac83ff72ae6f20e2761f133820b2f0db8040420f9
-  bytes: 1419
+  sha256: 123e892acce8f31cec4b3c1b4ee4a5f82a6dccb1a6df4e22776549c9cf89cbb2
+  bytes: 1418
 - path: gas/c-gas-06.yaml
   role: gas-fixture
-  sha256: 525a08e3bd7cd9615ff583ea99bbe226ebab64f6c5c2567d5753c86e2fa3cc31
-  bytes: 1356
+  sha256: d148fb0608a8496264a1565d8fda0b58a7238843f9d59ce77b4c0b4dd13585a0
+  bytes: 1355
 - path: gas/c-gas-07.yaml
   role: gas-fixture
-  sha256: 71bae64459b938bd1f0377c3372a35501056062aeffb107df10fed9f36f9c8fe
-  bytes: 1381
+  sha256: a937cbd21d0a9518412bf13c8f1289048e7f836f9d6d9bba11ee1fdc20b05b0c
+  bytes: 1380
 - path: gas/c-gas-08.yaml
   role: gas-fixture
-  sha256: 3f3d41c25a6c6fff58014f8509c8ba4797dfda6480d8581361a3070e1bdbcbb6
-  bytes: 1351
+  sha256: 9239f5042982c5362f328333f3383f585e7b5c1bd1666e3405a504a888ef1b87
+  bytes: 1350
 - path: idx/c-idx-01.yaml
   role: behavior-fixture
-  sha256: 43a2a1e603cc1917e022f2e688e0f964c63cd88223b6e63a60ea213fd3345390
-  bytes: 1631
+  sha256: 683688400f2c09c33abf9cdd6147635d09875d334ab37a6718079dc4368f03eb
+  bytes: 1630
 - path: idx/c-idx-02.yaml
   role: behavior-fixture
-  sha256: 026ee3c5a7ad075b7d5e41bdccdce86208e22d11340aafc5eec50bea2f1e1a6b
-  bytes: 1793
+  sha256: ce6f094ee593d023f4b335079ae9e4b6eccb459b7a3927cdd53da5d0960d6800
+  bytes: 1791
 - path: init/c-init-01.yaml
   role: behavior-fixture
-  sha256: 116fb0d78aaa4ce1c76e3ef2e0837ee0bbc8d448c31c4e35bcda14d9bc7ab380
-  bytes: 1367
+  sha256: 3a8b19b6213511b3ac3ed21f03c0d3ad4bce8f2474bdc615d4f4698ce1c9ac23
+  bytes: 1366
 - path: init/c-init-02.yaml
   role: behavior-fixture
-  sha256: db3eb98a99cc97c80a5e6dc10959bb7e630ce4bca04073366a5f2a625fddca44
-  bytes: 1385
+  sha256: e82fcf36b5178fd7caab488c7710c7e4e121122c9f16ce54dc1261ac5d3a95ae
+  bytes: 1384
 - path: init/c-init-03.yaml
   role: behavior-fixture
-  sha256: 67293bf64aacea355052df073bf528c9b1b319a1f254ca5f431cc6b3e3559be2
-  bytes: 1390
+  sha256: 97d5ad20d4b0e3f8eb2e540f95ff23bc09005ee0ae9ca827896eced0c2bd6aaf
+  bytes: 1389
 - path: init/c-init-04.yaml
   role: behavior-fixture
-  sha256: 3284bcb8aa749a102de782e8ac64afe9caeefdb5a7c99a76830d5f4f60f58e07
-  bytes: 1596
+  sha256: 02c6bc09e29319586ea68b3006bd258a7e5437bb7d699bbb109d340bc11cf70e
+  bytes: 1595
 - path: init/c-init-05.yaml
   role: behavior-fixture
-  sha256: 9b8046582e2df1412b632ab3cdf635cff9b2676136fea9d6b764cba32c532cfc
-  bytes: 1294
+  sha256: 77a0b6620674dd7a7a8b56ccea607a5a8bff5c7f42da79f44cd88bc664a9db06
+  bytes: 1293
+- path: init/c-init-06.yaml
+  role: behavior-fixture
+  sha256: 885753d62e01ae076fe191d145ebeebb8982ea9bffa2c43c171ca0d06307f11d
+  bytes: 1710
 - path: life/c-life-01.yaml
   role: behavior-fixture
-  sha256: b395fee96b6e46a12840cf6995411ecbdf957e60fd1e701b8241ac853f180ac9
-  bytes: 1309
+  sha256: 9e35c1806b6393f6096e7113a4531ce4a6c21fcce15c2600748274265fc452e8
+  bytes: 1308
 - path: life/c-life-02.yaml
   role: behavior-fixture
-  sha256: a1cb57a836c213c9826e01b6e525a276fa1f9870e50bf192f3d4503a315a48d6
-  bytes: 1480
+  sha256: 80138983e88e7b20370ef90c67fc6c74cf9eca5625254c71a2d6c69fd5e15cf7
+  bytes: 1479
 - path: life/c-life-03.yaml
   role: behavior-fixture
-  sha256: 2cb48ff04fbeda8d8d4cc9cacf6258920a659501a5582e67d7f15d09ab55a832
-  bytes: 2145
+  sha256: 0bc4580d0c56161db9967d66f995504c06d0161cbb7502fd38c059291454e664
+  bytes: 2144
 - path: life/c-life-04.yaml
   role: behavior-fixture
-  sha256: d4e2c67a8fbcc72e774e0da85348ccb98e7859f6d18da634678678df90346821
-  bytes: 1458
+  sha256: c8cbbe414b5a29aace8157329b399178aa2087ebd0568cb8e3b9f9ab234bb245
+  bytes: 1457
 - path: projection-catalog.yaml
   role: support
-  sha256: 090d1424d9528cc9776286cdd7012d2e83b167e605ebe544a526fddb18d44bb1
-  bytes: 15993
+  sha256: 19337d172fc7d690b1d0c831b3d725d1281e809b2e235a67a36c3638e4e47113
+  bytes: 17869
 - path: prot/c-prot-01.yaml
   role: behavior-fixture
-  sha256: 0b47abfaf94a7841358720b4d35556bc838bda8ef2588612fec5b19dfab824e4
-  bytes: 1500
+  sha256: 416fb909c19b61164a09aeead5d382552f9a673d73db2663a71eab8058e6638e
+  bytes: 1499
 - path: prot/c-prot-02.yaml
   role: behavior-fixture
-  sha256: b2799ae6417561574881413c1d44012c3386a5a1cfbb29166c092c453f2f60b5
-  bytes: 1649
+  sha256: 773dfb561c8c8e6e4a52db3b7e902bc3f85954da159d82db55b39adbcfb9a57f
+  bytes: 1648
 - path: rep/c-rep-01.yaml
   role: behavior-fixture
-  sha256: d061b6cb42bd3231f543954065f543dbd9b5d2916ba621080f8633339166edad
-  bytes: 1558
+  sha256: 59c29a8f4f8ceb3382a73b5fec896a9c0a8f448cf293fc07e8402dd88ebd817e
+  bytes: 1557
 - path: rep/c-rep-02.yaml
   role: behavior-fixture
-  sha256: 74aaf35ceb1bd56e30c3d12242b8b3d26c12b1058bb7c47c1d071bf8a94864d6
-  bytes: 1724
+  sha256: e7ed4751d28c17a2834cacbd80b395e0818002017692f52a0f9e2416adcb1f15
+  bytes: 1723
 - path: rep/c-rep-03.yaml
   role: behavior-fixture
-  sha256: 3d7c4952e7b73103ba63aca88af89f8fbe755f0d61af5dd76bd5a3505b053a63
-  bytes: 1469
+  sha256: a196d5ed24cfe9b8cade25da11da72146df50c6a112ae0315c4bb6283ec17b54
+  bytes: 1468
 - path: rep/c-rep-04.yaml
   role: behavior-fixture
-  sha256: 28730cbcdfa84b17f409da1bdd1bd29dd6639e8ca4e72f8b0b2c4915b92cb7e1
-  bytes: 6074
+  sha256: c46a0e80301e0d2b36d31def191cf9ed104860a7e3035adf7077a4f25a9a7b6e
+  bytes: 6073
 - path: rep/c-rep-05.yaml
   role: behavior-fixture
-  sha256: 23cd65db2a515b9d642b71132d47206f0bc38bfe376c9aab4b41b7d3db3d56ba
-  bytes: 1535
+  sha256: 558073dd7c78d7bdbb8b88075bb4d9aaf2f747cc3ad4ab8a0e2b207c0f54ebfc
+  bytes: 1534
 - path: rep/c-rep-06.yaml
   role: behavior-fixture
-  sha256: 607173c8942a51058476d247085825e1eabf74a1f1393af2543866a7c887a090
-  bytes: 1628
+  sha256: a625e380256c0a6bc6edc4e88996d542ea3130dd9304abbd1cf85f1ae8d2cc3b
+  bytes: 1627
 - path: rep/c-rep-07.yaml
   role: behavior-fixture
-  sha256: 0722f6beaf555db94c3d3c9248b463623f6f7ddaa244563eccf7f053269d0466
-  bytes: 1634
+  sha256: 6be30a20893e0b905aa78a93760767c8e5cf2a7e884c1f40b4b8576e8a58cb7d
+  bytes: 1633
+- path: snd/c-cyc-01.yaml
+  role: behavior-fixture
+  sha256: 2bba2af23a4296636bea63a5a84064ed42e55f9ebc7ad77bc5e8175aedad8d52
+  bytes: 1142
+- path: snd/c-cyc-02.yaml
+  role: behavior-fixture
+  sha256: 510f3654482245c6745cf19ffa1279b8a3328d35c45d8aaec47427fc6230b301
+  bytes: 1049
+- path: snd/c-cyc-04.yaml
+  role: behavior-fixture
+  sha256: 08d826c447b90a465dfaad8e17c7334c015955f8a8a2dab6078da0ab23c4b66d
+  bytes: 1626
 - path: snd/c-snd-01.yaml
   role: behavior-fixture
-  sha256: 42be95179520a9360251340c082ed434242f18b6722db87980e97f9f23667e11
-  bytes: 1461
+  sha256: 212a330035f6fda77d8fdf789fc12f9aae1d949406c628463a3d09780b797f49
+  bytes: 1460
 - path: snd/c-snd-02.yaml
   role: behavior-fixture
-  sha256: e65a1a6780c4e0cf9c5b4c7dee5c1d4932da5e8cf4dfee50423adaeec30de6e8
-  bytes: 1487
+  sha256: 40f750ef8f811acf93dee7288d318e245e727aab5cfc1270507fdd86ac2e66ba
+  bytes: 1486
 - path: snd/c-snd-03.yaml
   role: behavior-fixture
-  sha256: 3bdc555f8166a00b7675e9428c154e8a3c9200e5340c15f9b25831b7686c64f1
-  bytes: 1456
+  sha256: 0d63135064e6947a49c7be967bf36716318042cd60240509003f23e82f953fda
+  bytes: 1455
 - path: snd/c-snd-04.yaml
   role: behavior-fixture
-  sha256: d5832ac119d2d0cc5b3800cbf92524364b8378ff0c11fde49b1bcca2714c5685
-  bytes: 1615
+  sha256: 80d95382905353b5061eb0bb4f1fe864ee227772dba25ab5fdd78dadfd9190b7
+  bytes: 1614
 - path: upd/c-upd-01.yaml
   role: behavior-fixture
-  sha256: cb5adc688128a8aaa098849d692b087db350bf1edb6799fb50552e6efa7d6f19
-  bytes: 1512
+  sha256: 84cd397264214d8116d883276cf8265a1388dd3ee6c7940f46096535e41d6cdc
+  bytes: 1511
 - path: upd/c-upd-02.yaml
   role: behavior-fixture
-  sha256: 6ac804a8be11a9ee67fe2b281aaeca479b28ce1ed127cc85dab734499d2b6761
-  bytes: 1416
+  sha256: 2dc563c2d07a406494cbe9df82f975830d59777b06bf2bacd0b54350c237fff5
+  bytes: 1415
 - path: upd/c-upd-03.yaml
   role: behavior-fixture
-  sha256: c78ca03583034525dcd4df29656a8eb8ca828ced4038f77ce492164dd6b98d53
-  bytes: 1975
+  sha256: bf7164a48386fa2808d5b36b11d897c6f6c63d1a605e4ff390ed1c2e7cd96e8b
+  bytes: 1974
 - path: vector-coverage.yaml
   role: support
-  sha256: 8623f8db1368787375c5e1de28834906745e877ef975309958e97b3afa13f20d
-  bytes: 6283
+  sha256: 2c59b3c696b992297f2db92ab14b8df2a2a82dd220d82f4e93b2d270a622ee4f
+  bytes: 6745
 packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
   lineEndings: LF
-packageIdentity: sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5
+packageIdentity: sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca
 gasSchedule: blue-contracts/gas/1.0
 gasManifestPackageIdentity: sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
 gasManifestSha256: 1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f

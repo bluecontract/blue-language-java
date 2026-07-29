@@ -16,6 +16,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -27,11 +29,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -40,11 +41,16 @@ public class BlueLanguageConformanceFixtureTest {
     private static final String FIXTURE_PATH = "blue-language-1.0/fixtures";
 
     @TestFactory
-    Stream<DynamicTest> blueLanguage10Fixtures() {
-        BlueConformanceReport report = new Blue().runConformanceSuite();
+    Stream<DynamicTest> shouldPassAllBlueLanguage10Fixtures() {
+        // given
+        Blue blue = new Blue();
+
+        // when
+        BlueConformanceReport report = blue.runConformanceSuite();
         Map<String, BlueConformanceFailure> failuresById = report.getFailures().stream()
                 .collect(Collectors.toMap(BlueConformanceFailure::getFixtureId, Function.identity()));
 
+        // then
         return report.getFixtureIds().stream()
                 .map(id -> DynamicTest.dynamicTest(id, () -> {
                     BlueConformanceFailure failure = failuresById.get(id);
@@ -56,19 +62,25 @@ public class BlueLanguageConformanceFixtureTest {
     }
 
     @Test
-    void fixtureWithoutExpectedOutputFailsMetadataValidation() {
+    void shouldRejectFixtureWithoutExpectedOutputDuringMetadataValidation() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: B_missing_expected\n" +
                 "category: BlueId\n" +
                 "operation: calculateBlueId\n" +
                 "input: 1\n");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void fixtureOperationCalculateBlueIdAllowingCyclicPlaceholdersIsRejected() {
+    void shouldRejectPlaceholderAwareBlueIdCalculationAsFixtureOperation() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: C_placeholder_helper\n" +
                 "category: Circular\n" +
@@ -77,12 +89,17 @@ public class BlueLanguageConformanceFixtureTest {
                 "  blueId: this#0\n" +
                 "expectedNodeBlueId: placeholder\n");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void fixtureTopLevelProfileFieldFails() {
+    void shouldRejectTopLevelFixtureProfileField() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: B_profile_metadata\n" +
                 "profile: BlueId\n" +
@@ -91,12 +108,17 @@ public class BlueLanguageConformanceFixtureTest {
                 "input: 1\n" +
                 "expectedNodeBlueId: placeholder\n");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void fixtureInputMayContainOrdinaryProfileField() {
+    void shouldAllowOrdinaryProfileFieldInFixtureInput() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: B_profile_data\n" +
                 "category: BlueId\n" +
@@ -105,11 +127,17 @@ public class BlueLanguageConformanceFixtureTest {
                 "  profile: user\n" +
                 "expectedNodeBlueId: placeholder\n");
 
-        assertDoesNotThrow(() -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+        // when
+        Throwable failure = captureFailure(
+                () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void fixtureExpectedOutputMayContainOrdinaryProfileField() {
+    void shouldAllowOrdinaryProfileFieldInExpectedOutput() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: R_profile_expected\n" +
                 "category: Resolution\n" +
@@ -119,11 +147,17 @@ public class BlueLanguageConformanceFixtureTest {
                 "expectedPreprocessed:\n" +
                 "  profile: user\n");
 
-        assertDoesNotThrow(() -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+        // when
+        Throwable failure = captureFailure(
+                () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void fixtureProviderNodeMayContainOrdinaryProfileField() {
+    void shouldAllowOrdinaryProfileFieldInProviderNode() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: F_profile_provider\n" +
                 "category: Provider\n" +
@@ -135,11 +169,17 @@ public class BlueLanguageConformanceFixtureTest {
                 "input: 1\n" +
                 "expectedNodeBlueId: placeholder\n");
 
-        assertDoesNotThrow(() -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+        // when
+        Throwable failure = captureFailure(
+                () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void fixtureExpectedErrorCategoryIsValidated() {
+    void shouldAcceptKnownExpectedErrorCategory() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: B_error_category\n" +
                 "category: BlueId\n" +
@@ -150,11 +190,17 @@ public class BlueLanguageConformanceFixtureTest {
                 "  type: Integer\n" +
                 "  value: 1\n");
 
-        assertDoesNotThrow(() -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+        // when
+        Throwable failure = captureFailure(
+                () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void fixtureExpectedErrorCategoryRejectsUnknownCategory() {
+    void shouldRejectUnknownExpectedErrorCategory() {
+        // given
         JsonNode spec = YAML_MAPPER.readTree(
                 "id: B_error_category\n" +
                 "category: BlueId\n" +
@@ -165,12 +211,17 @@ public class BlueLanguageConformanceFixtureTest {
                 "  type: Integer\n" +
                 "  value: 1\n");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(spec));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void mutatedExpectedIdentityValueAndOutcomeFailClosed() {
+    void shouldFailClosedWhenExpectedIdentityValueOrOutcomeIsMutated() {
+        // given
         JsonNode wrongIdentity = YAML_MAPPER.readTree(
                 "id: B_mutated_identity\n"
                         + "category: BlueId\n"
@@ -196,80 +247,170 @@ public class BlueLanguageConformanceFixtureTest {
                         + "path: /missing\n"
                         + "expectedOutcome: Established\n");
 
-        assertThrows(AssertionError.class,
+        // when
+        AssertionError identityFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongIdentity));
-        assertThrows(AssertionError.class,
+        AssertionError valueFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongValue));
-        assertThrows(AssertionError.class,
+        AssertionError outcomeFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongOutcome));
+
+        // then
+        assertTrue(identityFailure instanceof AssertionError);
+        assertTrue(valueFailure instanceof AssertionError);
+        assertTrue(outcomeFailure instanceof AssertionError);
     }
 
     @Test
-    void languageErrorClassifierRecognizesRepresentativeCategories() {
-        assertEquals(BlueLanguageErrorCategory.InvalidBlueId,
-                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("not a valid BlueId")));
-        assertEquals(BlueLanguageErrorCategory.SchemaViolation,
-                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("schema keyword minLength applies to wrong kind")));
-        assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
-                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("Provider returned content for abc but computed BlueId xyz")));
-        assertEquals(BlueLanguageErrorCategory.ListControlViolation,
-                BlueLanguageErrorClassifier.classify(new IllegalArgumentException("$pos list overlay is invalid")));
+    void shouldClassifyRepresentativeLanguageErrors() {
+        // given
+        IllegalArgumentException invalidBlueId = new IllegalArgumentException("not a valid BlueId");
+        IllegalArgumentException schemaViolation =
+                new IllegalArgumentException("schema keyword minLength applies to wrong kind");
+        IllegalArgumentException providerMismatch =
+                new IllegalArgumentException("Provider returned content for abc but computed BlueId xyz");
+        IllegalArgumentException listControlViolation =
+                new IllegalArgumentException("$pos list overlay is invalid");
+
+        // when
+        BlueLanguageErrorCategory invalidBlueIdCategory = BlueLanguageErrorClassifier.classify(invalidBlueId);
+        BlueLanguageErrorCategory schemaViolationCategory = BlueLanguageErrorClassifier.classify(schemaViolation);
+        BlueLanguageErrorCategory providerMismatchCategory = BlueLanguageErrorClassifier.classify(providerMismatch);
+        BlueLanguageErrorCategory listControlViolationCategory = BlueLanguageErrorClassifier.classify(listControlViolation);
+
+        // then
+        assertEquals(BlueLanguageErrorCategory.InvalidBlueId, invalidBlueIdCategory);
+        assertEquals(BlueLanguageErrorCategory.SchemaViolation, schemaViolationCategory);
+        assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch, providerMismatchCategory);
+        assertEquals(BlueLanguageErrorCategory.ListControlViolation, listControlViolationCategory);
     }
 
     @Test
-    void missingProviderMessagesClassifyAsProviderUnavailable() {
+    void shouldClassifyMissingProviderMessagesAsProviderUnavailable() {
+        // given
         String[] messages = {
                 "No content found for blueId: missing",
                 "No content found for $previous blueId: missing",
                 "No content found for required blueId missing at path /subject."
         };
 
-        for (String message : messages) {
-            assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
-                    BlueLanguageErrorClassifier.classify(new IllegalArgumentException(message)),
-                    message);
-        }
+        // when
+        List<BlueLanguageErrorCategory> categories = Arrays.stream(messages)
+                .map(message -> BlueLanguageErrorClassifier.classify(new IllegalArgumentException(message)))
+                .collect(Collectors.toList());
+
+        // then
+        assertEquals(
+                Collections.nCopies(messages.length, BlueLanguageErrorCategory.ProviderUnavailable),
+                categories);
     }
 
     @Test
-    void conformanceManifestIsAuthoritative() throws Exception {
-        URL resource = getClass().getClassLoader().getResource(FIXTURE_PATH);
-        assertTrue(resource != null);
-        Path fixtureRoot = Paths.get(resource.toURI());
-        JsonNode manifest = YAML_MAPPER.readTree(new String(Files.readAllBytes(fixtureRoot.resolve("manifest.yaml"))));
-        JsonNode manifestFiles = manifest.get("files");
-        assertTrue(manifestFiles != null && manifestFiles.isArray());
-        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
-                requireNonNull(manifest, "packageIdentity").asText());
-        assertEquals(125, requireNonNull(manifest, "behaviorFixtureCount").asInt());
+    void shouldTreatConformanceManifestAsAuthoritative() throws Exception {
+        // given
+        Set<String> requiredFixtureIds = BlueConformanceReport.requiredFixtureIdsForBlueLanguage10();
+        int requiredFixtureCount = requiredFixtureIds.size();
 
+        // when
+        URL resource = getClass().getClassLoader().getResource(FIXTURE_PATH);
+        Path fixtureRoot = resource == null ? null : Paths.get(resource.toURI());
+        JsonNode manifest = fixtureRoot == null
+                ? null
+                : YAML_MAPPER.readTree(new String(Files.readAllBytes(fixtureRoot.resolve("manifest.yaml"))));
+        JsonNode manifestFiles = manifest == null ? null : manifest.get("files");
+        String packageIdentity = manifest != null && manifest.hasNonNull("packageIdentity")
+                ? manifest.get("packageIdentity").asText()
+                : null;
+        Integer behaviorFixtureCount = manifest != null && manifest.hasNonNull("behaviorFixtureCount")
+                ? manifest.get("behaviorFixtureCount").asInt()
+                : null;
+        Set<String> knownOperations = BlueConformanceSuiteRunner.knownOperations();
         Set<String> fixtureIds = new LinkedHashSet<>();
         Set<Path> listedPaths = new HashSet<>();
-        for (JsonNode entry : manifestFiles) {
-            assertTrue(entry.hasNonNull("path"));
-            assertTrue(entry.hasNonNull("role"));
-            assertTrue(entry.hasNonNull("sha256"));
-            assertTrue(entry.hasNonNull("bytes"));
-            Path fixturePath = fixtureRoot.resolve(entry.get("path").asText()).normalize();
-            assertTrue(Files.isRegularFile(fixturePath), "Missing fixture file: " + fixturePath);
-            listedPaths.add(fixturePath.toAbsolutePath().normalize());
-            if (!"behavior-fixture".equals(entry.get("role").asText())) {
-                assertEquals("support", entry.get("role").asText());
-                continue;
+        List<String> manifestViolations = new ArrayList<>();
+        if (manifestFiles != null && manifestFiles.isArray()) {
+            for (JsonNode entry : manifestFiles) {
+                String entryPath = entry.hasNonNull("path") ? entry.get("path").asText() : null;
+                String role = entry.hasNonNull("role") ? entry.get("role").asText() : null;
+                if (entryPath == null) {
+                    manifestViolations.add("Manifest entry is missing path: " + entry);
+                }
+                if (role == null) {
+                    manifestViolations.add("Manifest entry is missing role: " + entry);
+                }
+                if (!entry.hasNonNull("sha256")) {
+                    manifestViolations.add("Manifest entry is missing sha256: " + entry);
+                }
+                if (!entry.hasNonNull("bytes")) {
+                    manifestViolations.add("Manifest entry is missing bytes: " + entry);
+                }
+                if (entryPath == null || fixtureRoot == null) {
+                    continue;
+                }
+
+                Path fixturePath = fixtureRoot.resolve(entryPath).normalize();
+                if (!Files.isRegularFile(fixturePath)) {
+                    manifestViolations.add("Missing fixture file: " + fixturePath);
+                    continue;
+                }
+                listedPaths.add(fixturePath.toAbsolutePath().normalize());
+                if (!"behavior-fixture".equals(role)) {
+                    if (!"support".equals(role)) {
+                        manifestViolations.add("Unknown fixture role '" + role + "' for " + fixturePath);
+                    }
+                    continue;
+                }
+
+                JsonNode fixture = YAML_MAPPER.readTree(new String(Files.readAllBytes(fixturePath)));
+                if (fixture.has("profile")) {
+                    manifestViolations.add("Fixture metadata must use category, not profile: " + fixturePath);
+                }
+                JsonNode idNode = fixture.get("id");
+                if (idNode == null || idNode.isNull()) {
+                    manifestViolations.add("Fixture is missing required field 'id': " + fixturePath);
+                } else if (!fixtureIds.add(idNode.asText())) {
+                    manifestViolations.add("Duplicate fixture id: " + idNode.asText());
+                }
+
+                JsonNode categoryNode = fixture.get("category");
+                if (categoryNode == null || categoryNode.isNull()) {
+                    manifestViolations.add("Fixture is missing required field 'category': " + fixturePath);
+                } else {
+                    Throwable categoryFailure = captureFailure(
+                            () -> BlueFixtureCategory.fromLabel(categoryNode.asText()));
+                    if (categoryFailure != null) {
+                        manifestViolations.add("Unknown fixture category in " + fixturePath
+                                + ": " + categoryFailure.getMessage());
+                    }
+                }
+
+                JsonNode operationNode = fixture.get("operation");
+                if (operationNode == null || operationNode.isNull()) {
+                    manifestViolations.add("Fixture is missing required field 'operation': " + fixturePath);
+                } else if (!knownOperations.contains(operationNode.asText())) {
+                    manifestViolations.add("Unknown fixture operation in " + fixturePath);
+                }
+
+                Throwable metadataFailure = captureFailure(
+                        () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(fixture));
+                if (metadataFailure != null) {
+                    manifestViolations.add("Invalid fixture metadata in " + fixturePath
+                            + ": " + metadataFailure.getMessage());
+                }
             }
-
-            JsonNode fixture = YAML_MAPPER.readTree(new String(Files.readAllBytes(fixturePath)));
-            assertFalse(fixture.has("profile"), "Fixture metadata must use category, not profile: " + fixturePath);
-            String id = requireNonNull(fixture, "id").asText();
-            assertTrue(fixtureIds.add(id), "Duplicate fixture id: " + id);
-            BlueFixtureCategory.fromLabel(requireNonNull(fixture, "category").asText());
-            assertTrue(BlueConformanceSuiteRunner.knownOperations().contains(requireNonNull(fixture, "operation").asText()),
-                    "Unknown fixture operation in " + fixturePath);
-            BlueConformanceSuiteRunner.validateFixtureMetadataForTest(fixture);
         }
+        Set<Path> actualFixturePaths = fixtureRoot == null
+                ? Collections.emptySet()
+                : fixtureYamlFiles(fixtureRoot);
 
-        assertEquals(BlueConformanceReport.requiredFixtureIdsForBlueLanguage10(), fixtureIds);
-        assertEquals(listedPaths, fixtureYamlFiles(fixtureRoot));
+        // then
+        assertTrue(resource != null);
+        assertTrue(manifestFiles != null && manifestFiles.isArray());
+        assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY, packageIdentity);
+        assertEquals(requiredFixtureCount, behaviorFixtureCount);
+        assertTrue(manifestViolations.isEmpty(), String.join("\n", manifestViolations));
+        assertEquals(requiredFixtureIds, fixtureIds);
+        assertEquals(listedPaths, actualFixturePaths);
     }
 
     private Set<Path> fixtureYamlFiles(Path fixtureRoot) throws Exception {
@@ -285,14 +426,6 @@ public class BlueLanguageConformanceFixtureTest {
                     .map(path -> path.toAbsolutePath().normalize())
                     .collect(Collectors.toCollection(LinkedHashSet::new));
         }
-    }
-
-    private JsonNode requireNonNull(JsonNode node, String field) {
-        JsonNode value = node.get(field);
-        if (value == null || value.isNull()) {
-            throw new IllegalArgumentException("Fixture is missing required field: " + field);
-        }
-        return value;
     }
 
     private String failureMessage(BlueConformanceFailure failure) {

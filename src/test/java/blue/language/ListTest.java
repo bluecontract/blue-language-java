@@ -7,6 +7,7 @@ import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
+import blue.language.processor.FailureCapture;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.BasicNodeProvider;
@@ -21,6 +22,7 @@ import static blue.language.utils.BlueIdCalculator.calculateBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ListTest {
@@ -58,7 +60,8 @@ public class ListTest {
 
 
     @Test
-    public void testSubtypeHasMoreItemsThanParentType() throws Exception {
+    public void shouldAllowSubtypeWithMoreItemsThanParentType() throws Exception {
+        // given
         x = new Node()
                 .name("X")
                 .items(
@@ -77,13 +80,16 @@ public class ListTest {
         yId = calculateBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
+        // when
         Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);
 
+        // then
         assertEquals(3, node.getItems().size());
     }
 
     @Test
-    public void testSubtypeHasLessItemsThanParentType() throws Exception {
+    public void shouldRejectSubtypeWithFewerItemsThanParentType() throws Exception {
+        // given
         x = new Node()
                 .name("X")
                 .items(
@@ -101,12 +107,15 @@ public class ListTest {
                 );
         yId = calculateBlueId(y);
 
+        // when
         nodeProvider.addSingleNodes(x, y);
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS));
     }
 
     @Test
-    public void testSubtypeHasSameNumberOfItemsAsParentType() throws Exception {
+    public void shouldResolveSubtypeWithSameItemCountAsParentType() throws Exception {
+        // given
         x = new Node()
                 .name("X")
                 .items(
@@ -124,14 +133,17 @@ public class ListTest {
         yId = calculateBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
+        // when
         Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);
 
+        // then
         assertEquals(2, node.getItems().size());
     }
 
     @Test
-    public void testDifferentFlavoursOfAList() throws Exception {
+    public void shouldResolveInlineAndReferencedListRepresentationsToSameItems() throws Exception {
 
+        // given
         Node x1 = new Node()
                 .name("X")
                 .items(
@@ -157,18 +169,21 @@ public class ListTest {
         nodeProvider.addListAndItsItems(asList(a, b));
         nodeProvider.addListAndItsItems(asList(a, b, c));
 
+        // when
         Node x1Extended = preprocessAndExtend(x1);
         Node x2Extended = preprocessAndExtend(x2);
         Node x3Extended = preprocessAndExtend(x3);
 
+        // then
         assertEquals(3, x1Extended.getItems().size());
         assertEquals(3, x2Extended.getItems().size());
         assertEquals(3, x3Extended.getItems().size());
     }
 
     @Test
-    public void testDifferentFlavoursOfAList2() throws Exception {
+    public void shouldResolveYamlInlineAndReferencedListRepresentations() throws Exception {
 
+        // given
         String a = "A";
         String b = "B";
         String c = "C";
@@ -183,10 +198,6 @@ public class ListTest {
         String abId = BlueIdCalculator.calculateBlueId(ab);
         nodeProvider.addListAndItsItems(ab);
 
-        List<Node> abc = Arrays.asList(aNode, bNode, cNode);
-        String abcId = BlueIdCalculator.calculateBlueId(abc);
-        nodeProvider.addListAndItsItems(abc);
-
         String x1 = "name: X1\n" +
                     "items:\n" +
                     "  - A\n" +
@@ -198,17 +209,36 @@ public class ListTest {
                     "  - blueId: " + abId + "\n" +
                     "  - C";
 
-        String x5 = "name: X1\n" +
-                    "items:\n" +
-                    "  blueId: " + abcId;
-
+        // when
         Node x1Extended = preprocessAndExtend(x1);
         Node x2Extended = preprocessAndExtend(x2);
-        assertThrows(IllegalArgumentException.class, () -> preprocessAndExtend(x5));
 
+        // then
         assertEquals(3, x1Extended.getItems().size());
         assertEquals(3, x2Extended.getItems().size());
+    }
 
+    @Test
+    public void shouldRejectBlueIdObjectAsListItemsPayload() {
+        // given
+        Node aNode = YAML_MAPPER.readValue("A", Node.class);
+        Node bNode = YAML_MAPPER.readValue("B", Node.class);
+        Node cNode = YAML_MAPPER.readValue("C", Node.class);
+        List<Node> abc = Arrays.asList(aNode, bNode, cNode);
+        String abcId = BlueIdCalculator.calculateBlueId(abc);
+        nodeProvider.addSingleNodes(aNode, bNode, cNode);
+        nodeProvider.addListAndItsItems(abc);
+        String invalid = "name: X1\n"
+                + "items:\n"
+                + "  blueId: " + abcId;
+
+        // when
+        Throwable failure =
+                FailureCapture.captureFailure(
+                        () -> preprocessAndExtend(invalid));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     private Node preprocessAndExtend(String doc) {

@@ -1,0 +1,18 @@
+id: F_opaque_cyclic_member_fragment
+category: CircularReferences
+operation: verifyOpaqueCyclicFragment
+description: A finalized cyclic member identity is preserved as an opaque edge and is never independently verified from a member body.
+input:
+  ordinary: 1
+  cyclicType:
+    blueId: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0
+cuts:
+  - /ordinary
+expectedSameRootNodeBlueId: true
+expectedOpaqueEdges:
+  - path: /cyclicType
+    blueId: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0
+expectedLocalProviderOutcome:
+  GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0: NotFound
+expectedWithoutSetContextErrorCategory: ProviderUnavailable
+expectedWithVerifiedSetContext: true

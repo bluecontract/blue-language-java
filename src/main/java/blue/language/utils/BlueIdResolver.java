@@ -10,9 +10,27 @@ import java.io.InputStream;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
+/**
+ * Resolves the default BlueId associated with a {@link TypeBlueId}-annotated
+ * Java class.
+ *
+ * <p>Inline annotation values take precedence over the optional classpath
+ * repository. Missing annotations, resources, or mappings resolve to
+ * {@code null}; repository failures are logged rather than thrown.</p>
+ */
 public class BlueIdResolver {
     private static final Logger logger = LoggerFactory.getLogger(BlueIdResolver.class);
 
+    /** Creates a compatibility facade over static type-resolution helpers. */
+    public BlueIdResolver() {
+    }
+
+    /**
+     * Returns the class's preferred annotated BlueId.
+     *
+     * @param clazz annotated Java class
+     * @return preferred BlueId, or {@code null} when unresolved
+     */
     public static String resolveBlueId(Class<?> clazz) {
         TypeBlueId annotation = clazz.getAnnotation(TypeBlueId.class);
         if (annotation == null) {

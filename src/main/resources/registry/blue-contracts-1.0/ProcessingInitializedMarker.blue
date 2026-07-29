@@ -1,9 +1,17 @@
 name: Processing Initialized Marker
 type:
   blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
-description: Direct processor state at contracts/initialized. It records the exact pre-initialization scope Node BlueId. Its write produces no Document Update.
-documentId:
-  type:
-    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+description: >
+  Direct processor state at contracts/initialized. It records the exact scope
+  document as it existed immediately before initialization effects. The
+  document may be represented by an equivalent pure BlueId reference or by
+  verified materialized content; those forms have the same meaning and must
+  not change processing, identity, or gas. Its write produces no Document
+  Update.
+document:
+  description: >
+    Exact pre-initialization scope document. This is the initial document for
+    the scope's processing lifecycle. It may be materialized inline or
+    represented as an equivalent pure { blueId: ... } reference.
   schema:
     required: true

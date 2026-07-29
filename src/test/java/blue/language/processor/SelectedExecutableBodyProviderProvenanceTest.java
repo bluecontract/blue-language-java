@@ -15,14 +15,15 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SelectedExecutableBodyProviderProvenanceTest {
 
     @Test
-    void selectedBodyUsesActiveSnapshotManagerInsteadOfMatchingBlueProvider() {
+    void shouldUseActiveSnapshotManagerForSelectedBodyInsteadOfMatchingBlueProvider() {
+        // given
         Node body = new Node().properties(
                 "provenance", new Node().value("active-snapshot-manager"));
         String bodyBlueId =
@@ -86,9 +87,12 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 execution.runtime(),
                 new CheckpointManager(execution.runtime()));
 
-        assertTrue(runner.runHandlers(
-                "/", bundle, "events", new Node()));
+        // when
+        boolean handled = runner.runHandlers(
+                "/", bundle, "events", new Node());
 
+        // then
+        assertTrue(handled);
         assertEquals(1, activeManager.materializations);
         assertEquals(0, matchingProviderFetches.get());
         assertNotNull(handlerProcessor.executedResult);
@@ -98,7 +102,8 @@ class SelectedExecutableBodyProviderProvenanceTest {
     }
 
     @Test
-    void activeRuntimeMaterializerRevalidatesManagerOwnedExactResult() {
+    void shouldRevalidateManagerOwnedExactResultInActiveRuntimeMaterializer() {
+        // given
         Node body = new Node().value("owned");
         String bodyBlueId =
                 BlueIdCalculator.calculateBlueId(body);
@@ -111,10 +116,12 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 FrozenNode.fromResolvedNode(
                         new Node().blueId(bodyBlueId));
 
+        // when
         FrozenNode materialized =
                 runtime.materializeSelectedExecutableReference(
                         reference);
 
+        // then
         assertEquals(1, manager.materializations);
         assertEquals(bodyBlueId,
                 materialized.blueId());
@@ -122,7 +129,8 @@ class SelectedExecutableBodyProviderProvenanceTest {
     }
 
     @Test
-    void runtimeMaterializationFailsClosedWithoutSnapshotManager() {
+    void shouldFailRuntimeMaterializationClosedWithoutSnapshotManager() {
+        // given
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(new Node());
         FrozenNode reference =
@@ -131,14 +139,19 @@ class SelectedExecutableBodyProviderProvenanceTest {
                                 BlueIdCalculator.calculateBlueId(
                                         new Node().value("body"))));
 
-        assertThrows(IllegalStateException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> runtime
                         .materializeSelectedExecutableReference(
-                        reference));
+                                reference));
+
+        // then
+        assertInstanceOf(IllegalStateException.class, failure);
     }
 
     @Test
-    void runtimeRejectsManagerContentThatDoesNotMatchSelectedBodyReference() {
+    void shouldRejectManagerContentThatDoesNotMatchSelectedBodyReference() {
+        // given
         Node exact = new Node().value("exact");
         String bodyBlueId =
                 BlueIdCalculator.calculateBlueId(exact);
@@ -149,20 +162,33 @@ class SelectedExecutableBodyProviderProvenanceTest {
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
                         new Node(), null, manager);
+        FrozenNode reference = FrozenNode.fromNode(
+                new Node().blueId(bodyBlueId));
 
-        ProcessorFailureException failure =
-                assertThrows(
-                        ProcessorFailureException.class,
-                        () -> runtime
-                                .materializeSelectedExecutableReference(
-                                        FrozenNode.fromNode(
-                                                new Node().blueId(
-                                                        bodyBlueId))));
+        // when
+        Throwable failure = captureFailure(
+                () -> runtime
+                        .materializeSelectedExecutableReference(
+                                reference));
 
+        // then
+        assertInstanceOf(
+                ProcessorFailureException.class,
+                failure);
         assertEquals(
                 ProcessorErrorCategory
                         .InvalidProcessingDocument,
-                failure.errorCategory());
+                ((ProcessorFailureException) failure)
+                        .errorCategory());
+    }
+
+    private static Throwable captureFailure(Runnable operation) {
+        try {
+            operation.run();
+            return null;
+        } catch (Throwable failure) {
+            return failure;
+        }
     }
 
     private static final class CapturingMockHandlerProcessor

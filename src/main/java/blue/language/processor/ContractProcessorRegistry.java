@@ -24,7 +24,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Maintains the mapping between contract BlueIds and their processors.
+ * Thread-safe registry of exact contract type identities and processors.
+ *
+ * <p>Registration validates a complete candidate before publishing any map,
+ * so conflicting type, role, or executable-body metadata cannot leave a
+ * partial registration. Readers use a shared configuration lock while
+ * processor invocations are active.</p>
  */
 public class ContractProcessorRegistry {
 
@@ -99,6 +104,12 @@ public class ContractProcessorRegistry {
     private final ReentrantReadWriteLock configurationLock = new ReentrantReadWriteLock();
     private long version;
 
+    /**
+     * Creates an empty, independently synchronized processor registry.
+     */
+    public ContractProcessorRegistry() {
+    }
+
     Lock configurationReadLock() {
         return configurationLock.readLock();
     }
@@ -111,18 +122,44 @@ public class ContractProcessorRegistry {
         return configurationLock.getReadHoldCount() > 0;
     }
 
+    /**
+     * Atomically registers all exact identities declared by a Handler type.
+     *
+     * @param <T> exact Handler model
+     * @param processor processor to register
+     */
     public <T extends HandlerContract> void registerHandler(HandlerProcessor<T> processor) {
         mutateConfiguration(() -> registerHandlerInternal(processor));
     }
 
+    /**
+     * Atomically registers all exact identities declared by a Channel type.
+     *
+     * @param <T> exact Channel model
+     * @param processor processor to register
+     */
     public <T extends ChannelContract> void registerChannel(ChannelProcessor<T> processor) {
         mutateConfiguration(() -> registerChannelInternal(processor));
     }
 
+    /**
+     * Atomically registers all exact identities declared by a Marker type.
+     *
+     * @param <T> exact Marker model
+     * @param processor processor to register
+     */
     public <T extends MarkerContract> void registerMarker(ContractProcessor<T> processor) {
         mutateConfiguration(() -> registerMarkerInternal(processor));
     }
 
+    /**
+     * Dispatches registration by processor role and rejects unsupported
+     * contract classes before publishing configuration.
+     *
+     * @param processor exact-role processor to register
+     * @throws IllegalArgumentException if the processor role and contract
+     *         class are inconsistent
+     */
     public void register(ContractProcessor<? extends Contract> processor) {
         mutateConfiguration(() -> registerInternal(processor));
     }
@@ -136,6 +173,12 @@ public class ContractProcessorRegistry {
      * have a verified provider-backed snapshot manager/Blue runtime or exact
      * canonical registration evidence; otherwise recognition fails explicitly
      * with {@code ProviderUnavailable}.</p>
+     *
+     * @param blueId exact runtime type identity
+     * @param processor Java processor mapping
+     * @throws IllegalArgumentException if either argument is invalid
+     * @throws IllegalStateException if the identity conflicts with an
+     *         existing registration
      */
     public void register(String blueId, ContractProcessor<? extends Contract> processor) {
         mutateConfiguration(() -> {
@@ -160,6 +203,14 @@ public class ContractProcessorRegistry {
      * <p>The legacy {@link #register(String, ContractProcessor)} overload does
      * not imply any type content. In particular, a Java class name is never
      * interpreted as the canonical node for the supplied BlueId.</p>
+     *
+     * @param blueId exact runtime type identity
+     * @param canonicalTypeNode exact canonical content for {@code blueId}
+     * @param processor Java processor mapping
+     * @throws IllegalArgumentException if the canonical content does not
+     *         calculate to {@code blueId}
+     * @throws IllegalStateException if the identity conflicts with an
+     *         existing registration
      */
     public void register(String blueId,
                          Node canonicalTypeNode,
@@ -228,10 +279,22 @@ public class ContractProcessorRegistry {
         }
     }
 
+    /**
+     * Looks up a Handler processor by its exact Java contract class.
+     *
+     * @param type exact Handler contract class
+     * @return registered processor, or empty
+     */
     public synchronized Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Class<? extends HandlerContract> type) {
         return Optional.ofNullable(handlerProcessors.get(type));
     }
 
+    /**
+     * Looks up a Handler processor by exact runtime type identity.
+     *
+     * @param blueId exact type BlueId
+     * @return registered processor, or empty
+     */
     public synchronized Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
         return Optional.ofNullable(handlerProcessorsByBlueId.get(blueId));
     }
@@ -239,6 +302,9 @@ public class ContractProcessorRegistry {
     /**
      * Returns the immutable ordered executable-body fields captured when the
      * exact Handler runtime type was registered.
+     *
+     * @param blueId exact Handler type identity
+     * @return immutable ordered field names, or an empty list
      */
     public synchronized List<String> executableBodyFields(String blueId) {
         List<String> fields = handlerExecutableBodyFieldsByBlueId.get(blueId);
@@ -254,6 +320,13 @@ public class ContractProcessorRegistry {
         return Collections.unmodifiableMap(snapshot);
     }
 
+    /**
+     * Looks up the processor matching the contract's identity, then its exact
+     * Java class as a compatibility fallback.
+     *
+     * @param contract Handler contract to classify
+     * @return registered processor, or empty
+     */
     public synchronized Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(HandlerContract contract) {
         if (contract == null) {
             return Optional.empty();
@@ -264,14 +337,33 @@ public class ContractProcessorRegistry {
                 : lookupHandler(contract.getClass().asSubclass(HandlerContract.class));
     }
 
+    /**
+     * Looks up a Channel processor by its exact Java contract class.
+     *
+     * @param type exact Channel contract class
+     * @return registered processor, or empty
+     */
     public synchronized Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Class<? extends ChannelContract> type) {
         return Optional.ofNullable(channelProcessors.get(type));
     }
 
+    /**
+     * Looks up a Channel processor by exact runtime type identity.
+     *
+     * @param blueId exact type BlueId
+     * @return registered processor, or empty
+     */
     public synchronized Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
         return Optional.ofNullable(channelProcessorsByBlueId.get(blueId));
     }
 
+    /**
+     * Looks up the processor matching the contract's identity, then its exact
+     * Java class as a compatibility fallback.
+     *
+     * @param contract Channel contract to classify
+     * @return registered processor, or empty
+     */
     public synchronized Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(ChannelContract contract) {
         if (contract == null) {
             return Optional.empty();
@@ -282,14 +374,33 @@ public class ContractProcessorRegistry {
                 : lookupChannel(contract.getClass().asSubclass(ChannelContract.class));
     }
 
+    /**
+     * Looks up a Marker processor by its exact Java contract class.
+     *
+     * @param type exact Marker contract class
+     * @return registered processor, or empty
+     */
     public synchronized Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Class<? extends MarkerContract> type) {
         return Optional.ofNullable(markerProcessors.get(type));
     }
 
+    /**
+     * Looks up a Marker processor by exact runtime type identity.
+     *
+     * @param blueId exact type BlueId
+     * @return registered processor, or empty
+     */
     public synchronized Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
         return Optional.ofNullable(markerProcessorsByBlueId.get(blueId));
     }
 
+    /**
+     * Looks up the processor matching the contract's identity, then its exact
+     * Java class as a compatibility fallback.
+     *
+     * @param contract Marker contract to classify
+     * @return registered processor, or empty
+     */
     public synchronized Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(MarkerContract contract) {
         if (contract == null) {
             return Optional.empty();
@@ -300,6 +411,11 @@ public class ContractProcessorRegistry {
                 : lookupMarker(contract.getClass().asSubclass(MarkerContract.class));
     }
 
+    /**
+     * Returns the live unmodifiable identity-to-processor registry view.
+     *
+     * @return thread-safe live registry view
+     */
     public synchronized Map<String, ContractProcessor<? extends Contract>> processors() {
         return processorsView;
     }

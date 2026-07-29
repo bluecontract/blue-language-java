@@ -9,18 +9,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ContractRecognitionMeterTest {
 
     @Test
-    void canonicalClassificationBatchGroupsDistinctHeadersAndDeduplicatesThem() {
+    void shouldVerifyCanonicalClassificationBatchGroupsDistinctHeadersAndDeduplicatesThem() {
+        // given
         GasMeter gas = new GasMeter();
         ContractRecognitionMeter meter =
                 new ContractRecognitionMeter(gas);
 
+        // when
         meter.beginCanonicalClassificationBatch();
         meter.recognizeHeader(
                 "/",
@@ -38,16 +40,27 @@ final class ContractRecognitionMeterTest {
                 Arrays.asList("channel-contribution"),
                 "target-channel-header");
         meter.flushCanonicalClassificationBatch();
-
-        assertEquals(1, gas.trace().size());
+        int traceSize = gas.trace().size();
         GasTraceEntry aggregate = gas.trace().get(0);
+
+        // then
+        assertEquals(1, traceSize);
         assertEquals("contractHeaderRecognized", aggregate.counter());
         assertEquals(2L, aggregate.quantity());
         assertEquals("/", aggregate.scopePath());
         assertEquals(
                 "structural-and-channel-headers",
                 aggregate.reason());
+    }
 
+    @Test
+    void shouldNotChargeHeadersRecognizedInPriorCanonicalBatch() {
+        // given
+        GasMeter gas = new GasMeter();
+        ContractRecognitionMeter meter =
+                new ContractRecognitionMeter(gas);
+
+        // when
         meter.beginCanonicalClassificationBatch();
         meter.recognizeHeader(
                 "/",
@@ -60,19 +73,35 @@ final class ContractRecognitionMeterTest {
                 Arrays.asList("channel-contribution"),
                 "target-channel-header");
         meter.flushCanonicalClassificationBatch();
+        meter.beginCanonicalClassificationBatch();
+        meter.recognizeHeader(
+                "/",
+                "embedded",
+                Arrays.asList("embedded-contribution"),
+                "structural-route-header");
+        meter.recognizeHeader(
+                "/child",
+                "in",
+                Arrays.asList("channel-contribution"),
+                "target-channel-header");
+        meter.flushCanonicalClassificationBatch();
+        int traceSize = gas.trace().size();
 
+        // then
         assertEquals(
                 1,
-                gas.trace().size(),
+                traceSize,
                 "headers admitted in a prior batch remain recognized");
     }
 
     @Test
-    void singleHeaderClassificationBatchPreservesExactContext() {
+    void shouldVerifySingleHeaderClassificationBatchPreservesExactContext() {
+        // given
         GasMeter gas = new GasMeter();
         ContractRecognitionMeter meter =
                 new ContractRecognitionMeter(gas);
 
+        // when
         meter.beginCanonicalClassificationBatch();
         meter.recognizeHeader(
                 "/child",
@@ -80,9 +109,11 @@ final class ContractRecognitionMeterTest {
                 Arrays.asList("channel-contribution"),
                 "target-channel-header");
         meter.flushCanonicalClassificationBatch();
-
-        assertEquals(1, gas.trace().size());
+        int traceSize = gas.trace().size();
         GasTraceEntry entry = gas.trace().get(0);
+
+        // then
+        assertEquals(1, traceSize);
         assertEquals(1L, entry.quantity());
         assertEquals("/child", entry.scopePath());
         assertEquals("in", entry.contractKey());
@@ -90,7 +121,8 @@ final class ContractRecognitionMeterTest {
     }
 
     @Test
-    void fullRecognitionChargesEachExactContributionTupleOnce() {
+    void shouldVerifyFullRecognitionChargesEachExactContributionTupleOnce() {
+        // given
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
         ContractLoader loader = processor.contractLoader();
@@ -105,6 +137,7 @@ final class ContractRecognitionMeterTest {
         Node scope = scope(first, second);
         FrozenNode frozen = FrozenNode.fromResolvedNode(scope);
 
+        // when
         loader.load(
                 frozen,
                 frozen,
@@ -119,14 +152,11 @@ final class ContractRecognitionMeterTest {
                 ProcessingMetricsSink.NOOP,
                 meter,
                 "participating-contract-header");
-
-        assertEquals(
-                2L,
+        long quantityAfterDuplicateLoad =
                 quantity(
                         gas,
                         "processor",
-                        "contractHeaderRecognized"));
-
+                        "contractHeaderRecognized");
         first.properties("order", new Node().value(7));
         FrozenNode changed =
                 FrozenNode.fromResolvedNode(
@@ -138,18 +168,25 @@ final class ContractRecognitionMeterTest {
                 ProcessingMetricsSink.NOOP,
                 meter,
                 "participating-contract-header");
-
-        assertEquals(
-                3L,
+        long quantityAfterChangedContribution =
                 quantity(
                         gas,
                         "processor",
-                        "contractHeaderRecognized"),
+                        "contractHeaderRecognized");
+
+        // then
+        assertEquals(
+                2L,
+                quantityAfterDuplicateLoad);
+        assertEquals(
+                3L,
+                quantityAfterChangedContribution,
                 "only the changed ordered contribution tuple is new");
     }
 
     @Test
-    void malformedProcessEmbeddedBodyChargesItsExactHeaderButNoPathEntry() {
+    void shouldVerifyMalformedProcessEmbeddedBodyChargesItsExactHeaderButNoPathEntry() {
+        // given
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
         Node malformed = new Node()
@@ -165,8 +202,8 @@ final class ContractRecognitionMeterTest {
                                 malformed)));
         GasMeter gas = new GasMeter();
 
-        assertThrows(
-                MustUnderstandFailureException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> processor.contractLoader()
                         .loadExternalClassification(
                                 scope,
@@ -178,6 +215,8 @@ final class ContractRecognitionMeterTest {
                                 new ContractRecognitionMeter(gas),
                                 "structural-route-header"));
 
+        // then
+        assertTrue(failure instanceof MustUnderstandFailureException);
         assertEquals(
                 1L,
                 quantity(
@@ -193,7 +232,8 @@ final class ContractRecognitionMeterTest {
     }
 
     @Test
-    void absentProcessEmbeddedHasNoSyntheticHeaderCharge() {
+    void shouldVerifyAbsentProcessEmbeddedHasNoSyntheticHeaderCharge() {
+        // given
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
         FrozenNode scope = FrozenNode.fromResolvedNode(
@@ -202,6 +242,7 @@ final class ContractRecognitionMeterTest {
                         new Node()));
         GasMeter gas = new GasMeter();
 
+        // when
         ContractBundle bundle =
                 processor.contractLoader()
                         .loadExternalClassification(
@@ -214,6 +255,7 @@ final class ContractRecognitionMeterTest {
                                 new ContractRecognitionMeter(gas),
                                 "structural-route-header");
 
+        // then
         assertTrue(bundle.effectiveContractSnapshots()
                 .isEmpty());
         assertEquals(
@@ -225,13 +267,15 @@ final class ContractRecognitionMeterTest {
     }
 
     @Test
-    void pathEntryExhaustionStopsBeforeTheSecondEntryAndHeader() {
+    void shouldVerifyPathEntryExhaustionStopsBeforeTheSecondEntryAndHeader() {
+        // given
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
         FrozenNode scope = processEmbeddedScope(
                 "/first",
                 "/second/leaf");
 
+        // when
         GasMeter completeGas = new GasMeter();
         processor.contractLoader()
                 .loadExternalClassification(
@@ -244,7 +288,6 @@ final class ContractRecognitionMeterTest {
                         new ContractRecognitionMeter(
                                 completeGas),
                         "structural-route-header");
-
         List<String> logicalPaths = new ArrayList<>();
         for (GasTraceEntry entry : completeGas.trace()) {
             if ("embeddedPathEntryRead".equals(
@@ -252,21 +295,14 @@ final class ContractRecognitionMeterTest {
                 logicalPaths.add(entry.logicalPath());
             }
         }
-        assertEquals(
-                Arrays.asList("/first", "/second/leaf"),
-                logicalPaths,
-                "route gas names the authored logical paths, not manifest pointers");
-
         long prefix = prefixBeforeSecondPathEntry(
                 completeGas);
         GasMeter limited =
                 new GasMeter(
                         GasSchedule.contracts10(),
                         prefix);
-
-        GasLimitExceededException failure =
-                assertThrows(
-                        GasLimitExceededException.class,
+        Throwable failure =
+                captureFailure(
                         () -> processor.contractLoader()
                                 .loadExternalClassification(
                                         scope,
@@ -279,7 +315,16 @@ final class ContractRecognitionMeterTest {
                                                 limited),
                                         "structural-route-header"));
 
-        assertEquals(prefix, failure.admittedGas());
+        // then
+        assertEquals(
+                Arrays.asList("/first", "/second/leaf"),
+                logicalPaths,
+                "route gas names the authored logical paths, not manifest pointers");
+        assertTrue(failure instanceof GasLimitExceededException);
+        assertEquals(
+                prefix,
+                ((GasLimitExceededException) failure)
+                        .admittedGas());
         assertEquals(
                 1L,
                 quantity(

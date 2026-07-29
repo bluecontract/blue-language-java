@@ -5,12 +5,25 @@ import blue.language.model.Node;
 import java.util.Set;
 import java.util.Stack;
 
+/**
+ * Suppresses extension of selected properties while traversing instances of
+ * one exact declared type.
+ *
+ * <p>Merging is never suppressed. The root path remains eligible even if its
+ * segment name appears in the ignored-property set.</p>
+ */
 public class TypeSpecificPropertyFilter implements Limits {
     private final String typeBlueId;
     private final Set<String> ignoredProperties;
     private final Stack<String> currentPath = new Stack<>();
     private final Stack<Boolean> typeMatchStack = new Stack<>();
 
+    /**
+     * Creates a filter for one declared type BlueId and property-name set.
+     *
+     * @param typeBlueId exact declared type whose properties are filtered
+     * @param ignoredProperties property names whose extension is suppressed
+     */
     public TypeSpecificPropertyFilter(String typeBlueId, Set<String> ignoredProperties) {
         this.typeBlueId = typeBlueId;
         this.ignoredProperties = ignoredProperties;

@@ -1,6 +1,11 @@
 package blue.language.processor.conformance;
 
-import blue.language.registry.BlueCoreTypeRegistry;
+import blue.language.utils.Properties;
+
+import blue.language.model.Node;
+import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
+import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.math.BigDecimal;
@@ -13,21 +18,47 @@ import java.util.Objects;
 
 /**
  * Evaluates the exact assertion vocabulary from the Contracts 1.0 harness.
+ *
+ * <p>The evaluator reads expected values only after execution and compares
+ * them with a presence-aware actual projection. It does not mutate the
+ * projection or execute fixture controls.</p>
  */
 public final class ContractsAssertionEvaluator {
 
     private static final String TEXT_BLUE_ID =
-            BlueCoreTypeRegistry.INSTANCE.blueId("Text");
+            Properties.TEXT_TYPE_BLUE_ID;
     private static final String INTEGER_BLUE_ID =
-            BlueCoreTypeRegistry.INSTANCE.blueId("Integer");
+            Properties.INTEGER_TYPE_BLUE_ID;
     private static final String DOUBLE_BLUE_ID =
-            BlueCoreTypeRegistry.INSTANCE.blueId("Double");
+            Properties.DOUBLE_TYPE_BLUE_ID;
     private static final String BOOLEAN_BLUE_ID =
-            BlueCoreTypeRegistry.INSTANCE.blueId("Boolean");
+            Properties.BOOLEAN_TYPE_BLUE_ID;
 
+    /**
+     * Creates a stateless assertion evaluator.
+     */
+    public ContractsAssertionEvaluator() {
+    }
+
+    /**
+     * Evaluates all general assertions and compact gas-micro expectations.
+     *
+     * <p>An absent assertion array is accepted as an empty assertion set.
+     * Assertion failures use deterministic {@link AssertionError} messages;
+     * structurally invalid fixtures are expected to have been rejected by
+     * {@link ClosedContractsFixtureValidator} first.</p>
+     *
+     * @param fixture validated fixture containing expected assertions
+     * @param projection actual execution projection to inspect
+     * @throws AssertionError when any expected observable does not match
+     * @throws NullPointerException when {@code fixture} or
+     *         {@code projection} is {@code null}
+     */
     public void evaluate(JsonNode fixture, ContractsConformanceProjection projection) {
         evaluateGasEnvelope(fixture, projection);
-        JsonNode assertions = fixture.path("expected").path("assertions");
+        JsonNode assertions = fixture
+                .path(ContractsFixtureConstants.Field.EXPECTED)
+                .path(ContractsFixtureConstants.Field.ASSERTIONS);
         if (!assertions.isArray()) {
             return;
         }
@@ -45,26 +76,67 @@ public final class ContractsAssertionEvaluator {
      */
     private void evaluateGasEnvelope(JsonNode fixture,
                                      ContractsConformanceProjection projection) {
-        if (!"gas-micro".equals(fixture.path("operation").asText())
-                || fixture.path("input").has("root")) {
+        if (!ContractsFixtureConstants.Operation.GAS_MICRO.equals(
+                fixture.path(
+                        ContractsFixtureConstants.Field.OPERATION).asText())
+                || fixture.path(ContractsFixtureConstants.Field.INPUT)
+                .has(ContractsFixtureConstants.Field.ROOT)) {
             return;
         }
-        JsonNode expected = fixture.path("expected");
-        compareGasField(expected, "trace", projection, "__gas.trace");
-        compareGasField(expected, "totalGas", projection, "__gas.totalGas");
-        compareGasField(expected, "admitted", projection, "__gas.admitted");
-        compareGasField(expected, "failedChargeAbsent",
-                projection, "__gas.failedChargeAbsent");
-        compareGasField(expected, "listFoldStepRecomputed",
-                projection, "__gas.listFoldStepRecomputed");
-        compareGasField(expected, "textBlockExamined",
-                projection, "__gas.textBlockExamined");
-        compareGasField(expected, "validationProofReused",
-                projection, "__gas.validationProofReused");
-        compareGasField(expected, "directIdentityHashBlock",
-                projection, "__gas.directIdentityHashBlock");
-        compareGasField(expected, "integerLimbOperation",
-                projection, "__gas.integerLimbOperation");
+        JsonNode expected = fixture.path(
+                ContractsFixtureConstants.Field.EXPECTED);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.TRACE,
+                projection,
+                ContractsFixtureConstants.Projection.GAS_TRACE);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.TOTAL_GAS,
+                projection,
+                ContractsFixtureConstants.Projection.GAS_TOTAL);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.ADMITTED,
+                projection,
+                ContractsFixtureConstants.Projection.GAS_ADMITTED);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.FAILED_CHARGE_ABSENT,
+                projection,
+                ContractsFixtureConstants.Projection
+                        .GAS_FAILED_CHARGE_ABSENT);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field
+                        .LIST_FOLD_STEP_RECOMPUTED,
+                projection,
+                ContractsFixtureConstants.Projection
+                        .GAS_LIST_FOLD_STEP_RECOMPUTED);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.TEXT_BLOCK_EXAMINED,
+                projection,
+                ContractsFixtureConstants.Projection
+                        .GAS_TEXT_BLOCK_EXAMINED);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.VALIDATION_PROOF_REUSED,
+                projection,
+                ContractsFixtureConstants.Projection
+                        .GAS_VALIDATION_PROOF_REUSED);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.DIRECT_IDENTITY_HASH_BLOCK,
+                projection,
+                ContractsFixtureConstants.Projection
+                        .GAS_DIRECT_IDENTITY_HASH_BLOCK);
+        compareGasField(
+                expected,
+                ContractsFixtureConstants.Field.INTEGER_LIMB_OPERATION,
+                projection,
+                ContractsFixtureConstants.Projection
+                        .GAS_INTEGER_LIMB_OPERATION);
     }
 
     private static void compareGasField(JsonNode expected,
@@ -82,11 +154,13 @@ public final class ContractsAssertionEvaluator {
         Object expectedValue =
                 ContractsConformanceProjection.normalize(
                         expected.get(expectedField));
-        if ("trace".equals(expectedField)) {
+        if (ContractsFixtureConstants.Field.TRACE.equals(
+                expectedField)) {
             check(actual.getValue() instanceof List
                             && expectedValue instanceof List
                             && sequenceEquals(
-                            "trace.namedEntries",
+                            ContractsFixtureConstants.Projection
+                                    .TRACE_NAMED_ENTRIES,
                             actual.getValue(),
                             expectedValue),
                     "Gas expectation trace mismatch: actual="
@@ -103,19 +177,28 @@ public final class ContractsAssertionEvaluator {
     private void evaluateAssertion(JsonNode assertion,
                                    ContractsConformanceProjection projection,
                                    int index) {
-        String path = assertion.path("actual").asText();
-        String op = assertion.path("op").asText();
+        String path = assertion.path(
+                ContractsFixtureConstants.Field.ACTUAL).asText();
+        String op = assertion.path(
+                ContractsFixtureConstants.Field.OP).asText();
         String message = "Fixture " + path + " " + op + " assertion " + index;
-        if ("sameAcrossVariants".equals(op)) {
+        if (ContractsFixtureConstants.AssertionOperator
+                .SAME_ACROSS_VARIANTS.equals(op)) {
             assertSameAcrossVariants(
-                    projection.projectAcrossVariants(path, assertion.path("variant").asText(null)),
+                    projection.projectAcrossVariants(
+                            path,
+                            assertion.path(
+                                    ContractsFixtureConstants.Field.VARIANT)
+                                    .asText(null)),
                     message);
             return;
         }
 
-        String variant = assertion.path("variant").asText(null);
+        String variant = assertion.path(
+                ContractsFixtureConstants.Field.VARIANT).asText(null);
         if (variant != null && !variant.isEmpty()) {
-            if ("all".equals(variant)) {
+            if (ContractsFixtureConstants.VariantSelector.ALL.equals(
+                    variant)) {
                 check(!projection.variants().isEmpty(),
                         message + " requested all variants but none were executed");
                 for (Map.Entry<String, ContractsConformanceProjection> entry
@@ -138,65 +221,89 @@ public final class ContractsAssertionEvaluator {
     private void evaluateValueAssertion(JsonNode assertion,
                                         ContractsConformanceProjection projection,
                                         String message) {
-        String path = assertion.path("actual").asText();
-        String op = assertion.path("op").asText();
+        String path = assertion.path(
+                ContractsFixtureConstants.Field.ACTUAL).asText();
+        String op = assertion.path(
+                ContractsFixtureConstants.Field.OP).asText();
         ContractsConformanceProjection.Presence actual = projection.project(path);
 
-        if ("absent".equals(op)) {
+        if (ContractsFixtureConstants.AssertionOperator.ABSENT.equals(
+                op)) {
             check(!actual.isPresent(), message + " expected absence");
             return;
         }
-        if ("present".equals(op)) {
+        if (ContractsFixtureConstants.AssertionOperator.PRESENT.equals(
+                op)) {
             check(actual.isPresent(), message + " expected presence");
             return;
         }
 
         check(actual.isPresent(), message + " selected an absent projection");
         Object actualValue = actual.getValue();
-        Object expected = assertion.has("expected")
-                ? ContractsConformanceProjection.normalize(assertion.get("expected"))
+        Object expected = assertion.has(
+                ContractsFixtureConstants.Field.EXPECTED)
+                ? ContractsConformanceProjection.normalize(assertion.get(
+                ContractsFixtureConstants.Field.EXPECTED))
                 : null;
 
-        if ("equalsProjection".equals(op)) {
-            String expectedPath = assertion.path("expectedProjection").asText();
+        if (ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION
+                .equals(op)) {
+            String expectedPath = assertion.path(
+                    ContractsFixtureConstants.Field.EXPECTED_PROJECTION)
+                    .asText();
             ContractsConformanceProjection.Presence other = projection.project(expectedPath);
             check(other.isPresent(), message + " expected projection is absent: " + expectedPath);
-            check(deepEquals(actualValue, other.getValue()),
+            check(exactProjectionEquals(actualValue, other.getValue()),
                     message + " mismatch: actual=" + debug(actualValue)
                             + ", expectedProjection=" + expectedPath
                             + " value=" + debug(other.getValue()));
-        } else if ("equals".equals(op) || "failsWith".equals(op)) {
+        } else if (ContractsFixtureConstants.AssertionOperator.EQUALS
+                .equals(op)
+                || ContractsFixtureConstants.AssertionOperator.FAILS_WITH
+                .equals(op)) {
             check(deepEquals(actualValue, expected),
                     message + " mismatch: actual=" + debug(actualValue)
                             + ", expected=" + debug(expected));
-        } else if ("notEquals".equals(op)) {
+        } else if (ContractsFixtureConstants.AssertionOperator.NOT_EQUALS
+                .equals(op)) {
             check(!deepEquals(actualValue, expected),
                     message + " unexpectedly matched " + debug(expected));
-        } else if ("sequenceEquals".equals(op)) {
+        } else if (ContractsFixtureConstants.AssertionOperator
+                .SEQUENCE_EQUALS.equals(op)) {
             check(actualValue instanceof List && expected instanceof List,
                     message + " requires two sequences");
             check(sequenceEquals(path, actualValue, expected),
                     message + " sequence mismatch: actual=" + debug(actualValue)
                             + ", expected=" + debug(expected));
-        } else if ("contains".equals(op)) {
-            boolean ordered = assertion.path("ordered").asBoolean(false);
+        } else if (ContractsFixtureConstants.AssertionOperator.CONTAINS
+                .equals(op)) {
+            boolean ordered = assertion.path(
+                    ContractsFixtureConstants.Field.ORDERED)
+                    .asBoolean(false);
             check(contains(actualValue, expected, ordered),
                     message + " did not contain " + debug(expected)
                             + " in " + debug(actualValue));
-        } else if ("notContains".equals(op)) {
-            boolean ordered = assertion.path("ordered").asBoolean(false);
+        } else if (ContractsFixtureConstants.AssertionOperator.NOT_CONTAINS
+                .equals(op)) {
+            boolean ordered = assertion.path(
+                    ContractsFixtureConstants.Field.ORDERED)
+                    .asBoolean(false);
             check(!contains(actualValue, expected, ordered),
                     message + " unexpectedly contained " + debug(expected));
-        } else if ("lessThan".equals(op)) {
+        } else if (ContractsFixtureConstants.AssertionOperator.LESS_THAN
+                .equals(op)) {
             check(compareNumbers(actualValue, expected, message) < 0,
                     message + " expected " + actualValue + " < " + expected);
-        } else if ("greaterThan".equals(op)) {
+        } else if (ContractsFixtureConstants.AssertionOperator.GREATER_THAN
+                .equals(op)) {
             check(compareNumbers(actualValue, expected, message) > 0,
                     message + " expected " + actualValue + " > " + expected);
-        } else if ("all".equals(op)) {
+        } else if (ContractsFixtureConstants.AssertionOperator.ALL.equals(
+                op)) {
             check(all(actualValue, expected),
                     message + " universal predicate failed for " + debug(actualValue));
-        } else if ("none".equals(op)) {
+        } else if (ContractsFixtureConstants.AssertionOperator.NONE.equals(
+                op)) {
             check(none(actualValue, expected),
                     message + " empty predicate failed for " + debug(actualValue));
         } else {
@@ -208,7 +315,8 @@ public final class ContractsAssertionEvaluator {
     private static boolean sequenceEquals(String path,
                                           Object actual,
                                           Object expected) {
-        if (!"trace.namedEntries".equals(path)) {
+        if (!ContractsFixtureConstants.Projection.TRACE_NAMED_ENTRIES
+                .equals(path)) {
             return deepEquals(actual, expected);
         }
         List<Object> actualEntries = (List<Object>) actual;
@@ -223,8 +331,8 @@ public final class ContractsAssertionEvaluator {
                 Map<String, Object> actualMap =
                         new java.util.LinkedHashMap<>((Map<String, Object>) actualEntry);
                 Map<String, Object> expectedMap = (Map<String, Object>) expectedEntry;
-                if (!expectedMap.containsKey("sequence")) {
-                    actualMap.remove("sequence");
+                if (!expectedMap.containsKey(ContractsFixtureConstants.Field.SEQUENCE)) {
+                    actualMap.remove(ContractsFixtureConstants.Field.SEQUENCE);
                 }
                 if (!deepEquals(actualMap, expectedMap)) {
                     return false;
@@ -396,6 +504,56 @@ public final class ContractsAssertionEvaluator {
         return Objects.equals(left, right);
     }
 
+    /**
+     * Projection equality normally compares normalized values recursively.
+     * When either projection is a pure exact-node reference, Language 1.0
+     * additionally requires its verified materialization to compare equal:
+     * expansion and collapse are representation changes, not semantic ones.
+     */
+    private static boolean exactProjectionEquals(Object left, Object right) {
+        if (deepEquals(left, right)) {
+            return true;
+        }
+        String leftReference = pureReferenceBlueId(left);
+        if (leftReference != null) {
+            return leftReference.equals(exactNodeBlueId(right));
+        }
+        String rightReference = pureReferenceBlueId(right);
+        return rightReference != null
+                && rightReference.equals(exactNodeBlueId(left));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String pureReferenceBlueId(Object value) {
+        if (!(value instanceof Map)) {
+            return null;
+        }
+        Map<String, Object> reference = (Map<String, Object>) value;
+        if (reference.size() != 1
+                || !(reference.get(Properties.OBJECT_BLUE_ID) instanceof String)) {
+            return null;
+        }
+        String blueId = (String) reference.get(Properties.OBJECT_BLUE_ID);
+        try {
+            return BlueIds.requirePlainBlueId(
+                    blueId,
+                    ContractsFixtureConstants.AssertionOperator
+                            .EQUALS_PROJECTION);
+        } catch (IllegalArgumentException invalidReference) {
+            return null;
+        }
+    }
+
+    private static String exactNodeBlueId(Object value) {
+        try {
+            Node node = UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                    value, Node.class);
+            return BlueIdCalculator.calculateBlueId(node);
+        } catch (RuntimeException notAnExactNode) {
+            return null;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static TypedScalar typedScalar(Object candidate) {
         if (!(candidate instanceof Map)) {
@@ -403,19 +561,19 @@ public final class ContractsAssertionEvaluator {
         }
         Map<String, Object> wrapper = (Map<String, Object>) candidate;
         if (wrapper.size() != 2
-                || !wrapper.containsKey("type")
-                || !wrapper.containsKey("value")
-                || !(wrapper.get("type") instanceof Map)) {
+                || !wrapper.containsKey(Properties.OBJECT_TYPE)
+                || !wrapper.containsKey(Properties.OBJECT_VALUE)
+                || !(wrapper.get(Properties.OBJECT_TYPE) instanceof Map)) {
             return null;
         }
         Map<String, Object> type =
-                (Map<String, Object>) wrapper.get("type");
+                (Map<String, Object>) wrapper.get(Properties.OBJECT_TYPE);
         if (type.size() != 1
-                || !(type.get("blueId") instanceof String)) {
+                || !(type.get(Properties.OBJECT_BLUE_ID) instanceof String)) {
             return null;
         }
-        String typeBlueId = (String) type.get("blueId");
-        Object value = wrapper.get("value");
+        String typeBlueId = (String) type.get(Properties.OBJECT_BLUE_ID);
+        Object value = wrapper.get(Properties.OBJECT_VALUE);
         if ((TEXT_BLUE_ID.equals(typeBlueId) && value instanceof String)
                 || (INTEGER_BLUE_ID.equals(typeBlueId)
                 && isIntegralNumber(value))

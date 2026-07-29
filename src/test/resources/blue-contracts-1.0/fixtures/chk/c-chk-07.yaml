@@ -12,11 +12,12 @@ input:
     contracts:
       initialized:
         type:
-          blueId: 5qrHeD39ytiuWtKXStznJHTjDfgAtiPAr3jwHibvQKvR
-        documentId: preinitialized
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          name: preinitialized
       in:
         type:
-          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
         order: 0
         subscriptionKey: timeline
         eventKey: timeline
@@ -24,7 +25,7 @@ input:
         checkpointDomain: domain-current
       old:
         type:
-          blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
         order: 1
         subscriptionKey: old-timeline
         eventKey: old-timeline
@@ -45,7 +46,7 @@ input:
         entries:
           old:
             domain:
-              blueId: EvkAYvdyHqzvbmUPWGZjztuA1fu3xKVSqq8AqdSasYv7
+              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
             subject:
               blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
   event:

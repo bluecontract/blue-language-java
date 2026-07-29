@@ -17,10 +17,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessingRuntimeBatchPatchTest {
@@ -29,7 +30,8 @@ class DocumentProcessingRuntimeBatchPatchTest {
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
-    void applyPatchesAppliesMultipleObjectPatchesAndCommitsOnce() {
+    void shouldApplyMultipleObjectPatchesAndCommitOnce() {
+        // given
         Node document = new Node();
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
@@ -39,8 +41,10 @@ class DocumentProcessingRuntimeBatchPatchTest {
                 JsonPatch.replace("/a", new Node().value("three"))
         );
 
+        // when
         List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", patches);
 
+        // then
         assertEquals(3, updates.size());
         assertEquals("three", document.getAsText("/a"));
         assertEquals("two", document.getAsText("/b"));
@@ -56,15 +60,18 @@ class DocumentProcessingRuntimeBatchPatchTest {
     }
 
     @Test
-    void duplicatePatchPathsPreserveUpdateOrder() {
+    void shouldVerifyDuplicatePatchPathsPreserveUpdateOrder() {
+        // given
         Node document = new Node().properties("status", new Node().value("idle"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/status", new Node().value("first")),
                 JsonPatch.replace("/status", new Node().value("second"))
         ));
 
+        // then
         assertEquals("second", document.getAsText("/status"));
         assertEquals("idle", updates.get(0).before().getValue());
         assertEquals("first", updates.get(0).after().getValue());
@@ -73,22 +80,28 @@ class DocumentProcessingRuntimeBatchPatchTest {
     }
 
     @Test
-    void batchRollsBackWhenLaterPatchFails() {
+    void shouldVerifyBatchRollsBackWhenLaterPatchFails() {
+        // given
         Node document = new Node().properties("status", new Node().value("idle"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        assertThrows(IllegalStateException.class, () -> runtime.applyPatches("/", Arrays.asList(
+        // when
+        Throwable failure = captureFailure(
+                () -> runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/status", new Node().value("active")),
                 JsonPatch.remove("/missing")
         )));
 
+        // then
+        assertTrue(failure instanceof IllegalStateException);
         assertEquals("idle", document.getAsText("/status"));
         assertNull(document.getProperties().get("missing"));
         assertEquals(0, runtime.batchPatchRollbackCopiesForTest());
     }
 
     @Test
-    void atomicBatchRejectsCyclicMemberTraversalBeforeSnapshotProviderDemand() {
+    void shouldVerifyAtomicBatchRejectsCyclicMemberTraversalBeforeSnapshotProviderDemand() {
+        // given
         Node document = new Node().properties(
                 "cyclic",
                 new Node().blueId(CYCLIC_MEMBER_BLUE_ID));
@@ -97,8 +110,8 @@ class DocumentProcessingRuntimeBatchPatchTest {
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document, null, manager);
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> runtime.applyPatches(
                         "/",
                         Collections.singletonList(
@@ -106,8 +119,10 @@ class DocumentProcessingRuntimeBatchPatchTest {
                                         "/cyclic/member",
                                         new Node().value(1)))));
 
+        // then
+        assertInstanceOf(ProcessorFailureException.class, failure);
         assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
-                failure.errorCategory());
+                ((ProcessorFailureException) failure).errorCategory());
         assertEquals(exactInput, document.toString());
         assertEquals(0, manager.fromDocumentCalls);
         assertEquals(0, manager.applyPatchCalls);
@@ -115,7 +130,8 @@ class DocumentProcessingRuntimeBatchPatchTest {
     }
 
     @Test
-    void directWriteRejectsCyclicMemberTraversalBeforeSnapshotProviderDemand() {
+    void shouldVerifyDirectWriteRejectsCyclicMemberTraversalBeforeSnapshotProviderDemand() {
+        // given
         Node document = new Node().properties(
                 "cyclic",
                 new Node().blueId(CYCLIC_MEMBER_BLUE_ID));
@@ -124,14 +140,16 @@ class DocumentProcessingRuntimeBatchPatchTest {
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document, null, manager);
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> runtime.directWrite(
                         "/cyclic/member",
                         new Node().value(1)));
 
+        // then
+        assertInstanceOf(ProcessorFailureException.class, failure);
         assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
-                failure.errorCategory());
+                ((ProcessorFailureException) failure).errorCategory());
         assertEquals(exactInput, document.toString());
         assertEquals(0, manager.fromDocumentCalls);
         assertEquals(0, manager.applyPatchCalls);
@@ -139,56 +157,51 @@ class DocumentProcessingRuntimeBatchPatchTest {
     }
 
     @Test
-    void intrinsicCyclicMemberTraversalFailsBeforeSnapshotProviderDemand() {
-        for (boolean listPayload : Arrays.asList(false, true)) {
-            for (String field : Arrays.asList(
-                    "type",
-                    "itemType",
-                    "keyType",
-                    "valueType",
-                    "blue",
-                    "contracts")) {
-                Node intrinsic = nodeWithIntrinsicCyclicReference(field);
-                Node document;
-                String path;
-                if (listPayload) {
-                    intrinsic.items(new Node().value("retained item"));
-                    document = new Node().properties("list", intrinsic);
-                    path = "/list/" + field + "/member";
-                } else {
-                    document = intrinsic;
-                    path = "/" + field + "/member";
-                }
-                String exactInput = document.toString();
-                CountingSnapshotManager manager =
-                        new CountingSnapshotManager();
-                DocumentProcessingRuntime runtime =
-                        new DocumentProcessingRuntime(document, null, manager);
+    void shouldVerifyIntrinsicCyclicMemberTraversalFailsBeforeSnapshotProviderDemand() {
+        // given
+        List<IntrinsicTraversalCase> cases =
+                intrinsicTraversalCases();
 
-                ProcessorFailureException failure = assertThrows(
-                        ProcessorFailureException.class,
-                        () -> runtime.applyPatches(
-                                "/",
-                                Collections.singletonList(
-                                        JsonPatch.add(
-                                                path,
-                                                new Node().value(1)))),
-                        field + ", listPayload=" + listPayload);
+        // when
+        for (IntrinsicTraversalCase traversalCase : cases) {
+            traversalCase.failure = captureFailure(
+                    () -> traversalCase.runtime.applyPatches(
+                            "/",
+                            Collections.singletonList(
+                                    JsonPatch.add(
+                                            traversalCase.path,
+                                            new Node().value(1)))));
+        }
 
-                assertEquals(
-                        ProcessorErrorCategory.CyclicSetMutationUnsupported,
-                        failure.errorCategory(),
-                        field);
-                assertEquals(exactInput, document.toString(), field);
-                assertEquals(0, manager.fromDocumentCalls, field);
-                assertEquals(0, manager.applyPatchCalls, field);
-                assertEquals(0, manager.cacheSnapshotCalls, field);
-            }
+        // then
+        for (IntrinsicTraversalCase traversalCase : cases) {
+            assertInstanceOf(
+                    ProcessorFailureException.class,
+                    traversalCase.failure,
+                    traversalCase.label());
+            assertEquals(
+                    ProcessorErrorCategory.CyclicSetMutationUnsupported,
+                    ((ProcessorFailureException) traversalCase.failure)
+                            .errorCategory(),
+                    traversalCase.label());
+            assertEquals(traversalCase.exactInput,
+                    traversalCase.document.toString(),
+                    traversalCase.label());
+            assertEquals(0,
+                    traversalCase.manager.fromDocumentCalls,
+                    traversalCase.label());
+            assertEquals(0,
+                    traversalCase.manager.applyPatchCalls,
+                    traversalCase.label());
+            assertEquals(0,
+                    traversalCase.manager.cacheSnapshotCalls,
+                    traversalCase.label());
         }
     }
 
     @Test
-    void atomicBatchPreflightTracksWholeReferenceReplacementBeforeDescendantPatch() {
+    void shouldVerifyAtomicBatchPreflightTracksWholeReferenceReplacementBeforeDescendantPatch() {
+        // given
         Node document = new Node().properties(
                 "cyclic",
                 new Node().blueId(CYCLIC_MEMBER_BLUE_ID));
@@ -196,6 +209,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document, null, manager);
 
+        // when
         runtime.applyPatches(
                 "/",
                 Arrays.asList(
@@ -208,6 +222,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
                                 "/cyclic/next",
                                 new Node().value("allowed"))));
 
+        // then
         assertEquals("replacement", document.getAsText("/cyclic/member"));
         assertEquals("allowed", document.getAsText("/cyclic/next"));
     }
@@ -237,14 +252,15 @@ class DocumentProcessingRuntimeBatchPatchTest {
     }
 
     @Test
-    void atomicBatchPreflightTracksIntroducedReferenceBeforeDescendantPatch() {
+    void shouldVerifyAtomicBatchPreflightTracksIntroducedReferenceBeforeDescendantPatch() {
+        // given
         Node document = new Node();
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document, null, manager);
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> runtime.applyPatches(
                         "/",
                         Arrays.asList(
@@ -255,23 +271,102 @@ class DocumentProcessingRuntimeBatchPatchTest {
                                         "/cyclic/member",
                                         new Node().value("forbidden")))));
 
+        // then
+        assertInstanceOf(ProcessorFailureException.class, failure);
         assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
-                failure.errorCategory());
+                ((ProcessorFailureException) failure).errorCategory());
         assertNull(document.getProperties());
         assertEquals(0, manager.fromDocumentCalls);
     }
 
+    private List<IntrinsicTraversalCase> intrinsicTraversalCases() {
+        List<IntrinsicTraversalCase> cases = new ArrayList<>();
+        for (boolean listPayload : Arrays.asList(false, true)) {
+            for (String field : Arrays.asList(
+                    "type",
+                    "itemType",
+                    "keyType",
+                    "valueType",
+                    "blue",
+                    "contracts")) {
+                Node intrinsic =
+                        nodeWithIntrinsicCyclicReference(field);
+                Node document;
+                String path;
+                if (listPayload) {
+                    intrinsic.items(
+                            new Node().value("retained item"));
+                    document =
+                            new Node().properties("list", intrinsic);
+                    path = "/list/" + field + "/member";
+                } else {
+                    document = intrinsic;
+                    path = "/" + field + "/member";
+                }
+                CountingSnapshotManager manager =
+                        new CountingSnapshotManager();
+                cases.add(new IntrinsicTraversalCase(
+                        field,
+                        listPayload,
+                        document,
+                        document.toString(),
+                        manager,
+                        new DocumentProcessingRuntime(
+                                document, null, manager),
+                        path));
+            }
+        }
+        return cases;
+    }
+
+    private static final class IntrinsicTraversalCase {
+        private final String field;
+        private final boolean listPayload;
+        private final Node document;
+        private final String exactInput;
+        private final CountingSnapshotManager manager;
+        private final DocumentProcessingRuntime runtime;
+        private final String path;
+        private Throwable failure;
+
+        private IntrinsicTraversalCase(
+                String field,
+                boolean listPayload,
+                Node document,
+                String exactInput,
+                CountingSnapshotManager manager,
+                DocumentProcessingRuntime runtime,
+                String path) {
+            this.field = field;
+            this.listPayload = listPayload;
+            this.document = document;
+            this.exactInput = exactInput;
+            this.manager = manager;
+            this.runtime = runtime;
+            this.path = path;
+        }
+
+        private String label() {
+            return field + ", listPayload=" + listPayload;
+        }
+    }
+
     @Test
-    void batchFailureDuringCommitLeavesDocumentUnchanged() {
+    void shouldVerifyBatchFailureDuringCommitLeavesDocumentUnchanged() {
+        // given
         Node document = new Node().properties("status", new Node().value("idle"));
         CountingSnapshotManager manager = new CountingSnapshotManager();
         manager.failCacheSnapshot = true;
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
 
-        assertThrows(IllegalStateException.class, () -> runtime.applyPatches("/", Collections.singletonList(
+        // when
+        Throwable failure = captureFailure(
+                () -> runtime.applyPatches("/", Collections.singletonList(
                 JsonPatch.replace("/status", new Node().value("active"))
         )));
 
+        // then
+        assertTrue(failure instanceof IllegalStateException);
         assertEquals("idle", document.getAsText("/status"));
         assertEquals(1, manager.fromDocumentCalls);
         assertEquals(1, manager.cacheSnapshotCalls);
@@ -279,50 +374,68 @@ class DocumentProcessingRuntimeBatchPatchTest {
     }
 
     @Test
-    void batchArrayPatchesMatchSequentialArrayPatches() {
+    void shouldVerifyBatchArrayPatchesMatchSequentialArrayPatches() {
+        // given
         Node batchDoc = arrayDocument("values", 1, 2, 3);
         Node sequentialDoc = arrayDocument("values", 1, 2, 3);
+        DocumentProcessingRuntime batch =
+                new DocumentProcessingRuntime(batchDoc);
+        DocumentProcessingRuntime sequential =
+                new DocumentProcessingRuntime(sequentialDoc);
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/values/1", new Node().value(99)),
                 JsonPatch.replace("/values/2", new Node().value(100)),
                 JsonPatch.remove("/values/0")
         );
 
-        new DocumentProcessingRuntime(batchDoc).applyPatches("/", patches);
-        DocumentProcessingRuntime sequential = new DocumentProcessingRuntime(sequentialDoc);
+        // when
+        batch.applyPatches("/", patches);
         for (JsonPatch patch : patches) {
             sequential.applyPatch("/", patch);
         }
 
+        // then
         assertEquals(Arrays.asList(99, 100, 3), integerValues(batchDoc, "/values"));
         assertEquals(integerValues(sequentialDoc, "/values"), integerValues(batchDoc, "/values"));
     }
 
     @Test
-    void applyPatchDelegatesToApplyPatchesSemantics() {
+    void shouldDelegateApplyPatchToApplyPatchesSemantics() {
+        // given
         Node one = new Node();
         Node two = new Node();
+        DocumentProcessingRuntime oneRuntime =
+                new DocumentProcessingRuntime(one);
+        DocumentProcessingRuntime twoRuntime =
+                new DocumentProcessingRuntime(two);
 
-        new DocumentProcessingRuntime(one).applyPatch("/", JsonPatch.add("/x", new Node().value(1)));
-        new DocumentProcessingRuntime(two).applyPatches("/", Collections.singletonList(
+        // when
+        oneRuntime.applyPatch("/", JsonPatch.add("/x", new Node().value(1)));
+        twoRuntime.applyPatches("/", Collections.singletonList(
                 JsonPatch.add("/x", new Node().value(1))
         ));
 
+        // then
         assertEquals(one.getAsInteger("/x"), two.getAsInteger("/x"));
     }
 
     @Test
-    void addRemoveAndRemoveAddSamePathPreserveOrderedUpdates() {
+    void shouldPreserveOrderedUpdatesForAddRemoveAndRemoveAddOnSamePath() {
+        // given
         Node document = new Node().properties("temp", new Node().value("old"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.remove("/temp"),
                 JsonPatch.add("/temp", new Node().value("new")),
                 JsonPatch.add("/scratch", new Node().value("value")),
                 JsonPatch.remove("/scratch")
         ));
+        Throwable missingScratchFailure = captureFailure(
+                () -> document.getAsNode("/scratch"));
 
+        // then
         assertEquals("new", document.getAsText("/temp"));
         assertEquals("old", updates.get(0).before().getValue());
         assertNull(updates.get(0).after());
@@ -332,32 +445,46 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertEquals("value", updates.get(2).after().getValue());
         assertEquals("value", updates.get(3).before().getValue());
         assertNull(updates.get(3).after());
-        assertThrows(IllegalArgumentException.class, () -> document.getAsNode("/scratch"));
+        assertTrue(missingScratchFailure instanceof IllegalArgumentException);
     }
 
     @Test
-    void updateDataMaterializesBeforeAndAfterLazily() {
+    void shouldVerifyUpdateDataMaterializesBeforeAndAfterLazily() {
+        // given
         Node document = new Node().properties("status", new Node().value("idle"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Collections.singletonList(
                 JsonPatch.replace("/status", new Node().value("active"))
         ));
+        long beforeMaterializationsBeforeRead =
+                runtime.documentUpdateBeforeNodeMaterializationsForTest();
+        long afterMaterializationsBeforeRead =
+                runtime.documentUpdateAfterNodeMaterializationsForTest();
+        Object firstBefore = updates.get(0).before().getValue();
+        Object firstAfter = updates.get(0).after().getValue();
+        Object repeatedBefore = updates.get(0).before().getValue();
+        Object repeatedAfter = updates.get(0).after().getValue();
+        long beforeMaterializationsAfterRead =
+                runtime.documentUpdateBeforeNodeMaterializationsForTest();
+        long afterMaterializationsAfterRead =
+                runtime.documentUpdateAfterNodeMaterializationsForTest();
 
-        assertEquals(0, runtime.documentUpdateBeforeNodeMaterializationsForTest());
-        assertEquals(0, runtime.documentUpdateAfterNodeMaterializationsForTest());
-
-        assertEquals("idle", updates.get(0).before().getValue());
-        assertEquals("active", updates.get(0).after().getValue());
-        assertEquals("idle", updates.get(0).before().getValue());
-        assertEquals("active", updates.get(0).after().getValue());
-
-        assertEquals(1, runtime.documentUpdateBeforeNodeMaterializationsForTest());
-        assertEquals(1, runtime.documentUpdateAfterNodeMaterializationsForTest());
+        // then
+        assertEquals(0, beforeMaterializationsBeforeRead);
+        assertEquals(0, afterMaterializationsBeforeRead);
+        assertEquals("idle", firstBefore);
+        assertEquals("active", firstAfter);
+        assertEquals("idle", repeatedBefore);
+        assertEquals("active", repeatedAfter);
+        assertEquals(1, beforeMaterializationsAfterRead);
+        assertEquals(1, afterMaterializationsAfterRead);
     }
 
     @Test
-    void inheritedParentThenChildPatchDoesNotMinimizeMidBatch() {
+    void shouldVerifyInheritedParentThenChildPatchDoesNotMinimizeMidBatch() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
                 "name: Has Inherited List\n" +
@@ -370,19 +497,24 @@ class DocumentProcessingRuntimeBatchPatchTest {
                 "  blueId: " + provider.getBlueIdByName("Has Inherited List") + "\n", Node.class);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(canonical);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot, null, new PassthroughSnapshotManager());
+        Node inheritedList = new Node().items(
+                Collections.singletonList(
+                        new Node().value("inherited")));
 
-        Node inheritedList = new Node().items(Collections.singletonList(new Node().value("inherited")));
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/a", inheritedList),
                 JsonPatch.add("/a/-", new Node().value("custom"))
         ));
 
+        // then
         assertEquals("inherited", runtime.snapshot().canonicalRoot().getAsText("/a/0"));
         assertEquals("custom", runtime.snapshot().canonicalRoot().getAsText("/a/1"));
     }
 
     @Test
-    void sameInheritedPathCanBeChangedAgainInSameBatch() {
+    void shouldVerifySameInheritedPathCanBeChangedAgainInSameBatch() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
                 "name: Has Inherited Status\n" +
@@ -395,32 +527,38 @@ class DocumentProcessingRuntimeBatchPatchTest {
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(canonical);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot, null, new PassthroughSnapshotManager());
 
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/status", new Node().value("idle")),
                 JsonPatch.replace("/status", new Node().value("custom"))
         ));
 
+        // then
         assertEquals("custom", runtime.snapshot().canonicalRoot().getAsText("/status"));
     }
 
     @Test
-    void escapedPointerKeysWorkInBatch() {
+    void shouldVerifyEscapedPointerKeysWorkInBatch() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.add("/tilde/a~1b", new Node().value("slash")),
                 JsonPatch.add("/tilde/a~0b", new Node().value("tilde")),
                 JsonPatch.add("/tilde/~01key", new Node().value("literal"))
         ));
 
+        // then
         assertEquals("slash", document.getAsText("/tilde/a~1b"));
         assertEquals("tilde", document.getAsText("/tilde/a~0b"));
         assertEquals("literal", document.getAsText("/tilde/~01key"));
     }
 
     @Test
-    void batchPatchAvoidsRepeatedSnapshotCommitCost() {
+    void shouldVerifyBatchPatchAvoidsRepeatedSnapshotCommitCost() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
         List<JsonPatch> patches = new ArrayList<>();
@@ -428,10 +566,12 @@ class DocumentProcessingRuntimeBatchPatchTest {
             patches.add(JsonPatch.add("/values/k" + i, new Node().value(i)));
         }
 
+        // when
         long start = System.nanoTime();
         runtime.applyPatches("/", patches);
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
+        // then
         assertEquals(100, document.getAsNode("/values").getProperties().size());
         assertTrue(elapsedMs < 1000, "Batch patching should not be catastrophically slow; elapsedMs=" + elapsedMs);
         assertEquals(1, runtime.batchPatchCallsForTest());
@@ -440,14 +580,6 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertTrue(runtime.batchPatchPlanningNanosForTest() > 0);
         assertTrue(runtime.batchPatchBuildUpdatesNanosForTest() > 0);
         assertTrue(runtime.batchPatchCommitNanosForTest() > 0);
-        System.out.printf("batchPatchEntries=%d planningMs=%d conformanceMs=%d buildUpdatesMs=%d commitMs=%d beforeAfterMaterializations=%d/%d%n",
-                runtime.batchPatchEntriesForTest(),
-                TimeUnit.NANOSECONDS.toMillis(runtime.batchPatchPlanningNanosForTest()),
-                TimeUnit.NANOSECONDS.toMillis(runtime.batchPatchConformanceNanosForTest()),
-                TimeUnit.NANOSECONDS.toMillis(runtime.batchPatchBuildUpdatesNanosForTest()),
-                TimeUnit.NANOSECONDS.toMillis(runtime.batchPatchCommitNanosForTest()),
-                runtime.documentUpdateBeforeNodeMaterializationsForTest(),
-                runtime.documentUpdateAfterNodeMaterializationsForTest());
     }
 
     private List<Integer> integerValues(Node document, String path) {

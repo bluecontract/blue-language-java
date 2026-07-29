@@ -6,6 +6,13 @@ import blue.language.utils.ParsedJsonPointer;
 
 import java.util.List;
 
+/**
+ * Immutable evidence captured for one patch while an atomic batch is planned.
+ *
+ * <p>Canonical and resolved plans describe the same authored operation at the
+ * same batch position. The before/after values are therefore patch-time
+ * values, not projections of the final batch root.</p>
+ */
 final class BatchPatchRecord {
 
     private final ParsedJsonPointer parsedPath;

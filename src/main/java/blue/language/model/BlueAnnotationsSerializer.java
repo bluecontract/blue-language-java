@@ -1,5 +1,7 @@
 package blue.language.model;
 
+import blue.language.utils.Properties;
+
 import blue.language.utils.BlueIdResolver;
 import blue.language.utils.JacksonPropertyNames;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -9,11 +11,26 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 
+/**
+ * Serializes annotated Java objects into Blue's type/reference and
+ * name/description field shapes.
+ *
+ * <p>Classes without a resolvable type BlueId delegate to the original Jackson
+ * bean serializer. Static constants and compiler-generated fields are omitted
+ * because only per-instance state belongs in a Blue document.</p>
+ */
 public class BlueAnnotationsSerializer extends StdSerializer<Object> {
+    /** Delegate used when a class has no resolvable Blue type identity. */
     private final BeanSerializerBase defaultSerializer;
 
+    /**
+     * Creates a serializer with the delegate used for non-Blue classes.
+     *
+     * @param defaultSerializer delegate bean serializer
+     */
     public BlueAnnotationsSerializer(BeanSerializerBase defaultSerializer) {
         super(Object.class);
         this.defaultSerializer = defaultSerializer;
@@ -27,8 +44,8 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
         if (typeBlueId != null) {
             gen.writeStartObject();
 
-            gen.writeObjectFieldStart("type");
-            gen.writeStringField("blueId", typeBlueId);
+            gen.writeObjectFieldStart(Properties.OBJECT_TYPE);
+            gen.writeStringField(Properties.OBJECT_BLUE_ID, typeBlueId);
             gen.writeEndObject();
 
             Map<String, Map<String, Object>> blueFields = new HashMap<>();
@@ -47,7 +64,7 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
                 if (field.isAnnotationPresent(BlueId.class)) {
                     if (fieldValue != null) {
                         gen.writeObjectFieldStart(propertyName);
-                        gen.writeStringField("blueId", fieldValue.toString());
+                        gen.writeStringField(Properties.OBJECT_BLUE_ID, fieldValue.toString());
                         gen.writeEndObject();
                     }
                     processedFields.add(propertyName);
@@ -61,9 +78,10 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
                     Map<String, Object> blueFieldMap = blueFields.get(targetPropertyName);
 
                     if (field.isAnnotationPresent(BlueName.class)) {
-                        blueFieldMap.put("name", fieldValue);
+                        blueFieldMap.put(Properties.OBJECT_NAME, fieldValue);
                     } else {
-                        blueFieldMap.put("description", fieldValue);
+                        blueFieldMap.put(
+                                Properties.OBJECT_DESCRIPTION, fieldValue);
                     }
 
                     Field targetFieldObj = JacksonPropertyNames.findField(clazz, targetFieldName);
@@ -72,9 +90,9 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
                         try {
                             Object targetFieldValue = targetFieldObj.get(value);
                             if (targetFieldValue instanceof Collection) {
-                                blueFieldMap.put("items", targetFieldValue);
+                                blueFieldMap.put(Properties.OBJECT_ITEMS, targetFieldValue);
                             } else {
-                                blueFieldMap.put("value", targetFieldValue);
+                                blueFieldMap.put(Properties.OBJECT_VALUE, targetFieldValue);
                             }
                         } catch (IllegalAccessException e) {
                             throw new RuntimeException(e);
@@ -116,7 +134,12 @@ public class BlueAnnotationsSerializer extends StdSerializer<Object> {
     private List<Field> getAllFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<>();
         while (clazz != null) {
-            fields.addAll(Arrays.asList(clazz.getDeclaredFields()));
+            for (Field field : clazz.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers())
+                        && !field.isSynthetic()) {
+                    fields.add(field);
+                }
+            }
             clazz = clazz.getSuperclass();
         }
         return fields;

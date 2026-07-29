@@ -10,11 +10,23 @@ import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
 
+/** Minimal HTTP gateway client used by the compatibility IPFS provider. */
 public class IPFSContentFetcher {
 
     private static final String BASE_URL = "https://ipfs.io/ipfs/";
     private static final int TIMEOUT_IN_SECONDS = 2;
 
+    /** Creates a compatibility facade over the static gateway operation. */
+    public IPFSContentFetcher() {
+    }
+
+    /**
+     * Fetches one CID from the configured public gateway.
+     *
+     * @param cid CIDv1 to fetch
+     * @return response body, or {@code null} for an empty successful response
+     * @throws IOException for transport failures or non-200 responses
+     */
     public static String fetchContent(String cid) throws IOException {
         int timeout = TIMEOUT_IN_SECONDS * 1000;
         RequestConfig requestConfig = RequestConfig.custom()

@@ -11,42 +11,54 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class ExclusiveItemsOrValueCheckerTest {
 
     @Test
-    public void testNodeWithOnlyItemsShouldPass() {
+    public void shouldAcceptNodeWithOnlyItems() {
+        // given
         Node source = new Node()
                 .items(new Node(), new Node());
         Node target = new Node();
+        // when
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
+        // then
         assertDoesNotThrow(() -> processor.process(target, source, null, null));
     }
 
     @Test
-    public void testNodeWithOnlyValueShouldPass() {
+    public void shouldAcceptNodeWithOnlyValue() {
+        // given
         Node source = new Node()
                 .value("Some value");
         Node target = new Node();
+        // when
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
+        // then
         assertDoesNotThrow(() -> processor.process(target, source, null, null));
     }
 
     @Test
-    public void testNodeWithBothItemsAndValueShouldFail() {
+    public void shouldRejectNodeWithBothItemsAndValue() {
+        // given
         Node source = new Node()
                 .items(new Node(), new Node())
                 .value("Some value");
         Node target = new Node();
+        // when
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> processor.process(target, source, null, null));
     }
 
     @Test
-    public void testNodeWithNeitherItemsNorValueShouldPass() {
+    public void shouldAcceptNodeWithNeitherItemsNorValue() {
+        // given
         Node source = new Node();
         Node target = new Node();
+        // when
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
+        // then
         assertDoesNotThrow(() -> processor.process(target, source, null, null));
     }
 }

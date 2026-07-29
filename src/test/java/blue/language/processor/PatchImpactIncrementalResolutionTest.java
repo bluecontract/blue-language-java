@@ -15,6 +15,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,7 +29,8 @@ import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 class PatchImpactIncrementalResolutionTest {
 
     @Test
-    void dependencyFreeTypedScalarReplacementMatchesFullOracleAfterEveryPatch() {
+    void shouldVerifyDependencyFreeTypedScalarReplacementMatchesFullOracleAfterEveryPatch() {
+        // given
         Fixture fixture = Fixture.withUnrelatedTypeContribution();
         ResolvedSnapshot base = fixture.snapshot();
         FrozenNode unaffected = base.resolvedAt("/inheritedUnrelated");
@@ -45,27 +47,50 @@ class PatchImpactIncrementalResolutionTest {
                 base,
                 fixture.blue.conformanceEngine(),
                 oracleManager);
-
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.replace("/status", new Node().value("confirmed")),
                 JsonPatch.replace("/status", new Node().value("fulfilled")),
                 JsonPatch.replace("/status", new Node().value("settled")));
+
+        // when
+        List<PatchObservation> observations = new ArrayList<>();
         for (JsonPatch patch : patches) {
             DocumentProcessingRuntime.DocumentUpdateData incrementalUpdate =
                     incremental.applyPatch("/", patch);
             DocumentProcessingRuntime.DocumentUpdateData oracleUpdate =
                     oracle.applyPatch("/", patch);
-
-            assertSnapshotEquals(fixture.blue, oracle.snapshot(), incremental.snapshot());
-            assertEquals(fixture.blue.nodeToJson(oracleUpdate.before()),
-                    fixture.blue.nodeToJson(incrementalUpdate.before()));
-            assertEquals(fixture.blue.nodeToJson(oracleUpdate.after()),
-                    fixture.blue.nodeToJson(incrementalUpdate.after()));
-            assertEquals(oracleUpdate.path(), incrementalUpdate.path());
-            assertEquals(oracleUpdate.op(), incrementalUpdate.op());
+            observations.add(new PatchObservation(
+                    oracle.snapshot(),
+                    incremental.snapshot(),
+                    oracleUpdate,
+                    incrementalUpdate,
+                    null,
+                    incremental.snapshot()
+                            .resolvedAt("/inheritedUnrelated")));
         }
-
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        FrozenNode finalUnaffected =
+                incremental.snapshot()
+                        .resolvedAt("/inheritedUnrelated");
+
+        // then
+        for (PatchObservation observation : observations) {
+            assertSnapshotEquals(fixture.blue,
+                    observation.expectedSnapshot,
+                    observation.actualSnapshot);
+            assertEquals(fixture.blue.nodeToJson(
+                            observation.expectedUpdate.before()),
+                    fixture.blue.nodeToJson(
+                            observation.actualUpdate.before()));
+            assertEquals(fixture.blue.nodeToJson(
+                            observation.expectedUpdate.after()),
+                    fixture.blue.nodeToJson(
+                            observation.actualUpdate.after()));
+            assertEquals(observation.expectedUpdate.path(),
+                    observation.actualUpdate.path());
+            assertEquals(observation.expectedUpdate.op(),
+                    observation.actualUpdate.op());
+        }
         assertEquals(3L, snapshot.counter("patchImpactAnalyses"));
         assertEquals(3L, snapshot.counter("patchImpactValueOnly"), snapshot.toString());
         assertEquals(3L, snapshot.counter("incrementalSnapshotResolutions"));
@@ -74,12 +99,13 @@ class PatchImpactIncrementalResolutionTest {
         assertEquals(0L, snapshot.counter("fullResolvedRootMaterializations"));
         assertEquals(0L, snapshot.counter("conformancePlans"));
         assertEquals(3, oracleManager.fullResolutions);
-        assertSame(unaffected, incremental.snapshot().resolvedAt("/inheritedUnrelated"),
+        assertSame(unaffected, finalUnaffected,
                 "the incremental splice must retain an unrelated resolved subtree by identity");
     }
 
     @Test
-    void basicTypedLeafReplacementPreservesResolvedMetadataAndMatchesFullOracleAfterEveryPatch() {
+    void shouldVerifyBasicTypedLeafReplacementPreservesResolvedMetadataAndMatchesFullOracleAfterEveryPatch() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshot();
         FrozenNode unaffected = base.resolvedAt("/inheritedUnrelated");
@@ -95,28 +121,49 @@ class PatchImpactIncrementalResolutionTest {
                 base,
                 fixture.blue.conformanceEngine(),
                 oracleManager);
-
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.replace("/status", new Node().value("confirmed")),
                 JsonPatch.replace("/status", new Node().value("fulfilled")),
                 JsonPatch.replace("/status", new Node().value("settled")));
+
+        // when
+        List<PatchObservation> observations = new ArrayList<>();
         for (JsonPatch patch : patches) {
             DocumentProcessingRuntime.DocumentUpdateData incrementalUpdate =
                     incremental.applyPatch("/", patch);
             DocumentProcessingRuntime.DocumentUpdateData oracleUpdate =
                     oracle.applyPatch("/", patch);
-
-            assertSnapshotEquals(fixture.blue, oracle.snapshot(), incremental.snapshot());
-            assertEquals(fixture.blue.nodeToJson(oracleUpdate.before()),
-                    fixture.blue.nodeToJson(incrementalUpdate.before()));
-            assertEquals(fixture.blue.nodeToJson(oracleUpdate.after()),
-                    fixture.blue.nodeToJson(incrementalUpdate.after()));
             FrozenNode resolvedStatus = incremental.snapshot().resolvedAt("/status");
-            assertEquals(TEXT_TYPE_BLUE_ID, resolvedStatus.getType().getReferenceBlueId());
-            assertSame(unaffected, incremental.snapshot().resolvedAt("/inheritedUnrelated"));
+            observations.add(new PatchObservation(
+                    oracle.snapshot(),
+                    incremental.snapshot(),
+                    oracleUpdate,
+                    incrementalUpdate,
+                    resolvedStatus,
+                    incremental.snapshot()
+                            .resolvedAt("/inheritedUnrelated")));
         }
-
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+
+        // then
+        for (PatchObservation observation : observations) {
+            assertSnapshotEquals(fixture.blue,
+                    observation.expectedSnapshot,
+                    observation.actualSnapshot);
+            assertEquals(fixture.blue.nodeToJson(
+                            observation.expectedUpdate.before()),
+                    fixture.blue.nodeToJson(
+                            observation.actualUpdate.before()));
+            assertEquals(fixture.blue.nodeToJson(
+                            observation.expectedUpdate.after()),
+                    fixture.blue.nodeToJson(
+                            observation.actualUpdate.after()));
+            assertEquals(TEXT_TYPE_BLUE_ID,
+                    observation.resolvedChangedNode
+                            .getType().getReferenceBlueId());
+            assertSame(unaffected,
+                    observation.unaffectedNode);
+        }
         assertEquals(3L, snapshot.counter("patchImpactValueOnly"), snapshot.toString());
         assertEquals(3L, snapshot.counter("incrementalSnapshotResolutions"));
         assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"));
@@ -128,7 +175,8 @@ class PatchImpactIncrementalResolutionTest {
     }
 
     @Test
-    void nonEmptyProcessorContractsRemainSharedAcrossTypedLeafFastPathPatches() {
+    void shouldVerifyNonEmptyProcessorContractsRemainSharedAcrossTypedLeafFastPathPatches() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshotWithNonEmptyContracts();
         FrozenNode unaffectedContract = base.resolvedAt("/contracts/retained");
@@ -144,27 +192,45 @@ class PatchImpactIncrementalResolutionTest {
                 base,
                 fixture.blue.conformanceEngine(),
                 oracleManager);
-
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.replace("/status", new Node().value("confirmed")),
                 JsonPatch.replace("/status", new Node().value("fulfilled")),
                 JsonPatch.replace("/status", new Node().value("settled")));
+
+        // when
+        List<PatchObservation> observations = new ArrayList<>();
         for (JsonPatch patch : patches) {
             DocumentProcessingRuntime.DocumentUpdateData incrementalUpdate =
                     incremental.applyPatch("/", patch);
             DocumentProcessingRuntime.DocumentUpdateData oracleUpdate =
                     oracle.applyPatch("/", patch);
-
-            assertSnapshotEquals(fixture.blue, oracle.snapshot(), incremental.snapshot());
-            assertEquals(fixture.blue.nodeToJson(oracleUpdate.before()),
-                    fixture.blue.nodeToJson(incrementalUpdate.before()));
-            assertEquals(fixture.blue.nodeToJson(oracleUpdate.after()),
-                    fixture.blue.nodeToJson(incrementalUpdate.after()));
-            assertSame(unaffectedContract,
-                    incremental.snapshot().resolvedAt("/contracts/retained"));
+            observations.add(new PatchObservation(
+                    oracle.snapshot(),
+                    incremental.snapshot(),
+                    oracleUpdate,
+                    incrementalUpdate,
+                    null,
+                    incremental.snapshot()
+                            .resolvedAt("/contracts/retained")));
         }
-
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+
+        // then
+        for (PatchObservation observation : observations) {
+            assertSnapshotEquals(fixture.blue,
+                    observation.expectedSnapshot,
+                    observation.actualSnapshot);
+            assertEquals(fixture.blue.nodeToJson(
+                            observation.expectedUpdate.before()),
+                    fixture.blue.nodeToJson(
+                            observation.actualUpdate.before()));
+            assertEquals(fixture.blue.nodeToJson(
+                            observation.expectedUpdate.after()),
+                    fixture.blue.nodeToJson(
+                            observation.actualUpdate.after()));
+            assertSame(unaffectedContract,
+                    observation.unaffectedNode);
+        }
         assertEquals(3L, snapshot.counter("incrementalSnapshotResolutions"));
         assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"));
         assertEquals(0L, snapshot.counter("fullCanonicalRootMaterializations"));
@@ -174,7 +240,8 @@ class PatchImpactIncrementalResolutionTest {
     }
 
     @Test
-    void patchUnderContractsUsesNamedFullFallbackAndMatchesOracle() {
+    void shouldVerifyPatchUnderContractsUsesNamedFullFallbackAndMatchesOracle() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshotWithNonEmptyContracts();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
@@ -190,11 +257,13 @@ class PatchImpactIncrementalResolutionTest {
                 fixture.blue.conformanceEngine(),
                 oracleManager);
 
+        // when
         JsonPatch patch = JsonPatch.replace(
                 "/contracts/retained/processorState", new Node().value("busy"));
         incremental.applyPatch("/", patch);
         oracle.applyPatch("/", patch);
 
+        // then
         assertSnapshotEquals(fixture.blue, oracle.snapshot(), incremental.snapshot());
         assertEquals(1, incrementalManager.fullResolutions);
         assertEquals(1L, metrics.snapshot().counter("fullSnapshotFallbacks"));
@@ -204,7 +273,8 @@ class PatchImpactIncrementalResolutionTest {
     }
 
     @Test
-    void typeContributionOnChangedPathUsesOneExplicitFullFallbackAndMatchesOracle() {
+    void shouldVerifyTypeContributionOnChangedPathUsesOneExplicitFullFallbackAndMatchesOracle() {
+        // given
         Fixture fixture = Fixture.withFixedStatusSubtype();
         ResolvedSnapshot base = fixture.snapshot();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
@@ -220,10 +290,12 @@ class PatchImpactIncrementalResolutionTest {
                 fixture.blue.conformanceEngine(),
                 oracleManager);
 
+        // when
         JsonPatch patch = JsonPatch.replace("/status", new Node().value("published"));
         incremental.applyPatch("/", patch);
         oracle.applyPatch("/", patch);
 
+        // then
         assertSnapshotEquals(fixture.blue, oracle.snapshot(), incremental.snapshot());
         assertEquals(fixture.parentTypeId,
                 incremental.snapshot().canonicalRoot().getAsText("/type/blueId"));
@@ -235,7 +307,8 @@ class PatchImpactIncrementalResolutionTest {
     }
 
     @Test
-    void schemaBearingTypedLeafUsesOneExplicitFullFallbackAndMatchesOracle() {
+    void shouldVerifySchemaBearingTypedLeafUsesOneExplicitFullFallbackAndMatchesOracle() {
+        // given
         Fixture fixture = Fixture.withSchemaStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshot();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
@@ -251,10 +324,12 @@ class PatchImpactIncrementalResolutionTest {
                 fixture.blue.conformanceEngine(),
                 oracleManager);
 
+        // when
         JsonPatch patch = JsonPatch.replace("/status", new Node().value("published"));
         incremental.applyPatch("/", patch);
         oracle.applyPatch("/", patch);
 
+        // then
         assertSnapshotEquals(fixture.blue, oracle.snapshot(), incremental.snapshot());
         assertEquals(1, incrementalManager.fullResolutions);
         assertEquals(1L, metrics.snapshot().counter("fullSnapshotFallbacks"));
@@ -264,7 +339,8 @@ class PatchImpactIncrementalResolutionTest {
     }
 
     @Test
-    void emptyContractsNormalizationPreventsTheTypedLeafFastPathAndMatchesTheFullOracle() {
+    void shouldVerifyEmptyContractsNormalizationPreventsTheTypedLeafFastPathAndMatchesTheFullOracle() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshotWithEmptyContracts();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
@@ -280,10 +356,12 @@ class PatchImpactIncrementalResolutionTest {
                 fixture.blue.conformanceEngine(),
                 oracleManager);
 
+        // when
         JsonPatch patch = JsonPatch.replace("/status", new Node().value("published"));
         incremental.applyPatch("/", patch);
         oracle.applyPatch("/", patch);
 
+        // then
         assertSnapshotEquals(fixture.blue, oracle.snapshot(), incremental.snapshot());
         assertEquals(1, incrementalManager.fullResolutions);
         assertEquals(1L, metrics.snapshot().counter("fullSnapshotFallbacks"));
@@ -293,27 +371,34 @@ class PatchImpactIncrementalResolutionTest {
     }
 
     @Test
-    void customMergingProcessorCannotOptIntoBuiltInIncrementalProof() {
+    void shouldVerifyCustomMergingProcessorCannotOptIntoBuiltInIncrementalProof() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         MergingProcessor custom = new DelegatingMergingProcessor(fixture.blue.getMergingProcessor());
-        ConformanceEngine customEngine = new ConformanceEngine(fixture.blue.getNodeProvider(), custom);
-        assertFalse(customEngine.supportsIncrementalValueResolution());
 
+        // when
+        ConformanceEngine customEngine = new ConformanceEngine(fixture.blue.getNodeProvider(), custom);
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         FullOracleSnapshotManager manager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 fixture.snapshot(), customEngine, manager, metrics);
-
         runtime.applyPatch("/", JsonPatch.replace("/status", new Node().value("confirmed")));
+        boolean supportsIncremental =
+                customEngine.supportsIncrementalValueResolution();
+        ProcessingMetricsSnapshot snapshot =
+                metrics.snapshot();
 
+        // then
+        assertFalse(supportsIncremental);
         assertEquals(1, manager.fullResolutions);
-        assertEquals(1L, metrics.snapshot().counter("fullSnapshotFallbacks"));
-        assertEquals(1L, metrics.snapshot().counter(
+        assertEquals(1L, snapshot.counter("fullSnapshotFallbacks"));
+        assertEquals(1L, snapshot.counter(
                 "fullSnapshotFallbackReason.CUSTOM_MERGING_PROCESSOR"));
     }
 
     @Test
-    void requestAwareTransparentWrapperAllowsIncrementalResolution() {
+    void shouldVerifyRequestAwareTransparentWrapperAllowsIncrementalResolution() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         RequestAwareWrapper wrapper = new RequestAwareWrapper(
                 fixture.blue.getMergingProcessor(), null);
@@ -331,22 +416,31 @@ class PatchImpactIncrementalResolutionTest {
                 wrappedBlue.conformanceEngine(),
                 oracleManager);
 
+        // when
         JsonPatch patch = JsonPatch.replace("/status", new Node().value("confirmed"));
         runtime.applyPatch("/", patch);
         oracle.applyPatch("/", patch);
-
-        assertSnapshotEquals(wrappedBlue, oracle.snapshot(), runtime.snapshot());
+        ResolvedSnapshot expectedSnapshot =
+                oracle.snapshot();
+        ResolvedSnapshot actualSnapshot =
+                runtime.snapshot();
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        int requestCalls = wrapper.requestCalls;
+
+        // then
+        assertSnapshotEquals(wrappedBlue,
+                expectedSnapshot, actualSnapshot);
         assertEquals(1L, snapshot.counter("incrementalSnapshotResolutions"), snapshot.toString());
         assertEquals(0L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
         assertEquals(1L, snapshot.counter("incrementalMergerCapabilityRequests"), snapshot.toString());
         assertEquals(1L, snapshot.counter("incrementalMergerCapabilityAllowed"), snapshot.toString());
-        assertTrue(wrapper.requestCalls >= 2,
+        assertTrue(requestCalls >= 2,
                 "both conformance and snapshot manager should consult the same request-aware capability");
     }
 
     @Test
-    void requestAwareGuardedWrapperDeniesProtectedRegion() {
+    void shouldVerifyRequestAwareGuardedWrapperDeniesProtectedRegion() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         RequestAwareWrapper wrapper = new RequestAwareWrapper(
                 fixture.blue.getMergingProcessor(), "/status");
@@ -360,20 +454,24 @@ class PatchImpactIncrementalResolutionTest {
                 manager,
                 metrics);
 
+        // when
         runtime.applyPatch("/", JsonPatch.replace("/status", new Node().value("confirmed")));
-
         ProcessingMetricsSnapshot snapshot = metrics.snapshot();
+        int fullResolutions = manager.fullResolutions;
+
+        // then
         assertEquals(1L, snapshot.counter("fullSnapshotFallbacks"), snapshot.toString());
         assertEquals(1L, snapshot.counter("fullSnapshotFallbackReason.CUSTOM_MERGING_PROCESSOR"), snapshot.toString());
         assertEquals(1L, snapshot.counter("incrementalMergerCapabilityRequests"), snapshot.toString());
         assertEquals(1L, snapshot.counter("incrementalMergerCapabilityDenied"), snapshot.toString());
         assertEquals(1L, snapshot.counter("incrementalMergerCapabilityDeniedByConformance"), snapshot.toString());
         assertEquals(0L, snapshot.counter("incrementalMergerCapabilityDeniedBySnapshotManager"), snapshot.toString());
-        assertEquals(1, manager.fullResolutions);
+        assertEquals(1, fullResolutions);
     }
 
     @Test
-    void dishonestCapabilityDemonstratesTruthfulWrapperContract() {
+    void shouldVerifyDishonestCapabilityDemonstratesTruthfulWrapperContract() {
+        // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         DishonestWrapper wrapper = new DishonestWrapper(fixture.blue.getMergingProcessor());
         Blue wrappedBlue = new Blue(fixture.provider, wrapper);
@@ -390,10 +488,12 @@ class PatchImpactIncrementalResolutionTest {
                 wrappedBlue.conformanceEngine(),
                 oracleManager);
 
+        // when
         JsonPatch patch = JsonPatch.replace("/status", new Node().value("confirmed"));
         incremental.applyPatch("/", patch);
         oracle.applyPatch("/", patch);
 
+        // then
         assertEquals(1L, metrics.snapshot().counter("incrementalSnapshotResolutions"));
         assertEquals(0L, metrics.snapshot().counter("fullSnapshotFallbacks"));
         assertNotEquals(wrappedBlue.nodeToJson(oracle.snapshot().resolvedRoot()),
@@ -403,7 +503,8 @@ class PatchImpactIncrementalResolutionTest {
 
 
     @Test
-    void impactModelCarriesTypedBoundaryAndDependencyEvidence() {
+    void shouldVerifyImpactModelCarriesTypedBoundaryAndDependencyEvidence() {
+        // given
         Fixture fixture = Fixture.withFixedStatusSubtype();
         ResolvedSnapshot base = fixture.snapshot();
         ImmutableJsonPatch patch = ImmutableJsonPatch.from(
@@ -419,6 +520,7 @@ class PatchImpactIncrementalResolutionTest {
         FullOracleSnapshotManager manager = new FullOracleSnapshotManager(fixture.blue, true);
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
 
+        // when
         PatchImpact impact = new PatchImpactAnalyzer(
                 fixture.blue.conformanceEngine(), null, manager, metrics)
                 .analyze(true,
@@ -428,6 +530,7 @@ class PatchImpactIncrementalResolutionTest {
                         resolvedPlan,
                         patch);
 
+        // then
         assertEquals(PatchImpact.Kind.VALUE_ONLY, impact.kind());
         assertEquals("/status", impact.path().pointer());
         assertEquals(PatchImpact.Shape.SCALAR, impact.beforeShape());
@@ -540,6 +643,30 @@ class PatchImpactIncrementalResolutionTest {
                     .contracts(new Node().properties(
                             "retained", new Node().properties(
                                     "processorState", new Node().value("idle")))));
+        }
+    }
+
+    private static final class PatchObservation {
+        private final ResolvedSnapshot expectedSnapshot;
+        private final ResolvedSnapshot actualSnapshot;
+        private final DocumentProcessingRuntime.DocumentUpdateData expectedUpdate;
+        private final DocumentProcessingRuntime.DocumentUpdateData actualUpdate;
+        private final FrozenNode resolvedChangedNode;
+        private final FrozenNode unaffectedNode;
+
+        private PatchObservation(
+                ResolvedSnapshot expectedSnapshot,
+                ResolvedSnapshot actualSnapshot,
+                DocumentProcessingRuntime.DocumentUpdateData expectedUpdate,
+                DocumentProcessingRuntime.DocumentUpdateData actualUpdate,
+                FrozenNode resolvedChangedNode,
+                FrozenNode unaffectedNode) {
+            this.expectedSnapshot = expectedSnapshot;
+            this.actualSnapshot = actualSnapshot;
+            this.expectedUpdate = expectedUpdate;
+            this.actualUpdate = actualUpdate;
+            this.resolvedChangedNode = resolvedChangedNode;
+            this.unaffectedNode = unaffectedNode;
         }
     }
 

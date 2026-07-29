@@ -23,6 +23,11 @@ public class ExcludedPathLimits implements Limits {
     private final Stack<String> currentPath = new Stack<>();
     private final Stack<Boolean> enteredPathSegment = new Stack<>();
 
+    /**
+     * Creates limits from canonicalized RFC 6901 paths; null means no exclusions.
+     *
+     * @param excludedPaths paths to exclude, or {@code null}
+     */
     public ExcludedPathLimits(Collection<String> excludedPaths) {
         this.excludedPaths = excludedPaths == null
                 ? new HashSet<>()
@@ -31,6 +36,12 @@ public class ExcludedPathLimits implements Limits {
                     .collect(Collectors.toSet());
     }
 
+    /**
+     * Factory equivalent to {@link #ExcludedPathLimits(Collection)}.
+     *
+     * @param excludedPaths paths to exclude, or {@code null}
+     * @return new stateful limits instance
+     */
     public static ExcludedPathLimits excluding(Collection<String> excludedPaths) {
         return new ExcludedPathLimits(excludedPaths);
     }

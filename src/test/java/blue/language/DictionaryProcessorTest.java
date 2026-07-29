@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class DictionaryProcessorTest {
 
     @Test
-    public void testKeyTypeAndValueTypeAssignment() {
+    public void shouldAssignDictionaryKeyAndValueTypes() {
+        // given
         Node dictA = new Node().name("DictA")
                 .type("Dictionary")
                 .keyType("Text")
@@ -37,14 +38,17 @@ public class DictionaryProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictANode = nodeProvider.findNodeByName("DictA").orElseThrow(() -> new IllegalStateException("No \"DictA\" available for NodeProvider."));
+        // when
         Node result = merger.resolve(dictANode, Limits.NO_LIMITS);
 
+        // then
         assertEquals("Text", CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(result.getKeyType().getBlueId()));
         assertEquals("Integer", CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(result.getValueType().getBlueId()));
     }
 
     @Test
-    public void testDictionaryWithValidTypes() throws Exception {
+    public void shouldResolveDictionaryWithValidKeyAndValueTypes() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -78,8 +82,10 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictOfAToBNode = nodeProvider.getNodeByName("DictOfAToB");
         new NodeExtender(nodeProvider).extend(dictOfAToBNode, Limits.NO_LIMITS);
+        // when
         Node result = merger.resolve(dictOfAToBNode);
 
+        // then
         assertEquals("Text", CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(result.getKeyType().getBlueId()));
         assertEquals("A", result.getValueType().getName());
         assertEquals(2, result.getProperties().size());
@@ -88,7 +94,8 @@ public class DictionaryProcessorTest {
     }
 
     @Test
-    public void testDictionaryWithInvalidKeyType() throws Exception {
+    public void shouldRejectDictionaryWithInvalidKeyType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String dictWithInvalidKeyType = "name: DictWithInvalidKeyType\n" +
@@ -106,13 +113,16 @@ public class DictionaryProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictNode = nodeProvider.findNodeByName("DictWithInvalidKeyType").orElseThrow(() -> new IllegalStateException("No \"DictWithInvalidKeyType\" available for NodeProvider."));
+        // when
         new NodeExtender(nodeProvider).extend(dictNode, Limits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(dictNode));
     }
 
     @Test
-    public void testDictionaryWithInvalidValueType() throws Exception {
+    public void shouldRejectDictionaryWithInvalidValueType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -136,13 +146,16 @@ public class DictionaryProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictNode = nodeProvider.findNodeByName("DictWithInvalidValue").orElseThrow(() -> new IllegalStateException("No \"DictWithInvalidValue\" available for NodeProvider."));
+        // when
         new NodeExtender(nodeProvider).extend(dictNode, Limits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(dictNode));
     }
 
     @Test
-    public void testNonDictionaryTypeWithKeyTypeOrValueType() throws Exception {
+    public void shouldRejectDictionaryTypeFieldsOnNonDictionaryNode() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String nonDictWithKeyType = "name: NonDictWithKeyType\n" +
@@ -159,8 +172,10 @@ public class DictionaryProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node nonDictNode = nodeProvider.findNodeByName("NonDictWithKeyType").orElseThrow(() -> new IllegalStateException("No \"NonDictWithKeyType\" available for NodeProvider."));
+        // when
         new NodeExtender(nodeProvider).extend(nonDictNode, Limits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nonDictNode));
     }
 

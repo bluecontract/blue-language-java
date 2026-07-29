@@ -5,11 +5,29 @@ import blue.language.utils.JsonPointer;
 
 import java.util.Map;
 
+import static blue.language.utils.Properties.OBJECT_CONTRACTS;
+
+/**
+ * Converts the leaf shape of a node graph into exact path-based traversal
+ * limits.
+ */
 public class NodeToPathLimitsConverter {
 
+    /**
+     * Creates a node-to-path-limits converter.
+     */
+    public NodeToPathLimitsConverter() {
+    }
+
+    /**
+     * Returns limits whose allowed paths correspond to terminal graph nodes.
+     *
+     * @param node graph root to inspect
+     * @return exact path limits for the graph's terminal nodes
+     */
     public static PathLimits convert(Node node) {
         PathLimits.Builder builder = new PathLimits.Builder();
-        traverseNode(node, "/", builder);
+        traverseNode(node, JsonPointer.ROOT, builder);
         return builder.build();
     }
 
@@ -26,7 +44,10 @@ public class NodeToPathLimitsConverter {
         }
 
         if (node.getContracts() != null) {
-            traverseNode(node.getContracts(), JsonPointer.append(currentPath, "contracts"), builder);
+            traverseNode(
+                    node.getContracts(),
+                    JsonPointer.append(currentPath, OBJECT_CONTRACTS),
+                    builder);
         }
 
         if (node.getProperties() != null) {

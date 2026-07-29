@@ -11,8 +11,13 @@ import static blue.language.utils.Nodes.NodeField.*;
 import static blue.language.utils.Nodes.hasFieldsAndMayHaveFields;
 import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
 
+/**
+ * Reverses completed merge output into either a minimal authored overlay or
+ * strict canonical identity input while retaining non-derivable provenance.
+ */
 final class OverlayReconstruction {
 
+    /** Returns an overlay that re-resolves to {@code mergedNode}. */
     Node minimizedOverlay(Node mergedNode) {
         Node minimalNode = new Node();
         reverseNode(minimalNode, mergedNode, mergedNode.getType(), false, null,
@@ -20,6 +25,7 @@ final class OverlayReconstruction {
         return minimalNode;
     }
 
+    /** Reconstructs identity input using the exact preprocessed source provenance. */
     Node canonicalIdentityInput(Node mergedNode, Node sourceNode) {
         Node minimalNode = new Node();
         reverseNode(minimalNode, mergedNode, mergedNode.getType(), true, sourceNode,

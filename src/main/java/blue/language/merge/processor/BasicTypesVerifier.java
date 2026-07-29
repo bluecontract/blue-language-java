@@ -8,7 +8,16 @@ import blue.language.utils.Types;
 
 import static blue.language.utils.Types.findBasicTypeName;
 
+/**
+ * Rejects resolved instances of scalar core types that also carry list or
+ * object payloads.
+ */
 public class BasicTypesVerifier implements MergingProcessor {
+
+    /** Creates a stateless scalar payload verifier. */
+    public BasicTypesVerifier() {
+    }
+
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
         // do nothing

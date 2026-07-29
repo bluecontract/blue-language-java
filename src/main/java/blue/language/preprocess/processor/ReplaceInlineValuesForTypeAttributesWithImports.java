@@ -7,11 +7,22 @@ import blue.language.utils.NodeTransformer;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Replaces inline type aliases in {@code type}, {@code itemType},
+ * {@code keyType}, and {@code valueType} with exact imported BlueId
+ * references.
+ */
 public class ReplaceInlineValuesForTypeAttributesWithImports implements TransformationProcessor {
 
+    /** Transformation property containing alias-to-BlueId mappings. */
     public static final String MAPPINGS = "mappings";
     private Map<String, String> mappings = new HashMap<>();
 
+    /**
+     * Reads alias mappings from a declared transformation node.
+     *
+     * @param transformation transformation node containing a {@link #MAPPINGS} property
+     */
     public ReplaceInlineValuesForTypeAttributesWithImports(Node transformation) {
         if (transformation.getProperties() != null && transformation.getProperties().containsKey(MAPPINGS)) {
             transformation.getProperties().get(MAPPINGS).getProperties().forEach((key, node) ->
@@ -19,6 +30,11 @@ public class ReplaceInlineValuesForTypeAttributesWithImports implements Transfor
         }
     }
 
+    /**
+     * Creates the transformation from an alias map.
+     *
+     * @param mappings aliases mapped to exact BlueIds
+     */
     public ReplaceInlineValuesForTypeAttributesWithImports(Map<String, String> mappings) {
         this.mappings = mappings;
     }

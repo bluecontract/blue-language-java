@@ -8,8 +8,10 @@ import blue.language.utils.NodeTypeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
@@ -40,43 +42,45 @@ public class TypeSpecificPropertyFilterTest {
     }
 
     @Test
-    public void testShouldProcessPathSegment() {
-        Node nodeWithType = new Node();
-        nodeWithType.type(new Node().blueId(typeBlueId));
+    public void shouldIgnoreConfiguredPropertiesWithinMatchingType() {
+        // given
+        Node nodeWithType =
+                new Node().type(new Node().blueId(typeBlueId));
 
-        // Root level, should process all
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("x", nodeWithType));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("y", nodeWithType));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("z", nodeWithType));
-
-        typeSpecificPropertyFilter.enterPathSegment("", nodeWithType); // Enter root node
-
-        // Now we're in the target type, should not process "y"
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("x", nodeWithType));
-        assertFalse(typeSpecificPropertyFilter.shouldExtendPathSegment("y", nodeWithType));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("z", nodeWithType));
-
+        // when
+        List<Boolean> atRoot =
+                extensionDecisions(nodeWithType, "x", "y", "z");
+        typeSpecificPropertyFilter.enterPathSegment("", nodeWithType);
+        List<Boolean> insideTarget =
+                extensionDecisions(nodeWithType, "x", "y", "z");
         typeSpecificPropertyFilter.enterPathSegment("x", nodeWithType);
+        List<Boolean> insideTargetChild =
+                extensionDecisions(
+                        nodeWithType,
+                        "nestedX",
+                        "y",
+                        "nestedZ");
+        typeSpecificPropertyFilter.exitPathSegment();
+        typeSpecificPropertyFilter.exitPathSegment();
+        List<Boolean> afterExit =
+                extensionDecisions(nodeWithType, "x", "y", "z");
+        boolean unrelatedTypeDecision =
+                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                        "otherProperty", mockNode);
 
-        // Still in target type, behavior should be the same
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("nestedX", nodeWithType));
-        assertFalse(typeSpecificPropertyFilter.shouldExtendPathSegment("y", nodeWithType));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("nestedZ", nodeWithType));
-
-        typeSpecificPropertyFilter.exitPathSegment(); // Exit x
-        typeSpecificPropertyFilter.exitPathSegment(); // Exit root
-
-        // Back at root level, should process all again
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("x", nodeWithType));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("y", nodeWithType));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("z", nodeWithType));
-
-        // This should be true for a non-target type
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("otherProperty", mockNode));
+        // then
+        assertEquals(Arrays.asList(true, true, true), atRoot);
+        assertEquals(Arrays.asList(true, false, true), insideTarget);
+        assertEquals(
+                Arrays.asList(true, false, true),
+                insideTargetChild);
+        assertEquals(Arrays.asList(true, true, true), afterExit);
+        assertTrue(unrelatedTypeDecision);
     }
 
     @Test
-    public void testComplexNestedStructure() throws Exception {
+    public void shouldSkipIgnoredPropertiesOnlyWithinMatchingNestedStructures() throws Exception {
+        // given
         Node validExtensionNode1 = new Node().name("ValidExtension1");
         Node validExtensionNode2 = new Node().name("ValidExtension2");
 
@@ -107,8 +111,10 @@ public class TypeSpecificPropertyFilterTest {
         Node complexNode = blue.yamlToNode(complexYaml);
 
         NodeExtender nodeExtender = new NodeExtender(nodeProvider);
+        // when
         nodeExtender.extend(complexNode, typeSpecificPropertyFilter);
 
+        // then
         assertNull(complexNode.getAsNode("/a/b/c/y").getName(), "Extension should not occur for matching type");
         assertNull(complexNode.getAsNode("/a/l/0/y/name").getName(), "Extension should not occur for matching type in list");
         assertEquals("ValidExtension1", complexNode.get("/a/l/1/y/name"), "Extension should occur for non-matching type in list");
@@ -116,7 +122,8 @@ public class TypeSpecificPropertyFilterTest {
     }
 
     @Test
-    public void testWithNodeTypeMatcher() throws Exception {
+    public void shouldMatchTypeWhileFilteringConfiguredProperties() throws Exception {
+        // given
         String instanceYaml = "name: InstanceA\n" +
                               "type:\n" +
                               "  blueId: " + typeBlueId + "\n" +
@@ -138,20 +145,40 @@ public class TypeSpecificPropertyFilterTest {
         Blue blue = new Blue(nodeProvider);
 
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
+        // when
         boolean result = matcher.matchesType(instanceNode, typeNode, typeSpecificPropertyFilter);
 
+        // then
         assertTrue(result);
     }
 
     @Test
-    public void testNonTargetType() {
-        Node nonTargetNode = new Node();
-        nonTargetNode.type(new Node().blueId("different-blue-id"));
+    public void shouldSkipNonTargetType() {
+        // given
+        Node nonTargetNode =
+                new Node().type(
+                        new Node().blueId(
+                                "different-blue-id"));
 
-        // For non-target types, all properties should be processed, including the ignored ones
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("x", nonTargetNode));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("y", nonTargetNode));
-        assertTrue(typeSpecificPropertyFilter.shouldExtendPathSegment("z", nonTargetNode));
+        // when
+        List<Boolean> decisions =
+                extensionDecisions(nonTargetNode, "x", "y", "z");
+
+        // then
+        assertEquals(Arrays.asList(true, true, true), decisions);
     }
 
+    private List<Boolean> extensionDecisions(
+            Node node,
+            String first,
+            String second,
+            String third) {
+        return Arrays.asList(
+                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                        first, node),
+                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                        second, node),
+                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                        third, node));
+    }
 }

@@ -12,12 +12,17 @@ public interface IncrementalMergingProcessorCapability {
     /**
      * Whether value-only replacements may use dependency-proven incremental
      * snapshot resolution.
+     *
+     * @return {@code true} when this processor supports incremental value resolution
      */
     boolean supportsIncrementalValueResolution();
 
     /**
      * Request-aware variant for transparent wrappers. Existing implementations
      * keep their historical behavior through this conservative default.
+     *
+     * @param request immutable evidence describing the proposed incremental resolution
+     * @return {@code true} when this processor supports the supplied request
      */
     default boolean supportsIncrementalValueResolution(
             IncrementalValueResolutionRequest request) {

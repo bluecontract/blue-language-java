@@ -13,14 +13,32 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Closed, path-addressed projection of one fixture execution. Missing values are
- * represented explicitly and are never conflated with a present null value.
+ * Mutable, path-addressed projection of one fixture execution.
+ *
+ * <p>Missing values are represented explicitly and are never conflated with
+ * a present {@code null} value. Registration order is preserved for both
+ * observables and variants. Instances are execution-local and not
+ * thread-safe.</p>
  */
 public final class ContractsConformanceProjection {
 
     private final Map<String, Object> values = new LinkedHashMap<>();
     private final Map<String, ContractsConformanceProjection> variants = new LinkedHashMap<>();
 
+    /**
+     * Creates an empty execution-local projection.
+     */
+    public ContractsConformanceProjection() {
+    }
+
+    /**
+     * Stores one observable value after converting Nodes, JSON values,
+     * iterables, and arrays to the projection's map/list/scalar vocabulary.
+     *
+     * @param path declared projection path
+     * @param value value to normalize; {@code null} remains explicitly present
+     * @return this projection
+     */
     public ContractsConformanceProjection put(String path, Object value) {
         if (path == null || path.trim().isEmpty()) {
             throw new IllegalArgumentException("Projection path is required");
@@ -29,6 +47,15 @@ public final class ContractsConformanceProjection {
         return this;
     }
 
+    /**
+     * Registers a uniquely named execution variant.
+     *
+     * @param name nonblank unique variant name
+     * @param projection variant projection retained by reference
+     * @return this projection
+     * @throws IllegalArgumentException if the name is blank, the projection is
+     *         null, or the name was already registered
+     */
     public ContractsConformanceProjection putVariant(String name,
                                                      ContractsConformanceProjection projection) {
         if (name == null || name.trim().isEmpty()) {
@@ -43,6 +70,14 @@ public final class ContractsConformanceProjection {
         return this;
     }
 
+    /**
+     * Resolves a stored path, a nested map/list selection, a variant-prefixed
+     * path, or a braced field selection.
+     *
+     * @param path exact projection path or supported nested selection
+     * @return explicit presence, preserving the distinction between an absent
+     *         path and a present {@code null}
+     */
     public Presence project(String path) {
         if (path == null || path.isEmpty()) {
             return Presence.absent();
@@ -91,13 +126,25 @@ public final class ContractsConformanceProjection {
         return match;
     }
 
+    /**
+     * Projects the same path from every variant, or only the named selector.
+     *
+     * @param path projection path resolved within each selected variant
+     * @param selector variant name, {@code "all"}, or blank for all variants
+     * @return immutable variant-to-presence map in registration order
+     * @throws IllegalStateException when no variants were registered
+     * @throws IllegalArgumentException when a named selector is unknown
+     */
     public Map<String, Presence> projectAcrossVariants(String path, String selector) {
         if (variants.isEmpty()) {
             throw new IllegalStateException(
                     "Projection has no variants for sameAcrossVariants assertion: " + path);
         }
         Map<String, Presence> selected = new LinkedHashMap<>();
-        if (selector != null && !selector.isEmpty() && !"all".equals(selector)) {
+        if (selector != null
+                && !selector.isEmpty()
+                && !ContractsFixtureConstants.VariantSelector.ALL.equals(
+                        selector)) {
             ContractsConformanceProjection variant = variants.get(selector);
             if (variant == null) {
                 throw new IllegalArgumentException("Unknown projection variant: " + selector);
@@ -111,10 +158,23 @@ public final class ContractsConformanceProjection {
         return Collections.unmodifiableMap(selected);
     }
 
+    /**
+     * Returns the directly stored observables.
+     *
+     * <p>The map is unmodifiable, while normalized container values retain
+     * their execution-owned map/list representation.</p>
+     *
+     * @return unmodifiable values view in registration order
+     */
     public Map<String, Object> values() {
         return Collections.unmodifiableMap(values);
     }
 
+    /**
+     * Returns registered variant projections.
+     *
+     * @return unmodifiable variant view in registration order
+     */
     public Map<String, ContractsConformanceProjection> variants() {
         return Collections.unmodifiableMap(variants);
     }
@@ -197,6 +257,10 @@ public final class ContractsConformanceProjection {
         return value;
     }
 
+    /**
+     * Presence-aware projection result that can represent a present
+     * {@code null} without conflating it with absence.
+     */
     public static final class Presence {
         private static final Presence ABSENT = new Presence(false, null);
 
@@ -208,18 +272,40 @@ public final class ContractsConformanceProjection {
             this.value = value;
         }
 
+        /**
+         * Creates a present result whose value is normalized for comparison.
+         *
+         * @param value present value; {@code null} remains present
+         * @return a new presence result
+         */
         public static Presence present(Object value) {
             return new Presence(true, normalize(value));
         }
 
+        /**
+         * Returns the shared absent result.
+         *
+         * @return immutable absent result
+         */
         public static Presence absent() {
             return ABSENT;
         }
 
+        /**
+         * Reports whether the requested projection path was present.
+         *
+         * @return {@code true} for a present value, including present null
+         */
         public boolean isPresent() {
             return present;
         }
 
+        /**
+         * Returns the present value.
+         *
+         * @return normalized present value, possibly {@code null}
+         * @throws IllegalStateException when this result represents absence
+         */
         public Object getValue() {
             if (!present) {
                 throw new IllegalStateException("Projection is absent");

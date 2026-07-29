@@ -28,14 +28,17 @@ class PatchSequenceRandomizedDifferentialTest {
             };
 
     @Test
-    void randomizedSequentialCheckpointsUpdatesAndFinalIdsMatchPublicSingletonPatching() {
+    void shouldVerifyRandomizedSequentialCheckpointsUpdatesAndFinalIdsMatchPublicSingletonPatching() {
+        // given
         int[] counts = {0, 1, 2, 4, 8, 16, 32, 64, 128};
+        // when
         for (int count : counts) {
             for (int scenario = 0; scenario < 8; scenario++) {
                 long seed = 0x5E0A11A1L + 1_009L * count + scenario;
                 verifySequence(count, seed);
             }
         }
+    // then
     }
 
     private void verifySequence(int count, long seed) {

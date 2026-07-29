@@ -12,6 +12,17 @@ import blue.language.model.Node;
 @FunctionalInterface
 public interface ExternalDeliveryEvidenceVerifier {
 
+    /**
+     * Verifies that supplied evidence is complete and exact for an occurrence.
+     *
+     * @param root exact Processing Root
+     * @param event exact incoming event
+     * @param evidence caller-supplied immutable evidence
+     * @throws InvalidExecutionEvidenceException when evidence is forged,
+     *         stale, incomplete, or otherwise inconsistent
+     * @throws ExecutionEvidenceUnavailableException when verification inputs
+     *         cannot yet be acquired
+     */
     void verify(Node root,
                 Node event,
                 VerifiedExecutionEvidence evidence);
@@ -21,6 +32,13 @@ public interface ExternalDeliveryEvidenceVerifier {
      * caller's configuration lock.  Custom verifiers retain their historical
      * behavior; the core verifier overrides this to avoid re-reading
      * environmental state.
+     *
+     * @param root exact Processing Root
+     * @param event exact incoming event
+     * @param evidence caller-supplied immutable evidence
+     * @param derivedPlan immutable occurrence plan derived under the same lock
+     * @throws InvalidExecutionEvidenceException when evidence does not match
+     *         the derived plan
      */
     default void verifyDerived(Node root,
                                Node event,

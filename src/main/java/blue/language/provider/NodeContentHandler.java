@@ -3,6 +3,7 @@ package blue.language.provider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIds;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -23,17 +24,51 @@ import static blue.language.utils.Properties.OBJECT_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
+/**
+ * Parses provider source, preprocesses it, and calculates plain or cyclic-set
+ * content identities.
+ *
+ * <p>{@code this} placeholders are retained in stored content and are resolved
+ * only when content is fetched under its calculated identity.</p>
+ */
 public class NodeContentHandler {
 
+    /** Placeholder identity used only during cyclic-set BlueId calculation. */
     public static final String ZERO_BLUE_ID = "00000000000000000000000000000000000000000000";
-    private static final Pattern THIS_REFERENCE_PATTERN = Pattern.compile("^this(#\\d+)?$");
-    private static final Pattern THIS_INDEX_REFERENCE_PATTERN = Pattern.compile("^this#(\\d+)$");
+    private static final Pattern THIS_REFERENCE_PATTERN =
+            Pattern.compile(
+                    "^" + BlueIds.THIS_PLACEHOLDER
+                            + "("
+                            + Pattern.quote(
+                                    BlueIds.CYCLIC_MEMBER_SEPARATOR)
+                            + "\\d+)?$");
+    private static final Pattern THIS_INDEX_REFERENCE_PATTERN =
+            Pattern.compile(
+                    "^" + BlueIds.THIS_MEMBER_PREFIX
+                            + "(\\d+)$");
 
+    /**
+     * Creates a compatibility facade over the static content helpers.
+     */
+    public NodeContentHandler() {
+    }
+
+    /** Parsed canonical content plus the identity and storage-shape metadata. */
     public static class ParsedContent {
+        /** Calculated plain or cyclic-set master BlueId. */
         public final String blueId;
+        /** Preprocessed content retained with authored {@code this} placeholders. */
         public final JsonNode content;
+        /** Whether the stored value is a multi-document set. */
         public final boolean isMultipleDocuments;
 
+        /**
+         * Creates parsed-content metadata.
+         *
+         * @param blueId calculated plain or cyclic-set master identity
+         * @param content retained preprocessed JSON content
+         * @param isMultipleDocuments whether the content is a document set
+         */
         public ParsedContent(String blueId, JsonNode content, boolean isMultipleDocuments) {
             this.blueId = blueId;
             this.content = content;
@@ -41,6 +76,15 @@ public class NodeContentHandler {
         }
     }
 
+    /**
+     * Parses YAML or JSON source, applies preprocessing, and calculates its
+     * identity.
+     *
+     * @param content source document or document set
+     * @param preprocessor preprocessing function
+     * @return parsed canonical content and identity metadata
+     * @throws RuntimeException when the source cannot be parsed or normalized
+     */
     public static ParsedContent parseAndCalculateBlueId(String content, Function<Node, Node> preprocessor) {
         JsonNode jsonNode;
         try {
@@ -75,11 +119,27 @@ public class NodeContentHandler {
         return new ParsedContent(blueId, jsonNode, isMultipleDocuments);
     }
 
+    /**
+     * Applies preprocessing to one node and calculates its retained identity.
+     *
+     * @param node source node
+     * @param preprocessor preprocessing function
+     * @return parsed canonical content and identity metadata
+     */
     public static ParsedContent parseAndCalculateBlueId(Node node, Function<Node, Node> preprocessor) {
         Node preprocessedNode = preprocessor.apply(node);
         return calculateParsedContent(preprocessedNode);
     }
 
+    /**
+     * Applies preprocessing to an ordered document set and calculates its
+     * retained identity.
+     *
+     * @param nodes non-empty source document set
+     * @param preprocessor preprocessing function
+     * @return parsed canonical content and identity metadata
+     * @throws IllegalArgumentException when {@code nodes} is null or empty
+     */
     public static ParsedContent parseAndCalculateBlueId(List<Node> nodes, Function<Node, Node> preprocessor) {
         if (nodes == null || nodes.isEmpty()) {
             throw new IllegalArgumentException("List of nodes cannot be null or empty");
@@ -139,7 +199,8 @@ public class NodeContentHandler {
             Node rewritten = indexedNode.node.clone();
             rewriteThisReferences(rewritten, reference -> {
                 int targetIndex = parseThisIndex(reference);
-                return "this#" + originalIndexToSortedIndex.get(targetIndex);
+                return BlueIds.indexedThisPlaceholder(
+                        originalIndexToSortedIndex.get(targetIndex));
             });
             sortedNodes.add(rewritten);
         }
@@ -148,6 +209,17 @@ public class NodeContentHandler {
         return new ParsedContent(blueId, JSON_MAPPER.valueToTree(sortedNodes), true);
     }
 
+    /**
+     * Returns a deep copy with cyclic placeholders resolved relative to the
+     * supplied calculated identity.
+     *
+     * @param content retained content containing authored placeholders
+     * @param currentBlueId calculated plain or cyclic-set master identity
+     * @param isMultipleDocuments whether content is a document set
+     * @return deep copy with every {@code this} placeholder resolved
+     * @throws IllegalArgumentException when placeholder syntax is incompatible
+     *                                  with the storage shape
+     */
     public static JsonNode resolveThisReferences(JsonNode content, String currentBlueId, boolean isMultipleDocuments) {
         return resolveThisReferencesRecursive(content.deepCopy(), currentBlueId, isMultipleDocuments);
     }
@@ -183,23 +255,39 @@ public class NodeContentHandler {
 
     private static String resolveThisReference(String textValue, String currentBlueId, boolean isMultipleDocuments) {
         if (isMultipleDocuments) {
-            if (!textValue.startsWith("this#")) {
-                throw new IllegalArgumentException("For multiple documents, 'this' references must include an index (e.g., 'this#0')");
+            if (!textValue.startsWith(
+                    BlueIds.THIS_MEMBER_PREFIX)) {
+                throw new IllegalArgumentException(
+                        "For multiple documents, 'this' references must "
+                                + "include an index (e.g., '"
+                                + BlueIds.indexedThisPlaceholder(0)
+                                + "')");
             }
-            return currentBlueId + textValue.substring(4);
+            return currentBlueId + textValue.substring(
+                    BlueIds.THIS_PLACEHOLDER.length());
         } else {
-            if (textValue.equals("this")) {
+            if (textValue.equals(
+                    BlueIds.THIS_PLACEHOLDER)) {
                 return currentBlueId;
             } else {
-                throw new IllegalArgumentException("For a single document, only 'this' is allowed as a reference, not 'this#<id>'");
+                throw new IllegalArgumentException(
+                        "For a single document, only 'this' is allowed as a "
+                                + "reference, not '"
+                                + BlueIds.THIS_MEMBER_PREFIX
+                                + "<id>'");
             }
         }
     }
 
     private static void validateSingleDocumentReferences(List<ThisReference> references) {
         for (ThisReference reference : references) {
-            if (!"this".equals(reference.value)) {
-                throw new IllegalArgumentException("For a single document, only 'this' is allowed as a reference, not 'this#<id>'");
+            if (!BlueIds.THIS_PLACEHOLDER.equals(
+                    reference.value)) {
+                throw new IllegalArgumentException(
+                        "For a single document, only 'this' is allowed as a "
+                                + "reference, not '"
+                                + BlueIds.THIS_MEMBER_PREFIX
+                                + "<id>'");
             }
         }
     }
@@ -208,11 +296,17 @@ public class NodeContentHandler {
         for (ThisReference reference : references) {
             Matcher matcher = THIS_INDEX_REFERENCE_PATTERN.matcher(reference.value);
             if (!matcher.matches()) {
-                throw new IllegalArgumentException("For multiple documents, 'this' references must include an index (e.g., 'this#0')");
+                throw new IllegalArgumentException(
+                        "For multiple documents, 'this' references must "
+                                + "include an index (e.g., '"
+                                + BlueIds.indexedThisPlaceholder(0)
+                                + "')");
             }
             int targetIndex = Integer.parseInt(matcher.group(1));
             if (targetIndex >= documentCount) {
-                throw new IllegalArgumentException("'this#" + targetIndex + "' points outside the cyclic document set.");
+                throw new IllegalArgumentException(
+                        "'" + BlueIds.indexedThisPlaceholder(targetIndex)
+                                + "' points outside the cyclic document set.");
             }
         }
     }
@@ -263,6 +357,13 @@ public class NodeContentHandler {
         if (schema == null) {
             return;
         }
+        if (schema.getBlueId() != null
+                && THIS_REFERENCE_PATTERN
+                .matcher(schema.getBlueId()).matches()) {
+            references.add(
+                    new ThisReference(
+                            schema.getBlueId()));
+        }
         collectThisReferences(schema.getRequired(), references);
         collectThisReferences(schema.getMinLength(), references);
         collectThisReferences(schema.getMaxLength(), references);
@@ -306,6 +407,12 @@ public class NodeContentHandler {
     private static void rewriteThisReferences(Schema schema, java.util.function.Function<String, String> replacement) {
         if (schema == null) {
             return;
+        }
+        if (schema.getBlueId() != null
+                && THIS_REFERENCE_PATTERN
+                .matcher(schema.getBlueId()).matches()) {
+            schema.blueId(replacement.apply(
+                    schema.getBlueId()));
         }
         rewriteThisReferences(schema.getRequired(), replacement);
         rewriteThisReferences(schema.getMinLength(), replacement);

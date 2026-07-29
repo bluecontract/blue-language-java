@@ -14,7 +14,13 @@ import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 
-/** Immutable evidence describing which semantic region one patch can affect. */
+/**
+ * Immutable evidence describing which semantic region one patch can affect.
+ *
+ * <p>The analyzer records the narrowest safe impact kind plus exact boundary
+ * and dependency paths. Planning may choose a broader fallback but must never
+ * infer less work than this evidence requires.</p>
+ */
 final class PatchImpact {
 
     enum Kind {

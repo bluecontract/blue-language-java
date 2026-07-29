@@ -25,37 +25,41 @@ class CachingNodeProviderTest {
     }
 
     @Test
-    void testCacheHit() {
+    void shouldReturnCachedNodeOnCacheHit() {
+        // given
         Node node = new Node().name("Test1");
         String blueId = BlueIdCalculator.calculateBlueId(node);
         List<Node> nodes = Arrays.asList(node);
         when(mockDelegate.fetchByBlueId(blueId)).thenReturn(nodes);
 
-        // First call should hit the delegate
+        // when
         List<Node> result1 = cachingProvider.fetchByBlueId(blueId);
-        assertEquals(nodes, result1);
-        verify(mockDelegate, times(1)).fetchByBlueId(blueId);
-
-        // Second call should hit the cache
         List<Node> result2 = cachingProvider.fetchByBlueId(blueId);
+
+        // then
+        assertEquals(nodes, result1);
         assertEquals(nodes, result2);
         verify(mockDelegate, times(1)).fetchByBlueId(blueId);
     }
 
     @Test
-    void testCacheMiss() {
+    void shouldDelegateOnCacheMiss() {
+        // given
         Node node = new Node().name("Test2");
         String blueId = BlueIdCalculator.calculateBlueId(node);
         when(mockDelegate.fetchByBlueId(blueId)).thenReturn(null);
 
+        // when
         List<Node> result = cachingProvider.fetchByBlueId(blueId);
+        // then
         assertNull(result);
         verify(mockDelegate, times(1)).fetchByBlueId(blueId);
     }
 
     @Test
-    void testCacheEviction() {
+    void shouldEvictEntryAtCacheCapacity() {
         // Create nodes that will exceed the cache size
+        // given
         Node largeNode1 = new Node().name("Large1").value(createRepeatedString('A', 300));
         Node largeNode2 = new Node().name("Large2").value(createRepeatedString('B', 300));
         String blueId1 = BlueIdCalculator.calculateBlueId(largeNode1);
@@ -64,23 +68,24 @@ class CachingNodeProviderTest {
         when(mockDelegate.fetchByBlueId(blueId1)).thenReturn(Arrays.asList(largeNode1));
         when(mockDelegate.fetchByBlueId(blueId2)).thenReturn(Arrays.asList(largeNode2));
 
+        // when
         cachingProvider.fetchByBlueId(blueId1);
         long sizeAfterFirst = cachingProvider.getCurrentSize();
         int cacheCountAfterFirst = cachingProvider.getCacheSize();
-
         cachingProvider.fetchByBlueId(blueId2);
         long sizeAfterSecond = cachingProvider.getCurrentSize();
         int cacheCountAfterSecond = cachingProvider.getCacheSize();
 
-        // Check if the cache size is within the limit
+        // then
+        assertTrue(sizeAfterFirst <= MAX_SIZE_BYTES);
+        assertEquals(1, cacheCountAfterFirst);
         assertTrue(sizeAfterSecond <= MAX_SIZE_BYTES, "Cache size exceeds the maximum allowed size");
-
-        // Check if exactly one item was evicted
         assertEquals(1, cacheCountAfterSecond, "Expected only one item in the cache after eviction");
     }
 
     @Test
-    void testWithBasicNodeProvider() {
+    void shouldCacheBasicNodeProviderResults() {
+        // given
         BasicNodeProvider basicProvider = new BasicNodeProvider();
         CachingNodeProvider cachingBasicProvider = new CachingNodeProvider(basicProvider, 10000);
 
@@ -107,23 +112,25 @@ class CachingNodeProviderTest {
 
         String dictBlueId = basicProvider.getBlueIdByName("DictOfAToB");
 
-        // First call should hit the delegate
+        // when
         List<Node> result1 = cachingBasicProvider.fetchByBlueId(dictBlueId);
+        List<Node> result2 = cachingBasicProvider.fetchByBlueId(dictBlueId);
+        long currentSize = cachingBasicProvider.getCurrentSize();
+        int cacheSize = cachingBasicProvider.getCacheSize();
+
+        // then
         assertNotNull(result1);
         assertEquals(1, result1.size());
         assertEquals("DictOfAToB", result1.get(0).getName());
-
-        // Second call should hit the cache
-        List<Node> result2 = cachingBasicProvider.fetchByBlueId(dictBlueId);
         assertNotNull(result2);
         assertEquals(result1, result2);
-
-        assertTrue(cachingBasicProvider.getCurrentSize() > 0);
-        assertTrue(cachingBasicProvider.getCacheSize() > 0);
+        assertTrue(currentSize > 0);
+        assertTrue(cacheSize > 0);
     }
 
     @Test
-    void testCacheSize() {
+    void shouldRespectConfiguredCacheSize() {
+        // given
         Node smallNode1 = new Node().name("Small1").value("Small content 1");
         Node smallNode2 = new Node().name("Small2").value("Small content 2");
         Node smallNode3 = new Node().name("Small3").value("Small content 3");
@@ -136,13 +143,17 @@ class CachingNodeProviderTest {
         when(mockDelegate.fetchByBlueId(blueId2)).thenReturn(Arrays.asList(smallNode2));
         when(mockDelegate.fetchByBlueId(blueId3)).thenReturn(Arrays.asList(smallNode3));
 
+        // when
         cachingProvider.fetchByBlueId(blueId1);
         cachingProvider.fetchByBlueId(blueId2);
         cachingProvider.fetchByBlueId(blueId3);
+        long currentSize = cachingProvider.getCurrentSize();
+        int cacheSize = cachingProvider.getCacheSize();
 
-        assertTrue(cachingProvider.getCurrentSize() <= MAX_SIZE_BYTES);
-        assertTrue(cachingProvider.getCacheSize() > 0);
-        assertTrue(cachingProvider.getCacheSize() <= 3);
+        // then
+        assertTrue(currentSize <= MAX_SIZE_BYTES);
+        assertTrue(cacheSize > 0);
+        assertTrue(cacheSize <= 3);
     }
 
     private String createRepeatedString(char c, int count) {

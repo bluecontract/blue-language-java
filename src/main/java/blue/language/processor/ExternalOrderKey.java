@@ -9,6 +9,10 @@ import java.util.Objects;
 /**
  * Immutable canonical external-order tuple supplied as verified environment
  * evidence.
+ *
+ * <p>Components retain their supported scalar kind, so comparison never
+ * depends on locale or Java object stringification. Tuple comparison is
+ * lexicographic and provides the stable total order used for delivery.</p>
  */
 public final class ExternalOrderKey implements Comparable<ExternalOrderKey> {
 
@@ -18,6 +22,13 @@ public final class ExternalOrderKey implements Comparable<ExternalOrderKey> {
         this.components = Collections.unmodifiableList(new ArrayList<>(components));
     }
 
+    /**
+     * Creates a canonical external-order key from the supplied scalar tuple.
+     *
+     * @param values ordered Integer/Text tuple components
+     * @return immutable canonical order key
+     * @throws IllegalArgumentException for unsupported component kinds
+     */
     public static ExternalOrderKey of(List<?> values) {
         Objects.requireNonNull(values, "values");
         List<Component> components = new ArrayList<>();
@@ -27,6 +38,11 @@ public final class ExternalOrderKey implements Comparable<ExternalOrderKey> {
         return new ExternalOrderKey(components);
     }
 
+    /**
+     * Returns the canonical scalar components in tuple order.
+     *
+     * @return immutable canonical scalar components
+     */
     public List<Object> components() {
         List<Object> result = new ArrayList<>(components.size());
         for (Component component : components) {
@@ -65,6 +81,13 @@ public final class ExternalOrderKey implements Comparable<ExternalOrderKey> {
         return components().toString();
     }
 
+    /**
+     * Compares text by Unicode code points without locale dependence.
+     *
+     * @param left first text
+     * @param right second text
+     * @return negative, zero, or positive according to code-point order
+     */
     public static int compareTextCodePoints(String left, String right) {
         Objects.requireNonNull(left, "left");
         Objects.requireNonNull(right, "right");

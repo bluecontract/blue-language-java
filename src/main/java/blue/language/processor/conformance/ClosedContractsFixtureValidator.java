@@ -1,6 +1,8 @@
 package blue.language.processor.conformance;
 
 import blue.language.BlueContractsFixtureCategory;
+import blue.language.processor.GasScheduleConstants;
+import blue.language.utils.Properties;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Arrays;
@@ -27,150 +29,342 @@ public final class ClosedContractsFixtureValidator {
             Pattern.compile("^C-[A-Z0-9]+-[0-9]{2}$");
 
     private static final Set<String> TOP = set(
-            "schema", "id", "vectors", "category", "description",
-            "operation", "input", "expected");
+            Properties.OBJECT_SCHEMA,
+            ContractsFixtureConstants.Field.ID,
+            ContractsFixtureConstants.Field.VECTORS,
+            ContractsFixtureConstants.Field.CATEGORY,
+            ContractsFixtureConstants.Field.DESCRIPTION,
+            ContractsFixtureConstants.Field.OPERATION,
+            ContractsFixtureConstants.Field.INPUT,
+            ContractsFixtureConstants.Field.EXPECTED);
     private static final Set<String> INPUT = set(
-            "root", "event", "feeder", "provider", "runtime", "builders", "variants",
-            "namespace", "counter", "quantity", "weightManifest", "oldLength", "limit",
-            "charges", "textCodePointsExamined", "proofKey", "uses",
-            "directCanonicalBytes", "operation", "leftLimbs", "rightLimbs",
-            "replaceIndex", "priorExactIdentity", "append");
+            ContractsFixtureConstants.Field.ROOT,
+            ContractsFixtureConstants.Field.EVENT,
+            ContractsFixtureConstants.Field.FEEDER,
+            ContractsFixtureConstants.Field.PROVIDER,
+            ContractsFixtureConstants.Field.RUNTIME,
+            ContractsFixtureConstants.Field.BUILDERS,
+            ContractsFixtureConstants.Field.VARIANTS,
+            ContractsFixtureConstants.Field.NAMESPACE,
+            ContractsFixtureConstants.Field.COUNTER,
+            ContractsFixtureConstants.Field.QUANTITY,
+            ContractsFixtureConstants.Field.WEIGHT_MANIFEST,
+            ContractsFixtureConstants.Field.OLD_LENGTH,
+            ContractsFixtureConstants.Field.LIMIT,
+            ContractsFixtureConstants.Field.CHARGES,
+            ContractsFixtureConstants.Field.TEXT_CODE_POINTS_EXAMINED,
+            ContractsFixtureConstants.Field.PROOF_KEY,
+            ContractsFixtureConstants.Field.USES,
+            ContractsFixtureConstants.Field.DIRECT_CANONICAL_BYTES,
+            ContractsFixtureConstants.Field.OPERATION,
+            ContractsFixtureConstants.Field.LEFT_LIMBS,
+            ContractsFixtureConstants.Field.RIGHT_LIMBS,
+            ContractsFixtureConstants.Field.REPLACE_INDEX,
+            ContractsFixtureConstants.Field.PRIOR_EXACT_IDENTITY,
+            ContractsFixtureConstants.Field.APPEND);
     private static final Set<String> BUILDER = set(
             "kind", "target", "memberCount", "itemCount", "codePointCount",
-            "keyPrefix", "value", "item", "text");
+            "keyPrefix", Properties.OBJECT_VALUE, "item", "text");
     private static final Set<String> PROVIDER = set(
             "mode", "semanticDemandsOnly", "nodes", "transientUnavailableAt");
     private static final Set<String> RUNTIME = set(
-            "typeRegistryManifest", "handlers", "cascadeMutation", "childEmissions",
+            ContractsFixtureConstants.Field.TYPE_REGISTRY_MANIFEST,
+            ContractsFixtureConstants.Field.HANDLERS,
+            "cascadeMutation", "childEmissions",
             "gasLimit", "gasLimitDuringTermination", "generalizationCandidates",
             "initializationPatches", "nestedEnqueues", "rootForwardAll",
             "terminationRequests", "validCandidate");
-    private static final Set<String> SCRIPTED_HANDLER = set("result", "fail");
+    private static final Set<String> SCRIPTED_HANDLER = set(
+            ContractsFixtureConstants.Field.RESULT,
+            ContractsFixtureConstants.Field.FAIL);
     private static final Set<String> SCRIPTED_RESULT = set(
-            "patches", "events", "termination", "fail", "runtimeCounters");
+            ContractsFixtureConstants.Field.PATCHES,
+            ContractsFixtureConstants.Field.EVENTS,
+            ContractsFixtureConstants.Field.TERMINATION,
+            ContractsFixtureConstants.Field.FAIL,
+            ContractsFixtureConstants.Field.RUNTIME_COUNTERS);
     private static final Set<String> CASCADE = set(
             "afterPatchIndex", "replaceScope", "thenReaddSamePath",
             "replaceScopeDuringLifecycle", "sourceCutOffDuringUpdate");
-    private static final Set<String> TERMINATION_REQUEST = set("cause", "reason");
+    private static final Set<String> TERMINATION_REQUEST = set("cause", ContractsFixtureConstants.Field.REASON);
     private static final Set<String> FEEDER = set(
             "managedRootRevision", "indexedRootRevision", "evaluatedRevision",
-            "eventOrderKey", "deliverySnapshot", "acceptanceStateVariants",
+            ContractsFixtureConstants.Field.EVENT_ORDER_KEY,
+            ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT,
+            "acceptanceStateVariants",
             "canonicalPreselection", "casConflict", "channelLawCases",
             "currentEventAddsChannel", "eventQueue", "intervalHistory",
             "rawIndexCandidates", "sameFailureCount", "targetsByEvent");
     private static final Set<String> DELIVERY_HINT = set(
-            "scopePath", "channelKey", "order", "activationStartExclusive");
+            ContractsFixtureConstants.Field.SCOPE_PATH,
+            ContractsFixtureConstants.Field.CHANNEL_KEY,
+            ContractsFixtureConstants.Field.ORDER,
+            ContractsFixtureConstants.Field.ACTIVATION_START_EXCLUSIVE);
     private static final Set<String> CHANNEL_LAW = set(
             "accepts", "preselects", "keyIntersection");
     private static final Set<String> VARIANT = set(
-            "name", "accept", "batching", "cache", "checkpointSubject",
-            "listOperation", "newEmbeddedSurface", "rootForm", "rootRevision", "sameEvent");
-    private static final Set<String> LIST_OPERATION = set("op", "size", "delta", "index");
+            ContractsFixtureConstants.Field.NAME,
+            ContractsFixtureConstants.Field.ACCEPT,
+            ContractsFixtureConstants.Field.BATCHING,
+            ContractsFixtureConstants.Field.CACHE,
+            "checkpointSubject",
+            ContractsFixtureConstants.Field.LIST_OPERATION,
+            "newEmbeddedSurface",
+            ContractsFixtureConstants.Field.ROOT_FORM,
+            ContractsFixtureConstants.Field.ROOT_REVISION,
+            ContractsFixtureConstants.Field.SAME_EVENT);
+    private static final Set<String> LIST_OPERATION = set(
+            ContractsFixtureConstants.Field.OP,
+            ContractsFixtureConstants.Field.SIZE,
+            ContractsFixtureConstants.Field.DELTA,
+            ContractsFixtureConstants.Field.INDEX);
     private static final Set<String> EXPECTED = set(
-            "assertions", "trace", "totalGas", "listFoldStepRecomputed", "admitted",
-            "failedChargeAbsent", "textBlockExamined", "validationProofReused",
-            "directIdentityHashBlock", "integerLimbOperation");
+            ContractsFixtureConstants.Field.ASSERTIONS,
+            ContractsFixtureConstants.Field.TRACE,
+            ContractsFixtureConstants.Field.TOTAL_GAS,
+            ContractsFixtureConstants.Field.LIST_FOLD_STEP_RECOMPUTED,
+            ContractsFixtureConstants.Field.ADMITTED,
+            ContractsFixtureConstants.Field.FAILED_CHARGE_ABSENT,
+            ContractsFixtureConstants.Field.TEXT_BLOCK_EXAMINED,
+            ContractsFixtureConstants.Field.VALIDATION_PROOF_REUSED,
+            ContractsFixtureConstants.Field.DIRECT_IDENTITY_HASH_BLOCK,
+            ContractsFixtureConstants.Field.INTEGER_LIMB_OPERATION);
     private static final Set<String> ASSERTION = set(
-            "actual", "op", "expected", "expectedProjection", "variant", "ordered");
-    private static final Set<String> CHARGE = set("counter", "quantity");
+            ContractsFixtureConstants.Field.ACTUAL,
+            ContractsFixtureConstants.Field.OP,
+            ContractsFixtureConstants.Field.EXPECTED,
+            ContractsFixtureConstants.Field.EXPECTED_PROJECTION,
+            ContractsFixtureConstants.Field.VARIANT,
+            ContractsFixtureConstants.Field.ORDERED);
+    private static final Set<String> CHARGE = set(
+            ContractsFixtureConstants.Field.COUNTER,
+            ContractsFixtureConstants.Field.QUANTITY);
     private static final Set<String> OPERATIONS =
-            set("process", "process-attempt", "platform", "gas-micro");
+            set(ContractsFixtureConstants.Operation.PROCESS,
+                    ContractsFixtureConstants.Operation.PROCESS_ATTEMPT,
+                    ContractsFixtureConstants.Operation.PLATFORM,
+                    ContractsFixtureConstants.Operation.GAS_MICRO);
     private static final Set<String> ASSERTION_OPERATORS = set(
-            "equals", "notEquals", "equalsProjection", "absent", "present",
-            "sequenceEquals", "contains", "notContains", "lessThan", "greaterThan",
-            "sameAcrossVariants", "failsWith", "all", "none");
+            ContractsFixtureConstants.AssertionOperator.EQUALS,
+            ContractsFixtureConstants.AssertionOperator.NOT_EQUALS,
+            ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION,
+            ContractsFixtureConstants.AssertionOperator.ABSENT,
+            ContractsFixtureConstants.AssertionOperator.PRESENT,
+            ContractsFixtureConstants.AssertionOperator.SEQUENCE_EQUALS,
+            ContractsFixtureConstants.AssertionOperator.CONTAINS,
+            ContractsFixtureConstants.AssertionOperator.NOT_CONTAINS,
+            ContractsFixtureConstants.AssertionOperator.LESS_THAN,
+            ContractsFixtureConstants.AssertionOperator.GREATER_THAN,
+            ContractsFixtureConstants.AssertionOperator.SAME_ACROSS_VARIANTS,
+            ContractsFixtureConstants.AssertionOperator.FAILS_WITH,
+            ContractsFixtureConstants.AssertionOperator.ALL,
+            ContractsFixtureConstants.AssertionOperator.NONE);
 
+    /**
+     * Creates a stateless validator for the closed Contracts 1.0 fixture format.
+     */
+    public ClosedContractsFixtureValidator() {
+    }
+
+    /**
+     * Validates the complete fixture envelope and every operation-specific
+     * control without executing the fixture.
+     *
+     * @param fixture candidate fixture JSON
+     * @throws IllegalArgumentException when a required field, type, closed
+     *         object surface, identifier, or operation-specific invariant is
+     *         invalid
+     */
     public void validate(JsonNode fixture) {
         requireObject(fixture, "$");
         closed(fixture, "$", TOP);
-        requireFields(fixture, "$", "schema", "id", "vectors", "category",
-                "operation", "input", "expected");
-        requireExactText(fixture, "$", "schema", "blue-contracts-fixture/1.0");
-        requirePatternText(fixture, "$", "id", ID);
-        validateVectors(fixture.get("vectors"));
-        BlueContractsFixtureCategory.fromLabel(requireText(fixture, "$", "category"));
-        String operation = requireText(fixture, "$", "operation");
+        requireFields(
+                fixture,
+                "$",
+                Properties.OBJECT_SCHEMA,
+                ContractsFixtureConstants.Field.ID,
+                ContractsFixtureConstants.Field.VECTORS,
+                ContractsFixtureConstants.Field.CATEGORY,
+                ContractsFixtureConstants.Field.OPERATION,
+                ContractsFixtureConstants.Field.INPUT,
+                ContractsFixtureConstants.Field.EXPECTED);
+        requireExactText(
+                fixture,
+                "$",
+                Properties.OBJECT_SCHEMA,
+                "blue-contracts-fixture/1.0");
+        requirePatternText(
+                fixture, "$", ContractsFixtureConstants.Field.ID, ID);
+        validateVectors(
+                fixture.get(ContractsFixtureConstants.Field.VECTORS));
+        BlueContractsFixtureCategory.fromLabel(requireText(
+                fixture, "$", ContractsFixtureConstants.Field.CATEGORY));
+        String operation = requireText(
+                fixture, "$", ContractsFixtureConstants.Field.OPERATION);
         requireMember(operation, "$.operation", OPERATIONS);
-        optionalText(fixture, "$", "description");
+        optionalText(
+                fixture, "$", ContractsFixtureConstants.Field.DESCRIPTION);
 
-        JsonNode input = requireObjectField(fixture, "$", "input");
+        JsonNode input = requireObjectField(
+                fixture, "$", ContractsFixtureConstants.Field.INPUT);
         validateInput(input, operation);
-        JsonNode expected = requireObjectField(fixture, "$", "expected");
+        JsonNode expected = requireObjectField(
+                fixture, "$", ContractsFixtureConstants.Field.EXPECTED);
         validateExpected(expected);
     }
 
     private void validateInput(JsonNode input, String operation) {
         closed(input, "$.input", INPUT);
-        if (!"gas-micro".equals(operation)) {
-            requireFields(input, "$.input", "root", "event", "feeder", "provider", "runtime");
+        if (!ContractsFixtureConstants.Operation.GAS_MICRO.equals(
+                operation)) {
+            requireFields(
+                    input,
+                    "$.input",
+                    ContractsFixtureConstants.Field.ROOT,
+                    ContractsFixtureConstants.Field.EVENT,
+                    ContractsFixtureConstants.Field.FEEDER,
+                    ContractsFixtureConstants.Field.PROVIDER,
+                    ContractsFixtureConstants.Field.RUNTIME);
         }
-        if (input.has("builders")) {
-            requireArray(input.get("builders"), "$.input.builders");
+        if (input.has(ContractsFixtureConstants.Field.BUILDERS)) {
+            requireArray(
+                    input.get(ContractsFixtureConstants.Field.BUILDERS),
+                    "$.input.builders");
             int index = 0;
-            for (JsonNode builder : input.get("builders")) {
+            for (JsonNode builder
+                    : input.get(ContractsFixtureConstants.Field.BUILDERS)) {
                 validateBuilder(builder, "$.input.builders[" + index++ + "]");
             }
         }
-        if (input.has("provider")) {
-            validateProvider(input.get("provider"));
+        if (input.has(ContractsFixtureConstants.Field.PROVIDER)) {
+            validateProvider(
+                    input.get(ContractsFixtureConstants.Field.PROVIDER));
         }
-        if (input.has("runtime")) {
-            validateRuntime(input.get("runtime"));
+        if (input.has(ContractsFixtureConstants.Field.RUNTIME)) {
+            validateRuntime(
+                    input.get(ContractsFixtureConstants.Field.RUNTIME));
         }
-        if (input.has("feeder")) {
-            validateFeeder(input.get("feeder"));
+        if (input.has(ContractsFixtureConstants.Field.FEEDER)) {
+            validateFeeder(
+                    input.get(ContractsFixtureConstants.Field.FEEDER));
         }
-        if (input.has("variants")) {
-            requireArray(input.get("variants"), "$.input.variants");
+        if (input.has(ContractsFixtureConstants.Field.VARIANTS)) {
+            requireArray(
+                    input.get(ContractsFixtureConstants.Field.VARIANTS),
+                    "$.input.variants");
             Set<String> names = new LinkedHashSet<>();
             int index = 0;
-            for (JsonNode variant : input.get("variants")) {
+            for (JsonNode variant
+                    : input.get(ContractsFixtureConstants.Field.VARIANTS)) {
                 String path = "$.input.variants[" + index++ + "]";
                 requireObject(variant, path);
                 closed(variant, path, VARIANT);
-                requireFields(variant, path, "name");
-                String name = requireText(variant, path, "name");
+                requireFields(
+                        variant, path, ContractsFixtureConstants.Field.NAME);
+                String name = requireText(
+                        variant, path, ContractsFixtureConstants.Field.NAME);
                 if (!names.add(name)) {
                     fail(path + ".name", "duplicate variant name " + name);
                 }
                 if (variant.size() == 1) {
                     fail(path, "a variant name alone has no semantics");
                 }
-                optionalEnum(variant, path, "rootForm", set("inline", "reference", "eager", "lazy"));
-                optionalEnum(variant, path, "cache", set("warm", "cold"));
-                optionalEnum(variant, path, "batching", set("batched", "unbatched"));
-                optionalBoolean(variant, path, "accept");
-                optionalBoolean(variant, path, "sameEvent");
-                optionalNonNegativeInteger(variant, path, "rootRevision");
-                if (variant.has("listOperation")) {
-                    validateListOperation(variant.get("listOperation"), path + ".listOperation");
+                optionalEnum(
+                        variant,
+                        path,
+                        ContractsFixtureConstants.Field.ROOT_FORM,
+                        set("inline", "reference", "eager", "lazy"));
+                optionalEnum(
+                        variant,
+                        path,
+                        ContractsFixtureConstants.Field.CACHE,
+                        set("warm", "cold"));
+                optionalEnum(
+                        variant,
+                        path,
+                        ContractsFixtureConstants.Field.BATCHING,
+                        set("batched", "unbatched"));
+                optionalBoolean(
+                        variant, path, ContractsFixtureConstants.Field.ACCEPT);
+                optionalBoolean(
+                        variant,
+                        path,
+                        ContractsFixtureConstants.Field.SAME_EVENT);
+                optionalNonNegativeInteger(
+                        variant,
+                        path,
+                        ContractsFixtureConstants.Field.ROOT_REVISION);
+                if (variant.has(
+                        ContractsFixtureConstants.Field.LIST_OPERATION)) {
+                    validateListOperation(
+                            variant.get(
+                                    ContractsFixtureConstants.Field
+                                            .LIST_OPERATION),
+                            path + ".listOperation");
                 }
             }
         }
-        optionalEnum(input, "$.input", "namespace", set("processor", "semantic", "runtime"));
-        optionalText(input, "$.input", "counter");
-        optionalText(input, "$.input", "weightManifest");
+        optionalEnum(
+                input,
+                "$.input",
+                ContractsFixtureConstants.Field.NAMESPACE,
+                set(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        ContractsFixtureConstants.RuntimeNamespace.RUNTIME));
+        optionalText(
+                input, "$.input", ContractsFixtureConstants.Field.COUNTER);
+        optionalText(
+                input,
+                "$.input",
+                ContractsFixtureConstants.Field.WEIGHT_MANIFEST);
         for (String field : Arrays.asList(
-                "quantity", "oldLength", "limit", "textCodePointsExamined", "uses",
-                "directCanonicalBytes", "leftLimbs", "rightLimbs", "replaceIndex", "append")) {
+                ContractsFixtureConstants.Field.QUANTITY,
+                ContractsFixtureConstants.Field.OLD_LENGTH,
+                ContractsFixtureConstants.Field.LIMIT,
+                ContractsFixtureConstants.Field.TEXT_CODE_POINTS_EXAMINED,
+                ContractsFixtureConstants.Field.USES,
+                ContractsFixtureConstants.Field.DIRECT_CANONICAL_BYTES,
+                ContractsFixtureConstants.Field.LEFT_LIMBS,
+                ContractsFixtureConstants.Field.RIGHT_LIMBS,
+                ContractsFixtureConstants.Field.REPLACE_INDEX,
+                ContractsFixtureConstants.Field.APPEND)) {
             optionalNonNegativeInteger(input, "$.input", field);
         }
-        optionalText(input, "$.input", "proofKey");
-        optionalText(input, "$.input", "operation");
-        optionalBoolean(input, "$.input", "priorExactIdentity");
-        if (input.has("charges")) {
-            requireArray(input.get("charges"), "$.input.charges");
+        optionalText(
+                input, "$.input", ContractsFixtureConstants.Field.PROOF_KEY);
+        optionalText(
+                input, "$.input", ContractsFixtureConstants.Field.OPERATION);
+        optionalBoolean(
+                input,
+                "$.input",
+                ContractsFixtureConstants.Field.PRIOR_EXACT_IDENTITY);
+        if (input.has(ContractsFixtureConstants.Field.CHARGES)) {
+            requireArray(
+                    input.get(ContractsFixtureConstants.Field.CHARGES),
+                    "$.input.charges");
             int index = 0;
-            for (JsonNode charge : input.get("charges")) {
+            for (JsonNode charge
+                    : input.get(ContractsFixtureConstants.Field.CHARGES)) {
                 String path = "$.input.charges[" + index++ + "]";
                 if (charge.isIntegralNumber()) {
                     requireNonNegative(charge, path);
                 } else {
                     requireObject(charge, path);
                     closed(charge, path, CHARGE);
-                    requireFields(charge, path, "counter", "quantity");
-                    requireText(charge, path, "counter");
-                    requireNonNegative(charge.get("quantity"), path + ".quantity");
+                    requireFields(
+                            charge,
+                            path,
+                            ContractsFixtureConstants.Field.COUNTER,
+                            ContractsFixtureConstants.Field.QUANTITY);
+                    requireText(
+                            charge,
+                            path,
+                            ContractsFixtureConstants.Field.COUNTER);
+                    requireNonNegative(
+                            charge.get(
+                                    ContractsFixtureConstants.Field.QUANTITY),
+                            path + ".quantity");
                 }
             }
         }
@@ -185,7 +379,7 @@ public final class ClosedContractsFixtureValidator {
                 set("generated-object", "repeated-text", "generated-list"));
         requireText(builder, path, "target");
         if ("generated-object".equals(kind)) {
-            requireFields(builder, path, "memberCount", "keyPrefix", "value");
+            requireFields(builder, path, "memberCount", "keyPrefix", Properties.OBJECT_VALUE);
             requireNonNegative(builder.get("memberCount"), path + ".memberCount");
             requireText(builder, path, "keyPrefix");
         } else if ("generated-list".equals(kind)) {
@@ -219,12 +413,21 @@ public final class ClosedContractsFixtureValidator {
     private void validateRuntime(JsonNode runtime) {
         requireObject(runtime, "$.input.runtime");
         closed(runtime, "$.input.runtime", RUNTIME);
-        requireFields(runtime, "$.input.runtime", "typeRegistryManifest");
-        requireExactText(runtime, "$.input.runtime",
-                "typeRegistryManifest", "../../registry/manifest.yaml");
-        if (runtime.has("handlers")) {
-            requireObject(runtime.get("handlers"), "$.input.runtime.handlers");
-            for (Iterator<Map.Entry<String, JsonNode>> it = runtime.get("handlers").fields();
+        requireFields(
+                runtime,
+                "$.input.runtime",
+                ContractsFixtureConstants.Field.TYPE_REGISTRY_MANIFEST);
+        requireExactText(
+                runtime,
+                "$.input.runtime",
+                ContractsFixtureConstants.Field.TYPE_REGISTRY_MANIFEST,
+                "../../registry/manifest.yaml");
+        if (runtime.has(ContractsFixtureConstants.Field.HANDLERS)) {
+            requireObject(
+                    runtime.get(ContractsFixtureConstants.Field.HANDLERS),
+                    "$.input.runtime.handlers");
+            for (Iterator<Map.Entry<String, JsonNode>> it = runtime.get(
+                    ContractsFixtureConstants.Field.HANDLERS).fields();
                  it.hasNext(); ) {
                 Map.Entry<String, JsonNode> entry = it.next();
                 String path = "$.input.runtime.handlers." + entry.getKey();
@@ -233,10 +436,17 @@ public final class ClosedContractsFixtureValidator {
                 }
                 requireObject(entry.getValue(), path);
                 closed(entry.getValue(), path, SCRIPTED_HANDLER);
-                if (entry.getValue().has("result")) {
-                    validateScriptedResult(entry.getValue().get("result"), path + ".result");
+                if (entry.getValue().has(
+                        ContractsFixtureConstants.Field.RESULT)) {
+                    validateScriptedResult(
+                            entry.getValue().get(
+                                    ContractsFixtureConstants.Field.RESULT),
+                            path + ".result");
                 }
-                optionalText(entry.getValue(), path, "fail");
+                optionalText(
+                        entry.getValue(),
+                        path,
+                        ContractsFixtureConstants.Field.FAIL);
             }
         }
         if (runtime.has("cascadeMutation")) {
@@ -270,7 +480,7 @@ public final class ClosedContractsFixtureValidator {
                 closed(request, path, TERMINATION_REQUEST);
                 requireFields(request, path, "cause");
                 requireText(request, path, "cause");
-                optionalText(request, path, "reason");
+                optionalText(request, path, ContractsFixtureConstants.Field.REASON);
             }
         }
         optionalNonNegativeInteger(runtime, "$.input.runtime", "gasLimit");
@@ -283,17 +493,26 @@ public final class ClosedContractsFixtureValidator {
     private void validateScriptedResult(JsonNode result, String path) {
         requireObject(result, path);
         closed(result, path, SCRIPTED_RESULT);
-        if (result.has("patches")) {
-            requireArray(result.get("patches"), path + ".patches");
+        if (result.has(ContractsFixtureConstants.Field.PATCHES)) {
+            requireArray(
+                    result.get(ContractsFixtureConstants.Field.PATCHES),
+                    path + ".patches");
         }
-        if (result.has("events")) {
-            requireArray(result.get("events"), path + ".events");
+        if (result.has(ContractsFixtureConstants.Field.EVENTS)) {
+            requireArray(
+                    result.get(ContractsFixtureConstants.Field.EVENTS),
+                    path + ".events");
         }
-        optionalText(result, path, "fail");
-        if (result.has("runtimeCounters")) {
-            requireObject(result.get("runtimeCounters"), path + ".runtimeCounters");
+        optionalText(result, path, ContractsFixtureConstants.Field.FAIL);
+        if (result.has(ContractsFixtureConstants.Field.RUNTIME_COUNTERS)) {
+            requireObject(
+                    result.get(
+                            ContractsFixtureConstants.Field.RUNTIME_COUNTERS),
+                    path + ".runtimeCounters");
             for (Iterator<Map.Entry<String, JsonNode>> it =
-                 result.get("runtimeCounters").fields(); it.hasNext(); ) {
+                 result.get(
+                         ContractsFixtureConstants.Field.RUNTIME_COUNTERS)
+                         .fields(); it.hasNext(); ) {
                 Map.Entry<String, JsonNode> entry = it.next();
                 requireNonNegative(entry.getValue(), path + ".runtimeCounters." + entry.getKey());
             }
@@ -304,15 +523,23 @@ public final class ClosedContractsFixtureValidator {
         requireObject(feeder, "$.input.feeder");
         closed(feeder, "$.input.feeder", FEEDER);
         requireFields(feeder, "$.input.feeder",
-                "managedRootRevision", "indexedRootRevision", "eventOrderKey", "deliverySnapshot");
+                "managedRootRevision",
+                "indexedRootRevision",
+                ContractsFixtureConstants.Field.EVENT_ORDER_KEY,
+                ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT);
         optionalNonNegativeInteger(feeder, "$.input.feeder", "managedRootRevision");
         optionalNonNegativeInteger(feeder, "$.input.feeder", "indexedRootRevision");
         optionalNonNegativeInteger(feeder, "$.input.feeder", "evaluatedRevision");
         optionalNonNegativeInteger(feeder, "$.input.feeder", "sameFailureCount");
-        validateOrderKey(feeder.get("eventOrderKey"), "$.input.feeder.eventOrderKey");
-        requireArray(feeder.get("deliverySnapshot"), "$.input.feeder.deliverySnapshot");
+        validateOrderKey(
+                feeder.get(ContractsFixtureConstants.Field.EVENT_ORDER_KEY),
+                "$.input.feeder.eventOrderKey");
+        requireArray(
+                feeder.get(ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT),
+                "$.input.feeder.deliverySnapshot");
         int index = 0;
-        for (JsonNode hint : feeder.get("deliverySnapshot")) {
+        for (JsonNode hint : feeder.get(
+                ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT)) {
             validateDeliveryHint(hint, "$.input.feeder.deliverySnapshot[" + index++ + "]");
         }
         if (feeder.has("canonicalPreselection")) {
@@ -370,15 +597,25 @@ public final class ClosedContractsFixtureValidator {
     private void validateDeliveryHint(JsonNode hint, String path) {
         requireObject(hint, path);
         closed(hint, path, DELIVERY_HINT);
-        requireFields(hint, path, "scopePath", "channelKey");
-        String scope = requireText(hint, path, "scopePath");
+        requireFields(
+                hint,
+                path,
+                ContractsFixtureConstants.Field.SCOPE_PATH,
+                ContractsFixtureConstants.Field.CHANNEL_KEY);
+        String scope = requireText(
+                hint, path, ContractsFixtureConstants.Field.SCOPE_PATH);
         if (!scope.startsWith("/")) {
             fail(path + ".scopePath", "must be an absolute runtime pointer");
         }
-        requireText(hint, path, "channelKey");
-        optionalNonNegativeInteger(hint, path, "order");
-        if (hint.has("activationStartExclusive")) {
-            validateOrderKey(hint.get("activationStartExclusive"),
+        requireText(
+                hint, path, ContractsFixtureConstants.Field.CHANNEL_KEY);
+        optionalNonNegativeInteger(
+                hint, path, ContractsFixtureConstants.Field.ORDER);
+        if (hint.has(
+                ContractsFixtureConstants.Field.ACTIVATION_START_EXCLUSIVE)) {
+            validateOrderKey(hint.get(
+                            ContractsFixtureConstants.Field
+                                    .ACTIVATION_START_EXCLUSIVE),
                     path + ".activationStartExclusive");
         }
     }
@@ -386,12 +623,25 @@ public final class ClosedContractsFixtureValidator {
     private void validateListOperation(JsonNode operation, String path) {
         requireObject(operation, path);
         closed(operation, path, LIST_OPERATION);
-        requireFields(operation, path, "op", "size");
-        requireMember(requireText(operation, path, "op"), path + ".op",
-                set("append", "replace"));
-        requireNonNegative(operation.get("size"), path + ".size");
-        optionalNonNegativeInteger(operation, path, "delta");
-        optionalNonNegativeInteger(operation, path, "index");
+        requireFields(
+                operation,
+                path,
+                ContractsFixtureConstants.Field.OP,
+                ContractsFixtureConstants.Field.SIZE);
+        requireMember(
+                requireText(
+                        operation, path, ContractsFixtureConstants.Field.OP),
+                path + ".op",
+                set(
+                        ContractsFixtureConstants.ListOperation.APPEND,
+                        ContractsFixtureConstants.ListOperation.REPLACE));
+        requireNonNegative(
+                operation.get(ContractsFixtureConstants.Field.SIZE),
+                path + ".size");
+        optionalNonNegativeInteger(
+                operation, path, ContractsFixtureConstants.Field.DELTA);
+        optionalNonNegativeInteger(
+                operation, path, ContractsFixtureConstants.Field.INDEX);
     }
 
     private void validateExpected(JsonNode expected) {
@@ -399,27 +649,42 @@ public final class ClosedContractsFixtureValidator {
         if (expected.size() == 0) {
             fail("$.expected", "at least one assertion or exact gas outcome is required");
         }
-        if (expected.has("assertions")) {
-            requireArray(expected.get("assertions"), "$.expected.assertions");
-            if (expected.get("assertions").size() == 0) {
+        if (expected.has(ContractsFixtureConstants.Field.ASSERTIONS)) {
+            requireArray(
+                    expected.get(ContractsFixtureConstants.Field.ASSERTIONS),
+                    "$.expected.assertions");
+            if (expected.get(
+                    ContractsFixtureConstants.Field.ASSERTIONS).size() == 0) {
                 fail("$.expected.assertions", "must not be empty");
             }
             int index = 0;
-            for (JsonNode assertion : expected.get("assertions")) {
+            for (JsonNode assertion
+                    : expected.get(
+                            ContractsFixtureConstants.Field.ASSERTIONS)) {
                 validateAssertion(assertion, "$.expected.assertions[" + index++ + "]");
             }
         }
-        if (expected.has("trace")) {
-            requireArray(expected.get("trace"), "$.expected.trace");
+        if (expected.has(ContractsFixtureConstants.Field.TRACE)) {
+            requireArray(
+                    expected.get(ContractsFixtureConstants.Field.TRACE),
+                    "$.expected.trace");
         }
         for (String field : Arrays.asList(
-                "totalGas", "listFoldStepRecomputed", "textBlockExamined",
-                "validationProofReused", "directIdentityHashBlock", "integerLimbOperation")) {
+                ContractsFixtureConstants.Field.TOTAL_GAS,
+                ContractsFixtureConstants.Field.LIST_FOLD_STEP_RECOMPUTED,
+                ContractsFixtureConstants.Field.TEXT_BLOCK_EXAMINED,
+                ContractsFixtureConstants.Field.VALIDATION_PROOF_REUSED,
+                ContractsFixtureConstants.Field.DIRECT_IDENTITY_HASH_BLOCK,
+                ContractsFixtureConstants.Field.INTEGER_LIMB_OPERATION)) {
             optionalNonNegativeInteger(expected, "$.expected", field);
         }
-        optionalBoolean(expected, "$.expected", "failedChargeAbsent");
-        if (expected.has("admitted")) {
-            JsonNode admitted = expected.get("admitted");
+        optionalBoolean(
+                expected,
+                "$.expected",
+                ContractsFixtureConstants.Field.FAILED_CHARGE_ABSENT);
+        if (expected.has(ContractsFixtureConstants.Field.ADMITTED)) {
+            JsonNode admitted = expected.get(
+                    ContractsFixtureConstants.Field.ADMITTED);
             if (admitted.isBoolean()) {
                 return;
             }
@@ -434,27 +699,55 @@ public final class ClosedContractsFixtureValidator {
     private void validateAssertion(JsonNode assertion, String path) {
         requireObject(assertion, path);
         closed(assertion, path, ASSERTION);
-        requireFields(assertion, path, "actual", "op");
-        requireText(assertion, path, "actual");
-        String op = requireText(assertion, path, "op");
+        requireFields(
+                assertion,
+                path,
+                ContractsFixtureConstants.Field.ACTUAL,
+                ContractsFixtureConstants.Field.OP);
+        requireText(
+                assertion, path, ContractsFixtureConstants.Field.ACTUAL);
+        String op = requireText(
+                assertion,
+                path,
+                ContractsFixtureConstants.Field.OP);
         requireMember(op, path + ".op", ASSERTION_OPERATORS);
-        optionalText(assertion, path, "variant");
-        optionalBoolean(assertion, path, "ordered");
-        if ("equalsProjection".equals(op)) {
-            requireFields(assertion, path, "expectedProjection");
-            requireText(assertion, path, "expectedProjection");
-            if (assertion.has("expected")) {
+        optionalText(
+                assertion, path, ContractsFixtureConstants.Field.VARIANT);
+        optionalBoolean(
+                assertion, path, ContractsFixtureConstants.Field.ORDERED);
+        if (ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION
+                .equals(op)) {
+            requireFields(
+                    assertion,
+                    path,
+                    ContractsFixtureConstants.Field.EXPECTED_PROJECTION);
+            requireText(
+                    assertion,
+                    path,
+                    ContractsFixtureConstants.Field.EXPECTED_PROJECTION);
+            if (assertion.has(
+                    ContractsFixtureConstants.Field.EXPECTED)) {
                 fail(path + ".expected", "equalsProjection must not also declare expected");
             }
-        } else if ("absent".equals(op)
-                || "present".equals(op)
-                || "sameAcrossVariants".equals(op)) {
-            if (assertion.has("expected") || assertion.has("expectedProjection")) {
+        } else if (ContractsFixtureConstants.AssertionOperator.ABSENT
+                .equals(op)
+                || ContractsFixtureConstants.AssertionOperator.PRESENT
+                .equals(op)
+                || ContractsFixtureConstants.AssertionOperator
+                .SAME_ACROSS_VARIANTS.equals(op)) {
+            if (assertion.has(ContractsFixtureConstants.Field.EXPECTED)
+                    || assertion.has(
+                            ContractsFixtureConstants.Field
+                                    .EXPECTED_PROJECTION)) {
                 fail(path, op + " does not accept an expected value");
             }
         } else {
-            requireFields(assertion, path, "expected");
-            if (assertion.has("expectedProjection")) {
+            requireFields(
+                    assertion,
+                    path,
+                    ContractsFixtureConstants.Field.EXPECTED);
+            if (assertion.has(
+                    ContractsFixtureConstants.Field.EXPECTED_PROJECTION)) {
                 fail(path + ".expectedProjection",
                         "only equalsProjection accepts expectedProjection");
             }

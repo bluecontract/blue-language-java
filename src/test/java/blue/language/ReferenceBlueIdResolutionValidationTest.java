@@ -9,6 +9,7 @@ import blue.language.processor.ProcessorErrorCategory;
 import blue.language.processor.ProcessorStatus;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.CyclicAwareNodeProvider;
+import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
@@ -30,10 +31,10 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -42,61 +43,83 @@ class ReferenceBlueIdResolutionValidationTest {
     private static final String MALFORMED_BLUE_ID = "symbolic-type-name";
 
     @Test
-    void unmaterializedMalformedReferenceFailsBeforeOrdinaryProviderLookup() {
+    void shouldFailUnmaterializedMalformedReferenceBeforeOrdinaryProviderLookup() {
+        // given
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(countingMiss(fetches));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(nestedMalformedReference()));
+        int fetchCount = fetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId, "/subject/blueId");
-        assertEquals(0, fetches.get());
+        assertEquals(0, fetchCount);
     }
 
     @Test
-    void unmaterializedMalformedReferenceFailsBeforeTrustedProviderLookup() {
+    void shouldFailUnmaterializedMalformedReferenceBeforeTrustedProviderLookup() {
+        // given
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(new VerifyingNodeProvider(countingMiss(fetches)));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(nestedMalformedReference()));
+        int fetchCount = fetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId, "/subject/blueId");
-        assertEquals(0, fetches.get());
+        assertEquals(0, fetchCount);
     }
 
     @Test
-    void malformedTypeReferenceIsProviderInvariantDuringDirectResolution() {
+    void shouldKeepMalformedTypeFailureProviderInvariantDuringDirectResolution() {
+        // given
         AtomicInteger ordinaryFetches = new AtomicInteger();
         AtomicInteger trustedFetches = new AtomicInteger();
         Blue ordinary = new Blue(countingMiss(ordinaryFetches));
         Blue trusted = new Blue(
                 new VerifyingNodeProvider(countingMiss(trustedFetches)));
 
-        RuntimeException ordinaryFailure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException ordinaryFailure = captureFailure(
                 () -> ordinary.resolve(malformedTypeDocument(false)));
-        RuntimeException trustedFailure = assertThrows(RuntimeException.class,
+        RuntimeException trustedFailure = captureFailure(
                 () -> trusted.resolve(malformedTypeDocument(false)));
+        int ordinaryFetchCount = ordinaryFetches.get();
+        int trustedFetchCount = trustedFetches.get();
 
+        // then
+        assertTrue(ordinaryFailure instanceof RuntimeException);
+        assertTrue(trustedFailure instanceof RuntimeException);
         assertFailure(ordinaryFailure, BlueLanguageErrorCategory.InvalidBlueId, "/type/blueId");
         assertFailure(trustedFailure, BlueLanguageErrorCategory.InvalidBlueId, "/type/blueId");
-        assertEquals(0, ordinaryFetches.get());
-        assertEquals(0, trustedFetches.get());
+        assertEquals(0, ordinaryFetchCount);
+        assertEquals(0, trustedFetchCount);
     }
 
     @Test
-    void malformedTypeReferenceIsProviderInvariantDuringInitialization() {
+    void shouldKeepMalformedTypeFailureProviderInvariantDuringInitialization() {
+        // given
         AtomicInteger ordinaryFetches = new AtomicInteger();
         AtomicInteger trustedFetches = new AtomicInteger();
         Blue ordinary = new Blue(countingMiss(ordinaryFetches));
         Blue trusted = new Blue(
                 new VerifyingNodeProvider(countingMiss(trustedFetches)));
 
+        // when
         DocumentProcessingResult ordinaryResult =
                 ordinary.initializeDocument(malformedTypeDocument(true));
         DocumentProcessingResult trustedResult =
                 trusted.initializeDocument(malformedTypeDocument(true));
+        int ordinaryFetchCount = ordinaryFetches.get();
+        int trustedFetchCount = trustedFetches.get();
 
+        // then
         assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 ordinaryResult.status(), diagnosticMessage(ordinaryResult));
         assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
@@ -109,32 +132,44 @@ class ReferenceBlueIdResolutionValidationTest {
                 diagnosticCategory(trustedResult), diagnosticMessage(trustedResult));
         assertTrue(diagnosticMessage(trustedResult).contains("/type/blueId"),
                 diagnosticMessage(trustedResult));
-        assertEquals(0, ordinaryFetches.get());
-        assertEquals(0, trustedFetches.get());
+        assertEquals(0, ordinaryFetchCount);
+        assertEquals(0, trustedFetchCount);
     }
 
     @ParameterizedTest(name = "{1}")
     @MethodSource("malformedReferenceContainers")
-    void malformedReferencesAreValidatedInEveryNodeContainer(Node source, String expectedPath) {
-        RuntimeException failure = assertThrows(RuntimeException.class,
-                () -> new Blue().resolve(source));
+    void shouldValidateMalformedReferencesInEveryNodeContainer(
+            Node source,
+            String expectedPath) {
+        // given
+        Blue blue = new Blue();
 
+        // when
+        RuntimeException failure = captureFailure(() -> blue.resolve(source));
+
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId, expectedPath);
     }
 
     @Test
-    void malformedReferenceUnderExcludedResolutionPathStillFails() {
+    void shouldFailMalformedReferenceUnderExcludedResolutionPath() {
+        // given
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(countingMiss(fetches));
         Node source = new Node()
                 .properties("included", new Node().value("visible"))
                 .properties("excluded", malformedReference());
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(source, PathLimits.withSinglePath("/included")));
+        int fetchCount = fetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId, "/excluded/blueId");
-        assertEquals(0, fetches.get());
+        assertEquals(0, fetchCount);
     }
 
     @ParameterizedTest
@@ -144,20 +179,26 @@ class ReferenceBlueIdResolutionValidationTest {
             "wrong blueId",
             "field$previous"
     })
-    void malformedReferenceCategoryIsIndependentOfFieldName(String fieldName) {
+    void shouldKeepMalformedReferenceCategoryIndependentOfFieldName(String fieldName) {
+        // given
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(countingMiss(fetches));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(new Node().properties(fieldName, malformedReference())));
+        int fetchCount = fetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId,
                 "/" + JsonPointer.escape(fieldName) + "/blueId");
-        assertEquals(0, fetches.get());
+        assertEquals(0, fetchCount);
     }
 
     @Test
-    void onlyActualPreviousPathIsListControlViolation() {
+    void shouldClassifyOnlyActualPreviousPathAsListControlViolation() {
+        // given
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(countingMiss(fetches));
         Node previousSource = new Node().items(
@@ -165,46 +206,65 @@ class ReferenceBlueIdResolutionValidationTest {
                 new Node().value("appended"));
         Node ordinarySource = new Node().properties("field$previous", malformedReference());
 
-        RuntimeException previousFailure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException previousFailure = captureFailure(
                 () -> blue.resolve(previousSource));
-        RuntimeException ordinaryFailure = assertThrows(RuntimeException.class,
+        RuntimeException ordinaryFailure = captureFailure(
                 () -> blue.resolve(ordinarySource));
+        int fetchCount = fetches.get();
 
+        // then
+        assertTrue(previousFailure instanceof RuntimeException);
+        assertTrue(ordinaryFailure instanceof RuntimeException);
         assertFailure(previousFailure, BlueLanguageErrorCategory.ListControlViolation,
                 "/0/$previous/blueId");
         assertFailure(ordinaryFailure, BlueLanguageErrorCategory.InvalidBlueId,
                 "/field$previous/blueId");
-        assertEquals(0, fetches.get());
+        assertEquals(0, fetchCount);
     }
 
     @Test
     @ResourceLock(Resources.LOCALE)
-    void malformedReferenceClassificationIsLocaleIndependent() {
+    void shouldKeepMalformedReferenceClassificationLocaleIndependent() {
+        // given
         Locale original = Locale.getDefault();
         AtomicInteger fetches = new AtomicInteger();
+
+        // when
+        RuntimeException failure;
+        int fetchCount;
         try {
             Locale.setDefault(Locale.forLanguageTag("tr-TR"));
-
-            RuntimeException failure = assertThrows(RuntimeException.class,
+            failure = captureFailure(
                     () -> new Blue(countingMiss(fetches)).resolve(nestedMalformedReference()));
-
-            assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId,
-                    "/subject/blueId");
-            assertEquals(0, fetches.get());
+            fetchCount = fetches.get();
         } finally {
             Locale.setDefault(original);
         }
+
+        // then
+        assertTrue(failure instanceof RuntimeException);
+        assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId,
+                "/subject/blueId");
+        assertEquals(0, fetchCount);
     }
 
     @Test
-    void directBlueIdInputParsersUseTheSharedReferenceValidator() {
-        RuntimeException yamlFailure = assertThrows(RuntimeException.class,
+    void shouldDirectBlueIdInputParsersUseTheSharedReferenceValidator() {
+        // given
+        Blue blue = new Blue();
+
+        // when
+        RuntimeException yamlFailure = captureFailure(
                 () -> new Blue().parseBlueIdInputYaml(
                         "subject:\n  blueId: " + MALFORMED_BLUE_ID + "\n"));
-        RuntimeException jsonFailure = assertThrows(RuntimeException.class,
-                () -> new Blue().parseBlueIdInputJson(
+        RuntimeException jsonFailure = captureFailure(
+                () -> blue.parseBlueIdInputJson(
                         "{\"subject\":{\"blueId\":\"" + MALFORMED_BLUE_ID + "\"}}"));
 
+        // then
+        assertTrue(yamlFailure instanceof RuntimeException);
+        assertTrue(jsonFailure instanceof RuntimeException);
         assertFailure(yamlFailure, BlueLanguageErrorCategory.InvalidBlueId,
                 "/subject/blueId");
         assertFailure(jsonFailure, BlueLanguageErrorCategory.InvalidBlueId,
@@ -212,20 +272,26 @@ class ReferenceBlueIdResolutionValidationTest {
     }
 
     @Test
-    void validMissingReferenceRemainsProviderUnavailable() {
+    void shouldKeepValidMissingReferenceClassifiedAsProviderUnavailable() {
+        // given
         String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Missing Type"));
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(countingMiss(fetches));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(new Node().type(reference(missingBlueId))));
+        int fetchCount = fetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.ProviderUnavailable, missingBlueId);
-        assertEquals(1, fetches.get());
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void validOrdinaryMismatchRemainsProviderBlueIdMismatch() {
+    void shouldKeepValidOrdinaryMismatchClassifiedAsProviderBlueIdMismatch() {
+        // given
         String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Requested Type"));
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
@@ -235,15 +301,20 @@ class ReferenceBlueIdResolutionValidationTest {
                     : null;
         });
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(new Node().type(reference(requestedBlueId))));
+        int fetchCount = fetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.ProviderBlueIdMismatch, requestedBlueId);
-        assertEquals(1, fetches.get());
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void deprecatedUnverifiedWrapperCannotBypassDirectBlueIdVerification() {
+    void shouldPreventDeprecatedUnverifiedWrapperFromBypassingDirectBlueIdVerification() {
+        // given
         Node requested = new Node().name("Requested Trusted Type")
                 .properties("fixed", new Node().value("requested"));
         Node trusted = new Node().name("Trusted Non-Direct Type")
@@ -257,47 +328,81 @@ class ReferenceBlueIdResolutionValidationTest {
                     : null;
         }));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(new Node().type(reference(requestedBlueId))));
+        int fetchCount = fetches.get();
+        int referenceCacheSize = blue.resolvedReferenceCacheSize();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.ProviderBlueIdMismatch,
                 requestedBlueId);
-        assertEquals(1, fetches.get());
-        assertEquals(0, blue.resolvedReferenceCacheSize());
+        assertEquals(1, fetchCount);
+        assertEquals(0, referenceCacheSize);
     }
 
     @Test
-    void validCyclicMemberStillReachesCyclicAwareProvider() {
+    void shouldReachCyclicAwareProviderForValidCyclicMember() {
+        // given
         BasicNodeProvider cyclicProvider = new BasicNodeProvider(YAML_MAPPER.readValue(
                 "- name: Cyclic A\n"
                         + "  fixed: cyclic\n"
+                        + "  peer:\n"
+                        + "    blueId: this#1\n"
                         + "- name: Cyclic B\n"
-                        + "  fixed: companion\n",
+                        + "  fixed: companion\n"
+                        + "  peer:\n"
+                        + "    blueId: this#0\n",
                 Node.class));
         String memberBlueId = cyclicProvider.getBlueIdByName("Cyclic A");
         CountingCyclicProvider countingProvider = new CountingCyclicProvider(cyclicProvider);
         Blue blue = new Blue(countingProvider);
 
+        // when
         Node resolved = blue.resolve(new Node().type(reference(memberBlueId)));
+        int fetchCount = countingProvider.fetches.get();
 
+        // then
         assertEquals("Cyclic A", resolved.getType().getName());
         assertEquals("cyclic", resolved.getAsText("/fixed"));
-        assertEquals(1, countingProvider.fetches.get());
+        assertEquals(1, fetchCount);
+    }
 
+    @Test
+    void shouldRejectMalformedCyclicMemberBeforeProviderLookup() {
+        // given
+        BasicNodeProvider cyclicProvider = new BasicNodeProvider(YAML_MAPPER.readValue(
+                "- name: Cyclic A\n"
+                        + "  fixed: cyclic\n"
+                        + "  peer:\n"
+                        + "    blueId: this#1\n"
+                        + "- name: Cyclic B\n"
+                        + "  fixed: companion\n"
+                        + "  peer:\n"
+                        + "    blueId: this#0\n",
+                Node.class));
+        String memberBlueId = cyclicProvider.getBlueIdByName("Cyclic A");
         AtomicInteger malformedFetches = new AtomicInteger();
         CountingCyclicProvider malformedProvider = new CountingCyclicProvider(
                 cyclicProvider, malformedFetches);
         String malformedMember = memberBlueId.substring(0, memberBlueId.indexOf('#')) + "#01";
-        RuntimeException failure = assertThrows(RuntimeException.class,
+
+        // when
+        RuntimeException failure = captureFailure(
                 () -> new Blue(malformedProvider).resolve(
                         new Node().type(reference(malformedMember))));
+        int malformedFetchCount = malformedFetches.get();
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertFailure(failure, BlueLanguageErrorCategory.InvalidBlueId, "/type/blueId");
-        assertEquals(0, malformedFetches.get());
+        assertEquals(0, malformedFetchCount);
     }
 
     @Test
-    void declaredTypeAliasStillPreprocessesBeforeResolution() {
+    void shouldPreprocessDeclaredTypeAliasBeforeResolution() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(new Node().name("Aliased Subject Type")
                 .properties("provided", new Node().value("from-alias")));
@@ -310,23 +415,34 @@ class ReferenceBlueIdResolutionValidationTest {
                 + "type: Subject\n";
 
         Node preprocessed = blue.yamlToNode(yaml);
+        // when
         Node resolved = blue.resolve(preprocessed);
 
+        // then
         assertEquals(typeBlueId, preprocessed.getType().getBlueId());
         assertEquals("from-alias", resolved.getAsText("/provided"));
     }
 
     @Test
-    void malformedBlueIdClassifierMappingsPreserveExistingDiagnosticControls() {
-        RuntimeException malformedPlain = assertThrows(RuntimeException.class,
-                () -> BlueIds.requirePlainBlueId(MALFORMED_BLUE_ID, "/subject/blueId"));
-        RuntimeException malformedCyclic = assertThrows(RuntimeException.class,
-                () -> BlueIds.requireBlueIdOrCyclicMember("abc#01", "/subject/blueId"));
-        RuntimeException malformedPrevious = assertThrows(RuntimeException.class,
-                () -> BlueIds.requirePlainBlueId(MALFORMED_BLUE_ID, "/$previous/blueId"));
-        RuntimeException invalidDirectInput = assertThrows(RuntimeException.class,
-                () -> new Blue().parseBlueIdInputYaml("type: Integer\nvalue: 1\n"));
+    void shouldPreserveDiagnosticControlsInMalformedBlueIdClassifierMappings() {
+        // given
+        Blue blue = new Blue();
 
+        // when
+        RuntimeException malformedPlain = captureFailure(
+                () -> BlueIds.requirePlainBlueId(MALFORMED_BLUE_ID, "/subject/blueId"));
+        RuntimeException malformedCyclic = captureFailure(
+                () -> BlueIds.requireBlueIdOrCyclicMember("abc#01", "/subject/blueId"));
+        RuntimeException malformedPrevious = captureFailure(
+                () -> BlueIds.requirePlainBlueId(MALFORMED_BLUE_ID, "/$previous/blueId"));
+        RuntimeException invalidDirectInput = captureFailure(
+                () -> blue.parseBlueIdInputYaml("type: Integer\nvalue: 1\n"));
+
+        // then
+        assertTrue(malformedPlain instanceof RuntimeException);
+        assertTrue(malformedCyclic instanceof RuntimeException);
+        assertTrue(malformedPrevious instanceof RuntimeException);
+        assertTrue(invalidDirectInput instanceof RuntimeException);
         assertEquals(BlueLanguageErrorCategory.InvalidBlueId,
                 BlueLanguageErrorClassifier.classify(malformedPlain));
         assertEquals(BlueLanguageErrorCategory.InvalidBlueId,
@@ -335,14 +451,23 @@ class ReferenceBlueIdResolutionValidationTest {
                 BlueLanguageErrorClassifier.classify(malformedPrevious));
         assertEquals(BlueLanguageErrorCategory.InvalidBlueIdInput,
                 BlueLanguageErrorClassifier.classify(invalidDirectInput));
+    }
 
+    @Test
+    void shouldPreserveProviderFailureClassifierMappings() {
+        // given
         String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Classifier Missing"));
-        RuntimeException missing = assertThrows(RuntimeException.class,
+
+        // when
+        RuntimeException missing = captureFailure(
                 () -> new Blue(blueId -> null).resolve(new Node().type(reference(missingBlueId))));
-        RuntimeException mismatch = assertThrows(RuntimeException.class,
+        RuntimeException mismatch = captureFailure(
                 () -> new Blue(blueId -> Collections.singletonList(new Node().name("Mismatch")))
                         .resolve(new Node().type(reference(missingBlueId))));
 
+        // then
+        assertTrue(missing instanceof RuntimeException);
+        assertTrue(mismatch instanceof RuntimeException);
         assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
                 BlueLanguageErrorClassifier.classify(missing));
         assertEquals(BlueLanguageErrorCategory.ProviderBlueIdMismatch,
@@ -350,14 +475,17 @@ class ReferenceBlueIdResolutionValidationTest {
     }
 
     @Test
-    void validatorHandlesSharedNodesAndAccidentalObjectCyclesWithoutMutation() {
+    void shouldHandleSharedNodesAndAccidentalObjectCyclesWithoutMutation() {
+        // given
         String validBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Shared Reference"));
         Node shared = reference(validBlueId);
         Node root = new Node().type(shared).properties("shared", shared);
         root.properties("self", root);
 
+        // when
         BlueIdReferenceValidator.validate(root);
 
+        // then
         assertSame(shared, root.getType());
         assertSame(shared, root.getProperties().get("shared"));
         assertSame(root, root.getProperties().get("self"));
@@ -465,8 +593,8 @@ class ReferenceBlueIdResolutionValidationTest {
         }
 
         @Override
-        public boolean hasVerifiedContentForBlueId(String blueId) {
-            return delegate.hasVerifiedContentForBlueId(blueId);
+        public CyclicSetProofResult cyclicSetProofFor(String blueId) {
+            return delegate.cyclicSetProofFor(blueId);
         }
     }
 }

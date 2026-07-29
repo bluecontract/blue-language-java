@@ -7,11 +7,34 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.utils.Properties.OBJECT_BLUE;
+import static blue.language.utils.Properties.OBJECT_CONTRACTS;
+import static blue.language.utils.Properties.OBJECT_ITEM_TYPE;
+import static blue.language.utils.Properties.OBJECT_KEY_TYPE;
+import static blue.language.utils.Properties.OBJECT_TYPE;
+import static blue.language.utils.Properties.OBJECT_VALUE_TYPE;
+
+/**
+ * Reads or writes structural children of a mutable node graph by RFC 6901
+ * pointer.
+ *
+ * <p>Writes create missing object/list containers and grow lists with empty
+ * nodes. Writing the root delegates to {@link Node#replaceWith(Node)}.</p>
+ */
 public final class NodePathEditor {
+
+    private static final String ARRAY_APPEND_TOKEN = "-";
 
     private NodePathEditor() {
     }
 
+    /**
+     * Returns the structural child at a pointer.
+     *
+     * @param node graph root to read
+     * @param pointer canonical pointer to the child
+     * @return structural child, or {@code null} if absent
+     */
     public static Node getOrNull(Node node, String pointer) {
         Node current = node;
         for (String segment : JsonPointer.split(pointer)) {
@@ -23,6 +46,13 @@ public final class NodePathEditor {
         return current;
     }
 
+    /**
+     * Writes a value in place, creating missing intermediate containers.
+     *
+     * @param root mutable graph root
+     * @param pointer canonical destination pointer
+     * @param value node to write
+     */
     public static void put(Node root, String pointer, Node value) {
         List<String> segments = JsonPointer.split(pointer);
         if (segments.isEmpty()) {
@@ -38,25 +68,27 @@ public final class NodePathEditor {
     }
 
     private static Node childAtOrNull(Node node, String segment) {
-        if ("type".equals(segment)) {
+        if (OBJECT_TYPE.equals(segment)) {
             return node.getType();
         }
-        if ("itemType".equals(segment)) {
+        if (OBJECT_ITEM_TYPE.equals(segment)) {
             return node.getItemType();
         }
-        if ("keyType".equals(segment)) {
+        if (OBJECT_KEY_TYPE.equals(segment)) {
             return node.getKeyType();
         }
-        if ("valueType".equals(segment)) {
+        if (OBJECT_VALUE_TYPE.equals(segment)) {
             return node.getValueType();
         }
-        if ("blue".equals(segment)) {
+        if (OBJECT_BLUE.equals(segment)) {
             return node.getBlue();
         }
-        if ("contracts".equals(segment)) {
+        if (OBJECT_CONTRACTS.equals(segment)) {
             return node.getContracts();
         }
-        if (JsonPointer.isArrayIndexSegment(segment) && node.getItems() != null && !"-".equals(segment)) {
+        if (JsonPointer.isArrayIndexSegment(segment)
+                && node.getItems() != null
+                && !ARRAY_APPEND_TOKEN.equals(segment)) {
             int index = Integer.parseInt(segment);
             return index < node.getItems().size() ? node.getItems().get(index) : null;
         }
@@ -74,31 +106,32 @@ public final class NodePathEditor {
     }
 
     private static void setChild(Node node, String segment, Node value) {
-        if ("type".equals(segment)) {
+        if (OBJECT_TYPE.equals(segment)) {
             node.type(value);
             return;
         }
-        if ("itemType".equals(segment)) {
+        if (OBJECT_ITEM_TYPE.equals(segment)) {
             node.itemType(value);
             return;
         }
-        if ("keyType".equals(segment)) {
+        if (OBJECT_KEY_TYPE.equals(segment)) {
             node.keyType(value);
             return;
         }
-        if ("valueType".equals(segment)) {
+        if (OBJECT_VALUE_TYPE.equals(segment)) {
             node.valueType(value);
             return;
         }
-        if ("blue".equals(segment)) {
+        if (OBJECT_BLUE.equals(segment)) {
             node.blue(value);
             return;
         }
-        if ("contracts".equals(segment)) {
+        if (OBJECT_CONTRACTS.equals(segment)) {
             node.contracts(value);
             return;
         }
-        if (JsonPointer.isArrayIndexSegment(segment) && !"-".equals(segment)) {
+        if (JsonPointer.isArrayIndexSegment(segment)
+                && !ARRAY_APPEND_TOKEN.equals(segment)) {
             int index = Integer.parseInt(segment);
             List<Node> items = node.getItems();
             if (items == null) {

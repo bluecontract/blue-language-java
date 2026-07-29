@@ -4,7 +4,13 @@ import blue.language.model.Node;
 
 import java.lang.reflect.Type;
 
+/** Converts an exact scalar spelling to a constant of the requested enum. */
 public class EnumConverter implements Converter<Enum<?>> {
+
+    /** Creates a stateless enum converter. */
+    public EnumConverter() {
+    }
+
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Enum<?> convert(Node node, Type targetType) {

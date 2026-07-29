@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,7 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ExecutableBodyFieldMetadataTest {
 
     @Test
-    void handlerEventMatcherIsPreservedAsAuthoredPartialData() {
+    void shouldVerifyHandlerEventMatcherIsPreservedAsAuthoredPartialData() {
+        // given
         Node document = new Node()
                 .contracts(new Node()
                         .properties(
@@ -53,6 +55,7 @@ class ExecutableBodyFieldMetadataTest {
                         RuntimeBlueIds.HANDLER,
                         Collections.emptyList());
 
+        // when
         Set<String> mutablePaths =
                 DocumentProcessingRuntime.executableBodyPaths(
                         document,
@@ -65,6 +68,7 @@ class ExecutableBodyFieldMetadataTest {
                         Collections.singleton("/"),
                         handlerMetadata);
 
+        // then
         assertEquals(
                 Collections.singleton(
                         "/contracts/h/event"),
@@ -73,7 +77,8 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void typedPartialEventMatcherRemainsExactThroughMatchAndBodyMaterialization() {
+    void shouldVerifyTypedPartialEventMatcherRemainsExactThroughMatchAndBodyMaterialization() {
+        // given
         Fixture fixture =
                 new Fixture(
                         true,
@@ -81,9 +86,11 @@ class ExecutableBodyFieldMetadataTest {
                         false,
                         true);
 
+        // when
         DocumentProcessingResult result =
                 fixture.initialize();
 
+        // then
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
@@ -106,7 +113,8 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void registryCapturesExactRuntimeMetadataAndPreservesInheritedProgramPath() {
+    void shouldVerifyRegistryCapturesExactRuntimeMetadataAndPreservesInheritedProgramPath() {
+        // given
         Fixture fixture = new Fixture(false);
         ContractProcessorRegistry registry =
                 ContractProcessorRegistryBuilder.create()
@@ -116,18 +124,12 @@ class ExecutableBodyFieldMetadataTest {
                                 fixture.handlerType,
                                 fixture.processor)
                         .build();
+        // when
         fixture.processor.declaredExecutableFields.add(
                 "body");
-
-        assertEquals(
-                Collections.singletonList("program"),
-                registry.executableBodyFields(
-                        fixture.handlerTypeBlueId));
-        assertThrows(
-                UnsupportedOperationException.class,
+        Throwable mutationFailure = captureFailure(
                 () -> registry.executableBodyFields(
                         fixture.handlerTypeBlueId).add("body"));
-
         Set<String> mutablePaths =
                 DocumentProcessingRuntime.executableBodyPaths(
                         fixture.document(),
@@ -140,6 +142,12 @@ class ExecutableBodyFieldMetadataTest {
                         Collections.singleton("/"),
                         registry.executableBodyFieldsByType());
 
+        // then
+        assertEquals(
+                Collections.singletonList("program"),
+                registry.executableBodyFields(
+                        fixture.handlerTypeBlueId));
+        assertTrue(mutationFailure instanceof UnsupportedOperationException);
         assertEquals(
                 Collections.singleton(
                         "/contracts/run/program"),
@@ -152,12 +160,15 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void nonMatchingHandlerDoesNotDemandAnyCollapsedHandlerData() {
+    void shouldVerifyNonMatchingHandlerDoesNotDemandAnyCollapsedHandlerData() {
+        // given
         Fixture fixture = new Fixture(false);
 
+        // when
         DocumentProcessingResult result =
                 fixture.initialize();
 
+        // then
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
@@ -174,16 +185,19 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void nonMatchingHandlerBehindReferencedContractsMapDoesNotDemandBodyReference() {
+    void shouldVerifyNonMatchingHandlerBehindReferencedContractsMapDoesNotDemandBodyReference() {
+        // given
         Fixture fixture =
                 new Fixture(
                         false,
                         BodyForm
                                 .WHOLE_CONTRACTS_MAP_REFERENCE);
 
+        // when
         DocumentProcessingResult result =
                 fixture.initialize();
 
+        // then
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
@@ -196,7 +210,8 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void unrelatedLifecyclePatchBeforeMatchingDoesNotDemandBodyBehindReferencedContractRepresentations() {
+    void shouldVerifyUnrelatedLifecyclePatchBeforeMatchingDoesNotDemandBodyBehindReferencedContractRepresentations() {
+        // given
         for (BodyForm form : new BodyForm[]{
                 BodyForm.WHOLE_CONTRACT_REFERENCE,
                 BodyForm.WHOLE_CONTRACTS_MAP_REFERENCE}) {
@@ -206,9 +221,11 @@ class ExecutableBodyFieldMetadataTest {
                             form,
                             true);
 
+            // when
             DocumentProcessingResult result =
                     fixture.initialize();
 
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
@@ -236,15 +253,18 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void typedPatchConformancePreservesBodyBehindReferencedContractRepresentations() {
+    void shouldVerifyTypedPatchConformancePreservesBodyBehindReferencedContractRepresentations() {
+        // given
         for (BodyForm form : new BodyForm[]{
                 BodyForm.WHOLE_CONTRACT_REFERENCE,
                 BodyForm.WHOLE_CONTRACTS_MAP_REFERENCE}) {
             Fixture fixture = new Fixture(false, form);
 
+            // when
             ProcessingMetricsSnapshot metrics =
                     fixture.applyUnrelatedTypedPatchDirectly();
 
+            // then
             assertTrue(
                     metrics.counter("conformancePlans") > 0,
                     form + " did not exercise conformance planning");
@@ -256,12 +276,15 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void matchingHandlerDemandsAndMaterializesOnlyItsDeclaredProgramField() {
+    void shouldVerifyMatchingHandlerDemandsAndMaterializesOnlyItsDeclaredProgramField() {
+        // given
         Fixture fixture = new Fixture(true);
 
+        // when
         DocumentProcessingResult result =
                 fixture.initialize();
 
+        // then
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
@@ -280,7 +303,8 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void matcherSeesOnlyHeaderWhileExecutionReceivesExactBodyFromEagerSnapshotAcrossRepresentations() {
+    void shouldVerifyMatcherSeesOnlyHeaderWhileExecutionReceivesExactBodyFromEagerSnapshotAcrossRepresentations() {
+        // given
         for (BodyForm form : new BodyForm[]{
                 BodyForm.INHERITED_INLINE,
                 BodyForm.INHERITED_REFERENCE,
@@ -291,9 +315,11 @@ class ExecutableBodyFieldMetadataTest {
             Fixture fixture =
                     new Fixture(true, form);
 
+            // when
             DocumentProcessingResult result =
                     fixture.initialize();
 
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
@@ -314,24 +340,45 @@ class ExecutableBodyFieldMetadataTest {
     }
 
     @Test
-    void selectedExactReferenceAcceptsScalarAndMultiNodeListProviderContent() {
-        assertExactReferencedBody(
-                new Node().value("scalar"),
+    void shouldVerifySelectedExactReferenceAcceptsScalarProviderContent() {
+        // given
+        Node logicalBody = new Node().value("scalar");
+        List<Node> providerResult =
                 Collections.singletonList(
-                        new Node().value("scalar")));
+                        new Node().value("scalar"));
 
-        Node first = new Node().value("first");
-        Node second = new Node().value("second");
-        assertExactReferencedBody(
-                new Node().items(
-                        first.clone(),
-                        second.clone()),
-                java.util.Arrays.asList(
-                        first,
-                        second));
+        // when
+        ExactBodyObservation observation =
+                executeExactReferencedBody(
+                        logicalBody,
+                        providerResult);
+
+        // then
+        assertExactReferencedBody(observation);
     }
 
-    private void assertExactReferencedBody(
+    @Test
+    void shouldVerifySelectedExactReferenceAcceptsMultiNodeListProviderContent() {
+        // given
+        Node first = new Node().value("first");
+        Node second = new Node().value("second");
+        Node logicalBody = new Node().items(
+                first.clone(),
+                second.clone());
+        List<Node> providerResult =
+                java.util.Arrays.asList(first, second);
+
+        // when
+        ExactBodyObservation observation =
+                executeExactReferencedBody(
+                        logicalBody,
+                        providerResult);
+
+        // then
+        assertExactReferencedBody(observation);
+    }
+
+    private ExactBodyObservation executeExactReferencedBody(
             Node logicalBody,
             List<Node> providerResult) {
         String bodyBlueId =
@@ -398,17 +445,40 @@ class ExecutableBodyFieldMetadataTest {
             result = blue.initializeDocument(
                     document);
         }
+        return new ExactBodyObservation(
+                bodyBlueId,
+                processor,
+                result);
+    }
 
+    private void assertExactReferencedBody(
+            ExactBodyObservation observation) {
         assertEquals(
                 ProcessorStatus.SUCCESS,
-                result.status(),
-                diagnosticMessage(result));
+                observation.result.status(),
+                diagnosticMessage(observation.result));
         assertFalse(
-                processor.programWasVisibleDuringMatch);
+                observation.processor
+                        .programWasVisibleDuringMatch);
         assertEquals(
-                bodyBlueId,
+                observation.bodyBlueId,
                 BlueIdCalculator.calculateBlueId(
-                        processor.executedProgram));
+                        observation.processor.executedProgram));
+    }
+
+    private static final class ExactBodyObservation {
+        private final String bodyBlueId;
+        private final OpaqueBodyHandlerProcessor processor;
+        private final DocumentProcessingResult result;
+
+        private ExactBodyObservation(
+                String bodyBlueId,
+                OpaqueBodyHandlerProcessor processor,
+                DocumentProcessingResult result) {
+            this.bodyBlueId = bodyBlueId;
+            this.processor = processor;
+            this.result = result;
+        }
     }
 
     private enum BodyForm {

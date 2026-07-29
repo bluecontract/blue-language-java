@@ -35,76 +35,102 @@ final class ProcessorPhasePrecedenceTest {
                     Arrays.asList(31, "phase-precedence"));
 
     @Test
-    void rejectedAndStaleOnlyCandidatesDoNotPreflightUnsupportedOrMalformedSiblings() {
-        for (Node unrelated : Arrays.asList(
+    void shouldRejectedCandidatesSkipUnrelatedPreflight() {
+        // given
+        List<Node> unrelatedContracts = Arrays.asList(
                 new Node().type(
                         new Node().blueId(
                                 UNKNOWN_TYPE_BLUE_ID)),
                 new Node().properties(
                         "body",
-                        new Node().value("missing type")))) {
+                        new Node().value("missing type")));
+
+        // when
+        List<PhaseObservation> observations = new ArrayList<>();
+        for (Node unrelated : unrelatedContracts) {
+            observations.add(classifyBeforePreflight(
+                    false, true, unrelated));
+        }
+
+        // then
+        for (PhaseObservation observation : observations) {
             assertClassificationPrecedesPreflight(
-                    false,
-                    true,
-                    unrelated,
-                    ProcessorStatus.NO_MATCH);
-            assertClassificationPrecedesPreflight(
-                    true,
-                    false,
-                    unrelated,
-                    ProcessorStatus.STALE);
+                    observation, ProcessorStatus.NO_MATCH);
         }
     }
 
     @Test
-    void acceptedNewCandidatePreflightsUnsupportedOrMalformedSiblingBeforeInitialization() {
-        for (Node unrelated : Arrays.asList(
+    void shouldStaleCandidatesSkipUnrelatedPreflight() {
+        // given
+        List<Node> unrelatedContracts = Arrays.asList(
                 new Node().type(
                         new Node().blueId(
                                 UNKNOWN_TYPE_BLUE_ID)),
                 new Node().properties(
                         "body",
-                        new Node().value("missing type")))) {
-            Node channel = channel(true, true);
-            Node root = new Node().contracts(
-                    new Node()
-                            .properties(
-                                    "incoming",
-                                    channel)
-                            .properties(
-                                    "unrelated",
-                                    unrelated.clone()));
-            Node event = event();
+                        new Node().value("missing type")));
 
-            ProcessingDebugResult debug =
-                    phaseProcessor(
-                            plan(snapshot(channel, event)))
-                            .processDocumentWithTrace(
-                                    root.clone(),
-                                    event.clone());
+        // when
+        List<PhaseObservation> observations = new ArrayList<>();
+        for (Node unrelated : unrelatedContracts) {
+            observations.add(classifyBeforePreflight(
+                    true, false, unrelated));
+        }
 
+        // then
+        for (PhaseObservation observation : observations) {
+            assertClassificationPrecedesPreflight(
+                    observation, ProcessorStatus.STALE);
+        }
+    }
+
+    @Test
+    void shouldVerifyAcceptedNewCandidatePreflightsUnsupportedOrMalformedSiblingBeforeInitialization() {
+        // given
+        List<Node> unrelatedContracts = Arrays.asList(
+                new Node().type(
+                        new Node().blueId(
+                                UNKNOWN_TYPE_BLUE_ID)),
+                new Node().properties(
+                        "body",
+                        new Node().value("missing type")));
+
+        // when
+        List<PhaseObservation> observations = new ArrayList<>();
+        for (Node unrelated : unrelatedContracts) {
+            observations.add(classifyBeforePreflight(
+                    true, true, unrelated));
+        }
+
+        // then
+        for (PhaseObservation observation : observations) {
             assertEquals(
                     ProcessorStatus.CAPABILITY_FAILURE,
-                    debug.processResult().status());
+                    observation.debug.processResult().status());
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(root),
                     BlueIdCalculator.calculateBlueId(
-                            debug.processResult().document()));
+                            observation.root),
+                    BlueIdCalculator.calculateBlueId(
+                            observation.debug
+                                    .processResult().document()));
             assertTrue(
-                    debug.processResult().events().isEmpty());
+                    observation.debug
+                            .processResult().events().isEmpty());
             assertFalse(
                     hasInitializedMarker(
-                            debug.processResult().document()));
+                            observation.debug
+                                    .processResult().document()));
             assertEquals(
                     1L,
-                    debug.trace().counterQuantity(
+                    observation.debug.trace().counterQuantity(
                             "processor",
                             "channelAccepted"));
         }
     }
 
     @Test
-    void phaseBChargesOneScopeAndEachExactHeaderBeforeItsRejectedCandidate() {
+    void shouldVerifyPhaseBChargesOneScopeAndEachExactHeaderBeforeItsRejectedCandidate() {
+        // given
         Node first = channel(false, true);
         Node second = channel(false, true);
         second.properties(
@@ -128,11 +154,25 @@ final class ProcessorPhasePrecedenceTest {
                         .exactRuntimeState()
                         .build();
 
+        // when
         ProcessingDebugResult debug =
                 phaseProcessor(plan)
                         .processDocumentWithTrace(
                                 root, event);
+        List<String> phaseBCounters =
+                new ArrayList<>();
+        for (GasTraceEntry entry
+                : debug.trace().gas()) {
+            if ("scopeOpened".equals(entry.counter())
+                    || "contractHeaderRecognized".equals(
+                    entry.counter())
+                    || "channelCandidateTested".equals(
+                    entry.counter())) {
+                phaseBCounters.add(entry.counter());
+            }
+        }
 
+        // then
         assertEquals(
                 ProcessorStatus.NO_MATCH,
                 debug.processResult().status());
@@ -150,18 +190,6 @@ final class ProcessorPhasePrecedenceTest {
                 debug.trace().counterQuantity(
                         "processor",
                         "channelCandidateTested"));
-        List<String> phaseBCounters =
-                new ArrayList<>();
-        for (GasTraceEntry entry
-                : debug.trace().gas()) {
-            if ("scopeOpened".equals(entry.counter())
-                    || "contractHeaderRecognized".equals(
-                    entry.counter())
-                    || "channelCandidateTested".equals(
-                    entry.counter())) {
-                phaseBCounters.add(entry.counter());
-            }
-        }
         assertEquals(
                 Arrays.asList(
                         "scopeOpened",
@@ -173,78 +201,91 @@ final class ProcessorPhasePrecedenceTest {
     }
 
     @Test
-    void directTerminationBypassesUnavailableAndInvalidFeederForNodeAndSnapshotForms() {
-        Node root = terminatedRoot();
-        Node event = event();
-        String missing = BlueIdCalculator.calculateBlueId(
-                new Node().name("Unavailable feeder state"));
-        AtomicInteger feederCalls = new AtomicInteger();
-        ExternalDeliveryPlanDeriver unavailable =
-                ExternalDeliveryPlanDeriver.needsResources(
-                        Collections.singletonList(missing));
+    void shouldDirectTerminationBypassUnavailableFeederForNodeInput() {
+        // given
+        try (TerminatedPhaseFixture fixture =
+                     terminatedPhaseFixture()) {
+            // when
+            ProcessingDebugResult result =
+                    fixture.processor.processDocumentWithTrace(
+                            fixture.root.clone(),
+                            fixture.event.clone());
 
-        try (Blue language = new Blue()) {
-            ResolvedSnapshot snapshot =
-                    language.resolveToSnapshot(root.clone());
-            DocumentProcessor processor =
-                    DocumentProcessor.builder()
-                            .withSnapshotManager(
-                                    language.getDocumentProcessor()
-                                            .snapshotManager())
-                            .withExternalDeliveryPlanDeriver(
-                                    (document, processingEvent) -> {
-                                        feederCalls.incrementAndGet();
-                                        return unavailable.derive(
-                                                document,
-                                                processingEvent);
-                                    })
-                            .build();
+            // then
+            assertTerminatedAtPhaseA(
+                    result, fixture.root, null);
+            assertEquals(0, fixture.feederCalls.get());
+        }
+    }
 
-            ProcessingDebugResult node =
-                    processor.processDocumentWithTrace(
-                            root.clone(), event.clone());
-            ProcessingDebugResult resolved =
-                    processor.processDocumentWithTrace(
-                            snapshot, event.clone());
+    @Test
+    void shouldDirectTerminationBypassUnavailableFeederForSnapshotInput() {
+        // given
+        try (TerminatedPhaseFixture fixture =
+                     terminatedPhaseFixture()) {
+            // when
+            ProcessingDebugResult result =
+                    fixture.processor.processDocumentWithTrace(
+                            fixture.snapshot,
+                            fixture.event.clone());
 
-            VerifiedExecutionEvidence invalid =
-                    VerifiedExecutionEvidence.builder(
-                                    BlueIdCalculator.calculateBlueId(
-                                            new Node().properties(
-                                                    "different",
-                                                    new Node().value(true))),
-                                    BlueIdCalculator.calculateBlueId(
-                                            event))
-                            .revisions(0L, 0L)
-                            .runtimeRegistryIdentity(
-                                    RuntimeBlueIds
-                                            .REGISTRY_PACKAGE_IDENTITY)
-                            .eventOrderKey(EVENT_ORDER)
-                            .build();
-            ProcessingDebugResult invalidNode =
-                    processor.processDocumentWithTrace(
-                            root.clone(),
-                            event.clone(),
-                            invalid);
-            ProcessingDebugResult invalidSnapshot =
-                    processor.processDocumentWithTrace(
-                            snapshot,
-                            event.clone(),
-                            invalid);
+            // then
+            assertTerminatedAtPhaseA(
+                    result, fixture.root, fixture.snapshot);
+            assertEquals(0, fixture.feederCalls.get());
+        }
+    }
+
+    @Test
+    void shouldDirectTerminationPrecedeInvalidEvidenceForNodeInput() {
+        // given
+        try (TerminatedPhaseFixture fixture =
+                     terminatedPhaseFixture()) {
+            // when
+            ProcessingDebugResult result =
+                    fixture.processor.processDocumentWithTrace(
+                            fixture.root.clone(),
+                            fixture.event.clone(),
+                            fixture.invalidEvidence);
+
+            // then
+            assertTerminatedAtPhaseA(
+                    result, fixture.root, null);
+            assertEquals(0, fixture.feederCalls.get());
+        }
+    }
+
+    @Test
+    void shouldDirectTerminationPrecedeInvalidEvidenceForSnapshotInput() {
+        // given
+        try (TerminatedPhaseFixture fixture =
+                     terminatedPhaseFixture()) {
+            // when
+            ProcessingDebugResult result =
+                    fixture.processor.processDocumentWithTrace(
+                            fixture.snapshot,
+                            fixture.event.clone(),
+                            fixture.invalidEvidence);
+
+            // then
+            assertTerminatedAtPhaseA(
+                    result, fixture.root, fixture.snapshot);
+            assertEquals(0, fixture.feederCalls.get());
+        }
+    }
+
+    @Test
+    void shouldDirectTerminationCompleteProcessAttemptWithoutFeederWork() {
+        // given
+        try (TerminatedPhaseFixture fixture =
+                     terminatedPhaseFixture()) {
+            // when
             ProcessAttemptResult attempt =
-                    processor.processAttempt(
-                            root.clone(), event.clone());
+                    fixture.processor.processAttempt(
+                            fixture.root.clone(),
+                            fixture.event.clone());
 
-            assertTerminatedAtPhaseA(
-                    node, root, null);
-            assertTerminatedAtPhaseA(
-                    resolved, root, snapshot);
-            assertTerminatedAtPhaseA(
-                    invalidNode, root, null);
-            assertTerminatedAtPhaseA(
-                    invalidSnapshot, root, snapshot);
-            assertEquals(0, feederCalls.get(),
-                    "direct terminated state must precede feeder derivation");
+            // then
             assertEquals(
                     ProcessAttemptResult.Kind.COMPLETE,
                     attempt.kind());
@@ -257,14 +298,14 @@ final class ProcessorPhasePrecedenceTest {
                                     "processor",
                                     "processInvocation")),
                     attempt.portableGas());
+            assertEquals(0, fixture.feederCalls.get());
         }
     }
 
-    private static void assertClassificationPrecedesPreflight(
+    private static PhaseObservation classifyBeforePreflight(
             boolean accepts,
             boolean newer,
-            Node unrelated,
-            ProcessorStatus expectedStatus) {
+            Node unrelated) {
         Node channel = channel(accepts, newer);
         Node root = new Node().contracts(
                 new Node()
@@ -281,13 +322,20 @@ final class ProcessorPhasePrecedenceTest {
         ProcessingDebugResult debug =
                 processor.processDocumentWithTrace(
                         root.clone(), event.clone());
+        return new PhaseObservation(root, debug);
+    }
 
+    private static void assertClassificationPrecedesPreflight(
+            PhaseObservation observation,
+            ProcessorStatus expectedStatus) {
+        ProcessingDebugResult debug = observation.debug;
         assertEquals(
                 expectedStatus,
                 debug.processResult().status(),
                 diagnosticMessage(debug.processResult()));
         assertEquals(
-                BlueIdCalculator.calculateBlueId(root),
+                BlueIdCalculator.calculateBlueId(
+                        observation.root),
                 BlueIdCalculator.calculateBlueId(
                         debug.processResult().document()));
         assertTrue(
@@ -312,6 +360,55 @@ final class ProcessorPhasePrecedenceTest {
                         "contractHeaderRecognized"));
         assertTrue(
                 debug.trace().contractSnapshots().isEmpty());
+    }
+
+    private static TerminatedPhaseFixture terminatedPhaseFixture() {
+        Node root = terminatedRoot();
+        Node event = event();
+        String missing = BlueIdCalculator.calculateBlueId(
+                new Node().name("Unavailable feeder state"));
+        AtomicInteger feederCalls = new AtomicInteger();
+        ExternalDeliveryPlanDeriver unavailable =
+                ExternalDeliveryPlanDeriver.needsResources(
+                        Collections.singletonList(missing));
+        Blue language = new Blue();
+        ResolvedSnapshot snapshot =
+                language.resolveToSnapshot(root.clone());
+        DocumentProcessor processor =
+                DocumentProcessor.builder()
+                        .withSnapshotManager(
+                                language.getDocumentProcessor()
+                                        .snapshotManager())
+                        .withExternalDeliveryPlanDeriver(
+                                (document, processingEvent) -> {
+                                    feederCalls.incrementAndGet();
+                                    return unavailable.derive(
+                                            document,
+                                            processingEvent);
+                                })
+                        .build();
+        VerifiedExecutionEvidence invalidEvidence =
+                VerifiedExecutionEvidence.builder(
+                                BlueIdCalculator.calculateBlueId(
+                                        new Node().properties(
+                                                "different",
+                                                new Node().value(true))),
+                                BlueIdCalculator.calculateBlueId(
+                                        event))
+                        .revisions(0L, 0L)
+                        .runtimeRegistryIdentity(
+                                RuntimeBlueIds
+                                        .REGISTRY_PACKAGE_IDENTITY)
+                        .eventOrderKey(EVENT_ORDER)
+                        .build();
+        return new TerminatedPhaseFixture(
+                language,
+                root,
+                event,
+                snapshot,
+                processor,
+                invalidEvidence,
+                feederCalls);
     }
 
     private static DocumentProcessor phaseProcessor(
@@ -468,6 +565,52 @@ final class ProcessorPhasePrecedenceTest {
                 && document.getContracts().getProperties() != null
                 && document.getContracts().getProperties()
                     .containsKey("initialized");
+    }
+
+    private static final class PhaseObservation {
+        private final Node root;
+        private final ProcessingDebugResult debug;
+
+        private PhaseObservation(
+                Node root,
+                ProcessingDebugResult debug) {
+            this.root = root;
+            this.debug = debug;
+        }
+    }
+
+    private static final class TerminatedPhaseFixture
+            implements AutoCloseable {
+        private final Blue language;
+        private final Node root;
+        private final Node event;
+        private final ResolvedSnapshot snapshot;
+        private final DocumentProcessor processor;
+        private final VerifiedExecutionEvidence invalidEvidence;
+        private final AtomicInteger feederCalls;
+
+        private TerminatedPhaseFixture(
+                Blue language,
+                Node root,
+                Node event,
+                ResolvedSnapshot snapshot,
+                DocumentProcessor processor,
+                VerifiedExecutionEvidence invalidEvidence,
+                AtomicInteger feederCalls) {
+            this.language = language;
+            this.root = root;
+            this.event = event;
+            this.snapshot = snapshot;
+            this.processor = processor;
+            this.invalidEvidence = invalidEvidence;
+            this.feederCalls = feederCalls;
+        }
+
+        @Override
+        public void close() {
+            processor.close();
+            language.close();
+        }
     }
 
     public static final class PhaseChannel

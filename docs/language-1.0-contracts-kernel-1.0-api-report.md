@@ -1,17 +1,33 @@
-# Blue Language 1.0 and Contracts Kernel 1.0 final JVM API report
+# Blue Language 1.0 and Contracts Kernel 1.0 JVM API cleanup ledger
 
-This report records the intentional pre-1.0 Java API cleanup between the
+> **Generic-kernel candidate overlay.** The checked-in compatibility baseline
+> contains 293 externally reachable public/protected classes. The generic
+> hosted-runtime candidate contains 320 classes at class-file major version
+> 52. `verifyFinalApiBaseline` currently reports zero incompatibilities and 127
+> additive class/member descriptors. The generated final-generic-kernel report
+> records the exact additive list and whether the baseline itself is unchanged
+> from the candidate commit.
+
+This ledger records the intentional pre-1.0 Java API cleanup between the
 committed implementation at `2cb64cf14c2696aedeef92743788e67b6a2e1fb7` and
-the final Language 1.0 / Contracts Kernel 1.0 candidate working tree.
+an earlier Language 1.0 / Contracts Kernel 1.0 candidate.
 
 The inventory is based on compiled production class files, not on source names
-alone. It covers every externally reachable public or protected class, field,
-constructor, and method descriptor. The final comparison contains 79
-intentional pre-1.0 incompatibilities and 44 additions: 30 from the original
-Language/Contracts cleanup and 14 from the subsequent Phase-B/fragmentation
-completion. The tables below account for all 79 changes; when an entire type
-was removed, they also list every public member of that type even though the
-class-file comparison reports the type as one change.
+alone. The historical comparison contained 79 intentional pre-1.0
+incompatibilities and 44 additions: 30 from the original Language/Contracts
+cleanup and 14 from the subsequent Phase-B/fragmentation completion. The
+tables below retain that design ledger. The final candidate evidence is the
+checked-in deterministic JSON baseline and the generated binary-API report,
+not those historical totals.
+
+Immediately before refreshing the baseline, the preceding 288-class snapshot
+was compared with the final 293-class candidate. That audit reported 12
+intentional pre-1.0 removals or descriptor changes and 36 additions, including
+the final `document` marker shape, proof-bound cyclic-set API, typed Channel
+lookup, and removal of the retained transient-trusted content lane. After the
+reviewed candidate replaced the forward baseline, the exact
+baseline-to-candidate check reported 293/293 classes, zero incompatibilities,
+and zero additions.
 
 This is an API-shape report. It does not report test or conformance outcomes.
 
@@ -26,8 +42,17 @@ first final baseline:
 - channel occurrences come from revision-bound verified feeder evidence, not
   caller-authored delivery carriers;
 - provider identity evidence and resolved-graph structural sharing use
-  different cache APIs;
+  different cache APIs, with no transient-trusted content lane;
 - runtime gas uses named, weighted child ledgers;
+- `RuntimeWorkSession` owns multiple live-bounded runtime namespaces and their
+  success, deterministic-failure, suspension, and exhaustion lifecycle;
+- one invocation-owned `RuntimeWorkBudget` can cap work accumulated across
+  several independently named runtime ledgers without replacing the parent
+  invocation limit;
+- `SemanticOutputBoundary` admits exact hosted output under the invocation's
+  semantic meter;
+- subtype-compatible member catalogs, exact executable-body source
+  descriptors, and selected-body materialization remain header/body-local;
 - submitted child-ledger gas is admitted immediately and survives rollback of
   later application effects;
 - subscription validation receives one evidence-rich context;
@@ -45,7 +70,9 @@ first final baseline:
 - exact pure-reference Root and Event inputs are admitted through the verified
   processing snapshot boundary without recursive whole-graph expansion;
 - finalized cyclic-member references remain opaque exact edges during generic
-  fragmentation and require cyclic-set proof when opened;
+  fragmentation and require cyclic-set proof when opened; proof acquisition
+  preserves typed found, not-found, unavailable, and invalid-evidence
+  outcomes;
 - application splitters can inspect effective/inherited `Process Embedded`,
   header, contribution, and executable-body boundaries without execution or
   body materialization;
@@ -53,23 +80,27 @@ first final baseline:
   logical handler delivery while retaining their own atomic checkpoints;
 - fatal runtime failure is atomic and noncommitting, while graceful
   termination remains a successful business transition;
-- preview aliases and partial-evidence constructors are absent from the final
-  surface; the one released provider compatibility descriptor remains but
-  enforces verification and provides no trust bypass.
+- initialization markers and initiation events carry the exact
+  pre-initialization `document`, never a derived `documentId`;
+- exact same-scope Channel lookup distinguishes Channel, proven absence, and a
+  present non-Channel member;
+- preview aliases and partial-evidence constructors are absent from the target
+  surface; generic provider entry points enforce verification and provide no
+  trust bypass.
 
 The final source also treats these decisions as release invariants. Production
 code may not declare `@Deprecated`, and it may not reintroduce a bare
 `reverse(...)` API or `MergeReverser`.
 
-## Downstream compatibility and excluded Coordination prerequisites
+## Repository-independent provider boundary
 
-The released
-`blue.repo:blue-repo-java:3.0.0-rc.10`
-`BlueRepository.configure()` bytecode still invokes
-`NodeProviderWrapper.unverified(NodeProvider)`. The descriptor is retained for
-binary linkage, but its implementation delegates to
-`NodeProviderWrapper.wrap(...)`: every result-producing provider leaf is
-verified, and the former host-trust bypass is not restored.
+The public API depends only on the generic `NodeProvider` contract and makes no
+assumption about a repository product, catalog artifact, or manifest.
+`NodeProviderWrapper.unverified(NodeProvider)` remains only as a binary
+signature and delegates to the strict direct-node verification performed by
+`NodeProviderWrapper.wrap(...)`. Explicit authored-source admission uses
+`ProviderEvidenceVerifier` and a fully bound `SourceProviderEnvironment`; no
+provider entry point supplies a host-trust bypass.
 
 The generic kernel now separates accepted raw source occurrences from a
 same-scope logical handler delivery. Runtime-neutral immutable functions can
@@ -82,7 +113,9 @@ policy, and source persistence remain outside this repository.
 
 That routing boundary is now closed across Phase B. A fixed peer target is
 declared with `dependOnSameScopeChannel(key)`; an event-selected target uses
-`dependOnSameScopeChannelCatalog()` followed by event-only `channel(key)`.
+`dependOnSameScopeChannelCatalog()` followed by event-only
+`lookupChannel(key)`. The typed result distinguishes Channel, proven absence,
+and a present non-Channel key; `channel(key)` is only a compatibility view.
 `ChannelMemberSnapshot` proves the effective Channel role and sanitized header
 without granting External-source or checkpoint behavior. The active interval
 retains exact Channel entries and whole-catalog raw-key membership so Phase B
@@ -91,9 +124,10 @@ non-Channel key, and keep unrelated bodies cold. The selected target snapshot
 is compared again with the full Phase-C bundle before mutation.
 
 The generic named child-ledger surface is also not a claim that every
-downstream runtime can already populate it. BEX 1.1 lacks the required named
-live counter stream and needs a coordinated update before it can provide a
-Contracts 1.0 runtime ledger.
+downstream runtime populates it identically. BEX 2.0 integrations bind their
+named live counter stream through this Language-owned boundary and must
+validate the exact compatible artifact before claiming a Contracts 1.0
+runtime ledger.
 
 Event-scoped `matchesPattern(...)` and
 `materializeExactReference(...)` close inline/pure-reference acceptance and
@@ -201,7 +235,7 @@ Language subtotal: **15 JVM changes**.
 | 3 | `DocumentProcessingResult.capabilityFailure()`; `failureReason()`; `errorCategory()` | Inspect `status()` directly. Read failure detail from nullable `diagnostic()`, then `ProcessorDiagnostic.message()` or `category()`. To reproduce the old boolean exactly, test both `CAPABILITY_FAILURE` and `INVALID_PROCESSING_DOCUMENT`; final code should normally distinguish them. |
 | 1 | `DocumentProcessingResult.triggeredEvents()` | Use `events()`. The final name also reinforces that the list contains Root emissions, not a public transitive event log. |
 | 1 | `DocumentProcessingRuntime.addGas(long)` | Create a named ledger with `newRuntimeGasLedger(String, Map<String, Long>)`, charge declared counters on the `GasMeter.ChildGasLedger`, and submit/merge it once. Submission admits the ledger immediately, so its gas and trace survive rollback of later application effects. Anonymous gas units are not part of the Contracts 1.0 accounting vocabulary. |
-| 1 | `DocumentProcessingRuntime.calculatePreInitializationScopeContentBlueId(String)` | Use `calculatePreInitializationScopeNodeBlueId(String)`. The value is the direct BlueId of the exact pre-initialization scope node, not Content BlueId after preprocessing or resolution. |
+| 1 | `DocumentProcessingRuntime.calculatePreInitializationScopeContentBlueId(String)` | Historical replacement: `calculatePreInitializationScopeNodeBlueId(String)`. The final candidate instead captures the exact pre-initialization scope with `capturePreInitializationScopeDocument(String)` so lifecycle state carries `document`, not a derived identifier. |
 | 1 | `DocumentProcessingRuntime.chargeFatalTerminationOverhead()` | No replacement. Contracts 1.0 has no committed fatal mode and no fixed fatal closeout charge. |
 | 2 | `ProcessorExecutionContext.consumeGas(long)`; `terminateFatally(String)` | For gas, use `newRuntimeGasLedger(...)` and `submitRuntimeGasLedger(...)`; submission is immediate and permitted once per handler result. For deterministic atomic runtime failure, use `throwFatal(String)`. Use `terminateGracefully(String)` or `terminate(String cause, String reason)` only for successful business termination. |
 | 2 | `MockExternalChannelProcessor(ScriptedContractsRuntime)`; `MockExternalChannelProcessor(ScriptedContractsRuntime, Node)` | Use `MockExternalChannelProcessor()` or `MockExternalChannelProcessor(Node checkpointSubjectOverride)`. The conformance channel behavior is declared by the immutable selected channel; `ScriptedContractsRuntime` is not a constructor dependency. |
@@ -249,8 +283,8 @@ Processing and diagnostics subtotal: **51 JVM changes**.
 | 1 | `FrozenNode.fromResolvedNode(Node, FrozenNode.ResolvedReferenceInterner)` | Prefer `ResolvedReferenceCache.freezeResolved(Node)`. For an independent structural interner, use `FrozenNode.fromResolvedNode(Node, FrozenNode.ResolvedStructuralInterner)`. BlueId-keyed graph interning is not evidence verification. |
 | 1 | Removed compatibility interface `FrozenNode.ResolvedReferenceInterner`, including `lookup(String)` and `intern(String, FrozenNode)` | Use verified cache publication/retrieval for BlueId identity and `ResolvedStructuralInterner` for exact immutable graph sharing. No single interface should conflate those responsibilities. |
 | 3 | `FrozenNode.ResolvedStructuralInterner` no longer extends `ResolvedReferenceInterner`; its inherited/default `lookup(String)` and `intern(String, FrozenNode)` methods were removed | Implement only `intern(FrozenNode.ResolvedStructuralKey, FrozenNode)`. The structural key includes exact representation details that a semantic Content BlueId deliberately omits. |
-| 1 | `ResolvedReferenceCache` no longer implements `FrozenNode.ResolvedReferenceInterner` | Use the cache’s explicit verified-canonical, verified-resolved, transient-trusted, and structural-graph operations. There is no generic BlueId interner contract. |
-| 6 | `ResolvedReferenceCache.get(String)`; `mutableCopy(String)`; `putIfAbsent(String, FrozenNode)`; `indexResolved(FrozenNode)`; `lookup(String)`; `intern(String, FrozenNode)` | Read through `getVerifiedCanonical(String)` or `getVerifiedResolved(String)`; convert a verified frozen value with `FrozenNode.toNode()` when a mutable copy is required. Publish verified content with `putVerifiedCanonical(...)`, `putVerifiedResolved(VerifiedReferenceResolution)`, or `putPinnedVerifiedResolved(...)`. Use `rememberResolvedGraph(FrozenNode)`/`freezeResolved(Node)` for structural reuse. The removed alias lane never established provider identity and therefore has no final equivalent. |
+| 1 | `ResolvedReferenceCache` no longer implements `FrozenNode.ResolvedReferenceInterner` | Use explicit verified-canonical, verified-resolved, and structural-graph operations. The legacy transient-trusted methods remain only as fail-closed compatibility bridges and retain no content. There is no generic BlueId interner contract. |
+| 6 | `ResolvedReferenceCache.get(String)`; `mutableCopy(String)`; `putIfAbsent(String, FrozenNode)`; `indexResolved(FrozenNode)`; `lookup(String)`; `intern(String, FrozenNode)` | Read through `getVerifiedCanonical(String)` or `getVerifiedResolved(String)`; convert a verified frozen value with `FrozenNode.toNode()` when a mutable copy is required. Publish only independently verified content with `putVerifiedCanonical(...)` or `putVerifiedResolved(VerifiedReferenceResolution)`. Use `rememberResolvedGraph(FrozenNode)`/`freezeResolved(Node)` for non-authoritative structural reuse. There is no transient-trusted content lane. |
 The released `NodeProviderWrapper.unverified(NodeProvider)` and
 `isExplicitlyHostTrusted(NodeProvider)` descriptors remain binary-compatible.
 The former delegates to `wrap(...)`; the latter always reports `false`. They
@@ -276,7 +310,7 @@ The pre-Phase-B class-file comparison identifies 30 additions:
 | 1 | `CanonicalIdentityInputBuilder` | Names canonical identity reconstruction and requires `(resolvedNode, preprocessedSource)`. |
 | 1 | `MinimizedOverlayBuilder` | Names author-facing minimized-overlay construction and requires only `resolvedNode`. |
 | 1 | `ReleaseConformanceCli.main(String[])` | Provides the strict release-report command entry point. |
-| 1 | `DocumentProcessingRuntime.calculatePreInitializationScopeNodeBlueId(String)` | Replaces the misleading `...ContentBlueId` name with the exact direct-node operation. |
+| 1 | Historical addition `DocumentProcessingRuntime.calculatePreInitializationScopeNodeBlueId(String)` | Superseded in the final candidate by `capturePreInitializationScopeDocument(String)`, which returns the exact frozen scope document needed by initialization lifecycle state. |
 | 1 | `ProcessingDebugResult.resultingSnapshot()` | Carries snapshot-native debug state outside the five-field semantic result. |
 | 1 | `MockExternalChannelProcessor(Node checkpointSubjectOverride)` | Retains the fixture control without a `ScriptedContractsRuntime` constructor dependency. |
 | 2 | `ExactNodeGraphFragments` and `ExactNodeGraphFragments.RootRepresentation` | Construct immutable identity-preserving shallow fragments, pure-reference Root forms, exact fragment inventories, and a verified in-memory provider without defining a second graph representation. |
@@ -302,7 +336,7 @@ and 14 additions relative to the prior checked baseline:
 | `ChannelMemberSnapshot` | Frozen, read-only same-scope External or processor-managed Channel header. It carries key, order, effective type, role, ordered contributions, deterministic header dependencies, header identity, and a defensive sanitized header node—never source evaluation, checkpoint, handler execution, or executable-body authority. |
 | `ExternalChannelFunctionContext.dependOnSameScopeChannel(String)` | Declares one required fixed Channel target during subscription-header evaluation and returns its immutable header. |
 | `ExternalChannelFunctionContext.dependOnSameScopeChannelCatalog()` | Declares the bounded complete same-scope Channel-header selector when an event may name any target key. |
-| `ExternalChannelFunctionContext.channel(String)` | Performs one event-only exact raw-key lookup covered by an exact or whole-catalog declaration. Empty means proven semantic absence; a present non-Channel or incomplete evidence fails distinctly. |
+| `ExternalChannelFunctionContext.lookupChannel(String)` and `ChannelLookupResult` | Perform one event-only exact raw-key lookup covered by an exact or whole-catalog declaration and preserve the three distinct outcomes: Channel, proven absence, and present non-Channel. |
 | `ExternalChannelDependencySnapshot.ChannelEntry`, `channelEntries()`, `wholeSameScopeChannelCatalog()`, and `channelCatalogContractKeys()` | Retain exact target headers plus complete raw-key membership for checkpoint-domain derivation, interval invalidation, sparse evidence verification, and Phase-B rehydration. |
 | Dependency-snapshot constructors carrying Channel entries/catalog membership | Provide a public canonical round trip for retained evidence. |
 | `DocumentProcessor.effectiveFragmentationCatalog(Node)` and `EffectiveFragmentationCatalog` | Expose immutable provider-verified effective fragmentation boundaries without executing contracts or consuming Contracts gas. |
@@ -394,3 +428,34 @@ candidate classes with a major version above 52, preserving Java 8 bytecode.
 The Gradle `check` lifecycle depends on `verifyNoDeprecatedProductionApi`,
 `verifyNoAmbiguousReverseApi`, and `verifyFinalApiBaseline`, so source-shape and
 binary-surface drift are evaluated together.
+
+## Final-candidate regeneration
+
+The final candidate was generated with the following sequence after all
+production changes were complete. The old-baseline comparison is retained as
+audit evidence:
+
+```bash
+./gradlew clean
+./gradlew jar
+python3 tools/check_binary_api.py \
+  api/blue-language-java-1.0.json \
+  build/libs/<final-release>.jar \
+  build/reports/binary-api/pre-final-baseline-to-candidate.txt
+python3 tools/write_api_baseline.py \
+  build/libs/<final-release>.jar \
+  build/reports/binary-api/blue-language-java-1.0.candidate.json
+```
+
+Review the generated JSON and the pre-final comparison without replacing
+`api/blue-language-java-1.0.json` during implementation. A separately reviewed
+release process may advance that floor after compatibility approval. Run:
+
+```bash
+./gradlew verifyFinalApiBaseline
+```
+
+The generated machine-readable report contains the exact descriptor list. Run
+the final `clean build` and `rcVerify` invocations separately with the same
+`SOURCE_DATE_EPOCH` so their evidence is bound to the exact final input
+fingerprint.

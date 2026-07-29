@@ -48,9 +48,11 @@ class DeepGraphPhysicalLocalityIntegrationTest {
 
     private static final int SPINE_SCOPE_COUNT = 7;
     private static final int DECOY_HANDLERS_PER_SCOPE = 4;
-    private static final int UNRELATED_BODY_PAYLOAD_BYTES = 12_000;
+    private static final int UNRELATED_BODY_PAYLOAD_BYTES = 32_000;
     private static final int SELECTED_BODY_PAYLOAD_BYTES = 8_000;
     private static final int BOUNDED_BATCH_SIZE = 3;
+    private static final long MIN_UNRELATED_GRAPH_BYTES =
+            2L * 1024L * 1024L;
 
     private static final String SELECTED_SEGMENT = "selected";
     private static final String LEFT_SEGMENT = "left";
@@ -73,35 +75,34 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                     91, "deep-locality", 1));
 
     @Test
-    void deepGraphHasSemanticParityAndPhysicalLocalityAcrossRepresentationsAndProviders() {
-        SemanticProjection baseline = null;
-        int variants = 0;
+    void shouldVerifyDeepGraphHasSemanticParityAndPhysicalLocalityAcrossRepresentationsAndProviders() {
+        // given
+        List<Variant> variants = Variant.requiredMatrix();
 
-        for (BodyForm bodyForm : BodyForm.values()) {
-            for (EntryMode entryMode : EntryMode.values()) {
-                for (CacheMode cacheMode : CacheMode.values()) {
-                    for (BatchMode batchMode : BatchMode.values()) {
-                        Variant variant = new Variant(
-                                bodyForm, entryMode, cacheMode, batchMode);
-                        Run run = execute(variant);
-                        assertDefinitiveLocalityProof(run);
-                        SemanticProjection projection =
-                                SemanticProjection.of(run.debug);
-                        if (baseline == null) {
-                            baseline = projection;
-                        } else {
-                            assertEquals(
-                                    baseline,
-                                    projection,
-                                    "semantic drift for " + variant);
-                        }
-                        variants++;
-                    }
-                }
+        // when
+        List<Run> runs = new ArrayList<>(variants.size());
+        List<SemanticProjection> projections =
+                new ArrayList<>(variants.size());
+        for (Variant variant : variants) {
+            runs.add(execute(variant));
+        }
+        for (Run run : runs) {
+            projections.add(SemanticProjection.of(run.debug));
+        }
+        SemanticProjection baseline = projections.get(0);
+
+        // then
+        for (int index = 0; index < runs.size(); index++) {
+            Run run = runs.get(index);
+            assertDefinitiveLocalityProof(run);
+            if (index > 0) {
+                assertEquals(
+                        baseline,
+                        projections.get(index),
+                        "semantic drift for " + run.variant);
             }
         }
-
-        assertEquals(24, variants);
+        assertEquals(32, variants.size());
         assertNotNull(baseline);
         assertEquals(ProcessorStatus.SUCCESS, baseline.status);
         assertEquals(2, baseline.rootEventBlueIds.size());
@@ -112,7 +113,8 @@ class DeepGraphPhysicalLocalityIntegrationTest {
     }
 
     @Test
-    void rootOnlyPureReferenceEventDoesNotDemandAnyEmbeddedScope() {
+    void shouldVerifyRootOnlyPureReferenceEventDoesNotDemandAnyEmbeddedScope() {
+        // given
         Scenario scenario =
                 Scenario.forForm(
                         BodyForm.REFERENCE);
@@ -216,10 +218,9 @@ class DeepGraphPhysicalLocalityIntegrationTest {
         }
         String rootBlueId =
                 BlueIdCalculator.calculateBlueId(root);
-        assertEquals(
-                rootBlueId,
+        String rootFragmentBlueId =
                 BlueIdCalculator.calculateBlueId(
-                        rootFragment));
+                        rootFragment);
         providerContent.put(
                 rootBlueId,
                 rootFragment);
@@ -361,84 +362,87 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                     // inside the generic processor.
                                 })
                         .build();
+        ProcessingDebugResult debug;
+        ProviderMetrics providerMetrics;
         try {
-            ProcessingDebugResult debug =
+            // when
+            debug =
                     processor.processDocumentWithTrace(
                             new Node().blueId(
-                                    rootBlueId),
+                            rootBlueId),
                             new Node().blueId(
                                     scenario.eventBlueId));
-
-            assertEquals(
-                    ProcessorStatus.SUCCESS,
-                    debug.processResult().status(),
-                    debug.processResult()
-                                    .diagnostic() != null
-                            ? debug.processResult()
-                                    .diagnostic()
-                                    .message()
-                            : null);
-            assertEquals(
-                    "root-processed",
-                    debug.processResult()
-                            .document()
-                            .getAsText(
-                                    "/localState"));
-            assertEquals(
-                    allowed,
-                    measured.snapshotMetrics()
-                            .requestedBlueIds);
-            assertTrue(
-                    Collections.disjoint(
-                            measured.snapshotMetrics()
-                                    .requestedBlueIds,
-                            embeddedChildBlueIds));
-            assertTrue(
-                    Collections.disjoint(
-                            measured.snapshotMetrics()
-                                    .requestedBlueIds,
-                            scenario.unrelatedBodyBlueIds));
-            assertEquals(
-                    allowed,
-                    measured.snapshotMetrics()
-                            .backendLoadedBlueIds);
-            assertEquals(
-                    scenario.providerBytes(
-                            Arrays.asList(
-                                    scenario.eventBlueId))
-                            + NodeCanonicalizer
-                                    .canonicalSize(
-                                            rootFragment)
-                            + NodeCanonicalizer
-                                    .canonicalSize(
-                                            rootBody),
-                    measured.snapshotMetrics()
-                            .backendBytes);
-            assertEquals(
-                    1,
-                    Collections.frequency(
-                            debug.trace()
-                                    .semanticDemands(),
-                            rootBodyBlueId));
-            assertEquals(
-                    1,
-                    debug.trace()
-                            .records(
-                                    ProcessingTraceRecord.Kind
-                                            .EXTERNAL_DELIVERY)
-                            .size());
-            assertEquals(
-                    "/",
-                    debug.trace()
-                            .records(
-                                    ProcessingTraceRecord.Kind
-                                            .EXTERNAL_DELIVERY)
-                            .get(0)
-                            .scopePath());
+            providerMetrics = measured.snapshotMetrics();
         } finally {
             processor.close();
             blue.close();
         }
+
+        // then
+        assertEquals(
+                rootBlueId,
+                rootFragmentBlueId);
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                debug.processResult().status(),
+                debug.processResult()
+                                .diagnostic() != null
+                        ? debug.processResult()
+                                .diagnostic()
+                                .message()
+                        : null);
+        assertEquals(
+                "root-processed",
+                debug.processResult()
+                        .document()
+                        .getAsText(
+                                "/localState"));
+        assertEquals(
+                allowed,
+                providerMetrics.requestedBlueIds);
+        assertTrue(
+                Collections.disjoint(
+                        providerMetrics.requestedBlueIds,
+                        embeddedChildBlueIds));
+        assertTrue(
+                Collections.disjoint(
+                        providerMetrics.requestedBlueIds,
+                        scenario.unrelatedBodyBlueIds));
+        assertEquals(
+                allowed,
+                providerMetrics.backendLoadedBlueIds);
+        assertEquals(
+                scenario.providerBytes(
+                        Arrays.asList(
+                                scenario.eventBlueId))
+                        + NodeCanonicalizer
+                                .canonicalSize(
+                                        rootFragment)
+                        + NodeCanonicalizer
+                                .canonicalSize(
+                                        rootBody),
+                providerMetrics.backendBytes);
+        assertEquals(
+                1,
+                Collections.frequency(
+                        debug.trace()
+                                .semanticDemands(),
+                        rootBodyBlueId));
+        assertEquals(
+                1,
+                debug.trace()
+                        .records(
+                                ProcessingTraceRecord.Kind
+                                        .EXTERNAL_DELIVERY)
+                        .size());
+        assertEquals(
+                "/",
+                debug.trace()
+                        .records(
+                                ProcessingTraceRecord.Kind
+                                        .EXTERNAL_DELIVERY)
+                        .get(0)
+                        .scopePath());
     }
 
     private static Run execute(Variant variant) {
@@ -539,7 +543,16 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             Node snapshotInput =
                     variant.entryMode
                             == EntryMode.PURE_REFERENCES
+                            || variant.entryMode
+                            == EntryMode
+                            .ROOT_REFERENCE_EVENT_INLINE
+                            || variant.entryMode
+                            == EntryMode.PARTIAL
                             ? scenario.fragmentedRoot
+                            : variant.entryMode
+                            == EntryMode
+                            .MIXED_FRAGMENT_BOUNDARIES
+                            ? scenario.mixedFragmentedRoot
                             : scenario.root;
             ResolvedSnapshot inputSnapshot =
                     snapshots.fromDocumentPreservingPaths(
@@ -675,9 +688,18 @@ class DeepGraphPhysicalLocalityIntegrationTest {
         Set<String> expectedRequests =
                 new LinkedHashSet<>();
         if (run.variant.entryMode
-                == EntryMode.PURE_REFERENCES) {
+                == EntryMode.PURE_REFERENCES
+                || run.variant.entryMode
+                == EntryMode
+                .ROOT_REFERENCE_EVENT_INLINE) {
             expectedRequests.add(
                     run.scenario.rootBlueId);
+        }
+        if (run.variant.entryMode
+                == EntryMode.PURE_REFERENCES
+                || run.variant.entryMode
+                == EntryMode
+                .ROOT_INLINE_EVENT_REFERENCE) {
             expectedRequests.add(
                     run.scenario.eventBlueId);
         }
@@ -725,6 +747,11 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                 run.scenario.unrelatedBodyBytes
                         > run.scenario.selectedBodyBytes * 50L,
                 "unrelated physical graph must dominate the selected closure");
+        assertTrue(
+                run.scenario.unrelatedBodyBytes
+                        >= MIN_UNRELATED_GRAPH_BYTES,
+                "configured unrelated graph must be at least 2 MiB; actual="
+                        + run.scenario.unrelatedBodyBytes);
         assertChangedSpineOnly(run, context);
     }
 
@@ -853,7 +880,11 @@ class DeepGraphPhysicalLocalityIntegrationTest {
     private enum EntryMode {
         EAGER_SNAPSHOT,
         LAZY_NODE,
-        PURE_REFERENCES
+        PURE_REFERENCES,
+        ROOT_REFERENCE_EVENT_INLINE,
+        ROOT_INLINE_EVENT_REFERENCE,
+        PARTIAL,
+        MIXED_FRAGMENT_BOUNDARIES
     }
 
     private enum CacheMode {
@@ -881,6 +912,47 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             this.entryMode = entryMode;
             this.cacheMode = cacheMode;
             this.batchMode = batchMode;
+        }
+
+        private static List<Variant> requiredMatrix() {
+            List<Variant> result = new ArrayList<>();
+            EntryMode[] fullProviderMatrix = {
+                    EntryMode.EAGER_SNAPSHOT,
+                    EntryMode.LAZY_NODE,
+                    EntryMode.PURE_REFERENCES
+            };
+            for (BodyForm bodyForm : BodyForm.values()) {
+                for (EntryMode entryMode :
+                        fullProviderMatrix) {
+                    for (CacheMode cacheMode :
+                            CacheMode.values()) {
+                        for (BatchMode batchMode :
+                                BatchMode.values()) {
+                            result.add(new Variant(
+                                    bodyForm,
+                                    entryMode,
+                                    cacheMode,
+                                    batchMode));
+                        }
+                    }
+                }
+                for (EntryMode entryMode :
+                        Arrays.asList(
+                                EntryMode
+                                        .ROOT_REFERENCE_EVENT_INLINE,
+                                EntryMode
+                                        .ROOT_INLINE_EVENT_REFERENCE,
+                                EntryMode.PARTIAL,
+                                EntryMode
+                                        .MIXED_FRAGMENT_BOUNDARIES)) {
+                    result.add(new Variant(
+                            bodyForm,
+                            entryMode,
+                            CacheMode.COLD,
+                            BatchMode.UNBATCHED));
+                }
+            }
+            return Collections.unmodifiableList(result);
         }
 
         @Override
@@ -939,6 +1011,35 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                 scenario.rootBlueId),
                         new Node().blueId(
                                 scenario.eventBlueId));
+            }
+            if (variant.entryMode
+                    == EntryMode
+                    .ROOT_REFERENCE_EVENT_INLINE) {
+                return processor.processDocumentWithTrace(
+                        new Node().blueId(
+                                scenario.rootBlueId),
+                        scenario.event.clone());
+            }
+            if (variant.entryMode
+                    == EntryMode
+                    .ROOT_INLINE_EVENT_REFERENCE) {
+                return processor.processDocumentWithTrace(
+                        scenario.root.clone(),
+                        new Node().blueId(
+                                scenario.eventBlueId));
+            }
+            if (variant.entryMode
+                    == EntryMode.PARTIAL) {
+                return processor.processDocumentWithTrace(
+                        scenario.fragmentedRoot.clone(),
+                        scenario.partialEvent.clone());
+            }
+            if (variant.entryMode
+                    == EntryMode
+                    .MIXED_FRAGMENT_BOUNDARIES) {
+                return processor.processDocumentWithTrace(
+                        scenario.mixedFragmentedRoot.clone(),
+                        scenario.partialEvent.clone());
             }
             return processor.processDocumentWithTrace(
                     scenario.root.clone(),
@@ -1004,7 +1105,9 @@ class DeepGraphPhysicalLocalityIntegrationTest {
 
         private final Node root;
         private final Node fragmentedRoot;
+        private final Node mixedFragmentedRoot;
         private final Node event;
+        private final Node partialEvent;
         private final String rootBlueId;
         private final String eventBlueId;
         private final String leafPath;
@@ -1024,7 +1127,9 @@ class DeepGraphPhysicalLocalityIntegrationTest {
         private Scenario(
                 Node root,
                 Node fragmentedRoot,
+                Node mixedFragmentedRoot,
                 Node event,
+                Node partialEvent,
                 String rootBlueId,
                 String eventBlueId,
                 String leafPath,
@@ -1042,7 +1147,10 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                 ExternalDeliveryPlan plan) {
             this.root = root;
             this.fragmentedRoot = fragmentedRoot;
+            this.mixedFragmentedRoot =
+                    mixedFragmentedRoot;
             this.event = event;
+            this.partialEvent = partialEvent;
             this.rootBlueId = rootBlueId;
             this.eventBlueId = eventBlueId;
             this.leafPath = leafPath;
@@ -1149,6 +1257,23 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                     ancestorPaths);
             physicallyDeferredPaths.addAll(
                     executableBodyPaths);
+            Node eventMetadata = new Node()
+                    .properties(
+                            "kind",
+                            new Node().value(
+                                    "deep-locality-metadata"))
+                    .properties(
+                            "hostPayload",
+                            new Node().value(
+                                    padding(
+                                            UNRELATED_BODY_PAYLOAD_BYTES,
+                                            'm')));
+            String eventMetadataBlueId =
+                    addProviderBody(
+                            providerBodies,
+                            eventMetadata);
+            unrelatedBodyBlueIds.add(
+                    eventMetadataBlueId);
             Node event = new Node()
                     .properties(
                             "subscriptionKey",
@@ -1160,8 +1285,18 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                     "deep-locality-event"))
                     .properties(
                             "kind",
-                            new Node().value("selected"));
+                            new Node().value("selected"))
+                    .properties(
+                            "metadata",
+                            eventMetadata);
+            Node partialEvent = event.clone();
+            partialEvent.getProperties().put(
+                    "metadata",
+                    new Node().blueId(
+                            eventMetadataBlueId));
             Node fragmentedRoot = root.clone();
+            Node mixedFragmentedRoot = root.clone();
+            int ancestorIndex = 0;
             for (String ancestorPath : ancestorPaths) {
                 for (String siblingSegment :
                         Arrays.asList(
@@ -1186,7 +1321,20 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                             siblingPath,
                             new Node().blueId(
                                     siblingBlueId));
+                    String mixedBoundary =
+                            ancestorIndex % 2 == 0
+                                    ? LEFT_SEGMENT
+                                    : RIGHT_SEGMENT;
+                    if (mixedBoundary.equals(
+                            siblingSegment)) {
+                        NodePathEditor.put(
+                                mixedFragmentedRoot,
+                                siblingPath,
+                                new Node().blueId(
+                                        siblingBlueId));
+                    }
                 }
+                ancestorIndex++;
             }
             String rootBlueId =
                     BlueIdCalculator.calculateBlueId(root);
@@ -1195,6 +1343,12 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                             fragmentedRoot))) {
                 throw new IllegalStateException(
                         "Deep locality Root fragmentation changed identity");
+            }
+            if (!rootBlueId.equals(
+                    BlueIdCalculator.calculateBlueId(
+                            mixedFragmentedRoot))) {
+                throw new IllegalStateException(
+                        "Mixed deep fragment boundaries changed Root identity");
             }
             providerBodies.put(
                     rootBlueId,
@@ -1216,9 +1370,15 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                             CHECKPOINT_DISCRIMINATOR);
             String eventBlueId =
                     BlueIdCalculator.calculateBlueId(event);
+            if (!eventBlueId.equals(
+                    BlueIdCalculator.calculateBlueId(
+                            partialEvent))) {
+                throw new IllegalStateException(
+                        "Partial Event fragmentation changed identity");
+            }
             providerBodies.put(
                     eventBlueId,
-                    event.clone());
+                    partialEvent.clone());
             selectedClosure.add(eventBlueId);
             ExternalDeliverySnapshot delivery =
                     ExternalDeliverySnapshot.builder(
@@ -1280,7 +1440,9 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             return new Scenario(
                     root,
                     fragmentedRoot,
+                    mixedFragmentedRoot,
                     event,
+                    partialEvent,
                     rootBlueId,
                     eventBlueId,
                     leafPath,
@@ -1520,7 +1682,9 @@ class DeepGraphPhysicalLocalityIntegrationTest {
 
         private static void addPreinitializedMarker(
                 Node contracts,
-                String documentId) {
+                String documentName) {
+            Node exactDocument = new Node().value(
+                    "preinitialized-" + documentName);
             contracts.properties(
                     "initialized",
                     new Node()
@@ -1528,10 +1692,10 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                     RuntimeBlueIds
                                             .PROCESSING_INITIALIZED_MARKER))
                             .properties(
-                                    "documentId",
-                                    new Node().value(
-                                            "preinitialized-"
-                                                    + documentId)));
+                                    "document",
+                                    new Node().blueId(
+                                            BlueIdCalculator.calculateBlueId(
+                                                    exactDocument))));
         }
 
         private static void addDecoyWorkflows(
@@ -2251,8 +2415,8 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                 + "|" + record.logicalPath()
                                 + "|" + record.details()
                                 + "|" + (record.node() != null
-                                ? ProcessorEngine
-                                .canonicalSignature(
+                                ? BlueIdCalculator
+                                .calculateBlueId(
                                         record.node())
                                 : null));
             }

@@ -10,7 +10,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-/** Immutable transaction-boundary representation of a JSON patch. */
+/**
+ * Defensively captured JSON patch used at transaction boundaries.
+ *
+ * <p>The authored pointer and value are retained alongside parsed and frozen
+ * forms. Mutable caller input is never consulted after construction, and
+ * canonical/resolved value materialization is memoized for the owning
+ * transaction.</p>
+ */
 final class ImmutableJsonPatch {
 
     private final JsonPatch.Op op;

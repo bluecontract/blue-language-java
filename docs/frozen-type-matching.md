@@ -517,31 +517,29 @@ cases assert fetch counts per blueId, which proves the important performance
 property: the matcher fetches only the references required by the observed
 pattern and does not accidentally expand unrelated branches.
 
-## Final Local Verification
+## Verification
 
-The current local verification commands are:
+Run the focused matcher coverage and then the complete suite:
 
 ```bash
 ./gradlew test --tests blue.language.utils.NodeTypeMatcherTest
 ./gradlew test
 ```
 
-Both pass in the current workspace.
-
 ## Boundaries
 
-The matcher is ready for snapshot-backed channel and handler matching, but there
-are broader runtime/spec concerns outside this class:
+The matcher is used for snapshot-backed channel and handler matching, with
+these deliberate boundaries:
 
 - `schema.pattern` is intentionally unsupported in the core language; regex
   validation belongs in contract/runtime code;
-- cross-language golden fixtures should eventually verify shared matching,
-  hashing, and schema behavior;
-- `deriveChannel`, `channelize`, and `isNewerEvent` now have Java processor SPI
-  hooks, but still need explicit spec treatment;
-- the long-term processor path should pass `ResolvedSnapshot`/`FrozenNode`
-  values directly instead of using mutable `Node` adapters.
+- the mutable `NodeTypeMatcher` remains a compatibility adapter, while
+  `FrozenTypeMatcher` is the processor hot path;
+- event-scoped non-core reference lookup must use the captured verified exact
+  materialization boundary, never ambient provider state; and
+- exact canonical type lineage is supported, but event-scoped matching does
+  not preprocess or merge definitions that require the complete Language
+  resolution pipeline.
 
-Within the current Java implementation, the matcher now has the needed local
-coverage for correctness, immutability, caller-limit enforcement, path handling,
-schema/type semantics, and reference-resolution performance.
+The test suite covers correctness, immutability, caller-limit enforcement, path
+handling, schema/type semantics, and reference-resolution performance.

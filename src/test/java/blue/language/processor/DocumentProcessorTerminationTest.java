@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_CAUSE;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_TERMINATED;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorTerminationTest {
@@ -29,7 +31,8 @@ class DocumentProcessorTerminationTest {
     }
 
     @Test
-    void rootGracefulTerminationStopsFurtherWork() {
+    void shouldVerifyRootGracefulTerminationStopsFurtherWork() {
+        // given
         Node document = blue.yamlToNode("name: Root Doc\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
@@ -43,25 +46,29 @@ class DocumentProcessorTerminationTest {
                 "    emitAfter: true\n" +
                 "    patchAfter: true\n");
 
+        // when
         Node event = buildTestEvent("evt-1");
         DocumentProcessingResult initialized = blue.initializeDocument(document);
         DocumentProcessingResult result =
                 blue.processDocument(snapshot(blue, initialized), event);
+        Node processed = result.document();
+        Node contracts = processed.getContracts();
+        Node terminated = contracts.getProperties().get(KEY_TERMINATED);
+        Node afterTermination = processed.getProperties() != null
+                ? processed.getProperties().get("afterTermination")
+                : null;
+        List<Node> rootEvents = result.events();
 
+        // then
         assertEquals(ProcessorStatus.SUCCESS,
                 result.status());
         assertTrue(result.commits());
-        Node processed = result.document();
-        Node contracts = processed.getContracts();
         assertNotNull(contracts);
-        Node terminated = contracts.getProperties().get("terminated");
         assertNotNull(terminated);
-        assertEquals("graceful", terminated.getProperties().get("cause").getValue());
-        Node afterTermination = processed.getProperties() != null ? processed.getProperties().get("afterTermination") : null;
+        assertEquals("graceful",
+                terminated.getProperties().get(KEY_CAUSE).getValue());
         assertNotNull(afterTermination, "buffered patches apply before buffered termination");
         assertEquals("should-not-exist", afterTermination.getValue());
-
-        List<Node> rootEvents = result.events();
         assertEquals(1, rootEvents.size(),
                 "only the explicit application event emitted by Root enters the public outbox");
         assertEquals("ShouldNotEmit",
@@ -69,7 +76,8 @@ class DocumentProcessorTerminationTest {
     }
 
     @Test
-    void fatalTerminationRequestRollsBackWithoutOutboxOrMarker() {
+    void shouldVerifyFatalTerminationRequestRollsBackWithoutOutboxOrMarker() {
+        // given
         Node document = blue.yamlToNode("name: Root Fatal\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
@@ -82,12 +90,14 @@ class DocumentProcessorTerminationTest {
                 "    mode: fatal\n" +
                 "    reason: panic\n");
 
+        // when
         Node event = buildTestEvent("evt-2");
         Node initialized = blue.initializeDocument(document).document();
         String input = initialized.toString();
         DocumentProcessingResult result =
                 blue.processDocument(initialized, event);
 
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
         assertFalse(result.commits());
@@ -95,11 +105,12 @@ class DocumentProcessorTerminationTest {
                 "deterministic failure must return the exact input Root");
         assertTrue(result.events().isEmpty());
         assertFalse(result.document().getContracts()
-                .getProperties().containsKey("terminated"));
+                .getProperties().containsKey(KEY_TERMINATED));
     }
 
     @Test
-    void childTerminationLifecycleRemainsLocal() {
+    void shouldVerifyChildTerminationLifecycleRemainsLocal() {
+        // given
         Node document = blue.yamlToNode("name: Parent\n" +
                 "child:\n" +
                 "  name: Child\n" +
@@ -129,12 +140,20 @@ class DocumentProcessorTerminationTest {
                 "    propertyKey: /fromChild\n" +
                 "    propertyValue: 7\n");
 
+        // when
         Node event = buildTestEvent("evt-3");
         DocumentProcessingResult initialized = blue.initializeDocument(document);
         ProcessingDebugResult debug = blue.getDocumentProcessor()
                 .processDocumentWithTrace(snapshot(blue, initialized), event);
         DocumentProcessingResult result = debug.processResult();
+        Node processed = result.document();
+        Node fromChild = processed.getProperties().get("fromChild");
+        Node childContracts = processed.getProperties()
+                .get("child").getContracts();
+        Node childTerminated = childContracts.getProperties()
+                .get(KEY_TERMINATED);
 
+        // then
         assertEquals(ProcessorStatus.SUCCESS,
                 result.status(),
                 debug.trace().records().stream()
@@ -143,16 +162,12 @@ class DocumentProcessorTerminationTest {
                                 + record.contractKey())
                         .collect(java.util.stream.Collectors.joining(", ")));
         assertTrue(result.commits());
-        Node processed = result.document();
-        Node fromChild = processed.getProperties().get("fromChild");
         assertNull(fromChild,
                 "processor-generated lifecycle delivery is local to its scope");
-
-        Node childContracts = processed.getProperties().get("child").getContracts();
         assertNotNull(childContracts);
-        Node childTerminated = childContracts.getProperties().get("terminated");
         assertNotNull(childTerminated);
-        assertEquals("graceful", childTerminated.getProperties().get("cause").getValue());
+        assertEquals("graceful",
+                childTerminated.getProperties().get(KEY_CAUSE).getValue());
         assertTrue(result.events().isEmpty(),
                 "processor-generated embedded lifecycle events remain internal");
     }

@@ -16,7 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class PlatformCommitCompanionTest {
 
     @Test
-    void atomicHandOffRetainsTheExactValidatorDeltaInstance() {
+    void shouldVerifyAtomicHandOffRetainsTheExactValidatorDeltaInstance() {
+        // given
         Node root = new Node().properties(
                 "value", new Node().value(1));
         Node event = new Node().value("event");
@@ -46,6 +47,7 @@ final class PlatformCommitCompanionTest {
                         Collections.<Node>emptyList(),
                         5L);
 
+        // when
         PlatformCommitCompanion companion =
                 PlatformCommitCompanion.of(
                         evidence, semantic, delta);
@@ -53,6 +55,7 @@ final class PlatformCommitCompanionTest {
                 new PlatformProcessingResult(
                         semantic, companion);
 
+        // then
         assertSame(semantic, handOff.processResult());
         assertSame(companion, handOff.commitCompanion());
         assertSame(delta, companion.subscriptionDelta());
@@ -68,7 +71,8 @@ final class PlatformCommitCompanionTest {
     }
 
     @Test
-    void directTerminationProducesProgressCompanionWithoutDeliveryVerification() {
+    void shouldVerifyDirectTerminationProducesProgressCompanionWithoutDeliveryVerification() {
+        // given
         Node root = terminatedRoot();
         Node event = new Node().value("event");
         ExternalOrderKey order = ExternalOrderKey.of(
@@ -85,10 +89,12 @@ final class PlatformCommitCompanionTest {
                                 })
                         .build();
 
+        // when
         PlatformProcessingResult handOff =
                 processor.processDocumentForPlatformCommit(
                         root, event, evidence);
 
+        // then
         assertEquals(
                 ProcessorStatus.TERMINATED,
                 handOff.processResult().status());

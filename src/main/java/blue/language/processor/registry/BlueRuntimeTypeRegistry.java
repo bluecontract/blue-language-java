@@ -2,6 +2,7 @@ package blue.language.processor.registry;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.registry.RegistryManifestConstants;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.UncheckedObjectMapper;
@@ -27,9 +28,23 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Fail-closed registry of the runtime types published by Blue Contracts 1.0.
+ *
+ * <p>Construction eagerly loads every bundled type, verifies the manifest and
+ * resource digests, recalculates each BlueId and the package identity, and
+ * rejects any mismatch. Returned {@link Node} instances are defensive clones;
+ * the provider performs the same cloning at its boundary.</p>
+ */
 public final class BlueRuntimeTypeRegistry {
 
+    /** Classpath directory containing the verified registry manifest and types. */
     public static final String RESOURCE_ROOT = "registry/blue-contracts-1.0";
+    private static final String MANIFEST_RESOURCE = "manifest.yaml";
+    private static final String FIXTURE_MANIFEST_RESOURCE =
+            "blue-contracts-1.0/fixtures/manifest.yaml";
+    private static final String SHA_256_ALGORITHM = "SHA-256";
+    private static final String SHA_256_PREFIX = "sha256:";
 
     private static final BlueRuntimeTypeRegistry DEFAULT = new BlueRuntimeTypeRegistry();
 
@@ -39,6 +54,12 @@ public final class BlueRuntimeTypeRegistry {
     private final String registryIdentity;
     private final NodeProvider provider;
 
+    /**
+     * Loads and verifies the complete bundled registry.
+     *
+     * @throws IllegalStateException when any required artifact is absent,
+     *         malformed, or inconsistent with its published identity
+     */
     public BlueRuntimeTypeRegistry() {
         Manifest manifest = loadManifest();
         this.entries = loadEntries(manifest);
@@ -52,26 +73,59 @@ public final class BlueRuntimeTypeRegistry {
                 : null;
     }
 
+    /**
+     * Returns the process-wide, eagerly verified registry instance.
+     *
+     * @return shared immutable registry
+     */
     public static BlueRuntimeTypeRegistry getDefault() {
         return DEFAULT;
     }
 
+    /**
+     * Returns the published BlueId for the requested runtime type.
+     *
+     * @param key stable runtime type key
+     * @return verified published BlueId
+     */
     public String blueId(RuntimeTypeKey key) {
         return entry(key).blueId;
     }
 
+    /**
+     * Returns a defensive copy of the canonical node for the requested type.
+     *
+     * @param key stable runtime type key
+     * @return detached canonical registry node
+     */
     public Node node(RuntimeTypeKey key) {
         return entry(key).node.clone();
     }
 
+    /**
+     * Returns whether the BlueId identifies a processor-managed runtime type.
+     *
+     * @param blueId exact type identity to classify
+     * @return {@code true} for a processor-owned type
+     */
     public boolean isProcessorManagedTypeBlueId(String blueId) {
         return processorManagedTypeBlueIds.contains(blueId);
     }
 
+    /**
+     * Returns the immutable set of processor-managed runtime type BlueIds.
+     *
+     * @return immutable verified identity set
+     */
     public Set<String> processorManagedTypeBlueIds() {
         return processorManagedTypeBlueIds;
     }
 
+    /**
+     * Returns an immutable snapshot of every runtime key-to-BlueId mapping.
+     *
+     * @return immutable mapping in registry-key order
+     */
     public Map<RuntimeTypeKey, String> blueIds() {
         Map<RuntimeTypeKey, String> result = new EnumMap<>(RuntimeTypeKey.class);
         for (Map.Entry<RuntimeTypeKey, RegistryEntry> entry : entries.entrySet()) {
@@ -80,14 +134,79 @@ public final class BlueRuntimeTypeRegistry {
         return Collections.unmodifiableMap(result);
     }
 
+    /**
+     * Returns whether a registered runtime type has the requested registered
+     * supertype in its canonical type ancestry.
+     *
+     * <p>This query is intentionally limited to the verified runtime registry.
+     * Application-defined types are classified from their resolved contract
+     * snapshots and processor registrations instead.</p>
+     *
+     * @param candidateBlueId exact registered candidate identity
+     * @param supertype stable registered supertype key
+     * @return {@code true} when the verified registry ancestry contains the
+     *         requested supertype
+     * @throws IllegalStateException if the verified registry contains cyclic
+     *         type ancestry
+     */
+    public boolean isRegisteredSubtype(
+            String candidateBlueId,
+            RuntimeTypeKey supertype) {
+        Objects.requireNonNull(supertype, "supertype");
+        if (candidateBlueId == null || candidateBlueId.isEmpty()) {
+            return false;
+        }
+        String expectedBlueId = blueId(supertype);
+        String currentBlueId = candidateBlueId;
+        Set<String> visited = new LinkedHashSet<>();
+        while (visited.add(currentBlueId)) {
+            if (expectedBlueId.equals(currentBlueId)) {
+                return true;
+            }
+            RuntimeTypeKey currentKey = keyByBlueId.get(currentBlueId);
+            if (currentKey == null) {
+                return false;
+            }
+            Node declaredType = entry(currentKey).node.getType();
+            if (declaredType == null) {
+                return false;
+            }
+            currentBlueId = declaredType.getBlueId() != null
+                    ? declaredType.getBlueId()
+                    : BlueIdCalculator.calculateBlueId(declaredType);
+        }
+        throw new IllegalStateException(
+                "Cyclic runtime registry type ancestry at "
+                        + currentBlueId);
+    }
+
+    /**
+     * Returns the verified SHA-256 identity of the registry package.
+     *
+     * @return lowercase hexadecimal package digest
+     */
     public String registryIdentity() {
         return registryIdentity;
     }
 
+    /**
+     * Returns a provider that accepts published BlueIds and supplies defensive
+     * copies of their canonical registry nodes.
+     *
+     * @return immutable verified registry provider
+     */
     public NodeProvider asProvider() {
         return provider;
     }
 
+    /**
+     * Returns the verified provider used to resolve processor-owned snapshots.
+     *
+     * <p>This intent-revealing alias currently has the same behavior as
+     * {@link #asProvider()}.</p>
+     *
+     * @return immutable verified processor-snapshot provider
+     */
     public NodeProvider asProcessorSnapshotProvider() {
         return provider;
     }
@@ -102,23 +221,33 @@ public final class BlueRuntimeTypeRegistry {
     }
 
     private Manifest loadManifest() {
-        try (InputStream input = resource("manifest.yaml")) {
+        try (InputStream input = resource(MANIFEST_RESOURCE)) {
             Map<String, Object> raw = UncheckedObjectMapper.YAML_MAPPER.readValue(input,
                     new TypeReference<Map<String, Object>>() {
                     });
             Manifest manifest = new Manifest();
             manifest.raw = raw;
-            manifest.registry = stringValue(raw.get("registry"));
-            manifest.registryKind = stringValue(raw.get("registryKind"));
-            manifest.specVersion = stringValue(raw.get("specificationVersion"));
-            manifest.languageVersion = stringValue(raw.get("languageVersion"));
+            manifest.registry = stringValue(raw.get(
+                    RegistryManifestConstants.FIELD_REGISTRY));
+            manifest.registryKind = stringValue(raw.get(
+                    RegistryManifestConstants.FIELD_REGISTRY_KIND));
+            manifest.specVersion = stringValue(raw.get(
+                    RegistryManifestConstants
+                            .FIELD_SPECIFICATION_VERSION));
+            manifest.languageVersion = stringValue(raw.get(
+                    RegistryManifestConstants.FIELD_LANGUAGE_VERSION));
             manifest.fixturePackageIdentity =
-                    stringValue(raw.get("fixturePackageIdentity"));
-            manifest.packageIdentity = stringValue(raw.get("packageIdentity"));
-            if (raw.containsKey("types")) {
+                    stringValue(raw.get(
+                            RegistryManifestConstants
+                                    .FIELD_FIXTURE_PACKAGE_IDENTITY));
+            manifest.packageIdentity = stringValue(raw.get(
+                    RegistryManifestConstants.FIELD_PACKAGE_IDENTITY));
+            if (raw.containsKey(
+                    RegistryManifestConstants.FIELD_LEGACY_TYPES)) {
                 throw new IllegalStateException("Runtime registry manifest uses stale types map shape");
             }
-            Object entries = raw.get("entries");
+            Object entries = raw.get(
+                    RegistryManifestConstants.FIELD_ENTRIES);
             if (!(entries instanceof List)) {
                 throw new IllegalStateException("Runtime registry manifest must contain an entries list");
             }
@@ -128,23 +257,36 @@ public final class BlueRuntimeTypeRegistry {
                 }
                 @SuppressWarnings("unchecked")
                 Map<String, Object> value = (Map<String, Object>) rawEntry;
-                String manifestKey = stringValue(value.get("key"));
+                String manifestKey = stringValue(value.get(
+                        RegistryManifestConstants.FIELD_KEY));
                 RuntimeTypeKey key = manifestKey(manifestKey);
                 if (manifest.entries.containsKey(key)) {
                     throw new IllegalStateException("Duplicate runtime registry manifest key: " + manifestKey);
                 }
                 manifest.entries.put(key, new ManifestEntry(
                         manifestKey,
-                        stringValue(value.get("path")),
-                        stringValue(value.get("blueId")),
-                        stringValue(value.get("sha256")),
-                        booleanValue(value.get("semanticDescriptionIdentityBearing")),
-                        booleanValue(value.get("fixtureOnly"))));
+                        stringValue(value.get(
+                                RegistryManifestConstants.FIELD_PATH)),
+                        stringValue(value.get(
+                                RegistryManifestConstants.FIELD_BLUE_ID)),
+                        stringValue(value.get(
+                                RegistryManifestConstants.FIELD_SHA256)),
+                        booleanValue(value.get(
+                                RegistryManifestConstants
+                                        .FIELD_SEMANTIC_DESCRIPTION_IDENTITY_BEARING)),
+                        booleanValue(value.get(
+                                RegistryManifestConstants
+                                        .FIELD_FIXTURE_ONLY))));
             }
-            if (!"blue-contracts-runtime".equals(manifest.registry)
-                    || !"runtime-type".equals(manifest.registryKind)
-                    || !"1.0".equals(manifest.specVersion)
-                    || !"1.0".equals(manifest.languageVersion)) {
+            if (!RegistryManifestConstants
+                    .REGISTRY_CONTRACTS_RUNTIME
+                    .equals(manifest.registry)
+                    || !RegistryManifestConstants.KIND_RUNTIME_TYPE
+                    .equals(manifest.registryKind)
+                    || !RegistryManifestConstants.VERSION_1_0
+                    .equals(manifest.specVersion)
+                    || !RegistryManifestConstants.VERSION_1_0
+                    .equals(manifest.languageVersion)) {
                 throw new IllegalStateException("Unsupported Blue Contracts registry version: " + manifest.specVersion);
             }
             if (!RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY.equals(manifest.packageIdentity)) {
@@ -229,14 +371,20 @@ public final class BlueRuntimeTypeRegistry {
 
     private String calculateRegistryIdentity(Manifest manifest) {
         Map<String, Object> payload = deepCopyMap(manifest.raw);
-        payload.put("packageIdentity", null);
-        payload.put("fixturePackageIdentity", null);
+        payload.put(
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                null);
+        payload.put(
+                RegistryManifestConstants
+                        .FIELD_FIXTURE_PACKAGE_IDENTITY,
+                null);
         try {
             ObjectMapper identityMapper = new ObjectMapper();
             identityMapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
             String json = identityMapper.writeValueAsString(payload);
             byte[] canonical = new JsonCanonicalizer(json).getEncodedUTF8();
-            String calculated = "sha256:" + toHex(sha256().digest(canonical));
+            String calculated = SHA_256_PREFIX
+                    + toHex(sha256().digest(canonical));
             if (!manifest.packageIdentity.equals(calculated)) {
                 throw new IllegalStateException(
                         "Runtime registry package identity mismatch: calculated="
@@ -265,14 +413,15 @@ public final class BlueRuntimeTypeRegistry {
 
     private String readFixturePackageIdentityIfPresent() {
         try (InputStream input = BlueRuntimeTypeRegistry.class.getClassLoader()
-                .getResourceAsStream("blue-contracts-1.0/fixtures/manifest.yaml")) {
+                .getResourceAsStream(FIXTURE_MANIFEST_RESOURCE)) {
             if (input == null) {
                 return null;
             }
             Map<String, Object> raw = UncheckedObjectMapper.YAML_MAPPER.readValue(input,
                     new TypeReference<Map<String, Object>>() {
                     });
-            Object value = raw.get("packageIdentity");
+            Object value = raw.get(
+                    RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
             return value instanceof String && !((String) value).isEmpty() ? (String) value : null;
         } catch (IOException ex) {
             throw new IllegalStateException("Unable to read Blue Contracts fixture manifest", ex);
@@ -346,7 +495,8 @@ public final class BlueRuntimeTypeRegistry {
 
     private static MessageDigest sha256() {
         try {
-            return MessageDigest.getInstance("SHA-256");
+            return MessageDigest.getInstance(
+                    SHA_256_ALGORITHM);
         } catch (NoSuchAlgorithmException ex) {
             throw new AssertionError("SHA-256 is unavailable", ex);
         }

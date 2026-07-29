@@ -1,0 +1,30 @@
+id: F_exact_graph_fragments_roundtrip
+category: Provider
+operation: splitExactGraphFragments
+description: Exact fragments are ordinary Blue nodes; splitting selected direct children preserves Root identity and reconstructs the original graph.
+input:
+  name: Fragmented Root
+  selected:
+    a: 1
+    body:
+      code: selected
+      constants: [A, B]
+  archive:
+    data:
+      untouched: true
+  sibling:
+    x: 9
+cuts:
+  - /selected/body
+  - /archive
+  - /sibling
+expectedSameRootNodeBlueId: true
+expectedRoundTripEqual: true
+expectedFragmentCount: 5
+expectedReferencePaths:
+  - /selected/body
+  - /archive
+  - /sibling
+expectedDefensiveCopies: true
+expectedLocalProviderOutcome:
+  unknown: NotFound

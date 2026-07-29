@@ -26,6 +26,8 @@ public final class EffectiveContractSnapshot {
     private final List<String> executableBodyFields;
     private final List<String> executableBodyNodeBlueIds;
     private final Map<String, String> executableBodyNodeBlueIdsByField;
+    private final Map<String, ExecutableBodySourceDescriptor>
+            executableBodySourceDescriptorsByField;
     private final List<String> deterministicDependencyNodeBlueIds;
 
     private EffectiveContractSnapshot(Builder builder) {
@@ -46,38 +48,85 @@ public final class EffectiveContractSnapshot {
                 Collections.unmodifiableMap(
                         new LinkedHashMap<>(
                                 builder.executableBodyNodeBlueIdsByField));
+        this.executableBodySourceDescriptorsByField =
+                Collections.unmodifiableMap(
+                        new LinkedHashMap<>(
+                                builder.executableBodySourceDescriptorsByField));
+        validateExecutableBodySourceDescriptors();
         this.deterministicDependencyNodeBlueIds =
                 immutable(builder.deterministicDependencyNodeBlueIds);
     }
 
+    /**
+     * Starts a snapshot for one effective same-scope contract.
+     *
+     * @param scopePath normalized owning scope
+     * @param key exact contract key
+     * @return a new mutable builder
+     */
     public static Builder builder(String scopePath, String key) {
         return new Builder(scopePath, key);
     }
 
+    /**
+     * Returns the normalized scope that owns this contract occurrence.
+     *
+     * @return normalized owning scope
+     */
     public String scopePath() {
         return scopePath;
     }
 
+    /**
+     * Returns the exact same-scope contract key.
+     *
+     * @return exact same-scope contract key
+     */
     public String key() {
         return key;
     }
 
+    /**
+     * Returns source contribution identities in merge order.
+     *
+     * @return immutable ancestor-to-descendant source identities
+     */
     public List<String> sourceContributionNodeBlueIds() {
         return sourceContributionNodeBlueIds;
     }
 
+    /**
+     * Returns the effective runtime type identity used for dispatch.
+     *
+     * @return exact effective runtime type BlueId
+     */
     public String effectiveTypeBlueId() {
         return effectiveTypeBlueId;
     }
 
+    /**
+     * Returns the recognized runtime dispatch role.
+     *
+     * @return deterministic runtime dispatch role
+     */
     public String role() {
         return role;
     }
 
+    /**
+     * Returns the effective contract ordering value.
+     *
+     * @return effective dispatch order
+     */
     public int order() {
         return order;
     }
 
+    /**
+     * Returns normalized scalar fields used for dispatch.
+     *
+     * @return immutable normalized dispatch-field values
+     */
     public Map<String, String> dispatchFields() {
         return dispatchFields;
     }
@@ -88,6 +137,8 @@ public final class EffectiveContractSnapshot {
      *
      * <p>The fields are exposed individually so this snapshot never invents a
      * BlueId for the effective merged contract.</p>
+     *
+     * @return immutable field-to-frozen-value mapping
      */
     public Map<String, FrozenNode> headerFields() {
         return headerFields;
@@ -97,11 +148,18 @@ public final class EffectiveContractSnapshot {
      * Ordered executable-body field names declared by the selected runtime
      * type. A declared field remains present here when the effective contract
      * supplies no body at that field.
+     *
+     * @return immutable ordered executable-body field names
      */
     public List<String> executableBodyFields() {
         return executableBodyFields;
     }
 
+    /**
+     * Returns identities of present executable bodies in declared field order.
+     *
+     * @return immutable executable-body identities in field order
+     */
     public List<String> executableBodyNodeBlueIds() {
         return executableBodyNodeBlueIds;
     }
@@ -110,19 +168,66 @@ public final class EffectiveContractSnapshot {
      * Exact identities of the executable bodies that are present, keyed by
      * their registered field names. A pure-reference body contributes its
      * requested identity without being materialized.
+     *
+     * @return immutable field-to-body-identity mapping
      */
     public Map<String, String> executableBodyNodeBlueIdsByField() {
         return executableBodyNodeBlueIdsByField;
     }
 
+    /**
+     * Exact Source descriptors for the executable bodies that are present,
+     * keyed by their registered field names.
+     *
+     * <p>A descriptor keeps the preserved body BlueId and its owning Source
+     * contribution separate from the effective merged contract, for which no
+     * synthetic identity exists.</p>
+     *
+     * @return immutable field-to-source-descriptor mapping
+     */
+    public Map<String, ExecutableBodySourceDescriptor>
+    executableBodySourceDescriptorsByField() {
+        return executableBodySourceDescriptorsByField;
+    }
+
+    /**
+     * Returns exact dependency identities used to validate this snapshot.
+     *
+     * @return immutable exact dependency identities in deterministic order
+     */
     public List<String> deterministicDependencyNodeBlueIds() {
         return deterministicDependencyNodeBlueIds;
+    }
+
+    private void validateExecutableBodySourceDescriptors() {
+        for (Map.Entry<String, ExecutableBodySourceDescriptor> entry
+                : executableBodySourceDescriptorsByField.entrySet()) {
+            String field = entry.getKey();
+            ExecutableBodySourceDescriptor descriptor =
+                    entry.getValue();
+            if (!scopePath.equals(descriptor.scopePath())
+                    || !key.equals(descriptor.contractKey())
+                    || !effectiveTypeBlueId.equals(
+                            descriptor.effectiveTypeBlueId())
+                    || !field.equals(descriptor.bodyField())
+                    || !Objects.equals(
+                            executableBodyNodeBlueIdsByField.get(field),
+                            descriptor.bodyNodeBlueId())
+                    || !sourceContributionNodeBlueIds.equals(
+                            descriptor.sourceContributionNodeBlueIds())) {
+                throw new IllegalArgumentException(
+                        "Executable-body descriptor is not bound to its effective contract snapshot");
+            }
+        }
     }
 
     private static List<String> immutable(List<String> source) {
         return Collections.unmodifiableList(new ArrayList<>(source));
     }
 
+    /**
+     * Mutable, single-use accumulator for an effective contract snapshot.
+     */
     public static final class Builder {
         private final String scopePath;
         private final String key;
@@ -138,6 +243,9 @@ public final class EffectiveContractSnapshot {
         private final List<String> executableBodyNodeBlueIds = new ArrayList<>();
         private final Map<String, String> executableBodyNodeBlueIdsByField =
                 new LinkedHashMap<>();
+        private final Map<String, ExecutableBodySourceDescriptor>
+                executableBodySourceDescriptorsByField =
+                new LinkedHashMap<>();
         private final List<String> deterministicDependencyNodeBlueIds = new ArrayList<>();
 
         private Builder(String scopePath, String key) {
@@ -145,6 +253,12 @@ public final class EffectiveContractSnapshot {
             this.key = key;
         }
 
+        /**
+         * Appends one exact source contribution identity.
+         *
+         * @param blueId exact source contribution identity; null is ignored
+         * @return this builder
+         */
         public Builder sourceContribution(String blueId) {
             if (blueId != null) {
                 sourceContributionNodeBlueIds.add(blueId);
@@ -152,21 +266,46 @@ public final class EffectiveContractSnapshot {
             return this;
         }
 
+        /**
+         * Sets the recognized effective runtime type identity.
+         *
+         * @param blueId exact effective runtime type identity
+         * @return this builder
+         */
         public Builder effectiveTypeBlueId(String blueId) {
             this.effectiveTypeBlueId = blueId;
             return this;
         }
 
+        /**
+         * Sets the deterministic dispatch role.
+         *
+         * @param role deterministic runtime dispatch role
+         * @return this builder
+         */
         public Builder role(String role) {
             this.role = role;
             return this;
         }
 
+        /**
+         * Sets the deterministic dispatch ordering value.
+         *
+         * @param order deterministic dispatch order
+         * @return this builder
+         */
         public Builder order(int order) {
             this.order = order;
             return this;
         }
 
+        /**
+         * Adds a normalized non-null dispatch field.
+         *
+         * @param name field name; null is ignored
+         * @param value field value converted to text; null is ignored
+         * @return this builder
+         */
         public Builder dispatchField(String name, Object value) {
             if (name != null && value != null) {
                 dispatchFields.put(name, String.valueOf(value));
@@ -174,6 +313,12 @@ public final class EffectiveContractSnapshot {
             return this;
         }
 
+        /**
+         * Appends a legacy executable-body identity.
+         *
+         * @param blueId exact body identity; null is ignored
+         * @return this builder
+         */
         public Builder executableBody(String blueId) {
             if (blueId != null) {
                 executableBodyNodeBlueIds.add(blueId);
@@ -204,6 +349,26 @@ public final class EffectiveContractSnapshot {
             return this;
         }
 
+        Builder executableBodySourceDescriptor(
+                String field,
+                ExecutableBodySourceDescriptor descriptor) {
+            if (field != null && descriptor != null) {
+                if (!field.equals(descriptor.bodyField())) {
+                    throw new IllegalArgumentException(
+                            "Executable-body descriptor field mismatch");
+                }
+                executableBodySourceDescriptorsByField.put(
+                        field, descriptor);
+            }
+            return this;
+        }
+
+        /**
+         * Appends one exact dependency identity.
+         *
+         * @param blueId exact dependency identity; null is ignored
+         * @return this builder
+         */
         public Builder deterministicDependency(String blueId) {
             if (blueId != null) {
                 deterministicDependencyNodeBlueIds.add(blueId);
@@ -211,6 +376,13 @@ public final class EffectiveContractSnapshot {
             return this;
         }
 
+        /**
+         * Validates and freezes the accumulated snapshot.
+         *
+         * @return a new immutable snapshot
+         * @throws NullPointerException when a required identity is absent
+         * @throws IllegalArgumentException when body-source metadata is inconsistent
+         */
         public EffectiveContractSnapshot build() {
             return new EffectiveContractSnapshot(this);
         }

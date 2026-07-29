@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.registry.RegistryManifestConstants;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,33 +34,55 @@ import java.util.function.Function;
  */
 public final class BlueContractsConformanceReport {
 
+    /** Classpath resources bound into the released conformance package. */
     public static final String FIXTURE_ROOT_RESOURCE = "blue-contracts-1.0/fixtures/";
+    /** Authoritative Contracts fixture manifest resource. */
     public static final String FIXTURE_MANIFEST_RESOURCE = FIXTURE_ROOT_RESOURCE + "manifest.yaml";
+    /** Contracts gas manifest resource. */
     public static final String GAS_MANIFEST_RESOURCE = "blue/language/processor/contracts-gas-1.0.yaml";
+    /** Contracts registry manifest resource. */
     public static final String REGISTRY_MANIFEST_RESOURCE = "registry/blue-contracts-1.0/manifest.yaml";
+    /** Combined release manifest resource. */
     public static final String RELEASE_MANIFEST_RESOURCE =
             "release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml";
+    /** Normative Contracts specification resource. */
     public static final String CONTRACTS_SPECIFICATION_RESOURCE =
             "specifications/blue-contracts-and-processor-specification-1.0.md";
+    /** Normative Language specification resource. */
+    public static final String LANGUAGE_SPECIFICATION_RESOURCE =
+            "specifications/blue-language-specification-1.0.md";
 
+    /** Exact release and constituent package identities. */
     public static final String RELEASE_NAME =
-            "blue-language-1.0-contracts-1.0-bex-2.0-implementation-baseline";
+            "blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline";
+    /** Exact combined release package identity. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:e114721126a0c74aade6f4a6530583848de191a727d84dd3b49ce48a384f180d";
+            "sha256:1059e8250bce470febfe281bade2ebc4a0b2da5ce9bb297a50283eebe70ab747";
+    /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
+    /** Exact Language fixture package identity. */
     public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:277418303ae10aade4029a398f880a8d0f2b321d4943492ac811287c21eb3dbb";
+            "sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5";
+    /** Exact Contracts registry package identity. */
     public static final String CONTRACTS_REGISTRY_PACKAGE_IDENTITY =
-            "sha256:14d5537efbece502ebf430e09805650dd7ea460415a7aa0a8279c2c11d1d6366";
+            "sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8";
+    /** Exact Contracts gas package identity. */
     public static final String CONTRACTS_GAS_PACKAGE_IDENTITY =
             "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
+    /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:e35f94c329850f39c705cc3c0222c431e8d6f07142740e39e6b529c228fc96e5";
+            "sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca";
+
+    /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
             "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
+    /** Published SHA-256 digest of the Contracts specification. */
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "e109bed525acc3c183742a656aa33d0c5291116d1e3cf9909ae971e3f63bca2f";
+            "75e8d212a3818ad756bd8227d8bda877fb27df9192cff312e347d7742daaed0f";
+    /** Published SHA-256 digest of the Language specification. */
+    public static final String LANGUAGE_SPECIFICATION_SHA256 =
+            "ac1ac47e10c91be82ebe45e2406f33ad5073cc3f3684bc1651704117b5008852";
 
     /**
      * Fixture envelopes may use YAML anchors for literal reuse. This parser is
@@ -86,6 +109,25 @@ public final class BlueContractsConformanceReport {
     private final List<BlueContractsConformanceFailure> failures;
     private final List<BlueContractsFixtureResult> fixtureResults;
 
+    /**
+     * Creates an immutable report and normalizes null collections to empty.
+     *
+     * @param specVersion Contracts specification version
+     * @param releaseName release name
+     * @param releasePackageIdentity exact release package identity
+     * @param languageRegistryPackageIdentity language registry package identity
+     * @param languageFixturePackageIdentity language fixture package identity
+     * @param contractsRegistryPackageIdentity Contracts registry package
+     *                                         identity
+     * @param contractsGasPackageIdentity Contracts gas package identity
+     * @param fixturePackageIdentity Contracts fixture package identity
+     * @param fixtureIds all fixture identities
+     * @param passedFixtureIds fixture identities that passed
+     * @param failedFixtureIds fixture identities that failed
+     * @param fixtureCategories categories keyed by fixture identity
+     * @param failures detailed failure records
+     * @param fixtureResults complete fixture result records
+     */
     public BlueContractsConformanceReport(String specVersion,
                                           String releaseName,
                                           String releasePackageIdentity,
@@ -132,66 +174,210 @@ public final class BlueContractsConformanceReport {
         validateResultPartition();
     }
 
+    /**
+
+     * Returns the Contracts specification version.
+
+     *
+
+     * @return specification version
+
+     */
     public String getSpecVersion() {
         return specVersion;
     }
 
+    /**
+
+     * Returns the release name.
+
+     *
+
+     * @return release name
+
+     */
     public String getReleaseName() {
         return releaseName;
     }
 
+    /**
+
+     * Returns the release package identity.
+
+     *
+
+     * @return release package identity
+
+     */
     public String getReleasePackageIdentity() {
         return releasePackageIdentity;
     }
 
+    /**
+
+     * Returns the language registry identity.
+
+     *
+
+     * @return language registry identity
+
+     */
     public String getLanguageRegistryPackageIdentity() {
         return languageRegistryPackageIdentity;
     }
 
+    /**
+
+     * Returns the language fixture identity.
+
+     *
+
+     * @return language fixture identity
+
+     */
     public String getLanguageFixturePackageIdentity() {
         return languageFixturePackageIdentity;
     }
 
+    /**
+
+     * Returns the Contracts registry identity.
+
+     *
+
+     * @return Contracts registry identity
+
+     */
     public String getContractsRegistryPackageIdentity() {
         return contractsRegistryPackageIdentity;
     }
 
+    /**
+
+     * Returns the Contracts gas identity.
+
+     *
+
+     * @return Contracts gas identity
+
+     */
     public String getContractsGasPackageIdentity() {
         return contractsGasPackageIdentity;
     }
 
+    /**
+
+     * Returns the Contracts fixture identity.
+
+     *
+
+     * @return Contracts fixture identity
+
+     */
     public String getFixturePackageIdentity() {
         return fixturePackageIdentity;
     }
 
+    /**
+
+     * Returns all fixture identities.
+
+     *
+
+     * @return immutable fixture identity list
+
+     */
     public List<String> getFixtureIds() {
         return fixtureIds;
     }
 
+    /**
+
+     * Returns passed fixture identities.
+
+     *
+
+     * @return immutable passed-fixture list
+
+     */
     public List<String> getPassedFixtureIds() {
         return passedFixtureIds;
     }
 
+    /**
+
+     * Returns failed fixture identities.
+
+     *
+
+     * @return immutable failed-fixture list
+
+     */
     public List<String> getFailedFixtureIds() {
         return failedFixtureIds;
     }
 
+    /**
+
+     * Returns fixture categories.
+
+     *
+
+     * @return immutable category map
+
+     */
     public Map<String, BlueContractsFixtureCategory> getFixtureCategories() {
         return fixtureCategories;
     }
 
+    /**
+
+     * Returns detailed failures.
+
+     *
+
+     * @return immutable failure list
+
+     */
     public List<BlueContractsConformanceFailure> getFailures() {
         return failures;
     }
 
+    /**
+
+     * Returns complete fixture results.
+
+     *
+
+     * @return immutable result list
+
+     */
     public List<BlueContractsFixtureResult> getFixtureResults() {
         return fixtureResults;
     }
 
+    /**
+
+     * Returns the skipped-fixture count, which is always zero.
+
+     *
+
+     * @return zero
+
+     */
     public int getSkippedFixtureCount() {
         return 0;
     }
 
+    /**
+
+     * Tests full conformance.
+
+     *
+
+     * @return whether every release condition passes
+
+     */
     public boolean isConformant() {
         return failures.isEmpty()
                 && passedFixtureIds.equals(fixtureIds)
@@ -199,69 +385,149 @@ public final class BlueContractsConformanceReport {
                 && isOfficialContracts10FixturePackage();
     }
 
+    /**
+
+     * Tests required fixture coverage.
+
+     *
+
+     * @return whether every required fixture is present
+
+     */
     public boolean hasRequiredFixtureCoverage() {
         return fixtureIds.containsAll(requiredFixtureIdsForContracts10());
     }
 
+    /**
+
+     * Tests exact fixture-set equality.
+
+     *
+
+     * @return whether the fixture set is exact
+
+     */
     public boolean hasExactRequiredFixtureSet() {
         Set<String> fixtureSet = new LinkedHashSet<>(fixtureIds);
         Set<String> requiredSet = new LinkedHashSet<>(requiredFixtureIdsForContracts10());
         return fixtureSet.equals(requiredSet) && fixtureIds.size() == requiredSet.size();
     }
 
+    /**
+
+     * Tests the official fixture identity.
+
+     *
+
+     * @return whether the fixture package is official
+
+     */
     public boolean isOfficialContracts10FixturePackage() {
         return CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(fixturePackageIdentity);
     }
 
+    /**
+
+     * Builds the release-tool report.
+
+     *
+
+     * @return immutable machine-readable map
+
+     */
     public Map<String, Object> toMachineReadableMap() {
         Map<String, Object> report = new LinkedHashMap<>();
-        report.put("schema", "blue-contracts-conformance-report/1.0");
+        report.put(ConformanceReportConstants.Field.SCHEMA,
+                ConformanceReportConstants.Schema.CONTRACTS);
 
         Map<String, Object> release = new LinkedHashMap<>();
-        release.put("name", releaseName);
-        release.put("packageIdentity", releasePackageIdentity);
-        report.put("release", release);
+        release.put(ConformanceReportConstants.Field.NAME, releaseName);
+        release.put(ConformanceReportConstants.Field.PACKAGE_IDENTITY,
+                releasePackageIdentity);
+        report.put(ConformanceReportConstants.Field.RELEASE, release);
 
         Map<String, Object> language = new LinkedHashMap<>();
-        language.put("specificationVersion", "1.0");
-        language.put("registryPackageIdentity", languageRegistryPackageIdentity);
-        language.put("fixturePackageIdentity", languageFixturePackageIdentity);
-        report.put("language", language);
+        language.put(ConformanceReportConstants.Field.SPECIFICATION_VERSION,
+                ConformanceReportConstants.SPECIFICATION_VERSION_1_0);
+        language.put(ConformanceReportConstants.Field.SPECIFICATION_SHA256,
+                LANGUAGE_SPECIFICATION_SHA256);
+        language.put(
+                ConformanceReportConstants.Field.REGISTRY_PACKAGE_IDENTITY,
+                languageRegistryPackageIdentity);
+        language.put(ConformanceReportConstants.Field.FIXTURE_PACKAGE_IDENTITY,
+                languageFixturePackageIdentity);
+        report.put(ConformanceReportConstants.Field.LANGUAGE, language);
 
         Map<String, Object> contracts = new LinkedHashMap<>();
-        contracts.put("specificationVersion", specVersion);
-        contracts.put("specificationSha256", CONTRACTS_SPECIFICATION_SHA256);
-        contracts.put("registryPackageIdentity", contractsRegistryPackageIdentity);
-        contracts.put("gasPackageIdentity", contractsGasPackageIdentity);
-        contracts.put("fixturePackageIdentity", fixturePackageIdentity);
-        report.put("contracts", contracts);
+        contracts.put(ConformanceReportConstants.Field.SPECIFICATION_VERSION,
+                specVersion);
+        contracts.put(ConformanceReportConstants.Field.SPECIFICATION_SHA256,
+                CONTRACTS_SPECIFICATION_SHA256);
+        contracts.put(
+                ConformanceReportConstants.Field.REGISTRY_PACKAGE_IDENTITY,
+                contractsRegistryPackageIdentity);
+        contracts.put(ConformanceReportConstants.Field.GAS_PACKAGE_IDENTITY,
+                contractsGasPackageIdentity);
+        contracts.put(
+                ConformanceReportConstants.Field.FIXTURE_PACKAGE_IDENTITY,
+                fixturePackageIdentity);
+        report.put(ConformanceReportConstants.Field.CONTRACTS, contracts);
 
         Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("total", fixtureIds.size());
-        summary.put("passed", passedFixtureIds.size());
-        summary.put("failed", fixtureResults.isEmpty()
+        summary.put(ConformanceReportConstants.Field.TOTAL, fixtureIds.size());
+        summary.put(ConformanceReportConstants.Field.PASSED,
+                passedFixtureIds.size());
+        summary.put(ConformanceReportConstants.Field.FAILED,
+                fixtureResults.isEmpty()
                 ? fixtureIds.size() - passedFixtureIds.size()
                 : failedFixtureIds.size());
-        summary.put("skipped", 0);
-        summary.put("conformant", isConformant());
-        report.put("summary", summary);
-        report.put("fixtures", machineFixtureResults());
+        summary.put(ConformanceReportConstants.Field.SKIPPED, 0);
+        summary.put(ConformanceReportConstants.Field.CONFORMANT,
+                isConformant());
+        report.put(ConformanceReportConstants.Field.SUMMARY, summary);
+        report.put(ConformanceReportConstants.Field.FIXTURES,
+                machineFixtureResults());
         return Collections.unmodifiableMap(report);
     }
 
+    /**
+
+     * Serializes the release-tool report.
+
+     *
+
+     * @return JSON report
+
+     */
     public String toMachineReadableJson() {
         return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(toMachineReadableMap());
     }
 
+    /**
+
+     * Returns normative Contracts 1.0 fixture identities.
+
+     *
+
+     * @return immutable identity list
+
+     */
     public static List<String> requiredFixtureIdsForContracts10() {
         return Collections.unmodifiableList(loadFixtureIds());
     }
 
+    /**
+     * Loads the declared fixture package identity.
+     *
+     * @param fallback value used when no identity is declared
+     * @return declared identity or {@code fallback}
+     */
     public static String loadFixturePackageIdentity(String fallback) {
         validateFixturePackageIntegrity();
         validateReleaseBindings();
         JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
-        JsonNode identity = manifest.get("packageIdentity");
+        JsonNode identity = manifest.get(
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
         if (identity == null || !identity.isTextual() || identity.asText().trim().isEmpty()) {
             throw new IllegalStateException(
                     "Contracts fixture manifest is missing packageIdentity");
@@ -269,6 +535,15 @@ public final class BlueContractsConformanceReport {
         return identity.asText();
     }
 
+    /**
+
+     * Loads fixture identities in manifest order.
+
+     *
+
+     * @return fixture identity list
+
+     */
     public static List<String> loadFixtureIds() {
         List<String> ids = new ArrayList<>();
         for (FixtureInventoryEntry entry : loadFixtureInventory()) {
@@ -277,6 +552,15 @@ public final class BlueContractsConformanceReport {
         return ids;
     }
 
+    /**
+
+     * Loads fixture categories.
+
+     *
+
+     * @return categories keyed by fixture identity
+
+     */
     public static Map<String, BlueContractsFixtureCategory> loadFixtureCategories() {
         Map<String, BlueContractsFixtureCategory> categories = new LinkedHashMap<>();
         for (FixtureInventoryEntry entry : loadFixtureInventory()) {
@@ -285,23 +569,76 @@ public final class BlueContractsConformanceReport {
         return categories;
     }
 
+    /**
+
+     * Recomputes the fixture package identity.
+
+     *
+
+     * @return fixture package identity
+
+     */
     public static String computeFixturePackageIdentity() {
-        return computeYamlPackageIdentity(FIXTURE_MANIFEST_RESOURCE, "packageIdentity");
+        return computeYamlPackageIdentity(
+                FIXTURE_MANIFEST_RESOURCE,
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
     }
 
+    /**
+
+     * Recomputes the gas package identity.
+
+     *
+
+     * @return gas package identity
+
+     */
     public static String computeGasPackageIdentity() {
-        return computeYamlPackageIdentity(GAS_MANIFEST_RESOURCE, "packageIdentity");
+        return computeYamlPackageIdentity(
+                GAS_MANIFEST_RESOURCE,
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
     }
 
+    /**
+
+     * Recomputes the registry package identity.
+
+     *
+
+     * @return registry package identity
+
+     */
     public static String computeRegistryPackageIdentity() {
         return computeYamlPackageIdentity(
-                REGISTRY_MANIFEST_RESOURCE, "packageIdentity", "fixturePackageIdentity");
+                REGISTRY_MANIFEST_RESOURCE,
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                RegistryManifestConstants.FIELD_FIXTURE_PACKAGE_IDENTITY);
     }
 
+    /**
+
+     * Recomputes the release package identity.
+
+     *
+
+     * @return release package identity
+
+     */
     public static String computeReleasePackageIdentity() {
-        return computeYamlPackageIdentity(RELEASE_MANIFEST_RESOURCE, "packageIdentity");
+        return computeYamlPackageIdentity(
+                RELEASE_MANIFEST_RESOURCE,
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
     }
 
+    /**
+
+     * Verifies fixture identity and file digests.
+
+     *
+
+     * @return whether all evidence matches
+
+     */
     public static boolean fixturePackageIdentityMatchesFixtureFiles() {
         try {
             validateFixturePackageIntegrity();
@@ -311,16 +648,27 @@ public final class BlueContractsConformanceReport {
         }
     }
 
+    /**
+     * Requires internally consistent fixture package evidence.
+     *
+     * @throws IllegalStateException when package evidence is inconsistent
+     */
     public static void validateFixturePackageIntegrity() {
         JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
         requireText(manifest, "fixturePackage", "blue-contracts-conformance");
-        requireText(manifest, "specificationVersion", "1.0");
+        requireText(
+                manifest,
+                RegistryManifestConstants.FIELD_SPECIFICATION_VERSION,
+                ConformanceReportConstants.SPECIFICATION_VERSION_1_0);
         requireText(manifest, "schemaVersion", "blue-contracts-fixture/1.0");
         requireText(manifest, "registryPackageIdentity", CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
         requireText(manifest, "gasSchedule", "blue-contracts/gas/1.0");
         requireText(manifest, "gasManifestPackageIdentity", CONTRACTS_GAS_PACKAGE_IDENTITY);
         requireText(manifest, "gasManifestSha256", CONTRACTS_GAS_MANIFEST_SHA256);
-        requireText(manifest, "packageIdentity", CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
+        requireText(
+                manifest,
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
 
         JsonNode files = manifest.get("files");
         if (files == null || !files.isArray()) {
@@ -330,7 +678,8 @@ public final class BlueContractsConformanceReport {
         int behavior = 0;
         int gas = 0;
         for (JsonNode file : files) {
-            String path = requiredText(file, "path");
+            String path = requiredText(
+                    file, RegistryManifestConstants.FIELD_PATH);
             validateRelativeResourcePath(path);
             if (!paths.add(path)) {
                 throw new IllegalStateException("Duplicate Contracts fixture file path: " + path);
@@ -348,7 +697,8 @@ public final class BlueContractsConformanceReport {
             if (file.path("bytes").asLong(-1L) != normalized.length) {
                 throw new IllegalStateException("Contracts fixture byte length mismatch: " + path);
             }
-            String expectedDigest = requiredText(file, "sha256");
+            String expectedDigest = requiredText(
+                    file, RegistryManifestConstants.FIELD_SHA256);
             String actualDigest = sha256Hex(normalized);
             if (!expectedDigest.equals(actualDigest)) {
                 throw new IllegalStateException("Contracts fixture digest mismatch: " + path);
@@ -356,10 +706,13 @@ public final class BlueContractsConformanceReport {
         }
         requireCount(manifest, "behaviorFixtureCount", behavior);
         requireCount(manifest, "gasFixtureCount", gas);
-        requireCount(manifest, "vectorCount", 78);
-        if (behavior != 69 || gas != 58) {
+        requireCount(manifest, "vectorCount", 90);
+        if (behavior
+                != ConformanceReportConstants.FixtureCount.CONTRACTS_BEHAVIOR
+                || gas
+                != ConformanceReportConstants.FixtureCount.CONTRACTS_GAS) {
             throw new IllegalStateException(
-                    "Contracts fixture inventory must contain 69 behavior and 58 gas fixtures");
+                    "Contracts fixture inventory must contain 82 behavior and 58 gas fixtures");
         }
         if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
             throw new IllegalStateException("Contracts fixture package identity mismatch");
@@ -374,6 +727,11 @@ public final class BlueContractsConformanceReport {
                 });
     }
 
+    /**
+     * Requires the published release bindings to match bundled resources.
+     *
+     * @throws IllegalStateException when a release binding is inconsistent
+     */
     public static void validateReleaseBindings() {
         JsonNode release = requireYamlResource(RELEASE_MANIFEST_RESOURCE);
         requireText(release, "release", RELEASE_NAME);
@@ -386,7 +744,10 @@ public final class BlueContractsConformanceReport {
         requireText(components, "contractsRegistryPackage", CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
         requireText(components, "contractsGasPackage", CONTRACTS_GAS_PACKAGE_IDENTITY);
         requireText(components, "contractsFixturePackage", CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
-        requireText(release, "packageIdentity", RELEASE_PACKAGE_IDENTITY);
+        requireText(
+                release,
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                RELEASE_PACKAGE_IDENTITY);
         if (!RELEASE_PACKAGE_IDENTITY.equals(computeReleasePackageIdentity())) {
             throw new IllegalStateException("Release package identity mismatch");
         }
@@ -397,6 +758,9 @@ public final class BlueContractsConformanceReport {
             throw new IllegalStateException("Contracts registry package identity mismatch");
         }
         assertRawResourceDigest(GAS_MANIFEST_RESOURCE, CONTRACTS_GAS_MANIFEST_SHA256);
+        assertRawResourceDigest(
+                LANGUAGE_SPECIFICATION_RESOURCE,
+                LANGUAGE_SPECIFICATION_SHA256);
         assertRawResourceDigest(CONTRACTS_SPECIFICATION_RESOURCE, CONTRACTS_SPECIFICATION_SHA256);
     }
 
@@ -465,7 +829,8 @@ public final class BlueContractsConformanceReport {
             if (!"behavior-fixture".equals(role) && !"gas-fixture".equals(role)) {
                 continue;
             }
-            String path = requiredText(file, "path");
+            String path = requiredText(
+                    file, RegistryManifestConstants.FIELD_PATH);
             validateRelativeResourcePath(path);
             if (!paths.add(path)) {
                 throw new IllegalStateException(
@@ -476,13 +841,15 @@ public final class BlueContractsConformanceReport {
                 throw new IllegalStateException(
                         "Contracts fixture must be an object: " + path);
             }
-            String id = requiredText(fixture, "id");
+            String id = requiredText(
+                    fixture, ConformanceReportConstants.Field.ID);
             if (!ids.add(id)) {
                 throw new IllegalStateException(
                         "Duplicate executable Contracts fixture id: " + id);
             }
             List<String> vectors = new ArrayList<>();
-            JsonNode declaredVectors = fixture.get("vectors");
+            JsonNode declaredVectors = fixture.get(
+                    ConformanceReportConstants.Field.VECTORS);
             if (declaredVectors == null
                     || !declaredVectors.isArray()
                     || declaredVectors.size() == 0) {
@@ -500,8 +867,12 @@ public final class BlueContractsConformanceReport {
                     id,
                     path,
                     role,
-                    BlueContractsFixtureCategory.fromLabel(requiredText(fixture, "category")),
-                    requiredText(fixture, "operation"),
+                    BlueContractsFixtureCategory.fromLabel(requiredText(
+                            fixture,
+                            ConformanceReportConstants.Field.CATEGORY)),
+                    requiredText(
+                            fixture,
+                            ConformanceReportConstants.Field.OPERATION),
                     vectors));
             if ("behavior-fixture".equals(role)) {
                 behavior++;
@@ -509,10 +880,15 @@ public final class BlueContractsConformanceReport {
                 gas++;
             }
         }
-        if (behavior != 69 || gas != 58 || entries.size() != 127) {
+        if (behavior
+                != ConformanceReportConstants.FixtureCount.CONTRACTS_BEHAVIOR
+                || gas
+                != ConformanceReportConstants.FixtureCount.CONTRACTS_GAS
+                || entries.size()
+                != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
             throw new IllegalStateException(
                     "Contracts executable inventory must contain exactly "
-                            + "69 behavior and 58 gas fixtures; found "
+                            + "82 behavior and 58 gas fixtures; found "
                             + behavior + " behavior and " + gas + " gas");
         }
         return Collections.unmodifiableList(entries);
@@ -724,30 +1100,40 @@ public final class BlueContractsConformanceReport {
         for (String fixtureId : fixtureIds) {
             BlueContractsFixtureResult result = byId.get(fixtureId);
             Map<String, Object> value = new LinkedHashMap<>();
-            value.put("id", fixtureId);
+            value.put(ConformanceReportConstants.Field.ID, fixtureId);
             if (result == null) {
                 BlueContractsFixtureCategory category =
                         fixtureCategories.get(fixtureId);
-                value.put("category",
+                value.put(ConformanceReportConstants.Field.CATEGORY,
                         category != null ? category.getLabel() : null);
-                value.put("status", "FAIL");
-                value.put("errorCategory", "HarnessDidNotRunFixture");
-                value.put("message", "Fixture has no execution result.");
+                value.put(ConformanceReportConstants.Field.STATUS,
+                        ConformanceReportConstants.Status.FAIL);
+                value.put(ConformanceReportConstants.Field.ERROR_CATEGORY,
+                        ConformanceReportConstants.ErrorCategory
+                                .HARNESS_DID_NOT_RUN_FIXTURE);
+                value.put(ConformanceReportConstants.Field.MESSAGE,
+                        "Fixture has no execution result.");
                 encoded.add(Collections.unmodifiableMap(value));
                 continue;
             }
-            value.put("path", result.getPath());
-            value.put("role", result.getRole());
-            value.put("category", result.getCategory().getLabel());
-            value.put("operation", result.getOperation());
-            value.put("vectors", result.getVectors());
-            value.put("status", result.getStatus().name());
+            value.put(ConformanceReportConstants.Field.PATH, result.getPath());
+            value.put(ConformanceReportConstants.Field.ROLE, result.getRole());
+            value.put(ConformanceReportConstants.Field.CATEGORY,
+                    result.getCategory().getLabel());
+            value.put(ConformanceReportConstants.Field.OPERATION,
+                    result.getOperation());
+            value.put(ConformanceReportConstants.Field.VECTORS,
+                    result.getVectors());
+            value.put(ConformanceReportConstants.Field.STATUS,
+                    result.getStatus().name());
             if (result.getFailure() != null) {
                 Map<String, Object> failure = new LinkedHashMap<>();
-                failure.put("exceptionClass",
+                failure.put(ConformanceReportConstants.Field.EXCEPTION_CLASS,
                         result.getFailure().getExceptionClass());
-                failure.put("message", result.getFailure().getMessage());
-                value.put("failure", Collections.unmodifiableMap(failure));
+                failure.put(ConformanceReportConstants.Field.MESSAGE,
+                        result.getFailure().getMessage());
+                value.put(ConformanceReportConstants.Field.FAILURE,
+                        Collections.unmodifiableMap(failure));
             }
             encoded.add(Collections.unmodifiableMap(value));
         }

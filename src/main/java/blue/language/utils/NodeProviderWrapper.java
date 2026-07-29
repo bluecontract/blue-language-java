@@ -11,7 +11,27 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Builds the verified provider graph used by Language operations.
+ *
+ * <p>Bootstrap and runtime-type providers are inserted ahead of caller
+ * providers, and every external result-producing leaf is independently
+ * evidence-verified. Existing equivalent wrappers are retained.</p>
+ */
 public class NodeProviderWrapper {
+
+    /**
+     * Creates a provider-graph wrapper helper.
+     */
+    public NodeProviderWrapper() {
+    }
+
+    /**
+     * Returns a provider graph with bootstrap, runtime, and verification boundaries.
+     *
+     * @param originalProvider caller-supplied provider graph
+     * @return secured provider graph
+     */
     public static NodeProvider wrap(NodeProvider originalProvider) {
         NodeProvider verifiedProvider =
                 verifyProviderGraph(originalProvider);
@@ -28,11 +48,15 @@ public class NodeProviderWrapper {
     }
 
     /**
-     * Binary-compatibility entry point for released repository integrations.
+     * Binary-compatibility entry point for callers compiled against the
+     * legacy method name.
      *
      * <p>Language 1.0 has no host-trusted provider bypass. Despite the legacy
-     * method name, this path deliberately applies the same exact evidence
-     * verification as {@link #wrap(NodeProvider)}.</p>
+     * name, this method applies the same strict direct-node verification as
+     * {@link #wrap(NodeProvider)}.</p>
+     *
+     * @param originalProvider caller-supplied provider graph
+     * @return secured provider graph
      */
     public static NodeProvider unverified(
             NodeProvider originalProvider) {
@@ -42,6 +66,9 @@ public class NodeProviderWrapper {
     /**
      * Reports the Language 1.0 trust rule to released callers that still
      * probe the former host-trust marker.
+     *
+     * @param provider provider being probed
+     * @return always {@code false}
      */
     public static boolean isExplicitlyHostTrusted(
             NodeProvider provider) {
@@ -55,15 +82,20 @@ public class NodeProviderWrapper {
      */
     private static NodeProvider verifyProviderGraph(
             NodeProvider provider) {
+        if (provider == null) {
+            throw new NullPointerException("provider");
+        }
         NodeProvider runtimeProvider =
                 BlueRuntimeTypeRegistry.getDefault()
                         .asProcessorSnapshotProvider();
         if (provider == BootstrapProvider.INSTANCE
                 || provider == runtimeProvider
-                || provider instanceof VerifyingNodeProvider) {
+                || provider.getClass()
+                == VerifyingNodeProvider.class) {
             return provider;
         }
-        if (provider instanceof PotentialBlueIdNodeProvider) {
+        if (provider.getClass()
+                == PotentialBlueIdNodeProvider.class) {
             PotentialBlueIdNodeProvider filtered =
                     (PotentialBlueIdNodeProvider) provider;
             NodeProvider verifiedDelegate =
@@ -73,7 +105,8 @@ public class NodeProviderWrapper {
                     : new PotentialBlueIdNodeProvider(
                     verifiedDelegate);
         }
-        if (provider instanceof SequentialNodeProvider) {
+        if (provider.getClass()
+                == SequentialNodeProvider.class) {
             List<NodeProvider> providers =
                     ((SequentialNodeProvider) provider)
                             .getNodeProviders();
@@ -96,6 +129,8 @@ public class NodeProviderWrapper {
     private static boolean hasBootstrapAtTopLevel(
             NodeProvider provider) {
         return provider instanceof SequentialNodeProvider
+                && provider.getClass()
+                == SequentialNodeProvider.class
                 && ((SequentialNodeProvider) provider)
                 .getNodeProviders().stream()
                 .anyMatch(member ->
@@ -103,7 +138,8 @@ public class NodeProviderWrapper {
     }
 
     private static NodeProvider withRuntimeProvider(NodeProvider originalProvider) {
-        if (!(originalProvider instanceof SequentialNodeProvider)) {
+        if (originalProvider.getClass()
+                != SequentialNodeProvider.class) {
             return originalProvider;
         }
         NodeProvider runtimeProvider = BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider();
@@ -125,4 +161,5 @@ public class NodeProviderWrapper {
         }
         return new SequentialNodeProvider(wrapped);
     }
+
 }

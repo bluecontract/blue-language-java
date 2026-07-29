@@ -5,11 +5,12 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Language 1.0 treats materialization and cache state as out-of-band. There is
@@ -18,71 +19,112 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SelectedProcessingStateCacheIsolationFailFirstTest {
 
     @Test
-    void pureReferenceAndVerifiedInlineMaterializationHaveOneIdentity() {
+    void shouldAssignOneIdentityToPureReferenceAndVerifiedInlineMaterialization() {
+        // given
         ExactNodeFixture fixture = new ExactNodeFixture();
         Node collapsed = fixture.collapsedDocument();
         Node inline = fixture.inlineDocument();
 
-        assertEquals(fixture.blue.calculateBlueId(collapsed),
-                fixture.blue.calculateBlueId(inline));
-
+        // when
+        String collapsedBlueId =
+                fixture.blue.calculateBlueId(collapsed);
+        String inlineBlueId =
+                fixture.blue.calculateBlueId(inline);
         ResolvedSnapshot collapsedSnapshot =
                 fixture.blue.resolveToSnapshot(collapsed);
         ResolvedSnapshot inlineSnapshot =
                 fixture.blue.resolveToSnapshot(inline);
-
-        assertEquivalentMeaning(collapsedSnapshot, inlineSnapshot, fixture.blue);
-        assertEquals("present",
+        String expandedPayload =
                 fixture.blue.expand(collapsedSnapshot.resolvedRoot())
-                        .getAsText("/subject/payload"));
+                        .getAsText("/subject/payload");
+        String collapsedExpandedJson = expandedJson(collapsedSnapshot, fixture.blue);
+        String inlineExpandedJson = expandedJson(inlineSnapshot, fixture.blue);
+
+        // then
+        assertEquals(collapsedBlueId, inlineBlueId);
+        assertEquals(collapsedSnapshot.blueId(), inlineSnapshot.blueId());
+        assertEquals(collapsedExpandedJson, inlineExpandedJson);
+        assertEquals("present", expandedPayload);
     }
 
     @Test
-    void cacheHistoryCannotChangeReferenceVersusInlineMeaning() {
+    void shouldKeepReferenceVersusInlineMeaningIndependentOfCacheHistory() {
+        // given
         ExactNodeFixture referenceFirst = new ExactNodeFixture();
-        ResolvedSnapshot collapsedFirst = referenceFirst.blue.resolveToSnapshot(
-                referenceFirst.collapsedDocument());
-        ResolvedSnapshot inlineSecond = referenceFirst.blue.resolveToSnapshot(
-                referenceFirst.inlineDocument());
-
+        Node collapsedReferenceFirst =
+                referenceFirst.collapsedDocument();
+        Node inlineReferenceSecond =
+                referenceFirst.inlineDocument();
         ExactNodeFixture inlineFirst = new ExactNodeFixture();
-        ResolvedSnapshot inlineFirstSnapshot = inlineFirst.blue.resolveToSnapshot(
-                inlineFirst.inlineDocument());
-        ResolvedSnapshot collapsedSecond = inlineFirst.blue.resolveToSnapshot(
-                inlineFirst.collapsedDocument());
+        Node inlineFirstDocument = inlineFirst.inlineDocument();
+        Node collapsedInlineSecond =
+                inlineFirst.collapsedDocument();
 
-        assertEquivalentMeaning(collapsedFirst, inlineSecond, referenceFirst.blue);
-        assertEquivalentMeaning(collapsedFirst, inlineFirstSnapshot, referenceFirst.blue);
-        assertEquivalentMeaning(collapsedFirst, collapsedSecond, referenceFirst.blue);
+        // when
+        ResolvedSnapshot collapsedFirst = referenceFirst.blue.resolveToSnapshot(
+                collapsedReferenceFirst);
+        ResolvedSnapshot inlineSecond = referenceFirst.blue.resolveToSnapshot(
+                inlineReferenceSecond);
+        ResolvedSnapshot inlineFirstSnapshot = inlineFirst.blue.resolveToSnapshot(
+                inlineFirstDocument);
+        ResolvedSnapshot collapsedSecond = inlineFirst.blue.resolveToSnapshot(
+                collapsedInlineSecond);
+        List<String> blueIds = Arrays.asList(
+                collapsedFirst.blueId(),
+                inlineSecond.blueId(),
+                inlineFirstSnapshot.blueId(),
+                collapsedSecond.blueId());
+        List<String> expandedDocuments = Arrays.asList(
+                expandedJson(collapsedFirst, referenceFirst.blue),
+                expandedJson(inlineSecond, referenceFirst.blue),
+                expandedJson(inlineFirstSnapshot, inlineFirst.blue),
+                expandedJson(collapsedSecond, inlineFirst.blue));
+
+        // then
+        assertEquals(Collections.nCopies(blueIds.size(), blueIds.get(0)), blueIds);
+        assertEquals(
+                Collections.nCopies(expandedDocuments.size(), expandedDocuments.get(0)),
+                expandedDocuments);
     }
 
     @Test
-    void ordinaryTransportsPreserveCollapsedReferenceMeaning() {
+    void shouldPreserveCollapsedReferenceMeaningAcrossOrdinaryTransports() {
+        // given
         ExactNodeFixture fixture = new ExactNodeFixture();
         Node collapsed = fixture.collapsedDocument();
+
+        // when
         List<Node> forms = Arrays.asList(
                 collapsed,
                 collapsed.clone(),
                 fixture.blue.jsonToNode(fixture.blue.nodeToJson(collapsed)),
                 fixture.blue.yamlToNode(fixture.blue.nodeToYaml(collapsed)));
         ResolvedSnapshot expected = fixture.blue.resolveToSnapshot(collapsed);
-
+        List<Boolean> referenceOnly =
+                new ArrayList<>(forms.size());
+        List<String> actualBlueIds =
+                new ArrayList<>(forms.size());
+        List<String> actualExpandedDocuments =
+                new ArrayList<>(forms.size());
         for (Node form : forms) {
-            assertTrue(form.getAsNode("/subject").isReferenceOnly());
+            referenceOnly.add(
+                    form.getAsNode("/subject").isReferenceOnly());
             ResolvedSnapshot actual = fixture.blue.resolveToSnapshot(form);
-            assertEquivalentMeaning(expected, actual, fixture.blue);
+            actualBlueIds.add(actual.blueId());
+            actualExpandedDocuments.add(expandedJson(actual, fixture.blue));
         }
+        String expectedExpandedDocument = expandedJson(expected, fixture.blue);
+
+        // then
+        assertEquals(Collections.nCopies(forms.size(), true), referenceOnly);
+        assertEquals(Collections.nCopies(forms.size(), expected.blueId()), actualBlueIds);
+        assertEquals(
+                Collections.nCopies(forms.size(), expectedExpandedDocument),
+                actualExpandedDocuments);
     }
 
-    private static void assertEquivalentMeaning(ResolvedSnapshot expected,
-                                                ResolvedSnapshot actual,
-                                                Blue renderer) {
-        assertEquals(expected.blueId(), actual.blueId());
-        assertEquals(
-                renderer.nodeToJson(
-                        renderer.expand(expected.resolvedRoot())),
-                renderer.nodeToJson(
-                        renderer.expand(actual.resolvedRoot())));
+    private static String expandedJson(ResolvedSnapshot snapshot, Blue renderer) {
+        return renderer.nodeToJson(renderer.expand(snapshot.resolvedRoot()));
     }
 
     private static final class ExactNodeFixture {

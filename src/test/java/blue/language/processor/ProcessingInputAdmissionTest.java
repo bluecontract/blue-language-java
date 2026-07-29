@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProcessingInputAdmissionTest {
@@ -38,7 +37,8 @@ class ProcessingInputAdmissionTest {
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
-    void blueFacadeProcessesExactPureReferenceRootAndEvent() {
+    void shouldVerifyBlueFacadeProcessesExactPureReferenceRootAndEvent() {
+        // given
         Node root = new Node()
                 .properties(
                         "state",
@@ -65,6 +65,7 @@ class ProcessingInputAdmissionTest {
                     .fetchByBlueId(blueId);
         };
 
+        // when
         try (Blue blue = new Blue(
                 trackingProvider)) {
             DocumentProcessingResult result =
@@ -72,6 +73,7 @@ class ProcessingInputAdmissionTest {
                             reference(rootBlueId),
                             reference(eventBlueId));
 
+            // then
             assertEquals(
                     ProcessorStatus.NO_MATCH,
                     result.status());
@@ -88,7 +90,8 @@ class ProcessingInputAdmissionTest {
     }
 
     @Test
-    void publicProcessAdmitsExactRootAndEventWithoutOpeningUnrelatedReference() {
+    void shouldVerifyPublicProcessAdmitsExactRootAndEventWithoutOpeningUnrelatedReference() {
+        // given
         Node unrelated = new Node().properties(
                 "payload", new Node().value("must remain cold"));
         String unrelatedBlueId =
@@ -115,13 +118,17 @@ class ProcessingInputAdmissionTest {
         AtomicInteger derivations = new AtomicInteger();
         AtomicInteger verifications = new AtomicInteger();
 
+        // when
         try (DocumentProcessor processor = processor(
                 fragments, derivations, verifications)) {
             DocumentProcessingResult result =
                     processor.processDocument(
                             reference(rootBlueId),
                             reference(eventBlueId));
+            Node retained = NodePathEditor.getOrNull(
+                    result.document(), "/unrelated");
 
+            // then
             assertEquals(
                     ProcessorStatus.NO_MATCH,
                     result.status());
@@ -134,8 +141,6 @@ class ProcessingInputAdmissionTest {
             assertEquals(0, fragments.fullSnapshotBuilds());
             assertEquals(1, derivations.get());
             assertEquals(1, verifications.get());
-            Node retained = NodePathEditor.getOrNull(
-                    result.document(), "/unrelated");
             assertNotNull(retained);
             assertTrue(retained.isReferenceOnly());
             assertEquals(
@@ -144,7 +149,8 @@ class ProcessingInputAdmissionTest {
     }
 
     @Test
-    void snapshotEntryAdmitsPureReferenceEventOnly() {
+    void shouldVerifySnapshotEntryAdmitsPureReferenceEventOnly() {
+        // given
         Node unrelated = new Node().value(
                 "snapshot sibling remains cold");
         String unrelatedBlueId =
@@ -167,6 +173,7 @@ class ProcessingInputAdmissionTest {
                         FrozenNode.fromNode(root),
                         FrozenNode.fromResolvedNode(root));
 
+        // when
         try (DocumentProcessor processor = processor(
                 fragments,
                 new AtomicInteger(),
@@ -176,6 +183,7 @@ class ProcessingInputAdmissionTest {
                             snapshot,
                             reference(eventBlueId));
 
+            // then
             assertEquals(
                     ProcessorStatus.NO_MATCH,
                     result.status());
@@ -190,7 +198,8 @@ class ProcessingInputAdmissionTest {
     }
 
     @Test
-    void scopeAdmissionOpensOnlyReferenceAncestorsOnSelectedPath() {
+    void shouldVerifyScopeAdmissionOpensOnlyReferenceAncestorsOnSelectedPath() {
+        // given
         Node unrelated = new Node().value(
                 "unrelated root branch");
         String unrelatedBlueId =
@@ -225,6 +234,7 @@ class ProcessingInputAdmissionTest {
         ProcessingInputAdmission admission =
                 new ProcessingInputAdmission(fragments);
 
+        // when
         ProcessingInputAdmission.AdmittedNode admitted =
                 admission.materializeTopLevel(
                         reference(rootBlueId),
@@ -234,6 +244,7 @@ class ProcessingInputAdmissionTest {
                 Collections.singletonList(
                         "/selected/nested"));
 
+        // then
         assertEquals(
                 Arrays.asList(
                         rootBlueId,
@@ -262,25 +273,203 @@ class ProcessingInputAdmissionTest {
     }
 
     @Test
-    void topLevelCyclicMemberIsRejectedWithoutProviderDemand() {
+    void shouldVerifyTopLevelCyclicMemberIsRejectedWithoutProviderDemand() {
+        // given
         StrictFragmentSnapshotManager fragments =
                 new StrictFragmentSnapshotManager();
         ProcessingInputAdmission admission =
                 new ProcessingInputAdmission(fragments);
 
-        InvalidExecutionEvidenceException failure = assertThrows(
-                InvalidExecutionEvidenceException.class,
+        // when
+        InvalidExecutionEvidenceException failure =
+                FailureCapture.captureFailure(
                 () -> admission.materializeTopLevel(
                         reference(CYCLIC_MEMBER_BLUE_ID),
                         "Processing Root"));
 
+        // then
+        assertNotNull(failure);
         assertTrue(failure.getMessage()
                 .contains("cannot be an independently processed"));
+        assertEquals(
+                ProcessorErrorCategory
+                        .CyclicMemberProcessingRootUnsupported,
+                failure.errorCategory());
         assertTrue(fragments.requests().isEmpty());
     }
 
     @Test
-    void scopeAdmissionRejectsOpaqueCyclicBoundaryBeforeProviderDemand() {
+    void shouldVerifyTopLevelCyclicMemberEventHasDistinctDiagnostic() {
+        // given
+        StrictFragmentSnapshotManager fragments =
+                new StrictFragmentSnapshotManager();
+        ProcessingInputAdmission admission =
+                new ProcessingInputAdmission(fragments);
+
+        // when
+        InvalidExecutionEvidenceException failure =
+                FailureCapture.captureFailure(
+                () -> admission.materializeTopLevel(
+                        reference(CYCLIC_MEMBER_BLUE_ID),
+                        "Processing Event"));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory
+                        .CyclicMemberProcessingEventUnsupported,
+                failure.errorCategory());
+        assertTrue(fragments.requests().isEmpty());
+    }
+
+    @Test
+    void shouldVerifyMaterializedCyclicMemberEventRetainsTheTopLevelBoundary() {
+        // given
+        StrictFragmentSnapshotManager fragments =
+                new StrictFragmentSnapshotManager();
+        ProcessingInputAdmission admission =
+                new ProcessingInputAdmission(fragments);
+        Node materializedMember =
+                reference(CYCLIC_MEMBER_BLUE_ID)
+                        .properties(
+                                "body",
+                                new Node().value("verified by owning set"));
+
+        // when
+        InvalidExecutionEvidenceException failure =
+                FailureCapture.captureFailure(
+                () -> admission.materializeTopLevel(
+                        materializedMember,
+                        "Processing Event"));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory
+                        .CyclicMemberProcessingEventUnsupported,
+                failure.errorCategory());
+        assertTrue(fragments.requests().isEmpty());
+    }
+
+    @Test
+    void shouldVerifyTerminatedRootRejectsCyclicEventAcrossNodeAndSnapshotEntries() {
+        // given
+        StrictFragmentSnapshotManager fragments =
+                new StrictFragmentSnapshotManager();
+        AtomicInteger derivations = new AtomicInteger();
+        AtomicInteger verifications = new AtomicInteger();
+        Node root = terminatedRoot();
+        ResolvedSnapshot snapshot = new ResolvedSnapshot(
+                root.clone(),
+                root.clone(),
+                BlueIdCalculator.calculateBlueId(root));
+        VerifiedExecutionEvidence evidence =
+                evidence(root, CYCLIC_MEMBER_BLUE_ID);
+
+        // when
+        List<DocumentProcessingResult> results;
+        try (DocumentProcessor processor = processor(
+                fragments, derivations, verifications)) {
+            results = Arrays.asList(
+                    processor.processDocument(
+                            root.clone(),
+                            reference(CYCLIC_MEMBER_BLUE_ID)),
+                    processor.processDocument(
+                            root.clone(),
+                            materializedCyclicMemberEvent(),
+                            evidence),
+                    processor.processDocument(
+                            snapshot,
+                            reference(CYCLIC_MEMBER_BLUE_ID)),
+                    processor.processDocument(
+                            snapshot,
+                            materializedCyclicMemberEvent(),
+                            evidence));
+        }
+
+        // then
+        for (DocumentProcessingResult result : results) {
+            assertCyclicEventInvalid(result);
+        }
+        assertTrue(fragments.requests().isEmpty());
+        assertEquals(0, derivations.get());
+        assertEquals(0, verifications.get());
+    }
+
+    @Test
+    void shouldVerifyTerminatedRootRejectsCyclicEventAcrossAttemptEvidenceEntries() {
+        // given
+        StrictFragmentSnapshotManager fragments =
+                new StrictFragmentSnapshotManager();
+        AtomicInteger derivations = new AtomicInteger();
+        AtomicInteger verifications = new AtomicInteger();
+        Node root = terminatedRoot();
+        VerifiedExecutionEvidence evidence =
+                evidence(root, CYCLIC_MEMBER_BLUE_ID);
+
+        // when
+        try (DocumentProcessor processor = processor(
+                fragments, derivations, verifications)) {
+            ProcessAttemptResult derivedAttempt =
+                    processor.processAttempt(
+                            root.clone(),
+                            reference(CYCLIC_MEMBER_BLUE_ID));
+            ProcessAttemptResult evidenceAttempt =
+                    processor.processAttempt(
+                            root.clone(),
+                            materializedCyclicMemberEvent(),
+                            evidence);
+
+            // then
+            assertEquals(
+                    ProcessAttemptResult.Kind.COMPLETE,
+                    derivedAttempt.kind());
+            assertEquals(
+                    ProcessAttemptResult.Kind.COMPLETE,
+                    evidenceAttempt.kind());
+            assertCyclicEventInvalid(
+                    derivedAttempt.processResult());
+            assertCyclicEventInvalid(
+                    evidenceAttempt.processResult());
+        }
+
+        assertTrue(fragments.requests().isEmpty());
+        assertEquals(0, derivations.get());
+        assertEquals(0, verifications.get());
+    }
+
+    @Test
+    void shouldVerifyTerminatedRootStillValidatesGenericEventBlueIdSyntax() {
+        // given
+        StrictFragmentSnapshotManager fragments =
+                new StrictFragmentSnapshotManager();
+
+        // when
+        try (DocumentProcessor processor = processor(
+                fragments,
+                new AtomicInteger(),
+                new AtomicInteger())) {
+            DocumentProcessingResult result =
+                    processor.processDocument(
+                            terminatedRoot(),
+                            new Node().blueId("not-a-blue-id"));
+
+            // then
+            assertEquals(
+                    ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                    result.status());
+            assertNotNull(result.diagnostic());
+            assertEquals(
+                    ProcessorErrorCategory.InvalidProcessingEvent,
+                    result.diagnostic().category());
+        }
+
+        assertTrue(fragments.requests().isEmpty());
+    }
+
+    @Test
+    void shouldVerifyScopeAdmissionRejectsOpaqueCyclicBoundaryBeforeProviderDemand() {
+        // given
         StrictFragmentSnapshotManager fragments =
                 new StrictFragmentSnapshotManager();
         ProcessingInputAdmission admission =
@@ -291,20 +480,28 @@ class ProcessingInputAdmissionTest {
                                 "cyclic",
                                 reference(CYCLIC_MEMBER_BLUE_ID)));
 
-        InvalidExecutionEvidenceException failure = assertThrows(
-                InvalidExecutionEvidenceException.class,
+        // when
+        InvalidExecutionEvidenceException failure =
+                FailureCapture.captureFailure(
                 () -> admission.materializeScopePaths(
                         admitted,
                         Collections.singletonList(
                                 "/cyclic/embedded")));
 
+        // then
+        assertNotNull(failure);
         assertTrue(failure.getMessage()
                 .contains("cannot cross opaque cyclic-set member"));
+        assertEquals(
+                ProcessorErrorCategory
+                        .CyclicSetEmbeddedBoundaryUnsupported,
+                failure.errorCategory());
         assertTrue(fragments.requests().isEmpty());
     }
 
     @Test
-    void mismatchedExactRootEvidenceIsDeterministicallyInvalid() {
+    void shouldVerifyMismatchedExactRootEvidenceIsDeterministicallyInvalid() {
+        // given
         Node expected = new Node().properties(
                 "state", new Node().value("expected"));
         String requestedBlueId =
@@ -318,6 +515,7 @@ class ProcessingInputAdmissionTest {
         AtomicInteger derivations = new AtomicInteger();
         AtomicInteger verifications = new AtomicInteger();
 
+        // when
         try (DocumentProcessor processor = processor(
                 fragments, derivations, verifications)) {
             DocumentProcessingResult result =
@@ -325,6 +523,7 @@ class ProcessingInputAdmissionTest {
                             reference(requestedBlueId),
                             new Node().value("event"));
 
+            // then
             assertEquals(
                     ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                     result.status());
@@ -344,7 +543,8 @@ class ProcessingInputAdmissionTest {
     }
 
     @Test
-    void notFoundTopLevelRootCompletesAsInvalidWithoutGas() {
+    void shouldVerifyNotFoundTopLevelRootCompletesAsInvalidWithoutGas() {
+        // given
         Node expected = new Node().properties(
                 "state", new Node().value("not-found"));
         String requestedBlueId =
@@ -354,6 +554,7 @@ class ProcessingInputAdmissionTest {
         AtomicInteger derivations = new AtomicInteger();
         AtomicInteger verifications = new AtomicInteger();
 
+        // when
         try (DocumentProcessor processor = processor(
                 fragments, derivations, verifications)) {
             ProcessAttemptResult attempt =
@@ -361,6 +562,7 @@ class ProcessingInputAdmissionTest {
                             reference(requestedBlueId),
                             new Node().value("event"));
 
+            // then
             assertEquals(
                     ProcessAttemptResult.Kind.COMPLETE,
                     attempt.kind());
@@ -381,7 +583,8 @@ class ProcessingInputAdmissionTest {
     }
 
     @Test
-    void unavailableTopLevelRootSuspendsAttemptBeforeGasOrEffects() {
+    void shouldVerifyUnavailableTopLevelRootSuspendsAttemptBeforeGasOrEffects() {
+        // given
         Node expected = new Node().properties(
                 "state", new Node().value("unavailable"));
         String requestedBlueId =
@@ -392,6 +595,7 @@ class ProcessingInputAdmissionTest {
         AtomicInteger derivations = new AtomicInteger();
         AtomicInteger verifications = new AtomicInteger();
 
+        // when
         try (DocumentProcessor processor = processor(
                 fragments, derivations, verifications)) {
             ProcessAttemptResult attempt =
@@ -399,6 +603,7 @@ class ProcessingInputAdmissionTest {
                             reference(requestedBlueId),
                             new Node().value("event"));
 
+            // then
             assertEquals(
                     ProcessAttemptResult.Kind.NEEDS_RESOURCES,
                     attempt.kind());
@@ -419,7 +624,8 @@ class ProcessingInputAdmissionTest {
     }
 
     @Test
-    void eventNotFoundIsInvalidButEventUnavailableSuspends() {
+    void shouldVerifyEventNotFoundIsInvalidButEventUnavailableSuspends() {
+        // given
         Node root = new Node().value("root");
         Node event = new Node().properties(
                 "subscriptionKey",
@@ -430,57 +636,60 @@ class ProcessingInputAdmissionTest {
                 BlueIdCalculator.calculateBlueId(event);
         ExactNodeGraphFragments rootFragments =
                 new ExactNodeGraphFragments(root);
-
         StrictFragmentSnapshotManager notFound =
                 new StrictFragmentSnapshotManager()
                         .provider(rootFragments.provider());
-        try (DocumentProcessor processor = processor(
-                notFound,
-                new AtomicInteger(),
-                new AtomicInteger())) {
-            ProcessAttemptResult attempt =
-                    processor.processAttempt(
-                            reference(rootBlueId),
-                            reference(eventBlueId));
-
-            assertEquals(
-                    ProcessAttemptResult.Kind.COMPLETE,
-                    attempt.kind());
-            assertNotNull(attempt.processResult());
-            assertEquals(
-                    ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
-                    attempt.processResult().status());
-            assertEquals(0L, attempt.processResult().totalGas());
-            assertEquals(
-                    Arrays.asList(rootBlueId, eventBlueId),
-                    notFound.requests());
-        }
-
         StrictFragmentSnapshotManager unavailable =
                 new StrictFragmentSnapshotManager()
                         .provider(rootFragments.provider())
                         .unavailable(eventBlueId);
+
+        // when
+        ProcessAttemptResult notFoundAttempt;
+        try (DocumentProcessor processor = processor(
+                notFound,
+                new AtomicInteger(),
+                new AtomicInteger())) {
+            notFoundAttempt =
+                    processor.processAttempt(
+                            reference(rootBlueId),
+                            reference(eventBlueId));
+        }
+        ProcessAttemptResult unavailableAttempt;
         try (DocumentProcessor processor = processor(
                 unavailable,
                 new AtomicInteger(),
                 new AtomicInteger())) {
-            ProcessAttemptResult attempt =
+            unavailableAttempt =
                     processor.processAttempt(
                             reference(rootBlueId),
                             reference(eventBlueId));
-
-            assertEquals(
-                    ProcessAttemptResult.Kind.NEEDS_RESOURCES,
-                    attempt.kind());
-            assertEquals(
-                    Collections.singletonList(eventBlueId),
-                    attempt.requiredExactBlueIds());
-            assertNull(attempt.processResult());
-            assertNull(attempt.portableGas());
-            assertEquals(
-                    Arrays.asList(rootBlueId, eventBlueId),
-                    unavailable.requests());
         }
+
+        // then
+        assertEquals(
+                ProcessAttemptResult.Kind.COMPLETE,
+                notFoundAttempt.kind());
+        assertNotNull(notFoundAttempt.processResult());
+        assertEquals(
+                ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                notFoundAttempt.processResult().status());
+        assertEquals(0L,
+                notFoundAttempt.processResult().totalGas());
+        assertEquals(
+                Arrays.asList(rootBlueId, eventBlueId),
+                notFound.requests());
+        assertEquals(
+                ProcessAttemptResult.Kind.NEEDS_RESOURCES,
+                unavailableAttempt.kind());
+        assertEquals(
+                Collections.singletonList(eventBlueId),
+                unavailableAttempt.requiredExactBlueIds());
+        assertNull(unavailableAttempt.processResult());
+        assertNull(unavailableAttempt.portableGas());
+        assertEquals(
+                Arrays.asList(rootBlueId, eventBlueId),
+                unavailable.requests());
     }
 
     private static DocumentProcessor processor(
@@ -516,6 +725,59 @@ class ProcessingInputAdmissionTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private static Node materializedCyclicMemberEvent() {
+        return reference(CYCLIC_MEMBER_BLUE_ID)
+                .properties(
+                        "body",
+                        new Node().value("verified by owning set"));
+    }
+
+    private static Node terminatedRoot() {
+        return new Node().contracts(
+                new Node().properties(
+                        "terminated",
+                        new Node()
+                                .type(new Node().blueId(
+                                        RuntimeBlueIds
+                                                .PROCESSING_TERMINATED_MARKER))
+                                .properties(
+                                        "cause",
+                                        new Node().value("business"))
+                                .properties(
+                                        "reason",
+                                        new Node().value("complete"))));
+    }
+
+    private static VerifiedExecutionEvidence evidence(
+            Node root,
+            String eventBlueId) {
+        return VerifiedExecutionEvidence.builder(
+                        BlueIdCalculator.calculateBlueId(root),
+                        eventBlueId)
+                .revisions(7L, 7L)
+                .runtimeRegistryIdentity(
+                        RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY)
+                .eventOrderKey(EVENT_ORDER)
+                .activeSubscriptionIntervals(
+                        Collections
+                                .<SubscriptionDelta.Entry>emptyList())
+                .build();
+    }
+
+    private static void assertCyclicEventInvalid(
+            DocumentProcessingResult result) {
+        assertNotNull(result);
+        assertEquals(
+                ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                result.status());
+        assertEquals(0L, result.totalGas());
+        assertNotNull(result.diagnostic());
+        assertEquals(
+                ProcessorErrorCategory
+                        .CyclicMemberProcessingEventUnsupported,
+                result.diagnostic().category());
     }
 
     private static final class StrictFragmentSnapshotManager

@@ -10,15 +10,35 @@ import java.util.stream.Collectors;
 import static blue.language.utils.BlueIdCalculator.calculateUncheckedBlueId;
 import static blue.language.utils.Properties.*;
 
+/**
+ * Compatibility helpers for nominal Blue type identity and subtype traversal.
+ *
+ * <p>Type labels are ignored where identity requires it, while released core
+ * types retain their fixed identities. Provider-backed traversal requires each
+ * non-core reference to resolve to exactly one type definition.</p>
+ */
 public class Types {
 
     private final Map<String, Node> types;
 
+    /**
+     * Indexes named type nodes by name.
+     *
+     * @param nodes type definitions to index; duplicate names are rejected
+     */
     public Types(List<? extends Node> nodes) {
         types = nodes.stream()
                 .collect(Collectors.toMap(Node::getName, node -> node));
     }
 
+    /**
+     * Tests whether one type is identical to or derives from another.
+     *
+     * @param subtype candidate subtype
+     * @param supertype required supertype
+     * @param nodeProvider provider used to traverse non-core type references
+     * @return {@code true} when the candidate is the same type or a subtype
+     */
     public static boolean isSubtype(Node subtype, Node supertype, NodeProvider nodeProvider) {
         if (subtype == null || supertype == null) {
             return false;
@@ -205,12 +225,26 @@ public class Types {
         }
     }
 
+    /**
+     * Tests whether a type resolves to one of the released basic scalar types.
+     *
+     * @param type type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the type derives from a basic scalar type
+     */
     public static boolean isSubtypeOfBasicType(Node type, NodeProvider nodeProvider) {
         return BASIC_TYPE_BLUE_IDS.stream()
                 .map(blueId -> new Node().blueId(blueId))
                 .anyMatch(basicTypeNode -> isSubtype(type, basicTypeNode, nodeProvider));
     }
 
+    /**
+     * Returns the released basic type name reached by a type chain.
+     *
+     * @param type type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return released basic type name
+     */
     public static String findBasicTypeName(Node type, NodeProvider nodeProvider) {
         return BASIC_TYPE_BLUE_IDS.stream()
                 .filter(blueId -> Types.isSubtype(type, new Node().blueId(blueId), nodeProvider))
@@ -246,37 +280,92 @@ public class Types {
         return type;
     }
 
+    /**
+     * Tests whether a string is a released basic scalar type name.
+     *
+     * @param type candidate type name
+     * @return {@code true} when the name identifies a basic scalar type
+     */
     public static boolean isBasicTypeName(String type) {
         return BASIC_TYPES.contains(type);
     }
 
+    /**
+     * Tests whether a node is or derives from a released basic scalar type.
+     *
+     * @param typeNode type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the node is a basic scalar type
+     */
     public static boolean isBasicType(Node typeNode, NodeProvider nodeProvider) {
         return BASIC_TYPE_BLUE_IDS.stream()
                 .map(blueId -> new Node().blueId(blueId))
                 .anyMatch(basicTypeNode -> isSubtype(typeNode, basicTypeNode, nodeProvider));
     }
 
+    /**
+     * Tests whether a type is or derives from the released Text type.
+     *
+     * @param typeNode type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the type is textual
+     */
     public static boolean isTextType(Node typeNode, NodeProvider nodeProvider) {
         return isSubtype(typeNode, new Node().blueId(TEXT_TYPE_BLUE_ID), nodeProvider);
     }
 
+    /**
+     * Tests whether a type is or derives from the released Number type.
+     *
+     * @param typeNode type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the type is numeric
+     */
     public static boolean isNumberType(Node typeNode, NodeProvider nodeProvider) {
         return isSubtype(typeNode, new Node().blueId(DOUBLE_TYPE_BLUE_ID), nodeProvider);
     }
 
+    /**
+     * Tests whether a type is or derives from the released Integer type.
+     *
+     * @param typeNode type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the type is integral
+     */
     public static boolean isIntegerType(Node typeNode, NodeProvider nodeProvider) {
         return isSubtype(typeNode, new Node().blueId(INTEGER_TYPE_BLUE_ID), nodeProvider);
     }
 
+    /**
+     * Tests whether a type is or derives from the released Boolean type.
+     *
+     * @param typeNode type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the type is Boolean
+     */
     public static boolean isBooleanType(Node typeNode, NodeProvider nodeProvider) {
         return isSubtype(typeNode, new Node().blueId(BOOLEAN_TYPE_BLUE_ID), nodeProvider);
     }
 
 
+    /**
+     * Tests whether a type is or derives from the released List type.
+     *
+     * @param typeNode type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the type is a list
+     */
     public static boolean isListType(Node typeNode, NodeProvider nodeProvider) {
         return isSubtype(typeNode, new Node().blueId(LIST_TYPE_BLUE_ID), nodeProvider);
     }
 
+    /**
+     * Tests whether a type is or derives from the released Dictionary type.
+     *
+     * @param typeNode type to inspect
+     * @param nodeProvider provider used to traverse its type chain
+     * @return {@code true} when the type is a dictionary
+     */
     public static boolean isDictionaryType(Node typeNode, NodeProvider nodeProvider) {
         return isSubtype(typeNode, new Node().blueId(DICTIONARY_TYPE_BLUE_ID), nodeProvider);
     }

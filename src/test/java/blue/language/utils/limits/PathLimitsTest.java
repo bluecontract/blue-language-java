@@ -35,150 +35,264 @@ public class PathLimitsTest {
     }
 
     @Test
-    public void testShouldProcessPathSegment() {
-        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+    public void shouldProcessPathSegmentWithinConfiguredLimits() {
+        // given
+
+        // when
+        boolean rootIncludesX =
+                pathLimits.shouldExtendPathSegment("x", mockNode);
         pathLimits.enterPathSegment("x");
-        assertTrue(pathLimits.shouldExtendPathSegment("a", mockNode));
+        boolean xIncludesA =
+                pathLimits.shouldExtendPathSegment("a", mockNode);
         pathLimits.enterPathSegment("a");
-        assertFalse(pathLimits.shouldExtendPathSegment("d", mockNode));
+        boolean xaIncludesD =
+                pathLimits.shouldExtendPathSegment("d", mockNode);
         pathLimits.exitPathSegment();
-        assertTrue(pathLimits.shouldExtendPathSegment("y", mockNode));
+        boolean xIncludesY =
+                pathLimits.shouldExtendPathSegment("y", mockNode);
         pathLimits.exitPathSegment();
-
         pathLimits.enterPathSegment("y");
-        assertFalse(pathLimits.shouldExtendPathSegment("c", mockNode));
+        boolean yIncludesC =
+                pathLimits.shouldExtendPathSegment("c", mockNode);
         pathLimits.exitPathSegment();
-
         pathLimits.enterPathSegment("a");
         pathLimits.enterPathSegment("b");
-        assertTrue(pathLimits.shouldExtendPathSegment("d", mockNode));
+        boolean abIncludesD =
+                pathLimits.shouldExtendPathSegment("d", mockNode);
         pathLimits.enterPathSegment("d");
-        assertTrue(pathLimits.shouldExtendPathSegment("c", mockNode));
+        boolean abdIncludesC =
+                pathLimits.shouldExtendPathSegment("c", mockNode);
+
+        // then
+        assertTrue(rootIncludesX);
+        assertTrue(xIncludesA);
+        assertFalse(xaIncludesD);
+        assertTrue(xIncludesY);
+        assertFalse(yIncludesC);
+        assertTrue(abIncludesD);
+        assertTrue(abdIncludesC);
     }
 
     @Test
-    public void testMaxDepth() {
+    public void shouldEnforceMaximumDepth() {
+        // given
         pathLimits.enterPathSegment("a");
+        // when
         pathLimits.enterPathSegment("b");
-        assertTrue(pathLimits.shouldExtendPathSegment("any", mockNode));
+        boolean depthTwoIncludesAny =
+                pathLimits.shouldExtendPathSegment("any", mockNode);
         pathLimits.enterPathSegment("any");
-        assertTrue(pathLimits.shouldExtendPathSegment("c", mockNode));
+        boolean depthThreeIncludesC =
+                pathLimits.shouldExtendPathSegment("c", mockNode);
         pathLimits.enterPathSegment("c");
-        assertFalse(pathLimits.shouldExtendPathSegment("e", mockNode));
+        boolean depthFourIncludesE =
+                pathLimits.shouldExtendPathSegment("e", mockNode);
+
+        // then
+        assertTrue(depthTwoIncludesAny);
+        assertTrue(depthThreeIncludesC);
+        assertFalse(depthFourIncludesE);
     }
 
     @Test
-    public void testWildcardSingle() {
+    public void shouldMatchSingleWildcard() {
+        // given
         pathLimits.enterPathSegment("a");
+        // when
         pathLimits.enterPathSegment("b");
-        assertTrue(pathLimits.shouldExtendPathSegment("any", mockNode));
+        boolean includesAny =
+                pathLimits.shouldExtendPathSegment("any", mockNode);
         pathLimits.enterPathSegment("any");
-        assertTrue(pathLimits.shouldExtendPathSegment("c", mockNode));
+        boolean wildcardIncludesC =
+                pathLimits.shouldExtendPathSegment("c", mockNode);
+
+        // then
+        assertTrue(includesAny);
+        assertTrue(wildcardIncludesC);
     }
 
     @Test
-    public void testComplexPath() {
+    public void shouldMatchComplexPath() {
+        // given
         pathLimits.enterPathSegment("a");
+        // when
         pathLimits.enterPathSegment("b");
-        assertTrue(pathLimits.shouldExtendPathSegment("c", mockNode));
+        boolean includesC =
+                pathLimits.shouldExtendPathSegment("c", mockNode);
         pathLimits.enterPathSegment("c");
-        assertFalse(pathLimits.shouldExtendPathSegment("e", mockNode));
+        boolean includesE =
+                pathLimits.shouldExtendPathSegment("e", mockNode);
+
+        // then
+        assertTrue(includesC);
+        assertFalse(includesE);
     }
 
     @Test
-    public void testInvalidPath() {
-        pathLimits.enterPathSegment("z");
-        assertFalse(pathLimits.shouldExtendPathSegment("a", mockNode));
+    public void shouldRejectInvalidPath() {
+        // given
+        String invalidRootSegment = "z";
+        String candidateChildSegment = "a";
+
+        // when
+        pathLimits.enterPathSegment(invalidRootSegment);
+        boolean candidateChildIncluded =
+                pathLimits.shouldExtendPathSegment(candidateChildSegment, mockNode);
+
+        // then
+        assertFalse(candidateChildIncluded);
     }
 
     @Test
-    public void testPathWithIndex() {
-        pathLimits.enterPathSegment("d");
-        assertTrue(pathLimits.shouldExtendPathSegment("0", mockNode));
-        pathLimits.enterPathSegment("0");
-        assertTrue(pathLimits.shouldExtendPathSegment("any", mockNode));
-        pathLimits.exitPathSegment();
-        assertFalse(pathLimits.shouldExtendPathSegment("1", mockNode));
+    public void shouldMatchPathWithIndex() {
+        // given
+        PathLimits limits = pathLimits;
+
+        // when
+        limits.enterPathSegment("d");
+        boolean includesZero =
+                limits.shouldExtendPathSegment("0", mockNode);
+        limits.enterPathSegment("0");
+        boolean zeroIncludesAny =
+                limits.shouldExtendPathSegment("any", mockNode);
+        limits.exitPathSegment();
+        boolean includesOne =
+                limits.shouldExtendPathSegment("1", mockNode);
+
+        // then
+        assertTrue(includesZero);
+        assertTrue(zeroIncludesAny);
+        assertFalse(includesOne);
     }
 
     @Test
-    public void testMultipleWildcards() {
-        pathLimits.enterPathSegment("e");
-        assertTrue(pathLimits.shouldExtendPathSegment("0", mockNode));
-        pathLimits.enterPathSegment("0");
-        assertTrue(pathLimits.shouldExtendPathSegment("1", mockNode));
+    public void shouldMatchMultipleWildcards() {
+        // given
+        PathLimits limits = pathLimits;
+
+        // when
+        limits.enterPathSegment("e");
+        boolean includesZero =
+                limits.shouldExtendPathSegment("0", mockNode);
+        limits.enterPathSegment("0");
+        boolean zeroIncludesOne =
+                limits.shouldExtendPathSegment("1", mockNode);
+
+        // then
+        assertTrue(includesZero);
+        assertTrue(zeroIncludesOne);
     }
 
     @Test
-    public void testSpecificIndexPath() {
+    public void shouldMatchSpecificIndexPath() {
+        // given
         pathLimits = new PathLimits.Builder()
                 .addPath("/forX/d/0")
                 .build();
 
-        assertTrue(pathLimits.shouldExtendPathSegment("forX", mockNode));
+        // when
+        boolean rootIncludesForX =
+                pathLimits.shouldExtendPathSegment("forX", mockNode);
         pathLimits.enterPathSegment("forX");
-
-        assertTrue(pathLimits.shouldExtendPathSegment("d", mockNode));
+        boolean forXIncludesD =
+                pathLimits.shouldExtendPathSegment("d", mockNode);
         pathLimits.enterPathSegment("d");
-
-        assertTrue(pathLimits.shouldExtendPathSegment("0", mockNode));
+        boolean dIncludesZero =
+                pathLimits.shouldExtendPathSegment("0", mockNode);
         pathLimits.enterPathSegment("0");
-
-        assertFalse(pathLimits.shouldExtendPathSegment("any", mockNode));
-
+        boolean zeroIncludesAny =
+                pathLimits.shouldExtendPathSegment("any", mockNode);
         pathLimits.exitPathSegment();
+        boolean dIncludesOne =
+                pathLimits.shouldExtendPathSegment("1", mockNode);
 
-        assertFalse(pathLimits.shouldExtendPathSegment("1", mockNode));
+        // then
+        assertTrue(rootIncludesForX);
+        assertTrue(forXIncludesD);
+        assertTrue(dIncludesZero);
+        assertFalse(zeroIncludesAny);
+        assertFalse(dIncludesOne);
     }
 
     @Test
-    public void testEscapedJsonPointerSegments() {
+    public void shouldMatchEscapedJsonPointerSegments() {
+        // given
         pathLimits = new PathLimits.Builder()
                 .addPath("/x/a~1b/c~0d")
                 .build();
 
-        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+        // when
+        boolean rootIncludesX =
+                pathLimits.shouldExtendPathSegment("x", mockNode);
         pathLimits.enterPathSegment("x");
-
-        assertTrue(pathLimits.shouldExtendPathSegment("a/b", mockNode));
-        assertFalse(pathLimits.shouldExtendPathSegment("a~1b", mockNode));
+        boolean xIncludesDecodedSlash =
+                pathLimits.shouldExtendPathSegment("a/b", mockNode);
+        boolean xIncludesEncodedSlash =
+                pathLimits.shouldExtendPathSegment("a~1b", mockNode);
         pathLimits.enterPathSegment("a/b");
+        boolean slashIncludesDecodedTilde =
+                pathLimits.shouldExtendPathSegment("c~d", mockNode);
+        boolean slashIncludesSlash =
+                pathLimits.shouldExtendPathSegment("c/d", mockNode);
 
-        assertTrue(pathLimits.shouldExtendPathSegment("c~d", mockNode));
-        assertFalse(pathLimits.shouldExtendPathSegment("c/d", mockNode));
+        // then
+        assertTrue(rootIncludesX);
+        assertTrue(xIncludesDecodedSlash);
+        assertFalse(xIncludesEncodedSlash);
+        assertTrue(slashIncludesDecodedTilde);
+        assertFalse(slashIncludesSlash);
     }
 
     @Test
-    public void testTwoLevelWildcard() {
-        assertTrue(pathLimits.shouldExtendPathSegment("f", mockNode));
+    public void shouldMatchTwoLevelWildcard() {
+        // given
+
+        // when
+        boolean rootIncludesF =
+                pathLimits.shouldExtendPathSegment("f", mockNode);
         pathLimits.enterPathSegment("f");
-
-        assertTrue(pathLimits.shouldExtendPathSegment("anySegment", mockNode));
+        boolean fIncludesAny =
+                pathLimits.shouldExtendPathSegment("anySegment", mockNode);
         pathLimits.enterPathSegment("anySegment");
-
-        assertTrue(pathLimits.shouldExtendPathSegment("anotherSegment", mockNode));
+        boolean firstWildcardIncludesAnother =
+                pathLimits.shouldExtendPathSegment(
+                        "anotherSegment", mockNode);
         pathLimits.enterPathSegment("anotherSegment");
-
-        assertFalse(pathLimits.shouldExtendPathSegment("tooDeep", mockNode));
-
+        boolean secondWildcardIncludesTooDeep =
+                pathLimits.shouldExtendPathSegment("tooDeep", mockNode);
         pathLimits.exitPathSegment();
         pathLimits.exitPathSegment();
-        assertTrue(pathLimits.shouldExtendPathSegment("differentSegment", mockNode));
+        boolean fIncludesDifferent =
+                pathLimits.shouldExtendPathSegment(
+                        "differentSegment", mockNode);
         pathLimits.enterPathSegment("differentSegment");
-
-        assertTrue(pathLimits.shouldExtendPathSegment("lastSegment", mockNode));
+        boolean differentIncludesLast =
+                pathLimits.shouldExtendPathSegment(
+                        "lastSegment", mockNode);
         pathLimits.enterPathSegment("lastSegment");
+        boolean lastIncludesTooDeep =
+                pathLimits.shouldExtendPathSegment(
+                        "tooDeepAgain", mockNode);
+        pathLimits.exitPathSegment();
+        pathLimits.exitPathSegment();
+        pathLimits.exitPathSegment();
+        boolean rootIncludesG =
+                pathLimits.shouldExtendPathSegment("g", mockNode);
 
-        assertFalse(pathLimits.shouldExtendPathSegment("tooDeepAgain", mockNode));
-
-        pathLimits.exitPathSegment();
-        pathLimits.exitPathSegment();
-        pathLimits.exitPathSegment();
-        assertFalse(pathLimits.shouldExtendPathSegment("g", mockNode));
+        // then
+        assertTrue(rootIncludesF);
+        assertTrue(fIncludesAny);
+        assertTrue(firstWildcardIncludesAnother);
+        assertFalse(secondWildcardIncludesTooDeep);
+        assertTrue(fIncludesDifferent);
+        assertTrue(differentIncludesLast);
+        assertFalse(lastIncludesTooDeep);
+        assertFalse(rootIncludesG);
     }
 
     @Test
-    public void testSchemaAndBlueId() throws Exception {
+    public void shouldIncludeSchemaAndBlueIdMetadata() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);
 
@@ -216,13 +330,12 @@ public class PathLimitsTest {
         Set<String> ignoredProperties = new HashSet<>(Collections.singletonList("x"));
         Limits globalLimits = new TypeSpecificPropertyFilter(typeBlueId, ignoredProperties);
 
-        boolean result = new NodeTypeMatcher(blue).matchesType(bInstNode, bNode, globalLimits);
+        // when
+        boolean result =
+                new NodeTypeMatcher(blue)
+                        .matchesType(bInstNode, bNode, globalLimits);
 
-        if (!result) {
-            System.out.println("bInstNode: \n" + YAML_MAPPER.writeValueAsString(bInstNode));
-            System.out.println("bNode: \n" + YAML_MAPPER.writeValueAsString(bNode));
-        }
-
+        // then
         assertTrue(result);
     }
 

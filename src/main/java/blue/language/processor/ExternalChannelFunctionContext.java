@@ -14,34 +14,52 @@ import java.util.Optional;
  * <p>Every member returned by this context has an exact frozen effective
  * contract header. Explicit {@link #member(String)} and {@link #members()}
  * access resolves registered subscription functions immediately.
- * {@link #membersByEffectiveType(String)} is shallow: it resolves a selected
- * member only when derived fields or event evaluation are requested. All
- * consultations are recorded as deterministic dependencies of the owning
+ * {@link #membersByEffectiveType(String)} and
+ * {@link #membersAssignableToType(String)} are shallow: they resolve a
+ * selected member only when derived fields or event evaluation are requested.
+ * All consultations are recorded as deterministic dependencies of the owning
  * channel. Whole-surface and type-family enumeration selectors additionally
  * retain membership, including an empty result, so later additions, removals,
  * replacements, and retyping invalidate the owning subscription.</p>
  */
 public final class ExternalChannelFunctionContext {
 
+    /**
+     * Processor-owned boundary that supplies same-scope evidence and records
+     * every dependency consulted by a registered function.
+     */
     interface Access {
+
+        /** Returns one resolved External Channel member by raw contract key. */
         ExternalChannelMemberSnapshot member(String key);
 
+        /** Returns the complete canonical-order External Channel surface. */
         List<ExternalChannelMemberSnapshot> members();
 
+        /** Returns shallow members having exactly the requested effective type. */
         List<ExternalChannelMemberSnapshot> membersByEffectiveType(
                 String effectiveTypeBlueId);
 
+        /** Returns shallow members assignable to the requested base type. */
+        List<ExternalChannelMemberSnapshot> membersAssignableToType(
+                String baseTypeBlueId);
+
+        /** Records and returns one same-scope Channel header dependency. */
         ChannelMemberSnapshot dependOnSameScopeChannel(
                 String key);
 
+        /** Records a dependency on the complete same-scope Channel catalog. */
         void dependOnSameScopeChannelCatalog();
 
-        Optional<ChannelMemberSnapshot> channel(String key);
+        /** Looks up one previously declared same-scope Channel header. */
+        ChannelLookupResult lookupChannel(String key);
 
+        /** Matches exact frozen values through the captured matcher session. */
         boolean matchesPattern(
                 FrozenNode candidate,
                 FrozenNode pattern);
 
+        /** Materializes an exact reference through verified snapshot evidence. */
         FrozenNode materializeExactReference(
                 FrozenNode reference);
     }
@@ -49,29 +67,68 @@ public final class ExternalChannelFunctionContext {
     private final String scopePath;
     private final String channelKey;
     private final Access access;
+    private final RuntimeWorkSession runtimeWorkSession;
 
     ExternalChannelFunctionContext(
             String scopePath,
             String channelKey,
             Access access) {
+        this(scopePath, channelKey, access, null);
+    }
+
+    ExternalChannelFunctionContext(
+            String scopePath,
+            String channelKey,
+            Access access,
+            RuntimeWorkSession runtimeWorkSession) {
         this.scopePath = Objects.requireNonNull(
                 scopePath, "scopePath");
         this.channelKey = Objects.requireNonNull(
                 channelKey, "channelKey");
         this.access = Objects.requireNonNull(access, "access");
+        this.runtimeWorkSession = runtimeWorkSession;
     }
 
+    /**
+     * Returns the absolute scope containing the owning External Channel.
+     *
+     * @return normalized scope path
+     */
     public String scopePath() {
         return scopePath;
     }
 
+    /**
+     * Returns the raw key of the owning External Channel.
+     *
+     * @return Channel key
+     */
     public String channelKey() {
         return channelKey;
     }
 
     /**
+     * Returns the processor-owned runtime work session for this deterministic
+     * function pass.
+     *
+     * @return invocation-owned runtime work session
+     * @throws IllegalStateException for a legacy out-of-band pass
+     */
+    public RuntimeWorkSession runtimeWorkSession() {
+        if (runtimeWorkSession == null) {
+            throw new IllegalStateException(
+                    "Runtime work is unavailable in this legacy out-of-band context");
+        }
+        return runtimeWorkSession;
+    }
+
+    /**
      * Returns one required same-scope External Channel or fails closed when
      * the key is missing, non-external, unsupported, or cyclic.
+     *
+     * @param key raw same-scope contract key
+     * @return immutable resolved External Channel snapshot
+     * @throws IllegalArgumentException if {@code key} is empty
      */
     public ExternalChannelMemberSnapshot member(String key) {
         if (key == null || key.isEmpty()) {
@@ -90,6 +147,8 @@ public final class ExternalChannelFunctionContext {
      * between peer aggregate channels. Prefer
      * {@link #membersByEffectiveType(String)} when the runtime depends on one
      * exact member family.</p>
+     *
+     * @return immutable External Channel snapshots in canonical order
      */
     public List<ExternalChannelMemberSnapshot> members() {
         return access.members();
@@ -106,6 +165,9 @@ public final class ExternalChannelFunctionContext {
      * dependency, so additions, removals, replacements, and retyping rotate
      * the owning subscription without depending on unrelated runtime
      * types.</p>
+     *
+     * @param effectiveTypeBlueId exact runtime type identity
+     * @return immutable matching header snapshots in canonical order
      */
     public List<ExternalChannelMemberSnapshot> membersByEffectiveType(
             String effectiveTypeBlueId) {
@@ -119,6 +181,29 @@ public final class ExternalChannelFunctionContext {
     }
 
     /**
+     * Returns shallow immutable snapshots of every other same-scope External
+     * Channel whose exact effective type is equal to or a Blue subtype of the
+     * requested base type, in canonical member order.
+     *
+     * <p>The bounded type lineage is resolved only through the processor's
+     * captured verified snapshot boundary. Enumeration does not evaluate
+     * member subscription functions or load executable bodies. The complete
+     * subtype-family membership, including an empty result, is retained as a
+     * distinct dependency from exact-type enumeration.</p>
+     *
+     * @param baseTypeBlueId exact BlueId of the requested base type
+     * @return immutable matching header snapshots in canonical order
+     */
+    public List<ExternalChannelMemberSnapshot>
+    membersAssignableToType(String baseTypeBlueId) {
+        if (baseTypeBlueId == null || baseTypeBlueId.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "baseTypeBlueId must be non-empty");
+        }
+        return access.membersAssignableToType(baseTypeBlueId);
+    }
+
+    /**
      * Declares that this External Channel's immutable subscription header
      * depends on the complete bounded same-scope Channel-header catalog.
      *
@@ -126,8 +211,11 @@ public final class ExternalChannelFunctionContext {
      * are evaluated. It captures External and processor-managed Channel
      * headers without evaluating any peer as an External source and without
      * loading handler or executable-body content. A later event-time
-     * {@link #channel(String)} lookup is permitted only when this declaration
+     * {@link #lookupChannel(String)} lookup is permitted only when this
+     * declaration
      * was present in the exact retained header dependency snapshot.</p>
+     *
+     * @throws IllegalStateException outside subscription-header evaluation
      */
     public void dependOnSameScopeChannelCatalog() {
         access.dependOnSameScopeChannelCatalog();
@@ -171,13 +259,35 @@ public final class ExternalChannelFunctionContext {
      * @return an immutable read-only Channel header, or empty only for proven
      *         semantic absence
      */
-    public Optional<ChannelMemberSnapshot> channel(
+    public ChannelLookupResult lookupChannel(
             String rawContractKey) {
         if (rawContractKey == null || rawContractKey.isEmpty()) {
             throw new IllegalArgumentException(
                     "Channel catalog lookup key must be non-empty");
         }
-        return access.channel(rawContractKey);
+        return access.lookupChannel(rawContractKey);
+    }
+
+    /**
+     * Compatibility view of {@link #lookupChannel(String)}.
+     *
+     * <p>Semantic absence remains an empty result. A present non-Channel
+     * Contract keeps the historical fail-closed behavior; runtimes that need
+     * to distinguish it from absence use the typed lookup directly.</p>
+     *
+     * @param rawContractKey exact same-scope raw contract key
+     * @return immutable Channel snapshot, or empty for proven absence
+     */
+    public Optional<ChannelMemberSnapshot> channel(
+            String rawContractKey) {
+        ChannelLookupResult result =
+                lookupChannel(rawContractKey);
+        if (result.isNonChannel()) {
+            throw new IllegalStateException(
+                    "Same-scope contract is not a Channel: "
+                            + rawContractKey);
+        }
+        return result.channel();
     }
 
     /**

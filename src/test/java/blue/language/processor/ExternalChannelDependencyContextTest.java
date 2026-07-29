@@ -6,6 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.HandlerContract;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
@@ -19,11 +20,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ExternalChannelDependencyContextTest {
@@ -32,6 +33,33 @@ final class ExternalChannelDependencyContextTest {
             new Node().name("Dependency Leaf Channel");
     private static final String LEAF_TYPE_BLUE_ID =
             BlueIdCalculator.calculateBlueId(LEAF_TYPE);
+    private static final Node ASSIGNABLE_BASE_TYPE =
+            new Node()
+                    .name("Dependency Assignable Base Channel")
+                    .type(reference(
+                            RuntimeBlueIds.EXTERNAL_CHANNEL))
+                    .properties(
+                            "assignableFamilyMarker",
+                            new Node().value("dependency-family"));
+    private static final String ASSIGNABLE_BASE_TYPE_BLUE_ID =
+            BlueIdCalculator.calculateBlueId(
+                    ASSIGNABLE_BASE_TYPE);
+    private static final Node ASSIGNABLE_DIRECT_TYPE =
+            new Node()
+                    .name("Dependency Assignable Direct Channel")
+                    .type(reference(
+                            ASSIGNABLE_BASE_TYPE_BLUE_ID));
+    private static final String ASSIGNABLE_DIRECT_TYPE_BLUE_ID =
+            BlueIdCalculator.calculateBlueId(
+                    ASSIGNABLE_DIRECT_TYPE);
+    private static final Node ASSIGNABLE_DEEP_TYPE =
+            new Node()
+                    .name("Dependency Assignable Deep Channel")
+                    .type(reference(
+                            ASSIGNABLE_DIRECT_TYPE_BLUE_ID));
+    private static final String ASSIGNABLE_DEEP_TYPE_BLUE_ID =
+            BlueIdCalculator.calculateBlueId(
+                    ASSIGNABLE_DEEP_TYPE);
     private static final Node AGGREGATE_TYPE =
             new Node().name("Dependency Aggregate Channel");
     private static final String AGGREGATE_TYPE_BLUE_ID =
@@ -55,7 +83,8 @@ final class ExternalChannelDependencyContextTest {
                             "dependency-test-order"));
 
     @Test
-    void explicitAndTransitiveMemberReplacementRotateOuterSnapshots() {
+    void shouldVerifyExplicitAndTransitiveMemberReplacementRotateOuterSnapshots() {
+        // given
         Node before = root(
                 aggregate("outer", "middle", "explicit"),
                 aggregate("middle", "leaf", "explicit"),
@@ -65,22 +94,24 @@ final class ExternalChannelDependencyContextTest {
                 aggregate("middle", "leaf", "explicit"),
                 leaf("leaf", "old-topic", "new-domain", "timeline-a"));
 
+        // when
         try (Blue blue = runtime()) {
             SubscriptionDelta delta = validate(
                     blue,
                     before,
                     after,
                     "/contracts/leaf");
+            SubscriptionDelta.Entry outerBefore =
+                    entry(delta.removed(), "outer");
+            SubscriptionDelta.Entry outerAfter =
+                    entry(delta.added(), "outer");
 
+            // then
             for (String key : Arrays.asList(
                     "leaf", "middle", "outer")) {
                 assertNotNull(entry(delta.removed(), key));
                 assertNotNull(entry(delta.added(), key));
             }
-            SubscriptionDelta.Entry outerBefore =
-                    entry(delta.removed(), "outer");
-            SubscriptionDelta.Entry outerAfter =
-                    entry(delta.added(), "outer");
             assertEquals(
                     Collections.singletonList("old-topic"),
                     outerBefore.subscriptionKeys());
@@ -98,7 +129,8 @@ final class ExternalChannelDependencyContextTest {
     }
 
     @Test
-    void filteredFamilyIsShallowTracksEmptyAdditionAndIgnoresOtherTypes() {
+    void shouldVerifyFilteredFamilyIsShallowTracksEmptyAdditionAndIgnoresOtherTypes() {
+        // given
         Node beforeEmpty = root(
                 aggregate("all-a", null, "family"),
                 aggregate("all-b", null, "family"));
@@ -106,48 +138,57 @@ final class ExternalChannelDependencyContextTest {
                 aggregate("all-a", null, "family"),
                 aggregate("all-b", null, "family"),
                 leaf("leaf", "topic", "leaf-domain", "timeline-a"));
-
+        Node beforeOther = root(
+                aggregate("all", null, "family"),
+                leaf("leaf", "topic", "leaf-domain", "timeline-a"),
+                other("other", "old-other", "old-domain"));
+        Node afterOther = root(
+                aggregate("all", null, "family"),
+                leaf("leaf", "topic", "leaf-domain", "timeline-a"),
+                other("other", "new-other", "new-domain"));
         try (Blue blue = runtime()) {
+            // when
             SubscriptionDelta addition = validate(
                     blue,
                     beforeEmpty,
                     afterAddition,
                     "/contracts/leaf");
-            for (String key : Arrays.asList("all-a", "all-b")) {
-                SubscriptionDelta.Entry removed =
-                        entry(addition.removed(), key);
-                SubscriptionDelta.Entry added =
-                        entry(addition.added(), key);
-                assertNotNull(removed);
-                assertNotNull(added);
-                assertTrue(removed.dependencies().entries().isEmpty());
-                assertEquals(
-                        1,
-                        removed.dependencies()
-                                .typeFamilies().size());
-                assertTrue(removed.dependencies()
-                        .typeFamilies().get(0)
-                        .members().isEmpty());
-                assertEquals(
-                        Collections.singletonList("leaf"),
-                        familyMemberKeys(
-                                added.dependencies()
-                                        .typeFamilies().get(0)));
-            }
-
-            Node beforeOther = root(
-                    aggregate("all", null, "family"),
-                    leaf("leaf", "topic", "leaf-domain", "timeline-a"),
-                    other("other", "old-other", "old-domain"));
-            Node afterOther = root(
-                    aggregate("all", null, "family"),
-                    leaf("leaf", "topic", "leaf-domain", "timeline-a"),
-                    other("other", "new-other", "new-domain"));
             SubscriptionDelta unrelated = validate(
                     blue,
                     beforeOther,
                     afterOther,
                     "/contracts/other");
+            List<SubscriptionEntryObservation> entryObservations =
+                    new ArrayList<>();
+            for (String key : Arrays.asList(
+                    "all-a", "all-b")) {
+                entryObservations.add(
+                        new SubscriptionEntryObservation(
+                                entry(addition.removed(), key),
+                                entry(addition.added(), key)));
+            }
+
+            // then
+            for (SubscriptionEntryObservation observation
+                    : entryObservations) {
+                assertNotNull(observation.removed);
+                assertNotNull(observation.added);
+                assertTrue(observation.removed
+                        .dependencies().entries().isEmpty());
+                assertEquals(
+                        1,
+                        observation.removed.dependencies()
+                                .typeFamilies().size());
+                assertTrue(observation.removed.dependencies()
+                        .typeFamilies().get(0)
+                        .members().isEmpty());
+                assertEquals(
+                        Collections.singletonList("leaf"),
+                        familyMemberKeys(
+                                observation.added.dependencies()
+                                        .typeFamilies().get(0)));
+            }
+
             assertFalse(hasEntry(unrelated.removed(), "all"));
             assertFalse(hasEntry(unrelated.added(), "all"));
             assertNotNull(entry(unrelated.removed(), "other"));
@@ -156,7 +197,266 @@ final class ExternalChannelDependencyContextTest {
     }
 
     @Test
-    void familyReplacementAndRetypingRotateExactMembership() {
+    void shouldVerifyAssignableFamilyIncludesVerifiedDeepAndInheritedHeadersOnly() {
+        // given
+        String unavailableBodyBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        new Node().value(
+                                "assignable-unavailable-handler-body"));
+        AtomicInteger bodyDemands = new AtomicInteger();
+        Node inheritedDeep = typedLeaf(
+                "deep",
+                ASSIGNABLE_DEEP_TYPE_BLUE_ID,
+                "deep-topic",
+                "deep-domain",
+                "timeline-deep",
+                3);
+        inheritedDeep.name(null);
+        Node scopeType = new Node().contracts(
+                new Node().properties(
+                        "deep",
+                        inheritedDeep));
+        String scopeTypeBlueId =
+                BlueIdCalculator.calculateBlueId(scopeType);
+        NodeProvider provider = blueId -> {
+            if (scopeTypeBlueId.equals(blueId)) {
+                return Collections.singletonList(
+                        scopeType.clone());
+            }
+            if (unavailableBodyBlueId.equals(blueId)) {
+                bodyDemands.incrementAndGet();
+            }
+            return null;
+        };
+
+        try (Blue blue = runtime(provider, true)) {
+            Node document = root(
+                    aggregate(
+                            "all",
+                            null,
+                            "assignable-headers"),
+                    typedLeaf(
+                            "base",
+                            ASSIGNABLE_BASE_TYPE_BLUE_ID,
+                            "base-topic",
+                            "base-domain",
+                            "timeline-base",
+                            1),
+                    typedLeaf(
+                            "direct",
+                            ASSIGNABLE_DIRECT_TYPE_BLUE_ID,
+                            "direct-topic",
+                            "direct-domain",
+                            "timeline-direct",
+                            2),
+                    other(
+                            "unrelated",
+                            "other-topic",
+                            "other-domain"),
+                    new Node()
+                            .name("handler")
+                            .type(reference(
+                                    HANDLER_TYPE_BLUE_ID))
+                            .properties(
+                                    "channel",
+                                    new Node().value("never"))
+                            .properties(
+                                    "program",
+                                    reference(
+                                            unavailableBodyBlueId)));
+            document.type(reference(scopeTypeBlueId));
+
+            // when
+            SubscriptionDelta delta = validate(
+                    blue,
+                    new Node(),
+                    document,
+                    "/");
+            SubscriptionDelta.Entry aggregate =
+                    entry(delta.added(), "all");
+            ExternalChannelDependencySnapshot.TypeFamily family =
+                    aggregate.dependencies()
+                            .typeFamilies().get(0);
+
+            // then
+            assertNotNull(aggregate);
+            assertTrue(aggregate.dependencies().entries().isEmpty());
+            assertEquals(
+                    1,
+                    aggregate.dependencies()
+                            .typeFamilies().size());
+            assertEquals(
+                    ExternalChannelDependencySnapshot.TypeMatchMode
+                            .ASSIGNABLE,
+                    family.matchMode());
+            assertTrue(family.includesSubtypes());
+            assertEquals(
+                    ASSIGNABLE_BASE_TYPE_BLUE_ID,
+                    family.baseTypeBlueId());
+            assertEquals(
+                    Arrays.asList("base", "direct", "deep"),
+                    familyMemberKeys(family));
+            assertEquals(
+                    Arrays.asList(
+                            ASSIGNABLE_BASE_TYPE_BLUE_ID,
+                            ASSIGNABLE_DIRECT_TYPE_BLUE_ID,
+                            ASSIGNABLE_DEEP_TYPE_BLUE_ID),
+                    familyMemberTypes(family));
+            assertEquals(0, bodyDemands.get());
+        }
+    }
+
+    @Test
+    void shouldVerifyAssignableFamilyUsesTheGenericChannelBaseIdentity() {
+        // given
+        try (Blue blue = runtime()) {
+            Node document = root(
+                    aggregate(
+                            "all",
+                            null,
+                            "assignable-channel-base"),
+                    typedLeaf(
+                            "base",
+                            ASSIGNABLE_BASE_TYPE_BLUE_ID,
+                            "base-topic",
+                            "base-domain",
+                            "timeline-base",
+                            1),
+                    typedLeaf(
+                            "direct",
+                            ASSIGNABLE_DIRECT_TYPE_BLUE_ID,
+                            "direct-topic",
+                            "direct-domain",
+                            "timeline-direct",
+                            2),
+                    typedLeaf(
+                            "deep",
+                            ASSIGNABLE_DEEP_TYPE_BLUE_ID,
+                            "deep-topic",
+                            "deep-domain",
+                            "timeline-deep",
+                            3),
+                    other(
+                            "unrelated",
+                            "other-topic",
+                            "other-domain"));
+
+            // when
+            SubscriptionDelta delta = validate(
+                    blue,
+                    new Node(),
+                    document,
+                    "/");
+            ExternalChannelDependencySnapshot.TypeFamily family =
+                    entry(delta.added(), "all")
+                            .dependencies()
+                            .typeFamilies()
+                            .get(0);
+
+            // then
+            assertEquals(
+                    RuntimeBlueIds.CHANNEL,
+                    family.baseTypeBlueId());
+            assertEquals(
+                    ExternalChannelDependencySnapshot.TypeMatchMode
+                            .ASSIGNABLE,
+                    family.matchMode());
+            assertEquals(
+                    Arrays.asList(
+                            "base", "direct", "deep"),
+                    familyMemberKeys(family));
+        }
+    }
+
+    @Test
+    void shouldRotateAssignableFamilyWhenMemberHeaderChanges() {
+        // given
+        Node before = assignableFamilyDocument(
+                assignableFamilyMember("domain-a", 1));
+        Node headerChanged = assignableFamilyDocument(
+                assignableFamilyMember("domain-b", 1));
+
+        try (Blue blue = runtime()) {
+            // when
+            SubscriptionDelta headerChange = validate(
+                    blue,
+                    before,
+                    headerChanged,
+                    "/contracts/member");
+
+            // then
+            assertAggregateRotates(headerChange);
+        }
+    }
+
+    @Test
+    void shouldRotateAssignableFamilyWhenMemberOrderChanges() {
+        // given
+        Node before = assignableFamilyDocument(
+                assignableFamilyMember("domain-a", 1));
+        Node orderChanged = assignableFamilyDocument(
+                assignableFamilyMember("domain-a", 9));
+
+        try (Blue blue = runtime()) {
+            // when
+            SubscriptionDelta orderChange = validate(
+                    blue,
+                    before,
+                    orderChanged,
+                    "/contracts/member/order");
+
+            // then
+            assertAggregateRotates(orderChange);
+        }
+    }
+
+    @Test
+    void shouldRotateAssignableFamilyWhenMemberIsRetyped() {
+        // given
+        Node before = assignableFamilyDocument(
+                assignableFamilyMember("domain-a", 1));
+        Node retyped = assignableFamilyDocument(
+                other(
+                        "member",
+                        "other-topic",
+                        "other-domain"));
+
+        try (Blue blue = runtime()) {
+            // when
+            SubscriptionDelta retyping = validate(
+                    blue,
+                    before,
+                    retyped,
+                    "/contracts/member");
+
+            // then
+            assertAggregateRotates(retyping);
+        }
+    }
+
+    @Test
+    void shouldRotateAssignableFamilyWhenMemberIsRemoved() {
+        // given
+        Node before = assignableFamilyDocument(
+                assignableFamilyMember("domain-a", 1));
+        Node removed = assignableFamilyDocument(null);
+
+        try (Blue blue = runtime()) {
+            // when
+            SubscriptionDelta removal = validate(
+                    blue,
+                    before,
+                    removed,
+                    "/contracts/member");
+
+            // then
+            assertAggregateRotates(removal);
+        }
+    }
+
+    @Test
+    void shouldVerifyFamilyReplacementAndRetypingRotateExactMembership() {
+        // given
         Node before = root(
                 aggregate("all", null, "family"),
                 leaf(
@@ -179,6 +479,7 @@ final class ExternalChannelDependencyContextTest {
                         "other-domain"));
 
         try (Blue blue = runtime()) {
+            // when
             SubscriptionDelta replacement = validate(
                     blue,
                     before,
@@ -188,6 +489,15 @@ final class ExternalChannelDependencyContextTest {
                     entry(replacement.removed(), "all");
             SubscriptionDelta.Entry added =
                     entry(replacement.added(), "all");
+            SubscriptionDelta retyping = validate(
+                    blue,
+                    replaced,
+                    retyped,
+                    "/contracts/member");
+            SubscriptionDelta.Entry afterRetype =
+                    entry(retyping.added(), "all");
+
+            // then
             assertNotNull(removed);
             assertNotNull(added);
             assertEquals(
@@ -202,13 +512,6 @@ final class ExternalChannelDependencyContextTest {
                             added.dependencies()
                                     .typeFamilies().get(0)));
 
-            SubscriptionDelta retyping = validate(
-                    blue,
-                    replaced,
-                    retyped,
-                    "/contracts/member");
-            SubscriptionDelta.Entry afterRetype =
-                    entry(retyping.added(), "all");
             assertNotNull(
                     entry(retyping.removed(), "all"));
             assertNotNull(afterRetype);
@@ -223,7 +526,8 @@ final class ExternalChannelDependencyContextTest {
     }
 
     @Test
-    void selectedMemberEvaluationPropagatesMinimalCheckpointSubject() {
+    void shouldVerifySelectedMemberEvaluationPropagatesMinimalCheckpointSubject() {
+        // given
         Node document = root(
                 aggregate("all", null, "family"),
                 leaf("leaf", "topic", "leaf-domain", "timeline-a"));
@@ -241,6 +545,7 @@ final class ExternalChannelDependencyContextTest {
                         "unrelated",
                         new Node().value("must-not-survive"));
 
+        // when
         try (Blue blue = runtime()) {
             ResolvedSnapshot snapshot =
                     blue.getDocumentProcessor()
@@ -264,10 +569,11 @@ final class ExternalChannelDependencyContextTest {
                             bundle,
                             aggregate,
                             event);
-
-            assertTrue(evaluation.accepts());
             Node subject =
                     evaluation.checkpointSubject().toNode();
+
+            // then
+            assertTrue(evaluation.accepts());
             assertEquals(
                     new LinkedHashSet<>(
                             Arrays.asList(
@@ -288,65 +594,94 @@ final class ExternalChannelDependencyContextTest {
     }
 
     @Test
-    void missingAndCyclicMemberDependenciesFailClosed() {
+    void shouldRejectMissingExternalChannelDependency() {
+        // given
+        Node missing = root(
+                aggregate(
+                        "outer",
+                        "absent",
+                        "explicit"));
+
+        // when
+        SubscriptionSurfaceInvalidException failure;
         try (Blue blue = runtime()) {
-            Node missing = root(
-                    aggregate(
-                            "outer",
-                            "absent",
-                            "explicit"));
-            SubscriptionSurfaceInvalidException missingFailure =
-                    assertThrows(
-                            SubscriptionSurfaceInvalidException.class,
+            failure = captureFailure(
                             () -> validate(
                                     blue,
                                     new Node(),
                                     missing,
                                     "/contracts/outer"));
-            assertTrue(missingFailure.getMessage().contains(
-                    "Missing same-scope External Channel dependency"));
+        }
 
-            Node cycle = root(
-                    aggregate("left", "right", "explicit"),
-                    aggregate("right", "left", "explicit"));
-            SubscriptionSurfaceInvalidException cycleFailure =
-                    assertThrows(
-                            SubscriptionSurfaceInvalidException.class,
+        // then
+        assertEquals(SubscriptionSurfaceInvalidException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "Missing same-scope External Channel dependency"));
+    }
+
+    @Test
+    void shouldRejectCyclicExternalChannelDependency() {
+        // given
+        Node cycle = root(
+                aggregate("left", "right", "explicit"),
+                aggregate("right", "left", "explicit"));
+
+        // when
+        SubscriptionSurfaceInvalidException failure;
+        try (Blue blue = runtime()) {
+            failure = captureFailure(
                             () -> validate(
                                     blue,
                                     new Node(),
                                     cycle,
                                     "/contracts/left"));
-            assertTrue(cycleFailure.getMessage().contains(
-                    "Cyclic same-scope External Channel dependency"));
+        }
 
+        // then
+        assertEquals(SubscriptionSurfaceInvalidException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "Cyclic same-scope External Channel dependency"));
+    }
+
+    @Test
+    void shouldRejectNonChannelExternalDependencyTarget() {
+        // given
+        Node invalid = root(
+                aggregate(
+                        "outer",
+                        "handler",
+                        "explicit"),
+                recordingHandler(
+                        "handler",
+                        "outer"));
+
+        // when
+        SubscriptionSurfaceInvalidException failure;
+        try (Blue blue = runtime()) {
             blue.registerExternalContractType(
                     RECORDING_HANDLER_TYPE_BLUE_ID,
                     RECORDING_HANDLER_TYPE,
                     new RecordingHandlerProcessor());
-            Node invalid = root(
-                    aggregate(
-                            "outer",
-                            "handler",
-                            "explicit"),
-                    recordingHandler(
-                            "handler",
-                            "outer"));
-            SubscriptionSurfaceInvalidException invalidFailure =
-                    assertThrows(
-                            SubscriptionSurfaceInvalidException.class,
+            failure = captureFailure(
                             () -> validate(
                                     blue,
                                     new Node(),
                                     invalid,
                                     "/contracts/outer"));
-            assertTrue(invalidFailure.getMessage().contains(
-                    "not an External Channel"));
         }
+
+        // then
+        assertEquals(SubscriptionSurfaceInvalidException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "not an External Channel"));
     }
 
     @Test
-    void dependencySnapshotHasPublicCanonicalRoundTrip() {
+    void shouldVerifyDependencySnapshotHasPublicCanonicalRoundTrip() {
+        // given
         ExternalChannelDependencySnapshot.Member member =
                 new ExternalChannelDependencySnapshot.Member(
                         "leaf",
@@ -372,23 +707,55 @@ final class ExternalChannelDependencyContextTest {
                         Collections.singletonList(entry),
                         Collections.singletonList(family),
                         true);
+        // when
         ExternalChannelDependencySnapshot reconstructed =
                 new ExternalChannelDependencySnapshot(
                         original.intrinsicNodeBlueIds(),
                         original.entries(),
                         original.typeFamilies(),
                         original.wholeSameScopeExternalSurface());
+        ExternalChannelDependencySnapshot.TypeFamily assignable =
+                new ExternalChannelDependencySnapshot.TypeFamily(
+                        "outer",
+                        LEAF_TYPE_BLUE_ID,
+                        ExternalChannelDependencySnapshot.TypeMatchMode
+                                .ASSIGNABLE,
+                        Collections.singletonList(
+                                new ExternalChannelDependencySnapshot.Member(
+                                        "leaf",
+                                        2,
+                                        LEAF_TYPE_BLUE_ID,
+                                        Collections.singletonList(
+                                                "source-leaf"),
+                                        Collections.singletonList(
+                                                "intrinsic-leaf"))));
 
+        // then
         assertEquals(original, reconstructed);
         assertEquals(
-                original.deterministicDependencyNodeBlueIds(),
+                        original.deterministicDependencyNodeBlueIds(),
                 reconstructed
                         .deterministicDependencyNodeBlueIds());
+
+        assertNotEquals(
+                family.identityBlueId(),
+                assignable.identityBlueId());
+        assertEquals(
+                LEAF_TYPE_BLUE_ID,
+                family.members().get(0)
+                        .effectiveTypeBlueId());
+        assertEquals(
+                ExternalChannelDependencySnapshot.TypeMatchMode.EXACT,
+                family.matchMode());
     }
 
     @Test
-    void sparseVerifierRejectsFalseAbsenceForEmptyEnumerations() {
-        for (String mode : Arrays.asList("family", "whole")) {
+    void shouldVerifySparseVerifierRejectsFalseAbsenceForEmptyEnumerations() {
+        // given
+        for (String mode : Arrays.asList(
+                "family",
+                "assignable-headers",
+                "whole")) {
             try (Blue blue = runtime()) {
                 Node emptyEnumeration = root(
                         aggregate("outer", null, mode));
@@ -409,19 +776,31 @@ final class ExternalChannelDependencyContextTest {
                                 .build();
                 DocumentProcessor verifier =
                         processorForPlan(blue, plan, false);
+                Node addedMember =
+                        "assignable-headers".equals(mode)
+                                ? typedLeaf(
+                                        "leaf",
+                                        ASSIGNABLE_DIRECT_TYPE_BLUE_ID,
+                                        "topic",
+                                        "leaf-domain",
+                                        "timeline-a",
+                                        0)
+                                : leaf(
+                                        "leaf",
+                                        "topic",
+                                        "leaf-domain",
+                                        "timeline-a");
                 Node actual = root(
                         aggregate("outer", null, mode),
-                        leaf(
-                                "leaf",
-                                "topic",
-                                "leaf-domain",
-                                "timeline-a"));
+                        addedMember);
 
+                // when
                 DocumentProcessingResult result =
                         verifier.processDocument(
                                 actual,
                                 nonMatchingEvent());
 
+                // then
                 assertEquals(
                         ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                         result.status());
@@ -430,7 +809,8 @@ final class ExternalChannelDependencyContextTest {
     }
 
     @Test
-    void inheritedUnselectedHandlerBodyIsNotDemandedBySelectorProof() {
+    void shouldVerifyInheritedUnselectedHandlerBodyIsNotDemandedBySelectorProof() {
+        // given
         String unavailableBodyBlueId =
                 BlueIdCalculator.calculateBlueId(
                         new Node().value(
@@ -491,11 +871,13 @@ final class ExternalChannelDependencyContextTest {
             Node inherited = direct.clone()
                     .type(reference(scopeTypeBlueId));
 
+            // when
             DocumentProcessingResult result =
                     verifier.processDocument(
                             inherited,
                             nonMatchingEvent());
 
+            // then
             assertEquals(
                     ProcessorStatus.NO_MATCH,
                     result.status());
@@ -504,7 +886,8 @@ final class ExternalChannelDependencyContextTest {
     }
 
     @Test
-    void outerCheckpointUsesSelectedSubjectAndDispatchesOnlyOuterHandlers() {
+    void shouldVerifyOuterCheckpointUsesSelectedSubjectAndDispatchesOnlyOuterHandlers() {
+        // given
         try (Blue language = runtime()) {
             language.registerExternalContractType(
                     RECORDING_HANDLER_TYPE_BLUE_ID,
@@ -611,6 +994,7 @@ final class ExternalChannelDependencyContextTest {
             execution.preflightScope("/");
             bundle = execution.bundleForScope("/");
 
+            // when
             runner.runExternalChannel(
                     "/",
                     bundle,
@@ -619,15 +1003,20 @@ final class ExternalChannelDependencyContextTest {
             runner.persistPendingCheckpoints("/");
             execution.preflightScope("/");
             bundle = execution.bundleForScope("/");
-
             ChannelEventCheckpoint checkpoint =
                     (ChannelEventCheckpoint) bundle.marker(
                             "checkpoint");
+            Node stored = checkpoint == null
+                    || checkpoint.entry("outer") == null
+                    ? null
+                    : checkpoint.entry("outer")
+                    .getSubject();
+
+            // then
             assertNotNull(checkpoint);
             assertNotNull(checkpoint.entry("outer"));
             assertEquals(null, checkpoint.entry("leaf"));
-            Node stored =
-                    checkpoint.entry("outer").getSubject();
+            assertNotNull(stored);
             assertFalse(stored.isReferenceOnly());
             assertEquals(
                     new LinkedHashSet<>(
@@ -701,6 +1090,18 @@ final class ExternalChannelDependencyContextTest {
                 LEAF_TYPE,
                 new LeafProcessor());
         blue.registerExternalContractType(
+                ASSIGNABLE_BASE_TYPE_BLUE_ID,
+                ASSIGNABLE_BASE_TYPE,
+                new LeafProcessor());
+        blue.registerExternalContractType(
+                ASSIGNABLE_DIRECT_TYPE_BLUE_ID,
+                ASSIGNABLE_DIRECT_TYPE,
+                new LeafProcessor());
+        blue.registerExternalContractType(
+                ASSIGNABLE_DEEP_TYPE_BLUE_ID,
+                ASSIGNABLE_DEEP_TYPE,
+                new LeafProcessor());
+        blue.registerExternalContractType(
                 AGGREGATE_TYPE_BLUE_ID,
                 AGGREGATE_TYPE,
                 new AggregateProcessor());
@@ -726,6 +1127,18 @@ final class ExternalChannelDependencyContextTest {
                         .registerContractProcessor(
                                 LEAF_TYPE_BLUE_ID,
                                 LEAF_TYPE,
+                                new LeafProcessor())
+                        .registerContractProcessor(
+                                ASSIGNABLE_BASE_TYPE_BLUE_ID,
+                                ASSIGNABLE_BASE_TYPE,
+                                new LeafProcessor())
+                        .registerContractProcessor(
+                                ASSIGNABLE_DIRECT_TYPE_BLUE_ID,
+                                ASSIGNABLE_DIRECT_TYPE,
+                                new LeafProcessor())
+                        .registerContractProcessor(
+                                ASSIGNABLE_DEEP_TYPE_BLUE_ID,
+                                ASSIGNABLE_DEEP_TYPE,
                                 new LeafProcessor())
                         .registerContractProcessor(
                                 AGGREGATE_TYPE_BLUE_ID,
@@ -807,6 +1220,28 @@ final class ExternalChannelDependencyContextTest {
         return builder.build();
     }
 
+    private static Node assignableFamilyDocument(Node member) {
+        Node family = aggregate(
+                "all",
+                null,
+                "assignable-headers");
+        return member == null
+                ? root(family)
+                : root(family, member);
+    }
+
+    private static Node assignableFamilyMember(
+            String domain,
+            int order) {
+        return typedLeaf(
+                "member",
+                ASSIGNABLE_DIRECT_TYPE_BLUE_ID,
+                "topic",
+                domain,
+                "timeline-a",
+                order);
+    }
+
     private static Node root(Node... contracts) {
         Node map = new Node();
         for (int index = 0; index < contracts.length; index++) {
@@ -823,9 +1258,29 @@ final class ExternalChannelDependencyContextTest {
             String subscriptionKey,
             String domain,
             String timeline) {
+        return typedLeaf(
+                key,
+                LEAF_TYPE_BLUE_ID,
+                subscriptionKey,
+                domain,
+                timeline,
+                0);
+    }
+
+    private static Node typedLeaf(
+            String key,
+            String typeBlueId,
+            String subscriptionKey,
+            String domain,
+            String timeline,
+            int order) {
         return new Node()
                 .name(key)
-                .type(reference(LEAF_TYPE_BLUE_ID))
+                .type(reference(typeBlueId))
+                .properties(
+                        "order",
+                        new Node().value(
+                                BigInteger.valueOf(order)))
                 .properties(
                         "subscriptionKey",
                         new Node().value(subscriptionKey))
@@ -924,6 +1379,22 @@ final class ExternalChannelDependencyContextTest {
         return keys;
     }
 
+    private static List<String> familyMemberTypes(
+            ExternalChannelDependencySnapshot.TypeFamily family) {
+        List<String> types = new ArrayList<>();
+        for (ExternalChannelDependencySnapshot.Member member
+                : family.members()) {
+            types.add(member.effectiveTypeBlueId());
+        }
+        return types;
+    }
+
+    private static void assertAggregateRotates(
+            SubscriptionDelta delta) {
+        assertNotNull(entry(delta.removed(), "all"));
+        assertNotNull(entry(delta.added(), "all"));
+    }
+
     public static final class DependencyLeafChannel
             extends ChannelContract {
         private String subscriptionKey;
@@ -1016,6 +1487,18 @@ final class ExternalChannelDependencyContextTest {
             extends HandlerContract {
     }
 
+    private static final class SubscriptionEntryObservation {
+        private final SubscriptionDelta.Entry removed;
+        private final SubscriptionDelta.Entry added;
+
+        private SubscriptionEntryObservation(
+                SubscriptionDelta.Entry removed,
+                SubscriptionDelta.Entry added) {
+            this.removed = removed;
+            this.added = added;
+        }
+    }
+
     private static final class LeafProcessor
             implements ChannelProcessor<DependencyLeafChannel> {
         private final ExternalChannelSubscriptionFunctions<
@@ -1088,6 +1571,23 @@ final class ExternalChannelDependencyContextTest {
                             DependencyAggregateChannel contract,
                             ExternalChannelFunctionContext context) {
                         Set<String> keys = new LinkedHashSet<>();
+                        if ("assignable-headers".equals(
+                                contract.getMode())
+                                || "assignable-channel-base".equals(
+                                contract.getMode())) {
+                            for (ExternalChannelMemberSnapshot member
+                                    : selected(contract, context)) {
+                                keys.add(
+                                        "member:"
+                                                + member.channelKey());
+                            }
+                            if (keys.isEmpty()) {
+                                keys.add(
+                                        "empty-family:"
+                                                + context.channelKey());
+                            }
+                            return new ArrayList<>(keys);
+                        }
                         for (ExternalChannelMemberSnapshot member
                                 : selected(contract, context)) {
                             keys.addAll(member.channelKeys());
@@ -1163,6 +1663,18 @@ final class ExternalChannelDependencyContextTest {
                         if ("family".equals(contract.getMode())) {
                             return context.membersByEffectiveType(
                                     LEAF_TYPE_BLUE_ID);
+                        }
+                        if ("assignable-headers".equals(
+                                contract.getMode())) {
+                            return context
+                                    .membersAssignableToType(
+                                            ASSIGNABLE_BASE_TYPE_BLUE_ID);
+                        }
+                        if ("assignable-channel-base".equals(
+                                contract.getMode())) {
+                            return context
+                                    .membersAssignableToType(
+                                            RuntimeBlueIds.CHANNEL);
                         }
                         if ("whole".equals(contract.getMode())) {
                             return context.members();

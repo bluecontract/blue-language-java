@@ -17,11 +17,15 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
 /**
  * Run-local recursive resolver for immutable External Channel functions.
+ *
+ * <p>Headers are indexed once in deterministic key order. Recursive lookups
+ * retain exact dependency snapshots and are bounded by portable depth and
+ * catalog limits; executable bodies and unrelated provider content remain
+ * unopened.</p>
  */
 final class ExternalChannelFunctionResolver {
 
@@ -33,10 +37,12 @@ final class ExternalChannelFunctionResolver {
     private final ExternalChannelFunctionEvaluation.MatcherSession
             eventMatcher;
     private final ContractBundle bundle;
+    private final RuntimeWorkSession runtimeWorkSession;
     private final List<String> effectiveContractKeys;
     private final Map<String, Header> headers = new LinkedHashMap<>();
     private final Deque<String> resolvingHeaders = new ArrayDeque<>();
     private final Deque<String> evaluatingEvents = new ArrayDeque<>();
+    private final List<String> channelLookupResults = new ArrayList<>();
 
     ExternalChannelFunctionResolver(
             ContractProcessorRegistry registry,
@@ -47,6 +53,7 @@ final class ExternalChannelFunctionResolver {
                 converter,
                 null,
                 bundle,
+                null,
                 null);
     }
 
@@ -61,6 +68,7 @@ final class ExternalChannelFunctionResolver {
                 converter,
                 eventMatcher,
                 bundle,
+                null,
                 null);
     }
 
@@ -71,12 +79,29 @@ final class ExternalChannelFunctionResolver {
                     eventMatcher,
             ContractBundle bundle,
             List<String> effectiveContractKeys) {
+        this(registry,
+                converter,
+                eventMatcher,
+                bundle,
+                effectiveContractKeys,
+                null);
+    }
+
+    ExternalChannelFunctionResolver(
+            ContractProcessorRegistry registry,
+            NodeToObjectConverter converter,
+            ExternalChannelFunctionEvaluation.MatcherSession
+                    eventMatcher,
+            ContractBundle bundle,
+            List<String> effectiveContractKeys,
+            RuntimeWorkSession runtimeWorkSession) {
         this.registry = Objects.requireNonNull(
                 registry, "registry");
         this.converter = Objects.requireNonNull(
                 converter, "converter");
         this.eventMatcher = eventMatcher;
         this.bundle = Objects.requireNonNull(bundle, "bundle");
+        this.runtimeWorkSession = runtimeWorkSession;
         this.effectiveContractKeys =
                 immutableEffectiveContractKeys(
                         effectiveContractKeys != null
@@ -236,6 +261,8 @@ final class ExternalChannelFunctionResolver {
 
             FrozenNode payload = null;
             FrozenNode checkpointSubject = null;
+            String payloadBlueId = null;
+            String checkpointSubjectBlueId = null;
             String handlerChannelKey = null;
             String logicalDeliveryKey = null;
             ChannelMemberSnapshot handlerChannel = null;
@@ -250,8 +277,11 @@ final class ExternalChannelFunctionResolver {
                                     + "at " + snapshot.scopePath() + "/"
                                     + key);
                 }
-                payload = FrozenNode.fromResolvedNode(
-                        suppliedPayload.clone());
+                ExactBlueValue admittedPayload =
+                        admitHostedOutput(
+                                suppliedPayload, true);
+                payload = admittedPayload.frozenValue();
+                payloadBlueId = admittedPayload.blueId();
                 handlerChannelKey = immutableRoutingKey(
                         functions.handlerChannelKey(
                                 freshChannel(snapshot),
@@ -282,10 +312,26 @@ final class ExternalChannelFunctionResolver {
                                     + snapshot.scopePath() + "/" + key);
                 }
                 try {
+                    ExactBlueValue admittedSubject =
+                            admitHostedOutput(
+                                    suppliedSubject, false);
                     checkpointSubject =
-                            FrozenNode.fromNode(
-                                    suppliedSubject.clone());
+                            suppliedSubject.isReferenceOnly()
+                                    ? FrozenNode.fromNode(
+                                    suppliedSubject.clone())
+                                    : admittedSubject
+                                    .frozenValue();
+                    checkpointSubjectBlueId =
+                            admittedSubject.blueId();
                 } catch (RuntimeException exception) {
+                    if (exception
+                            instanceof GasLimitExceededException
+                            || exception
+                            instanceof PortableLimitExceededException
+                            || exception
+                            instanceof ExecutionEvidenceUnavailableException) {
+                        throw exception;
+                    }
                     throw new IllegalStateException(
                             "External Channel CHECKPOINT_SUBJECT is not exact "
                                     + "BlueId Input at "
@@ -308,14 +354,44 @@ final class ExternalChannelFunctionResolver {
                     accepts,
                     header.checkpointDomainBlueId,
                     payload,
+                    payloadBlueId,
                     checkpointSubject,
+                    checkpointSubjectBlueId,
                     handlerChannelKey,
                     logicalDeliveryKey,
                     handlerChannel,
-                    header.dependencies);
+                    header.dependencies,
+                    channelLookupResults);
         } finally {
             evaluatingEvents.removeLast();
         }
+    }
+
+    private ExactBlueValue admitHostedOutput(
+            Node output,
+            boolean resolvedLegacyFallback) {
+        Node exact =
+                Objects.requireNonNull(output, "output");
+        if (runtimeWorkSession != null
+                && runtimeWorkSession
+                .hasSemanticOutputBoundary()) {
+            return runtimeWorkSession
+                    .semanticOutputBoundary()
+                    .admit(exact);
+        }
+        /*
+         * Legacy header/index probes do not own a Language-backed runtime
+         * phase. Event processing always supplies an attached semantic
+         * boundary; retain the historical exact conversion only for those
+         * out-of-band compatibility probes.
+         */
+        FrozenNode frozen =
+                resolvedLegacyFallback
+                        ? FrozenNode.fromResolvedNode(exact)
+                        : FrozenNode.fromNode(exact);
+        return new ExactBlueValue(
+                frozen,
+                frozen.blueId());
     }
 
     private Evaluation evaluate(String key, Node exactEvent) {
@@ -381,6 +457,48 @@ final class ExternalChannelFunctionResolver {
                         capture.typeFamily(
                                 owner.key(),
                                 effectiveTypeBlueId,
+                                ExternalChannelDependencySnapshot
+                                        .TypeMatchMode.EXACT,
+                                matching);
+                        List<ExternalChannelMemberSnapshot> members =
+                                new ArrayList<>(matching.size());
+                        for (EffectiveContractSnapshot snapshot
+                                : matching) {
+                            members.add(shallowMemberSnapshot(
+                                    snapshot,
+                                    capture,
+                                    owner,
+                                    eventEvaluation));
+                        }
+                        return Collections.unmodifiableList(members);
+                    }
+
+                    @Override
+                    public List<ExternalChannelMemberSnapshot>
+                    membersAssignableToType(
+                            String baseTypeBlueId) {
+                        if (eventMatcher == null) {
+                            throw new IllegalStateException(
+                                    "Verified subtype-family matcher is "
+                                            + "unavailable at "
+                                            + owner.scopePath() + "/"
+                                            + owner.key());
+                        }
+                        List<EffectiveContractSnapshot> matching =
+                                new ArrayList<>();
+                        for (EffectiveContractSnapshot snapshot
+                                : externalSnapshots(owner.key())) {
+                            if (eventMatcher.isAssignableToType(
+                                    snapshot.effectiveTypeBlueId(),
+                                    baseTypeBlueId)) {
+                                matching.add(snapshot);
+                            }
+                        }
+                        capture.typeFamily(
+                                owner.key(),
+                                baseTypeBlueId,
+                                ExternalChannelDependencySnapshot
+                                        .TypeMatchMode.ASSIGNABLE,
                                 matching);
                         List<ExternalChannelMemberSnapshot> members =
                                 new ArrayList<>(matching.size());
@@ -435,7 +553,7 @@ final class ExternalChannelFunctionResolver {
                     }
 
                     @Override
-                    public Optional<ChannelMemberSnapshot> channel(
+                    public ChannelLookupResult lookupChannel(
                             String key) {
                         requireEventEvaluation(
                                 owner,
@@ -469,17 +587,30 @@ final class ExternalChannelFunctionResolver {
                                     declaredDependencies
                                             .channelCatalogContractKeys());
                         }
-                        ChannelMemberSnapshot selected =
-                                channelSnapshot(key);
-                        if (selected == null) {
+                        EffectiveContractSnapshot selectedSnapshot =
+                                bundle.effectiveContractSnapshot(key);
+                        boolean effectiveContractPresent =
+                                effectiveContractKeys.contains(key);
+                        if (selectedSnapshot == null
+                                || !isChannelRole(
+                                selectedSnapshot.role())) {
                             if (declaredEntry != null) {
                                 throw new IllegalStateException(
                                         "Required same-scope Channel "
                                                 + "dependency is unavailable: "
                                                 + key);
                             }
-                            return Optional.empty();
+                            ChannelLookupResult result =
+                                    effectiveContractPresent
+                                            ? ChannelLookupResult
+                                            .nonChannel()
+                                            : ChannelLookupResult
+                                            .absent();
+                            recordChannelLookup(key, result);
+                            return result;
                         }
+                        ChannelMemberSnapshot selected =
+                                channelSnapshot(selectedSnapshot);
                         ExternalChannelDependencySnapshot.ChannelEntry
                                 actual =
                                 channelDependencyEntry(selected);
@@ -491,7 +622,10 @@ final class ExternalChannelFunctionResolver {
                                             + key);
                         }
                         capture.record(actual);
-                        return Optional.of(selected);
+                        ChannelLookupResult result =
+                                ChannelLookupResult.channel(selected);
+                        recordChannelLookup(key, result);
+                        return result;
                     }
 
                     @Override
@@ -522,7 +656,15 @@ final class ExternalChannelFunctionResolver {
                                 .materializeExactReference(
                                         reference);
                     }
-                });
+                },
+                runtimeWorkSession);
+    }
+
+    private void recordChannelLookup(
+            String key,
+            ChannelLookupResult result) {
+        channelLookupResults.add(
+                key + ":" + result.kind().name());
     }
 
     private ExternalChannelMemberSnapshot memberSnapshot(
@@ -645,7 +787,9 @@ final class ExternalChannelFunctionResolver {
         long externalCount = 0L;
         for (EffectiveContractSnapshot snapshot
                 : bundle.effectiveContractSnapshots()) {
-            if ("external-channel".equals(snapshot.role())) {
+            if (EffectiveContractSnapshotConstants
+                    .Role.EXTERNAL_CHANNEL.equals(
+                    snapshot.role())) {
                 externalCount++;
                 if (!snapshot.key().equals(excludedKey)) {
                     snapshots.add(snapshot);
@@ -653,7 +797,7 @@ final class ExternalChannelFunctionResolver {
             }
         }
         long memberLimit = PORTABLE_LIMITS.portableLimit(
-                "externalChannelsPerScope");
+                GasScheduleConstants.PortableLimit.EXTERNAL_CHANNELS_PER_SCOPE);
         if (externalCount > memberLimit) {
             throw new IllegalStateException(
                     "Same-scope External Channel dependency surface exceeds "
@@ -696,7 +840,7 @@ final class ExternalChannelFunctionResolver {
             }
         }
         long memberLimit = PORTABLE_LIMITS.portableLimit(
-                "effectiveContractsPerParticipatingScope");
+                GasScheduleConstants.PortableLimit.EFFECTIVE_CONTRACTS_PER_SCOPE);
         if (snapshots.size() > memberLimit) {
             throw new IllegalStateException(
                     "Same-scope Channel header catalog exceeds "
@@ -820,8 +964,10 @@ final class ExternalChannelFunctionResolver {
     }
 
     private boolean isChannelRole(String role) {
-        return "external-channel".equals(role)
-                || "processor-channel".equals(role);
+        return EffectiveContractSnapshotConstants
+                .Role.EXTERNAL_CHANNEL.equals(role)
+                || EffectiveContractSnapshotConstants
+                .Role.PROCESSOR_CHANNEL.equals(role);
     }
 
     private static List<String> snapshotKeys(
@@ -847,7 +993,7 @@ final class ExternalChannelFunctionResolver {
             }
         }
         long limit = PORTABLE_LIMITS.portableLimit(
-                "effectiveContractsPerParticipatingScope");
+                GasScheduleConstants.PortableLimit.EFFECTIVE_CONTRACTS_PER_SCOPE);
         if (unique.size() > limit) {
             throw new IllegalStateException(
                     "Same-scope effective contract key catalog exceeds "
@@ -867,7 +1013,9 @@ final class ExternalChannelFunctionResolver {
                     "Missing same-scope External Channel dependency: "
                             + key);
         }
-        if (!"external-channel".equals(snapshot.role())) {
+        if (!EffectiveContractSnapshotConstants
+                .Role.EXTERNAL_CHANNEL.equals(
+                snapshot.role())) {
             throw new IllegalStateException(
                     "Same-scope dependency is not an External Channel: "
                             + key);
@@ -1013,7 +1161,7 @@ final class ExternalChannelFunctionResolver {
             String key,
             String phase) {
         long depthLimit = PORTABLE_LIMITS.portableLimit(
-                "embeddedDepth");
+                GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH);
         if (stack.size() >= depthLimit) {
             throw new IllegalStateException(
                     "External Channel " + phase
@@ -1066,7 +1214,7 @@ final class ExternalChannelFunctionResolver {
         long codePoints =
                 supplied.codePointCount(0, supplied.length());
         long codePointLimit = PORTABLE_LIMITS.portableLimit(
-                "contractKeyCodePoints");
+                GasScheduleConstants.PortableLimit.CONTRACT_KEY_CODE_POINTS);
         if (codePoints > codePointLimit) {
             throw new IllegalStateException(
                     "External Channel " + label
@@ -1077,7 +1225,7 @@ final class ExternalChannelFunctionResolver {
         long utf8Bytes =
                 supplied.getBytes(StandardCharsets.UTF_8).length;
         long utf8Limit = PORTABLE_LIMITS.portableLimit(
-                "contractKeyUtf8Bytes");
+                GasScheduleConstants.PortableLimit.CONTRACT_KEY_UTF8_BYTES);
         if (utf8Bytes > utf8Limit) {
             throw new IllegalStateException(
                     "External Channel " + label
@@ -1088,6 +1236,12 @@ final class ExternalChannelFunctionResolver {
         return supplied;
     }
 
+    /**
+     * Immutable result of header-only external-channel evaluation.
+     *
+     * <p>Header evaluation may expose routing and dependency metadata but
+     * cannot materialize or execute the selected event body.</p>
+     */
     static final class Header {
         private final EffectiveContractSnapshot snapshot;
         private final FrozenNode contractNode;
@@ -1130,6 +1284,14 @@ final class ExternalChannelFunctionResolver {
         }
     }
 
+    /**
+     * Immutable full external-channel evaluation used by routing,
+     * checkpointing, and handler selection.
+     *
+     * <p>Every retained node and identity belongs to the same evaluated
+     * occurrence, preventing later phases from mixing header evidence with a
+     * different payload or checkpoint subject.</p>
+     */
     static final class Evaluation {
         private final List<String> channelKeys;
         private final List<String> eventKeys;
@@ -1137,11 +1299,14 @@ final class ExternalChannelFunctionResolver {
         private final boolean accepts;
         private final String checkpointDomainBlueId;
         private final FrozenNode payload;
+        private final String payloadBlueId;
         private final FrozenNode checkpointSubject;
+        private final String checkpointSubjectBlueId;
         private final String handlerChannelKey;
         private final String logicalDeliveryKey;
         private final ChannelMemberSnapshot handlerChannel;
         private final ExternalChannelDependencySnapshot dependencies;
+        private final List<String> channelLookupResults;
 
         private Evaluation(
                 List<String> channelKeys,
@@ -1150,11 +1315,14 @@ final class ExternalChannelFunctionResolver {
                 boolean accepts,
                 String checkpointDomainBlueId,
                 FrozenNode payload,
+                String payloadBlueId,
                 FrozenNode checkpointSubject,
+                String checkpointSubjectBlueId,
                 String handlerChannelKey,
                 String logicalDeliveryKey,
                 ChannelMemberSnapshot handlerChannel,
-                ExternalChannelDependencySnapshot dependencies) {
+                ExternalChannelDependencySnapshot dependencies,
+                List<String> channelLookupResults) {
             this.channelKeys = channelKeys;
             this.eventKeys = eventKeys;
             this.preselects = preselects;
@@ -1162,11 +1330,18 @@ final class ExternalChannelFunctionResolver {
             this.checkpointDomainBlueId =
                     checkpointDomainBlueId;
             this.payload = payload;
+            this.payloadBlueId = payloadBlueId;
             this.checkpointSubject = checkpointSubject;
+            this.checkpointSubjectBlueId =
+                    checkpointSubjectBlueId;
             this.handlerChannelKey = handlerChannelKey;
             this.logicalDeliveryKey = logicalDeliveryKey;
             this.handlerChannel = handlerChannel;
             this.dependencies = dependencies;
+            this.channelLookupResults =
+                    Collections.unmodifiableList(
+                            new ArrayList<>(
+                                    channelLookupResults));
         }
 
         List<String> channelKeys() {
@@ -1193,8 +1368,16 @@ final class ExternalChannelFunctionResolver {
             return payload;
         }
 
+        String payloadBlueId() {
+            return payloadBlueId;
+        }
+
         FrozenNode checkpointSubject() {
             return checkpointSubject;
+        }
+
+        String checkpointSubjectBlueId() {
+            return checkpointSubjectBlueId;
         }
 
         String handlerChannelKey() {
@@ -1211,6 +1394,10 @@ final class ExternalChannelFunctionResolver {
 
         ExternalChannelDependencySnapshot dependencies() {
             return dependencies;
+        }
+
+        List<String> channelLookupResults() {
+            return channelLookupResults;
         }
     }
 
@@ -1282,6 +1469,8 @@ final class ExternalChannelFunctionResolver {
         private void typeFamily(
                 String excludingChannelKey,
                 String effectiveTypeBlueId,
+                ExternalChannelDependencySnapshot.TypeMatchMode
+                        matchMode,
                 List<EffectiveContractSnapshot> matching) {
             List<ExternalChannelDependencySnapshot.Member> members =
                     new ArrayList<>(matching.size());
@@ -1290,6 +1479,7 @@ final class ExternalChannelFunctionResolver {
                         new ExternalChannelDependencySnapshot.Member(
                                 snapshot.key(),
                                 snapshot.order(),
+                                snapshot.effectiveTypeBlueId(),
                                 snapshot.sourceContributionNodeBlueIds(),
                                 snapshot
                                         .deterministicDependencyNodeBlueIds()));
@@ -1297,13 +1487,17 @@ final class ExternalChannelFunctionResolver {
             record(new ExternalChannelDependencySnapshot.TypeFamily(
                     excludingChannelKey,
                     effectiveTypeBlueId,
+                    matchMode,
                     members));
         }
 
         private void record(
                 ExternalChannelDependencySnapshot.TypeFamily family) {
             String selector = family.excludingChannelKey()
-                    + "\u0000" + family.effectiveTypeBlueId();
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                    + family.matchMode().name()
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                    + family.effectiveTypeBlueId();
             ExternalChannelDependencySnapshot.TypeFamily prior =
                     typeFamilies.get(selector);
             if (prior != null && !prior.equals(family)) {

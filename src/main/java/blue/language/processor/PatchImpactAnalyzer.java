@@ -1,8 +1,11 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
@@ -126,11 +129,16 @@ final class PatchImpactAnalyzer {
         boolean processorManagedStateChange = isProcessorManagedStateChange(
                 canonicalPlan.originScope(), path);
         boolean contractsChange = !processorManagedStateChange
-                && containsSegment(path, "contracts");
-        boolean typeChange = containsAnySegment(path, "type", "itemType", "keyType", "valueType");
-        boolean schemaChange = containsSegment(path, "schema");
-        boolean referenceChange = containsAnySegment(path, "blueId", "blue", "$previous", "$pos");
-        boolean mergePolicyChange = containsSegment(path, "mergePolicy");
+                && containsSegment(path, ProcessorContractConstants.KEY_CONTRACTS);
+        boolean typeChange = containsAnySegment(path, Properties.OBJECT_TYPE, Properties.OBJECT_ITEM_TYPE, Properties.OBJECT_KEY_TYPE, Properties.OBJECT_VALUE_TYPE);
+        boolean schemaChange = containsSegment(path, Properties.OBJECT_SCHEMA);
+        boolean referenceChange = containsAnySegment(
+                path,
+                Properties.OBJECT_BLUE_ID,
+                Properties.OBJECT_BLUE,
+                Properties.LIST_CONTROL_PREVIOUS,
+                Properties.LIST_CONTROL_POS);
+        boolean mergePolicyChange = containsSegment(path, Properties.OBJECT_MERGE_POLICY);
         boolean listIdentityChange = collectionChange
                 || patch.op() != JsonPatch.Op.REPLACE && path.hasArrayIndexLeaf();
         boolean safeBasicTypeDependency = typeDependency

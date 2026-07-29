@@ -7,10 +7,24 @@ import blue.language.utils.TypeClassResolver;
 import java.lang.reflect.*;
 import java.util.*;
 
+/**
+ * Converts Blue list nodes to Java arrays and collection types, recursively
+ * selecting converters for their declared generic item type.
+ *
+ * <p>When an interface or abstract collection cannot be instantiated, the
+ * converter falls back to an {@link ArrayList}. Null elements become Java null
+ * values or primitive defaults for primitive arrays.</p>
+ */
 public class CollectionConverter implements Converter<Object> {
     private final ConverterFactory converterFactory;
     private final TypeClassResolver typeClassResolver;
 
+    /**
+     * Creates a recursive collection converter.
+     *
+     * @param converterFactory factory for nested item converters
+     * @param typeClassResolver resolver for Blue-declared Java types
+     */
     public CollectionConverter(ConverterFactory converterFactory, TypeClassResolver typeClassResolver) {
         this.converterFactory = converterFactory;
         this.typeClassResolver = typeClassResolver;

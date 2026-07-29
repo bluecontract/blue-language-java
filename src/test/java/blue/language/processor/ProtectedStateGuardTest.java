@@ -5,29 +5,42 @@ import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 final class ProtectedStateGuardTest {
 
     @Test
-    void ordinaryApplicationStateMayChange() {
+    void shouldVerifyOrdinaryApplicationStateMayChange() {
+        // given
         FrozenNode before = frozen(
                 new Node().properties("value", new Node().value(0)));
+        // when
         FrozenNode after = frozen(
                 new Node().properties("value", new Node().value(1)));
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        before, before, after, after));
 
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                before, before, after, after));
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void directHistoryStateCannotChange() {
-        for (String key : new String[]{
+    void shouldVerifyDirectHistoryStateCannotChange() {
+        // given
+        String[] markerKeys = {
                 "initialized", "terminated", "checkpoint"
-        }) {
+        };
+
+        // when
+        Map<String, ProcessorFailureException> failures =
+                new LinkedHashMap<>();
+        for (String key : markerKeys) {
             Node beforeNode = new Node().contracts(new Node());
             Node afterNode = new Node().contracts(
                     new Node().properties(
@@ -36,25 +49,32 @@ final class ProtectedStateGuardTest {
                                     "identity",
                                     new Node().value(key))));
 
-            ProcessorFailureException failure = assertThrows(
-                    ProcessorFailureException.class,
+            ProcessorFailureException failure =
+                    FailureCapture.captureFailure(
                     () -> ProtectedStateGuard.verifyUnchanged(
                             frozen(beforeNode),
                             frozen(beforeNode),
                             frozen(afterNode),
-                            frozen(afterNode)),
-                    key);
+                            frozen(afterNode)));
+            failures.put(key, failure);
+        }
 
+        // then
+        assertEquals(markerKeys.length, failures.size());
+        for (Map.Entry<String, ProcessorFailureException> entry
+                : failures.entrySet()) {
+            assertNotNull(entry.getValue(), entry.getKey());
             assertEquals(
                     ProcessorErrorCategory
                             .ProtectedProcessorStateMutation,
-                    failure.errorCategory(),
-                    key);
+                    entry.getValue().errorCategory(),
+                    entry.getKey());
         }
     }
 
     @Test
-    void directHistoryComparesCanonicalIdentityNotResolvedValue() {
+    void shouldVerifyDirectHistoryComparesCanonicalIdentityNotResolvedValue() {
+        // given
         String beforeIdentity = FrozenNode.fromNode(
                 new Node().properties(
                         "subject",
@@ -79,25 +99,30 @@ final class ProtectedStateGuardTest {
                                         "subject",
                                         new Node().value("E1")))));
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         FrozenNode.fromNode(beforeNode),
                         sameResolved,
                         FrozenNode.fromNode(afterNode),
                         sameResolved));
 
+        // then
+        assertNotNull(failure);
         assertEquals(
                 ProcessorErrorCategory.ProtectedProcessorStateMutation,
                 failure.errorCategory());
     }
 
     @Test
-    void resolvedOnlyHistoryStateIsNotProtectedBecauseMarkersAreDirect() {
+    void shouldVerifyResolvedOnlyHistoryStateIsNotProtectedBecauseMarkersAreDirect() {
+        // given
         FrozenNode canonical = frozen(
                 new Node().type(new Node().blueId(
                         "11111111111111111111111111111111")));
         FrozenNode resolvedBefore = frozen(new Node());
+        // when
         FrozenNode resolvedAfter = frozen(
                 new Node().contracts(
                         new Node().properties(
@@ -105,29 +130,38 @@ final class ProtectedStateGuardTest {
                                 new Node().properties(
                                 "reason",
                                 new Node().value("done")))));
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        canonical,
+                        resolvedBefore,
+                        canonical,
+                        resolvedAfter));
 
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                canonical,
-                resolvedBefore,
-                canonical,
-                resolvedAfter));
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void exactProcessEmbeddedPathsExceptionPreservesOtherFields() {
+    void shouldVerifyExactProcessEmbeddedPathsExceptionPreservesOtherFields() {
+        // given
         FrozenNode before = frozen(rootWithEmbedded(
                 new Node().items(new Node().value("/one")),
                 new Node().value(7)));
+        // when
         FrozenNode after = frozen(rootWithEmbedded(
                 new Node().items(new Node().value("/two")),
                 new Node().value(7)));
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        before, before, after, after));
 
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                before, before, after, after));
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void processEmbeddedNonPathFieldCannotChange() {
+    void shouldVerifyProcessEmbeddedNonPathFieldCannotChange() {
+        // given
         FrozenNode before = frozen(rootWithEmbedded(
                 new Node().items(new Node().value("/one")),
                 new Node().value(7)));
@@ -135,18 +169,22 @@ final class ProtectedStateGuardTest {
                 new Node().items(new Node().value("/two")),
                 new Node().value(8)));
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         before, before, after, after));
 
+        // then
+        assertNotNull(failure);
         assertEquals(
                 ProcessorErrorCategory.ProtectedProcessorStateMutation,
                 failure.errorCategory());
     }
 
     @Test
-    void processEmbeddedEffectiveTypeCannotChange() {
+    void shouldVerifyProcessEmbeddedEffectiveTypeCannotChange() {
+        // given
         Node beforeNode = rootWithEmbedded(
                 new Node().items(new Node().value("/one")),
                 new Node().value(7));
@@ -159,21 +197,25 @@ final class ProtectedStateGuardTest {
                 .type(new Node().blueId(
                         "22222222222222222222222222222222"));
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         frozen(beforeNode),
                         frozen(beforeNode),
                         frozen(afterNode),
                         frozen(afterNode)));
 
+        // then
+        assertNotNull(failure);
         assertEquals(
                 ProcessorErrorCategory.ProtectedProcessorStateMutation,
                 failure.errorCategory());
     }
 
     @Test
-    void unrelatedNestedBusinessObjectContractsAreNotScopeState() {
+    void shouldVerifyUnrelatedNestedBusinessObjectContractsAreNotScopeState() {
+        // given
         Node beforeNode = new Node().properties(
                 "business",
                 new Node().properties(
@@ -185,6 +227,7 @@ final class ProtectedStateGuardTest {
                                                 "subject",
                                                 new Node().value("before"))))));
         Node afterNode = beforeNode.clone();
+        // when
         afterNode.getProperties()
                 .get("business")
                 .getProperties()
@@ -195,16 +238,20 @@ final class ProtectedStateGuardTest {
                         new Node().properties(
                                 "subject",
                                 new Node().value("after")));
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode),
+                        frozen(afterNode)));
 
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                frozen(beforeNode),
-                frozen(beforeNode),
-                frozen(afterNode),
-                frozen(afterNode)));
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void contractsInsideBusinessListItemsAreNotScopeState() {
+    void shouldVerifyContractsInsideBusinessListItemsAreNotScopeState() {
+        // given
         Node beforeNode = new Node().properties(
                 "rows",
                 new Node().items(
@@ -215,6 +262,7 @@ final class ProtectedStateGuardTest {
                                                 "documentId",
                                                 new Node().value("before"))))));
         Node afterNode = beforeNode.clone();
+        // when
         afterNode.getProperties()
                 .get("rows")
                 .getItems()
@@ -225,16 +273,20 @@ final class ProtectedStateGuardTest {
                         new Node().properties(
                                 "documentId",
                                 new Node().value("after")));
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode),
+                        frozen(afterNode)));
 
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                frozen(beforeNode),
-                frozen(beforeNode),
-                frozen(afterNode),
-                frozen(afterNode)));
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void malformedEmbeddedListRouteDoesNotTurnListItemIntoScope() {
+    void shouldVerifyMalformedEmbeddedListRouteDoesNotTurnListItemIntoScope() {
+        // given
         Node beforeNode = rootWithEmbedded(
                 new Node().items(new Node().value("/rows/0")),
                 new Node().value(7))
@@ -244,6 +296,7 @@ final class ProtectedStateGuardTest {
                                 childWithMarker(
                                         "checkpoint", "before")));
         Node afterNode = beforeNode.clone();
+        // when
         afterNode.getProperties()
                 .get("rows")
                 .getItems()
@@ -254,59 +307,51 @@ final class ProtectedStateGuardTest {
                         new Node().properties(
                                 "value",
                                 new Node().value("after")));
-
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                frozen(beforeNode),
-                frozen(beforeNode),
-                frozen(afterNode),
-                frozen(afterNode)));
-    }
-
-    @Test
-    void directHistoryAtDeclaredEmbeddedScopeCannotChange() {
-        Node beforeNode = rootWithEmbeddedChild(
-                childWithMarker("checkpoint", "before"));
-        Node afterNode = rootWithEmbeddedChild(
-                childWithMarker("checkpoint", "after"));
-
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        Throwable failure = FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         frozen(beforeNode),
                         frozen(beforeNode),
                         frozen(afterNode),
                         frozen(afterNode)));
 
+        // then
+        assertNull(failure);
+    }
+
+    @Test
+    void shouldVerifyDirectHistoryAtDeclaredEmbeddedScopeCannotChange() {
+        // given
+        Node beforeNode = rootWithEmbeddedChild(
+                childWithMarker("checkpoint", "before"));
+        Node afterNode = rootWithEmbeddedChild(
+                childWithMarker("checkpoint", "after"));
+
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode),
+                        frozen(afterNode)));
+
+        // then
+        assertNotNull(failure);
         assertEquals(
                 ProcessorErrorCategory.ProtectedProcessorStateMutation,
                 failure.errorCategory());
     }
 
     @Test
-    void wholeEmbeddedChildRemovalMayDropItsDirectHistory() {
+    void shouldVerifyWholeEmbeddedChildRemovalMayDropItsDirectHistory() {
+        // given
         Node beforeNode = rootWithEmbeddedChild(
                 childWithMarker("initialized", "before"));
+        // when
         Node afterNode = rootWithEmbedded(
                 new Node().items(new Node().value("/child")),
                 new Node().value(7));
-
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                frozen(beforeNode),
-                frozen(beforeNode),
-                frozen(afterNode),
-                frozen(afterNode),
-                Collections.singleton("/child")));
-    }
-
-    @Test
-    void wholeEmbeddedChildReplacementCannotForgeDirectHistory() {
-        Node beforeNode = rootWithEmbeddedChild(
-                childWithMarker("initialized", "before"));
-        Node afterNode = rootWithEmbeddedChild(
-                childWithMarker("initialized", "after"));
-
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        Throwable failure = FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         frozen(beforeNode),
                         frozen(beforeNode),
@@ -314,13 +359,38 @@ final class ProtectedStateGuardTest {
                         frozen(afterNode),
                         Collections.singleton("/child")));
 
+        // then
+        assertNull(failure);
+    }
+
+    @Test
+    void shouldVerifyWholeEmbeddedChildReplacementCannotForgeDirectHistory() {
+        // given
+        Node beforeNode = rootWithEmbeddedChild(
+                childWithMarker("initialized", "before"));
+        Node afterNode = rootWithEmbeddedChild(
+                childWithMarker("initialized", "after"));
+
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode),
+                        frozen(afterNode),
+                        Collections.singleton("/child")));
+
+        // then
+        assertNotNull(failure);
         assertEquals(
                 ProcessorErrorCategory.ProtectedProcessorStateMutation,
                 failure.errorCategory());
     }
 
     @Test
-    void directHistoryAtTransitivelyDeclaredScopeCannotChange() {
+    void shouldVerifyDirectHistoryAtTransitivelyDeclaredScopeCannotChange() {
+        // given
         Node beforeNode = rootWithEmbeddedChild(
                 childDeclaringGrandchild(
                         childWithMarker("terminated", "before")));
@@ -328,75 +398,92 @@ final class ProtectedStateGuardTest {
                 childDeclaringGrandchild(
                         childWithMarker("terminated", "after")));
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         frozen(beforeNode),
                         frozen(beforeNode),
                         frozen(afterNode),
                         frozen(afterNode)));
 
+        // then
+        assertNotNull(failure);
         assertEquals(
                 ProcessorErrorCategory.ProtectedProcessorStateMutation,
                 failure.errorCategory());
     }
 
     @Test
-    void effectiveGeneralizationAtDeclaredScopeCannotChange() {
+    void shouldVerifyEffectiveGeneralizationAtDeclaredScopeCannotChange() {
+        // given
         Node canonical = rootWithEmbeddedChild(new Node());
         Node resolvedBefore = rootWithEmbeddedChild(
                 childWithGeneralization("reject"));
         Node resolvedAfter = rootWithEmbeddedChild(
                 childWithGeneralization("nearest-valid-ancestor"));
 
-        ProcessorFailureException failure = assertThrows(
-                ProcessorFailureException.class,
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         frozen(canonical),
                         frozen(resolvedBefore),
                         frozen(canonical),
                         frozen(resolvedAfter)));
 
+        // then
+        assertNotNull(failure);
         assertEquals(
                 ProcessorErrorCategory.ProtectedProcessorStateMutation,
                 failure.errorCategory());
     }
 
     @Test
-    void effectiveProcessEmbeddedStateHasInlineReferenceBackedTypeParity() {
+    void shouldVerifyEffectiveProcessEmbeddedStateHasInlineReferenceBackedTypeParity() {
+        // given
         Node beforeNode = rootWithEmbedded(
                 new Node().items(new Node().value("/child")),
                 new Node().value(7));
         Node afterNode = beforeNode.clone();
+        // when
         afterNode.getContracts()
                 .getProperties()
                 .get("embedded")
                 .blueId("11111111111111111111111111111111");
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode)));
 
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                frozen(beforeNode),
-                frozen(beforeNode),
-                frozen(beforeNode),
-                frozen(afterNode)));
+        // then
+        assertNull(failure);
     }
 
     @Test
-    void directMarkerInlineAndReferenceFormsUseExactIdentity() {
+    void shouldVerifyDirectMarkerInlineAndReferenceFormsUseExactIdentity() {
+        // given
         Node marker = new Node().properties(
                 "subject", new Node().value("E1"));
         String markerId = FrozenNode.fromNode(marker).blueId();
         Node beforeNode = new Node().contracts(
                 new Node().properties("checkpoint", marker));
+        // when
         Node afterNode = new Node().contracts(
                 new Node().properties(
                         "checkpoint",
                         new Node().blueId(markerId)));
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        FrozenNode.fromNode(beforeNode),
+                        frozen(beforeNode),
+                        FrozenNode.fromNode(afterNode),
+                        frozen(beforeNode)));
 
-        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                FrozenNode.fromNode(beforeNode),
-                frozen(beforeNode),
-                FrozenNode.fromNode(afterNode),
-                frozen(beforeNode)));
+        // then
+        assertNull(failure);
     }
 
     private static Node rootWithEmbedded(Node paths, Node policy) {

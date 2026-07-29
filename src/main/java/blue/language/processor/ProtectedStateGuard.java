@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeToBlueIdInput;
@@ -23,7 +24,9 @@ import java.util.Set;
 final class ProtectedStateGuard {
 
     private static final String[] HISTORY_KEYS = {
-            "initialized", "terminated", "checkpoint"
+            ProcessorContractConstants.KEY_INITIALIZED,
+            ProcessorContractConstants.KEY_TERMINATED,
+            ProcessorContractConstants.KEY_CHECKPOINT
     };
 
     private ProtectedStateGuard() {
@@ -187,9 +190,12 @@ final class ProtectedStateGuard {
         while (!pending.isEmpty()) {
             String scope = pending.removeFirst();
             FrozenNode scopeNode = resolvedRoot.at(scope);
-            FrozenNode embedded = contract(scopeNode, "embedded");
+            FrozenNode embedded = contract(
+                    scopeNode,
+                    ProcessorContractConstants.KEY_EMBEDDED);
             FrozenNode paths = embedded != null
-                    ? embedded.property("paths")
+                    ? embedded.property(
+                    ProcessorContractConstants.KEY_PATHS)
                     : null;
             List<FrozenNode> items = paths != null
                     ? paths.getItems()
@@ -251,11 +257,17 @@ final class ProtectedStateGuard {
         FrozenNode contracts = node.getContracts();
         if (contracts != null) {
             putEffectiveIdentity(result,
-                    "effective:" + contractPath(path, "embedded"),
-                    withoutEmbeddedPaths(contracts.property("embedded")));
+                    "effective:" + contractPath(
+                            path,
+                            ProcessorContractConstants.KEY_EMBEDDED),
+                    withoutEmbeddedPaths(contracts.property(
+                            ProcessorContractConstants.KEY_EMBEDDED)));
             putEffectiveIdentity(result,
-                    "effective:" + contractPath(path, "generalization"),
-                    contracts.property("generalization"));
+                    "effective:" + contractPath(
+                            path,
+                            ProcessorContractConstants.KEY_GENERALIZATION),
+                    contracts.property(
+                            ProcessorContractConstants.KEY_GENERALIZATION));
         }
     }
 
@@ -289,7 +301,8 @@ final class ProtectedStateGuard {
         }
         Node stripped = embedded.toNode();
         if (stripped.getProperties() != null) {
-            stripped.getProperties().remove("paths");
+            stripped.getProperties().remove(
+                    ProcessorContractConstants.KEY_PATHS);
         }
         NodeToBlueIdInput.stripResolvedBlueIdMetadata(stripped);
         return Nodes.isEmptyNode(stripped)
@@ -317,7 +330,7 @@ final class ProtectedStateGuard {
     }
 
     private static String contractPath(String scopePath, String key) {
-        String contracts = childPath(scopePath, "contracts");
+        String contracts = childPath(scopePath, ProcessorContractConstants.KEY_CONTRACTS);
         return childPath(contracts, key);
     }
 

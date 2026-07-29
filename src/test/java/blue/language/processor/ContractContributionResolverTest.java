@@ -7,15 +7,19 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContractContributionResolverTest {
 
     @Test
-    void contextuallyInheritedTypeIsReverifiedFromItsExactBlueId() {
+    void shouldVerifyContextuallyInheritedTypeIsReverifiedFromItsExactBlueId() {
+        // given
         Node contribution = new Node()
                 .type(new Node().blueId(
                         RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL))
@@ -30,26 +34,31 @@ class ContractContributionResolverTest {
                 provider.getBlueIdByName(contextualType.getName());
         Node selectedCanonicalFragment = new Node()
                 .properties("local", new Node().value(true));
+        // when
         FrozenNode effectiveScope = FrozenNode.fromResolvedNode(
                 new Node()
                         .type(provider.fetchFirstByBlueId(
                                 contextualTypeBlueId))
                         .contracts(new Node().properties(
                                 "channel", contribution.clone())));
-
-        assertEquals(
-                Collections.singletonList(
-                        BlueIdCalculator.calculateBlueId(
-                                contribution)),
+        java.util.List<String> contributions =
                 new ContractContributionResolver(provider).resolve(
                         selectedCanonicalFragment,
                         effectiveScope,
                         "channel",
-                        true));
+                        true);
+
+        // then
+        assertEquals(
+                Collections.singletonList(
+                        BlueIdCalculator.calculateBlueId(
+                                contribution)),
+                contributions);
     }
 
     @Test
-    void effectiveContentWithoutExactTypeIdentityIsNotSourceEvidence() {
+    void shouldVerifyEffectiveContentWithoutExactTypeIdentityIsNotSourceEvidence() {
+        // given
         Node contribution = new Node()
                 .type(new Node().blueId(
                         RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
@@ -63,12 +72,186 @@ class ContractContributionResolverTest {
                         .contracts(new Node().properties(
                                 "channel", contribution)));
 
-        assertThrows(
-                MustUnderstandFailureException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> new ContractContributionResolver(null).resolve(
                         new Node(),
                         effectiveScope,
                         "channel",
                         true));
+
+        // then
+        assertTrue(failure instanceof MustUnderstandFailureException);
+    }
+
+    @Test
+    void shouldVerifyExecutableBodySourceUsesEscapedRfc6901Pointer() {
+        // given
+        String field = "body~/part";
+        Node body = new Node().value("cold");
+        String bodyBlueId =
+                BlueIdCalculator.calculateBlueId(body);
+        Node contribution =
+                new Node().properties(
+                        field,
+                        new Node().blueId(
+                                bodyBlueId));
+        Node selectedScope =
+                new Node().contracts(
+                        new Node().properties(
+                                "handler",
+                                contribution));
+
+        // when
+        ContractContributionResolver.BindingResolution
+                resolution =
+                new ContractContributionResolver(null)
+                        .resolveBinding(
+                                selectedScope,
+                                null,
+                                "handler",
+                                true,
+                                Collections.singletonList(
+                                        field));
+        ContractContributionResolver.ExecutableBodySource
+                source =
+                resolution.executableBodySources()
+                        .get(field);
+
+        // then
+        assertEquals(
+                Collections.singletonList(
+                        BlueIdCalculator.calculateBlueId(
+                                contribution)),
+                resolution.sourceContributions());
+        assertEquals(
+                resolution.sourceContributions().get(0),
+                source.owningContributionBlueId());
+        assertEquals(
+                "/body~0~1part",
+                source.sourcePointer());
+        assertTrue(source.pureReference());
+        assertEquals(
+                bodyBlueId,
+                resolution.exactExecutableBodies()
+                        .get(field)
+                        .getBlueId());
+    }
+
+    @Test
+    void shouldVerifyUnavailableSourceContributionRetainsItsExactDemand() {
+        // given
+        Node type =
+                new Node().name(
+                        "Unavailable Source type");
+        String typeBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        type);
+        Node selectedScope =
+                new Node().type(
+                        new Node().blueId(
+                                typeBlueId));
+
+        // when
+        ExecutionEvidenceUnavailableException failure =
+                captureFailure(
+                        () -> new ContractContributionResolver(
+                                blueId -> null)
+                                .resolveBinding(
+                                        selectedScope,
+                                        null,
+                                        "handler",
+                                        true,
+                                        Collections.singletonList(
+                                                "program")));
+
+        // then
+        assertEquals(ExecutionEvidenceUnavailableException.class,
+                failure.getClass());
+        assertEquals(
+                Collections.singletonList(
+                        typeBlueId),
+                failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldVerifyMostDerivedInheritedInlineBodyOwnsMultipleOverlayDescriptor() {
+        // given
+        Node baseBody =
+                new Node().value("base");
+        Node derivedBody =
+                new Node().value("derived");
+        Node baseContribution =
+                new Node().properties(
+                        "program",
+                        baseBody);
+        Node derivedContribution =
+                new Node().properties(
+                        "program",
+                        derivedBody);
+        Node baseType =
+                new Node()
+                        .name("Body Source base")
+                        .contracts(
+                                new Node().properties(
+                                        "run",
+                                        baseContribution));
+        String baseTypeBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        baseType);
+        Node derivedType =
+                new Node()
+                        .name("Body Source derived")
+                        .type(new Node().blueId(
+                                baseTypeBlueId))
+                        .contracts(
+                                new Node().properties(
+                                        "run",
+                                        derivedContribution));
+        String derivedTypeBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        derivedType);
+        BasicNodeProvider provider =
+                new BasicNodeProvider(
+                        baseType,
+                        derivedType);
+
+        // when
+        ContractContributionResolver.BindingResolution
+                resolution =
+                new ContractContributionResolver(provider)
+                        .resolveBinding(
+                                new Node().type(
+                                        new Node().blueId(
+                                                derivedTypeBlueId)),
+                                null,
+                                "run",
+                                true,
+                                Collections.singletonList(
+                                        "program"));
+        ContractContributionResolver.ExecutableBodySource
+                source =
+                resolution.executableBodySources()
+                        .get("program");
+
+        // then
+        assertEquals(
+                Arrays.asList(
+                        BlueIdCalculator.calculateBlueId(
+                                baseContribution),
+                        BlueIdCalculator.calculateBlueId(
+                                derivedContribution)),
+                resolution.sourceContributions());
+        assertEquals(
+                resolution.sourceContributions().get(1),
+                source.owningContributionBlueId());
+        assertEquals(
+                BlueIdCalculator.calculateBlueId(
+                        derivedBody),
+                BlueIdCalculator.calculateBlueId(
+                        resolution.exactExecutableBodies()
+                                .get("program")));
+        assertEquals("/program", source.sourcePointer());
+        assertFalse(source.pureReference());
     }
 }

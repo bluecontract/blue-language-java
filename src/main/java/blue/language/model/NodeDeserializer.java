@@ -1,7 +1,9 @@
 package blue.language.model;
 
-import blue.language.utils.UncheckedObjectMapper;
 import blue.language.utils.BlueNumbers;
+import blue.language.utils.JsonPointer;
+import blue.language.utils.Properties;
+import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,27 +18,42 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static blue.language.utils.Properties.*;
+import static blue.language.utils.SchemaPropertyConstants.*;
 
+/**
+ * Strict Jackson deserializer for Blue source nodes.
+ *
+ * <p>It enforces reserved-field shapes, payload-kind exclusivity, exact number
+ * bounds, list-control syntax, root-only preprocessing directives, and the
+ * closed core schema vocabulary while retaining ordinary object properties in
+ * insertion order.</p>
+ */
 public class NodeDeserializer extends StdDeserializer<Node> {
 
+    private static final String BLUE_DIRECTIVE_PATH =
+            JsonPointer.append(
+                    JsonPointer.ROOT,
+                    Properties.OBJECT_BLUE);
+
     private static final Set<String> ALLOWED_SCHEMA_KEYS = new HashSet<>(Arrays.asList(
-            "blueId",
-            "required",
-            "minLength",
-            "maxLength",
-            "minimum",
-            "maximum",
-            "exclusiveMinimum",
-            "exclusiveMaximum",
-            "multipleOf",
-            "minItems",
-            "maxItems",
-            "uniqueItems",
-            "minFields",
-            "maxFields",
-            "enum"
+            Properties.OBJECT_BLUE_ID,
+            KEY_REQUIRED,
+            KEY_MIN_LENGTH,
+            KEY_MAX_LENGTH,
+            KEY_MINIMUM,
+            KEY_MAXIMUM,
+            KEY_EXCLUSIVE_MINIMUM,
+            KEY_EXCLUSIVE_MAXIMUM,
+            KEY_MULTIPLE_OF,
+            KEY_MIN_ITEMS,
+            KEY_MAX_ITEMS,
+            KEY_UNIQUE_ITEMS,
+            KEY_MIN_FIELDS,
+            KEY_MAX_FIELDS,
+            KEY_ENUM
     ));
 
+    /** Creates the deserializer registered by {@link Node}'s Jackson metadata. */
     protected NodeDeserializer() {
         super(Node.class);
     }
@@ -44,7 +61,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     @Override
     public Node deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonNode treeNode = p.readValueAsTree();
-        return handleNode(treeNode, "/", true);
+        return handleNode(
+                treeNode,
+                JsonPointer.ROOT,
+                true);
     }
 
     private Node handleNode(JsonNode node, String path, boolean root) {
@@ -146,10 +166,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         }
                         obj.contracts(handleNode(value, appendPath(path, key), false));
                         break;
-                    case "constraints":
+                    case LEGACY_OBJECT_CONSTRAINTS:
                         throw new IllegalArgumentException("\"constraints\" is not part of the Blue Language 1.0 top-level vocabulary.");
                     default:
-                        if ("properties".equals(key)) {
+                        if (LEGACY_OBJECT_PROPERTIES.equals(key)) {
                             throw new IllegalArgumentException("\"properties\" is an internal field and must not appear in Blue documents.");
                         }
                         properties.put(key, handleNode(value, appendPath(path, key), false));
@@ -193,10 +213,14 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             return node.asText();
         } else if (node.isBigInteger() || node.isInt() || node.isLong()) {
             BigInteger value = node.bigIntegerValue();
-            BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-            BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-            if (value.compareTo(lowerBound) < 0 || value.compareTo(upperBound) > 0) {
-                throw new IllegalArgumentException("Unquoted integers outside [-9007199254740991, 9007199254740991] must be quoted and explicitly typed as Integer.");
+            if (value.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                    || value.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
+                throw new IllegalArgumentException(
+                        "Unquoted integers outside ["
+                                + BlueNumbers.MIN_INTEROPERABLE_INTEGER
+                                + ", "
+                                + BlueNumbers.MAX_INTEROPERABLE_INTEGER
+                                + "] must be quoted and explicitly typed as Integer.");
             }
             return value;
         } else if (node.isFloatingPointNumber()) {
@@ -281,34 +305,46 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         return UncheckedObjectMapper.YAML_MAPPER.convertValue(schemaNode, Schema.class);
     }
 
+    /**
+     * Parses one schema object using the same strict vocabulary checks as a
+     * complete Node parse.
+     *
+     * @param schemaNode JSON schema object to parse
+     * @param path path used in validation errors
+     * @return parsed mutable schema
+     */
     public static Schema parseSchema(JsonNode schemaNode, String path) {
         return new NodeDeserializer().handleSchema(schemaNode, path);
     }
 
     private void validateSchemaValueShapes(JsonNode schemaNode, String path) {
-        requireBooleanKeyword(schemaNode, "required", path);
-        requireBooleanKeyword(schemaNode, "uniqueItems", path);
+        requireBooleanKeyword(schemaNode, KEY_REQUIRED, path);
+        requireBooleanKeyword(schemaNode, KEY_UNIQUE_ITEMS, path);
 
-        requireNonNegativeIntegerKeyword(schemaNode, "minLength", path);
-        requireNonNegativeIntegerKeyword(schemaNode, "maxLength", path);
-        requireNonNegativeIntegerKeyword(schemaNode, "minItems", path);
-        requireNonNegativeIntegerKeyword(schemaNode, "maxItems", path);
-        requireNonNegativeIntegerKeyword(schemaNode, "minFields", path);
-        requireNonNegativeIntegerKeyword(schemaNode, "maxFields", path);
+        requireNonNegativeIntegerKeyword(schemaNode, KEY_MIN_LENGTH, path);
+        requireNonNegativeIntegerKeyword(schemaNode, KEY_MAX_LENGTH, path);
+        requireNonNegativeIntegerKeyword(schemaNode, KEY_MIN_ITEMS, path);
+        requireNonNegativeIntegerKeyword(schemaNode, KEY_MAX_ITEMS, path);
+        requireNonNegativeIntegerKeyword(schemaNode, KEY_MIN_FIELDS, path);
+        requireNonNegativeIntegerKeyword(schemaNode, KEY_MAX_FIELDS, path);
 
-        requireNumericKeyword(schemaNode, "minimum", path);
-        requireNumericKeyword(schemaNode, "maximum", path);
-        requireNumericKeyword(schemaNode, "exclusiveMinimum", path);
-        requireNumericKeyword(schemaNode, "exclusiveMaximum", path);
-        requireNumericKeyword(schemaNode, "multipleOf", path);
+        requireNumericKeyword(schemaNode, KEY_MINIMUM, path);
+        requireNumericKeyword(schemaNode, KEY_MAXIMUM, path);
+        requireNumericKeyword(schemaNode, KEY_EXCLUSIVE_MINIMUM, path);
+        requireNumericKeyword(schemaNode, KEY_EXCLUSIVE_MAXIMUM, path);
+        requireNumericKeyword(schemaNode, KEY_MULTIPLE_OF, path);
 
-        JsonNode enumNode = schemaNode.get("enum");
+        JsonNode enumNode = schemaNode.get(KEY_ENUM);
         if (enumNode != null) {
             if (!enumNode.isArray()) {
-                throw new IllegalArgumentException("\"schema.enum\" must be a list. Path: " + appendPath(path, "enum"));
+                throw new IllegalArgumentException(
+                        "\"schema.enum\" must be a list. Path: "
+                                + appendPath(path, KEY_ENUM));
             }
             for (int i = 0; i < enumNode.size(); i++) {
-                requireEnumEntry(enumNode.get(i), appendPath(appendPath(path, "enum"), i));
+                requireEnumEntry(
+                        enumNode.get(i),
+                        appendPath(appendPath(path, KEY_ENUM), i));
             }
         }
     }
@@ -358,7 +394,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             throw new IllegalArgumentException("\"schema." + keyword + "\" must be a non-negative integer. Path: " + appendPath(path, keyword));
         }
         if (integer.signum() < 0
-                || integer.compareTo(BigInteger.valueOf(9007199254740991L)) > 0) {
+                || integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
             throw new IllegalArgumentException("\"schema." + keyword + "\" must be a non-negative integer in the interoperable range. Path: " + appendPath(path, keyword));
         }
     }
@@ -371,9 +407,8 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         if (value.isNumber()) {
             if (value.isIntegralNumber()) {
                 BigInteger integer = value.bigIntegerValue();
-                BigInteger lowerBound = BigInteger.valueOf(-9007199254740991L);
-                BigInteger upperBound = BigInteger.valueOf(9007199254740991L);
-                if (integer.compareTo(lowerBound) < 0 || integer.compareTo(upperBound) > 0) {
+                if (integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
+                        || integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
                     throw new IllegalArgumentException("\"schema." + keyword + "\" unquoted integer is outside the interoperable range. Path: " + appendPath(path, keyword));
                 }
             }
@@ -434,10 +469,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private boolean isScalarType(Node type) {
-        return isCoreType(type, TEXT_TYPE_BLUE_ID, "Text")
-                || isCoreType(type, INTEGER_TYPE_BLUE_ID, "Integer")
-                || isCoreType(type, DOUBLE_TYPE_BLUE_ID, "Double")
-                || isCoreType(type, BOOLEAN_TYPE_BLUE_ID, "Boolean");
+        return isCoreType(type, TEXT_TYPE_BLUE_ID, TEXT_TYPE)
+                || isCoreType(type, INTEGER_TYPE_BLUE_ID, INTEGER_TYPE)
+                || isCoreType(type, DOUBLE_TYPE_BLUE_ID, DOUBLE_TYPE)
+                || isCoreType(type, BOOLEAN_TYPE_BLUE_ID, BOOLEAN_TYPE);
     }
 
     private boolean isNumericType(Node type) {
@@ -476,11 +511,11 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private boolean isIntegerType(Node type) {
-        return isCoreType(type, INTEGER_TYPE_BLUE_ID, "Integer");
+        return isCoreType(type, INTEGER_TYPE_BLUE_ID, INTEGER_TYPE);
     }
 
     private boolean isDoubleType(Node type) {
-        return isCoreType(type, DOUBLE_TYPE_BLUE_ID, "Double");
+        return isCoreType(type, DOUBLE_TYPE_BLUE_ID, DOUBLE_TYPE);
     }
 
     private boolean isCoreType(Node type, String blueId, String alias) {
@@ -507,11 +542,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private String appendPath(String path, String segment) {
-        String prefix = path == null || path.isEmpty() ? "/" : path;
-        if ("/".equals(prefix)) {
-            return "/" + escapePathSegment(segment);
-        }
-        return prefix + "/" + escapePathSegment(segment);
+        return JsonPointer.append(path, segment);
     }
 
     private String appendPath(String path, int index) {
@@ -519,10 +550,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private boolean isBlueImportsDirective(String path, String key) {
-        return "/blue".equals(path) && "imports".equals(key);
-    }
-
-    private String escapePathSegment(String segment) {
-        return segment.replace("~", "~0").replace("/", "~1");
+        return BLUE_DIRECTIVE_PATH.equals(path)
+                && BLUE_DIRECTIVE_IMPORTS.equals(key);
     }
 }

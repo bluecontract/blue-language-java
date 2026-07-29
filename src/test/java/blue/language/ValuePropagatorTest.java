@@ -21,8 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class ValuePropagatorTest {
 
     @Test
-    public void testValueShouldPropagate() throws Exception {
+    public void shouldPropagateValue() throws Exception {
 
+        // given
         String a = "name: A\n" +
                 "value: xyz";
 
@@ -42,14 +43,17 @@ public class ValuePropagatorTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
+        // when
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("B"))).get(0));
 
+        // then
         assertEquals("xyz", node.getValue());
     }
 
     @Test
-    public void testValuesMustNotConflict() throws Exception {
+    public void shouldRejectConflictingValues() throws Exception {
 
+        // given
         String a = "name: A\n" +
                 "value: xyz";
 
@@ -69,8 +73,10 @@ public class ValuePropagatorTest {
                 )
         );
 
+        // when
         Merger merger = new Merger(mergingProcessor, nodeProvider);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("B"))).get(0)));
     }
 

@@ -1,5 +1,13 @@
 package blue.language.utils;
 
+/**
+ * Encodes and decodes the canonical Bitcoin-style Base58 alphabet used by
+ * BlueIds.
+ *
+ * <p>Leading zero bytes round-trip as leading {@code '1'} characters. The
+ * decoder deliberately preserves the library's historical representation of
+ * an empty or all-zero input.</p>
+ */
 public class Base58 {
     private static final char[] ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
     private static final int CHUNK_DIGITS = 5;
@@ -13,6 +21,21 @@ public class Base58 {
         }
     }
 
+    /**
+     * Creates a compatibility codec instance.
+     *
+     * <p>Encoding and decoding operations are stateless static methods.</p>
+     */
+    public Base58() {
+    }
+
+    /**
+     * Encodes an unsigned big-endian byte sequence without separators or
+     * padding.
+     *
+     * @param input bytes to encode
+     * @return canonical Base58 representation
+     */
     public static String encode(byte[] input) {
         int leadingZeros = 0;
         while (leadingZeros < input.length && input[leadingZeros] == 0) {
@@ -69,6 +92,14 @@ public class Base58 {
         return new String(encoded, outputStart, encoded.length - outputStart);
     }
 
+    /**
+     * Decodes a canonical-alphabet string into its unsigned big-endian bytes.
+     *
+     * @param input canonical Base58 representation
+     * @return decoded unsigned big-endian bytes
+     * @throws IllegalArgumentException if {@code input} contains a character
+     *                                  outside the Base58 alphabet
+     */
     public static byte[] decode(String input) {
         int leadingZeros = 0;
         for (int index = 0; index < input.length(); index++) {

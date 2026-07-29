@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.utils.BlueIdCalculator;
 
 import java.util.ArrayList;
@@ -22,12 +23,19 @@ import java.util.Set;
  * same-scope dependency context, and exact event. Dependencies used during
  * event evaluation must be covered by those declared while deriving the
  * immutable subscription header.</p>
+ *
+ * @param <T> exact External Channel contract model handled by the functions
  */
 public interface ExternalChannelSubscriptionFunctions<
         T extends ChannelContract> {
 
     /**
      * Returns the finite ordered subscription-key set for this occurrence.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @return finite ordered subscription keys
+     * @throws UnsupportedOperationException when the runtime omits the
+     * required implementation
      */
     default List<String> channelKeys(
             T immutableContractSnapshot) {
@@ -42,6 +50,10 @@ public interface ExternalChannelSubscriptionFunctions<
      * Composite runtime types use {@code context} to consult exact immutable
      * same-scope External Channel snapshots. Every consultation is captured as
      * a deterministic subscription dependency.</p>
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param context immutable dependency-resolution context
+     * @return finite ordered subscription keys
      */
     default List<String> channelKeys(
             T immutableContractSnapshot,
@@ -56,13 +68,18 @@ public interface ExternalChannelSubscriptionFunctions<
      * {@code subscriptionKeys: List<Text>} or singular
      * {@code subscriptionKey: Text}. A runtime type with another immutable
      * dispatch header must override this function.</p>
+     *
+     * @param exactEvent exact incoming event
+     * @return finite ordered event keys
+     * @throws IllegalArgumentException when the default event-key fields are
+     * malformed
      */
     default List<String> eventKeys(Node exactEvent) {
         if (exactEvent == null || exactEvent.getProperties() == null) {
             return Collections.emptyList();
         }
         Node plural = exactEvent.getProperties().get(
-                "subscriptionKeys");
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEYS);
         if (plural != null) {
             if (plural.getItems() == null) {
                 throw new IllegalArgumentException(
@@ -83,7 +100,7 @@ public interface ExternalChannelSubscriptionFunctions<
             return keys;
         }
         Node singular = exactEvent.getProperties().get(
-                "subscriptionKey");
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEY);
         Object value = singular != null ? singular.getValue() : null;
         return value instanceof String && !((String) value).isEmpty()
                 ? Collections.singletonList((String) value)
@@ -93,6 +110,10 @@ public interface ExternalChannelSubscriptionFunctions<
     /**
      * Context-aware event-key derivation. Event-only runtime types inherit the
      * context-free implementation.
+     *
+     * @param exactEvent exact incoming event
+     * @param context immutable dependency-resolution context
+     * @return finite ordered event keys
      */
     default List<String> eventKeys(
             Node exactEvent,
@@ -103,7 +124,7 @@ public interface ExternalChannelSubscriptionFunctions<
         }
         Node projectedEvent = exactEvent;
         Node plural = exactEvent.getProperties().get(
-                "subscriptionKeys");
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEYS);
         if (plural != null) {
             Node projectedPlural = plural;
             boolean changed = false;
@@ -146,18 +167,18 @@ public interface ExternalChannelSubscriptionFunctions<
             if (changed) {
                 projectedEvent = exactEvent.clone();
                 projectedEvent.getProperties().put(
-                        "subscriptionKeys",
+                        ProcessorContractConstants.KEY_SUBSCRIPTION_KEYS,
                         projectedPlural.clone());
             }
             return eventKeys(projectedEvent);
         }
         Node singular = exactEvent.getProperties().get(
-                "subscriptionKey");
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEY);
         if (singular != null
                 && singular.isReferenceOnly()) {
             projectedEvent = exactEvent.clone();
             projectedEvent.getProperties().put(
-                    "subscriptionKey",
+                    ProcessorContractConstants.KEY_SUBSCRIPTION_KEY,
                     context.materializeExactReference(
                             singular));
         }
@@ -167,6 +188,10 @@ public interface ExternalChannelSubscriptionFunctions<
     /**
      * Exact immutable preselection. The default is the core finite-key
      * intersection proof.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @return {@code true} when contract and event keys intersect
      */
     default boolean preselects(
             T immutableContractSnapshot,
@@ -184,6 +209,11 @@ public interface ExternalChannelSubscriptionFunctions<
 
     /**
      * Context-aware exact immutable preselection.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @param context immutable dependency-resolution context
+     * @return {@code true} when contract and event keys intersect
      */
     default boolean preselects(
             T immutableContractSnapshot,
@@ -206,6 +236,10 @@ public interface ExternalChannelSubscriptionFunctions<
      * Exact immutable acceptance. Runtime types with additional immutable
      * acceptance fields override this; the core form accepts every preselected
      * occurrence.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @return {@code true} when the occurrence is accepted
      */
     default boolean accepts(
             T immutableContractSnapshot,
@@ -215,6 +249,11 @@ public interface ExternalChannelSubscriptionFunctions<
 
     /**
      * Context-aware exact immutable acceptance.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @param context immutable dependency-resolution context
+     * @return {@code true} when the occurrence is accepted
      */
     default boolean accepts(
             T immutableContractSnapshot,
@@ -233,6 +272,11 @@ public interface ExternalChannelSubscriptionFunctions<
      * the payload must override this function; verified external delivery uses
      * this immutable function rather than the single-occurrence
      * {@link ChannelProcessor#evaluate} result.</p>
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @return defensive copy of the channelized payload
+     * @throws IllegalArgumentException when {@code exactEvent} is {@code null}
      */
     default Node payload(
             T immutableContractSnapshot,
@@ -246,6 +290,11 @@ public interface ExternalChannelSubscriptionFunctions<
 
     /**
      * Context-aware channelized payload.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @param context immutable dependency-resolution context
+     * @return defensive copy of the channelized payload
      */
     default Node payload(
             T immutableContractSnapshot,
@@ -262,6 +311,12 @@ public interface ExternalChannelSubscriptionFunctions<
      * owner. The returned Channel is only the logical handler target and is
      * never evaluated or checkpointed as another external occurrence. The
      * default preserves ordinary one-source/one-channel dispatch.</p>
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @param exactPayload exact accepted payload
+     * @param context immutable dependency-resolution context
+     * @return same-scope Channel key used for Handler lookup
      */
     default String handlerChannelKey(
             T immutableContractSnapshot,
@@ -279,6 +334,12 @@ public interface ExternalChannelSubscriptionFunctions<
      * agree. Every participating source retains its own checkpoint. Defaulting
      * to the raw source key preserves independent delivery for existing
      * runtimes.</p>
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @param exactPayload exact accepted payload
+     * @param context immutable dependency-resolution context
+     * @return invocation-local logical-delivery key
      */
     default String logicalDeliveryKey(
             T immutableContractSnapshot,
@@ -294,6 +355,12 @@ public interface ExternalChannelSubscriptionFunctions<
      * <p>The default is the Contracts 1.0 exact input-event identity retained
      * as a pure reference. A runtime type with another immutable subject or
      * newness policy must override this function.</p>
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @param exactPayload exact accepted payload
+     * @return immutable checkpoint subject
+     * @throws IllegalArgumentException when {@code exactEvent} is {@code null}
      */
     default Node checkpointSubject(
             T immutableContractSnapshot,
@@ -314,6 +381,12 @@ public interface ExternalChannelSubscriptionFunctions<
      * <p>A composite runtime can return a selected member evaluation's exact
      * subject unchanged. The subject may be an inline minimal ordering value;
      * it is not required to retain the complete event.</p>
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param exactEvent exact incoming event
+     * @param exactPayload exact accepted payload
+     * @param context immutable dependency-resolution context
+     * @return immutable checkpoint subject
      */
     default Node checkpointSubject(
             T immutableContractSnapshot,
@@ -330,6 +403,11 @@ public interface ExternalChannelSubscriptionFunctions<
      * Returns the runtime-registered checkpoint-domain discriminator.  The
      * Contracts kernel combines it with the effective type and ordered Source
      * contribution identities to derive the exact checkpoint-domain BlueId.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @return stable runtime discriminator
+     * @throws UnsupportedOperationException when the runtime omits the
+     * required implementation
      */
     default String checkpointDomainDiscriminator(
             T immutableContractSnapshot) {
@@ -342,6 +420,10 @@ public interface ExternalChannelSubscriptionFunctions<
      * Context-aware checkpoint-domain discriminator. The generic kernel also
      * commits the exact ordered dependency identities captured by
      * {@code context} into the final domain BlueId.
+     *
+     * @param immutableContractSnapshot immutable effective Channel contract
+     * @param context immutable dependency-resolution context
+     * @return stable runtime discriminator
      */
     default String checkpointDomainDiscriminator(
             T immutableContractSnapshot,

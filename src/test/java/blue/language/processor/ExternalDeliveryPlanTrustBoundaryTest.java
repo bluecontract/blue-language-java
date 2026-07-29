@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,7 +43,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             ExternalOrderKey.of(Arrays.asList(7, "source", 11));
 
     @Test
-    void exactPlanRejectsOmissionExtraOrderRevisionAndResourceForgery() {
+    void shouldVerifyExactPlanRejectsOmissionExtraOrderRevisionAndResourceForgery() {
+        // given
         Node root = rootWithChannels(
                 channel("alpha", 0, true),
                 channel("beta", 1, true));
@@ -58,40 +60,46 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         ExternalDeliveryPlan canonical = plan(alpha, beta);
         DocumentProcessor processor = processor(
                 canonical, null, null);
-
-        assertInvalid(processor, root, event,
+        List<VerifiedExecutionEvidence> forgedEvidence = Arrays.asList(
                 evidence(root, event, 7L,
                         new ExternalDeliverySnapshot[]{alpha},
-                        null));
-        assertInvalid(processor, root, event,
+                        null),
                 evidence(root, event, 7L,
                         new ExternalDeliverySnapshot[]{
                                 beta, alpha
-                        }, null));
-        assertInvalid(processor, root, event,
+                        }, null),
                 evidence(root, event, 7L,
                         new ExternalDeliverySnapshot[]{
                                 alpha, beta, beta
-                        }, null));
-        assertInvalid(processor, root, event,
+                        }, null),
                 evidence(root, event, 8L,
                         new ExternalDeliverySnapshot[]{
                                 alpha, beta
-                        }, null));
-        assertInvalid(processor, root, event,
+                        }, null),
                 evidence(root, event, 7L,
                         new ExternalDeliverySnapshot[]{
                                 withExtraContribution(alpha), beta
-                        }, null));
-        assertInvalid(processor, root, event,
+                        }, null),
                 evidence(root, event, 7L,
                         new ExternalDeliverySnapshot[]{
                                 alpha, beta
                         }, "unexpected-resource"));
+
+        // when
+        List<DocumentProcessingResult> results =
+                new ArrayList<>(forgedEvidence.size());
+        for (VerifiedExecutionEvidence evidence : forgedEvidence) {
+            results.add(processor.processDocument(root, event, evidence));
+        }
+
+        // then
+        results.forEach(
+                ExternalDeliveryPlanTrustBoundaryTest::assertInvalid);
     }
 
     @Test
-    void inheritedEffectiveChannelUsesExactAncestorContributionSequence() {
+    void shouldVerifyInheritedEffectiveChannelUsesExactAncestorContributionSequence() {
+        // given
         Node inheritedChannel = channel("inherited", 0, true);
         Node base = new Node()
                 .name("Inherited External Surface")
@@ -126,14 +134,6 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                     language,
                     language.getDocumentProcessor()
                             .snapshotManager());
-
-            DocumentProcessingResult accepted =
-                    processor.processDocument(root, event);
-            assertEquals(
-                    ProcessorStatus.SUCCESS,
-                    accepted.status(),
-                    diagnosticMessage(accepted));
-
             ExternalDeliverySnapshot forged =
                     snapshotWithContributions(
                             "/",
@@ -143,39 +143,76 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                             BlueIdCalculator.calculateBlueId(
                                     inheritedChannel),
                             "forged-descendant-contribution");
-            assertInvalid(processor, root, event,
+            VerifiedExecutionEvidence forgedEvidence =
                     evidence(root, event, 7L,
                             new ExternalDeliverySnapshot[]{forged},
-                            null));
+                            null);
+
+            // when
+            DocumentProcessingResult accepted =
+                    processor.processDocument(root, event);
+            DocumentProcessingResult rejected =
+                    processor.processDocument(
+                            root, event, forgedEvidence);
+
+            // then
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    accepted.status(),
+                    diagnosticMessage(accepted));
+            assertInvalid(rejected);
         }
     }
 
     @Test
-    void defaultDeriverAcceptsOnlyProviderProvenEmptySurface() {
+    void shouldVerifyDefaultDeriverAcceptsDirectEmptySurface() {
+        // given
+        DocumentProcessor processor =
+                new DocumentProcessor();
+
+        // when
         DocumentProcessingResult directEmpty =
-                new DocumentProcessor().processDocument(
+                processor.processDocument(
                         new Node(), event("topic"));
+
+        // then
         assertEquals(
                 ProcessorStatus.NO_MATCH,
                 directEmpty.status(),
                 diagnosticMessage(directEmpty));
+    }
 
+    @Test
+    void shouldVerifyDefaultDeriverRejectsUnprovenExternalSurface() {
+        // given
         DocumentProcessor externalProcessor =
                 processor(null, null, null);
+
+        // when
         ExecutionEvidenceUnavailableException unavailable =
-                assertThrows(
-                        ExecutionEvidenceUnavailableException.class,
+                captureFailure(
                         () -> externalProcessor.processDocument(
                         rootWithChannels(
                                 channel("incoming", 0, true)),
                         event("topic")));
+
+        // then
+        assertEquals(ExecutionEvidenceUnavailableException.class,
+                unavailable.getClass());
         assertTrue(unavailable.getMessage().contains(
                 "subscription and activation state is unavailable"));
+    }
 
+    @Test
+    void shouldVerifyDefaultDeriverAcceptsProviderProvenInheritedEmptySurface() {
+        // given
         Node base = new Node().name(
                 "Provider-Proven Empty Surface");
         String baseBlueId =
                 BlueIdCalculator.calculateBlueId(base);
+        DocumentProcessingResult result;
+
+        // when
         try (Blue language = new Blue(blueId ->
                 baseBlueId.equals(blueId)
                         ? Collections.singletonList(base.clone())
@@ -185,30 +222,35 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                     language,
                     language.getDocumentProcessor()
                             .snapshotManager());
-            DocumentProcessingResult result =
+            result =
                     inheritedEmpty.processDocument(
                             new Node().type(
                                     new Node().blueId(baseBlueId)),
                             event("topic"));
-            assertEquals(
-                    ProcessorStatus.NO_MATCH,
-                    result.status(),
-                    diagnosticMessage(result));
         }
+
+        // then
+        assertEquals(
+                ProcessorStatus.NO_MATCH,
+                result.status(),
+                diagnosticMessage(result));
     }
 
     @Test
-    void retainedActiveSurfacePreventsOmittedTruePreselection() {
+    void shouldVerifyRetainedActiveSurfacePreventsOmittedTruePreselection() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         Node event = event("topic");
         ExternalDeliverySnapshot active =
                 snapshot("/", "incoming", incoming, event);
 
+        // when
         DocumentProcessingResult omitted =
                 processor(planWithActive(active), null, null)
                         .processDocument(root, event);
 
+        // then
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 omitted.status());
@@ -220,7 +262,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void exactBitWithoutRetainedActivationCompanionSuspends() {
+    void shouldVerifyExactBitWithoutRetainedActivationCompanionSuspends() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         Node event = event("topic");
@@ -233,15 +276,18 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         DocumentProcessor processor =
                 processor(incomplete, null, null);
 
+        // when
         ExecutionEvidenceUnavailableException unavailable =
-                assertThrows(
-                        ExecutionEvidenceUnavailableException.class,
+                captureFailure(
                         () -> processor.processDocument(root, event));
-        assertTrue(unavailable.getMessage().contains(
-                "retained external subscription and activation"));
-
         ProcessAttemptResult attempt =
                 processor.processAttempt(root, event);
+
+        // then
+        assertEquals(ExecutionEvidenceUnavailableException.class,
+                unavailable.getClass());
+        assertTrue(unavailable.getMessage().contains(
+                "retained external subscription and activation"));
         assertEquals(
                 ProcessAttemptResult.Kind.NEEDS_RESOURCES,
                 attempt.kind());
@@ -250,17 +296,20 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void exactCorePreselectionProofAcceptsEmptyFalsePreselection() {
+    void shouldVerifyExactCorePreselectionProofAcceptsEmptyFalsePreselection() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         Node other = event("other-topic");
         ExternalDeliverySnapshot active =
                 snapshot("/", "incoming", incoming, other);
 
+        // when
         DocumentProcessingResult result =
                 processor(planWithActive(active), null, null)
                         .processDocument(root, other);
 
+        // then
         assertEquals(
                 ProcessorStatus.NO_MATCH,
                 result.status(),
@@ -268,17 +317,20 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void rejectedAcceptanceDoesNotPermitOmittingTruePreselection() {
+    void shouldVerifyRejectedAcceptanceDoesNotPermitOmittingTruePreselection() {
+        // given
         Node rejecting = channel("incoming", 0, false);
         Node root = rootWithChannels(rejecting);
         Node event = event("topic");
         ExternalDeliverySnapshot active =
                 snapshot("/", "incoming", rejecting, event);
 
+        // when
         DocumentProcessingResult omitted =
                 processor(planWithActive(active), null, null)
                         .processDocument(root, event);
 
+        // then
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 omitted.status());
@@ -287,7 +339,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void attemptSuspendsBeforeProviderDependentCompletenessVerification() {
+    void shouldVerifyAttemptSuspendsBeforeProviderDependentCompletenessVerification() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         Node event = event("topic");
@@ -305,10 +358,12 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         .requiredExactNode(missing)
                         .build();
 
+        // when
         ProcessAttemptResult attempt =
                 processor(plan(), null, null)
                         .processAttempt(root, event, evidence);
 
+        // then
         assertEquals(
                 ProcessAttemptResult.Kind.NEEDS_RESOURCES,
                 attempt.kind());
@@ -320,7 +375,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void typedFeederAcquisitionSuspendsAttemptButNeverBecomesProcessStatus() {
+    void shouldVerifyTypedFeederAcquisitionSuspendsAttemptButNeverBecomesProcessStatus() {
+        // given
         Node root = new Node();
         Node event = event("topic");
         String missing = BlueIdCalculator.calculateBlueId(
@@ -331,8 +387,13 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                 Collections.singletonList(missing)))
                 .build();
 
+        // when
         ProcessAttemptResult attempt =
                 processor.processAttempt(root, event);
+        Throwable unavailable = captureFailure(
+                () -> processor.processDocument(root, event));
+
+        // then
         assertEquals(
                 ProcessAttemptResult.Kind.NEEDS_RESOURCES,
                 attempt.kind());
@@ -342,17 +403,16 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         assertNull(attempt.processResult());
         assertNull(attempt.portableGas());
 
-        ExecutionEvidenceUnavailableException unavailable =
-                assertThrows(
-                        ExecutionEvidenceUnavailableException.class,
-                        () -> processor.processDocument(root, event));
+        assertTrue(unavailable instanceof ExecutionEvidenceUnavailableException);
         assertEquals(
                 Collections.singletonList(missing),
-                unavailable.requiredExactBlueIds());
+                ((ExecutionEvidenceUnavailableException) unavailable)
+                        .requiredExactBlueIds());
     }
 
     @Test
-    void scalarRootWithContractsExecutesItsPreselectedExternalChannel() {
+    void shouldVerifyScalarRootWithContractsExecutesItsPreselectedExternalChannel() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming)
                 .value(0);
@@ -360,10 +420,12 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         ExternalDeliveryPlan plan = plan(
                 snapshot("/", "incoming", incoming, event));
 
+        // when
         DocumentProcessingResult result =
                 processor(plan, null, null)
                         .processDocument(root, event);
 
+        // then
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
@@ -371,10 +433,15 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void acceptedEvidenceUsesRunLocalManifestAndValidationProofMemos() {
+    void shouldVerifyAcceptedEvidenceUsesRunLocalManifestAndValidationProofMemos() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         Node event = event("topic");
+        Node rejecting = channel("rejecting", 0, false);
+        Node rejectingRoot = rootWithChannels(rejecting);
+
+        // when
         ProcessingDebugResult accepted =
                 processor(
                         plan(snapshot(
@@ -382,7 +449,16 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         null,
                         null)
                         .processDocumentWithTrace(root, event);
+        ProcessingDebugResult rejected =
+                processor(
+                        plan(snapshot(
+                                "/", "rejecting", rejecting, event)),
+                        null,
+                        null)
+                        .processDocumentWithTrace(
+                                rejectingRoot, event);
 
+        // then
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 accepted.processResult().status(),
@@ -396,18 +472,6 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 1L,
                 accepted.trace().counterQuantity(
                         "semantic", "validationProofReused"));
-
-        Node rejecting = channel("rejecting", 0, false);
-        Node rejectingRoot = rootWithChannels(rejecting);
-        ProcessingDebugResult rejected =
-                processor(
-                        plan(snapshot(
-                                "/", "rejecting", rejecting, event)),
-                        null,
-                        null)
-                        .processDocumentWithTrace(
-                                rejectingRoot, event);
-
         assertEquals(
                 ProcessorStatus.NO_MATCH,
                 rejected.processResult().status(),
@@ -420,7 +484,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void emittedOccurrencesAreDequeuedFifoBeforeCheckpointCommit() {
+    void shouldVerifyEmittedOccurrencesAreDequeuedFifoBeforeCheckpointCommit() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         root.getContracts().properties(
@@ -428,17 +493,13 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 traceHandler("incoming"));
         Node event = event("topic");
 
+        // when
         ProcessingDebugResult debug = traceProcessor(
                 plan(snapshot("/", "incoming", incoming, event)))
                 .processDocumentWithTrace(root, event);
-
-        assertEquals(ProcessorStatus.SUCCESS,
-                debug.processResult().status(),
-                diagnosticMessage(debug.processResult()));
         List<ProcessingTraceRecord> allDequeued =
                 debug.trace().records(
                         ProcessingTraceRecord.Kind.EVENT_DEQUEUED);
-        assertEquals(2, allDequeued.size());
         List<ProcessingTraceRecord> dequeued =
                 new ArrayList<>();
         for (ProcessingTraceRecord record : allDequeued) {
@@ -449,6 +510,15 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 dequeued.add(record);
             }
         }
+        java.util.List<ProcessingTraceRecord> checkpoints =
+                debug.trace().records(
+                        ProcessingTraceRecord.Kind.CHECKPOINT_WRITE);
+
+        // then
+        assertEquals(ProcessorStatus.SUCCESS,
+                debug.processResult().status(),
+                diagnosticMessage(debug.processResult()));
+        assertEquals(2, allDequeued.size());
         assertEquals(2, dequeued.size());
         assertEquals("A", dequeued.get(0).node()
                 .getAsText("/id"));
@@ -465,16 +535,14 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 .get(0).getAsText("/id"));
         assertEquals("B", debug.processResult().events()
                 .get(1).getAsText("/id"));
-        java.util.List<ProcessingTraceRecord> checkpoints =
-                debug.trace().records(
-                        ProcessingTraceRecord.Kind.CHECKPOINT_WRITE);
         assertEquals(1, checkpoints.size());
         assertTrue(checkpoints.get(0).sequence()
                 > dequeued.get(1).sequence());
     }
 
     @Test
-    void acceptedChildEvidenceBridgesItsEventToTheFrozenRootBeforeCheckpoint() {
+    void shouldVerifyAcceptedChildEvidenceBridgesItsEventToTheFrozenRootBeforeCheckpoint() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node child = rootWithChannels(incoming);
         child.getContracts().properties(
@@ -512,23 +580,11 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                 traceHandler("childBridge")));
         Node event = event("topic");
 
+        // when
         ProcessingDebugResult debug = traceProcessor(
                 plan(snapshot(
                         "/child", "incoming", incoming, event)))
                 .processDocumentWithTrace(root, event);
-
-        assertEquals(
-                ProcessorStatus.SUCCESS,
-                debug.processResult().status(),
-                diagnosticMessage(debug.processResult()));
-        assertEquals(
-                "child-event",
-                debug.processResult().document()
-                        .getAsText("/observedBridge"));
-        assertTrue(debug.processResult().events().isEmpty(),
-                "processor-generated lifecycle delivery is local and "
-                        + "the child emission remains internal");
-
         String childEventBlueId =
                 CheckpointIdentityCalculator.identity(
                         childApplicationEvent());
@@ -549,6 +605,22 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 break;
             }
         }
+        List<ProcessingTraceRecord> checkpoints =
+                debug.trace().records(
+                        ProcessingTraceRecord.Kind.CHECKPOINT_WRITE);
+
+        // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                debug.processResult().status(),
+                diagnosticMessage(debug.processResult()));
+        assertEquals(
+                "child-event",
+                debug.processResult().document()
+                        .getAsText("/observedBridge"));
+        assertTrue(debug.processResult().events().isEmpty(),
+                "processor-generated lifecycle delivery is local and "
+                        + "the child emission remains internal");
         assertTrue(embeddedDelivery != null,
                 "the frozen Root ancestor must receive the child event");
         assertEquals(
@@ -561,10 +633,6 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 embeddedDelivery.node(),
                 "/child",
                 childEventBlueId);
-
-        List<ProcessingTraceRecord> checkpoints =
-                debug.trace().records(
-                        ProcessingTraceRecord.Kind.CHECKPOINT_WRITE);
         assertEquals(1, checkpoints.size());
         assertTrue(
                 checkpoints.get(0).sequence()
@@ -573,7 +641,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void documentUpdateTraceDoesNotInventScopesFromObjectAncestors() {
+    void shouldVerifyDocumentUpdateTraceDoesNotInventScopesFromObjectAncestors() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         root.properties("child",
@@ -584,16 +653,18 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 traceHandler("incoming"));
         Node event = event("topic");
 
+        // when
         ProcessingDebugResult debug = traceProcessor(
                 plan(snapshot("/", "incoming", incoming, event)))
                 .processDocumentWithTrace(root, event);
-
-        assertEquals(ProcessorStatus.SUCCESS,
-                debug.processResult().status(),
-                diagnosticMessage(debug.processResult()));
         java.util.List<ProcessingTraceRecord> updates =
                 debug.trace().records(
                         ProcessingTraceRecord.Kind.DOCUMENT_UPDATE);
+
+        // then
+        assertEquals(ProcessorStatus.SUCCESS,
+                debug.processResult().status(),
+                diagnosticMessage(debug.processResult()));
         assertEquals(1, updates.size());
         assertEquals("/", updates.get(0).scopePath());
         assertEquals("/child/x", updates.get(0).logicalPath());
@@ -604,7 +675,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void inlineTypeCannotIntroduceProtectedCheckpointState() {
+    void shouldVerifyInlineTypeCannotIntroduceProtectedCheckpointState() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         root.getContracts().properties(
@@ -612,10 +684,12 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 traceHandler("incoming"));
         Node event = event("topic");
 
+        // when
         DocumentProcessingResult result = traceProcessor(
                 plan(snapshot("/", "incoming", incoming, event)))
                 .processDocument(root, event);
 
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL,
                 result.status());
         assertEquals(
@@ -625,7 +699,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void checkpointDomainDoesNotConfuseEffectiveNodeWithSourceContribution() {
+    void shouldVerifyCheckpointDomainDoesNotConfuseEffectiveNodeWithSourceContribution() {
+        // given
         Node root = new Node();
         Node event = event("topic");
         ExternalDeliverySnapshot delivery =
@@ -656,6 +731,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         contract.setKey("incoming");
         contract.setTypeBlueId(
                 CHANNEL_TYPE_BLUE_ID);
+        // when
         ContractBundle.ChannelBinding effectiveBinding =
                 new ContractBundle.ChannelBinding(
                         "incoming",
@@ -663,15 +739,18 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         FrozenNode.fromResolvedNode(
                                 new Node().name(
                                         "materialized-effective-contract")));
+        String checkpointDomain =
+                execution.checkpointDomain(effectiveBinding, "/");
 
+        // then
         assertEquals(
                 "derived-checkpoint-domain",
-                execution.checkpointDomain(
-                        effectiveBinding, "/"));
+                checkpointDomain);
     }
 
     @Test
-    void coreVerifierRejectsFeederCheckpointSubjectForgery() {
+    void shouldVerifyCoreVerifierRejectsFeederCheckpointSubjectForgery() {
+        // given
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         Node event = event("topic");
@@ -681,10 +760,12 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         BlueIdCalculator.calculateBlueId(
                                 new Node().value("forged-subject")));
 
+        // when
         DocumentProcessingResult result =
                 processor(plan(forged), null, null)
                         .processDocument(root, event);
 
+        // then
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 result.status());
@@ -696,7 +777,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void coreVerifierRejectsNondeterministicCheckpointSubjectFunction() {
+    void shouldVerifyCoreVerifierRejectsNondeterministicCheckpointSubjectFunction() {
+        // given
         Node incoming = channel("incoming", 0, true)
                 .properties(
                         "nondeterministicSubject",
@@ -704,6 +786,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         Node root = rootWithChannels(incoming);
         Node event = event("topic");
 
+        // when
         DocumentProcessingResult result =
                 processor(
                         plan(snapshot(
@@ -712,6 +795,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         null)
                         .processDocument(root, event);
 
+        // then
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 result.status());
@@ -723,7 +807,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void phaseBUsesRecomputedFrozenPayloadAndSubject() {
+    void shouldVerifyPhaseBUsesRecomputedFrozenPayloadAndSubject() {
+        // given
         Node incoming = channel("incoming", 0, true)
                 .properties(
                         "payloadTag",
@@ -775,9 +860,17 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                 })
                         .build();
 
+        // when
         DocumentProcessingResult result =
                 processor.processDocument(root, event, evidence);
+        Node checkpointSubject =
+                result.document().getContracts()
+                        .getProperties().get("checkpoint")
+                        .getProperties().get("entries")
+                        .getProperties().get("incoming")
+                        .getProperties().get("subject");
 
+        // then
         assertEquals(
                 ProcessorStatus.SUCCESS,
                 result.status(),
@@ -786,12 +879,6 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 "authoritative",
                 result.document().getAsText(
                         "/observedPayload"));
-        Node checkpointSubject =
-                result.document().getContracts()
-                        .getProperties().get("checkpoint")
-                        .getProperties().get("entries")
-                        .getProperties().get("incoming")
-                        .getProperties().get("subject");
         assertEquals(
                 authoritativeSubject,
                 BlueIdCalculator.calculateBlueId(
@@ -802,7 +889,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     @Test
-    void nodeAndResolvedSnapshotProcessOnlyPreselectedOccurrence() {
+    void shouldVerifyNodeAndResolvedSnapshotProcessOnlyPreselectedOccurrence() {
+        // given
         Node rootChannel = channel("root", 0, true);
         Node childChannel = channel("child", 0, false);
         childChannel.getProperties().put(
@@ -839,9 +927,16 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                     language.getDocumentProcessor()
                             .snapshotManager());
 
+            // when
             DocumentProcessingResult nodeResult =
                     processor.processDocument(
                             root.clone(), event);
+            ResolvedSnapshot snapshot =
+                    language.resolveToSnapshot(root.clone());
+            DocumentProcessingResult snapshotResult =
+                    processor.processDocument(snapshot, event);
+
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     nodeResult.status(),
@@ -849,10 +944,6 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             assertFalse(hasInitializedMarker(
                     nodeResult.document(), "/child"));
 
-            ResolvedSnapshot snapshot =
-                    language.resolveToSnapshot(root.clone());
-            DocumentProcessingResult snapshotResult =
-                    processor.processDocument(snapshot, event);
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     snapshotResult.status(),
@@ -1166,13 +1257,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     }
 
     private static void assertInvalid(
-            DocumentProcessor processor,
-            Node root,
-            Node event,
-            VerifiedExecutionEvidence evidence) {
-        DocumentProcessingResult result =
-                processor.processDocument(
-                        root, event, evidence);
+            DocumentProcessingResult result) {
         assertEquals(
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 result.status());

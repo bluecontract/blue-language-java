@@ -47,8 +47,10 @@ public final class ChannelMemberSnapshot {
         this.order = order;
         this.effectiveTypeBlueId =
                 requireText(effectiveTypeBlueId, "effectiveTypeBlueId");
-        if (!"external-channel".equals(role)
-                && !"processor-channel".equals(role)) {
+        if (!EffectiveContractSnapshotConstants
+                .Role.EXTERNAL_CHANNEL.equals(role)
+                && !EffectiveContractSnapshotConstants
+                .Role.PROCESSOR_CHANNEL.equals(role)) {
             throw new IllegalArgumentException(
                     "Unsupported Channel runtime role: " + role);
         }
@@ -95,23 +97,37 @@ public final class ChannelMemberSnapshot {
                 exactHeader.toNode());
     }
 
-    /** Returns the exact raw same-scope contract key. */
+    /**
+     * Returns the exact raw same-scope contract key.
+     *
+     * @return the contract key
+     */
     public String channelKey() {
         return channelKey;
     }
 
-    /** Returns the effective Channel dispatch order, defaulting to zero. */
+    /**
+     * Returns the effective Channel dispatch order, defaulting to zero.
+     *
+     * @return the deterministic dispatch order
+     */
     public int order() {
         return order;
     }
 
-    /** Returns the exact effective runtime type BlueId. */
+    /**
+     * Returns the exact effective runtime type BlueId.
+     *
+     * @return the runtime type identity
+     */
     public String effectiveTypeBlueId() {
         return effectiveTypeBlueId;
     }
 
     /**
      * Returns {@code external-channel} or {@code processor-channel}.
+     *
+     * @return the effective channel role
      */
     public String role() {
         return role;
@@ -119,13 +135,18 @@ public final class ChannelMemberSnapshot {
 
     /**
      * Returns whether this Channel also has External-source semantics.
+     *
+     * @return {@code true} for an External Channel
      */
     public boolean externalSource() {
-        return "external-channel".equals(role);
+        return EffectiveContractSnapshotConstants
+                .Role.EXTERNAL_CHANNEL.equals(role);
     }
 
     /**
      * Returns exact ancestor-to-descendant Source contribution identities.
+     *
+     * @return an immutable, deterministic identity list
      */
     public List<String> sourceContributionNodeBlueIds() {
         return sourceContributionNodeBlueIds;
@@ -134,6 +155,8 @@ public final class ChannelMemberSnapshot {
     /**
      * Returns deterministic header dependencies carried by the effective
      * Channel snapshot.
+     *
+     * @return an immutable dependency identity list
      */
     public List<String> deterministicDependencyNodeBlueIds() {
         return deterministicDependencyNodeBlueIds;
@@ -142,6 +165,8 @@ public final class ChannelMemberSnapshot {
     /**
      * Returns the exact frozen effective-header identity consulted by the
      * classification function.
+     *
+     * @return the effective-header BlueId
      */
     public String headerIdentityBlueId() {
         return headerIdentityBlueId;
@@ -149,6 +174,8 @@ public final class ChannelMemberSnapshot {
 
     /**
      * Returns a defensive copy of the immutable effective Channel header.
+     *
+     * @return a mutable copy owned by the caller
      */
     public Node contractNode() {
         return contractNode.clone();

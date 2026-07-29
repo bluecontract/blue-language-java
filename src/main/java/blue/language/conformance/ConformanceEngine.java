@@ -20,6 +20,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Checks resolved Blue conformance and plans immutable type generalization.
+ *
+ * <p>The engine verifies provider content through a wrapped
+ * {@link NodeProvider}. It may borrow a caller cache or own an isolated cache;
+ * only an owned cache is released by {@link #close()}.</p>
+ */
 public final class ConformanceEngine implements AutoCloseable {
 
     private final NodeProvider nodeProvider;
@@ -27,10 +34,25 @@ public final class ConformanceEngine implements AutoCloseable {
     private final ResolvedReferenceCache resolvedReferenceCache;
     private final boolean ownsReferenceCache;
 
+    /**
+     * Creates an engine without retained resolved-reference caching.
+     *
+     * @param nodeProvider referenced-content provider
+     * @param mergingProcessor stateless merge pipeline
+     */
     public ConformanceEngine(NodeProvider nodeProvider, MergingProcessor mergingProcessor) {
         this(nodeProvider, mergingProcessor, null);
     }
 
+    /**
+     * Creates an engine that borrows the supplied reference cache.
+     *
+     * <p>Closing this engine does not close the borrowed cache.</p>
+     *
+     * @param nodeProvider referenced-content provider
+     * @param mergingProcessor stateless merge pipeline
+     * @param resolvedReferenceCache borrowed cache, or {@code null}
+     */
     public ConformanceEngine(NodeProvider nodeProvider,
                              MergingProcessor mergingProcessor,
                              ResolvedReferenceCache resolvedReferenceCache) {
@@ -41,6 +63,11 @@ public final class ConformanceEngine implements AutoCloseable {
      * Creates an engine with an independent bounded reference cache that is
      * released when the engine is closed. This is suitable for handles whose
      * lifetime may outlast the runtime configuration that created them.
+     *
+     * @param nodeProvider referenced-content provider
+     * @param mergingProcessor stateless merge pipeline
+     * @param cachePolicy isolated cache bounds
+     * @return cache-owning conformance engine
      */
     public static ConformanceEngine withIsolatedCache(
             NodeProvider nodeProvider,
@@ -57,6 +84,11 @@ public final class ConformanceEngine implements AutoCloseable {
      * entries that are caller-pinned in {@code seedSource} at creation time.
      * Later source-cache invalidation cannot affect this engine, and entries
      * discovered by this engine cannot be published back to the source.
+     *
+     * @param nodeProvider referenced-content provider
+     * @param mergingProcessor stateless merge pipeline
+     * @param seedSource cache supplying pinned verified entries
+     * @return cache-owning conformance engine
      */
     public static ConformanceEngine withIsolatedCache(
             NodeProvider nodeProvider,
@@ -82,6 +114,8 @@ public final class ConformanceEngine implements AutoCloseable {
     /**
      * Creates a planning view that can read published reference content while
      * retaining all newly discovered reference and graph entries locally.
+     *
+     * @return transient planning view, or this engine when uncached
      */
     public ConformanceEngine transientView() {
         if (resolvedReferenceCache == null) {
@@ -93,7 +127,12 @@ public final class ConformanceEngine implements AutoCloseable {
                 true);
     }
 
-    /** Creates a planning view backed by the supplied sequence-local cache. */
+    /**
+     * Creates a planning view backed by a sequence-local cache.
+     *
+     * @param transientReferenceCache borrowed sequence-local cache
+     * @return transient planning view
+     */
     public ConformanceEngine transientView(ResolvedReferenceCache transientReferenceCache) {
         return new ConformanceEngine(nodeProvider,
                 mergingProcessor,
@@ -111,6 +150,8 @@ public final class ConformanceEngine implements AutoCloseable {
     /**
      * Returns whether this engine uses the exact built-in merge pipeline that
      * participates in conservative value-only dependency analysis.
+     *
+     * @return whether incremental value resolution is supported
      */
     public boolean supportsIncrementalValueResolution() {
         return mergingProcessor instanceof IncrementalMergingProcessorCapability
@@ -118,12 +159,25 @@ public final class ConformanceEngine implements AutoCloseable {
                 .supportsIncrementalValueResolution();
     }
 
+    /**
+     * Tests whether the merge pipeline accepts an incremental request.
+     *
+     * @param request exact dependency request
+     * @return whether incremental resolution is safe
+     */
     public boolean supportsIncrementalValueResolution(IncrementalValueResolutionRequest request) {
         return mergingProcessor instanceof IncrementalMergingProcessorCapability
                 && ((IncrementalMergingProcessorCapability) mergingProcessor)
                 .supportsIncrementalValueResolution(request);
     }
 
+    /**
+     * Resolves a defensive clone and captures a conformance failure as data.
+     * A null node is conformant.
+     *
+     * @param node node to check, or {@code null}
+     * @return conformance result
+     */
     public ConformanceResult check(Node node) {
         if (node == null) {
             return ConformanceResult.conformant();
@@ -136,10 +190,22 @@ public final class ConformanceEngine implements AutoCloseable {
         }
     }
 
+    /**
+     * Tests resolved conformance.
+     *
+     * @param node node to check, or {@code null}
+     * @return whether the node conforms
+     */
     public boolean conforms(Node node) {
         return check(node).isConformant();
     }
 
+    /**
+     * Requires resolved conformance.
+     *
+     * @param node node to check, or {@code null}
+     * @throws IllegalArgumentException when {@code node} does not conform
+     */
     public void requireConformant(Node node) {
         ConformanceResult result = check(node);
         if (!result.isConformant()) {
@@ -147,15 +213,38 @@ public final class ConformanceEngine implements AutoCloseable {
         }
     }
 
+    /**
+     * Plans generalization for one changed resolved path.
+     *
+     * @param resolvedRoot resolved root
+     * @param changedPath changed RFC 6901 path
+     * @return immutable conformance plan
+     */
     public ConformancePlan planGeneralization(FrozenNode resolvedRoot, String changedPath) {
         return planGeneralization(null, resolvedRoot, changedPath);
     }
 
+    /**
+     * Plans generalization for canonical and resolved roots.
+     *
+     * @param canonicalRoot canonical root
+     * @param resolvedRoot resolved root
+     * @param changedPath changed RFC 6901 path
+     * @return immutable conformance plan
+     */
     public ConformancePlan planGeneralization(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
         return new FrozenConformancePlanner(nodeProvider, mergingProcessor, resolvedReferenceCache)
                 .plan(canonicalRoot, resolvedRoot, changedPath);
     }
 
+    /**
+     * Plans ordered generalization for several changed paths.
+     *
+     * @param canonicalRoot canonical root
+     * @param resolvedRoot resolved root
+     * @param changedPaths changed RFC 6901 paths
+     * @return immutable conformance plan
+     */
     public ConformancePlan planGeneralization(FrozenNode canonicalRoot,
                                               FrozenNode resolvedRoot,
                                               List<String> changedPaths) {
@@ -170,6 +259,12 @@ public final class ConformanceEngine implements AutoCloseable {
      * Plans generalization while leaving selected pure-reference subtrees
      * collapsed. Callers remain responsible for materializing any selected
      * executable subtree before it is used.
+     *
+     * @param canonicalRoot canonical root
+     * @param resolvedRoot resolved root
+     * @param changedPaths changed RFC 6901 paths
+     * @param preservedReferencePaths paths that must remain collapsed
+     * @return immutable conformance plan
      */
     public ConformancePlan planGeneralizationPreservingPaths(
             FrozenNode canonicalRoot,
@@ -208,6 +303,15 @@ public final class ConformanceEngine implements AutoCloseable {
                 nextCanonical != null);
     }
 
+    /**
+     * Follows verified declared-type ancestry and returns whether the candidate
+     * is the expected type or one of its subtypes. Missing evidence and cycles
+     * fail closed.
+     *
+     * @param candidateBlueId candidate type identity
+     * @param expectedAncestorBlueId expected ancestor identity
+     * @return whether the candidate is the same type or a verified subtype
+     */
     public boolean isSubtypeOf(String candidateBlueId, String expectedAncestorBlueId) {
         if (candidateBlueId == null || expectedAncestorBlueId == null) {
             return false;

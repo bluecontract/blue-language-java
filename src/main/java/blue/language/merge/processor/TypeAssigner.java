@@ -8,7 +8,17 @@ import blue.language.utils.NodeToMapListOrValue;
 
 import static blue.language.utils.Types.isSubtype;
 
+/**
+ * Applies a source declared type only when it is equal to or more specific than
+ * the type already required by the target.
+ */
 public class TypeAssigner implements MergingProcessor {
+
+    /**
+     * Creates a stateless type-assignment stage.
+     */
+    public TypeAssigner() {
+    }
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {

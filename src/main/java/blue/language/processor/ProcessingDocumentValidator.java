@@ -1,6 +1,9 @@
 package blue.language.processor;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.Node;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -17,17 +20,24 @@ import java.util.Set;
 public final class ProcessingDocumentValidator {
 
     private static final Set<String> INVALID_CONTRACT_KEYS = new LinkedHashSet<>(Arrays.asList(
-            "type",
-            "value",
-            "items",
-            "schema",
-            "contracts",
-            "properties",
-            "constraints"));
+            Properties.OBJECT_TYPE,
+            Properties.OBJECT_VALUE,
+            Properties.OBJECT_ITEMS,
+            Properties.OBJECT_SCHEMA,
+            ProcessorContractConstants.KEY_CONTRACTS,
+            Properties.LEGACY_OBJECT_PROPERTIES,
+            Properties.LEGACY_OBJECT_CONSTRAINTS));
 
     private ProcessingDocumentValidator() {
     }
 
+    /**
+     * Validates raw contract keys before model conversion loses key context.
+     *
+     * @param rawDocument raw JSON document
+     * @param parsedDocument best-effort parsed document for failure output
+     * @return deterministic rejection, or {@code null} when valid
+     */
     public static DocumentProcessingResult validateRaw(JsonNode rawDocument, Node parsedDocument) {
         if (rawDocument == null || rawDocument.isNull()) {
             return DocumentProcessingResult.invalidProcessingDocument(
@@ -39,7 +49,7 @@ public final class ProcessingDocumentValidator {
                     fallbackDocument(parsedDocument),
                     "Invalid Processing Document: root scope must be an object");
         }
-        JsonNode contracts = rawDocument.get("contracts");
+        JsonNode contracts = rawDocument.get(ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null || !contracts.isObject()) {
             return null;
         }
@@ -60,6 +70,13 @@ public final class ProcessingDocumentValidator {
         return null;
     }
 
+    /**
+     * Converts a raw processing document after normalizing object-valued wrappers.
+     *
+     * @param rawDocument raw JSON document
+     * @return mutable parsed processing document
+     * @throws IllegalArgumentException when conversion fails
+     */
     public static Node readProcessingDocument(JsonNode rawDocument) {
         JsonNode normalizedRawDocument = normalizeObjectValuedValueWrappers(rawDocument);
         try {
@@ -68,12 +85,12 @@ public final class ProcessingDocumentValidator {
             if (normalizedRawDocument == null || !normalizedRawDocument.isObject()) {
                 throw ex;
             }
-            JsonNode rawContracts = normalizedRawDocument.get("contracts");
+            JsonNode rawContracts = normalizedRawDocument.get(ProcessorContractConstants.KEY_CONTRACTS);
             if (rawContracts == null || rawContracts.isObject()) {
                 throw ex;
             }
             ObjectNode copy = normalizedRawDocument.deepCopy();
-            copy.remove("contracts");
+            copy.remove(ProcessorContractConstants.KEY_CONTRACTS);
             Node document = UncheckedObjectMapper.JSON_MAPPER.convertValue(copy, Node.class);
             document.contracts(UncheckedObjectMapper.JSON_MAPPER.convertValue(rawContracts, Node.class));
             return document;
@@ -85,7 +102,7 @@ public final class ProcessingDocumentValidator {
             return node;
         }
         if (node.isObject()) {
-            JsonNode value = node.get("value");
+            JsonNode value = node.get(Properties.OBJECT_VALUE);
             if (value != null && (value.isObject() || value.isArray()) && node.size() == 1) {
                 return normalizeObjectValuedValueWrappers(value);
             }

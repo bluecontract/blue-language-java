@@ -22,9 +22,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class DeferredSnapshotProvenancePropagationTest {
 
     @Test
-    void workingDocumentRetainsDeferredProvenanceAndSkipsPublication() {
+    void shouldVerifyWorkingDocumentRetainsDeferredProvenanceAndSkipsPublication() {
+        // given
         Fixture fixture = new Fixture();
+        ResolvedSnapshot committed;
+        boolean workingResolutionComplete;
 
+        // when
         try (WorkingDocument working = new WorkingDocument(
                 "/",
                 fixture.snapshot.frozenCanonicalRoot(),
@@ -42,17 +46,17 @@ class DeferredSnapshotProvenancePropagationTest {
                 fixture.snapshot.isResolutionComplete())) {
             working.applyPatch(JsonPatch.replace(
                     "/counter", new Node().value(2)));
-
-            assertFalse(working.snapshot().isResolutionComplete());
-
-            ResolvedSnapshot committed = working.commitSnapshot();
-
-            assertFalse(committed.isResolutionComplete());
-            assertEquals(2, ((Number) committed
-                    .canonicalAt("/counter")
-                    .getValue()).intValue());
+            workingResolutionComplete =
+                    working.snapshot().isResolutionComplete();
+            committed = working.commitSnapshot();
         }
 
+        // then
+        assertFalse(workingResolutionComplete);
+        assertFalse(committed.isResolutionComplete());
+        assertEquals(2, ((Number) committed
+                .canonicalAt("/counter")
+                .getValue()).intValue());
         assertEquals(1, fixture.manager.preservationCalls);
         assertEquals(0, fixture.manager.eagerCalls);
         assertEquals(0, fixture.manager.cacheCalls);
@@ -62,14 +66,17 @@ class DeferredSnapshotProvenancePropagationTest {
     }
 
     @Test
-    void snapshotNativeBatchFallbackKeepsDeferredExecutableBodyLocal() {
+    void shouldVerifySnapshotNativeBatchFallbackKeepsDeferredExecutableBodyLocal() {
+        // given
         Fixture fixture = new Fixture();
         DocumentProcessingRuntime runtime = fixture.runtime();
 
+        // when
         runtime.applyPatch("/", JsonPatch.add(
                 "/contracts/handler/enabled",
                 new Node().value(true)));
 
+        // then
         assertFalse(runtime.snapshot().isResolutionComplete());
         assertEquals(Boolean.TRUE, runtime.snapshot()
                 .canonicalAt("/contracts/handler/enabled")
@@ -83,7 +90,8 @@ class DeferredSnapshotProvenancePropagationTest {
     }
 
     @Test
-    void providerFailureTerminationSpliceInheritsBaseCompleteness() {
+    void shouldVerifyProviderFailureTerminationSpliceInheritsBaseCompleteness() {
+        // given
         Fixture fixture = new Fixture();
         fixture.manager.failPreservation = true;
         DocumentProcessingRuntime runtime = fixture.runtime();
@@ -93,8 +101,10 @@ class DeferredSnapshotProvenancePropagationTest {
                 .properties("cause",
                         new Node().value("provider"));
 
+        // when
         runtime.directWrite("/contracts/terminated", marker);
 
+        // then
         assertFalse(runtime.snapshot().isResolutionComplete());
         assertNotNull(runtime.snapshot()
                 .canonicalAt("/contracts/terminated"));

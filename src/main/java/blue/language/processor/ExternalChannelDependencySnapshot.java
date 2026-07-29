@@ -18,15 +18,15 @@ import java.util.Set;
  * Channel subscription snapshot.
  *
  * <p>Entries are ordered by deterministic semantic consultation, not by
- * physical map iteration. A type-family dependency records the exact shallow
- * membership selected by one effective runtime type, including an empty
- * family, without resolving unrelated families. A whole-surface dependency
- * records that any same-scope External Channel addition or removal can change
- * the subscription even when none of the previously present entries changed.
- * The separate Channel catalog records read-only External and
- * processor-managed Channel headers without granting External-source
- * capabilities. Every resulting identity participates in checkpoint-domain
- * derivation and retained-subscription validation.</p>
+ * physical map iteration. A type-family dependency records either exact-type
+ * or bounded subtype-compatible shallow membership, including an empty
+ * family, without resolving unrelated member functions. A whole-surface
+ * dependency records that any same-scope External Channel addition or
+ * removal can change the subscription even when none of the previously
+ * present entries changed. The separate Channel catalog records read-only
+ * External and processor-managed Channel headers without granting
+ * External-source capabilities. Every resulting identity participates in
+ * checkpoint-domain derivation and retained-subscription validation.</p>
  */
 public final class ExternalChannelDependencySnapshot {
 
@@ -49,6 +49,13 @@ public final class ExternalChannelDependencySnapshot {
     private final List<String> channelCatalogContractKeys;
     private final List<String> deterministicDependencyNodeBlueIds;
 
+    /**
+     * Creates a snapshot without type-family or Channel-catalog dependencies.
+     *
+     * @param intrinsicNodeBlueIds exact intrinsic dependency identities
+     * @param entries exact consulted External Channel entries
+     * @param wholeSameScopeExternalSurface whether the entire External surface was consulted
+     */
     public ExternalChannelDependencySnapshot(
             List<String> intrinsicNodeBlueIds,
             List<Entry> entries,
@@ -63,6 +70,14 @@ public final class ExternalChannelDependencySnapshot {
                 Collections.<String>emptyList());
     }
 
+    /**
+     * Creates a snapshot without read-only Channel-catalog dependencies.
+     *
+     * @param intrinsicNodeBlueIds exact intrinsic dependency identities
+     * @param entries exact consulted External Channel entries
+     * @param typeFamilies shallow consulted type families
+     * @param wholeSameScopeExternalSurface whether the entire External surface was consulted
+     */
     public ExternalChannelDependencySnapshot(
             List<String> intrinsicNodeBlueIds,
             List<Entry> entries,
@@ -91,6 +106,15 @@ public final class ExternalChannelDependencySnapshot {
      * solely so an event-time exact lookup can distinguish semantic absence
      * from a present non-Channel contract without recognizing that unrelated
      * header.</p>
+     *
+     * @param intrinsicNodeBlueIds exact intrinsic dependency identities
+     * @param entries exact consulted External Channel entries
+     * @param typeFamilies shallow consulted type families
+     * @param wholeSameScopeExternalSurface whether the entire External surface was consulted
+     * @param channelEntries exact read-only Channel header entries
+     * @param wholeSameScopeChannelCatalog whether the complete Channel catalog was consulted
+     * @param channelCatalogContractKeys complete raw keys when the catalog is declared
+     * @throws IllegalArgumentException for duplicate, malformed, or incomplete evidence
      */
     public ExternalChannelDependencySnapshot(
             List<String> intrinsicNodeBlueIds,
@@ -146,28 +170,56 @@ public final class ExternalChannelDependencySnapshot {
                 Collections.unmodifiableList(identities);
     }
 
+    /**
+     * Returns the dependency snapshot used when no evidence was consulted.
+     *
+     * @return the shared immutable empty dependency snapshot
+     */
     public static ExternalChannelDependencySnapshot none() {
         return NONE;
     }
 
+    /**
+     * Returns exact identities intrinsic to the owning runtime function.
+     *
+     * @return immutable intrinsic dependency identities
+     */
     public List<String> intrinsicNodeBlueIds() {
         return intrinsicNodeBlueIds;
     }
 
+    /**
+     * Returns the exact External Channel members consulted directly.
+     *
+     * @return immutable consulted External Channel entries
+     */
     public List<Entry> entries() {
         return entries;
     }
 
+    /**
+     * Returns the shallow type families consulted during derivation.
+     *
+     * @return immutable shallow type-family dependencies
+     */
     public List<TypeFamily> typeFamilies() {
         return typeFamilies;
     }
 
+    /**
+     * Reports whether derivation consulted the complete same-scope External
+     * Channel membership surface.
+     *
+     * @return whether complete same-scope External membership was consulted
+     */
     public boolean wholeSameScopeExternalSurface() {
         return wholeSameScopeExternalSurface;
     }
 
     /**
      * Exact read-only same-scope Channel headers captured by this dependency.
+     *
+     * @return immutable Channel header entries
      */
     public List<ChannelEntry> channelEntries() {
         return channelEntries;
@@ -176,6 +228,8 @@ public final class ExternalChannelDependencySnapshot {
     /**
      * Whether the exact complete same-scope Channel-header catalog was
      * declared, including an empty catalog.
+     *
+     * @return whether whole-catalog evidence is present
      */
     public boolean wholeSameScopeChannelCatalog() {
         return wholeSameScopeChannelCatalog;
@@ -187,6 +241,8 @@ public final class ExternalChannelDependencySnapshot {
      *
      * <p>Keys naming non-Channel contracts intentionally expose no contract
      * content or runtime role beyond their proven presence.</p>
+     *
+     * @return immutable complete raw-key membership, or an empty list
      */
     public List<String> channelCatalogContractKeys() {
         return channelCatalogContractKeys;
@@ -195,11 +251,18 @@ public final class ExternalChannelDependencySnapshot {
     /**
      * Returns the exact ordered identities committed into checkpoint-domain
      * derivation.
+     *
+     * @return immutable deterministic dependency identities
      */
     public List<String> deterministicDependencyNodeBlueIds() {
         return deterministicDependencyNodeBlueIds;
     }
 
+    /**
+     * Reports whether this snapshot carries no dependency evidence.
+     *
+     * @return whether this snapshot carries no dependency evidence
+     */
     public boolean isEmpty() {
         return intrinsicNodeBlueIds.isEmpty()
                 && entries.isEmpty()
@@ -416,11 +479,13 @@ public final class ExternalChannelDependencySnapshot {
         }
         Node descriptor = new Node()
                 .properties(
-                        "kind",
+                        ProcessorIdentityConstants.Field.KIND,
                         new Node().value(
-                                "whole-same-scope-external-surface"))
+                                ProcessorIdentityConstants.Kind
+                                        .WHOLE_SAME_SCOPE_EXTERNAL_SURFACE))
                 .properties(
-                        "orderedDependencyNodeBlueIds",
+                        ProcessorIdentityConstants.Field
+                                .ORDERED_DEPENDENCY_NODE_BLUE_IDS,
                         new Node().items(items));
         return BlueIdCalculator.calculateBlueId(descriptor);
     }
@@ -436,14 +501,17 @@ public final class ExternalChannelDependencySnapshot {
         }
         Node descriptor = new Node()
                 .properties(
-                        "kind",
+                        ProcessorIdentityConstants.Field.KIND,
                         new Node().value(
-                                "whole-same-scope-channel-catalog"))
+                                ProcessorIdentityConstants.Kind
+                                        .WHOLE_SAME_SCOPE_CHANNEL_CATALOG))
                 .properties(
-                        "orderedChannelEntryIdentityBlueIds",
+                        ProcessorIdentityConstants.Field
+                                .ORDERED_CHANNEL_ENTRY_IDENTITY_BLUE_IDS,
                         new Node().items(items))
                 .properties(
-                        "effectiveContractKeys",
+                        ProcessorIdentityConstants.Field
+                                .EFFECTIVE_CONTRACT_KEYS,
                         Entry.textList(contractKeys));
         return BlueIdCalculator.calculateBlueId(descriptor);
     }
@@ -460,6 +528,17 @@ public final class ExternalChannelDependencySnapshot {
         private final String checkpointDomainBlueId;
         private final String identityBlueId;
 
+        /**
+         * Creates an identity-bearing External Channel dependency descriptor.
+         *
+         * @param channelKey exact same-scope channel key
+         * @param order deterministic channel order
+         * @param effectiveTypeBlueId exact effective runtime type identity
+         * @param sourceContributionNodeBlueIds ordered source identities
+         * @param deterministicDependencyNodeBlueIds ordered nested dependency identities
+         * @param checkpointDomainBlueId exact checkpoint-domain identity
+         * @throws IllegalArgumentException for empty or duplicate identity data
+         */
         public Entry(
                 String channelKey,
                 int order,
@@ -485,30 +564,66 @@ public final class ExternalChannelDependencySnapshot {
             this.identityBlueId = calculateIdentity();
         }
 
+        /**
+         * Returns the exact key of the consulted same-scope channel.
+         *
+         * @return exact same-scope channel key
+         */
         public String channelKey() {
             return channelKey;
         }
 
+        /**
+         * Returns the effective order used for deterministic dispatch.
+         *
+         * @return deterministic channel order
+         */
         public int order() {
             return order;
         }
 
+        /**
+         * Returns the exact effective runtime type used for dispatch.
+         *
+         * @return exact effective runtime type identity
+         */
         public String effectiveTypeBlueId() {
             return effectiveTypeBlueId;
         }
 
+        /**
+         * Returns the Source contribution identities in effective order.
+         *
+         * @return immutable ordered source identities
+         */
         public List<String> sourceContributionNodeBlueIds() {
             return sourceContributionNodeBlueIds;
         }
 
+        /**
+         * Returns identities of dependencies consulted while deriving this
+         * member.
+         *
+         * @return immutable ordered nested dependency identities
+         */
         public List<String> deterministicDependencyNodeBlueIds() {
             return deterministicDependencyNodeBlueIds;
         }
 
+        /**
+         * Returns the exact checkpoint domain derived for this member.
+         *
+         * @return exact checkpoint-domain identity
+         */
         public String checkpointDomainBlueId() {
             return checkpointDomainBlueId;
         }
 
+        /**
+         * Returns the canonical identity committing every descriptor field.
+         *
+         * @return canonical identity of this complete descriptor
+         */
         public String identityBlueId() {
             return identityBlueId;
         }
@@ -545,26 +660,30 @@ public final class ExternalChannelDependencySnapshot {
         private String calculateIdentity() {
             Node descriptor = new Node()
                     .properties(
-                            "channelKey",
+                            ProcessorIdentityConstants.Field.CHANNEL_KEY,
                             new Node().value(channelKey))
                     .properties(
-                            "order",
+                            ProcessorIdentityConstants.Field.ORDER,
                             new Node().value(
                                     BigInteger.valueOf(order)))
                     .properties(
-                            "effectiveTypeBlueId",
+                            ProcessorIdentityConstants.Field
+                                    .EFFECTIVE_TYPE_BLUE_ID,
                             new Node().value(
                                     effectiveTypeBlueId))
                     .properties(
-                            "sourceContributionNodeBlueIds",
+                            ProcessorIdentityConstants.Field
+                                    .SOURCE_CONTRIBUTION_NODE_BLUE_IDS,
                             textList(
                                     sourceContributionNodeBlueIds))
                     .properties(
-                            "deterministicDependencyNodeBlueIds",
+                            ProcessorIdentityConstants.Field
+                                    .DETERMINISTIC_DEPENDENCY_NODE_BLUE_IDS,
                             textList(
                                     deterministicDependencyNodeBlueIds))
                     .properties(
-                            "checkpointDomainBlueId",
+                            ProcessorIdentityConstants.Field
+                                    .CHECKPOINT_DOMAIN_BLUE_ID,
                             new Node().value(
                                     checkpointDomainBlueId));
             return BlueIdCalculator.calculateBlueId(descriptor);
@@ -606,6 +725,15 @@ public final class ExternalChannelDependencySnapshot {
 
         /**
          * Creates one exact read-only Channel-header dependency entry.
+         *
+         * @param channelKey exact same-scope channel key
+         * @param order deterministic channel order
+         * @param effectiveTypeBlueId exact effective runtime type identity
+         * @param role effective Channel role
+         * @param sourceContributionNodeBlueIds ordered source identities
+         * @param deterministicDependencyNodeBlueIds ordered dependency identities
+         * @param headerIdentityBlueId exact sanitized-header identity
+         * @throws IllegalArgumentException for malformed identity or role data
          */
         public ChannelEntry(
                 String channelKey,
@@ -621,8 +749,10 @@ public final class ExternalChannelDependencySnapshot {
             this.effectiveTypeBlueId = Entry.requireText(
                     effectiveTypeBlueId, "effectiveTypeBlueId");
             this.role = Entry.requireText(role, "role");
-            if (!"external-channel".equals(role)
-                    && !"processor-channel".equals(role)) {
+            if (!EffectiveContractSnapshotConstants
+                    .Role.EXTERNAL_CHANNEL.equals(role)
+                    && !EffectiveContractSnapshotConstants
+                    .Role.PROCESSOR_CHANNEL.equals(role)) {
                 throw new IllegalArgumentException(
                         "Unsupported Channel runtime role: " + role);
             }
@@ -638,47 +768,84 @@ public final class ExternalChannelDependencySnapshot {
             this.identityBlueId = calculateIdentity();
         }
 
-        /** Returns the exact raw same-scope contract key. */
+        /**
+         * Returns the exact raw key of the same-scope Channel contract.
+         *
+         * @return the exact raw same-scope contract key
+         */
         public String channelKey() {
             return channelKey;
         }
 
-        /** Returns the effective Channel order. */
+        /**
+         * Returns the effective Channel order used for deterministic lookup.
+         *
+         * @return the effective Channel order
+         */
         public int order() {
             return order;
         }
 
-        /** Returns the exact effective runtime type BlueId. */
+        /**
+         * Returns the exact effective runtime type of the Channel header.
+         *
+         * @return the exact effective runtime type BlueId
+         */
         public String effectiveTypeBlueId() {
             return effectiveTypeBlueId;
         }
 
-        /** Returns {@code external-channel} or {@code processor-channel}. */
+        /**
+         * Returns the runtime role proven by the effective Channel header.
+         *
+         * @return {@code external-channel} or {@code processor-channel}
+         */
         public String role() {
             return role;
         }
 
-        /** Returns whether the header also has External-source semantics. */
+        /**
+         * Reports whether this header may source External occurrences.
+         *
+         * @return whether the header also has External-source semantics
+         */
         public boolean externalSource() {
-            return "external-channel".equals(role);
+            return EffectiveContractSnapshotConstants
+                    .Role.EXTERNAL_CHANNEL.equals(role);
         }
 
-        /** Returns ordered exact Source contribution identities. */
+        /**
+         * Returns exact Source contribution identities in effective order.
+         *
+         * @return ordered exact Source contribution identities
+         */
         public List<String> sourceContributionNodeBlueIds() {
             return sourceContributionNodeBlueIds;
         }
 
-        /** Returns deterministic dependencies carried by the header. */
+        /**
+         * Returns deterministic dependencies retained by the effective header.
+         *
+         * @return deterministic dependencies carried by the header
+         */
         public List<String> deterministicDependencyNodeBlueIds() {
             return deterministicDependencyNodeBlueIds;
         }
 
-        /** Returns the exact sanitized effective-header identity. */
+        /**
+         * Returns the exact identity of the sanitized effective header.
+         *
+         * @return the exact sanitized effective-header identity
+         */
         public String headerIdentityBlueId() {
             return headerIdentityBlueId;
         }
 
-        /** Returns the canonical identity of this dependency descriptor. */
+        /**
+         * Returns the canonical identity committing this dependency descriptor.
+         *
+         * @return the canonical identity of this dependency descriptor
+         */
         public String identityBlueId() {
             return identityBlueId;
         }
@@ -717,33 +884,38 @@ public final class ExternalChannelDependencySnapshot {
         private String calculateIdentity() {
             Node descriptor = new Node()
                     .properties(
-                            "kind",
+                            ProcessorIdentityConstants.Field.KIND,
                             new Node().value(
-                                    "same-scope-channel-header"))
+                                    ProcessorIdentityConstants.Kind
+                                            .SAME_SCOPE_CHANNEL_HEADER))
                     .properties(
-                            "channelKey",
+                            ProcessorIdentityConstants.Field.CHANNEL_KEY,
                             new Node().value(channelKey))
                     .properties(
-                            "order",
+                            ProcessorIdentityConstants.Field.ORDER,
                             new Node().value(
                                     BigInteger.valueOf(order)))
                     .properties(
-                            "effectiveTypeBlueId",
+                            ProcessorIdentityConstants.Field
+                                    .EFFECTIVE_TYPE_BLUE_ID,
                             new Node().value(
                                     effectiveTypeBlueId))
                     .properties(
-                            "role",
+                            ProcessorIdentityConstants.Field.ROLE,
                             new Node().value(role))
                     .properties(
-                            "sourceContributionNodeBlueIds",
+                            ProcessorIdentityConstants.Field
+                                    .SOURCE_CONTRIBUTION_NODE_BLUE_IDS,
                             Entry.textList(
                                     sourceContributionNodeBlueIds))
                     .properties(
-                            "deterministicDependencyNodeBlueIds",
+                            ProcessorIdentityConstants.Field
+                                    .DETERMINISTIC_DEPENDENCY_NODE_BLUE_IDS,
                             Entry.textList(
                                     deterministicDependencyNodeBlueIds))
                     .properties(
-                            "headerIdentityBlueId",
+                            ProcessorIdentityConstants.Field
+                                    .HEADER_IDENTITY_BLUE_ID,
                             new Node().value(
                                     headerIdentityBlueId));
             return BlueIdCalculator.calculateBlueId(
@@ -752,19 +924,58 @@ public final class ExternalChannelDependencySnapshot {
     }
 
     /**
-     * Exact membership snapshot for one same-scope External Channel runtime
-     * type. Member headers are not recursively evaluated to create this
-     * snapshot.
+     * Type selector used by a same-scope External Channel family dependency.
+     */
+    public enum TypeMatchMode {
+        /** Only the requested exact effective type is selected. */
+        EXACT,
+        /** The requested type and all of its verified Blue subtypes select. */
+        ASSIGNABLE
+    }
+
+    /**
+     * Exact or subtype-compatible membership snapshot for one same-scope
+     * External Channel runtime type. Member headers are not recursively
+     * evaluated to create this snapshot.
      */
     public static final class TypeFamily {
         private final String excludingChannelKey;
         private final String effectiveTypeBlueId;
+        private final TypeMatchMode matchMode;
         private final List<Member> members;
         private final String identityBlueId;
 
+        /**
+         * Creates an exact-type family, preserving the original public API.
+         *
+         * @param excludingChannelKey context owner omitted from enumeration
+         * @param effectiveTypeBlueId exact family type identity
+         * @param members shallow family members in deterministic order
+         */
         public TypeFamily(
                 String excludingChannelKey,
                 String effectiveTypeBlueId,
+                List<Member> members) {
+            this(
+                    excludingChannelKey,
+                    effectiveTypeBlueId,
+                    TypeMatchMode.EXACT,
+                    members);
+        }
+
+        /**
+         * Creates an exact or assignable shallow type-family dependency.
+         *
+         * @param excludingChannelKey context owner omitted from enumeration
+         * @param effectiveTypeBlueId selected exact or base type identity
+         * @param matchMode exact or assignable matching mode
+         * @param members shallow family members in deterministic order
+         * @throws IllegalArgumentException for malformed or duplicate members
+         */
+        public TypeFamily(
+                String excludingChannelKey,
+                String effectiveTypeBlueId,
+                TypeMatchMode matchMode,
                 List<Member> members) {
             this.excludingChannelKey = Entry.requireText(
                     excludingChannelKey,
@@ -772,25 +983,75 @@ public final class ExternalChannelDependencySnapshot {
             this.effectiveTypeBlueId = Entry.requireText(
                     effectiveTypeBlueId,
                     "effectiveTypeBlueId");
-            this.members = immutableMembers(members);
+            this.matchMode = Objects.requireNonNull(
+                    matchMode, "matchMode");
+            this.members = immutableMembers(
+                    members,
+                    this.matchMode == TypeMatchMode.EXACT
+                            ? this.effectiveTypeBlueId
+                            : null);
             this.identityBlueId = calculateIdentity();
         }
 
         /**
          * The context owner omitted from this same-scope enumeration.
+         *
+         * @return exact omitted channel key
          */
         public String excludingChannelKey() {
             return excludingChannelKey;
         }
 
+        /**
+         * Returns the type selected by this exact or assignable family.
+         *
+         * @return selected exact or base type identity
+         */
         public String effectiveTypeBlueId() {
             return effectiveTypeBlueId;
         }
 
+        /**
+         * Alias that describes the selector role for assignable families.
+         *
+         * @return selected base type identity
+         */
+        public String baseTypeBlueId() {
+            return effectiveTypeBlueId;
+        }
+
+        /**
+         * Returns how member effective types are compared with the selector.
+         *
+         * @return exact or assignable family matching mode
+         */
+        public TypeMatchMode matchMode() {
+            return matchMode;
+        }
+
+        /**
+         * Reports whether the family includes verified subtype members.
+         *
+         * @return whether verified subtype members are included
+         */
+        public boolean includesSubtypes() {
+            return matchMode == TypeMatchMode.ASSIGNABLE;
+        }
+
+        /**
+         * Returns shallow member headers without evaluating member functions.
+         *
+         * @return immutable shallow members in deterministic order
+         */
         public List<Member> members() {
             return members;
         }
 
+        /**
+         * Returns the canonical identity committing the selector and members.
+         *
+         * @return canonical identity of this complete family descriptor
+         */
         public String identityBlueId() {
             return identityBlueId;
         }
@@ -805,6 +1066,7 @@ public final class ExternalChannelDependencySnapshot {
                     family.excludingChannelKey)
                     && effectiveTypeBlueId.equals(
                     family.effectiveTypeBlueId)
+                    && matchMode == family.matchMode
                     && members.equals(family.members);
         }
 
@@ -813,6 +1075,7 @@ public final class ExternalChannelDependencySnapshot {
             return Objects.hash(
                     excludingChannelKey,
                     effectiveTypeBlueId,
+                    matchMode,
                     members);
         }
 
@@ -826,30 +1089,54 @@ public final class ExternalChannelDependencySnapshot {
             }
             Node descriptor = new Node()
                     .properties(
-                            "kind",
+                            ProcessorIdentityConstants.Field.KIND,
                             new Node().value(
-                                    "same-scope-external-type-family"))
+                                    matchMode == TypeMatchMode.EXACT
+                                            ? ProcessorIdentityConstants.Kind
+                                            .SAME_SCOPE_EXTERNAL_TYPE_FAMILY
+                                            : ProcessorIdentityConstants.Kind
+                                            .SAME_SCOPE_EXTERNAL_ASSIGNABLE_TYPE_FAMILY))
                     .properties(
-                            "excludingChannelKey",
+                            ProcessorIdentityConstants.Field
+                                    .EXCLUDING_CHANNEL_KEY,
                             new Node().value(
                                     excludingChannelKey))
                     .properties(
-                            "effectiveTypeBlueId",
+                            ProcessorIdentityConstants.Field
+                                    .EFFECTIVE_TYPE_BLUE_ID,
                             new Node().value(
                                     effectiveTypeBlueId))
                     .properties(
-                            "orderedMemberIdentityBlueIds",
+                            ProcessorIdentityConstants.Field
+                                    .ORDERED_MEMBER_IDENTITY_BLUE_IDS,
                             new Node().items(identities));
+            if (matchMode == TypeMatchMode.ASSIGNABLE) {
+                List<Node> actualTypes =
+                        new ArrayList<>(members.size());
+                for (Member member : members) {
+                    actualTypes.add(
+                            new Node().value(
+                                    member.effectiveTypeBlueId()));
+                }
+                descriptor.properties(
+                        ProcessorIdentityConstants.Field
+                                .ORDERED_MEMBER_EFFECTIVE_TYPE_BLUE_IDS,
+                        new Node().items(actualTypes));
+            }
             return BlueIdCalculator.calculateBlueId(descriptor);
         }
 
         private String selectorKey() {
-            return excludingChannelKey + "\u0000"
+            return excludingChannelKey
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
+                    + matchMode.name()
+                    + ProcessorIdentityConstants.SELECTOR_COMPONENT_DELIMITER
                     + effectiveTypeBlueId;
         }
 
         private static List<Member> immutableMembers(
-                List<Member> supplied) {
+                List<Member> supplied,
+                String inferredExactTypeBlueId) {
             Objects.requireNonNull(supplied, "members");
             List<Member> copy = new ArrayList<>(
                     supplied.size());
@@ -861,6 +1148,16 @@ public final class ExternalChannelDependencySnapshot {
                     throw new IllegalArgumentException(
                             "Duplicate External Channel family member: "
                                     + exact.channelKey());
+                }
+                if (exact.effectiveTypeBlueId() == null) {
+                    if (inferredExactTypeBlueId == null) {
+                        throw new IllegalArgumentException(
+                                "Assignable External Channel family member "
+                                        + "must declare its actual effective "
+                                        + "type: " + exact.channelKey());
+                    }
+                    exact = exact.withEffectiveTypeBlueId(
+                            inferredExactTypeBlueId);
                 }
                 copy.add(exact);
             }
@@ -874,18 +1171,57 @@ public final class ExternalChannelDependencySnapshot {
     public static final class Member {
         private final String channelKey;
         private final int order;
+        private final String effectiveTypeBlueId;
         private final List<String> sourceContributionNodeBlueIds;
         private final List<String> deterministicDependencyNodeBlueIds;
         private final String identityBlueId;
 
+        /**
+         * Compatibility constructor for exact-type families. The enclosing
+         * exact {@link TypeFamily} supplies the member's effective type.
+         *
+         * @param channelKey exact channel key
+         * @param order deterministic channel order
+         * @param sourceContributionNodeBlueIds ordered source identities
+         * @param deterministicDependencyNodeBlueIds ordered dependency identities
+         */
         public Member(
                 String channelKey,
                 int order,
                 List<String> sourceContributionNodeBlueIds,
                 List<String> deterministicDependencyNodeBlueIds) {
+            this(
+                    channelKey,
+                    order,
+                    null,
+                    sourceContributionNodeBlueIds,
+                    deterministicDependencyNodeBlueIds);
+        }
+
+        /**
+         * Creates a shallow member with its actual effective type.
+         *
+         * @param channelKey exact channel key
+         * @param order deterministic channel order
+         * @param effectiveTypeBlueId actual effective type, or {@code null}
+         * @param sourceContributionNodeBlueIds ordered source identities
+         * @param deterministicDependencyNodeBlueIds ordered dependency identities
+         */
+        public Member(
+                String channelKey,
+                int order,
+                String effectiveTypeBlueId,
+                List<String> sourceContributionNodeBlueIds,
+                List<String> deterministicDependencyNodeBlueIds) {
             this.channelKey = Entry.requireText(
                     channelKey, "channelKey");
             this.order = order;
+            this.effectiveTypeBlueId =
+                    effectiveTypeBlueId != null
+                            ? Entry.requireText(
+                                    effectiveTypeBlueId,
+                                    "effectiveTypeBlueId")
+                            : null;
             this.sourceContributionNodeBlueIds = immutableText(
                     sourceContributionNodeBlueIds,
                     "source contribution");
@@ -896,22 +1232,57 @@ public final class ExternalChannelDependencySnapshot {
             this.identityBlueId = calculateIdentity();
         }
 
+        /**
+         * Returns the exact key of this shallow family member.
+         *
+         * @return exact channel key
+         */
         public String channelKey() {
             return channelKey;
         }
 
+        /**
+         * Returns the effective order used for deterministic enumeration.
+         *
+         * @return deterministic channel order
+         */
         public int order() {
             return order;
         }
 
+        /**
+         * Returns the member's actual effective type. Members obtained from a
+         * {@link TypeFamily} always provide this value.
+         *
+         * @return actual effective type identity, or {@code null} before family binding
+         */
+        public String effectiveTypeBlueId() {
+            return effectiveTypeBlueId;
+        }
+
+        /**
+         * Returns Source contribution identities in effective order.
+         *
+         * @return immutable ordered source identities
+         */
         public List<String> sourceContributionNodeBlueIds() {
             return sourceContributionNodeBlueIds;
         }
 
+        /**
+         * Returns deterministic dependencies carried by the member header.
+         *
+         * @return immutable ordered dependency identities
+         */
         public List<String> deterministicDependencyNodeBlueIds() {
             return deterministicDependencyNodeBlueIds;
         }
 
+        /**
+         * Returns the canonical identity committing the shallow member header.
+         *
+         * @return canonical identity of this shallow member descriptor
+         */
         public String identityBlueId() {
             return identityBlueId;
         }
@@ -924,6 +1295,9 @@ public final class ExternalChannelDependencySnapshot {
             Member member = (Member) other;
             return channelKey.equals(member.channelKey)
                     && order == member.order
+                    && Objects.equals(
+                    effectiveTypeBlueId,
+                    member.effectiveTypeBlueId)
                     && sourceContributionNodeBlueIds.equals(
                     member.sourceContributionNodeBlueIds)
                     && deterministicDependencyNodeBlueIds.equals(
@@ -935,6 +1309,17 @@ public final class ExternalChannelDependencySnapshot {
             return Objects.hash(
                     channelKey,
                     order,
+                    effectiveTypeBlueId,
+                    sourceContributionNodeBlueIds,
+                    deterministicDependencyNodeBlueIds);
+        }
+
+        private Member withEffectiveTypeBlueId(
+                String suppliedEffectiveTypeBlueId) {
+            return new Member(
+                    channelKey,
+                    order,
+                    suppliedEffectiveTypeBlueId,
                     sourceContributionNodeBlueIds,
                     deterministicDependencyNodeBlueIds);
         }
@@ -942,18 +1327,20 @@ public final class ExternalChannelDependencySnapshot {
         private String calculateIdentity() {
             Node descriptor = new Node()
                     .properties(
-                            "channelKey",
+                            ProcessorIdentityConstants.Field.CHANNEL_KEY,
                             new Node().value(channelKey))
                     .properties(
-                            "order",
+                            ProcessorIdentityConstants.Field.ORDER,
                             new Node().value(
                                     BigInteger.valueOf(order)))
                     .properties(
-                            "sourceContributionNodeBlueIds",
+                            ProcessorIdentityConstants.Field
+                                    .SOURCE_CONTRIBUTION_NODE_BLUE_IDS,
                             Entry.textList(
                                     sourceContributionNodeBlueIds))
                     .properties(
-                            "deterministicDependencyNodeBlueIds",
+                            ProcessorIdentityConstants.Field
+                                    .DETERMINISTIC_DEPENDENCY_NODE_BLUE_IDS,
                             Entry.textList(
                                     deterministicDependencyNodeBlueIds));
             return BlueIdCalculator.calculateBlueId(descriptor);

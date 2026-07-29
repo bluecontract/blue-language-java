@@ -130,6 +130,8 @@ properties:
     - validateVariants
     - verifyDirectList
     - verifyDirectNode
+    - splitExactGraphFragments
+    - verifyOpaqueCyclicFragment
   parent: {}
   path: {}
   pattern: {}
@@ -148,6 +150,16 @@ properties:
   source: {}
   storedOptimization: {}
   variants: {}
+  expectedFragmentCount:
+    type: integer
+    minimum: 0
+  expectedFragmentBlueIds: {}
+  expectedReferencePaths: {}
+  expectedOpaqueEdges: {}
+  expectedLocalProviderOutcome: {}
+  expectedDefensiveCopies:
+    type: boolean
+  cuts: {}
 $defs:
   limitedOutcome:
     enum:

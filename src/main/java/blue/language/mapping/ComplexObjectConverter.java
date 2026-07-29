@@ -1,5 +1,7 @@
 package blue.language.mapping;
 
+import blue.language.utils.Properties;
+
 import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
 import blue.language.model.BlueName;
@@ -12,10 +14,25 @@ import blue.language.utils.TypeClassResolver;
 import java.lang.reflect.*;
 import java.util.*;
 
+/**
+ * Reflectively materializes a Blue object node as a Java object.
+ *
+ * <p>The converter honors Blue metadata annotations, inherited fields,
+ * Jackson property names, resolved Blue type mappings, and generic field
+ * types. Static and compiler-generated fields are class metadata rather than
+ * instance payload and are deliberately ignored. Target classes must have an
+ * accessible no-argument constructor.</p>
+ */
 public class ComplexObjectConverter implements Converter<Object> {
     private final ConverterFactory converterFactory;
     private final TypeClassResolver typeClassResolver;
 
+    /**
+     * Creates a reflective object converter.
+     *
+     * @param converterFactory factory for nested field converters
+     * @param typeClassResolver resolver for Blue-declared Java types
+     */
     public ComplexObjectConverter(ConverterFactory converterFactory, TypeClassResolver typeClassResolver) {
         this.converterFactory = converterFactory;
         this.typeClassResolver = typeClassResolver;
@@ -64,6 +81,10 @@ public class ComplexObjectConverter implements Converter<Object> {
         }
 
         for (Field field : clazz.getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers())
+                    || field.isSynthetic()) {
+                continue;
+            }
             field.setAccessible(true);
             String fieldName = field.getName();
             String propertyName = JacksonPropertyNames.propertyName(field);
@@ -97,9 +118,10 @@ public class ComplexObjectConverter implements Converter<Object> {
                                 fieldValue = fieldConverter.convert(fieldNode, fieldType);
                             }
                         }
-                    } else if ("name".equals(propertyName)) {
+                    } else if (Properties.OBJECT_NAME.equals(propertyName)) {
                         fieldValue = node.getName();
-                    } else if ("description".equals(propertyName)) {
+                    } else if (Properties.OBJECT_DESCRIPTION.equals(
+                            propertyName)) {
                         fieldValue = node.getDescription();
                     }
                 }
@@ -138,7 +160,7 @@ public class ComplexObjectConverter implements Converter<Object> {
     }
 
     private Node propertyNode(Node node, String propertyName) {
-        if ("contracts".equals(propertyName)) {
+        if (Properties.OBJECT_CONTRACTS.equals(propertyName)) {
             return node.getContracts();
         }
         return node.getProperties() != null ? node.getProperties().get(propertyName) : null;

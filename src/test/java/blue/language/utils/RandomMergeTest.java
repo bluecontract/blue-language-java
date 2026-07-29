@@ -8,8 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class RandomMergeTest {
 
     @Test
-    public void testBlueIdCannotBeMergedWithSiblingContent() throws Exception {
+    public void shouldRejectMergingBlueIdWithSiblingContent() throws Exception {
 
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A\n" +
@@ -17,12 +18,14 @@ public class RandomMergeTest {
                    "  description: aaa";
         nodeProvider.addSingleDocs(a);
 
+        // when
         String b = "name: B\n" +
                    "type:\n" +
                    "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
                    "timeline:\n" +
                    "  blueId: abc-id\n" +
                    "  asdf: xyz";
+        // then
         assertThrows(RuntimeException.class, () -> nodeProvider.addSingleDocs(b));
     }
 

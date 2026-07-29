@@ -9,81 +9,97 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessingRuntimeJsonPatchTest {
 
     @Test
-    void addNestedPropertyCreatesIntermediateObjects() {
+    void shouldCreateIntermediateObjectsWhenAddingNestedProperty() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         JsonPatch patch = JsonPatch.add("/foo/bar/baz", new Node().value("qux"));
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        Node baz = property(property(property(document, "foo"), "bar"), "baz");
 
+        // then
         assertNull(data.before());
         assertEquals("qux", data.after().getValue());
         assertEquals("/foo/bar/baz", data.path());
-
-        Node baz = property(property(property(document, "foo"), "bar"), "baz");
         assertEquals("qux", baz.getValue());
     }
 
     @Test
-    void replaceUpsertsObjectProperty() {
+    void shouldUpsertObjectPropertyOnReplace() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         JsonPatch replace = JsonPatch.replace("/alpha/beta", new Node().value("v1"));
+        JsonPatch replaceAgain = JsonPatch.replace("/alpha/beta", new Node().value("v2"));
+
+        // when
         DocumentProcessingRuntime.DocumentUpdateData upsert = runtime.applyPatch("/", replace);
+        DocumentProcessingRuntime.DocumentUpdateData update = runtime.applyPatch("/", replaceAgain);
+        Node beta = property(property(document, "alpha"), "beta");
+
+        // then
         assertNull(upsert.before());
         assertEquals("v1", upsert.after().getValue());
-
-        JsonPatch replaceAgain = JsonPatch.replace("/alpha/beta", new Node().value("v2"));
-        DocumentProcessingRuntime.DocumentUpdateData update = runtime.applyPatch("/", replaceAgain);
         assertEquals("v1", update.before().getValue());
         assertEquals("v2", update.after().getValue());
-
-        Node beta = property(property(document, "alpha"), "beta");
         assertEquals("v2", beta.getValue());
     }
 
     @Test
-    void removeObjectProperty() {
+    void shouldRemoveObjectProperty() {
+        // given
         Node document = new Node();
         document.properties("key", new Node().value("value"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.remove("/key"));
 
+        // then
         assertEquals("value", data.before().getValue());
         assertNull(data.after());
         assertTrue(document.getProperties() == null || !document.getProperties().containsKey("key"));
     }
 
     @Test
-    void removeMissingObjectPropertyFailsWithoutMutation() {
+    void shouldFailWithoutMutationWhenRemovingMissingObjectProperty() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        IllegalStateException ex = captureFailure(
                 () -> runtime.applyPatch("/", JsonPatch.remove("/missing")));
+
+        // then
+        assertEquals(IllegalStateException.class, ex.getClass());
         assertTrue(ex.getMessage().contains("missing"));
         assertNull(document.getProperties());
     }
 
     @Test
-    void addArrayElementAtIndexShiftsExisting() {
+    void shouldShiftExistingElementsWhenAddingArrayElementAtIndex() {
+        // given
         Node document = arrayDocument("items", 1, 2, 3);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         JsonPatch patch = JsonPatch.add("/items/1", new Node().value(99));
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        List<Node> items = array(document, "items");
 
+        // then
         assertEquals(2, intValue(data.before()));
         assertEquals(99, intValue(data.after()));
-
-        List<Node> items = array(document, "items");
         assertEquals(4, items.size());
         assertEquals(1, intValue(items.get(0)));
         assertEquals(99, intValue(items.get(1)));
@@ -92,164 +108,214 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
-    void addArrayElementAppendToken() {
+    void shouldAppendArrayElementWhenUsingAppendToken() {
+        // given
         Node document = arrayDocument("values", 4, 5);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         JsonPatch patch = JsonPatch.add("/values/-", new Node().value(6));
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        List<Node> items = array(document, "values");
 
+        // then
         assertNull(data.before());
         assertEquals(6, intValue(data.after()));
-
-        List<Node> items = array(document, "values");
         assertEquals(3, items.size());
         assertEquals(6, intValue(items.get(2)));
     }
 
     @Test
-    void replaceArrayElementRequiresExistingIndex() {
+    void shouldReplaceExistingArrayElement() {
+        // given
         Node document = arrayDocument("nums", 7, 8);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/nums/1", new Node().value(80)));
 
+        // then
         assertEquals(8, intValue(data.before()));
         assertEquals(80, intValue(data.after()));
         assertEquals(80, intValue(array(document, "nums").get(1)));
+    }
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> runtime.applyPatch("/", JsonPatch.replace("/nums/5", new Node().value(123))));
+    @Test
+    void shouldRejectOutOfBoundsArrayReplacement() {
+        // given
+        Node document = arrayDocument("nums", 7, 8);
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document);
+
+        // when
+        IllegalStateException ex = captureFailure(
+                () -> runtime.applyPatch(
+                        "/",
+                        JsonPatch.replace(
+                                "/nums/5",
+                                new Node().value(123))));
+
+        // then
         assertTrue(ex.getMessage().contains("out of bounds"));
         assertEquals(2, array(document, "nums").size());
     }
 
     @Test
-    void removeArrayElement() {
+    void shouldRemoveArrayElement() {
+        // given
         Node document = arrayDocument("letters", "a", "b", "c");
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.remove("/letters/1"));
+        List<Node> items = array(document, "letters");
 
+        // then
         assertEquals("b", data.before().getValue());
         assertNull(data.after());
-
-        List<Node> items = array(document, "letters");
         assertEquals(2, items.size());
         assertEquals("a", items.get(0).getValue());
         assertEquals("c", items.get(1).getValue());
     }
 
     @Test
-    void removeArrayOutOfBoundsFailsWithoutMutation() {
+    void shouldFailWithoutMutationWhenRemovingOutOfBoundsArrayElement() {
+        // given
         Node document = arrayDocument("letters", "x");
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        IllegalStateException ex = captureFailure(
                 () -> runtime.applyPatch("/", JsonPatch.remove("/letters/5")));
+
+        // then
+        assertEquals(IllegalStateException.class, ex.getClass());
         assertTrue(ex.getMessage().contains(
                 "Array index out of bounds for remove"));
         assertEquals(1, array(document, "letters").size());
     }
 
     @Test
-    void arrayElementSubpathRequiresExistingElement() {
+    void shouldRejectArrayElementSubpathWhenElementDoesNotExist() {
+        // given
         Node array = new Node().items(new ArrayList<>());
         Node document = new Node().properties("arr", array);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        IllegalStateException ex = captureFailure(
                 () -> runtime.applyPatch("/", JsonPatch.add("/arr/0/name", new Node().value("bad"))));
+        Map<String, Node> arrProps = property(document, "arr").getProperties();
+
+        // then
+        assertEquals(IllegalStateException.class, ex.getClass());
         assertTrue(ex.getMessage().toLowerCase().contains("array index"), ex.getMessage());
         assertTrue(array.getItems().isEmpty());
-        Map<String, Node> arrProps = property(document, "arr").getProperties();
-        if (arrProps != null) {
-            assertTrue(arrProps.isEmpty());
-        }
+        assertTrue(arrProps == null || arrProps.isEmpty());
     }
 
     @Test
-    void appendTokenOnObjectFailsAndRollsBack() {
+    void shouldFailAndRollBackWhenUsingAppendTokenOnObject() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        // when
+        IllegalStateException ex = captureFailure(
                 () -> runtime.applyPatch("/", JsonPatch.add("/foo/-", new Node().value("nope"))));
+
+        // then
+        assertEquals(IllegalStateException.class, ex.getClass());
         assertTrue(ex.getMessage().contains("Append token"));
         assertNull(document.getProperties());
     }
 
     @Test
-    void addPropertyWithEmptySegmentsMaintainsLiteralPointer() {
+    void shouldMaintainLiteralPointerWhenAddingPropertyWithEmptySegments() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         runtime.applyPatch("/", JsonPatch.add("/foo//bar/", new Node().value("lit")));
-
         Node foo = property(document, "foo");
         Node emptyKey = property(foo, "");
         Node bar = property(emptyKey, "bar");
         Node trailingEmpty = property(bar, "");
+
+        // then
         assertEquals("lit", trailingEmpty.getValue());
     }
 
     @Test
-    void removePropertyWithEmptySegmentsCleansUpLeaf() {
+    void shouldCleanUpLeafWhenRemovingPropertyWithEmptySegments() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         runtime.applyPatch("/", JsonPatch.add("/foo//bar", new Node().value("lit")));
         runtime.applyPatch("/", JsonPatch.remove("/foo//bar"));
-
         Node foo = property(document, "foo");
         Node emptyKey = property(foo, "");
         Map<String, Node> props = emptyKey.getProperties();
+
+        // then
         assertTrue(props == null || !props.containsKey("bar"));
     }
 
     @Test
-    void jsonPointerEscapesAddressLiteralSlashAndTildeKeys() {
+    void shouldAddressLiteralSlashAndTildeKeysUsingJsonPointerEscapes() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         runtime.applyPatch("/", JsonPatch.add("/tilde/a~1b", new Node().value("slash")));
         runtime.applyPatch("/", JsonPatch.add("/tilde/a~0b", new Node().value("tilde")));
         runtime.applyPatch("/", JsonPatch.add("/tilde/~01key", new Node().value("literal")));
-
         Node tilde = property(document, "tilde");
+
+        // then
         assertEquals("slash", property(tilde, "a/b").getValue());
         assertEquals("tilde", property(tilde, "a~b").getValue());
         assertEquals("literal", property(tilde, "~1key").getValue());
     }
 
     @Test
-    void appendObjectAllowsNestedStructure() {
+    void shouldAllowNestedStructureWhenAppendingObject() {
+        // given
         Node document = arrayDocument("rows", 1);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
+        // when
         Node nested = new Node().properties("c", new Node().value("v"));
         Node appended = new Node().properties("b", nested);
         runtime.applyPatch("/", JsonPatch.add("/rows/-", appended));
-
         List<Node> rows = array(document, "rows");
         Node created = rows.get(rows.size() - 1);
         Node child = property(created, "b");
         Node grandChild = property(child, "c");
+
+        // then
         assertEquals("v", grandChild.getValue());
     }
 
     @Test
-    void snapshotsAreClones() {
+    void shouldReturnSnapshotsAsClones() {
+        // given
         Node document = arrayDocument("numbers", 1);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/numbers/0", new Node().value(2)));
 
+        // when
         // mutate returned nodes to ensure the document is unaffected
         data.before().properties("mutated", new Node().value(true));
         data.after().properties("mutated", new Node().value(true));
-
         Node stored = array(document, "numbers").get(0);
+
+        // then
         assertNull(stored.getProperties());
         assertEquals(2, intValue(stored));
     }

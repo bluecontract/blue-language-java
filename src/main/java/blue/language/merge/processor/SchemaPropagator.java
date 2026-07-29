@@ -5,10 +5,8 @@ import blue.language.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.LeastCommonMultiple;
-import blue.language.utils.NodeToBlueIdInput;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.utils.ScalarNodeIdentity;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -23,7 +21,21 @@ import java.util.stream.Collectors;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
 
+/**
+ * Intersects inherited and authored schema constraints into the effective
+ * schema of the merge target.
+ *
+ * <p>Minimum constraints become stricter maxima, maximum constraints become
+ * stricter minima, enum values are intersected by canonical scalar identity,
+ * and numeric {@code multipleOf} constraints are combined exactly.</p>
+ */
 public class SchemaPropagator implements MergingProcessor {
+
+    /**
+     * Creates a stateless schema propagation stage.
+     */
+    public SchemaPropagator() {
+    }
     
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
@@ -238,9 +250,7 @@ public class SchemaPropagator implements MergingProcessor {
     }
 
     private String enumComparableBlueId(Node node) {
-        Node comparable = node.clone();
-        comparable.schema(null);
-        return BlueIdCalculator.calculateBlueId(comparable);
+        return ScalarNodeIdentity.blueId(node);
     }
 
     private List<Node> canonicalizeEnum(List<Node> nodes) {
@@ -254,9 +264,7 @@ public class SchemaPropagator implements MergingProcessor {
     }
 
     private String enumCanonicalKey(Node node) {
-        Node comparable = node.clone();
-        comparable.schema(null);
-        return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(NodeToBlueIdInput.get(comparable));
+        return ScalarNodeIdentity.canonicalJson(node);
     }
 
 }

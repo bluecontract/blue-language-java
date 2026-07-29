@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PublishedSnapshotRoundTripTest {
 
     @Test
-    void snapshotInitializationPublishesStrictDurableCanonicalSnapshot() {
+    void shouldPublishStrictDurableCanonicalSnapshotDuringSnapshotInitialization() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -27,11 +28,13 @@ class PublishedSnapshotRoundTripTest {
                 "      - 2\n" +
                 "contracts: {}\n"));
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(input);
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
 
+        // then
         assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertPublishableRoundTrip(blue, result);
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(1L, snapshot.counter("processorInputStrictCanonical"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorInputUncheckedCanonical"), snapshot.toString());
         assertEquals(1L, snapshot.counter("processorPublishedStrictCanonical"), snapshot.toString());
@@ -45,7 +48,8 @@ class PublishedSnapshotRoundTripTest {
     }
 
     @Test
-    void snapshotProcessingWithNoExternalMatchPublishesStrictDurableCanonicalSnapshot() {
+    void shouldPublishStrictDurableCanonicalSnapshotWhenSnapshotProcessingHasNoExternalMatch() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(
                 "name: Published Snapshot Processing\n" +
@@ -59,12 +63,14 @@ class PublishedSnapshotRoundTripTest {
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
 
+        // when
         DocumentProcessingResult result = blue.processDocument(strictInitialized,
                 new Node().name("Ignored Published Snapshot Event"));
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
 
+        // then
         assertEquals(ProcessorStatus.NO_MATCH, result.status(), diagnosticMessage(result));
         assertPublishableRoundTrip(blue, result);
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(1L, snapshot.counter("processorInputStrictCanonical"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorInputUncheckedCanonical"), snapshot.toString());
         assertEquals(0L, snapshot.counter("processorPublishedStrictCanonical"), snapshot.toString());
@@ -78,7 +84,8 @@ class PublishedSnapshotRoundTripTest {
     }
 
     @Test
-    void uncheckedSnapshotInputIsCanonicalizedBeforePublication() {
+    void shouldCanonicalizeUncheckedSnapshotInputBeforePublication() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
         blue.getDocumentProcessor().processingMetricsSink(metrics);
@@ -94,11 +101,13 @@ class PublishedSnapshotRoundTripTest {
                 FrozenNode.fromResolvedNode(document),
                 canonicalRoot.blueId());
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(input);
+        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
 
+        // then
         assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertPublishableRoundTrip(blue, result);
-        ProcessingMetricsSnapshot snapshot = metrics.snapshot();
         assertEquals(0L, snapshot.counter("processorInputStrictCanonical"), snapshot.toString());
         assertEquals(1L, snapshot.counter("processorInputUncheckedCanonical"), snapshot.toString());
         assertEquals(1L, snapshot.counter("processorPublishedStrictCanonical"), snapshot.toString());

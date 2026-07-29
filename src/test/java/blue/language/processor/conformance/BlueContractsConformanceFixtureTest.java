@@ -15,14 +15,20 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.Test;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,11 +40,16 @@ class BlueContractsConformanceFixtureTest {
                     .build());
 
     @Test
-    void everyInventoriedExecutableFixturePassesClosedExecution() {
+    void shouldPassClosedExecutionForEveryInventoriedExecutableFixture() {
+        // given
         BlueContractsConformanceReport report =
                 new Blue().runContractsConformanceSuite();
 
-        assertEquals(127, report.getFixtureIds().size());
+        // when
+        int fixtureCount = report.getFixtureIds().size();
+
+        // then
+        assertEquals(140, fixtureCount);
         assertEquals(report.getFixtureIds(),
                 report.getPassedFixtureIds(),
                 report.getFailures()::toString);
@@ -48,9 +59,21 @@ class BlueContractsConformanceFixtureTest {
     }
 
     @Test
-    void everyInventoriedExecutableFixturePassesClosedMetadataValidation()
+    void shouldPassClosedMetadataValidationForEveryInventoriedExecutableFixture()
             throws IOException {
+        // given
         JsonNode manifest = resource("manifest.yaml");
+        int expectedFixtureCount = 0;
+        for (JsonNode file : manifest.path("files")) {
+            String role = file.path("role").asText();
+            if ("behavior-fixture".equals(role)
+                    || "gas-fixture".equals(role)) {
+                expectedFixtureCount++;
+            }
+        }
+
+        // when
+        int validatedFixtureCount = 0;
         for (JsonNode file : manifest.path("files")) {
             String role = file.path("role").asText();
             if (!"behavior-fixture".equals(role)
@@ -58,37 +81,158 @@ class BlueContractsConformanceFixtureTest {
                 continue;
             }
             JsonNode fixture = resource(file.path("path").asText());
-            assertDoesNotThrow(() ->
-                    BlueContractsConformanceSuiteRunner
-                            .validateFixtureMetadataForTest(fixture),
-                    file.path("path").asText());
+            BlueContractsConformanceSuiteRunner
+                    .validateFixtureMetadataForTest(fixture);
+            validatedFixtureCount++;
         }
+
+        // then
+        assertEquals(expectedFixtureCount,
+                validatedFixtureCount);
     }
 
     @Test
-    void unselectedMissingExecutableBodyRemainsCollapsed()
+    void shouldKeepUnselectedMissingExecutableBodyCollapsed()
             throws IOException {
+        // given
         JsonNode fixture =
                 resource("disc/c-disc-03.yaml");
 
-        assertDoesNotThrow(
-                () -> new ContractsFixtureHarness()
-                        .execute(fixture, null, false));
+        // when
+        ContractsConformanceProjection projection =
+                new ContractsFixtureHarness()
+                        .execute(fixture, null, false);
+
+        // then
+        assertNotNull(projection);
     }
 
     @Test
-    void cyclicSetMemberMutationFixtureUsesGenericRuntimeGuard()
+    void shouldUseGenericRuntimeGuardForCyclicSetMemberMutationFixture()
             throws IOException {
+        // given
         JsonNode fixture = resource("snd/c-snd-04.yaml");
 
-        assertDoesNotThrow(
-                () -> new ContractsFixtureHarness()
-                        .execute(fixture, null, false));
+        // when
+        ContractsConformanceProjection projection =
+                new ContractsFixtureHarness()
+                        .execute(fixture, null, false);
+
+        // then
+        assertNotNull(projection);
     }
 
     @Test
-    void selectedReferencedExecutableBodyIsVerifiedAndExecuted()
+    void shouldPassClosedExecutionForFinalRoutingCyclicAndFailureFixtures()
             throws IOException {
+        // given
+        String[] fixtures = {
+                "feed/c-feed-11.yaml",
+                "feed/c-feed-12.yaml",
+                "feed/c-feed-13.yaml",
+                "feed/c-feed-14.yaml",
+                "feed/c-feed-15.yaml",
+                "feed/c-feed-16.yaml",
+                "feed/c-feed-17.yaml",
+                "snd/c-cyc-01.yaml",
+                "snd/c-cyc-02.yaml",
+                "emb/c-cyc-03.yaml",
+                "snd/c-cyc-04.yaml",
+                "fail/c-fail-05.yaml",
+                "init/c-init-06.yaml"
+        };
+
+        // when
+        int executed = 0;
+        for (String fixture : fixtures) {
+            JsonNode input = resource(fixture);
+            new ContractsFixtureHarness()
+                    .execute(input, null, false);
+            executed++;
+        }
+
+        // then
+        assertEquals(fixtures.length, executed);
+    }
+
+    @Test
+    void shouldNotAdmitArbitraryOrderMismatchForDeliveryHintTieOrdinal()
+            throws IOException {
+        // given
+        ObjectNode fixture = (ObjectNode) resource(
+                "feed/c-feed-14.yaml").deepCopy();
+        ((ObjectNode) fixture.path("input")
+                .path("feeder")
+                .path("deliverySnapshot")
+                .get(1)).put("order", 2);
+
+        // when
+        IllegalArgumentException failure = captureFailure(
+                () -> new ContractsFixtureHarness()
+                        .execute(fixture, null, false));
+
+        // then
+        assertEquals(IllegalArgumentException.class,
+                failure.getClass());
+        assertTrue(failure.getMessage().contains(
+                "Delivery hint order mismatch"));
+    }
+
+    @Test
+    void shouldPreventStaleLogicalSourceFromInvalidatingFreshGroupedSource()
+            throws IOException {
+        // given
+        ObjectNode fixture = (ObjectNode) resource(
+                "feed/c-feed-17.yaml").deepCopy();
+        ArrayNode assertions = (ArrayNode) fixture.path("expected")
+                .path("assertions");
+        assertions.removeAll();
+        assertions.addObject()
+                .put("actual", "result.status")
+                .put("op", "present");
+
+        // when
+        ContractsConformanceProjection projection =
+                new ContractsFixtureHarness()
+                        .execute(fixture, null, false);
+
+        // then
+        assertEquals(
+                "success",
+                projection.project("result.status").getValue(),
+                projection.values()::toString);
+    }
+
+    @Test
+    void shouldExecuteInternalEventCycleBeforeLiveGasStopsIt()
+            throws IOException {
+        // given
+        ObjectNode fixture = (ObjectNode) resource(
+                "fail/c-fail-05.yaml").deepCopy();
+        ArrayNode assertions = (ArrayNode) fixture.path("expected")
+                .path("assertions");
+        assertions.removeAll();
+        assertions.addObject()
+                .put("actual", "result.status")
+                .put("op", "present");
+
+        // when
+        ContractsConformanceProjection projection =
+                new ContractsFixtureHarness()
+                        .execute(fixture, null, false);
+
+        // then
+        assertTrue(
+                ((Number) projection.project(
+                        "trace.eventOccurrencesDequeued")
+                        .getValue()).longValue() > 0L,
+                projection.values()::toString);
+    }
+
+    @Test
+    void shouldValidateAndExecuteSelectedReferencedExecutableBody()
+            throws IOException {
+        // given
         ObjectNode fixture = (ObjectNode) resource(
                 "disc/c-disc-03.yaml").deepCopy();
         ObjectNode input =
@@ -112,90 +256,123 @@ class BlueContractsConformanceFixtureTest {
         handler.putObject("result")
                 .put("blueId", bodyBlueId);
 
+        // when
         ContractsConformanceProjection projection =
                 new ContractsFixtureHarness()
                         .execute(fixture, null, false);
+        @SuppressWarnings("unchecked")
+        List<Object> demands = (List<Object>) projection
+                .project("demands.semantic")
+                .getValue();
 
+        // then
         assertEquals(
                 1L,
                 ((Number) projection.project(
                         "result.document.value")
                         .getValue()).longValue(),
                 projection.values()::toString);
-        @SuppressWarnings("unchecked")
-        List<Object> demands = (List<Object>) projection
-                .project("demands.semantic")
-                .getValue();
         assertTrue(demands.contains(bodyBlueId));
     }
 
     @Test
-    void unknownFixtureFieldFailsClosed() throws IOException {
+    void shouldFailClosedForUnknownFixtureField() throws IOException {
+        // given
         ObjectNode fixture = gasFixture();
         fixture.put("undocumented", true);
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> BlueContractsConformanceSuiteRunner
                         .validateFixtureMetadataForTest(fixture));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void unknownOperationFailsClosed() throws IOException {
+    void shouldFailClosedForUnknownOperation() throws IOException {
+        // given
         ObjectNode fixture = gasFixture();
         fixture.put("operation", "invented-operation");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> BlueContractsConformanceSuiteRunner
                         .validateFixtureMetadataForTest(fixture));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void unknownAssertionOperatorFailsClosed() throws IOException {
+    void shouldFailClosedForUnknownAssertionOperator() throws IOException {
+        // given
         ObjectNode fixture = gasFixture();
         firstAssertion(fixture).put("op", "silently-ignore");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> BlueContractsConformanceSuiteRunner
                         .validateFixtureMetadataForTest(fixture));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void unknownProjectionFailsClosed() throws IOException {
+    void shouldFailClosedForUnknownProjection() throws IOException {
+        // given
         ObjectNode fixture = gasFixture();
         firstAssertion(fixture).put(
                 "actual", "trace.undocumentedProjection");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> BlueContractsConformanceSuiteRunner
                         .validateFixtureMetadataForTest(fixture));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void unknownRuntimeControlFailsClosed() throws IOException {
+    void shouldFailClosedForUnknownRuntimeControl() throws IOException {
+        // given
         ObjectNode fixture =
                 (ObjectNode) resource("init/c-init-02.yaml").deepCopy();
         ((ObjectNode) fixture.path("input").path("runtime"))
                 .put("hostMutation", true);
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> BlueContractsConformanceSuiteRunner
                         .validateFixtureMetadataForTest(fixture));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void gasExpectedOutputIsEvaluatedAfterIndependentExecution()
+    void shouldEvaluateGasExpectedOutputAfterIndependentExecution()
             throws IOException {
+        // given
         ObjectNode fixture = gasFixture();
         ((ObjectNode) fixture.path("expected")).put("totalGas", 999L);
 
-        assertThrows(AssertionError.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> new ContractsFixtureHarness()
                         .execute(fixture, null, false));
+
+        // then
+        assertTrue(failure instanceof AssertionError);
     }
 
     @Test
-    void checkpointSubjectVariantIsStaleAndDoesNotInitialize()
+    void shouldTreatCheckpointSubjectVariantAsStaleWithoutInitializing()
             throws IOException {
+        // given
         ObjectNode fixture =
                 (ObjectNode) resource("init/c-init-01.yaml").deepCopy();
         ObjectNode root = (ObjectNode) fixture.path("input").path("root");
@@ -227,17 +404,24 @@ class BlueContractsConformanceFixtureTest {
         status.put("expected", "stale");
         status.put("variant", "stale");
 
-        new ContractsFixtureHarness().execute(fixture, null, false);
+        // when
+        ContractsConformanceProjection projection =
+                new ContractsFixtureHarness()
+                        .execute(fixture, null, false);
+
+        // then
+        assertNotNull(projection);
     }
 
     @Test
-    void checkpointSubjectVariantAcceptsExactObjectAndListSubjects()
+    void shouldAcceptExactObjectAndListSubjectsForCheckpointSubjectVariant()
             throws IOException {
+        // given
         ObjectNode objectSubject = YAML.createObjectNode();
         objectSubject.put("value", "E1");
         ArrayNode listSubject = YAML.createArrayNode();
         listSubject.add("E1");
-
+        List<ObjectNode> fixtures = new ArrayList<>();
         for (JsonNode subject :
                 new JsonNode[]{objectSubject, listSubject}) {
             ObjectNode fixture =
@@ -252,11 +436,22 @@ class BlueContractsConformanceFixtureTest {
             status.put("op", "equals");
             status.put("expected", "stale");
             status.put("variant", "stale");
+            fixtures.add(fixture);
+        }
 
-            assertDoesNotThrow(
+        // when
+        List<Throwable> failures = new ArrayList<>();
+        for (ObjectNode fixture : fixtures) {
+            failures.add(captureFailure(
                     () -> new ContractsFixtureHarness()
-                            .execute(fixture, null, false),
-                    subject.toString());
+                            .execute(fixture, null, false)));
+        }
+
+        // then
+        for (int index = 0; index < failures.size(); index++) {
+            assertTrue(
+                    failures.get(index) == null,
+                    fixtures.get(index).toString());
         }
     }
 
@@ -295,7 +490,11 @@ class BlueContractsConformanceFixtureTest {
                 throw new IllegalStateException(
                         "Missing test resource " + resource);
             }
-            return YAML.readTree(input);
+            LoaderOptions options = new LoaderOptions();
+            options.setAllowDuplicateKeys(false);
+            Object envelope =
+                    new Yaml(new SafeConstructor(options)).load(input);
+            return UncheckedObjectMapper.JSON_MAPPER.valueToTree(envelope);
         }
     }
 }

@@ -19,37 +19,44 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class LimitedCanonicalPatchTest {
 
     @Test
-    void directPatchPreservesCanonicalContentOutsideResolutionLimit() {
+    void shouldPreserveCanonicalContentOutsideResolutionLimitForDirectPatch() {
+        // given
         Blue blue = limitedBlue();
         // The input is already authoritative Canonical Identity Input. Its identity
         // remains complete even though the materialized resolved view is limited.
         ResolvedSnapshot before = blue.loadSnapshot(source());
-        assertLimitedSnapshot(before);
 
+        // when
         ResolvedSnapshot after = blue.applyCanonicalPatch(
                 before, JsonPatch.replace("/a", new Node().value("new")));
 
+        // then
+        assertLimitedSnapshot(before);
         assertEquals("new", after.canonicalNodeAt("/a").getValue());
         assertLimitedSnapshot(after);
     }
 
     @Test
-    void processingPatchPreservesCanonicalContentOutsideResolutionLimit() {
+    void shouldPreserveCanonicalContentOutsideResolutionLimitForProcessingPatch() {
+        // given
         // Processing starts from authoritative Canonical Identity Input, not Source.
         ResolvedSnapshot limited = limitedBlue().loadSnapshot(source());
-        assertLimitedSnapshot(limited);
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(limited, null, passThroughManager());
 
+        // when
         runtime.applyPatch("/", JsonPatch.replace("/a", new Node().value("new")));
-
         ResolvedSnapshot after = runtime.snapshot();
+
+        // then
+        assertLimitedSnapshot(limited);
         assertEquals("new", after.canonicalNodeAt("/a").getValue());
         assertLimitedSnapshot(after);
     }
 
     @Test
-    void processingPatchStructurallySharesLargeUntouchedCanonicalSubtree() {
+    void shouldStructurallyShareLargeUntouchedCanonicalSubtreeForProcessingPatch() {
+        // given
         List<Node> items = new ArrayList<>();
         for (int index = 0; index < 20_000; index++) {
             items.add(new Node().value(index));
@@ -61,10 +68,12 @@ class LimitedCanonicalPatchTest {
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(before, null, passThroughManager());
 
+        // when
         runtime.applyPatch("/",
                 JsonPatch.replace("/changed", new Node().value("new")));
-
         ResolvedSnapshot after = runtime.snapshot();
+
+        // then
         assertEquals("new", after.canonicalNodeAt("/changed").getValue());
         assertSame(before.canonicalAt("/untouched"), after.canonicalAt("/untouched"));
         assertSame(before.resolvedAt("/untouched"), after.resolvedAt("/untouched"));

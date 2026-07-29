@@ -47,17 +47,20 @@ final class InternalEventOccurrenceFifoTest {
             BlueIdCalculator.calculateBlueId(EVENT_D);
 
     @Test
-    void appendDuringDeliveryPreservesGlobalFifoAndContinuesPastTerminatingAncestor() {
+    void shouldPreserveGlobalFifoWhenAppendingDuringDeliveryAndContinuePastTerminatingAncestor() {
+        // given
         ProbeProcessor probe = new ProbeProcessor();
         try (Blue blue = configuredBlue(probe)) {
             Node initialized = blue.initializeDocument(
                     threeLevelDocument()).document();
             probe.clear();
 
+            // when
             DocumentProcessingResult result = blue.processDocument(
                     initialized,
                     new TestEvent().eventId("drive-fifo").toNode());
 
+            // then
             assertEquals(
                     ProcessorStatus.SUCCESS,
                     result.status(),
@@ -128,35 +131,39 @@ final class InternalEventOccurrenceFifoTest {
     }
 
     @Test
-    void rootApplicationEventsArePublicInOrderWithMultiplicity() {
+    void shouldExposeRootApplicationEventsPubliclyInOrderWithMultiplicity() {
+        // given
         ProbeProcessor probe = new ProbeProcessor();
+
+        // when
+        DocumentProcessingResult result;
         try (Blue blue = configuredBlue(probe)) {
-            DocumentProcessingResult result =
+            result =
                     blue.initializeDocument(rootMultiplicityDocument());
-
-            assertEquals(
-                    ProcessorStatus.SUCCESS,
-                    result.status(),
-                    diagnosticMessage(result));
-            assertEquals(
-                    Arrays.asList("root:T:D", "root:T:D"),
-                    probe.order);
-
-            List<Node> publicEvents = result.events();
-            assertEquals(2, publicEvents.size());
-            assertEquals(
-                    EVENT_D_BLUE_ID,
-                    BlueIdCalculator.calculateBlueId(
-                            publicEvents.get(0)));
-            assertEquals(
-                    EVENT_D_BLUE_ID,
-                    BlueIdCalculator.calculateBlueId(
-                            publicEvents.get(1)));
-            assertNotSame(
-                    publicEvents.get(0),
-                    publicEvents.get(1),
-                    "equal Root emissions retain multiplicity as distinct snapshots");
         }
+        List<Node> publicEvents = result.events();
+
+        // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                result.status(),
+                diagnosticMessage(result));
+        assertEquals(
+                Arrays.asList("root:T:D", "root:T:D"),
+                probe.order);
+        assertEquals(2, publicEvents.size());
+        assertEquals(
+                EVENT_D_BLUE_ID,
+                BlueIdCalculator.calculateBlueId(
+                        publicEvents.get(0)));
+        assertEquals(
+                EVENT_D_BLUE_ID,
+                BlueIdCalculator.calculateBlueId(
+                        publicEvents.get(1)));
+        assertNotSame(
+                publicEvents.get(0),
+                publicEvents.get(1),
+                "equal Root emissions retain multiplicity as distinct snapshots");
     }
 
     private static Blue configuredBlue(ProbeProcessor probe) {

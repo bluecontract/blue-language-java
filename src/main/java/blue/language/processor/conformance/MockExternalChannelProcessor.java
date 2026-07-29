@@ -3,17 +3,29 @@ package blue.language.processor.conformance;
 import blue.language.model.Node;
 import blue.language.processor.ChannelEvaluation;
 import blue.language.processor.ChannelEvaluationContext;
+import blue.language.processor.ChannelLookupResult;
 import blue.language.processor.ChannelProcessor;
+import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.utils.BlueIdCalculator;
 
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Closed fixture processor for {@link MockExternalChannel} contracts.
+ */
 public final class MockExternalChannelProcessor implements ChannelProcessor<MockExternalChannel> {
+
+    private static final String OPTIONAL_PAYLOAD_DESCRIPTOR_BLUE_ID =
+            BlueIdCalculator.calculateBlueId(
+                    new Node().description("Optional fixed payload."));
 
     private final ExternalChannelSubscriptionFunctions<MockExternalChannel>
             subscriptionFunctions;
 
+    /** Creates a fixture processor with no checkpoint-subject override. */
     public MockExternalChannelProcessor() {
         this(null);
     }
@@ -23,6 +35,9 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
      * {@code checkpointSubject}. The override is returned by the immutable
      * channel function itself, so execution evidence and processing evaluate
      * the same exact subject.
+     *
+     * @param checkpointSubjectOverride optional subject copied into the
+     *        fixture runtime
      */
     public MockExternalChannelProcessor(
             Node checkpointSubjectOverride) {
@@ -44,7 +59,9 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
 
     @Override
     public ChannelEvaluation evaluate(MockExternalChannel contract, ChannelEvaluationContext context) {
-        String eventSubscriptionKey = eventText(context.event(), "subscriptionKey");
+        String eventSubscriptionKey = eventText(
+                context.event(),
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEY);
         if (contract.getSubscriptionKey() != null
                 && !contract.getSubscriptionKey().equals(eventSubscriptionKey)) {
             return ChannelEvaluation.noMatch();
@@ -52,7 +69,10 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
         if (Boolean.FALSE.equals(contract.getAccept())) {
             return ChannelEvaluation.noMatch();
         }
-        Node payload = contract.getPayload() != null ? contract.getPayload().clone() : context.event();
+        Node declaredPayload = declaredPayload(contract);
+        Node payload = declaredPayload != null
+                ? declaredPayload.clone()
+                : context.event();
         return ChannelEvaluation.match(payload, null);
     }
 
@@ -81,7 +101,31 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
 
         @Override
         public List<String> channelKeys(
-                MockExternalChannel immutableContractSnapshot) {
+                MockExternalChannel immutableContractSnapshot,
+                ExternalChannelFunctionContext context) {
+            String dependencyMode =
+                    immutableContractSnapshot.getDependencyMode();
+            if (ContractsFixtureConstants.DependencyMode.CATALOG.equals(
+                    dependencyMode)) {
+                context.dependOnSameScopeChannelCatalog();
+            } else if (ContractsFixtureConstants.DependencyMode.EXACT.equals(
+                    dependencyMode)) {
+                String dependency =
+                        immutableContractSnapshot
+                                .getDependentChannelKey();
+                if (dependency == null || dependency.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "dependencyMode exact requires "
+                                    + "dependentChannelKey");
+                }
+                context.dependOnSameScopeChannel(dependency);
+            } else if (dependencyMode != null
+                    && !ContractsFixtureConstants.DependencyMode.NONE.equals(
+                            dependencyMode)) {
+                throw new IllegalArgumentException(
+                        "Unsupported dependencyMode: "
+                                + dependencyMode);
+            }
             String key =
                     immutableContractSnapshot.getSubscriptionKey();
             return key != null && !key.isEmpty()
@@ -98,11 +142,29 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
         @Override
         public boolean accepts(
                 MockExternalChannel immutableContractSnapshot,
-                Node exactEvent) {
-            return !Boolean.FALSE.equals(
+                Node exactEvent,
+                ExternalChannelFunctionContext context) {
+            if (Boolean.FALSE.equals(
                     immutableContractSnapshot.getAccept())
-                    && preselects(
-                    immutableContractSnapshot, exactEvent);
+                    || !immutableContractSnapshot
+                    .getSubscriptionKey()
+                    .equals(eventText(
+                            exactEvent,
+                            ProcessorContractConstants.KEY_SUBSCRIPTION_KEY))) {
+                return false;
+            }
+            String requested =
+                    immutableContractSnapshot
+                            .getHandlerChannelKey();
+            if (requested == null
+                    || requested.isEmpty()
+                    || Boolean.TRUE.equals(
+                    immutableContractSnapshot
+                            .getFallbackToSourceOnAbsentOrNonChannel())) {
+                return true;
+            }
+            return context.lookupChannel(requested)
+                    .isChannel();
         }
 
         @Override
@@ -110,7 +172,8 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
                 MockExternalChannel immutableContractSnapshot,
                 Node exactEvent) {
             Node declared =
-                    immutableContractSnapshot.getPayload();
+                    declaredPayload(
+                            immutableContractSnapshot);
             return declared != null
                     ? declared.clone()
                     : ExternalChannelSubscriptionFunctions.super
@@ -132,5 +195,64 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
                             exactEvent,
                             exactPayload);
         }
+
+        @Override
+        public String handlerChannelKey(
+                MockExternalChannel immutableContractSnapshot,
+                Node exactEvent,
+                Node exactPayload,
+                ExternalChannelFunctionContext context) {
+            String requested =
+                    immutableContractSnapshot
+                            .getHandlerChannelKey();
+            if (requested == null || requested.isEmpty()) {
+                return context.channelKey();
+            }
+            ChannelLookupResult lookup =
+                    context.lookupChannel(requested);
+            if (lookup.isChannel()) {
+                return lookup.channel().get().channelKey();
+            }
+            if (Boolean.TRUE.equals(
+                    immutableContractSnapshot
+                            .getFallbackToSourceOnAbsentOrNonChannel())) {
+                return context.channelKey();
+            }
+            throw new IllegalStateException(
+                    "Rejected scripted handler target reached routing: "
+                            + requested + ":" + lookup.kind());
+        }
+
+        @Override
+        public String logicalDeliveryKey(
+                MockExternalChannel immutableContractSnapshot,
+                Node exactEvent,
+                Node exactPayload,
+                ExternalChannelFunctionContext context) {
+            String logicalKey =
+                    immutableContractSnapshot
+                            .getLogicalDeliveryKey();
+            return logicalKey != null && !logicalKey.isEmpty()
+                    ? logicalKey
+                    : context.channelKey();
+        }
+    }
+
+    /**
+     * The resolved runtime type contributes its descriptive field declaration
+     * when an optional arbitrary-Node payload is absent. That declaration is
+     * schema metadata, not a fixed payload. Exact authored payloads remain
+     * untouched, including every non-descriptor Node shape.
+     */
+    private static Node declaredPayload(
+            MockExternalChannel contract) {
+        Node payload = contract != null
+                ? contract.getPayload()
+                : null;
+        return payload != null
+                && OPTIONAL_PAYLOAD_DESCRIPTOR_BLUE_ID.equals(
+                BlueIdCalculator.calculateBlueId(payload))
+                ? null
+                : payload;
     }
 }

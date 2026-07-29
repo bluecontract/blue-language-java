@@ -48,8 +48,11 @@ jobs:
       - name: Configure reproducible build timestamp
         run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
 
-      - name: Execute Gradle build
-        run: ./gradlew clean build rcVerify jmhClasses
+      - name: Execute clean Gradle build
+        run: ./gradlew clean build
+
+      - name: Execute RC verification
+        run: ./gradlew rcVerify
 
       - name: Verify reproducible source release
         run: |

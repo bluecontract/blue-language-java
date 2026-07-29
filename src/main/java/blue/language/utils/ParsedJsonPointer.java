@@ -27,6 +27,12 @@ public final class ParsedJsonPointer implements Comparable<ParsedJsonPointer> {
         this.hashCode = pointer.hashCode();
     }
 
+    /**
+     * Parses and canonicalizes a JSON Pointer.
+     *
+     * @param pointer pointer to parse
+     * @return immutable canonical parsed pointer
+     */
     public static ParsedJsonPointer parse(String pointer) {
         List<String> decoded = JsonPointer.split(pointer);
         if (decoded.isEmpty()) {
@@ -36,6 +42,12 @@ public final class ParsedJsonPointer implements Comparable<ParsedJsonPointer> {
         return new ParsedJsonPointer(JsonPointer.toPointer(immutable), immutable);
     }
 
+    /**
+     * Creates a canonical pointer from decoded path segments.
+     *
+     * @param segments decoded path segments
+     * @return immutable canonical parsed pointer
+     */
     public static ParsedJsonPointer ofSegments(List<String> segments) {
         if (segments == null || segments.isEmpty()) {
             return ROOT;
@@ -44,33 +56,68 @@ public final class ParsedJsonPointer implements Comparable<ParsedJsonPointer> {
         return new ParsedJsonPointer(JsonPointer.toPointer(copy), copy);
     }
 
+    /**
+     * Returns the canonical encoded pointer.
+     *
+     * @return canonical pointer text
+     */
     public String pointer() {
         return pointer;
     }
 
-    /** Returns an unmodifiable list of decoded pointer segments. */
+    /**
+     * Returns the decoded pointer segments.
+     *
+     * @return unmodifiable ordered segment list
+     */
     public List<String> segments() {
         return segments;
     }
 
+    /**
+     * Returns the number of path segments.
+     *
+     * @return non-negative pointer depth
+     */
     public int depth() {
         return segments.size();
     }
 
+    /**
+     * Reports whether this pointer denotes the root.
+     *
+     * @return {@code true} when the pointer has no segments
+     */
     public boolean isRoot() {
         return segments.isEmpty();
     }
 
+    /**
+     * Returns the final decoded path segment.
+     *
+     * @return leaf segment, or {@code null} for the root
+     */
     public String leaf() {
         return segments.isEmpty() ? null : segments.get(segments.size() - 1);
     }
 
+    /**
+     * Returns the canonical parent pointer.
+     *
+     * @return parent pointer, or this root pointer when already at the root
+     */
     public ParsedJsonPointer parent() {
         return segments.isEmpty()
                 ? this
                 : ofSegments(segments.subList(0, segments.size() - 1));
     }
 
+    /**
+     * Appends one decoded segment.
+     *
+     * @param decodedSegment decoded segment to append
+     * @return new canonical child pointer
+     */
     public ParsedJsonPointer append(String decodedSegment) {
         List<String> next = new ArrayList<>(segments.size() + 1);
         next.addAll(segments);
@@ -78,6 +125,12 @@ public final class ParsedJsonPointer implements Comparable<ParsedJsonPointer> {
         return ofSegments(next);
     }
 
+    /**
+     * Tests whether this pointer is equal to or an ancestor of a candidate.
+     *
+     * @param candidate candidate pointer
+     * @return {@code true} when every segment of this pointer prefixes the candidate
+     */
     public boolean isAncestorOfOrEqual(ParsedJsonPointer candidate) {
         Objects.requireNonNull(candidate, "candidate");
         if (segments.size() > candidate.segments.size()) {
@@ -91,27 +144,46 @@ public final class ParsedJsonPointer implements Comparable<ParsedJsonPointer> {
         return true;
     }
 
+    /**
+     * Tests whether either pointer is an ancestor of the other.
+     *
+     * @param other pointer to compare
+     * @return {@code true} when the pointers overlap
+     */
     public boolean overlaps(ParsedJsonPointer other) {
         Objects.requireNonNull(other, "other");
         return isAncestorOfOrEqual(other) || other.isAncestorOfOrEqual(this);
     }
 
+    /**
+     * Reports whether the leaf denotes an array index or append position.
+     *
+     * @return {@code true} when the leaf is numeric or {@code "-"}
+     */
     public boolean hasArrayIndexLeaf() {
         String leaf = leaf();
         return leaf != null && JsonPointer.isArrayIndexSegment(leaf);
     }
 
+    /**
+     * Reports whether the leaf is the array append marker.
+     *
+     * @return {@code true} when the leaf is {@code "-"}
+     */
     public boolean isAppend() {
-        return "-".equals(leaf());
+        return JsonPointer.ARRAY_APPEND.equals(leaf());
     }
 
     /**
      * Returns the non-negative numeric leaf, or {@code -1} when the leaf is
      * root, append, non-numeric, negative, or outside the {@code int} range.
+     *
+     * @return non-negative array index, or {@code -1} when unavailable
      */
     public int arrayIndex() {
         String leaf = leaf();
-        if (leaf == null || "-".equals(leaf)) {
+        if (leaf == null
+                || JsonPointer.ARRAY_APPEND.equals(leaf)) {
             return -1;
         }
         try {

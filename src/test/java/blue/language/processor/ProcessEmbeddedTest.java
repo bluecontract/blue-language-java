@@ -17,6 +17,10 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 
+import static blue.language.processor.util.ProcessorContractConstants.KEY_DOCUMENT;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_EMBEDDED;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_INITIALIZED;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_PATHS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -26,7 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProcessEmbeddedTest {
 
     @Test
-    void initializesEmbeddedChildDocument() {
+    void shouldInitializeEmbeddedChildDocument() {
+        // given
         String yaml = "name: Sample Doc\n" +
                 "x:\n" +
                 "  name: Sample Sub Doc\n" +
@@ -38,7 +43,7 @@ class ProcessEmbeddedTest {
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "      type:\n" +
                 "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      propertyKey: /a\n" +
@@ -49,233 +54,158 @@ class ProcessEmbeddedTest {
                 "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /x\n";
-
         Blue blue = ProcessorTestSupport.blue();
-        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        blue.registerContractProcessor(
+                new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
+
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node initialized = result.document();
-
         Node child = initialized.getProperties().get("x");
-        assertNotNull(child, "Embedded child should remain present");
         Node childContracts = child.getContracts();
+        Node childMarker = childContracts.getProperties()
+                .get(KEY_INITIALIZED);
+        Node childMarkerDocument =
+                childMarker.getProperties().get(KEY_DOCUMENT);
+        Node rootContracts = initialized.getContracts();
+        Node rootMarker = rootContracts.getProperties()
+                .get(KEY_INITIALIZED);
+        Node rootMarkerDocument =
+                rootMarker.getProperties().get(KEY_DOCUMENT);
+
+        // then
+        assertNotNull(child, "Embedded child should remain present");
         assertNotNull(childContracts, "Child contracts map should exist");
-        assertTrue(childContracts.getProperties().containsKey("initialized"),
+        assertTrue(childContracts.getProperties().containsKey(KEY_INITIALIZED),
                 "Child scope must record Initialization Marker");
-        Node childMarker = childContracts.getProperties().get("initialized");
-        Node childMarkerDocId = childMarker.getProperties().get("documentId");
-        assertNotNull(childMarkerDocId);
-        assertNotNull(childMarkerDocId.getValue());
+        assertNotNull(childMarkerDocument);
         assertEquals(new BigInteger("1"), child.getProperties().get("a").getValue(),
                 "Child property /x/a should be set by embedded handler");
 
-        Node rootContracts = initialized.getContracts();
         assertNotNull(rootContracts, "Root contracts map should exist");
-        assertTrue(rootContracts.getProperties().containsKey("initialized"),
+        assertTrue(rootContracts.getProperties().containsKey(KEY_INITIALIZED),
                 "Root scope must record Initialization Marker");
-        Node rootMarker = rootContracts.getProperties().get("initialized");
-        Node rootMarkerDocId = rootMarker.getProperties().get("documentId");
-        assertNotNull(rootMarkerDocId);
-        assertNotNull(rootMarkerDocId.getValue());
-        assertFalse(rootMarkerDocId.getValue().equals(childMarkerDocId.getValue()));
+        assertNotNull(rootMarkerDocument);
+        assertFalse(rootMarkerDocument.toString()
+                .equals(childMarkerDocument.toString()));
 
         assertTrue(result.events().isEmpty(),
                 "processor-generated initialization lifecycle is local");
     }
 
     @Test
-    void rootScopeCannotModifyEmbeddedInterior() {
-        String allowedYaml = "name: Sample Doc\n" +
-                "x:\n" +
-                "  name: Sample Sub Doc\n" +
-                "  contracts:\n" +
-                "    life:\n" +
-                "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                "    setX:\n" +
-                "      channel: life\n" +
-                "      event:\n" +
-                "        type:\n" +
-                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "      propertyKey: /a\n" +
-                "      propertyValue: 1\n" +
-                "contracts:\n" +
-                "  rootLife:\n" +
-                "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                "  embedded:\n" +
-                "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
-                "    paths:\n" +
-                "      - /x\n" +
-                "  setRootY:\n" +
-                "    channel: rootLife\n" +
-                "    event:\n" +
-                "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "    propertyKey: /y\n" +
-                "    propertyValue: 1\n";
-
-        String forbiddenYaml = allowedYaml +
-                "  setChildInterior:\n" +
-                "    order: 1\n" +
-                "    channel: rootLife\n" +
-                "    event:\n" +
-                "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "    propertyKey: /x/b\n" +
-                "    propertyValue: 1\n";
-
+    void shouldAllowRootScopeToModifyOutsideEmbeddedInterior() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(rootBoundaryYaml());
 
-        Node allowed = blue.yamlToNode(allowedYaml);
-        DocumentProcessingResult allowedResult = blue.initializeDocument(allowed);
-        Node initializedAllowed = allowedResult.document();
-        assertEquals(new BigInteger("1"), initializedAllowed.getProperties().get("y").getValue());
+        // when
+        DocumentProcessingResult result = blue.initializeDocument(document);
 
-        Node forbidden = blue.yamlToNode(forbiddenYaml);
-        DocumentProcessingResult forbiddenResult = blue.initializeDocument(forbidden);
-        assertRolledBack(forbidden, forbiddenResult);
+        // then
+        assertEquals(
+                new BigInteger("1"),
+                result.document().getProperties().get("y").getValue());
     }
 
     @Test
-    void nestedEmbeddedScopesEnforceBoundaries() {
-        String nestedYaml = "name: Nested Doc\n" +
-                "x:\n" +
-                "  name: X Doc\n" +
-                "  y:\n" +
-                "    name: Y Doc\n" +
-                "    contracts:\n" +
-                "      life:\n" +
-                "        type:\n" +
-                "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                "      setY:\n" +
-                "        channel: life\n" +
-                "        event:\n" +
-                "          type:\n" +
-                "            blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "        type:\n" +
-                "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "        propertyKey: /a\n" +
-                "        propertyValue: 1\n" +
-                "  contracts:\n" +
-                "    life:\n" +
-                "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                "    embedded:\n" +
-                "      type:\n" +
-                "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
-                "      paths:\n" +
-                "        - /y\n" +
-                "contracts:\n" +
-                "  embedded:\n" +
-                "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
-                "    paths:\n" +
-                "      - /x\n" +
-                "  life:\n" +
-                "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n";
-
-        String rootViolationYaml = nestedYaml +
-                "  setDeep:\n" +
-                "    channel: life\n" +
-                "    event:\n" +
-                "      type:\n" +
-                "        blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "    propertyKey: /x/y/a\n" +
-                "    propertyValue: 2\n";
-
-        String parentScopeViolationYaml = "name: Nested Doc\n" +
-                "x:\n" +
-                "  name: X Doc\n" +
-                "  y:\n" +
-                "    name: Y Doc\n" +
-                "    contracts:\n" +
-                "      life:\n" +
-                "        type:\n" +
-                "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                "      setY:\n" +
-                "        channel: life\n" +
-                "        event:\n" +
-                "          type:\n" +
-                "            blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "        type:\n" +
-                "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "        propertyKey: /a\n" +
-                "        propertyValue: 1\n" +
-                "  contracts:\n" +
-                "    life:\n" +
-                "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
-                "    embedded:\n" +
-                "      type:\n" +
-                "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
-                "      paths:\n" +
-                "        - /y\n" +
-                "    setIllegalFromX:\n" +
-                "      channel: life\n" +
-                "      order: 1\n" +
-                "      event:\n" +
-                "        type:\n" +
-                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
-                "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "      propertyKey: /y/a\n" +
-                "      propertyValue: 2\n" +
-                "contracts:\n" +
-                "  embedded:\n" +
-                "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
-                "    paths:\n" +
-                "      - /x\n" +
-                "  life:\n" +
-                "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n";
-
+    void shouldRejectRootScopeModificationInsideEmbeddedInterior() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(
+                rootBoundaryYaml()
+                        + "  setChildInterior:\n"
+                        + "    order: 1\n"
+                        + "    channel: rootLife\n"
+                        + "    event:\n"
+                        + "      type:\n"
+                        + "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                        + "    type:\n"
+                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "    propertyKey: /x/b\n"
+                        + "    propertyValue: 1\n");
 
-        Node nested = blue.yamlToNode(nestedYaml);
-        DocumentProcessingResult nestedResult = blue.initializeDocument(nested);
-        Node initialized = nestedResult.document();
+        // when
+        DocumentProcessingResult result = blue.initializeDocument(document);
 
+        // then
+        assertRolledBack(document, result);
+    }
+
+    @Test
+    void shouldInitializeEveryNestedEmbeddedScopeWithoutMutatingSource() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node source = blue.yamlToNode(nestedEmbeddedYaml());
+
+        // when
+        DocumentProcessingResult result = blue.initializeDocument(source);
+        Node initialized = result.document();
         Node xNode = initialized.getProperties().get("x");
-        assertNotNull(xNode);
         Node xContracts = xNode.getContracts();
-        assertNotNull(xContracts);
-        assertTrue(xContracts.getProperties().containsKey("initialized"));
-
         Node yNode = xNode.getProperties().get("y");
-        assertNotNull(yNode);
         Node yContracts = yNode.getContracts();
+        Node originalY = source.getProperties()
+                .get("x").getProperties().get("y");
+
+        // then
+        assertNotNull(xNode);
+        assertNotNull(xContracts);
+        assertTrue(xContracts.getProperties().containsKey(KEY_INITIALIZED));
+
+        assertNotNull(yNode);
         assertNotNull(yContracts);
-        assertTrue(yContracts.getProperties().containsKey("initialized"));
+        assertTrue(yContracts.getProperties().containsKey(KEY_INITIALIZED));
         assertEquals(new BigInteger("1"), yNode.getProperties().get("a").getValue());
 
-        Node originalY = nested.getProperties().get("x").getProperties().get("y");
         assertNull(originalY.getProperties() != null ? originalY.getProperties().get("a") : null);
-
-        Node rootViolation = blue.yamlToNode(rootViolationYaml);
-        DocumentProcessingResult rootResult = blue.initializeDocument(rootViolation);
-        assertRolledBack(rootViolation, rootResult);
-
-        Node parentScopeViolation = blue.yamlToNode(parentScopeViolationYaml);
-        DocumentProcessingResult parentResult = blue.initializeDocument(parentScopeViolation);
-        assertRolledBack(parentScopeViolation, parentResult);
     }
 
     @Test
-    void embeddedListUpdatesProcessNewChildAfterCurrentScopeFinishes() {
+    void shouldRejectRootMutationAcrossNestedEmbeddedBoundary() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(
+                nestedEmbeddedYaml()
+                        + "  setDeep:\n"
+                        + "    channel: life\n"
+                        + "    event:\n"
+                        + "      type:\n"
+                        + "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                        + "    type:\n"
+                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "    propertyKey: /x/y/a\n"
+                        + "    propertyValue: 2\n");
+
+        // when
+        DocumentProcessingResult result = blue.initializeDocument(document);
+
+        // then
+        assertRolledBack(document, result);
+    }
+
+    @Test
+    void shouldRejectParentMutationAcrossNestedEmbeddedBoundary() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(parentScopeViolationYaml());
+
+        // when
+        DocumentProcessingResult result = blue.initializeDocument(document);
+
+        // then
+        assertRolledBack(document, result);
+    }
+
+    @Test
+    void shouldVerifyEmbeddedListUpdatesProcessNewChildAfterCurrentScopeFinishes() {
+        // given
         String yaml = "name: Sample Doc\n" +
                 "a:\n" +
                 "  name: Doc A\n" +
@@ -287,7 +217,7 @@ class ProcessEmbeddedTest {
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "      type:\n" +
                 "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      propertyKey: /x\n" +
@@ -302,7 +232,7 @@ class ProcessEmbeddedTest {
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "      type:\n" +
                 "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      propertyKey: /x\n" +
@@ -317,7 +247,7 @@ class ProcessEmbeddedTest {
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: D22KJkwmKNhTXK3nPRdamypvnEAzaG3VAXJgFwHbLUQt\n" +
+                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
                 "      type:\n" +
                 "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
                 "      propertyKey: /x\n" +
@@ -361,16 +291,94 @@ class ProcessEmbeddedTest {
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new MutateEmbeddedPathsContractProcessor());
-
         Node original = blue.yamlToNode(yaml);
+
+        // when
         DocumentProcessingResult result = blue.initializeDocument(original);
-        Node document = result.document();
-        Node rootTerminated = terminatedMarker(document, "/");
-        assertNull(rootTerminated);
+
+        // then
+        assertNull(terminatedMarker(result.document(), "/"));
     }
 
     @Test
-    void embeddedListUpdatesAffectOnlyLaterExternalEvents() {
+    void shouldInitializeConfiguredEmbeddedMembership() {
+        // given
+        String currentEventId = "evt-current-membership";
+        String laterEventId = "evt-later-membership";
+
+        // when
+        EmbeddedMembershipObservation observation =
+                observeEmbeddedMembershipUpdates(
+                        currentEventId, laterEventId);
+        Node initialPaths = observation.initialized.getContracts()
+                .getProperties().get(KEY_EMBEDDED)
+                .getProperties().get(KEY_PATHS);
+
+        // then
+        assertNotNull(initialPaths);
+        assertEquals(2, initialPaths.getItems().size());
+        assertEquals("/a", initialPaths.getItems().get(0).getValue());
+        assertEquals("/b", initialPaths.getItems().get(1).getValue());
+        assertNull(observation.initialized.getProperties()
+                .get("itShouldHappen"));
+        assertNull(observation.initialized.getProperties()
+                .get("mustNotHappen"));
+    }
+
+    @Test
+    void shouldKeepCurrentExternalEventOnFrozenEmbeddedMembership() {
+        // given
+        String currentEventId = "evt-current-membership";
+        String laterEventId = "evt-later-membership";
+
+        // when
+        EmbeddedMembershipObservation observation =
+                observeEmbeddedMembershipUpdates(
+                        currentEventId, laterEventId);
+        Node afterFirst = observation.afterFirst;
+        Node updatedPaths = afterFirst.getContracts()
+                .getProperties().get(KEY_EMBEDDED)
+                .getProperties().get(KEY_PATHS);
+        Node cAfterFirst = afterFirst.getProperties().get("c");
+
+        // then
+        assertNull(terminatedMarker(afterFirst, "/"));
+        assertEquals(1, updatedPaths.getItems().size());
+        assertEquals("/c", updatedPaths.getItems().get(0).getValue());
+        assertNull(afterFirst.getProperties().get("itShouldHappen"),
+                "the new /c membership must not affect the current event");
+        assertNull(afterFirst.getProperties().get("mustNotHappen"),
+                "the removed /b scope cannot run after it is cut off");
+        assertTrue(cAfterFirst.getProperties() == null
+                        || cAfterFirst.getProperties().get("x") == null,
+                "the new /c membership must not execute until the next event");
+    }
+
+    @Test
+    void shouldApplyUpdatedEmbeddedMembershipToLaterExternalEvent() {
+        // given
+        String currentEventId = "evt-current-membership";
+        String laterEventId = "evt-later-membership";
+
+        // when
+        EmbeddedMembershipObservation observation =
+                observeEmbeddedMembershipUpdates(
+                        currentEventId, laterEventId);
+        Node afterSecond = observation.afterSecond;
+
+        // then
+        assertEquals(new BigInteger("1"),
+                afterSecond.getProperties().get("c")
+                        .getProperties().get("x").getValue());
+        assertNotNull(afterSecond.getProperties().get("itShouldHappen"),
+                observation.secondResult.status() + ": "
+                        + diagnosticMessage(observation.secondResult)
+                        + "\n" + observation.blue.nodeToYaml(afterSecond));
+    }
+
+    private EmbeddedMembershipObservation observeEmbeddedMembershipUpdates(
+            String currentEventId,
+            String laterEventId) {
         String yaml = "name: Sample Doc\n" +
                 "a:\n" +
                 "  name: Doc A\n" +
@@ -455,52 +463,24 @@ class ProcessEmbeddedTest {
         DocumentProcessingResult initResult = blue.initializeDocument(original);
         Node initialized = initResult.document();
 
-        Node initialContracts = initialized.getContracts();
-        Node initialEmbedded = initialContracts.getProperties().get("embedded");
-        Node initialPaths = initialEmbedded.getProperties().get("paths");
-        assertNotNull(initialPaths);
-        assertEquals(2, initialPaths.getItems().size());
-        assertEquals("/a", initialPaths.getItems().get(0).getValue());
-        assertEquals("/b", initialPaths.getItems().get(1).getValue());
-        assertNull(initialized.getProperties().get("itShouldHappen"));
-        assertNull(initialized.getProperties().get("mustNotHappen"));
-
         Node firstEvent = blue.objectToNode(
-                new TestEvent().eventId("evt-current-membership"));
+                new TestEvent().eventId(currentEventId));
         DocumentProcessingResult firstResult =
                 blue.processDocument(initialized, firstEvent);
         Node afterFirst = firstResult.document();
-        Node rootTerminated = terminatedMarker(afterFirst, "/");
-        assertNull(rootTerminated);
-        Node updatedPaths = afterFirst.getContracts()
-                .getProperties().get("embedded")
-                .getProperties().get("paths");
-        assertEquals(1, updatedPaths.getItems().size());
-        assertEquals("/c", updatedPaths.getItems().get(0).getValue());
-        assertNull(afterFirst.getProperties().get("itShouldHappen"),
-                "the new /c membership must not affect the current event");
-        assertNull(afterFirst.getProperties().get("mustNotHappen"),
-                "the removed /b scope cannot run after it is cut off");
-        Node cAfterFirst = afterFirst.getProperties().get("c");
-        assertTrue(cAfterFirst.getProperties() == null
-                        || cAfterFirst.getProperties().get("x") == null,
-                "the new /c membership must not execute until the next event");
 
         Node secondEvent = blue.objectToNode(
-                new TestEvent().eventId("evt-later-membership"));
+                new TestEvent().eventId(laterEventId));
         DocumentProcessingResult secondResult =
                 blue.processDocument(afterFirst, secondEvent);
         Node afterSecond = secondResult.document();
-        assertEquals(new BigInteger("1"),
-                afterSecond.getProperties().get("c")
-                        .getProperties().get("x").getValue());
-        assertNotNull(afterSecond.getProperties().get("itShouldHappen"),
-                secondResult.status() + ": " + diagnosticMessage(secondResult)
-                        + "\n" + blue.nodeToYaml(afterSecond));
+        return new EmbeddedMembershipObservation(
+                blue, initialized, afterFirst, afterSecond, secondResult);
     }
 
     @Test
-    void actualBalloonCutOffStillStopsFurtherEffects() {
+    void shouldVerifyActualBalloonCutOffStillStopsFurtherEffects() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(
                 DocumentProcessorExactFeederSupport.testEventChannelProcessor());
@@ -563,10 +543,17 @@ class ProcessEmbeddedTest {
         Node source = blue.yamlToNode(yaml);
         Node initialized = blue.initializeDocument(source).document();
 
+        // when
         Node event = blue.objectToNode(new TestEvent().eventId("evt-1"));
         DocumentProcessingResult result = blue.processDocument(initialized, event);
         Node processed = result.document();
+        boolean postEmissionRecorded = result.events().stream()
+                .map(Node::getProperties)
+                .filter(props -> props != null && props.get("kind") != null)
+                .anyMatch(props -> "post".equals(
+                        props.get("kind").getValue()));
 
+        // then
         assertNull(processed.getProperties() != null ? processed.getProperties().get("child") : null,
                 "Child scope should remain removed after cut-off; status="
                         + result.status() + ", reason="
@@ -576,15 +563,12 @@ class ProcessEmbeddedTest {
         assertNull(processed.getProperties() != null ? processed.getProperties().get("postSeen") : null,
                 "No post-cut-off emission should be bridged");
 
-        boolean postEmissionRecorded = result.events().stream()
-                .map(Node::getProperties)
-                .filter(props -> props != null && props.get("kind") != null)
-                .anyMatch(props -> "post".equals(props.get("kind").getValue()));
         assertFalse(postEmissionRecorded, "Post-cut-off emission must not reach root events");
     }
 
     @Test
-    void embeddedPathSlashFailsAtomicallyWithoutACommittedTerminationMarker() {
+    void shouldVerifyEmbeddedPathSlashFailsAtomicallyWithoutACommittedTerminationMarker() {
+        // given
         String yaml = "name: Self Embedded\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
@@ -592,11 +576,13 @@ class ProcessEmbeddedTest {
                 "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /\n";
-
         Blue blue = ProcessorTestSupport.blue();
         Node input = blue.yamlToNode(yaml);
+
+        // when
         DocumentProcessingResult result = blue.initializeDocument(input);
 
+        // then
         assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
                 result.status(), diagnosticMessage(result));
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
@@ -608,7 +594,8 @@ class ProcessEmbeddedTest {
     }
 
     @Test
-    void duplicateEmbeddedPathsAreRejected() {
+    void shouldVerifyDuplicateEmbeddedPathsAreRejected() {
+        // given
         String yaml = "name: Duplicate Embedded\n" +
                 "child:\n" +
                 "  name: Child\n" +
@@ -619,18 +606,21 @@ class ProcessEmbeddedTest {
                 "    paths:\n" +
                 "      - /child\n" +
                 "      - /child\n";
-
         Blue blue = ProcessorTestSupport.blue();
         Node input = blue.yamlToNode(yaml);
+
+        // when
         DocumentProcessingResult result = blue.initializeDocument(input);
 
+        // then
         assertTrue(isCapabilityFailure(result));
         assertTrue(diagnosticMessage(result).contains("Unique items"));
         assertEquals(input.toString(), result.document().toString());
     }
 
     @Test
-    void embeddedPathSelectingNonObjectFailsAtomically() {
+    void shouldVerifyEmbeddedPathSelectingNonObjectFailsAtomically() {
+        // given
         String yaml = "name: Scalar Embedded\n" +
                 "child: scalar\n" +
                 "contracts:\n" +
@@ -639,16 +629,19 @@ class ProcessEmbeddedTest {
                 "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /child\n";
-
         Blue blue = ProcessorTestSupport.blue();
         Node input = blue.yamlToNode(yaml);
+
+        // when
         DocumentProcessingResult result = blue.initializeDocument(input);
 
+        // then
         assertRolledBack(input, result);
     }
 
     @Test
-    void embeddedPathSelectingPureReferenceIsBoundaryViolationBeforeInitialization() {
+    void shouldVerifyEmbeddedPathSelectingPureReferenceIsBoundaryViolationBeforeInitialization() {
+        // given
         Node childType = new Node()
                 .name("Referenced Embedded Context Type")
                 .properties("inherited", new Node().value("forces typed materialization"));
@@ -674,10 +667,14 @@ class ProcessEmbeddedTest {
                 "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n";
-
         Blue blue = ProcessorTestSupport.blue(provider);
-        DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
+        Node input = blue.yamlToNode(yaml);
 
+        // when
+        DocumentProcessingResult result =
+                blue.initializeDocument(input);
+
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), diagnosticMessage(result));
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
                 diagnosticCategory(result), diagnosticMessage(result));
@@ -688,7 +685,8 @@ class ProcessEmbeddedTest {
     }
 
     @Test
-    void rejectsMultipleProcessEmbeddedMarkersWithinScope() {
+    void shouldRejectMultipleProcessEmbeddedMarkersWithinScope() {
+        // given
         String yaml = "name: Multi Embedded Doc\n" +
                 "x:\n" +
                 "  name: X Doc\n" +
@@ -705,11 +703,13 @@ class ProcessEmbeddedTest {
                 "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
                 "    paths:\n" +
                 "      - /y\n";
-
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(document);
+
+        // then
         assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
                 result.status(), diagnosticMessage(result));
         assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
@@ -718,6 +718,152 @@ class ProcessEmbeddedTest {
         assertFalse(result.commits());
         assertTrue(result.events().isEmpty());
         assertEquals(document.toString(), result.document().toString());
+    }
+
+    private String rootBoundaryYaml() {
+        return "name: Sample Doc\n"
+                + "x:\n"
+                + "  name: Sample Sub Doc\n"
+                + "  contracts:\n"
+                + "    life:\n"
+                + "      type:\n"
+                + "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "    setX:\n"
+                + "      channel: life\n"
+                + "      event:\n"
+                + "        type:\n"
+                + "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "      type:\n"
+                + "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "      propertyKey: /a\n"
+                + "      propertyValue: 1\n"
+                + "contracts:\n"
+                + "  rootLife:\n"
+                + "    type:\n"
+                + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "  embedded:\n"
+                + "    type:\n"
+                + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "    paths:\n"
+                + "      - /x\n"
+                + "  setRootY:\n"
+                + "    channel: rootLife\n"
+                + "    event:\n"
+                + "      type:\n"
+                + "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "    type:\n"
+                + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "    propertyKey: /y\n"
+                + "    propertyValue: 1\n";
+    }
+
+    private String nestedEmbeddedYaml() {
+        return "name: Nested Doc\n"
+                + "x:\n"
+                + "  name: X Doc\n"
+                + "  y:\n"
+                + "    name: Y Doc\n"
+                + "    contracts:\n"
+                + "      life:\n"
+                + "        type:\n"
+                + "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "      setY:\n"
+                + "        channel: life\n"
+                + "        event:\n"
+                + "          type:\n"
+                + "            blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "        type:\n"
+                + "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "        propertyKey: /a\n"
+                + "        propertyValue: 1\n"
+                + "  contracts:\n"
+                + "    life:\n"
+                + "      type:\n"
+                + "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "    embedded:\n"
+                + "      type:\n"
+                + "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "      paths:\n"
+                + "        - /y\n"
+                + "contracts:\n"
+                + "  embedded:\n"
+                + "    type:\n"
+                + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "    paths:\n"
+                + "      - /x\n"
+                + "  life:\n"
+                + "    type:\n"
+                + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n";
+    }
+
+    private String parentScopeViolationYaml() {
+        return "name: Nested Doc\n"
+                + "x:\n"
+                + "  name: X Doc\n"
+                + "  y:\n"
+                + "    name: Y Doc\n"
+                + "    contracts:\n"
+                + "      life:\n"
+                + "        type:\n"
+                + "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "      setY:\n"
+                + "        channel: life\n"
+                + "        event:\n"
+                + "          type:\n"
+                + "            blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "        type:\n"
+                + "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "        propertyKey: /a\n"
+                + "        propertyValue: 1\n"
+                + "  contracts:\n"
+                + "    life:\n"
+                + "      type:\n"
+                + "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "    embedded:\n"
+                + "      type:\n"
+                + "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "      paths:\n"
+                + "        - /y\n"
+                + "    setIllegalFromX:\n"
+                + "      channel: life\n"
+                + "      order: 1\n"
+                + "      event:\n"
+                + "        type:\n"
+                + "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "      type:\n"
+                + "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "      propertyKey: /y/a\n"
+                + "      propertyValue: 2\n"
+                + "contracts:\n"
+                + "  embedded:\n"
+                + "    type:\n"
+                + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "    paths:\n"
+                + "      - /x\n"
+                + "  life:\n"
+                + "    type:\n"
+                + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n";
+    }
+
+    private static final class EmbeddedMembershipObservation {
+        private final Blue blue;
+        private final Node initialized;
+        private final Node afterFirst;
+        private final Node afterSecond;
+        private final DocumentProcessingResult secondResult;
+
+        private EmbeddedMembershipObservation(
+                Blue blue,
+                Node initialized,
+                Node afterFirst,
+                Node afterSecond,
+                DocumentProcessingResult secondResult) {
+            this.blue = blue;
+            this.initialized = initialized;
+            this.afterFirst = afterFirst;
+            this.afterSecond = afterSecond;
+            this.secondResult = secondResult;
+        }
     }
 
     private void assertRolledBack(Node input, DocumentProcessingResult result) {
