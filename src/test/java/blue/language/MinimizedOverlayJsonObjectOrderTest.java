@@ -267,6 +267,33 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
+    void shouldTypeMetadataListChildrenPreserveDerivedLabelsWithoutTreatingRequiredDeclarationsAsValues() {
+        // given
+        BasicNodeProvider coldProvider = metadataListLabelProvider();
+        String derivedTypeId = coldProvider.getBlueIdByName("Derived Metadata List Type");
+        Blue coldBlue = new Blue(coldProvider);
+
+        BasicNodeProvider warmProvider = metadataListLabelProvider();
+        String warmDerivedTypeId =
+                warmProvider.getBlueIdByName("Derived Metadata List Type");
+        Blue warmBlue = new Blue(warmProvider);
+        warmBlue.resolve(listWithItemType(warmDerivedTypeId));
+
+        // when
+        Node cold = coldBlue.resolve(listWithItemType(derivedTypeId));
+        Node warm = warmBlue.resolve(listWithItemType(warmDerivedTypeId));
+
+        // then
+        Node coldEntry = cold.getAsNode("/itemType/entries").getItems().get(0);
+        Node requiredDeclaration = coldEntry.getAsNode("/requiredField");
+        assertEquals(derivedTypeId, warmDerivedTypeId);
+        assertEquals("Derived Entry", coldEntry.getName());
+        assertNull(requiredDeclaration.getValue());
+        assertEquals(Boolean.TRUE, requiredDeclaration.getSchema().getRequiredValue());
+        assertEquals(coldBlue.nodeToJson(cold), warmBlue.nodeToJson(warm));
+    }
+
+    @Test
     void shouldDeclarationLabelProvenanceHonorsPartialResolutionLimits() {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
@@ -1013,6 +1040,29 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "field:",
                 "  name: Derived Field",
                 "  description: Derived label."));
+        return provider;
+    }
+
+    private static BasicNodeProvider metadataListLabelProvider() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(String.join("\n",
+                "name: Base Metadata List Type",
+                "entries:",
+                "  type: List",
+                "  items:",
+                "    - name: Base Entry",
+                "      requiredField:",
+                "        type: Text",
+                "        schema:",
+                "          required: true"));
+        String baseTypeId = provider.getBlueIdByName("Base Metadata List Type");
+        provider.addSingleDocs(String.join("\n",
+                "name: Derived Metadata List Type",
+                "type:",
+                "  blueId: " + baseTypeId,
+                "entries:",
+                "  items:",
+                "    - name: Derived Entry"));
         return provider;
     }
 

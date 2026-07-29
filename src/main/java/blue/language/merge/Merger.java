@@ -221,6 +221,16 @@ public final class Merger implements NodeResolver {
                         typeNode, currentLabelPath, labelScope.labelPaths);
             }
             boolean typeContributionApplied = hasAppliedDeclaredTypeContribution(target, typeBlueId);
+            /*
+             * Type ancestry reached through item/key/value metadata remains
+             * declaration metadata at every depth. Ordinary instance type
+             * expansion keeps the TYPE_ROOT boundary used by completed-value
+             * validation and processor presence accounting.
+             */
+            Contribution typeExpansionContribution =
+                    resolutionState.contribution == Contribution.TYPE_METADATA
+                            ? Contribution.TYPE_METADATA
+                            : Contribution.TYPE_ROOT;
             boolean materializedCyclicType = isMaterializedCyclicSetMemberType(typeNode);
             FrozenNode cachedResolvedType = cachedResolvedType(typeBlueId, limits);
             boolean trackedType = typeBlueId != null;
@@ -245,7 +255,9 @@ public final class Merger implements NodeResolver {
                         }
                         source.type(detachedResolvedTypeMetadata(resolvedType));
                         if (!typeContributionApplied) {
-                            mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                            mergeObjectWithContribution(
+                                    target, resolvedType, limits,
+                                    typeExpansionContribution);
                             recordAppliedDeclaredTypeContribution(target, typeBlueId);
                         }
                     } else {
@@ -253,15 +265,20 @@ public final class Merger implements NodeResolver {
                             extendTypeReference(typeNode, typeBlueId);
                         }
 
-                        Node resolvedType = resolveWithContribution(typeNode, limits, Contribution.TYPE_ROOT);
+                        Node resolvedType = resolveWithContribution(
+                                typeNode, limits, typeExpansionContribution);
                         cacheResolvedReference(typeBlueId, resolvedType, limits);
                         source.type(detachedResolvedTypeMetadata(resolvedType));
                         if (!typeContributionApplied) {
                             // Align cold and warm resolution only when the completed type is safe to reuse.
                             if (cachedResolvedType(typeBlueId, limits) != null) {
-                                mergeObjectWithContribution(target, resolvedType, limits, Contribution.TYPE_ROOT);
+                                mergeObjectWithContribution(
+                                        target, resolvedType, limits,
+                                        typeExpansionContribution);
                             } else {
-                                mergeWithContribution(target, typeNode, limits, Contribution.TYPE_ROOT);
+                                mergeWithContribution(
+                                        target, typeNode, limits,
+                                        typeExpansionContribution);
                             }
                             recordAppliedDeclaredTypeContribution(target, typeBlueId);
                         }
@@ -506,8 +523,7 @@ public final class Merger implements NodeResolver {
 
             List<Node> children = source.getItems();
             if (children != null) {
-                mergeChildrenWithContribution(
-                        target, children, limits, childContribution(state.contribution));
+                mergeChildren(target, children, limits);
             }
 
             if (source.getContracts() != null && limits.shouldMergePathSegment(Properties.OBJECT_CONTRACTS, source.getContracts())) {
@@ -626,28 +642,13 @@ public final class Merger implements NodeResolver {
     }
 
     private Contribution childContribution(Contribution contribution) {
-        if (contribution == Contribution.TYPE_ROOT
-                || contribution == Contribution.TYPE_METADATA) {
+        if (contribution == Contribution.TYPE_ROOT) {
             return Contribution.TYPE_DECLARATION;
         }
         if (contribution == Contribution.CONTRACT_ROOT) {
             return Contribution.CONTRACT_CONTENT;
         }
         return contribution;
-    }
-
-    private void mergeChildrenWithContribution(Node target,
-                                               List<Node> sourceChildren,
-                                               Limits limits,
-                                               Contribution contribution) {
-        ResolutionState state = resolutionState;
-        Contribution previous = state.contribution;
-        state.contribution = contribution;
-        try {
-            mergeChildren(target, sourceChildren, limits);
-        } finally {
-            state.contribution = previous;
-        }
     }
 
     private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
@@ -1131,9 +1132,22 @@ public final class Merger implements NodeResolver {
         if (contribution == Contribution.MATERIALIZED_REFERENCE) {
             return LabelMergeMode.REFERENCE_EXPANSION;
         }
-        if (contribution == Contribution.TYPE_ROOT
-                || contribution == Contribution.TYPE_METADATA) {
+        if (contribution == Contribution.TYPE_ROOT) {
             return LabelMergeMode.NONE;
+        }
+        if (contribution == Contribution.TYPE_METADATA) {
+            /*
+             * TYPE_METADATA must remain the semantic contribution throughout
+             * metadata children: processor presence and completed-schema
+             * validation depend on that boundary. Labels authored below the
+             * metadata root are nevertheless declaration overlays and may
+             * refine labels inherited from the metadata type hierarchy.
+             */
+            LabelProvenanceScope scope = currentLabelProvenanceScope();
+            return scope != null
+                    && !currentLabelPath(resolutionState).equals(scope.rootPath)
+                    ? LabelMergeMode.AUTHORED_OVERLAY
+                    : LabelMergeMode.NONE;
         }
         return LabelMergeMode.AUTHORED_OVERLAY;
     }
@@ -1481,7 +1495,8 @@ public final class Merger implements NodeResolver {
         collectAuthoredLabelPaths(
                 source, currentLabelPath(state), limits, includeRootLabel, labelPaths,
                 Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>()));
-        LabelProvenanceScope scope = new LabelProvenanceScope(labelPaths);
+        LabelProvenanceScope scope = new LabelProvenanceScope(
+                currentLabelPath(state), labelPaths);
         state.labelProvenanceScopes.add(scope);
         return scope;
     }
@@ -2573,11 +2588,14 @@ public final class Merger implements NodeResolver {
     }
 
     private static final class LabelProvenanceScope {
+        private final LabelPath rootPath;
         private final Set<LabelPath> labelPaths;
         private final Set<LabelPath> declarationOnlyPaths = new HashSet<>();
         private final Set<LabelPath> fixedPaths = new HashSet<>();
 
-        private LabelProvenanceScope(Set<LabelPath> labelPaths) {
+        private LabelProvenanceScope(LabelPath rootPath,
+                                     Set<LabelPath> labelPaths) {
+            this.rootPath = rootPath;
             this.labelPaths = labelPaths;
         }
     }
