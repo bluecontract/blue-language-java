@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueNumbers;
 import blue.language.utils.Properties;
+import blue.language.utils.SchemaEnumCanonicalizer;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.NumberToJSON;
 import org.erdtman.jcs.JsonCanonicalizer;
@@ -474,10 +475,13 @@ public final class FrozenCanonicalWriter {
         } else if (KEY_MAX_FIELDS.equals(key)) {
             writeCanonicalValue(schema.getMaxFields().getValue(), sink);
         } else if (KEY_ENUM.equals(key)) {
+            List<Node> enumValues = mode == Mode.BLUE_ID_INPUT
+                    ? SchemaEnumCanonicalizer.canonicalize(schema.getEnum())
+                    : schema.getEnum();
             sink.writeByte('[');
-            for (int index = 0; index < schema.getEnum().size(); index++) {
+            for (int index = 0; index < enumValues.size(); index++) {
                 if (index > 0) sink.writeByte(',');
-                writeSchemaScalarOrNode(schema.getEnum().get(index), sink, mode);
+                writeSchemaScalarOrNode(enumValues.get(index), sink, mode);
             }
             sink.writeByte(']');
         } else {

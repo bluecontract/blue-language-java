@@ -215,8 +215,14 @@ public final class NodeToBlueIdInput {
             result.put(OBJECT_ITEMS, items);
         if (node.getSchema() != null) {
             validateSchemaNodes(node.getSchema(), appendPath(path, OBJECT_SCHEMA));
+            Schema identitySchema = node.getSchema().clone();
+            if (identitySchema.getEnum() != null) {
+                identitySchema.enumValues(
+                        SchemaEnumCanonicalizer.canonicalize(
+                                identitySchema.getEnum()));
+            }
             result.put(OBJECT_SCHEMA, SchemaToMapListOrValue.get(
-                    node.getSchema(),
+                    identitySchema,
                     child -> get(child, appendPath(path, OBJECT_SCHEMA), Context.METADATA, -1, allowCyclicPlaceholders)));
         }
         if (node.getContracts() != null) {

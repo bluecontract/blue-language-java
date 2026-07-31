@@ -6,6 +6,7 @@ import blue.language.utils.Base58;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.BlueNumbers;
+import blue.language.utils.SchemaEnumCanonicalizer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -263,7 +264,7 @@ final class FrozenCanonicalDigester {
         addSchemaScalar(fields, KEY_MAX_FIELDS, schemaValue(schema.getMaxFields()), observer);
         if (schema.getEnum() != null) {
             String accumulator = hashListEmpty(observer);
-            for (Node value : schema.getEnum()) {
+            for (Node value : SchemaEnumCanonicalizer.canonicalize(schema.getEnum())) {
                 String elementBlueId;
                 if (FrozenCanonicalWriter.isPlainScalar(value)) {
                     elementBlueId = hashScalar(value.getValue(), observer);

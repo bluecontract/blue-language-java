@@ -1503,6 +1503,41 @@ public class DocumentProcessor implements AutoCloseable {
         }
     }
 
+    /**
+     * Replaces the environmental External Channel plan deriver used by
+     * subsequent PROCESS calls and by explicit-evidence verification.
+     *
+     * <p>The configured root verifier still independently reconstructs and
+     * verifies the effective Contract surface. This hook supplies only the
+     * host-owned, revision-complete subscription and activation state that
+     * cannot be inferred from the two semantic PROCESS inputs.</p>
+     *
+     * @param deriver non-null deterministic environmental plan deriver
+     * @return this processor
+     * @throws NullPointerException when {@code deriver} is {@code null}
+     * @throws IllegalStateException when closed or called from active processing
+     */
+    public DocumentProcessor externalDeliveryPlanDeriver(
+            ExternalDeliveryPlanDeriver deriver) {
+        rejectWriteUpgrade();
+        lifecycleWrite.lock();
+        try {
+            ensureOpen();
+            externalDeliveryPlanDeriver =
+                    Objects.requireNonNull(deriver, "deriver");
+            deliveryEvidenceVerifier =
+                    RootExternalDeliveryEvidenceVerifier.configured(
+                            contractLoader,
+                            snapshotManager,
+                            contractRegistry,
+                            contractConverter,
+                            externalDeliveryPlanDeriver);
+            return this;
+        } finally {
+            lifecycleWrite.unlock();
+        }
+    }
+
     /** Releases every reloadable contract-plan and matching cache owned by this processor. */
     public void clearCaches() {
         if (lifecycleLock.getReadHoldCount() > 0) {

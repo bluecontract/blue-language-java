@@ -6,12 +6,11 @@ import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.LeastCommonMultiple;
-import blue.language.utils.ScalarNodeIdentity;
+import blue.language.utils.SchemaEnumCanonicalizer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -238,10 +237,14 @@ public class SchemaPropagator implements MergingProcessor {
         }
 
         Map<String, Node> targetValuesByBlueId = targetEnum.stream()
-                .collect(Collectors.toMap(this::enumComparableBlueId, Function.identity(), (left, right) -> left));
+                .collect(Collectors.toMap(
+                        SchemaEnumCanonicalizer::canonicalKey,
+                        Function.identity(),
+                        (left, right) -> left));
         List<Node> intersection = new ArrayList<>();
         for (Node sourceValue : sourceEnum) {
-            Node targetValue = targetValuesByBlueId.get(enumComparableBlueId(sourceValue));
+            Node targetValue = targetValuesByBlueId.get(
+                    SchemaEnumCanonicalizer.canonicalKey(sourceValue));
             if (targetValue != null) {
                 intersection.add(targetValue.clone());
             }
@@ -249,22 +252,8 @@ public class SchemaPropagator implements MergingProcessor {
         target.enumValues(canonicalizeEnum(intersection));
     }
 
-    private String enumComparableBlueId(Node node) {
-        return ScalarNodeIdentity.blueId(node);
-    }
-
     private List<Node> canonicalizeEnum(List<Node> nodes) {
-        Map<String, Node> uniqueByIdentity = new LinkedHashMap<>();
-        for (Node node : nodes) {
-            uniqueByIdentity.putIfAbsent(enumComparableBlueId(node), node.clone());
-        }
-        List<Node> result = new ArrayList<>(uniqueByIdentity.values());
-        result.sort((left, right) -> enumCanonicalKey(left).compareTo(enumCanonicalKey(right)));
-        return result;
-    }
-
-    private String enumCanonicalKey(Node node) {
-        return ScalarNodeIdentity.canonicalJson(node);
+        return SchemaEnumCanonicalizer.canonicalize(nodes);
     }
 
 }

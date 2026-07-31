@@ -10,7 +10,7 @@ public final class SourceProviderEnvironment {
     /** Release identity required for Blue Language 1.0 source ingestion. */
     public static final String LANGUAGE_1_0_RELEASE_IDENTITY =
             "blue-language-1.0-contracts-1.0-final-implementation-baseline@"
-                    + "sha256:1059e8250bce470febfe281bade2ebc4a0b2da5ce9bb297a50283eebe70ab747";
+                    + "sha256:de13521d2abf23fd3e3084aa6d754591c9b2f97b91176142287bc3d7456350d3";
     /** Domain used by the released explicit verifier overload. */
     public static final String EXPLICIT_VERIFIER_DOMAIN_IDENTITY =
             "blue-language-1.0:explicit-provider-evidence-verifier";

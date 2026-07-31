@@ -113,11 +113,11 @@ class BlueContractsConformanceReportTest {
         String expectedLanguageFixtures =
                 "sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5";
         String expectedContractsRegistry =
-                "sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8";
+                "sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b";
         String expectedContractsGas =
                 "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
         String expectedContractsFixtures =
-                "sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca";
+                "sha256:de65cf1ba53e5408f804513691434102b41cb33a95cbf8412ae890d8e28ad982";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();
@@ -228,10 +228,10 @@ class BlueContractsConformanceReportTest {
         // then
         assertEquals(expectedReleaseName, report.getReleaseName());
         assertEquals(
-                "sha256:1059e8250bce470febfe281bade2ebc4a0b2da5ce9bb297a50283eebe70ab747",
+                "sha256:de13521d2abf23fd3e3084aa6d754591c9b2f97b91176142287bc3d7456350d3",
                 report.getReleasePackageIdentity());
         assertEquals(
-                "sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca",
+                "sha256:de65cf1ba53e5408f804513691434102b41cb33a95cbf8412ae890d8e28ad982",
                 report.getFixturePackageIdentity());
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -259,7 +259,7 @@ class BlueContractsConformanceReportTest {
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(
-                "75e8d212a3818ad756bd8227d8bda877fb27df9192cff312e347d7742daaed0f",
+                "f99c17c700a1771b0cf308dfe7590b4001377a886a9b9eddb0d4a941647b8f83",
                 nested(report.toMachineReadableMap(),
                         "contracts", "specificationSha256"));
 

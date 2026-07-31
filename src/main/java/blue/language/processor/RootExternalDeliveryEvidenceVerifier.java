@@ -775,8 +775,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             throw invalid(
                     "Retained active subscription scope is absent");
         }
-        clearMaterializationProvenance(
-                projected, new IdentityHashMap<Node, Boolean>());
+        MaterializationProvenance.clear(projected);
         return new SubscriptionIndexProjection(
                 projected,
                 subscriptionKeys,
@@ -792,8 +791,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             throw invalid(
                     "Enumeration-selector scope is absent");
         }
-        clearMaterializationProvenance(
-                projected, new IdentityHashMap<Node, Boolean>());
+        MaterializationProvenance.clear(projected);
         return projected;
     }
 
@@ -1375,88 +1373,6 @@ public final class RootExternalDeliveryEvidenceVerifier
         return false;
     }
 
-    private void clearMaterializationProvenance(
-            Node node,
-            IdentityHashMap<Node, Boolean> visited) {
-        if (node == null || visited.put(node, Boolean.TRUE) != null) {
-            return;
-        }
-        if (node.isReferenceOnly()) {
-            return;
-        }
-        if (node.getBlueId() != null) {
-            node.blueId(null);
-        }
-        node.type(nominalReference(node.getType()));
-        node.itemType(nominalReference(node.getItemType()));
-        node.keyType(nominalReference(node.getKeyType()));
-        node.valueType(nominalReference(node.getValueType()));
-        clearMaterializationProvenance(node.getType(), visited);
-        clearMaterializationProvenance(node.getItemType(), visited);
-        clearMaterializationProvenance(node.getKeyType(), visited);
-        clearMaterializationProvenance(node.getValueType(), visited);
-        clearMaterializationProvenance(node.getBlue(), visited);
-        clearSchemaMaterializationProvenance(
-                node.getSchema(), visited);
-        clearMaterializationProvenance(node.getContracts(), visited);
-        if (node.getProperties() != null) {
-            for (Node child : node.getProperties().values()) {
-                clearMaterializationProvenance(child, visited);
-            }
-        }
-        if (node.getItems() != null) {
-            for (Node child : node.getItems()) {
-                clearMaterializationProvenance(child, visited);
-            }
-        }
-    }
-
-    /**
-     * A resolved nominal type may carry both its published identity and its
-     * materialized body. The Source projection must preserve the published
-     * nominal identity, so collapse that representation back to a pure
-     * reference instead of recomputing an identity from resolved content.
-     */
-    private Node nominalReference(Node type) {
-        if (type == null
-                || type.getBlueId() == null
-                || type.isReferenceOnly()) {
-            return type;
-        }
-        return new Node().blueId(type.getBlueId());
-    }
-
-    private void clearSchemaMaterializationProvenance(
-            Schema schema,
-            IdentityHashMap<Node, Boolean> visited) {
-        if (schema == null || schema.isReferenceOnly()) {
-            return;
-        }
-        if (schema.getBlueId() != null) {
-            schema.blueId(null);
-        }
-        clearMaterializationProvenance(schema.getRequired(), visited);
-        clearMaterializationProvenance(schema.getMinLength(), visited);
-        clearMaterializationProvenance(schema.getMaxLength(), visited);
-        clearMaterializationProvenance(schema.getMinimum(), visited);
-        clearMaterializationProvenance(schema.getMaximum(), visited);
-        clearMaterializationProvenance(
-                schema.getExclusiveMinimum(), visited);
-        clearMaterializationProvenance(
-                schema.getExclusiveMaximum(), visited);
-        clearMaterializationProvenance(schema.getMultipleOf(), visited);
-        clearMaterializationProvenance(schema.getMinItems(), visited);
-        clearMaterializationProvenance(schema.getMaxItems(), visited);
-        clearMaterializationProvenance(schema.getUniqueItems(), visited);
-        clearMaterializationProvenance(schema.getMinFields(), visited);
-        clearMaterializationProvenance(schema.getMaxFields(), visited);
-        if (schema.getEnum() != null) {
-            for (Node value : schema.getEnum()) {
-                clearMaterializationProvenance(value, visited);
-            }
-        }
-    }
-
     /**
      * Keeps only headers needed to derive feeder subscriptions. Unsupported or
      * malformed application contracts outside that header surface remain for
@@ -1488,8 +1404,7 @@ public final class RootExternalDeliveryEvidenceVerifier
                 projected.contracts(null);
             }
         }
-        clearMaterializationProvenance(
-                projected, new IdentityHashMap<Node, Boolean>());
+        MaterializationProvenance.clear(projected);
         return FrozenNode.fromResolvedNode(projected);
     }
 

@@ -848,7 +848,6 @@ final class ContractLoader {
                     snapshot.executableBodyField(field);
                     addExecutableBody(
                             snapshot,
-                            exactExecutableContract,
                             field,
                             scopePath,
                             key,
@@ -995,17 +994,25 @@ final class ContractLoader {
     }
 
     private void addExecutableBody(EffectiveContractSnapshot.Builder snapshot,
-                                   FrozenNode contract,
                                    String field,
                                    String scopePath,
                                    String contractKey,
                                    String contractTypeBlueId,
                                    ContractContributionResolver.BindingResolution
                                            bindingResolution) {
-        FrozenNode body = property(contract, field);
-        if (body != null) {
-            String effectiveBodyBlueId =
-                    body.blueId();
+        Node exactBody =
+                bindingResolution
+                        .exactExecutableBodies()
+                        .get(field);
+        if (exactBody != null) {
+            Node canonicalBody =
+                    exactBody.clone();
+            MaterializationProvenance.clear(
+                    canonicalBody);
+            String exactBodyBlueId =
+                    FrozenNode.fromNode(
+                            canonicalBody)
+                            .blueId();
             ContractContributionResolver.ExecutableBodySource
                     source =
                     bindingResolution
@@ -1023,7 +1030,7 @@ final class ContractLoader {
             }
             snapshot.executableBody(
                             field,
-                            effectiveBodyBlueId)
+                            exactBodyBlueId)
                     .executableBodySourceDescriptor(
                             field,
                             new ExecutableBodySourceDescriptor(
@@ -1031,7 +1038,7 @@ final class ContractLoader {
                                     contractKey,
                                     contractTypeBlueId,
                                     field,
-                                    effectiveBodyBlueId,
+                                    exactBodyBlueId,
                                     bindingResolution
                                             .sourceContributions(),
                                     source

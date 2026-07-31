@@ -200,3 +200,7 @@ portable-limit, gas, or subscription-surface failure returns the exact input
 Root and no Root events. Gas already admitted to the live invocation meter,
 including a submitted runtime child ledger, remains in the total and ordered
 trace. Runtime failure never commits a fatal marker or fatal lifecycle event.
+
+For the complete status matrix, diagnostic fields, detailed explanations of
+portable-limit and subscription-surface failures, and host retry guidance, see
+[Processor results, diagnostics, and recovery](processor-results-diagnostics-and-recovery.md).

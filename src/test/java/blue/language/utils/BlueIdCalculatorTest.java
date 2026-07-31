@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -909,6 +910,34 @@ public class BlueIdCalculatorTest {
 
                 // then
                 assertEquals(explicitBlueId, bareBlueId);
+        }
+
+        @Test
+        public void shouldCanonicalizeSchemaEnumOrderAndDuplicates() {
+                // given
+                Node first = new Node()
+                                .schema(new Schema().enumValues(Arrays.asList(
+                                                new Node().value("B"),
+                                                new Node().value("A"),
+                                                new Node().value("B"))))
+                                .value("A");
+                Node second = new Node()
+                                .schema(new Schema().enumValues(Arrays.asList(
+                                                new Node().value("A"),
+                                                new Node().value("B"))))
+                                .value("A");
+
+                // when
+                String firstBlueId = BlueIdCalculator.calculateBlueId(first);
+                String secondBlueId = BlueIdCalculator.calculateBlueId(second);
+
+                // then
+                assertEquals(secondBlueId, firstBlueId);
+                assertEquals(
+                                "4Q8KMTFv6BboSsKpd6WK6GDonEPhXY9LSHu7cmV1ZtFr",
+                                firstBlueId);
+                assertEquals("B", first.getSchema().getEnum().get(0).getValue());
+                assertEquals(3, first.getSchema().getEnum().size());
         }
 
         @Test

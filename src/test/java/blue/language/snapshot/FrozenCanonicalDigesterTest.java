@@ -160,6 +160,52 @@ class FrozenCanonicalDigesterTest {
     }
 
     @Test
+    void shouldCanonicalizeSchemaEnumsWithoutLeavingFrozenFastPath() throws Exception {
+        // given
+        Node mutable = new Node()
+                .schema(new Schema().enumValues(Arrays.asList(
+                        new Node().value("B"),
+                        new Node().value("A"),
+                        new Node().value("B"))))
+                .value("A");
+        FrozenNode frozen = FrozenNode.fromNode(mutable);
+        AtomicInteger fallbacks = new AtomicInteger();
+        FrozenCanonicalDigester.Observer observer =
+                new FrozenCanonicalDigester.Observer() {
+                    @Override
+                    public void genericFallback() {
+                        fallbacks.incrementAndGet();
+                    }
+                };
+        ByteArraySink identitySink = new ByteArraySink();
+        ByteArraySink officialSink = new ByteArraySink();
+
+        // when
+        String mutableIdentity = BlueIdCalculator.calculateBlueId(mutable);
+        String genericIdentity =
+                FrozenCanonicalDigester.calculateGenericOracle(frozen);
+        String streamingIdentity =
+                FrozenCanonicalDigester.calculateBlueId(frozen, observer);
+        FrozenCanonicalWriter.write(frozen, identitySink);
+        FrozenCanonicalWriter.writeOfficial(frozen, officialSink);
+        byte[] expectedIdentityBytes = new JsonCanonicalizer(
+                JSON_MAPPER.writeValueAsBytes(
+                        FrozenNodeToBlueIdInput.get(frozen)))
+                .getEncodedUTF8();
+
+        // then
+        assertEquals(mutableIdentity, genericIdentity);
+        assertEquals(mutableIdentity, streamingIdentity);
+        assertEquals(0, fallbacks.get());
+        assertArrayEquals(expectedIdentityBytes, identitySink.bytes());
+        assertTrue(
+                new String(officialSink.bytes(), StandardCharsets.UTF_8)
+                        .contains("\"enum\":[\"B\",\"A\",\"B\"]"));
+        assertEquals("B", mutable.getSchema().getEnum().get(0).getValue());
+        assertEquals(3, mutable.getSchema().getEnum().size());
+    }
+
+    @Test
     void shouldMatchJcsAcrossDeterministicUnicodeAndNumberCorpus() throws Exception {
         // given
         Random random = new Random(0x4a435346524f5a45L);

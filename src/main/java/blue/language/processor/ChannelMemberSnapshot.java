@@ -84,6 +84,7 @@ public final class ChannelMemberSnapshot {
                     field.getKey(),
                     field.getValue().toNode());
         }
+        MaterializationProvenance.clear(headerNode);
         FrozenNode exactHeader =
                 FrozenNode.fromResolvedNode(headerNode);
         return new ChannelMemberSnapshot(

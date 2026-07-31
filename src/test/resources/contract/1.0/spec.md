@@ -203,7 +203,7 @@ Registry source, calculated BlueIds, prose, fixtures, and gas manifest MUST agre
 The implementation-baseline runtime registry package identity is:
 
 ```text
-sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8
+sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b
 ```
 
 The machine-readable `blue-contracts/gas/1.0` manifest is normative for counter names, weights, formulas, and portable limits. Its implementation-baseline package identity is:
@@ -2399,7 +2399,7 @@ expected:
 The implementation-baseline fixture-package identity is:
 
 ```text
-sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca
+sha256:de65cf1ba53e5408f804513691434102b41cb33a95cbf8412ae890d8e28ad982
 ```
 
 The package contains 78 normative vectors, 69 behavior fixtures, and 58 gas fixtures. The behavior-fixture count is not required to equal the vector count because one executable fixture may cover several inseparable normative assertions.

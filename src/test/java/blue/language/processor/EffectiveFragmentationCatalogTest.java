@@ -190,6 +190,72 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
+    void shouldRetainCanonicalIdentityForInlineListExecutableBody() {
+        // given
+        Fixture fixture = new Fixture();
+        Node inlineProgram =
+                new Node().items(
+                        new Node()
+                                .name("Increment")
+                                .properties(
+                                        "operation",
+                                        new Node().value(
+                                                "descendant")));
+        String canonicalBodyBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        inlineProgram);
+        assertNotEquals(
+                canonicalBodyBlueId,
+                FrozenNode.fromResolvedNode(
+                        inlineProgram)
+                        .blueId(),
+                "the fixture must distinguish exact Source identity from resolved-view identity");
+        Node document = fixture.document();
+        Node direct =
+                document.getContracts()
+                        .getProperties()
+                        .get("run");
+        direct.properties(
+                "program",
+                inlineProgram.clone());
+        String directBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        direct);
+
+        // when
+        EffectiveContractSnapshot handler;
+        try (Blue blue = fixture.blue()) {
+            handler =
+                    contract(
+                            blue.getDocumentProcessor()
+                                    .effectiveFragmentationCatalog(
+                                            document),
+                            "/",
+                            "run");
+        }
+        ExecutableBodySourceDescriptor source =
+                handler
+                        .executableBodySourceDescriptorsByField()
+                        .get("program");
+
+        // then
+        assertEquals(
+                canonicalBodyBlueId,
+                handler
+                        .executableBodyNodeBlueIdsByField()
+                        .get("program"));
+        assertEquals(
+                canonicalBodyBlueId,
+                source.bodyNodeBlueId());
+        assertEquals(
+                directBlueId,
+                source
+                        .owningSourceContributionNodeBlueId());
+        assertEquals("/program", source.sourcePointer());
+        assertFalse(source.pureReference());
+    }
+
+    @Test
     void shouldAssignExactColdDescriptorOwnershipToDirectPureReferenceBody() {
         // given
         Fixture fixture = new Fixture();

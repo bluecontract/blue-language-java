@@ -5,6 +5,7 @@ import blue.language.utils.BlueIds;
 import blue.language.utils.BlueNumbers;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeToBlueIdInput;
+import blue.language.utils.SchemaEnumCanonicalizer;
 import blue.language.utils.SchemaToMapListOrValue;
 
 import java.math.BigDecimal;
@@ -144,8 +145,14 @@ public final class FrozenNodeToBlueIdInput {
         if (node.getSchema() != null) {
             Schema schema = node.getSchema();
             validateSchemaNodes(schema, appendPath(path, OBJECT_SCHEMA));
+            Schema identitySchema = schema.clone();
+            if (identitySchema.getEnum() != null) {
+                identitySchema.enumValues(
+                        SchemaEnumCanonicalizer.canonicalize(
+                                identitySchema.getEnum()));
+            }
             result.put(OBJECT_SCHEMA, SchemaToMapListOrValue.get(
-                    schema,
+                    identitySchema,
                     child -> NodeToBlueIdInput.get(child)));
         }
         if (node.getContracts() != null) {

@@ -828,6 +828,17 @@ System.out.println(result.totalGas());
 System.out.println(blue.nodeToYaml(result.document()));
 ```
 
+### Reading Processor Outcomes
+
+`DocumentProcessingResult` has one committing status and several normal or
+failure noncommitting statuses. In particular, `portable-limit-exceeded` means
+one structural bound in the bound gas manifest was exceeded, while
+`subscription-surface-invalid` means the Root cannot produce a finite,
+canonical external-subscription index. See
+[Processor Results, Diagnostics, And Recovery](docs/processor-results-diagnostics-and-recovery.md)
+for the complete status matrix, diagnostic fields, rollback behavior, examples,
+retry guidance, and cross-language comparison rules.
+
 External contract processors must register the canonical type node for the
 BlueId they handle. The runtime checks that every active contract in the
 initial processing closure is understood; if not, processing fails before state
@@ -1048,6 +1059,7 @@ The retained documents describe distinct parts of the final implementation:
 | [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md) | Immutable snapshots, patch planning, minimization, and type generalization |
 | [Frozen Type Matching](docs/frozen-type-matching.md) | Mutable/frozen matching paths, limits, references, schemas, and performance boundaries |
 | [Processor Contract Matching](docs/processor-contract-matching.md) | External evidence, channel and handler SPI, execution order, checkpointing, and atomic failure |
+| [Processor Results, Diagnostics, And Recovery](docs/processor-results-diagnostics-and-recovery.md) | Completed statuses, diagnostics, portable limits, subscription surfaces, rollback, retry, and cross-language handling |
 | [Fragmented PROCESS Inputs And Logical Delivery](docs/fragmented-processing-and-logical-delivery.md) | Exact fragments, locality, selected bodies, Phase-B dependencies, and coalesced logical delivery |
 | [`Blue` Facade Method Reference](docs/blue-facade-method-reference.md) | Complete facade inventory, operational distinctions, caching, and lifecycle behavior |
 | [Language 1.0 And Contracts Kernel 1.0 Migration](docs/language-1.0-contracts-kernel-1.0-migration.md) | Migration from preview APIs to the final generic hosted-runtime boundary |
@@ -1239,6 +1251,7 @@ docs/
   snapshots-patching-and-generalization.md
   frozen-type-matching.md
   processor-contract-matching.md
+  processor-results-diagnostics-and-recovery.md
   fragmented-processing-and-logical-delivery.md
   blue-facade-method-reference.md
   language-1.0-contracts-kernel-1.0-migration.md

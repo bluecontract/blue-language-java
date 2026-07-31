@@ -20,12 +20,14 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -41,6 +43,40 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             BlueIdCalculator.calculateBlueId(TRACE_HANDLER_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.asList(7, "source", 11));
+
+    @Test
+    void shouldReconfigureStrictVerifierWhenReplacingPlanDeriver() {
+        Node root = rootWithChannels(
+                channel("alpha", 0, true));
+        Node event = event("topic");
+        ExternalDeliveryPlan exactPlan =
+                plan(snapshot(
+                        "/",
+                        "alpha",
+                        root.getContracts()
+                                .getProperties()
+                                .get("alpha"),
+                        event));
+        AtomicInteger derivations = new AtomicInteger();
+        DocumentProcessor processor =
+                processor(null, null, null);
+
+        DocumentProcessor configured =
+                processor.externalDeliveryPlanDeriver(
+                        (suppliedRoot, suppliedEvent) -> {
+                            derivations.incrementAndGet();
+                            return exactPlan;
+                        });
+        DocumentProcessingResult result =
+                processor.processDocument(root, event);
+
+        assertSame(processor, configured);
+        assertEquals(1, derivations.get());
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                result.status(),
+                diagnosticMessage(result));
+    }
 
     @Test
     void shouldVerifyExactPlanRejectsOmissionExtraOrderRevisionAndResourceForgery() {
