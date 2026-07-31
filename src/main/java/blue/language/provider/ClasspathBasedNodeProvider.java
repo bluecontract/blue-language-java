@@ -36,15 +36,15 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
     private Function<Node, Node> preprocessor;
 
     /**
-     * Loads resources using a preprocessor configured with this provider's
-     * default Blue.
+     * Loads resources using the mandatory Language preprocessing pipeline
+     * backed by this provider.
      *
      * @param classpathDirectories classpath directories to scan recursively
      * @throws IOException when a directory or resource cannot be read
      */
     public ClasspathBasedNodeProvider(String... classpathDirectories) throws IOException {
         Preprocessor defaultPreprocessor = new Preprocessor(this);
-        this.preprocessor = defaultPreprocessor::preprocessWithDefaultBlue;
+        this.preprocessor = defaultPreprocessor::preprocess;
         load(classpathDirectories);
     }
 

@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Executes channel matching and handler invocation for a scope.
@@ -27,7 +30,11 @@ final class ChannelRunner {
     private final ProcessorEngine.Execution execution;
     private final DocumentProcessingRuntime runtime;
     private final CheckpointManager checkpointManager;
-    private final Map<String, List<PendingCheckpoint>> pendingCheckpoints =
+    private final Map<String, Map<PendingCheckpointKey, PendingCheckpoint>>
+            pendingCheckpoints =
+            new LinkedHashMap<>();
+    private final Map<String, PendingCheckpointCleanup>
+            pendingCheckpointCleanup =
             new LinkedHashMap<>();
 
     ChannelRunner(DocumentProcessor owner,
@@ -463,6 +470,7 @@ final class ChannelRunner {
             queueCheckpoint(
                     first.scopePath,
                     executionBundle,
+                    classification.sourceChannelKey,
                     classification.checkpoint,
                     classification.eventSignature,
                     classification.checkpointSubject);
@@ -517,13 +525,27 @@ final class ChannelRunner {
 
     private void queueCheckpoint(String scopePath,
                                  ContractBundle bundle,
+                                 String sourceChannelKey,
                                  CheckpointManager.CheckpointRecord checkpoint,
                                  String eventSignature,
                                  Node checkpointSubject) {
+        if (checkpoint == null
+                || !Objects.equals(
+                sourceChannelKey,
+                checkpoint.channelKey)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Checkpoint ownership changed from raw source Channel "
+                            + sourceChannelKey);
+        }
         String normalized = execution.normalizeScope(scopePath);
         pendingCheckpoints
-                .computeIfAbsent(normalized, ignored -> new ArrayList<>())
-                .add(new PendingCheckpoint(
+                .computeIfAbsent(
+                        normalized,
+                        ignored -> new TreeMap<>())
+                .put(new PendingCheckpointKey(
+                                checkpoint.channelKey,
+                                checkpoint.checkpointDomainBlueId),
+                        new PendingCheckpoint(
                         bundle, checkpoint, eventSignature,
                         checkpointSubject != null
                                 ? checkpointSubject.clone()
@@ -536,14 +558,20 @@ final class ChannelRunner {
      */
     void persistPendingCheckpoints(String scopePath) {
         String normalized = execution.normalizeScope(scopePath);
-        List<PendingCheckpoint> pending = pendingCheckpoints.remove(normalized);
-        if (pending == null || pending.isEmpty()) {
+        Map<PendingCheckpointKey, PendingCheckpoint> pending =
+                pendingCheckpoints.remove(normalized);
+        PendingCheckpointCleanup cleanup =
+                pendingCheckpointCleanup.remove(normalized);
+        if ((pending == null || pending.isEmpty())
+                && cleanup == null) {
             return;
         }
         if (!execution.isScopeActive(normalized)) {
             ScopeRuntimeContext scope = runtime.existingScope(normalized);
-            if (scope != null && scope.isCutOff()) {
-                for (PendingCheckpoint checkpoint : pending) {
+            if (scope != null
+                    && scope.isCutOff()
+                    && pending != null) {
+                for (PendingCheckpoint checkpoint : pending.values()) {
                     Map<String, Object> details = new LinkedHashMap<>();
                     details.put(
                             ProcessingTraceConstants.FIELD_EFFECT,
@@ -567,32 +595,63 @@ final class ChannelRunner {
             }
             return;
         }
+        ContractBundle mutationBundle =
+                cleanup != null
+                        ? cleanup.bundle
+                        : pending.values().iterator().next().bundle;
         ProcessingMetricsSink metrics = owner.metricsSink();
-        for (PendingCheckpoint checkpoint : pending) {
-            long checkpointPersistStart = System.nanoTime();
-            try {
-                checkpointManager.persist(normalized,
-                        checkpoint.bundle,
-                        checkpoint.record,
-                        checkpoint.eventSignature,
-                        checkpoint.subject);
-            } catch (GasLimitExceededException
-                     | PortableLimitExceededException
-                     | SubscriptionSurfaceInvalidException ex) {
-                throw ex;
-            } catch (RuntimeException ex) {
-                execution.abortRuntimeFailure(normalized,
-                        checkpoint.bundle,
-                        execution.fatalCategory(
-                                ex, ProcessorErrorCategory.CheckpointPolicyError),
-                        execution.fatalReason(ex, "Checkpoint error"));
-                return;
-            } finally {
-                metrics.addCheckpointPersistNanos(
-                        System.nanoTime() - checkpointPersistStart);
-                metrics.addCheckpointUpdateNanos(
-                        System.nanoTime() - checkpointPersistStart);
+        long checkpointPersistStart = System.nanoTime();
+        try {
+            if (pending != null) {
+                for (PendingCheckpoint checkpoint : pending.values()) {
+                    checkpointManager.persist(normalized,
+                            mutationBundle,
+                            checkpoint.record,
+                            checkpoint.eventSignature,
+                            checkpoint.subject);
+                }
             }
+            if (cleanup != null) {
+                checkpointManager.cleanupInactiveEntries(
+                        normalized,
+                        mutationBundle,
+                        cleanup.activeDomains);
+            }
+        } catch (GasLimitExceededException
+                 | PortableLimitExceededException
+                 | SubscriptionSurfaceInvalidException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            execution.abortRuntimeFailure(normalized,
+                    mutationBundle,
+                    execution.fatalCategory(
+                            ex, ProcessorErrorCategory.CheckpointPolicyError),
+                    execution.fatalReason(ex, "Checkpoint error"));
+        } finally {
+            metrics.addCheckpointPersistNanos(
+                    System.nanoTime() - checkpointPersistStart);
+            metrics.addCheckpointUpdateNanos(
+                    System.nanoTime() - checkpointPersistStart);
+        }
+    }
+
+    /**
+     * Commits every scope's tentative checkpoint mutation in deterministic
+     * scope order after the invocation has completed all logical deliveries
+     * and internal FIFO work.
+     */
+    void persistAllPendingCheckpoints() {
+        Set<String> scopes = new TreeSet<>(
+                ExternalOrderKey::compareTextCodePoints);
+        scopes.addAll(pendingCheckpoints.keySet());
+        scopes.addAll(pendingCheckpointCleanup.keySet());
+        for (String scopePath : scopes) {
+            if (execution.hasFailure()) {
+                pendingCheckpoints.clear();
+                pendingCheckpointCleanup.clear();
+                return;
+            }
+            persistPendingCheckpoints(scopePath);
         }
     }
 
@@ -616,6 +675,59 @@ final class ChannelRunner {
             this.eventSignature = eventSignature;
             this.subject =
                     subject != null ? subject.clone() : null;
+        }
+    }
+
+    /**
+     * Deterministic identity of one tentative raw-source checkpoint update.
+     */
+    private static final class PendingCheckpointKey
+            implements Comparable<PendingCheckpointKey> {
+        private final String rawChannelKey;
+        private final String checkpointDomainBlueId;
+
+        private PendingCheckpointKey(
+                String rawChannelKey,
+                String checkpointDomainBlueId) {
+            this.rawChannelKey = Objects.requireNonNull(
+                    rawChannelKey,
+                    "rawChannelKey");
+            this.checkpointDomainBlueId =
+                    Objects.requireNonNull(
+                            checkpointDomainBlueId,
+                            "checkpointDomainBlueId");
+        }
+
+        @Override
+        public int compareTo(PendingCheckpointKey other) {
+            int rawKeyOrder =
+                    ExternalOrderKey.compareTextCodePoints(
+                            rawChannelKey,
+                            other.rawChannelKey);
+            return rawKeyOrder != 0
+                    ? rawKeyOrder
+                    : ExternalOrderKey.compareTextCodePoints(
+                            checkpointDomainBlueId,
+                            other.checkpointDomainBlueId);
+        }
+    }
+
+    /**
+     * Invocation-local cleanup request composed with pending source updates.
+     */
+    private static final class PendingCheckpointCleanup {
+        private final ContractBundle bundle;
+        private final Map<String, String> activeDomains;
+
+        private PendingCheckpointCleanup(
+                ContractBundle bundle,
+                Map<String, String> activeDomains) {
+            this.bundle = Objects.requireNonNull(
+                    bundle,
+                    "bundle");
+            this.activeDomains = Collections.unmodifiableMap(
+                    new LinkedHashMap<>(
+                            activeDomains));
         }
     }
 
@@ -785,6 +897,7 @@ final class ChannelRunner {
                 bundle,
                 channelKey,
                 event,
+                event,
                 false);
     }
 
@@ -792,6 +905,35 @@ final class ChannelRunner {
                         ContractBundle bundle,
                         String channelKey,
                         Node event,
+                        boolean allowTerminatingScope) {
+        return runHandlers(
+                scopePath,
+                bundle,
+                channelKey,
+                event,
+                event,
+                allowTerminatingScope);
+    }
+
+    boolean runHandlers(String scopePath,
+                        ContractBundle bundle,
+                        String channelKey,
+                        Node event,
+                        Node occurrenceEvent) {
+        return runHandlers(
+                scopePath,
+                bundle,
+                channelKey,
+                event,
+                occurrenceEvent,
+                false);
+    }
+
+    private boolean runHandlers(String scopePath,
+                        ContractBundle bundle,
+                        String channelKey,
+                        Node event,
+                        Node occurrenceEvent,
                         boolean allowTerminatingScope) {
         ProcessingMetricsSink metrics = owner.metricsSink();
         long discoveryStart = System.nanoTime();
@@ -811,13 +953,19 @@ final class ChannelRunner {
             RuntimeWorkSession matchWork =
                     runtime.newRuntimeWorkSession(
                             execution.blue());
+            ExternalChannelFunctionEvaluation.MatcherSession
+                    matcherSession =
+                    runtime.externalChannelMatcherSessions()
+                            .open();
             HandlerMatchContext matchContext = new HandlerMatchContext(scopePath,
                     handler.key(),
                     channelKey,
                     event,
+                    occurrenceEvent,
                     bundle.markers(),
                     owner.matchingService(),
-                    matchWork);
+                    matchWork,
+                    matcherSession);
             metrics.incrementHandlerMatchAttempts();
             runtime.chargeHandlerCandidateTested(scopePath, handler.key());
             long matchStart = System.nanoTime();
@@ -832,6 +980,7 @@ final class ChannelRunner {
                 matchWork.failDeterministically();
                 throw failure;
             } finally {
+                matcherSession.close();
                 matchWork.close();
                 metrics.addHandlerMatchNanos(System.nanoTime() - matchStart);
             }
@@ -853,6 +1002,7 @@ final class ChannelRunner {
                 if (ex instanceof GasLimitExceededException
                         || ex instanceof PortableLimitExceededException
                         || ex instanceof ExecutionEvidenceUnavailableException
+                        || ex instanceof InvalidExecutionEvidenceException
                         || ScopeIdentityErrorMapper
                         .isProviderIdentityFailure(ex)) {
                     throw ex;
@@ -873,6 +1023,7 @@ final class ChannelRunner {
             ProcessorExecutionContext context = execution.createContext(scopePath,
                     bundle,
                     event,
+                    occurrenceEvent,
                     executableHandler.key(),
                     executableHandler.node(),
                     false);
@@ -912,7 +1063,8 @@ final class ChannelRunner {
                 }
             } catch (GasLimitExceededException
                      | PortableLimitExceededException
-                     | SubscriptionSurfaceInvalidException ex) {
+                     | SubscriptionSurfaceInvalidException
+                     | InvalidExecutionEvidenceException ex) {
                 throw ex;
             } catch (RunTerminationException ex) {
                 throw ex;
@@ -1004,7 +1156,11 @@ final class ChannelRunner {
                     channel.key(),
                     execution.checkpointDomain(channel, scopePath));
         }
-        checkpointManager.cleanupInactiveEntries(
-                scopePath, bundle, activeDomains);
+        String normalized = execution.normalizeScope(scopePath);
+        pendingCheckpointCleanup.put(
+                normalized,
+                new PendingCheckpointCleanup(
+                        bundle,
+                        activeDomains));
     }
 }

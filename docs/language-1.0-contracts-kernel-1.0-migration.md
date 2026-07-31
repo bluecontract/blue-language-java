@@ -7,21 +7,21 @@ Baseline identified by:
 release:
   blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline
 releasePackage:
-  sha256:1059e8250bce470febfe281bade2ebc4a0b2da5ce9bb297a50283eebe70ab747
+  sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70
 languageSpecification:
-  sha256:ac1ac47e10c91be82ebe45e2406f33ad5073cc3f3684bc1651704117b5008852
+  sha256:41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e
 contractsSpecification:
-  sha256:75e8d212a3818ad756bd8227d8bda877fb27df9192cff312e347d7742daaed0f
+  sha256:3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0
 languageRegistryPackage:
   sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e
 languageFixturePackage:
-  sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5
+  sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55
 contractsRegistryPackage:
-  sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8
+  sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b
 contractsGasPackage:
   sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
 contractsFixturePackage:
-  sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca
+  sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18
 ```
 
 The Contracts gas weights and portable limits are loaded from the bound
@@ -419,9 +419,9 @@ normative:
   pre-initialization Root. This lets the published limit exercise the intended
   internal-event cycle; ordinary PROCESS inputs still pay initialization gas.
 
-The final identity-bound packages produce 128/128 Language passes and 140/140
+The final identity-bound packages produce 153/153 Language passes and 140/140
 Contracts passes (82 behavior and 58 gas fixtures). The combined release report
-contains exactly 268 unique results: 268 `PASS`, zero `FAIL`, and zero skipped.
+contains exactly 293 unique results: 293 `PASS`, zero `FAIL`, and zero skipped.
 
 Thirteen prior Contracts failures were corrected in the fixture package because
 their old inputs or assertions did not describe executable normative scenarios:

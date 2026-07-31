@@ -1,0 +1,4 @@
+name: Blue Language Conformance Append Root Text Transformation
+description: >
+  Conformance-only deterministic preprocessing transformation that appends one
+  configured Text suffix to an existing direct root Text field.

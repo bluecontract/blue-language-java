@@ -1,0 +1,17 @@
+registry: blue-language-conformance-preprocessing-transformations
+registryKind: fixture-only-transformation-type
+specificationVersion: '1.0'
+entries:
+- key: RenameRootFieldTransformation
+  path: RenameRootFieldTransformation.blue
+  blueId: 7kEewGH6vogsgUXw3Gdyi73rtb5oQK1L8LWtHbYcG7pB
+- key: SetRootFieldTransformation
+  path: SetRootFieldTransformation.blue
+  blueId: DS4rHtvxTg1S3tn6e9ciuMNDkeEQtk4VTdiw8KUCfMAu
+- key: AppendRootTextTransformation
+  path: AppendRootTextTransformation.blue
+  blueId: D2DxVxaddbJT5k2YYj3sG35cSdotw1Mz9GpxrdP43nzN
+note: >
+  These exact types exist only to exercise the portable preprocessing pipeline.
+  They are not Blue Language core transformation types and do not define a
+  general standard field-mapping or text-transformation catalog.

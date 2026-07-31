@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.Stack;
 
 /**
- * Suppresses extension of selected properties while traversing instances of
+ * Suppresses expansion of selected properties while traversing instances of
  * one exact declared type.
  *
  * <p>Merging is never suppressed. The root path remains eligible even if its
@@ -22,7 +22,7 @@ public class TypeSpecificPropertyFilter implements Limits {
      * Creates a filter for one declared type BlueId and property-name set.
      *
      * @param typeBlueId exact declared type whose properties are filtered
-     * @param ignoredProperties property names whose extension is suppressed
+     * @param ignoredProperties property names whose expansion is suppressed
      */
     public TypeSpecificPropertyFilter(String typeBlueId, Set<String> ignoredProperties) {
         this.typeBlueId = typeBlueId;
@@ -30,11 +30,17 @@ public class TypeSpecificPropertyFilter implements Limits {
     }
 
     @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+    public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
         boolean isCurrentlyInTargetType = !typeMatchStack.isEmpty() && typeMatchStack.peek();
         boolean isIgnoredProperty = ignoredProperties.contains(pathSegment);
 
         return !isCurrentlyInTargetType || !isIgnoredProperty || currentPath.isEmpty();
+    }
+
+    /** Legacy binary-API spelling delegated to the canonical method. */
+    @Override
+    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+        return shouldExpandPathSegment(pathSegment, currentNode);
     }
 
     @Override

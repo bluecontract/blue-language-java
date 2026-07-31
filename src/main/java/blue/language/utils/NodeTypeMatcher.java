@@ -101,11 +101,18 @@ public class NodeTypeMatcher {
     }
 
     private Node resolveForMatching(Node node, Limits limits) {
-        Node original = blue.preprocess(node.clone());
-        Node extended = original.clone();
-        blue.extend(extended, limits);
-        Node resolved = blue.resolve(extended, limits);
-        restoreMissingStructure(resolved, extended);
+        /*
+         * Mutable compatibility callers may supply a verified materialization
+         * produced by a provider or snapshot. Its attached identity is
+         * implementation provenance, not a mixed Blue Source field.
+         */
+        Node sourceProjection = NodeToBlueIdInput
+                .stripResolvedBlueIdMetadata(node.clone());
+        Node original = blue.preprocess(sourceProjection);
+        Node expanded = original.clone();
+        blue.expand(expanded, limits);
+        Node resolved = blue.resolve(expanded, limits);
+        restoreMissingStructure(resolved, expanded);
         return resolved;
     }
 
@@ -199,8 +206,8 @@ public class NodeTypeMatcher {
         }
 
         @Override
-        public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-            TargetLookup targetAtPath = targetAtForExtend(candidatePath(pathSegment));
+        public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
+            TargetLookup targetAtPath = targetAtForExpansion(candidatePath(pathSegment));
             if (targetAtPath == null) {
                 return false;
             }
@@ -211,6 +218,12 @@ public class NodeTypeMatcher {
                     && currentNode != null
                     && currentNode.getBlueId() != null
                     && !currentNode.getBlueId().equals(targetAtPath.node.getBlueId());
+        }
+
+        /** Legacy binary-API spelling delegated to the canonical method. */
+        @Override
+        public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+            return shouldExpandPathSegment(pathSegment, currentNode);
         }
 
         @Override
@@ -257,7 +270,7 @@ public class NodeTypeMatcher {
             return path;
         }
 
-        private TargetLookup targetAtForExtend(List<String> path) {
+        private TargetLookup targetAtForExpansion(List<String> path) {
             return targetAt(targetPattern, path, 0, true, false);
         }
 

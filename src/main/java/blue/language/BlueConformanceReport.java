@@ -34,7 +34,7 @@ public final class BlueConformanceReport {
     public static final String FIXTURE_MANIFEST_RESOURCE = "blue-language-1.0/fixtures/manifest.yaml";
     /** Expected identity of the complete final fixture package. */
     public static final String FIXTURE_PACKAGE_IDENTITY =
-            "sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5";
+            "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55";
     /** Human-readable identifier of the specification source bound to the package. */
     public static final String BLUE_SPEC_SOURCE =
             "blue-language-1.0-final-implementation-baseline";
@@ -625,7 +625,9 @@ public final class BlueConformanceReport {
                 || new LinkedHashSet<>(ids).size()
                 != BlueReleaseConformanceReport.LANGUAGE_FIXTURE_COUNT) {
             throw new IllegalStateException(
-                    "Blue Language 1.0 requires exactly 128 unique behavior fixtures; found "
+                    "Blue Language 1.0 requires exactly "
+                            + BlueReleaseConformanceReport.LANGUAGE_FIXTURE_COUNT
+                            + " unique behavior fixtures; found "
                             + ids.size());
         }
         String calculatedIdentity = computeFixturePackageIdentity();

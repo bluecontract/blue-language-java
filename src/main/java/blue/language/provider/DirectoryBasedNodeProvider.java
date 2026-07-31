@@ -37,15 +37,15 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
     private Function<Node, Node> preprocessor;
 
     /**
-     * Loads resources using a preprocessor configured with this provider's
-     * default Blue.
+     * Loads resources using the mandatory Language preprocessing pipeline
+     * backed by this provider.
      *
      * @param directories filesystem directories to scan recursively
      * @throws IOException when a directory or file cannot be read
      */
     public DirectoryBasedNodeProvider(String... directories) throws IOException {
         Preprocessor defaultPreprocessor = new Preprocessor(this);
-        this.preprocessor = defaultPreprocessor::preprocessWithDefaultBlue;
+        this.preprocessor = defaultPreprocessor::preprocess;
         load(directories);
     }
 

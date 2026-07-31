@@ -1,0 +1,13 @@
+id: R_blue_builtin_alias_override_rejected
+category: Resolution
+operation: preprocess
+description: a built-in alias cannot be rebound to another BlueId
+expectError: true
+expectedErrorCategory: InvalidReservedField
+source:
+  blue:
+    imports:
+      Text:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  type: Text
+  value: hello

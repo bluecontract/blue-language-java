@@ -541,19 +541,19 @@ public class NodeToObjectConverterTest {
                                     "  blueId: PersonValue-BlueId\n" +
                                     "age1:\n" +
                                     "  type:\n" +
-                                    "    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\n" +
+                                    "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
                                     "  name: Official Age\n" +
                                     "  description: Description for official age\n" +
                                     "  value: 25\n" +
                                     "age2:\n" +
                                     "  type:\n" +
-                                    "    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\n" +
+                                    "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
                                     "  name: Official Age\n" +
                                     "  description: Description for official age\n" +
                                     "  value: 25\n" +
                                     "age3:\n" +
                                     "  type:\n" +
-                                    "    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\n" +
+                                    "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
                                     "  name: Official Age\n" +
                                     "  description: Description for official age\n" +
                                     "  value: 25";

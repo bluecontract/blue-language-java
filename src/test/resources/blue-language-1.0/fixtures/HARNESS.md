@@ -35,7 +35,24 @@ Parse a Source value while preserving the required token distinctions and exact 
 
 ### `preprocess`
 
-Apply the standard baseline environment and declared `blue.imports`, remove `blue`, normalize wrappers and list placeholders, and compare with `expectedPreprocessed`.
+Apply the exact §6 pipeline:
+
+1. resolve and verify the effective root `blue` directive, including pure-reference directives and reference-backed `imports` or `transformations`;
+2. establish the effective import map and supported transformation implementations without mutating the Source Document;
+3. remove the root `blue` field;
+4. execute declared transformations exactly once each in list order;
+5. apply mandatory wrapper, placeholder, alias, and primitive-inference baseline normalization;
+6. validate the resulting Preprocessed Document.
+
+`preprocessingAliases`, when present, is a closed test-environment map from a string-valued `blue` alias to one exact directive BlueId. The runner MUST configure those bindings before preprocessing. An unbound alias fails.
+
+The fixture package's `preprocessing/registry` directory defines three conformance-only transformation types and exact processor behavior. They are fixture support, not canonical Language core types. The runner MUST register only those exact types while running this package and MUST fail closed for any unsupported transformation type.
+
+`alsoEquivalentTo`, when present on a `preprocess` fixture, is independently preprocessed under the same provider, alias bindings, and transformation registry and MUST produce the exact same result as `source`.
+
+`expectedIdempotent: true` requires preprocessing the completed output again and obtaining the exact same node.
+
+Compare the final result with `expectedPreprocessed`.
 
 ### `resolve`
 
@@ -69,7 +86,15 @@ Prove that Content BlueId is the Node BlueId of Canonical Identity Input and tha
 
 ### `minimizeAndResolve`
 
-Produce a valid author-facing minimized overlay, allow only the fixture-listed optional controls, resolve it again, and prove the expected round trip.
+Produce a valid author-facing Minimized Overlay, allow only the fixture-listed optional controls, and resolve it again. The second resolution MUST reproduce the expected complete Resolved Form or resolved items.
+
+When `expectedSameContentBlueIdThroughPipeline: true` is present, the runner MUST calculate the Content BlueId of both the original Source meaning and the produced Minimized Overlay by running each through the complete pipeline:
+
+```text
+preprocess -> complete resolve -> canonicalize -> Node BlueId
+```
+
+The two Content BlueIds MUST be equal. The runner MUST NOT establish this assertion by directly hashing the Minimized Overlay, because minimization is not part of Content BlueId calculation and the minimized Source may contain controls such as `$previous`, `$pos`, or `$replace`.
 
 ### `canonicalizeLimitedResult`
 
@@ -167,7 +192,21 @@ expectedErrorCategory
 
 Lists preserve order unless the Language rule explicitly defines a set. A fixture runner MUST compare complete expected structures, not selected convenient fields.
 
-## 10. Package integrity
+## 10. Preprocessing transformation fixture registry
+
+The support registry at `preprocessing/registry/manifest.yaml` binds exact fixture-only transformation type BlueIds. Its `HARNESS.md` defines the closed configuration and behavior for:
+
+```text
+Rename Root Field Transformation
+Set Root Field Transformation
+Append Root Text Transformation
+```
+
+The harness MUST load the exact registry files, verify their BlueIds, and register their deterministic processors. Transformation selection is by exact type BlueId, never by `name`. Transformation items may be inline or pure references. All provider content must verify before execution.
+
+These fixture-only types do not imply that Blue Language 1.0 standardizes a universal field-renaming, field-setting, or text-append transformation catalog. They test the generic directive and transformation mechanism.
+
+## 11. Package integrity
 
 `manifest.yaml` is the authoritative inventory for this fixture package. It lists every behavior fixture and every support file with its relative path, role, LF-normalized byte length, and SHA-256 digest. It also binds the exact Language core-registry package identity and the exact vector-coverage map.
 
@@ -183,7 +222,7 @@ sha256(
 
 The manifest's `files` list is itself identity-bearing and is sorted by relative path. A fixture or support file that is added, removed, renamed, or changed requires a new manifest and fixture-package identity. The registry manifest binds this fixture package informationally; its own package identity deliberately excludes that reverse binding to avoid an identity cycle.
 
-## 11. Exact graph fragment operations
+## 12. Exact graph fragment operations
 
 ### `splitExactGraphFragments`
 

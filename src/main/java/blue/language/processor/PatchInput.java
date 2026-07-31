@@ -94,6 +94,12 @@ final class PatchInput {
         return frozenPatch != null ? frozenPatch.getValue() : null;
     }
 
+    ExactBlueValue exactValue() {
+        return frozenPatch != null
+                ? frozenPatch.getExactValue()
+                : null;
+    }
+
     long frozenAuthoredCanonicalSizeBytes() {
         if (frozenPatch == null) {
             throw new IllegalStateException("Mutable patch inputs do not carry frozen authored size");

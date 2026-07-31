@@ -549,7 +549,7 @@ class BlueCacheLifecycleTest {
                         snapshot.frozenResolvedRoot()),
                 () -> blue.nodeMatchesType(
                         snapshot, "/", snapshot.frozenResolvedRoot()),
-                () -> blue.extend(document(2), Limits.NO_LIMITS),
+                () -> blue.expand(document(2), Limits.NO_LIMITS),
                 () -> blue.preprocess(document(2)),
                 () -> blue.yamlToNode("value: 2"),
                 () -> blue.jsonToNode("{\"value\":2}"),

@@ -6,6 +6,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class InternalEventOccurrenceFifoTest {
 
     private static final String TEST_EVENT_CHANNEL =
-            "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
+            ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
     private static final Node PROBE_HANDLER_TYPE =
             new Node().name("Internal Event FIFO Probe Handler");
     private static final String PROBE_HANDLER_BLUE_ID =

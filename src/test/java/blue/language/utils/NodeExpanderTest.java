@@ -1,5 +1,6 @@
 package blue.language.utils;
 
+import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
@@ -17,13 +18,14 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class NodeExtenderTest {
+public class NodeExpanderTest {
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
     private Map<String, Node> nodes;
     private NodeProvider nodeProvider;
-    private NodeExtender nodeExtender;
+    private NodeExpander nodeExpander;
 
     @BeforeEach
     public void setup() throws Exception {
@@ -81,20 +83,23 @@ public class NodeExtenderTest {
         nodes.put("Y", y);
 
         nodeProvider = exactProvider;
-        nodeExtender = new NodeExtender(nodeProvider);
+        nodeExpander = new NodeExpander(nodeProvider);
     }
 
     @Test
-    public void shouldExtendSingleProperty() {
+    public void shouldExpandSingleProperty() {
         // given
         Node node = nodes.get("Y").clone();
+        String expectedBlueId = node.getAsNode("/forA").getBlueId();
         Limits limits = new PathLimits.Builder()
                 .addPath("/forA")
                 .build();
+
         // when
-        nodeExtender.extend(node, limits);
+        nodeExpander.expand(node, limits);
 
         // then
+        assertEquals(expectedBlueId, node.getAsNode("/forA").getBlueId());
         assertEquals("A", node.get("/forA/name"));
         assertEquals(BigInteger.valueOf(1), node.get("/forA/x"));
         assertEquals(BigInteger.valueOf(1), node.get("/forA/y/z"));
@@ -102,14 +107,14 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void shouldExtendNestedProperty() {
+    public void shouldExpandNestedProperty() {
         // given
         Node node = nodes.get("Y").clone();
         Limits limits = new PathLimits.Builder()
                 .addPath("/forX/a")
                 .build();
         // when
-        nodeExtender.extend(node, limits);
+        nodeExpander.expand(node, limits);
 
         // then
         assertEquals("X", node.get("/forX/name"));
@@ -118,14 +123,14 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void shouldExtendListItem() {
+    public void shouldExpandListItem() {
         // given
         Node node = nodes.get("Y").clone();
         Limits limits = new PathLimits.Builder()
                 .addPath("/forX/d/0")
                 .build();
         // when
-        nodeExtender.extend(node, limits);
+        nodeExpander.expand(node, limits);
 
         // then
         assertEquals("X", node.get("/forX/name"));
@@ -135,7 +140,7 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void shouldExtendWithMultiplePaths() {
+    public void shouldExpandWithMultiplePaths() {
         // given
         Node node = nodes.get("Y").clone();
         Limits limits = new PathLimits.Builder()
@@ -143,7 +148,7 @@ public class NodeExtenderTest {
                 .addPath("/forX/b")
                 .build();
         // when
-        nodeExtender.extend(node, limits);
+        nodeExpander.expand(node, limits);
 
         // then
         assertEquals("A", node.get("/forA/name"));
@@ -153,7 +158,7 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void shouldExtendList() throws Exception {
+    public void shouldExpandList() throws Exception {
 
         // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
@@ -179,13 +184,13 @@ public class NodeExtenderTest {
         Node node = YAML_MAPPER.readValue(listNode, Node.class);
         nodeProvider.addSingleNodes(node);
 
-        NodeExtender nodeExtender = new NodeExtender(nodeProvider);
+        NodeExpander nodeExpander = new NodeExpander(nodeProvider);
 
         Limits limits = new PathLimits.Builder()
                 .addPath("/*")
                 .build();
         // when
-        nodeExtender.extend(node, limits);
+        nodeExpander.expand(node, limits);
 
         // then
         assertEquals("ListNode", node.getName());
@@ -202,7 +207,7 @@ public class NodeExtenderTest {
     }
 
     @Test
-    public void shouldExtendListDirectly() throws Exception {
+    public void shouldExpandListDirectly() throws Exception {
         // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
@@ -227,13 +232,13 @@ public class NodeExtenderTest {
         String abc = "blueId: " + listABCBlueId;
         Node nodeABC = YAML_MAPPER.readValue(abc, Node.class);
 
-        NodeExtender nodeExtender = new NodeExtender(nodeProvider);
+        NodeExpander nodeExpander = new NodeExpander(nodeProvider);
 
         Limits limits = new PathLimits.Builder()
                 .addPath("/*")
                 .build();
         // when
-        nodeExtender.extend(nodeABC, limits);
+        nodeExpander.expand(nodeABC, limits);
 
         // then
         assertEquals(3, nodeABC.getItems().size());
@@ -246,6 +251,77 @@ public class NodeExtenderTest {
 
         assertEquals("C", nodeABC.get("/2/name"));
         assertEquals(3, nodeABC.getAsInteger("/2/value"));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void shouldRetainLegacyNodeExtenderAsCompatibilityBridge() {
+        // given
+        Node node = nodes.get("Y").clone();
+        Limits limits = new PathLimits.Builder()
+                .addPath("/forA")
+                .build();
+
+        // when
+        new NodeExtender(nodeProvider).extend(node, limits);
+
+        // then
+        assertEquals("A", node.get("/forA/name"));
+        assertEquals(BigInteger.valueOf(1), node.get("/forA/x"));
+    }
+
+    @Test
+    public void shouldLeaveMissingReferenceCollapsedWhenConfigured() {
+        // given
+        String missingBlueId = BlueIdCalculator.calculateBlueId(
+                new Node().value("not registered"));
+        Node reference = new Node().blueId(missingBlueId);
+        NodeExpander lenientExpander = new NodeExpander(
+                nodeProvider, NodeExpander.MissingElementStrategy.RETURN_EMPTY);
+
+        // when
+        lenientExpander.expand(reference, Limits.NO_LIMITS);
+
+        // then
+        assertEquals(missingBlueId, reference.getBlueId());
+        assertTrue(reference.isReferenceOnly());
+    }
+
+    @Test
+    public void shouldExposeLimitedExpansionThroughBlueFacade() {
+        // given
+        Node node = nodes.get("Y").clone();
+        Limits limits = new PathLimits.Builder()
+                .addPath("/forA")
+                .build();
+
+        // when
+        try (Blue blue = new Blue(nodeProvider)) {
+            blue.expand(node, limits);
+        }
+
+        // then
+        assertEquals("A", node.get("/forA/name"));
+        assertThrows(IllegalArgumentException.class, () -> node.get("/forX/a"));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void shouldRetainLegacyBlueExtendAsCompatibilityBridge() {
+        // given
+        Node node = nodes.get("Y").clone();
+        Limits limits = new PathLimits.Builder()
+                .addPath("/forA")
+                .build();
+
+        // when
+        try (Blue blue = new Blue(nodeProvider)) {
+            blue.extend(node, limits);
+        }
+
+        // then
+        assertEquals("A", node.get("/forA/name"));
+        assertThrows(IllegalArgumentException.class, () -> node.get("/forX/a"));
     }
 
 }

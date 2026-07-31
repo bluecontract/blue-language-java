@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static blue.language.utils.Properties.*;
 
@@ -45,6 +44,7 @@ public class Node implements Cloneable {
     private Integer position;
     private Node blue;
     private boolean inlineValue;
+    private boolean preprocessingTransformationConfiguration;
 
     /**
      * Creates an empty mutable node.
@@ -259,6 +259,20 @@ public class Node implements Cloneable {
      */
     public boolean isInlineValue() {
         return inlineValue;
+    }
+
+    /**
+     * Reports whether this node was parsed under the closed preprocessing
+     * transformation-configuration grammar.
+     *
+     * <p>The marker is implementation context, not Blue content. It permits a
+     * transformation configuration to use its specified {@code value} child
+     * without changing how ordinary typed nodes serialize or hash.</p>
+     *
+     * @return {@code true} for a contextual transformation configuration
+     */
+    public boolean isPreprocessingTransformationConfiguration() {
+        return preprocessingTransformationConfiguration;
     }
 
     /**
@@ -611,6 +625,22 @@ public class Node implements Cloneable {
     }
 
     /**
+     * Marks contextual preprocessing transformation configuration.
+     *
+     * <p>This flag is out-of-band parser state and is never serialized as a
+     * Blue field.</p>
+     *
+     * @param transformationConfiguration whether the contextual grammar applies
+     * @return this node
+     */
+    public Node preprocessingTransformationConfiguration(
+            boolean transformationConfiguration) {
+        this.preprocessingTransformationConfiguration =
+                transformationConfiguration;
+        return this;
+    }
+
+    /**
      * Replaces all state with a deep copy of {@code source}.
      *
      * @param source node whose state should be copied
@@ -622,35 +652,143 @@ public class Node implements Cloneable {
             throw new IllegalArgumentException("source must not be null");
         }
 
-        this.name = source.name;
-        this.description = source.description;
-        this.value = copyValue(source.value, new IdentityHashMap<Object, Object>());
-        this.blueId = source.blueId;
-        this.mergePolicy = source.mergePolicy;
-        this.previousBlueId = source.previousBlueId;
-        this.position = source.position;
-        this.inlineValue = source.inlineValue;
-        this.contracts = source.contracts != null ? source.contracts.clone() : null;
-
-        this.type = source.type != null ? source.type.clone() : null;
-        this.itemType = source.itemType != null ? source.itemType.clone() : null;
-        this.keyType = source.keyType != null ? source.keyType.clone() : null;
-        this.valueType = source.valueType != null ? source.valueType.clone() : null;
-        this.items = source.items != null
-                ? source.items.stream().map(Node::clone).collect(Collectors.toCollection(ArrayList::new))
-                : null;
-        this.properties = source.properties != null
-                ? source.properties.entrySet().stream()
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            entry -> entry.getValue().clone(),
-                            (e1, e2) -> e1,
-                            LinkedHashMap::new
-                    ))
-                : null;
-        this.schema = source.schema != null ? source.schema.clone() : null;
-        this.blue = source.blue != null ? source.blue.clone() : null;
+        Node stableSource = source == this ? copyGraph(source) : source;
+        copyGraphInto(stableSource, this);
         return this;
+    }
+
+    /**
+     * Copies the complete Node/Schema graph without consuming the VM call stack.
+     * An active-path map terminates back-edges while still copying a shared acyclic
+     * child independently at each edge, matching the historical clone behavior.
+     */
+    private static Node copyGraph(Node source) {
+        Node root = source.shallowClone();
+        copyGraphInto(source, root);
+        return root;
+    }
+
+    private static void copyGraphInto(Node source, Node root) {
+        IdentityHashMap<Node, Node> activeCopies = new IdentityHashMap<>();
+        Deque<NodeCopy> pending = new ArrayDeque<>();
+        pending.addLast(NodeCopy.enter(source, root));
+
+        while (!pending.isEmpty()) {
+            NodeCopy copy = pending.removeLast();
+            if (copy.exit) {
+                activeCopies.remove(copy.source);
+                continue;
+            }
+
+            Node from = copy.source;
+            Node to = copy.target;
+            activeCopies.put(from, to);
+            pending.addLast(NodeCopy.exit(from, to));
+
+            to.name = from.name;
+            to.description = from.description;
+            to.value = copyValue(from.value, new IdentityHashMap<Object, Object>());
+            to.blueId = from.blueId;
+            to.mergePolicy = from.mergePolicy;
+            to.previousBlueId = from.previousBlueId;
+            to.position = from.position;
+            to.inlineValue = from.inlineValue;
+            to.preprocessingTransformationConfiguration =
+                    from.preprocessingTransformationConfiguration;
+
+            to.type = copyNodeReference(from.type, activeCopies, pending);
+            to.itemType = copyNodeReference(from.itemType, activeCopies, pending);
+            to.keyType = copyNodeReference(from.keyType, activeCopies, pending);
+            to.valueType = copyNodeReference(from.valueType, activeCopies, pending);
+            to.contracts = copyNodeReference(from.contracts, activeCopies, pending);
+            to.blue = copyNodeReference(from.blue, activeCopies, pending);
+
+            if (from.items != null) {
+                to.items = new ArrayList<>(from.items.size());
+                for (Node item : from.items) {
+                    to.items.add(copyRequiredNodeReference(
+                            item, activeCopies, pending));
+                }
+            } else {
+                to.items = null;
+            }
+            if (from.properties != null) {
+                to.properties = new LinkedHashMap<>();
+                for (Map.Entry<String, Node> entry : from.properties.entrySet()) {
+                    to.properties.put(entry.getKey(), copyRequiredNodeReference(
+                            entry.getValue(), activeCopies, pending));
+                }
+            } else {
+                to.properties = null;
+            }
+            to.schema = copySchemaReference(
+                    from.schema, activeCopies, pending);
+        }
+    }
+
+    private static Node copyNodeReference(
+            Node source,
+            IdentityHashMap<Node, Node> activeCopies,
+            Deque<NodeCopy> pending) {
+        if (source == null) {
+            return null;
+        }
+        Node existing = activeCopies.get(source);
+        if (existing != null) {
+            return existing;
+        }
+        Node target = source.shallowClone();
+        pending.addLast(NodeCopy.enter(source, target));
+        return target;
+    }
+
+    private static Node copyRequiredNodeReference(
+            Node source,
+            IdentityHashMap<Node, Node> activeCopies,
+            Deque<NodeCopy> pending) {
+        return copyNodeReference(
+                Objects.requireNonNull(source, "Node child must not be null"),
+                activeCopies,
+                pending);
+    }
+
+    private static Schema copySchemaReference(
+            Schema source,
+            IdentityHashMap<Node, Node> activeCopies,
+            Deque<NodeCopy> pending) {
+        if (source == null) {
+            return null;
+        }
+        return source.copyWithNodeMapper(node -> copyRequiredNodeReference(
+                node, activeCopies, pending));
+    }
+
+    private Node shallowClone() {
+        try {
+            return (Node) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Node must be cloneable", e);
+        }
+    }
+
+    private static final class NodeCopy {
+        private final Node source;
+        private final Node target;
+        private final boolean exit;
+
+        private NodeCopy(Node source, Node target, boolean exit) {
+            this.source = source;
+            this.target = target;
+            this.exit = exit;
+        }
+
+        private static NodeCopy enter(Node source, Node target) {
+            return new NodeCopy(source, target, false);
+        }
+
+        private static NodeCopy exit(Node source, Node target) {
+            return new NodeCopy(source, target, true);
+        }
     }
 
     /** Deep-copies JSON container values so a cloned Node owns its mutable payload graph. */
@@ -858,13 +996,7 @@ public class Node implements Cloneable {
     /** Returns a deep mutable copy, including nested Node and JSON containers. */
     @Override
     public Node clone() {
-        try {
-            Node cloned = (Node) super.clone();
-
-            return cloned.replaceWith(this);
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError("Node must be cloneable", e);
-        }
+        return copyGraph(this);
     }
 
     @Override
@@ -887,6 +1019,8 @@ public class Node implements Cloneable {
                ", position=" + position +
                ", blue=" + blue +
                ", inlineValue=" + inlineValue +
+               ", preprocessingTransformationConfiguration=" +
+               preprocessingTransformationConfiguration +
                '}';
     }
 }

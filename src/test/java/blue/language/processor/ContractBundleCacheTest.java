@@ -5,6 +5,8 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -23,10 +25,10 @@ class ContractBundleCacheTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  increment:\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    channel: testChannel\n" +
                 "    propertyKey: /count\n")).document();
 
@@ -53,10 +55,10 @@ class ContractBundleCacheTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  set:\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    channel: testChannel\n" +
                 "    path: /orders\n" +
                 "    propertyKey: count\n" +
@@ -86,16 +88,16 @@ class ContractBundleCacheTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    increment:\n" +
                 "      type:\n" +
-                "        blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "      channel: testChannel\n" +
                 "      propertyKey: /count\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n")).document();
 

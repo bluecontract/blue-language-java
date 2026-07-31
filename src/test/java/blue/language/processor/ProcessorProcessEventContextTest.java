@@ -5,6 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -36,9 +37,10 @@ final class ProcessorProcessEventContextTest {
 
     private static final int CONCURRENT_READER_COUNT = 8;
     private static final long CONCURRENCY_TIMEOUT_SECONDS = 5L;
-    private static final String TEST_EVENT_TYPE = "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
-    private static final String TEST_EVENT_CHANNEL_TYPE = "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
-    private static final String SET_PROPERTY_TYPE = "8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts";
+    private static final String TEST_EVENT_TYPE = ProcessorTestTypeBlueIds.TEST_EVENT;
+    private static final String TEST_EVENT_CHANNEL_TYPE =
+            ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
+    private static final String SET_PROPERTY_TYPE = ProcessorTestTypeBlueIds.SET_PROPERTY;
 
     @Test
     void shouldVerifyExplicitInitializeHasNoProcessEventForDocumentAndSnapshotExecutions() {

@@ -64,7 +64,7 @@ files:
   bytes: 1483
 - path: disc/c-disc-04.yaml
   role: behavior-fixture
-  sha256: ad6032469ff58baffe544f99858b68316377fa5440f38d1209b91ed461391aeb
+  sha256: 9bd814c556735e79de891b7e085a25612da30ac24abb3291e80c2b5ff8cec0e1
   bytes: 1681
 - path: disc/c-disc-05.yaml
   role: behavior-fixture
@@ -599,7 +599,7 @@ packageIdentityAlgorithm:
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
   lineEndings: LF
-packageIdentity: sha256:de65cf1ba53e5408f804513691434102b41cb33a95cbf8412ae890d8e28ad982
+packageIdentity: sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18
 gasSchedule: blue-contracts/gas/1.0
 gasManifestPackageIdentity: sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
 gasManifestSha256: 1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f

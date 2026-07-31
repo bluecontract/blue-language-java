@@ -4,7 +4,6 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeTypeKey;
-import blue.language.preprocess.Preprocessor;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -55,7 +54,7 @@ class BootstrapProviderVerificationTest {
     }
 
     @Test
-    void shouldIncludeRuntimeTypeBlueIdsInDefaultBlueAliasMap() {
+    void shouldRetainRuntimeTypeBlueIdsOnlyInLegacyCombinedAliasMap() {
         // given
         BlueRuntimeTypeRegistry registry = BlueRuntimeTypeRegistry.getDefault();
         Map<String, String> expectedRuntimeAliases = new LinkedHashMap<>();
@@ -77,46 +76,13 @@ class BootstrapProviderVerificationTest {
 
         // then
         assertEquals(expectedRuntimeAliases, actualRuntimeAliases);
+        expectedRuntimeAliases.keySet().forEach(name ->
+                assertFalse(CORE_TYPE_NAME_TO_BLUE_ID_MAP.containsKey(name)));
         expectedRuntimeAliases.forEach((name, blueId) ->
                 assertEquals(blueId, actualDefaultAliases.get(name)));
         expectedRuntimeNames.forEach((blueId, name) ->
                 assertEquals(name, actualDefaultNames.get(blueId)));
         assertFalse(actualDefaultAliases.containsKey("Document Processing Fatal Error"));
-    }
-
-    @Test
-    void shouldMatchDefaultBlueResourceMappingsToDefaultAliasMap() throws Exception {
-        // given
-        Node defaultBlue = readResource("transformation/DefaultBlue.blue");
-        Node mappings = defaultBlue.getItems().get(0).getProperties().get("mappings");
-        Map<String, String> actual = new LinkedHashMap<>();
-        // when
-        mappings.getProperties().forEach((name, node) -> actual.put(name, (String) node.getValue()));
-
-        // then
-        assertEquals(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP, actual);
-    }
-
-    @Test
-    void shouldMatchDefaultBlueTransformBlueIdsToResources() throws Exception {
-        // given
-        Node defaultBlue = readResource("transformation/DefaultBlue.blue");
-        Node transformation = readResource("transformation/Transformation.blue");
-        Node replaceInlineTypes = readResource("transformation/ReplaceInlineTypesWithBlueIds.blue");
-        Node inferBasicTypes = readResource("transformation/InferBasicTypesForUntypedValues.blue");
-
-        // when
-        String transformationBlueId = BlueIdCalculator.calculateBlueId(transformation);
-        String replaceInlineTypesBlueId = BlueIdCalculator.calculateBlueId(replaceInlineTypes);
-        String inferBasicTypesBlueId = BlueIdCalculator.calculateBlueId(inferBasicTypes);
-        String defaultBlueBlueId = BlueIdCalculator.calculateBlueId(defaultBlue.getItems());
-
-        // then
-        assertEquals(transformationBlueId, replaceInlineTypes.getType().getBlueId());
-        assertEquals(transformationBlueId, inferBasicTypes.getType().getBlueId());
-        assertEquals(replaceInlineTypesBlueId, defaultBlue.getItems().get(0).getType().getBlueId());
-        assertEquals(inferBasicTypesBlueId, defaultBlue.getItems().get(1).getType().getBlueId());
-        assertEquals(defaultBlueBlueId, Preprocessor.DEFAULT_BLUE_BLUE_ID);
     }
 
     @Test
@@ -146,26 +112,6 @@ class BootstrapProviderVerificationTest {
             assertFalse(fetched.isEmpty(), "Bootstrap provider returned no content for " + resource);
             assertEquals(blueId, BlueIdCalculator.calculateBlueId(withoutRootIdentity(fetched.get(0))), resource);
         }
-    }
-
-    @Test
-    void shouldFetchAndVerifyAllDefaultBlueTransformsByBlueId() throws Exception {
-        // given
-        Node defaultBlue = readResource("transformation/DefaultBlue.blue");
-        Map<String, List<Node>> fetchedByBlueId = new LinkedHashMap<>();
-
-        // when
-        for (Node transformationReference : defaultBlue.getItems()) {
-            String blueId = transformationReference.getType().getBlueId();
-            fetchedByBlueId.put(blueId, BootstrapProvider.INSTANCE.fetchByBlueId(blueId));
-        }
-
-        // then
-        fetchedByBlueId.forEach((blueId, fetched) -> {
-            assertNotNull(fetched, "Bootstrap provider returned null for DefaultBlue transform " + blueId);
-            assertFalse(fetched.isEmpty(), "Bootstrap provider returned no transform content for " + blueId);
-            assertEquals(blueId, BlueIdCalculator.calculateBlueId(withoutRootIdentity(fetched.get(0))));
-        });
     }
 
     private Node withoutRootIdentity(Node node) {

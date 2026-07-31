@@ -2,6 +2,9 @@ package blue.language;
 
 import blue.language.processor.EffectiveContractSnapshotConstants;
 import blue.language.processor.GasScheduleConstants;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.registry.RegistryManifestConstants;
@@ -38,7 +41,7 @@ final class SourceStyleConventionsTest {
     private static final Pattern BEHAVIOR_NAME = Pattern.compile(
             "should[A-Z][A-Za-z0-9]*");
     private static final Pattern ASSERTION_CALL = Pattern.compile(
-            "\\b(?:assert[A-Z][A-Za-z0-9]*|fail)\\s*\\(");
+            "\\b(?:assert[A-Z][A-Za-z0-9]*|(?<!\\.)fail)\\s*\\(");
     private static final List<String> GIVEN_WHEN_THEN = Collections.unmodifiableList(
             Arrays.asList("// given", "// when", "// then"));
     private static final List<String> GIVEN_WHEN_THEN_FILLER =
@@ -215,6 +218,31 @@ final class SourceStyleConventionsTest {
                     "ProcessingTraceConstants.java",
                     "EffectiveContractSnapshotConstants.java",
                     "GasScheduleConstants.java"
+            )));
+    private static final Set<String> PUBLISHED_RUNTIME_IDENTITIES =
+            publishedRuntimeIdentities();
+    private static final Set<String> PUBLISHED_CORE_BLUE_IDS =
+            Collections.unmodifiableSet(
+                    new HashSet<>(Properties.CORE_TYPE_BLUE_IDS));
+    private static final Set<String> PROCESSOR_TEST_TYPE_BLUE_IDS =
+            Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+                    ProcessorTestTypeBlueIds.APPLY_BATCH_PATCH,
+                    ProcessorTestTypeBlueIds.ASSERT_DOCUMENT_UPDATE,
+                    ProcessorTestTypeBlueIds.CUT_OFF_PROBE,
+                    ProcessorTestTypeBlueIds.EMIT_EVENTS,
+                    ProcessorTestTypeBlueIds.INCREMENT_PROPERTY,
+                    ProcessorTestTypeBlueIds.MUTATE_EMBEDDED_PATHS,
+                    ProcessorTestTypeBlueIds.MUTATE_EVENT,
+                    ProcessorTestTypeBlueIds.PROCESSING_FAILURE_MARKER,
+                    ProcessorTestTypeBlueIds.RECORD_DOCUMENT_UPDATE,
+                    ProcessorTestTypeBlueIds.REMOVE_IF_PRESENT,
+                    ProcessorTestTypeBlueIds.REMOVE_PROPERTY,
+                    ProcessorTestTypeBlueIds.SET_PROPERTY,
+                    ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT,
+                    ProcessorTestTypeBlueIds.TERMINATE_SCOPE,
+                    ProcessorTestTypeBlueIds.TEST_EVENT,
+                    ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL,
+                    ProcessorTestTypeBlueIds.LEGACY_BLUE_ID_TYPE
             )));
 
     @Test
@@ -509,6 +537,60 @@ final class SourceStyleConventionsTest {
         assertTrue(violations.isEmpty(), joinViolations(violations));
     }
 
+    @Test
+    void shouldCentralizePublishedAndSyntheticTypeBlueIds()
+            throws IOException {
+        // given
+        List<Path> sources = new ArrayList<>();
+        sources.addAll(javaSources(Paths.get("src/main/java")));
+        sources.addAll(javaSources(Paths.get("src/test/java")));
+        sources.addAll(javaSources(Paths.get("src/jmh/java")));
+
+        // when
+        List<String> violations = new ArrayList<>();
+        for (Path source : sources) {
+            String fileName = source.getFileName().toString();
+            String content = read(source);
+            if (!"Properties.java".equals(fileName)) {
+                rejectContainedLiterals(
+                        source,
+                        content,
+                        PUBLISHED_CORE_BLUE_IDS,
+                        "published core BlueId",
+                        violations);
+            }
+            if (!"RuntimeBlueIds.java".equals(fileName)) {
+                rejectContainedLiterals(
+                        source,
+                        content,
+                        PUBLISHED_RUNTIME_IDENTITIES,
+                        "published runtime identity",
+                        violations);
+            }
+            if (!"ProcessorTestTypeBlueIds.java".equals(fileName)
+                    && !"RuntimeBlueIds.java".equals(fileName)) {
+                rejectContainedLiterals(
+                        source,
+                        content,
+                        PROCESSOR_TEST_TYPE_BLUE_IDS,
+                        "synthetic processor test BlueId",
+                        violations);
+            }
+        }
+
+        // then
+        assertTrue(violations.isEmpty(), joinViolations(violations));
+    }
+
+    private static Set<String> publishedRuntimeIdentities() {
+        Set<String> blueIds = new HashSet<>();
+        blueIds.add(RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY);
+        for (RuntimeTypeKey key : RuntimeTypeKey.values()) {
+            blueIds.add(RuntimeBlueIds.blueId(key));
+        }
+        return Collections.unmodifiableSet(blueIds);
+    }
+
     private static List<TestMethod> allTestMethods() throws IOException {
         List<TestMethod> result = new ArrayList<>();
         for (Path source : javaSources(Paths.get("src/test/java"))) {
@@ -535,6 +617,20 @@ final class SourceStyleConventionsTest {
                 violations.add(source + ": " + vocabulary
                         + " literal \"" + literal
                         + "\" must use its named constant");
+            }
+        }
+    }
+
+    private static void rejectContainedLiterals(
+            Path source,
+            String content,
+            Set<String> forbidden,
+            String vocabulary,
+            List<String> violations) {
+        for (String literal : forbidden) {
+            if (content.contains(literal)) {
+                violations.add(source + ": " + vocabulary
+                        + " must use its named constant");
             }
         }
     }

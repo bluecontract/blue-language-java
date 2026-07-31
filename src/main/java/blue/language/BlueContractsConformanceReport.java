@@ -1,5 +1,6 @@
 package blue.language;
 
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.registry.RegistryManifestConstants;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -57,32 +58,32 @@ public final class BlueContractsConformanceReport {
             "blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline";
     /** Exact combined release package identity. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:de13521d2abf23fd3e3084aa6d754591c9b2f97b91176142287bc3d7456350d3";
+            "sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
     /** Exact Language fixture package identity. */
     public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5";
+            "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55";
     /** Exact Contracts registry package identity. */
     public static final String CONTRACTS_REGISTRY_PACKAGE_IDENTITY =
-            "sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b";
+            RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
     /** Exact Contracts gas package identity. */
     public static final String CONTRACTS_GAS_PACKAGE_IDENTITY =
             "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
     /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:de65cf1ba53e5408f804513691434102b41cb33a95cbf8412ae890d8e28ad982";
+            "sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18";
 
     /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
             "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
     /** Published SHA-256 digest of the Contracts specification. */
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "f99c17c700a1771b0cf308dfe7590b4001377a886a9b9eddb0d4a941647b8f83";
+            "3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
-            "ac1ac47e10c91be82ebe45e2406f33ad5073cc3f3684bc1651704117b5008852";
+            "41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e";
 
     /**
      * Fixture envelopes may use YAML anchors for literal reuse. This parser is

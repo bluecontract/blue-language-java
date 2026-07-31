@@ -12,7 +12,7 @@ import java.util.Stack;
 import java.util.stream.Collectors;
 
 /**
- * Prevents merge/extension work at specific JSON Pointer paths.
+ * Prevents merge/expansion work at specific JSON Pointer paths.
  *
  * <p>This is intentionally contract-agnostic. Callers decide which authored
  * subtrees need to be preserved for later runtime processing; the language
@@ -47,8 +47,14 @@ public class ExcludedPathLimits implements Limits {
     }
 
     @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+    public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
         return !isExcluded(potentialPath(pathSegment));
+    }
+
+    /** Legacy binary-API spelling delegated to the canonical method. */
+    @Override
+    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+        return shouldExpandPathSegment(pathSegment, currentNode);
     }
 
     @Override

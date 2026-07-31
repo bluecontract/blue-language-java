@@ -332,8 +332,8 @@ Before changing a fixture package:
 8. Review the generated per-fixture evidence and confirm that every
    manifest-listed fixture executed exactly once.
 
-The current final packages contain 128 Language fixtures and 140 Contracts
-fixtures (82 behavior and 58 gas), for 268 release results. A change to those
+The current final packages contain 153 Language fixtures and 140 Contracts
+fixtures (82 behavior and 58 gas), for 293 release results. A change to those
 counts or identities is release work and must not be hidden inside an ordinary
 refactor.
 

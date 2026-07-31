@@ -29,10 +29,19 @@ final class CheckpointIdentityCalculator {
         if (event == null) {
             return null;
         }
+        /*
+         * Processor events may be captured from a resolved snapshot, where a
+         * nominal type carries both its requested BlueId and materialized
+         * definition. Project that trusted view back to valid Source form so
+         * checkpoint identity never depends on resolved representation.
+         */
+        Node sourceProjection = event.clone();
+        MaterializationProvenance.clear(sourceProjection);
         ProcessingMetricsSink sink = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
         long directStart = System.nanoTime();
         try {
-            String identity = BlueIdCalculator.calculateBlueId(event);
+            String identity = BlueIdCalculator.calculateBlueId(
+                    sourceProjection);
             sink.addCheckpointDirectBlueIdNanos(System.nanoTime() - directStart);
             return identity;
         } catch (RuntimeException directFailure) {
@@ -44,14 +53,16 @@ final class CheckpointIdentityCalculator {
             }
             long contentStart = System.nanoTime();
             try {
-                String identity = blue.calculateSemanticBlueId(event.clone());
+                String identity = blue.calculateSemanticBlueId(
+                        sourceProjection.clone());
                 sink.addCheckpointContentBlueIdNanos(System.nanoTime() - contentStart);
                 return identity;
             } catch (RuntimeException semanticFailure) {
                 sink.addCheckpointContentBlueIdNanos(System.nanoTime() - contentStart);
                 long fallbackStart = System.nanoTime();
                 try {
-                    return ProcessorEngine.canonicalSignature(event.clone());
+                    return ProcessorEngine.canonicalSignature(
+                            sourceProjection.clone());
                 } finally {
                     sink.addCheckpointFallbackNanos(System.nanoTime() - fallbackStart);
                 }

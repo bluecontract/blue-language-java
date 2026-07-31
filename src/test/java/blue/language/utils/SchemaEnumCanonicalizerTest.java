@@ -9,28 +9,42 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SchemaEnumCanonicalizerTest {
 
     @Test
-    void sortsPunctuationNumbersAndUnicodeByCanonicalUtf8Bytes() {
-        List<Node> punctuation = SchemaEnumCanonicalizer.canonicalize(Arrays.asList(
+    void shouldSortPunctuationNumbersAndUnicodeByCanonicalUtf8Bytes() {
+        // given
+        List<Node> authoredPunctuation = Arrays.asList(
                 scalar("CRU-LONG"),
                 scalar("CRU"),
                 scalar("Transfer_or_Adjust"),
-                scalar("Transfer")));
-        List<Node> integers = SchemaEnumCanonicalizer.canonicalize(Arrays.asList(
+                scalar("Transfer"));
+        List<Node> authoredIntegers = Arrays.asList(
                 scalar(BigInteger.ONE),
-                scalar(BigInteger.TEN)));
-        List<Node> unicode = SchemaEnumCanonicalizer.canonicalize(Arrays.asList(
+                scalar(BigInteger.TEN));
+        List<Node> authoredUnicode = Arrays.asList(
                 scalar("\uD800\uDC00"),
-                scalar("\uE000")));
+                scalar("\uE000"));
 
+        // when
+        List<Node> punctuation =
+                SchemaEnumCanonicalizer.canonicalize(
+                        authoredPunctuation);
+        List<Node> integers =
+                SchemaEnumCanonicalizer.canonicalize(
+                        authoredIntegers);
+        List<Node> unicode =
+                SchemaEnumCanonicalizer.canonicalize(
+                        authoredUnicode);
+
+        // then
         assertEquals(
                 Arrays.asList("CRU", "CRU-LONG", "Transfer", "Transfer_or_Adjust"),
                 stringValues(punctuation));
@@ -45,7 +59,8 @@ class SchemaEnumCanonicalizerTest {
     }
 
     @Test
-    void normalizesTypedIdentityDeduplicatesAndDoesNotMutateInput() {
+    void shouldNormalizeTypedIdentityDeduplicateAndNotMutateInput() {
+        // given
         Node bareA = scalar("A");
         Node explicitA = scalar("A")
                 .type(new Node().blueId(TEXT_TYPE_BLUE_ID));
@@ -55,36 +70,93 @@ class SchemaEnumCanonicalizerTest {
                 explicitA,
                 scalar("B"));
 
-        List<Node> canonical = SchemaEnumCanonicalizer.canonicalize(source);
+        // when
+        List<Node> canonical =
+                SchemaEnumCanonicalizer.canonicalize(
+                        source);
 
+        // then
         assertEquals(Arrays.asList("A", "B"), stringValues(canonical));
         assertEquals(Arrays.asList("B", "A", "A", "B"), stringValues(source));
         assertEquals(4, source.size());
     }
 
     @Test
-    void keepsIntegerAndDoubleIdentityDistinct() {
+    void shouldKeepIntegerAndDoubleIdentityDistinct() {
+        // given
         Node integer = scalar(BigInteger.ONE);
         Node doubleValue = scalar(new BigDecimal("1.0"))
                 .type(new Node().blueId(DOUBLE_TYPE_BLUE_ID));
 
+        // when
+        String integerKey =
+                SchemaEnumCanonicalizer.canonicalKey(integer);
+        String doubleKey =
+                SchemaEnumCanonicalizer.canonicalKey(
+                        doubleValue);
+        List<Node> canonical =
+                SchemaEnumCanonicalizer.canonicalize(
+                        Arrays.asList(integer, doubleValue));
+
+        // then
         assertNotEquals(
-                SchemaEnumCanonicalizer.canonicalKey(integer),
-                SchemaEnumCanonicalizer.canonicalKey(doubleValue));
+                integerKey,
+                doubleKey);
         assertEquals(
                 2,
-                SchemaEnumCanonicalizer.canonicalize(
-                        Arrays.asList(integer, doubleValue)).size());
+                canonical.size());
     }
 
     @Test
-    void rejectsDeclarationMetadataInsteadOfSilentlyHashingIt() {
+    void shouldRejectDeclarationMetadataInsteadOfSilentlyHashingIt() {
+        // given
         Node invalid = scalar("A").name("label");
 
-        assertThrows(
+        // when
+        Throwable failure =
+                captureFailure(
+                        () -> SchemaEnumCanonicalizer
+                                .canonicalize(
+                                        Arrays.asList(
+                                                invalid)));
+
+        // then
+        assertInstanceOf(
                 IllegalArgumentException.class,
-                () -> SchemaEnumCanonicalizer.canonicalize(
-                        Arrays.asList(invalid)));
+                failure);
+    }
+
+    @Test
+    void shouldCanonicalizeAndDeduplicatePureReferenceEntries() {
+        // given
+        Node referencedValue = scalar("referenced");
+        String referencedBlueId =
+                BlueIdCalculator.calculateBlueId(referencedValue);
+        Node reference = new Node().blueId(referencedBlueId);
+        List<Node> authored = Arrays.asList(
+                scalar("inline"),
+                reference,
+                reference.clone());
+
+        // when
+        List<Node> canonical =
+                SchemaEnumCanonicalizer.canonicalize(authored);
+
+        // then
+        assertEquals(2, canonical.size());
+        assertEquals(
+                1L,
+                canonical.stream()
+                        .filter(Node::isReferenceOnly)
+                        .count());
+        assertEquals(
+                referencedBlueId,
+                canonical.stream()
+                        .filter(Node::isReferenceOnly)
+                        .findFirst()
+                        .get()
+                        .getBlueId());
+        assertEquals(3, authored.size());
     }
 
     private static Node scalar(Object value) {

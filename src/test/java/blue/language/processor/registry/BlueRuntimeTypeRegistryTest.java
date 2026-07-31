@@ -20,6 +20,7 @@ import blue.language.utils.BlueIds;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,25 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueRuntimeTypeRegistryTest {
+
+    @Test
+    void shouldMatchEveryNamedRuntimeBlueIdToTheClosedRegistry() {
+        // given
+        BlueRuntimeTypeRegistry registry =
+                BlueRuntimeTypeRegistry.getDefault();
+        Map<RuntimeTypeKey, String> namedBlueIds =
+                new EnumMap<>(RuntimeTypeKey.class);
+
+        // when
+        for (RuntimeTypeKey key : RuntimeTypeKey.values()) {
+            namedBlueIds.put(key, RuntimeBlueIds.blueId(key));
+        }
+
+        // then
+        assertEquals(RuntimeTypeKey.values().length,
+                registry.blueIds().size());
+        assertEquals(registry.blueIds(), namedBlueIds);
+    }
 
     @Test
     void shouldVerifyProviderReturnsCanonicalNodesForRuntimeTypes() {

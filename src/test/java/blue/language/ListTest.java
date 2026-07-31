@@ -8,7 +8,7 @@ import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.processor.FailureCapture;
-import blue.language.utils.NodeExtender;
+import blue.language.utils.NodeExpander;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
@@ -33,7 +33,7 @@ public class ListTest {
     private MergingProcessor mergingProcessor;
     private Merger merger;
     private Preprocessor preprocessor;
-    private NodeExtender extender;
+    private NodeExpander expander;
 
     @BeforeEach
     public void setUp() {
@@ -55,7 +55,7 @@ public class ListTest {
         );
         merger = new Merger(mergingProcessor, nodeProvider);
         preprocessor = new Preprocessor(nodeProvider);
-        extender = new NodeExtender(nodeProvider);
+        expander = new NodeExpander(nodeProvider);
     }
 
 
@@ -170,14 +170,14 @@ public class ListTest {
         nodeProvider.addListAndItsItems(asList(a, b, c));
 
         // when
-        Node x1Extended = preprocessAndExtend(x1);
-        Node x2Extended = preprocessAndExtend(x2);
-        Node x3Extended = preprocessAndExtend(x3);
+        Node x1Expanded = preprocessAndExpand(x1);
+        Node x2Expanded = preprocessAndExpand(x2);
+        Node x3Expanded = preprocessAndExpand(x3);
 
         // then
-        assertEquals(3, x1Extended.getItems().size());
-        assertEquals(3, x2Extended.getItems().size());
-        assertEquals(3, x3Extended.getItems().size());
+        assertEquals(3, x1Expanded.getItems().size());
+        assertEquals(3, x2Expanded.getItems().size());
+        assertEquals(3, x3Expanded.getItems().size());
     }
 
     @Test
@@ -210,12 +210,12 @@ public class ListTest {
                     "  - C";
 
         // when
-        Node x1Extended = preprocessAndExtend(x1);
-        Node x2Extended = preprocessAndExtend(x2);
+        Node x1Expanded = preprocessAndExpand(x1);
+        Node x2Expanded = preprocessAndExpand(x2);
 
         // then
-        assertEquals(3, x1Extended.getItems().size());
-        assertEquals(3, x2Extended.getItems().size());
+        assertEquals(3, x1Expanded.getItems().size());
+        assertEquals(3, x2Expanded.getItems().size());
     }
 
     @Test
@@ -235,19 +235,19 @@ public class ListTest {
         // when
         Throwable failure =
                 FailureCapture.captureFailure(
-                        () -> preprocessAndExtend(invalid));
+                        () -> preprocessAndExpand(invalid));
 
         // then
         assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
-    private Node preprocessAndExtend(String doc) {
-        return preprocessAndExtend(YAML_MAPPER.readValue(doc, Node.class));
+    private Node preprocessAndExpand(String doc) {
+        return preprocessAndExpand(YAML_MAPPER.readValue(doc, Node.class));
     }
 
-    private Node preprocessAndExtend(Node node) {
-        Node result = preprocessor.preprocessWithDefaultBlue(node);
-        extender.extend(result, Limits.NO_LIMITS);
+    private Node preprocessAndExpand(Node node) {
+        Node result = preprocessor.preprocess(node);
+        expander.expand(result, Limits.NO_LIMITS);
         return result;
     }
 

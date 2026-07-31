@@ -890,7 +890,17 @@ public final class FrozenTypeMatcher {
             if (nodes == null || nodes.size() != 1) {
                 return null;
             }
-            return FrozenNode.fromResolvedNode(blue.preprocess(nodes.get(0).clone()));
+            /*
+             * A verified provider may retain the requested identity on its
+             * expanded root. That identity is materialization provenance, not
+             * a mixed Source field, so project it away before applying the
+             * strict preprocessing grammar.
+             */
+            Node sourceProjection = NodeToBlueIdInput
+                    .stripResolvedBlueIdMetadata(
+                            nodes.get(0).clone());
+            return FrozenNode.fromResolvedNode(
+                    blue.preprocess(sourceProjection));
         } catch (RuntimeException ex) {
             return null;
         }

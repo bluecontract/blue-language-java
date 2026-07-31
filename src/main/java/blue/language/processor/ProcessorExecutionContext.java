@@ -32,6 +32,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     private final String contractKey;
     private final FrozenNode contractNode;
     private final Node event;
+    private final Node occurrenceEvent;
     private final boolean allowReservedMutation;
     private final ContractEffectBuffer effects = new ContractEffectBuffer();
     private final RuntimeWorkSession runtimeWorkSession;
@@ -49,6 +50,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                               String contractKey,
                               FrozenNode contractNode,
                               Node event,
+                              Node occurrenceEvent,
                               boolean allowReservedMutation) {
         this.execution = Objects.requireNonNull(execution, "execution");
         this.bundle = Objects.requireNonNull(bundle, "bundle");
@@ -56,6 +58,9 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         this.contractKey = contractKey;
         this.contractNode = contractNode;
         this.event = Objects.requireNonNull(event, "event");
+        this.occurrenceEvent = Objects.requireNonNull(
+                occurrenceEvent,
+                "occurrenceEvent");
         this.allowReservedMutation = allowReservedMutation;
         this.runtimeWorkSession =
                 execution.runtime().newRuntimeWorkSession(
@@ -108,6 +113,19 @@ public final class ProcessorExecutionContext implements AutoCloseable {
      */
     public Node event() {
         return event;
+    }
+
+    /**
+     * Returns the semantic event occurrence offered to this handler.
+     *
+     * <p>Ordinary deliveries return the same value as {@link #event()}.
+     * Adapter Channels may keep their wire payload in {@code event()} while
+     * retaining the exact originating occurrence here.</p>
+     *
+     * @return current semantic occurrence event
+     */
+    public Node occurrenceEvent() {
+        return occurrenceEvent;
     }
 
     /**
@@ -247,12 +265,16 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         if (patches == null || patches.isEmpty()) {
             return;
         }
+        List<FrozenJsonPatch> admittedPatches =
+                admitExactPatchValues(
+                        patches);
         long observedPatchCount = requireEffectCapacity(
                 ProcessorErrorCategory.PatchLimitExceeded,
                 PATCH_LIMIT,
                 acceptedPatchCount,
-                patches.size());
-        effects.addFrozenPatches(patches);
+                admittedPatches.size());
+        effects.addFrozenPatches(
+                admittedPatches);
         acceptedPatchCount = observedPatchCount;
     }
 
@@ -275,12 +297,17 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         if (patches == null || patches.isEmpty()) {
             return;
         }
+        List<FrozenJsonPatch> admittedPatches =
+                admitExactPatchValues(
+                        patches);
         long observedPatchCount = requireEffectCapacity(
                 ProcessorErrorCategory.PatchLimitExceeded,
                 PATCH_LIMIT,
                 acceptedPatchCount,
-                patches.size());
-        effects.addPreviewedFrozenPatches(patches, preview);
+                admittedPatches.size());
+        effects.addPreviewedFrozenPatches(
+                admittedPatches,
+                preview);
         acceptedPatchCount = observedPatchCount;
     }
 
@@ -308,6 +335,37 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                 acceptedEventCount,
                 1L);
         effects.emit(emission);
+        acceptedEventCount = observedEventCount;
+    }
+
+    /**
+     * Buffers one event already admitted by a semantic output boundary.
+     *
+     * <p>The handle is re-admitted at this invocation boundary. Same-run
+     * capabilities therefore avoid a second identity charge, while handles
+     * from another invocation cannot replay ambient trust.</p>
+     *
+     * @param emission processor-issued exact event
+     */
+    public void emitEvent(
+            ExactBlueValue emission) {
+        ensureOpen();
+        if (execution.shouldStopScopeWork(
+                scopePath)) {
+            return;
+        }
+        ExactBlueValue admitted =
+                semanticOutputBoundary()
+                        .admit(
+                                Objects.requireNonNull(
+                                        emission,
+                                        "emission"));
+        long observedEventCount = requireEffectCapacity(
+                ProcessorErrorCategory.InternalEventLimitExceeded,
+                EVENT_LIMIT,
+                acceptedEventCount,
+                1L);
+        effects.emit(admitted);
         acceptedEventCount = observedEventCount;
     }
 
@@ -357,7 +415,8 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         for (int eventIndex = 0;
              eventIndex < effects.emittedEvents().size();
              eventIndex++) {
-            Node emission = effects.emittedEvents().get(eventIndex);
+            ContractEffectBuffer.EventEmission emission =
+                    effects.emittedEvents().get(eventIndex);
             if (!emitEventNow(emission)) {
                 recordCutOffDiscardedEffects(
                         effects.patchBatches().size(), eventIndex);
@@ -409,11 +468,13 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                         null);
             }
         }
-        List<Node> emissions = effects.emittedEvents();
+        List<ContractEffectBuffer.EventEmission> emissions =
+                effects.emittedEvents();
         for (int index = Math.max(0, firstEventIndex);
              index < emissions.size();
              index++) {
-            Node emission = emissions.get(index);
+            Node emission =
+                    emissions.get(index).event();
             Map<String, Object> details = new LinkedHashMap<>();
             details.put(
                     ProcessingTraceConstants.FIELD_EFFECT,
@@ -812,11 +873,44 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         return observed;
     }
 
-    private boolean emitEventNow(Node emission) {
+    private List<FrozenJsonPatch> admitExactPatchValues(
+            List<FrozenJsonPatch> patches) {
+        List<FrozenJsonPatch> admitted =
+                new ArrayList<>(
+                        patches.size());
+        for (FrozenJsonPatch patch : patches) {
+            FrozenJsonPatch checked =
+                    Objects.requireNonNull(
+                            patch,
+                            "patch");
+            ExactBlueValue exact =
+                    checked.getExactValue();
+            admitted.add(
+                    exact == null
+                            ? checked
+                            : checked.withExactValue(
+                                    semanticOutputBoundary()
+                                            .admit(
+                                                    exact)));
+        }
+        return Collections.unmodifiableList(
+                admitted);
+    }
+
+    private boolean emitEventNow(
+            ContractEffectBuffer.EventEmission emission) {
+        Node event =
+                emission.event();
         String eventBlueId;
         try {
-            eventBlueId = CheckpointIdentityCalculator.identity(
-                    emission, execution.blue());
+            eventBlueId =
+                    emission.exactValue() != null
+                            ? emission.exactValue()
+                                    .blueId()
+                            : CheckpointIdentityCalculator
+                                    .identity(
+                                            event,
+                                            execution.blue());
         } catch (RuntimeException ex) {
             execution.abortRuntimeFailure(scopePath,
                     bundle,
@@ -830,7 +924,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         execution.enqueueApplicationEvent(
                 scopePath,
                 contractKey,
-                emission,
+                event,
                 eventBlueId);
         return true;
     }

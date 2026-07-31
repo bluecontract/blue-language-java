@@ -22,16 +22,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import static blue.language.processor.model.ProcessorTestTypeBlueIds.TEST_EVENT;
+import static blue.language.processor.model.ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 final class ChannelCheckpointSubjectTest {
-
-    private static final String CHANNEL_TYPE_BLUE_ID =
-            "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
-    private static final String EVENT_TYPE_BLUE_ID =
-            "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
 
     @Test
     void shouldStoreFirstInlineSequenceSubjectWithoutSnapshotMaterialization() {
@@ -147,12 +144,12 @@ final class ChannelCheckpointSubjectTest {
                         .sourceContribution(
                                 contributionBlueId)
                         .effectiveTypeBlueId(
-                                CHANNEL_TYPE_BLUE_ID)
+                                TEST_EVENT_CHANNEL)
                         .subscriptionKey(
-                                EVENT_TYPE_BLUE_ID)
+                                TEST_EVENT)
                         .checkpointDomainBlueId(
                                 CheckpointDomain.derive(
-                                        CHANNEL_TYPE_BLUE_ID,
+                                        TEST_EVENT_CHANNEL,
                                         Collections.singletonList(
                                                 contributionBlueId),
                                         "inline-sequence"))
@@ -250,7 +247,7 @@ final class ChannelCheckpointSubjectTest {
                             "timeline",
                             new Node().type(
                                     new Node().blueId(
-                                            CHANNEL_TYPE_BLUE_ID))));
+                                            TEST_EVENT_CHANNEL))));
             for (Node watched : Arrays.asList(
                     subject(9),
                     subject(10),
@@ -353,14 +350,14 @@ final class ChannelCheckpointSubjectTest {
                     public List<String> channelKeys(
                             TestEventChannel contract) {
                         return Collections.singletonList(
-                                EVENT_TYPE_BLUE_ID);
+                                TEST_EVENT);
                     }
 
                     @Override
                     public List<String> eventKeys(
                             Node exactEvent) {
                         return Collections.singletonList(
-                                EVENT_TYPE_BLUE_ID);
+                                TEST_EVENT);
                     }
 
                     @Override

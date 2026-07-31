@@ -1,0 +1,19 @@
+id: R_specialization_creates_new_node
+category: Specialization
+operation: calculateBlueIdPair
+description: specialization creates a new node while expansion would preserve the existing node identity
+left:
+  name: Price
+  amount:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  currency:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+right:
+  name: PLN Price
+  type:
+    blueId: FshrbcDSaUvb8zYJe1w941qE4pdXCTAitkB7jS88R2hM
+  currency: PLN
+expectedEqual: false
+note: The left node has BlueId FshrbcDSaUvb8zYJe1w941qE4pdXCTAitkB7jS88R2hM. Materializing that node preserves its identity; the right node specializes it and has a different identity.

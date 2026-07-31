@@ -7,6 +7,8 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.ApplyBatchPatchContractProcessor;
 import blue.language.processor.contracts.RecordDocumentUpdateContractProcessor;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -36,11 +38,11 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  lifecycle:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  apply:\n" +
                 "    channel: lifecycle\n" +
                 "    type:\n" +
-                "      blueId: AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw\n");
+                "      blueId: " + ProcessorTestTypeBlueIds.APPLY_BATCH_PATCH + "\n");
 
         // when
         DocumentProcessingResult result = blue.initializeDocument(original);
@@ -215,27 +217,27 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  lifecycle:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  watchA:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /a\n" +
                 "  watchB:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /b\n" +
                 "  apply:\n" +
                 "    channel: lifecycle\n" +
                 "    type:\n" +
-                "      blueId: AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.APPLY_BATCH_PATCH + "\n" +
                 "  recordA:\n" +
                 "    channel: watchA\n" +
                 "    type:\n" +
-                "      blueId: qLb75fi7BHJf8HvxXNTJP8Zo2fCsA3t6Lz5R269qUiC\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.RECORD_DOCUMENT_UPDATE + "\n" +
                 "  recordB:\n" +
                 "    channel: watchB\n" +
                 "    type:\n" +
-                "      blueId: qLb75fi7BHJf8HvxXNTJP8Zo2fCsA3t6Lz5R269qUiC\n");
+                "      blueId: " + ProcessorTestTypeBlueIds.RECORD_DOCUMENT_UPDATE + "\n");
 
         // when
         blue.initializeDocument(original);
@@ -253,7 +255,7 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  watchOther:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /other\n");
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         execution.preflightScope("/");
@@ -278,7 +280,7 @@ class DocumentProcessorBatchPatchTest {
                 "contracts:\n" +
                 "  watchA:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /a\n");
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
         execution.preflightScope("/");

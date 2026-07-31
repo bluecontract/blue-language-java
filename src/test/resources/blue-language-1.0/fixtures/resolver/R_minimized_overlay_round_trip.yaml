@@ -17,3 +17,4 @@ expectedResolved:
     type: Integer
     value: 10
 expectedRoundTripEqual: true
+expectedSameContentBlueIdThroughPipeline: true

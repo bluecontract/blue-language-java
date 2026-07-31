@@ -1,6 +1,10 @@
 package blue.language;
 
 import blue.language.model.Node;
+import blue.language.model.NodeDeserializer;
+import blue.language.preprocess.Preprocessor;
+import blue.language.preprocess.TransformationProcessor;
+import blue.language.preprocess.TransformationProcessorProvider;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.CyclicSetProof;
@@ -46,6 +50,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -181,6 +186,8 @@ public final class BlueConformanceSuiteRunner {
                 "expectedFragmentBlueIds";
         private static final String EXPECTED_FRAGMENT_COUNT =
                 "expectedFragmentCount";
+        private static final String EXPECTED_IDEMPOTENT =
+                "expectedIdempotent";
         private static final String EXPECTED_IDENTITY_EQUAL =
                 "expectedIdentityEqual";
         private static final String EXPECTED_LOCAL_PROVIDER_OUTCOME =
@@ -225,6 +232,9 @@ public final class BlueConformanceSuiteRunner {
                 "expectedSameNodeBlueId";
         private static final String EXPECTED_SAME_ROOT_NODE_BLUE_ID =
                 "expectedSameRootNodeBlueId";
+        private static final String
+                EXPECTED_SAME_CONTENT_BLUE_ID_THROUGH_PIPELINE =
+                "expectedSameContentBlueIdThroughPipeline";
         private static final String EXPECTED_SAME_SEMANTIC_COVERAGE =
                 "expectedSameSemanticCoverage";
         private static final String EXPECTED_SAME_SEMANTIC_RESULT =
@@ -262,6 +272,8 @@ public final class BlueConformanceSuiteRunner {
         private static final String PROVIDER = "provider";
         private static final String PROVIDER_NODE = "providerNode";
         private static final String PROVIDER_RESULT = "providerResult";
+        private static final String PREPROCESSING_ALIASES =
+                "preprocessingAliases";
         private static final String PUBLISHABLE_FILES = "publishableFiles";
         private static final String REGISTRY_KEY = "registryKey";
         private static final String REGISTRY_KIND = "registryKind";
@@ -284,6 +296,11 @@ public final class BlueConformanceSuiteRunner {
 
     private static final String FIXTURE_ROOT = "blue-language-1.0/fixtures/";
     private static final String MANIFEST_RESOURCE = FIXTURE_ROOT + "manifest.yaml";
+    private static final String PREPROCESSING_REGISTRY_ROOT =
+            FIXTURE_ROOT + "preprocessing/registry/";
+    private static final String PREPROCESSING_REGISTRY_MANIFEST_RESOURCE =
+            PREPROCESSING_REGISTRY_ROOT + "manifest.yaml";
+    private static final int EXPECTED_BEHAVIOR_FIXTURE_COUNT = 153;
 
     private static final Set<String> OPERATIONS = immutableSet(
             FixtureOperation.ASSERT_VIEW_PATH,
@@ -339,7 +356,8 @@ public final class BlueConformanceSuiteRunner {
             FixtureField.EXPECTED_ELEMENT_BODY_REQUESTS, FixtureField.EXPECTED_EQUAL, FixtureField.EXPECTED_ERROR_CATEGORY,
             FixtureField.EXPECTED_EXPANDED, FixtureField.EXPECTED_EXPANDED_DESCENDANT_REQUESTS,
             FixtureField.EXPECTED_FIELD_COUNT, FixtureField.EXPECTED_FRAGMENT_BLUE_IDS,
-            FixtureField.EXPECTED_FRAGMENT_COUNT, FixtureField.EXPECTED_IDENTITY_EQUAL,
+            FixtureField.EXPECTED_FRAGMENT_COUNT, FixtureField.EXPECTED_IDEMPOTENT,
+            FixtureField.EXPECTED_IDENTITY_EQUAL,
             FixtureField.EXPECTED_LOCAL_PROVIDER_OUTCOME, FixtureField.EXPECTED_MATCH,
             FixtureField.EXPECTED_MERGE_POLICY, FixtureField.EXPECTED_MINIMIZED_MAY_CONTAIN,
             FixtureField.EXPECTED_NODE_BLUE_ID, FixtureField.EXPECTED_NOT_REQUESTED_BLUE_IDS,
@@ -352,6 +370,7 @@ public final class BlueConformanceSuiteRunner {
             FixtureField.EXPECTED_RESOLVED, FixtureField.EXPECTED_RESOLVED_ITEMS, FixtureField.EXPECTED_ROUND_TRIP_EQUAL,
             FixtureField.EXPECTED_ROUND_TRIP_ITEMS, FixtureField.EXPECTED_SAME_AS_COMPLETE_RESOLUTION,
             FixtureField.EXPECTED_SAME_NODE_BLUE_ID, FixtureField.EXPECTED_SAME_ROOT_NODE_BLUE_ID,
+            FixtureField.EXPECTED_SAME_CONTENT_BLUE_ID_THROUGH_PIPELINE,
             FixtureField.EXPECTED_SAME_SEMANTIC_COVERAGE, FixtureField.EXPECTED_SAME_SEMANTIC_RESULT,
             FixtureField.EXPECTED_SOURCE_REFERENCE_PRESERVED_BY_CANONICALIZATION,
             FixtureField.EXPECTED_VALID, FixtureField.EXPECTED_VALUE, FixtureField.EXPECTED_VERIFIED,
@@ -362,6 +381,7 @@ public final class BlueConformanceSuiteRunner {
             FixtureField.CUTS, FixtureField.LIMITS, FixtureField.MATCH_RULE, FixtureField.MUTATION, "note",
             FixtureField.OPERATION, FixtureField.PARENT,
             FixtureField.PATH, FixtureField.PATTERN, FixtureField.PROVIDER, FixtureField.PROVIDER_NODE, FixtureField.PROVIDER_RESULT,
+            FixtureField.PREPROCESSING_ALIASES,
             FixtureField.PUBLISHABLE_FILES, FixtureField.REGISTRY_KEY, FixtureField.REGISTRY_KIND,
             FixtureField.REQUESTED_BLUE_ID, FixtureField.REQUIRED_HEADINGS, FixtureField.REQUIRES_VECTOR_PREFIXES,
             FixtureField.RESOLVED_ITEMS, FixtureField.RIGHT, FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING,
@@ -649,11 +669,39 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static void runPreprocess(JsonNode spec) {
-        ProviderContext provider = providerContext(spec, null);
-        Blue blue = new Blue(provider.provider);
-        Node actual = blue.preprocess(readNode(requirePresent(spec, FixtureField.SOURCE)));
+        ProviderContext provider = preprocessingProviderContext(spec);
+        Map<String, String> aliases = preprocessingAliases(spec);
+        TransformationProcessorProvider transformations =
+                FixtureTransformationRegistry.INSTANCE;
+        Node actual = new Preprocessor(
+                transformations,
+                provider.provider,
+                aliases,
+                Collections.emptyMap())
+                .preprocess(readNode(requirePresent(
+                        spec, FixtureField.SOURCE)));
         assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_PREPROCESSED, actual);
         assertEffectiveTypes(spec.get(FixtureField.EXPECTED_EFFECTIVE_TYPES), actual);
+        if (spec.has(FixtureField.ALSO_EQUIVALENT_TO)) {
+            Node equivalent = new Preprocessor(
+                    transformations,
+                    provider.provider,
+                    aliases,
+                    Collections.emptyMap())
+                    .preprocess(readNode(spec.get(
+                            FixtureField.ALSO_EQUIVALENT_TO)));
+            assertNodeEquals(actual, equivalent);
+        }
+        if (spec.path(FixtureField.EXPECTED_IDEMPOTENT)
+                .asBoolean(false)) {
+            Node repeated = new Preprocessor(
+                    transformations,
+                    provider.provider,
+                    aliases,
+                    Collections.emptyMap())
+                    .preprocess(actual.clone());
+            assertNodeEquals(actual, repeated);
+        }
     }
 
     private static void runResolve(JsonNode spec) {
@@ -1282,14 +1330,16 @@ public final class BlueConformanceSuiteRunner {
     private static void runMinimizeAndResolve(JsonNode spec) {
         ProviderContext provider = providerContext(spec, null);
         Blue blue = new Blue(provider.provider);
+        Node originalSource;
         Node originalResolved;
         Node minimized;
         if (spec.has(FixtureField.SOURCE)) {
-            Node source = readNode(spec.get(FixtureField.SOURCE));
-            originalResolved = blue.resolve(blue.preprocess(source));
+            originalSource = readNode(spec.get(FixtureField.SOURCE));
+            originalResolved = blue.resolve(blue.preprocess(
+                    originalSource.clone()));
             assertExpectedResolvedIfPresent(spec, FixtureField.EXPECTED_RESOLVED,
                     originalResolved, blue);
-            minimized = blue.minimize(source.clone());
+            minimized = blue.minimize(originalSource.clone());
         } else {
             // Build the synthetic complete source in the same preprocessed
             // representation used by list-anchor validation. In particular,
@@ -1299,10 +1349,11 @@ public final class BlueConformanceSuiteRunner {
                     readNode(requirePresent(spec, FixtureField.PARENT)));
             Node desired = blue.preprocess(
                     readNode(requirePresent(spec, FixtureField.RESOLVED_ITEMS)));
-            Node completeOverlay = sourceForResolvedItems(
+            originalSource = sourceForResolvedItems(
                     parent, desired.getItems());
-            originalResolved = blue.resolve(blue.preprocess(completeOverlay));
-            minimized = blue.minimize(completeOverlay.clone());
+            originalResolved = blue.resolve(blue.preprocess(
+                    originalSource.clone()));
+            minimized = blue.minimize(originalSource.clone());
         }
         Node roundTrip = blue.resolve(blue.preprocess(minimized.clone()));
         if (spec.path(FixtureField.EXPECTED_ROUND_TRIP_EQUAL).asBoolean(false)) {
@@ -1315,6 +1366,13 @@ public final class BlueConformanceSuiteRunner {
         if (spec.has(FixtureField.EXPECTED_MINIMIZED_MAY_CONTAIN)) {
             assertOnlyAllowedMinimizationControls(
                     minimized, textValues(spec.get(FixtureField.EXPECTED_MINIMIZED_MAY_CONTAIN)));
+        }
+        if (spec.path(
+                FixtureField.EXPECTED_SAME_CONTENT_BLUE_ID_THROUGH_PIPELINE)
+                .asBoolean(false)) {
+            assertEquals(
+                    blue.calculateSemanticBlueId(originalSource.clone()),
+                    blue.calculateSemanticBlueId(minimized.clone()));
         }
     }
 
@@ -1966,6 +2024,24 @@ public final class BlueConformanceSuiteRunner {
 
     private static ProviderContext providerContext(
             JsonNode spec, Map<String, NodeProviderResult> absentProviderFallback) {
+        return providerContext(
+                spec,
+                absentProviderFallback,
+                Collections.emptySet());
+    }
+
+    private static ProviderContext preprocessingProviderContext(
+            JsonNode spec) {
+        return providerContext(
+                spec,
+                null,
+                preprocessingDirectiveBlueIds(spec));
+    }
+
+    private static ProviderContext providerContext(
+            JsonNode spec,
+            Map<String, NodeProviderResult> absentProviderFallback,
+            Set<String> preprocessingDirectiveBlueIds) {
         Map<String, NodeProviderResult> entries = new LinkedHashMap<>();
         if (!spec.has(FixtureField.PROVIDER)) {
             entries.putAll(absentProviderFallback == null
@@ -1977,10 +2053,71 @@ public final class BlueConformanceSuiteRunner {
                         "Fixture provider must be a list.");
             }
             for (JsonNode entry : provider) {
-                addProviderEntry(entries, entry);
+                addProviderEntry(
+                        entries,
+                        entry,
+                        preprocessingDirectiveBlueIds);
             }
         }
         return providerContextWithoutFixtureProvider(entries);
+    }
+
+    private static Map<String, String> preprocessingAliases(
+            JsonNode spec) {
+        JsonNode declared = spec.get(
+                FixtureField.PREPROCESSING_ALIASES);
+        if (declared == null) {
+            return Collections.emptyMap();
+        }
+        if (!declared.isObject()) {
+            throw new IllegalArgumentException(
+                    "Fixture preprocessingAliases must be an object.");
+        }
+        Map<String, String> aliases = new LinkedHashMap<>();
+        declared.fields().forEachRemaining(entry -> {
+            if (entry.getKey().isEmpty()
+                    || !entry.getValue().isTextual()) {
+                throw new IllegalArgumentException(
+                        "Fixture preprocessingAliases must map non-empty names to exact BlueIds.");
+            }
+            aliases.put(
+                    entry.getKey(),
+                    BlueIds.requirePlainBlueId(
+                            entry.getValue().asText(),
+                            FixtureField.PREPROCESSING_ALIASES
+                                    + "." + entry.getKey()));
+        });
+        return Collections.unmodifiableMap(aliases);
+    }
+
+    private static Set<String> preprocessingDirectiveBlueIds(
+            JsonNode spec) {
+        Set<String> result = new LinkedHashSet<>(
+                preprocessingAliases(spec).values());
+        addPreprocessingDirectiveBlueId(
+                result, spec.get(FixtureField.SOURCE));
+        addPreprocessingDirectiveBlueId(
+                result, spec.get(FixtureField.ALSO_EQUIVALENT_TO));
+        return Collections.unmodifiableSet(result);
+    }
+
+    private static void addPreprocessingDirectiveBlueId(
+            Set<String> destination,
+            JsonNode source) {
+        if (source == null || !source.isObject()) {
+            return;
+        }
+        JsonNode directive = source.get(Properties.OBJECT_BLUE);
+        if (directive == null || !directive.isObject()) {
+            return;
+        }
+        JsonNode blueId = directive.get(Properties.OBJECT_BLUE_ID);
+        if (blueId != null && blueId.isTextual()) {
+            destination.add(BlueIds.requirePlainBlueId(
+                    blueId.asText(),
+                    Properties.OBJECT_BLUE + "."
+                            + Properties.OBJECT_BLUE_ID));
+        }
     }
 
     /**
@@ -2061,6 +2198,13 @@ public final class BlueConformanceSuiteRunner {
 
     private static void addProviderEntry(
             Map<String, NodeProviderResult> entries, JsonNode entry) {
+        addProviderEntry(entries, entry, Collections.emptySet());
+    }
+
+    private static void addProviderEntry(
+            Map<String, NodeProviderResult> entries,
+            JsonNode entry,
+            Set<String> preprocessingDirectiveBlueIds) {
         String requested = entry.has(FixtureField.REQUESTED_BLUE_ID)
                 ? entry.get(FixtureField.REQUESTED_BLUE_ID).asText()
                 : requireText(entry, Properties.OBJECT_BLUE_ID);
@@ -2089,8 +2233,11 @@ public final class BlueConformanceSuiteRunner {
             throw new IllegalArgumentException(
                     "Provider entry requires node/returnedNode or outcome.");
         }
+        Node content = preprocessingDirectiveBlueIds.contains(requested)
+                ? NodeDeserializer.parsePreprocessingDirective(node)
+                : readNode(node);
         entries.put(requested, NodeProviderResult.found(
-                Collections.singletonList(readNode(node))));
+                Collections.singletonList(content)));
     }
 
     private static volatile Map<String, NodeProviderResult> providerCatalog;
@@ -2136,8 +2283,9 @@ public final class BlueConformanceSuiteRunner {
         JsonNode manifest = readYamlResource(MANIFEST_RESOURCE);
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 manifest.path("packageIdentity").asText());
-        assertEquals(128, manifest.path("behaviorFixtureCount").asInt());
-        assertEquals(128,
+        assertEquals(EXPECTED_BEHAVIOR_FIXTURE_COUNT,
+                manifest.path("behaviorFixtureCount").asInt());
+        assertEquals(EXPECTED_BEHAVIOR_FIXTURE_COUNT,
                 BlueConformanceReport.requiredFixtureIdsForBlueLanguage10().size());
         JsonNode files = requireArray(manifest, "files");
         List<FixtureEntry> result = new ArrayList<>();
@@ -2174,7 +2322,7 @@ public final class BlueConformanceSuiteRunner {
                     BlueFixtureCategory.fromLabel(
                             requireText(fixture, FixtureField.CATEGORY)), path));
         }
-        assertEquals(128, result.size());
+        assertEquals(EXPECTED_BEHAVIOR_FIXTURE_COUNT, result.size());
         return Collections.unmodifiableList(result);
     }
 
@@ -2391,6 +2539,624 @@ public final class BlueConformanceSuiteRunner {
 
     private static void assertTrue(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
+    }
+
+    /**
+     * Field vocabulary for the conformance-only transformation registry.
+     */
+    private static final class FixtureTransformationField {
+
+        private static final String REGISTRY = "registry";
+        private static final String REGISTRY_KIND = "registryKind";
+        private static final String SPECIFICATION_VERSION =
+                "specificationVersion";
+        private static final String ENTRIES = "entries";
+        private static final String KEY = "key";
+        private static final String FROM = "from";
+        private static final String TO = "to";
+        private static final String FIELD = "field";
+        private static final String SUFFIX = "suffix";
+
+        private FixtureTransformationField() {
+        }
+    }
+
+    /**
+     * Exact manifest keys and paths for the three fixture-only types.
+     */
+    private static final class FixtureTransformationDefinition {
+
+        private static final String REGISTRY_NAME =
+                "blue-language-conformance-preprocessing-transformations";
+        private static final String REGISTRY_KIND =
+                "fixture-only-transformation-type";
+        private static final String SPECIFICATION_VERSION = "1.0";
+        private static final String RENAME_ROOT_FIELD_KEY =
+                "RenameRootFieldTransformation";
+        private static final String RENAME_ROOT_FIELD_PATH =
+                "RenameRootFieldTransformation.blue";
+        private static final String SET_ROOT_FIELD_KEY =
+                "SetRootFieldTransformation";
+        private static final String SET_ROOT_FIELD_PATH =
+                "SetRootFieldTransformation.blue";
+        private static final String APPEND_ROOT_TEXT_KEY =
+                "AppendRootTextTransformation";
+        private static final String APPEND_ROOT_TEXT_PATH =
+                "AppendRootTextTransformation.blue";
+        private static final int ENTRY_COUNT = 3;
+
+        private FixtureTransformationDefinition() {
+        }
+    }
+
+    /**
+     * Closed transformation registry loaded only by the fixture harness.
+     */
+    private static final class FixtureTransformationRegistry
+            implements TransformationProcessorProvider {
+
+        private static final FixtureTransformationRegistry INSTANCE =
+                new FixtureTransformationRegistry();
+
+        private final Map<String, FixtureTransformationFactory>
+                factoriesByBlueId;
+
+        private FixtureTransformationRegistry() {
+            Map<String, FixtureTransformationFactory> factoriesByKey =
+                    new LinkedHashMap<>();
+            factoriesByKey.put(
+                    FixtureTransformationDefinition.RENAME_ROOT_FIELD_KEY,
+                    RenameRootFieldProcessor::new);
+            factoriesByKey.put(
+                    FixtureTransformationDefinition.SET_ROOT_FIELD_KEY,
+                    SetRootFieldProcessor::new);
+            factoriesByKey.put(
+                    FixtureTransformationDefinition.APPEND_ROOT_TEXT_KEY,
+                    AppendRootTextProcessor::new);
+
+            Map<String, String> pathsByKey = new LinkedHashMap<>();
+            pathsByKey.put(
+                    FixtureTransformationDefinition.RENAME_ROOT_FIELD_KEY,
+                    FixtureTransformationDefinition.RENAME_ROOT_FIELD_PATH);
+            pathsByKey.put(
+                    FixtureTransformationDefinition.SET_ROOT_FIELD_KEY,
+                    FixtureTransformationDefinition.SET_ROOT_FIELD_PATH);
+            pathsByKey.put(
+                    FixtureTransformationDefinition.APPEND_ROOT_TEXT_KEY,
+                    FixtureTransformationDefinition.APPEND_ROOT_TEXT_PATH);
+
+            JsonNode manifest = readYamlResource(
+                    PREPROCESSING_REGISTRY_MANIFEST_RESOURCE);
+            assertEquals(
+                    FixtureTransformationDefinition.REGISTRY_NAME,
+                    requireText(
+                            manifest,
+                            FixtureTransformationField.REGISTRY));
+            assertEquals(
+                    FixtureTransformationDefinition.REGISTRY_KIND,
+                    requireText(
+                            manifest,
+                            FixtureTransformationField.REGISTRY_KIND));
+            assertEquals(
+                    FixtureTransformationDefinition.SPECIFICATION_VERSION,
+                    requireText(
+                            manifest,
+                            FixtureTransformationField.SPECIFICATION_VERSION));
+
+            JsonNode entries = requireArray(
+                    manifest, FixtureTransformationField.ENTRIES);
+            assertEquals(
+                    FixtureTransformationDefinition.ENTRY_COUNT,
+                    entries.size());
+            Map<String, FixtureTransformationFactory> discovered =
+                    new LinkedHashMap<>();
+            Set<String> discoveredKeys = new LinkedHashSet<>();
+            for (JsonNode entry : entries) {
+                String key = requireText(
+                        entry, FixtureTransformationField.KEY);
+                FixtureTransformationFactory factory =
+                        factoriesByKey.get(key);
+                if (factory == null || !discoveredKeys.add(key)) {
+                    throw new IllegalStateException(
+                            "Unknown or duplicate fixture transformation key: "
+                                    + key);
+                }
+                String path = requireText(entry, FixtureField.PATH);
+                assertEquals(pathsByKey.get(key), path);
+                validateRelativePath(path);
+                String declaredBlueId = BlueIds.requirePlainBlueId(
+                        requireText(entry, Properties.OBJECT_BLUE_ID),
+                        "preprocessing.registry." + key);
+                Node typeDefinition = readNode(readYamlResource(
+                        PREPROCESSING_REGISTRY_ROOT + path));
+                assertEquals(
+                        declaredBlueId,
+                        BlueIdCalculator.calculateBlueId(typeDefinition));
+                if (discovered.put(declaredBlueId, factory) != null) {
+                    throw new IllegalStateException(
+                            "Duplicate fixture transformation BlueId: "
+                                    + declaredBlueId);
+                }
+            }
+            assertEquals(factoriesByKey.keySet(), discoveredKeys);
+            this.factoriesByBlueId = Collections.unmodifiableMap(
+                    discovered);
+        }
+
+        @Override
+        public Optional<TransformationProcessor> getProcessor(
+                Node transformation) {
+            if (transformation == null
+                    || transformation.getType() == null
+                    || !transformation.getType().isReferenceOnly()) {
+                return Optional.empty();
+            }
+            return processorFor(
+                    transformation.getType().getBlueId(),
+                    transformation);
+        }
+
+        @Override
+        public Optional<TransformationProcessor> processorFor(
+                String exactTypeBlueId,
+                Node exactTransformationNode) {
+            FixtureTransformationFactory factory =
+                    factoriesByBlueId.get(exactTypeBlueId);
+            if (factory == null) {
+                return Optional.empty();
+            }
+            return Optional.of(factory.create(
+                    exactTransformationNode.clone()));
+        }
+    }
+
+    /** Creates one immutable fixture transformation processor. */
+    private interface FixtureTransformationFactory {
+
+        TransformationProcessor create(Node configuration);
+    }
+
+    /** Moves one existing direct root field to an absent destination. */
+    private static final class RenameRootFieldProcessor
+            implements TransformationProcessor {
+
+        private final String from;
+        private final String to;
+
+        private RenameRootFieldProcessor(Node configuration) {
+            validateFixtureTransformationConfiguration(
+                    configuration,
+                    immutableSet(
+                            FixtureTransformationField.FROM,
+                            FixtureTransformationField.TO));
+            this.from = requireTextScalar(
+                    configuration.getProperties().get(
+                            FixtureTransformationField.FROM),
+                    FixtureTransformationField.FROM);
+            this.to = requireTextScalar(
+                    configuration.getProperties().get(
+                            FixtureTransformationField.TO),
+                    FixtureTransformationField.TO);
+        }
+
+        @Override
+        public Node process(Node document) {
+            Node result = requireObjectSourceRoot(document);
+            if (!hasDirectRootField(result, from)) {
+                throw new IllegalArgumentException(
+                        "Reserved fixture transformation source field is absent: "
+                                + from);
+            }
+            if (hasDirectRootField(result, to)) {
+                throw new IllegalArgumentException(
+                        "Reserved fixture transformation destination field already exists: "
+                                + to);
+            }
+            Node value = readDirectRootField(result, from);
+            removeDirectRootField(result, from);
+            writeDirectRootField(result, to, value);
+            return result;
+        }
+    }
+
+    /** Writes a defensive configuration-node copy to one direct root field. */
+    private static final class SetRootFieldProcessor
+            implements TransformationProcessor {
+
+        private final String field;
+        private final Node value;
+
+        private SetRootFieldProcessor(Node configuration) {
+            validateFixtureTransformationConfiguration(
+                    configuration,
+                    immutableSet(
+                            FixtureTransformationField.FIELD,
+                            Properties.OBJECT_VALUE));
+            this.field = requireTextScalar(
+                    configuration.getProperties().get(
+                            FixtureTransformationField.FIELD),
+                    FixtureTransformationField.FIELD);
+            this.value = configuration.getProperties().get(
+                    Properties.OBJECT_VALUE).clone();
+        }
+
+        @Override
+        public Node process(Node document) {
+            Node result = requireObjectSourceRoot(document);
+            writeDirectRootField(result, field, value.clone());
+            return result;
+        }
+    }
+
+    /** Appends one configured suffix to an existing direct Text field. */
+    private static final class AppendRootTextProcessor
+            implements TransformationProcessor {
+
+        private final String field;
+        private final String suffix;
+
+        private AppendRootTextProcessor(Node configuration) {
+            validateFixtureTransformationConfiguration(
+                    configuration,
+                    immutableSet(
+                            FixtureTransformationField.FIELD,
+                            FixtureTransformationField.SUFFIX));
+            this.field = requireTextScalar(
+                    configuration.getProperties().get(
+                            FixtureTransformationField.FIELD),
+                    FixtureTransformationField.FIELD);
+            this.suffix = requireTextScalar(
+                    configuration.getProperties().get(
+                            FixtureTransformationField.SUFFIX),
+                    FixtureTransformationField.SUFFIX);
+        }
+
+        @Override
+        public Node process(Node document) {
+            Node result = requireObjectSourceRoot(document);
+            if (!hasDirectRootField(result, field)) {
+                throw new IllegalArgumentException(
+                        "Reserved fixture transformation Text field is absent: "
+                                + field);
+            }
+            Node current = readDirectRootField(result, field);
+            String text = requireTextScalar(current, field);
+            current.value(text + suffix);
+            writeDirectRootField(result, field, current);
+            return result;
+        }
+    }
+
+    private static void validateFixtureTransformationConfiguration(
+            Node configuration,
+            Set<String> expectedFields) {
+        if (configuration == null
+                || configuration.getType() == null
+                || !configuration.getType().isReferenceOnly()
+                || configuration.getName() != null
+                || configuration.getDescription() != null
+                || configuration.getItemType() != null
+                || configuration.getKeyType() != null
+                || configuration.getValueType() != null
+                || configuration.getRawValue() != null
+                || configuration.getItems() != null
+                || configuration.getContracts() != null
+                || configuration.getBlueId() != null
+                || configuration.getSchema() != null
+                || configuration.getMergePolicy() != null
+                || configuration.getPreviousBlueId() != null
+                || configuration.getPosition() != null
+                || configuration.getBlue() != null
+                || configuration.getProperties() == null
+                || !expectedFields.equals(
+                        configuration.getProperties().keySet())) {
+            throw new IllegalArgumentException(
+                    "Reserved fixture transformation configuration has an invalid shape.");
+        }
+    }
+
+    private static Node requireObjectSourceRoot(Node document) {
+        if (document == null
+                || document.getRawValue() != null
+                || document.getItems() != null
+                || document.getBlueId() != null
+                || document.getPreviousBlueId() != null
+                || document.getPosition() != null) {
+            throw new IllegalArgumentException(
+                    "Reserved preprocessing transformation requires an object Source root.");
+        }
+        return document.clone();
+    }
+
+    private static String requireTextScalar(
+            Node node,
+            String role) {
+        if (node == null
+                || !(node.getRawValue() instanceof String)
+                || node.getItems() != null
+                || node.getProperties() != null
+                || node.getBlueId() != null
+                || node.getBlue() != null
+                || !hasTextCompatibleType(node.getType())) {
+            throw new IllegalArgumentException(
+                    "Reserved fixture transformation " + role
+                            + " must be Text.");
+        }
+        return (String) node.getRawValue();
+    }
+
+    private static boolean hasTextCompatibleType(Node type) {
+        if (type == null) {
+            return true;
+        }
+        if (type.isReferenceOnly()) {
+            return Properties.TEXT_TYPE_BLUE_ID.equals(
+                    type.getBlueId());
+        }
+        return Properties.TEXT_TYPE.equals(type.getRawValue())
+                && type.getItems() == null
+                && type.getProperties() == null
+                && type.getBlueId() == null;
+    }
+
+    private static boolean hasDirectRootField(
+            Node root,
+            String field) {
+        switch (field) {
+            case Properties.OBJECT_NAME:
+                return root.getName() != null;
+            case Properties.OBJECT_DESCRIPTION:
+                return root.getDescription() != null;
+            case Properties.OBJECT_TYPE:
+                return root.getType() != null;
+            case Properties.OBJECT_ITEM_TYPE:
+                return root.getItemType() != null;
+            case Properties.OBJECT_KEY_TYPE:
+                return root.getKeyType() != null;
+            case Properties.OBJECT_VALUE_TYPE:
+                return root.getValueType() != null;
+            case Properties.OBJECT_VALUE:
+                return root.getRawValue() != null;
+            case Properties.OBJECT_ITEMS:
+                return root.getItems() != null;
+            case Properties.OBJECT_BLUE_ID:
+                return root.getBlueId() != null;
+            case Properties.OBJECT_BLUE:
+                return root.getBlue() != null;
+            case Properties.OBJECT_SCHEMA:
+                return root.getSchema() != null;
+            case Properties.OBJECT_MERGE_POLICY:
+                return root.getMergePolicy() != null;
+            case Properties.OBJECT_CONTRACTS:
+                return root.getContracts() != null;
+            case Properties.LIST_CONTROL_PREVIOUS:
+                return root.getPreviousBlueId() != null;
+            case Properties.LIST_CONTROL_POS:
+                return root.getPosition() != null;
+            default:
+                return root.getProperties() != null
+                        && root.getProperties().containsKey(field);
+        }
+    }
+
+    private static Node readDirectRootField(
+            Node root,
+            String field) {
+        switch (field) {
+            case Properties.OBJECT_NAME:
+                return inlineScalar(root.getName());
+            case Properties.OBJECT_DESCRIPTION:
+                return inlineScalar(root.getDescription());
+            case Properties.OBJECT_TYPE:
+                return cloneNode(root.getType());
+            case Properties.OBJECT_ITEM_TYPE:
+                return cloneNode(root.getItemType());
+            case Properties.OBJECT_KEY_TYPE:
+                return cloneNode(root.getKeyType());
+            case Properties.OBJECT_VALUE_TYPE:
+                return cloneNode(root.getValueType());
+            case Properties.OBJECT_VALUE:
+                return inlineScalar(root.getRawValue());
+            case Properties.OBJECT_ITEMS:
+                return new Node().items(cloneNodes(root.getItems()));
+            case Properties.OBJECT_BLUE_ID:
+                return inlineScalar(root.getBlueId());
+            case Properties.OBJECT_BLUE:
+                return cloneNode(root.getBlue());
+            case Properties.OBJECT_SCHEMA:
+                return new Node().schema(root.getSchema().clone());
+            case Properties.OBJECT_MERGE_POLICY:
+                return inlineScalar(root.getMergePolicy());
+            case Properties.OBJECT_CONTRACTS:
+                return cloneNode(root.getContracts());
+            case Properties.LIST_CONTROL_PREVIOUS:
+                return new Node().blueId(root.getPreviousBlueId());
+            case Properties.LIST_CONTROL_POS:
+                return inlineScalar(BigInteger.valueOf(
+                        root.getPosition()));
+            default:
+                return cloneNode(root.getProperties().get(field));
+        }
+    }
+
+    private static void removeDirectRootField(
+            Node root,
+            String field) {
+        switch (field) {
+            case Properties.OBJECT_NAME:
+                root.name(null);
+                return;
+            case Properties.OBJECT_DESCRIPTION:
+                root.description(null);
+                return;
+            case Properties.OBJECT_TYPE:
+                root.type((Node) null);
+                return;
+            case Properties.OBJECT_ITEM_TYPE:
+                root.itemType((Node) null);
+                return;
+            case Properties.OBJECT_KEY_TYPE:
+                root.keyType((Node) null);
+                return;
+            case Properties.OBJECT_VALUE_TYPE:
+                root.valueType((Node) null);
+                return;
+            case Properties.OBJECT_VALUE:
+                root.value((Object) null);
+                return;
+            case Properties.OBJECT_ITEMS:
+                root.items((List<Node>) null);
+                return;
+            case Properties.OBJECT_BLUE_ID:
+                root.blueId(null);
+                return;
+            case Properties.OBJECT_BLUE:
+                root.blue(null);
+                return;
+            case Properties.OBJECT_SCHEMA:
+                root.schema(null);
+                return;
+            case Properties.OBJECT_MERGE_POLICY:
+                root.mergePolicy(null);
+                return;
+            case Properties.OBJECT_CONTRACTS:
+                root.contracts(null);
+                return;
+            case Properties.LIST_CONTROL_PREVIOUS:
+                root.previousBlueId(null);
+                return;
+            case Properties.LIST_CONTROL_POS:
+                root.position(null);
+                return;
+            default:
+                Map<String, Node> properties = new LinkedHashMap<>(
+                        root.getProperties());
+                properties.remove(field);
+                root.properties(properties.isEmpty()
+                        ? null : properties);
+        }
+    }
+
+    private static void writeDirectRootField(
+            Node root,
+            String field,
+            Node value) {
+        if (value == null) {
+            throw new IllegalArgumentException(
+                    "Reserved fixture transformation field value is missing: "
+                            + field);
+        }
+        switch (field) {
+            case Properties.OBJECT_NAME:
+                root.name(requireTextScalar(value, field));
+                return;
+            case Properties.OBJECT_DESCRIPTION:
+                root.description(requireTextScalar(value, field));
+                return;
+            case Properties.OBJECT_TYPE:
+                root.type(value.clone());
+                return;
+            case Properties.OBJECT_ITEM_TYPE:
+                root.itemType(value.clone());
+                return;
+            case Properties.OBJECT_KEY_TYPE:
+                root.keyType(value.clone());
+                return;
+            case Properties.OBJECT_VALUE_TYPE:
+                root.valueType(value.clone());
+                return;
+            case Properties.OBJECT_VALUE:
+                requireScalarPayload(value, field);
+                root.value(value.getRawValue());
+                return;
+            case Properties.OBJECT_ITEMS:
+                if (value.getItems() == null) {
+                    throw new IllegalArgumentException(
+                            "Reserved fixture transformation items value must be a list.");
+                }
+                root.items(cloneNodes(value.getItems()));
+                return;
+            case Properties.OBJECT_BLUE_ID:
+                root.blueId(requireTextScalar(value, field));
+                return;
+            case Properties.OBJECT_BLUE:
+                root.blue(value.clone());
+                return;
+            case Properties.OBJECT_SCHEMA:
+                if (value.getSchema() == null) {
+                    throw new IllegalArgumentException(
+                            "Reserved fixture transformation schema value must be a schema.");
+                }
+                root.schema(value.getSchema().clone());
+                return;
+            case Properties.OBJECT_MERGE_POLICY:
+                root.mergePolicy(requireTextScalar(value, field));
+                return;
+            case Properties.OBJECT_CONTRACTS:
+                root.contracts(value.clone());
+                return;
+            case Properties.LIST_CONTROL_PREVIOUS:
+                if (!value.isReferenceOnly()) {
+                    throw new IllegalArgumentException(
+                            "Reserved fixture transformation $previous value must be a pure reference.");
+                }
+                root.previousBlueId(value.getBlueId());
+                return;
+            case Properties.LIST_CONTROL_POS:
+                root.position(requireNonNegativeInteger(value, field));
+                return;
+            default:
+                root.properties(field, value.clone());
+        }
+    }
+
+    private static void requireScalarPayload(
+            Node value,
+            String field) {
+        if (value.getRawValue() == null
+                || value.getItems() != null
+                || value.getProperties() != null
+                || value.getBlueId() != null) {
+            throw new IllegalArgumentException(
+                    "Reserved fixture transformation " + field
+                            + " value must be a scalar.");
+        }
+    }
+
+    private static int requireNonNegativeInteger(
+            Node value,
+            String field) {
+        requireScalarPayload(value, field);
+        if (!(value.getRawValue() instanceof BigInteger)) {
+            throw new IllegalArgumentException(
+                    "Reserved fixture transformation " + field
+                            + " value must be an integer.");
+        }
+        BigInteger integer = (BigInteger) value.getRawValue();
+        if (integer.signum() < 0
+                || integer.compareTo(
+                        BigInteger.valueOf(Integer.MAX_VALUE)) > 0) {
+            throw new IllegalArgumentException(
+                    "Reserved fixture transformation " + field
+                            + " value is outside the supported range.");
+        }
+        return integer.intValue();
+    }
+
+    private static Node inlineScalar(Object value) {
+        return new Node().value(value).inlineValue(true);
+    }
+
+    private static Node cloneNode(Node node) {
+        return node == null ? null : node.clone();
+    }
+
+    private static List<Node> cloneNodes(List<Node> nodes) {
+        List<Node> result = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            result.add(node.clone());
+        }
+        return result;
     }
 
     private static final class FixtureEntry {

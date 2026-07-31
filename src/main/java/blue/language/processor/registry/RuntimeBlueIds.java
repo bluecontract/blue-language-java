@@ -13,7 +13,15 @@ public final class RuntimeBlueIds {
     public static final String REGISTRY_PACKAGE_IDENTITY =
             "sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b";
 
-    /** BlueId of the BlueId meta-type used by registry type references. */
+    /**
+     * Legacy BlueId meta-type identity retained for binary/source
+     * compatibility.
+     *
+     * <p>This compatibility-only identity is not an entry in the closed
+     * Contracts 1.0 runtime registry. New runtime code must use a
+     * {@link RuntimeTypeKey}-backed identity below. Test fixtures that need
+     * this legacy value own their intent in test-only constants.</p>
+     */
     public static final String BLUE_ID_TYPE =
             "APr87o8Wq358V8onThLEiW44hEn43wFGf9sKbw5TmmYz";
 

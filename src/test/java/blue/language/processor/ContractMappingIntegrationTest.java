@@ -12,6 +12,8 @@ import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TriggeredEventChannel;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -72,9 +74,9 @@ class ContractMappingIntegrationTest {
         assertEquals("/payment", ((EmbeddedNodeChannel) embeddedNodeContract).getSourcePath());
         assertTrue(checkpointContract instanceof ChannelEventCheckpoint);
         assertNotNull(checkpoint.entry("external"));
-        assertEquals("BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L",
+        assertEquals(ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL,
                 checkpoint.entry("external").domainBlueId());
-        assertEquals("Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf",
+        assertEquals(ProcessorTestTypeBlueIds.TEST_EVENT,
                 checkpoint.entry("external").subjectBlueId());
         assertTrue(initializedContract instanceof InitializationMarker);
         assertEquals("doc-123",
@@ -139,11 +141,11 @@ class ContractMappingIntegrationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  setProperty:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 7\n");
         ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()

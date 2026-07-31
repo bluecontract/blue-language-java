@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.preprocess.Preprocessor.DEFAULT_BLUE_BLUE_ID;
 import static blue.language.utils.Properties.*;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
@@ -67,12 +66,12 @@ public class PreprocessorTest {
     }
 
     @Test
-    public void shouldPreprocessWithCustomBlueExtendingDefaultBlue() throws Exception {
+    public void shouldRunExplicitCustomTransformationBeforeMandatoryBaseline() throws Exception {
         // given
         String doc = "blue:\n" +
-                     "  items:\n" +
-                     "    - blueId: " + DEFAULT_BLUE_BLUE_ID + "\n" +
-                     "    - name: MyTestTransformation\n" +
+                     "  transformations:\n" +
+                     "    - type:\n" +
+                     "        blueId: " + TEXT_TYPE_BLUE_ID + "\n" +
                      "x:\n" +
                      "  type: Integer\n" +
                      "y: ABC";
@@ -85,9 +84,12 @@ public class PreprocessorTest {
             return result;
         });
         TransformationProcessorProvider provider = transformation -> {
-            if ("MyTestTransformation".equals(transformation.getName()))
+            if (transformation.getType() != null
+                    && TEXT_TYPE_BLUE_ID.equals(
+                    transformation.getType().getBlueId())) {
                 return Optional.of(changeABCtoXYZ);
-            return Preprocessor.getStandardProvider().getProcessor(transformation);
+            }
+            return Optional.empty();
         };
         Preprocessor preprocessor = new Preprocessor(provider, BootstrapProvider.INSTANCE);
         // when
@@ -96,6 +98,8 @@ public class PreprocessorTest {
         // then
         assertEquals(Properties.INTEGER_TYPE_BLUE_ID, result.getAsText("/x/type/blueId"));
         assertEquals("XYZ", result.getAsText("/y/value"));
+        assertEquals(Properties.TEXT_TYPE_BLUE_ID,
+                result.getAsText("/y/type/blueId"));
     }
 
     @Test
@@ -111,7 +115,7 @@ public class PreprocessorTest {
     }
 
     @Test
-    public void shouldMatchBluePreprocessWhenUsingDefaultBlue() {
+    public void shouldMakeLegacyWithDefaultBlueBridgeMatchCanonicalPreprocess() {
         // given
         Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
 
@@ -124,7 +128,7 @@ public class PreprocessorTest {
     }
 
     @Test
-    public void shouldKeepPreprocessingExplicitWithoutDefaultBlue() {
+    public void shouldApplyMandatoryBaselineThroughLegacyWithoutDefaultBlueBridge() {
         // given
         Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
 
@@ -132,21 +136,26 @@ public class PreprocessorTest {
         Node result = new Preprocessor(BootstrapProvider.INSTANCE).preprocessWithoutDefaultBlue(raw);
 
         // then
-        assertNull(result.getProperties().get("x").getType());
+        assertEquals(INTEGER_TYPE_BLUE_ID,
+                result.getAsText("/x/type/blueId"));
         assertEquals(BigInteger.ONE, result.getProperties().get("x").getValue());
     }
 
     @Test
-    public void shouldPreventBlueImportsFromRedefiningDefaultRuntimeAliases() {
+    public void shouldPreventBlueImportsFromRedefiningCanonicalCoreAliases() {
         // given
         Node raw = YAML_MAPPER.readValue(
                 "blue:\n" +
                 "  imports:\n" +
-                "    Channel:\n" +
+                "    Text:\n" +
                 "      blueId: " + TEXT_TYPE_BLUE_ID + "\n" +
                 "x:\n" +
-                "  type: Channel",
+                "  type: Text",
                 Node.class);
+
+        raw.getBlue().getProperties().get("imports")
+                .getProperties().get("Text")
+                .blueId(INTEGER_TYPE_BLUE_ID);
 
         // when
         Throwable error = captureFailure(
@@ -156,7 +165,8 @@ public class PreprocessorTest {
 
         // then
         assertInstanceOf(IllegalArgumentException.class, error);
-        assertTrue(error.getMessage().contains("default Blue alias \"Channel\""));
+        assertTrue(error.getMessage().contains(
+                "cannot be rebound by blue.imports"));
     }
 
     @Test
@@ -333,8 +343,9 @@ public class PreprocessorTest {
                      "  imports:\n" +
                      "    Person:\n" +
                      "      blueId: " + personBlueId + "\n" +
-                     "  items:\n" +
-                     "    - name: MyTestTransformation\n" +
+                     "  transformations:\n" +
+                     "    - type:\n" +
+                     "        blueId: " + TEXT_TYPE_BLUE_ID + "\n" +
                      "x:\n" +
                      "  type: Person\n" +
                      "y: ABC";
@@ -348,7 +359,9 @@ public class PreprocessorTest {
             return result;
         });
         TransformationProcessorProvider provider = transformation -> {
-            if ("MyTestTransformation".equals(transformation.getName())) {
+            if (transformation.getType() != null
+                    && TEXT_TYPE_BLUE_ID.equals(
+                    transformation.getType().getBlueId())) {
                 return Optional.of(changeABCtoXYZ);
             }
             return Optional.empty();

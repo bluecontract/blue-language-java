@@ -3,7 +3,6 @@ package blue.language.provider;
 import blue.language.utils.Properties;
 
 import blue.language.Blue;
-import blue.language.preprocess.Preprocessor;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -13,9 +12,7 @@ import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -59,8 +56,6 @@ public final class ProviderEvidenceVerifier {
             "canonicalRegistryIdentity";
     private static final String FIELD_PREPROCESSING_ENVIRONMENT_IDENTITY =
             "preprocessingEnvironmentIdentity";
-    private static final String FIELD_DEFAULT_BLUE_SHA256 =
-            "defaultBlueSha256";
     private static final String FIELD_PREPROCESSING_ALIASES =
             "preprocessingAliases";
     private static final String FIELD_PROVIDER_DOMAIN_IDENTITY =
@@ -268,7 +263,8 @@ public final class ProviderEvidenceVerifier {
     }
 
     /**
-     * Binds Default Blue, canonical registry, release, and configured aliases.
+     * Binds the Language release, canonical registry, and configured directive
+     * aliases that define the active preprocessing environment.
      *
      * @param blue active language runtime
      * @return lowercase hexadecimal environment identity prefixed with
@@ -281,8 +277,6 @@ public final class ProviderEvidenceVerifier {
                 SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY);
         payload.put(FIELD_CANONICAL_REGISTRY_IDENTITY,
                 BlueCoreTypeRegistry.INSTANCE.packageIdentity());
-        payload.put(FIELD_DEFAULT_BLUE_SHA256, sha256Resource(
-                Preprocessor.DEFAULT_BLUE_RESOURCE));
         payload.put(FIELD_PREPROCESSING_ALIASES,
                 new TreeMap<>(blue.getPreprocessingAliases()));
         return sha256CanonicalIdentity(payload);
@@ -670,28 +664,6 @@ public final class ProviderEvidenceVerifier {
                 .writeValueAsBytes(value);
         return new JsonCanonicalizer(json)
                 .getEncodedUTF8();
-    }
-
-    private static String sha256Resource(String resource) {
-        try (InputStream input = ProviderEvidenceVerifier.class.getClassLoader()
-                .getResourceAsStream(resource)) {
-            if (input == null) {
-                throw new IllegalStateException(
-                        "Missing preprocessing environment resource: " + resource);
-            }
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            byte[] buffer = new byte[4096];
-            int read;
-            while ((read = input.read(buffer)) != -1) {
-                output.write(buffer, 0, read);
-            }
-            return SHA_256_PREFIX + toHex(MessageDigest.getInstance(
-                    SHA_256_ALGORITHM)
-                    .digest(output.toByteArray()));
-        } catch (IOException | NoSuchAlgorithmException failure) {
-            throw new IllegalStateException(
-                    "Unable to bind preprocessing environment resource.", failure);
-        }
     }
 
     private static String toHex(byte[] bytes) {

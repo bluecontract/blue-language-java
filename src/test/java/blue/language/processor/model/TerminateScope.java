@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.HandlerContract;
 
-@TypeBlueId("AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4")
+@TypeBlueId(ProcessorTestTypeBlueIds.TERMINATE_SCOPE)
 public class TerminateScope extends HandlerContract {
 
     private String mode;

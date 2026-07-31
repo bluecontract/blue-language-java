@@ -1,0 +1,27 @@
+id: R_blue_inline_imports_and_transformations
+category: Resolution
+operation: preprocess
+description: transformations run before mandatory alias substitution and primitive inference
+source:
+  blue:
+    imports:
+      Person:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+    transformations:
+      - type:
+          blueId: DS4rHtvxTg1S3tn6e9ciuMNDkeEQtk4VTdiw8KUCfMAu
+        field: type
+        value: Person
+      - type:
+          blueId: DS4rHtvxTg1S3tn6e9ciuMNDkeEQtk4VTdiw8KUCfMAu
+        field: count
+        value: 7
+  name: Alice
+expectedPreprocessed:
+  name: Alice
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  count:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+    value: 7

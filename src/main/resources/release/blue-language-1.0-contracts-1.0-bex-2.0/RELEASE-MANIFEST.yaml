@@ -4,17 +4,17 @@ architectureStatus: frozen-for-implementation
 numericGasStatus: pending benchmark calibration before permanent public gas identities
 components:
   languageRegistryPackage: sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e
-  languageFixturePackage: sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5
+  languageFixturePackage: sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55
   contractsRegistryPackage: sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b
   contractsGasPackage: sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
-  contractsFixturePackage: sha256:de65cf1ba53e5408f804513691434102b41cb33a95cbf8412ae890d8e28ad982
+  contractsFixturePackage: sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18
   bexRegistryPackage: sha256:23d282ec1c0bb016263922b1b49c369fdd537efdcf23e005eceeb888d7763fe1
   bexGasPackage: sha256:41247c820d91a12fdfc17fd9e787a5d8d668d8acc5954fdcb131715bf9e6147d
   bexFixturePackage: sha256:f5f64a38152ef0e50ebb1b03caaa1b07fd556552eb071b940937079fc0234dfe
   coordinationRegistryPackage: sha256:535dfeedccce266df59ad0b6ff935ac5ceb2eac25f0ec44ca76bd61500c0f175
   coordinationGasPackage: sha256:d4544b7c01104589a30c050bfa836d1012dbe60153f437e02fabcc249ccff59b
   coordinationFixturePackage: sha256:0c1c37c7d4dc703d0b2c159305bfc96debdad8edd38780b45b69a0e43bddc874
-fileCount: 630
+fileCount: 660
 files:
 - path: README.md
   sha256: 8d165d2a797843b76af31bbaf06386dc4acfd0bf3b34eac117f0a4cf2eea4af6
@@ -503,7 +503,7 @@ files:
   sha256: ee00f332f8fdede8f0abbb0d809a2406e2c1f75e748fe9f0622a2810ef12b571
   bytes: 1483
 - path: conformance/contracts/fixtures/disc/c-disc-04.yaml
-  sha256: ad6032469ff58baffe544f99858b68316377fa5440f38d1209b91ed461391aeb
+  sha256: 9bd814c556735e79de891b7e085a25612da30ac24abb3291e80c2b5ff8cec0e1
   bytes: 1681
 - path: conformance/contracts/fixtures/disc/c-disc-05.yaml
   sha256: 153a1c348420d78ee24decb6839e0ab42b0bf139dd5fd40a2453d8cfd16af9cf
@@ -839,7 +839,7 @@ files:
   sha256: 10beaa4cee851a1ea457d2ef6d93d3a6a2ce1ca8123fe6f3722083ddc3f40828
   bytes: 1458
 - path: conformance/contracts/fixtures/manifest.yaml
-  sha256: 185e20d85cef45249c2104c7a5b6d39be0a4cfefc5b00036eaef6223703dc985
+  sha256: 363f004f0bff4780b81f042c649cc98e9b1c3b497e218bd883d175d33ce0cd0f
   bytes: 22359
 - path: conformance/contracts/fixtures/projection-catalog.yaml
   sha256: 19337d172fc7d690b1d0c831b3d725d1281e809b2e235a67a36c3638e4e47113
@@ -989,7 +989,7 @@ files:
   sha256: 31d532f363bb33e347edde6f42fb85dd65e1e34893771499facfb05729dd12e2
   bytes: 411
 - path: conformance/contracts/registry/manifest.yaml
-  sha256: 169f70558453060b18f65228cd852de7303ffb1cb721e8dd9ad885f3fdae11db
+  sha256: 0bc5d07e143f68a079578035f0afd9dfc286002e69251ad5eaf7c1ae155cc8a5
   bytes: 7280
 - path: conformance/coordination/fixtures/HARNESS.md
   sha256: 183d9f337c16db9ae408a02e874ab13983c293a0dd4d576236e35ed0b8c86549
@@ -1457,11 +1457,11 @@ files:
   sha256: e66eeca1effd086e867dac99ca1ee70222e9f3463917875bc273ed6d5aa55bf0
   bytes: 22251
 - path: conformance/language/fixtures/HARNESS.md
-  sha256: 21c9268efe538901a823fe843f7a4ffe4745a2b5df917b1d75555a518493e4e4
-  bytes: 9570
+  sha256: cf87fb9cc5d86ab2c3067640bfb95b4dede39dd02a68795068deba2d7a984161
+  bytes: 12395
 - path: conformance/language/fixtures/README.md
-  sha256: 4bc2831021f276c7e703b2927f692348d3a4b33e802c3e8b4e12565771fa8d9e
-  bytes: 579
+  sha256: a110099c94b5def40e9995500dee3592e9bc31ab0100f40f5bc9ae4fd85a2f22
+  bytes: 962
 - path: conformance/language/fixtures/blueid/B_blue_directive_rejected.yaml
   sha256: 0a8eaa2f96acea33a477a5d88d7e118f7f22dfd477521ddc8b0f0f8e7db59cad
   bytes: 146
@@ -1574,8 +1574,8 @@ files:
   sha256: 0b8d4fc3a729db38a36ef78751ba7b45fe495987fad18d42baa21e66f6c7820e
   bytes: 673
 - path: conformance/language/fixtures/fixture-schema.yaml
-  sha256: 2c681fb771b6f856f9c90d2c835b7d33d490e71ba91409503fe7dee0e3e34395
-  bytes: 4124
+  sha256: 957dbb5cddad812ce7e2a22c3d300207dd3297f821334a184b89ba36b436b564
+  bytes: 4312
 - path: conformance/language/fixtures/limited/F_inline_reference_partial_equivalence.yaml
   sha256: a6f354ff33764cfffbe20f22781e202481a3af49c2343035459cbf44402ff92f
   bytes: 525
@@ -1613,8 +1613,89 @@ files:
   sha256: c1364c7d04016f5ad312acafd42fab0b3c48d20c37694c6442ff4242d1a6f991
   bytes: 895
 - path: conformance/language/fixtures/manifest.yaml
-  sha256: b2b51494fbcae51cc5365fb33e28ce9ce03adb2ba2183cb2f2a4216fba2903be
-  bytes: 22685
+  sha256: dc4bad7ecb016b92d046b5e1ae962ea2ecbc63de9208322426f9f0b2cf86f39f
+  bytes: 27736
+- path: conformance/language/fixtures/preprocessing/R_blue_absent_applies_baseline.yaml
+  sha256: b3f74939b1e51c2637cfb13ce9ec78034ac92cd72aac47971dc730c57e4a1f89
+  bytes: 304
+- path: conformance/language/fixtures/preprocessing/R_blue_builtin_alias_override_rejected.yaml
+  sha256: 7bd3234a79b7127b8d66390516dd5b4c2e73a4ee1d1c48051718fb2e6a5f1ee7
+  bytes: 344
+- path: conformance/language/fixtures/preprocessing/R_blue_builtin_alias_same_allowed.yaml
+  sha256: a21f4bafca2d737231c98f680d1372a03ab01f3ea113ed334aa33a0b9b8cfcb9
+  bytes: 390
+- path: conformance/language/fixtures/preprocessing/R_blue_empty_directive_equals_absent.yaml
+  sha256: 9ed8b9c456cd9b6ccc700fea0b92144fd9269a4d297e122264f0bd69e48120ae
+  bytes: 333
+- path: conformance/language/fixtures/preprocessing/R_blue_imports_only_type_positions.yaml
+  sha256: 5351bda8c625591996d553986be24fd93bab608c6816cbe91fa7b94cd725712c
+  bytes: 468
+- path: conformance/language/fixtures/preprocessing/R_blue_inline_imports_and_transformations.yaml
+  sha256: 13cfa991cfceaaa60a2e87a6be0d2521c99e388815060bedac4af7b423c9accf
+  bytes: 747
+- path: conformance/language/fixtures/preprocessing/R_blue_legacy_items_field_rejected.yaml
+  sha256: d1dda6f94a752142f2e35a3eb80c7e2672d70fd5067dca41cf1052803ec61334
+  bytes: 394
+- path: conformance/language/fixtures/preprocessing/R_blue_nested_directive_rejected.yaml
+  sha256: 86b68137ca606b0c287cc85fc15e8a0a1292534d1095d346f856cf787c8a6750
+  bytes: 245
+- path: conformance/language/fixtures/preprocessing/R_blue_preprocessing_idempotent.yaml
+  sha256: 2de7784e85925af3e0dcb3f3d1fd848968ffe0a45081e22fba2e82166e43ed95
+  bytes: 490
+- path: conformance/language/fixtures/preprocessing/R_blue_profile_field_rejected.yaml
+  sha256: bfa58b6b1362088d12239af14389e9f7b2fe75e4c4837536b7d77391975081a7
+  bytes: 331
+- path: conformance/language/fixtures/preprocessing/R_blue_reference_backed_components.yaml
+  sha256: f4d434a6e054fe4e37ca33aee2e5f173d1c3d8c20b6fbd955d129ab12bd891bd
+  bytes: 928
+- path: conformance/language/fixtures/preprocessing/R_blue_reference_directive_equivalent.yaml
+  sha256: 78265053fb6ca991f8193be95e0a62386094690a12a3dac417d9420535213409
+  bytes: 970
+- path: conformance/language/fixtures/preprocessing/R_blue_reference_invalid_evidence.yaml
+  sha256: fef4c30b723b34eb5a6f5fe48fd2cd3a8832a0d3d9e1c59e339742734b35c21f
+  bytes: 497
+- path: conformance/language/fixtures/preprocessing/R_blue_string_alias_resolves_exact_directive.yaml
+  sha256: 6d465b6bcdfb1e1bac082218903b1bd6ad62514a098adccb34d4a76ded596211
+  bytes: 751
+- path: conformance/language/fixtures/preprocessing/R_blue_transform_introduces_blue_rejected.yaml
+  sha256: d364aa5e02250596d31ee59942efb739f5e34bf19e0911b9036954d9dd9fd42b
+  bytes: 403
+- path: conformance/language/fixtures/preprocessing/R_blue_transformation_instance_reference.yaml
+  sha256: 27ce2397e3352e011f3330776934974168db06db3cb40e8ea6399af304a9ffd1
+  bytes: 594
+- path: conformance/language/fixtures/preprocessing/R_blue_transformation_type_alias_rejected.yaml
+  sha256: 1d9ef55bb312d6848c37445c788fec3b8e44539e6cdd086fd107a660ebad7e71
+  bytes: 429
+- path: conformance/language/fixtures/preprocessing/R_blue_transformations_declared_order.yaml
+  sha256: 916172ff24037f251cec0dbd75376d922cadf98992ee472fd8835b625fe843ce
+  bytes: 572
+- path: conformance/language/fixtures/preprocessing/R_blue_transformations_reverse_order.yaml
+  sha256: e4ea0fed18ea7c38507b46f5287a935e3cf137f32042647ef4414c674b987e32
+  bytes: 592
+- path: conformance/language/fixtures/preprocessing/R_blue_unbound_string_alias_rejected.yaml
+  sha256: aaeb3a725b8e67ab7171ff2dc93f88952b59bbb535f19a92fc2a506cffa500be
+  bytes: 268
+- path: conformance/language/fixtures/preprocessing/R_blue_unsupported_transformation.yaml
+  sha256: d7069b648d3f9c4d0578bbe1c549bbbd68a5b8cd4a475f1892aab8c68b758ef5
+  bytes: 364
+- path: conformance/language/fixtures/preprocessing/R_blue_unused_import_no_effect.yaml
+  sha256: adb8c7603694de446c3a8befaf44963fce2da57998ca95db5e3c462c961fafa1
+  bytes: 405
+- path: conformance/language/fixtures/preprocessing/registry/AppendRootTextTransformation.blue
+  sha256: 48f02ec336a35e543838c69de95aa95407916c953b2cd6c374eab170c37ab918
+  bytes: 222
+- path: conformance/language/fixtures/preprocessing/registry/HARNESS.md
+  sha256: 4d104b7043747d3815e8a211358b3bb2569c4fd129720fa80bd64eb22ea84263
+  bytes: 1551
+- path: conformance/language/fixtures/preprocessing/registry/RenameRootFieldTransformation.blue
+  sha256: c7a3fc5edacc45ab8456e4a0414a11f22434da8e8d80632354f33c1010173eab
+  bytes: 275
+- path: conformance/language/fixtures/preprocessing/registry/SetRootFieldTransformation.blue
+  sha256: 097733a85812a4845cd7f699cf5f798b18359f45984d064c8af6e5df84121c36
+  bytes: 256
+- path: conformance/language/fixtures/preprocessing/registry/manifest.yaml
+  sha256: 572295001dce50893de283c88df4edb688b40b695873dd81438573a5ab7bc4b2
+  bytes: 775
 - path: conformance/language/fixtures/provider/F_all_language_vectors_pass.yaml
   sha256: 5fa9b1e78ada4c9781b947fd1a546d4ad2d635526865feacdb0768d33e2c58f7
   bytes: 255
@@ -1696,9 +1777,12 @@ files:
 - path: conformance/language/fixtures/representation/F_direct_node_verification_without_descendants.yaml
   sha256: d9be90fd4d39087021d3a51fbf53a963045f673c0e4a56c4c0ee28c746cdbc41
   bytes: 538
+- path: conformance/language/fixtures/resolver/R_append_canonicalization_final_payload_three_items.yaml
+  sha256: 7aa00c087ecf48b933fa74a62c5e7f2b9fcd9101ca06a4a52f66ed1e5c1dbaad
+  bytes: 437
 - path: conformance/language/fixtures/resolver/R_append_minimized_previous_round_trip.yaml
-  sha256: 88ac03736df6067236ff7792d8662f057c223f564419f2fe2adb8866158e79e1
-  bytes: 253
+  sha256: b7684f61a91710ab7ebd2bc4208f2a50f314dbbfcd75a3ddb97bd2d974586a62
+  bytes: 302
 - path: conformance/language/fixtures/resolver/R_append_only_rejects_pos.yaml
   sha256: 143a99357d3d2e6a495d59481ad5c0016c88b1ab086b069d0929f5ed56360f4f
   bytes: 221
@@ -1717,6 +1801,9 @@ files:
 - path: conformance/language/fixtures/resolver/R_child_field_labels_materialize_until_overridden.yaml
   sha256: 427f3700a00a50b6346b055a13101b6fc5721c99a46022dcf24ab7cce8f31bd1
   bytes: 671
+- path: conformance/language/fixtures/resolver/R_content_blueid_is_canonical_node_blueid.yaml
+  sha256: 040a8777d4f800f83759dac5984970852518ea0c30e27290f0b72fbf28a4cab4
+  bytes: 481
 - path: conformance/language/fixtures/resolver/R_contracts_canonicalization_deterministic.yaml
   sha256: 562c85f28ac7e626df84f3d8f5122549eb2be98470702879e34aa5a9e6a8e8c2
   bytes: 396
@@ -1763,8 +1850,8 @@ files:
   sha256: 4e9f4bf229ed2d6af10982a895f8a02d886cd80bfb768d828f0028f7b06f3f4e
   bytes: 203
 - path: conformance/language/fixtures/resolver/R_minimized_overlay_round_trip.yaml
-  sha256: 8e3ec59f3b4b86038be941f8ee55ef311a4d505b8b92415705114ea2caf6321c
-  bytes: 324
+  sha256: c63b118afe11b111d2b4da6feec0945722dd20c679ec20b9a9a4637ed1d27fcd
+  bytes: 371
 - path: conformance/language/fixtures/resolver/R_noncanonical_inherited_integer_rejected.yaml
   sha256: 2c86ab53e6803d1fd6c0969ff722059bce64d1327ff1fb74568df665dae2ceb7
   bytes: 205
@@ -1772,8 +1859,8 @@ files:
   sha256: 2d27905db8b371681f3e6b4ea883995cbf972f79389eb5b6bd871024f53cc41e
   bytes: 273
 - path: conformance/language/fixtures/resolver/R_positional_minimized_round_trip.yaml
-  sha256: e66cd2f9d1da51361969380d2c2c142ef12150cccd6dbe44cd55ae65ace23ba7
-  bytes: 245
+  sha256: a768618f5eeb32c80d8108b339990d990bb11e07412d59d03d7a2cbbcfed5027
+  bytes: 297
 - path: conformance/language/fixtures/resolver/R_positional_reorder_or_remove_rejected.yaml
   sha256: ad47beabf9caaabc798979ed10d23e3f6ef9de518a10fb31aa8b7c4d4713aa44
   bytes: 369
@@ -1834,6 +1921,9 @@ files:
 - path: conformance/language/fixtures/resolver/R_source_recursive_empty_object_list_to_empty.yaml
   sha256: 7b918ed76662e38dcdb39c9adca5423e15f731ee0fcc1e531593528470f6cbaa
   bytes: 324
+- path: conformance/language/fixtures/resolver/R_specialization_creates_new_node.yaml
+  sha256: fa980fd9d8c1aef35f85191a7385aa04ac63d9c5a30f465b2d791082b3cd4ae8
+  bytes: 691
 - path: conformance/language/fixtures/resolver/R_top_level_type_name_description_not_inherited.yaml
   sha256: 3845bc40a3e6656411871f50ecf91c8283599c27d8c6ff3231f8a781e2fd132b
   bytes: 463
@@ -1853,8 +1943,8 @@ files:
   sha256: 107154b2e46350f5633e99ee617dadc2958525b6bbc689a1cd9c9407c2d6d8c6
   bytes: 497
 - path: conformance/language/fixtures/vector-coverage.yaml
-  sha256: 6b861f6051b724b837e65ee2ccd0b13fe5597c8e2d6791defd81f74eadd8b2ee
-  bytes: 6462
+  sha256: dcf6a25c83c6c1efc0d1141a73e9d8fb534cf231fb0ffff28d7128b22c9b4c57
+  bytes: 8551
 - path: conformance/language/registry/Boolean.blue
   sha256: 92cf78899ae67dcfcdb7cb837190a04545e37966236e1808895ba70eedc5331d
   bytes: 298
@@ -1874,7 +1964,7 @@ files:
   sha256: db8a4ff45cccfbb92e011ac3c79a70e6a17e57f2a807e10747e9f444c8d15fe5
   bytes: 530
 - path: conformance/language/registry/manifest.yaml
-  sha256: 96056d6dea2b234d6ce20a16fcbf4571f2d50ff11e407ca8d287a7335a3598a1
+  sha256: aa919ae25b1c21c9a5e63213c067f83e03aded39a597adb8043d4aacd0dacf54
   bytes: 1698
 - path: implementation-prompts/CODEX-PROMPT-blue-bex-java.md
   sha256: 1acaf85ac92c9e1d3d594e34d571d041c8ed8b141fcc71c6df132f3d72c481fe
@@ -1889,14 +1979,14 @@ files:
   sha256: b25d6d255f84c584ed7a484411430fab50c18142a1bb6c08cfb104acf09d6f69
   bytes: 96656
 - path: specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: f99c17c700a1771b0cf308dfe7590b4001377a886a9b9eddb0d4a941647b8f83
+  sha256: 3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0
   bytes: 122662
 - path: specifications/blue-coordination-specification-1.0.md
   sha256: b227e6add4d35bf26eb3b9a9f643979f7e4a642d6da8d9e587f9964492a156cc
   bytes: 48652
 - path: specifications/blue-language-specification-1.0.md
-  sha256: ac1ac47e10c91be82ebe45e2406f33ad5073cc3f3684bc1651704117b5008852
-  bytes: 162688
+  sha256: 41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e
+  bytes: 185046
 - path: tools/build_release.py
   sha256: 164122e4579add70c9e61b49a7b0d2fba1431d628fae2db85dfeaba89210395e
   bytes: 20626
@@ -1911,4 +2001,4 @@ packageIdentityAlgorithm:
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
   lineEndings: LF
-packageIdentity: sha256:de13521d2abf23fd3e3084aa6d754591c9b2f97b91176142287bc3d7456350d3
+packageIdentity: sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70

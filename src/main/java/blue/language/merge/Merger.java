@@ -528,7 +528,8 @@ public final class Merger implements NodeResolver {
 
             if (source.getContracts() != null && limits.shouldMergePathSegment(Properties.OBJECT_CONTRACTS, source.getContracts())) {
                 boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
-                        || limits.shouldExtendPathSegment(Properties.OBJECT_CONTRACTS, source.getContracts());
+                        || limits.shouldExpandPathSegment(
+                                Properties.OBJECT_CONTRACTS, source.getContracts());
                 limits.enterPathSegment(Properties.OBJECT_CONTRACTS, source.getContracts());
                 enterValidationPath(Properties.OBJECT_CONTRACTS, referenceExpansionAllowed);
                 try {
@@ -546,7 +547,7 @@ public final class Merger implements NodeResolver {
                 properties.forEach((key, value) -> {
                     if (limits.shouldMergePathSegment(key, value)) {
                         boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
-                                || limits.shouldExtendPathSegment(key, value);
+                                || limits.shouldExpandPathSegment(key, value);
                         boolean trackValidationPath = shouldTrackValidationPath(target, key, value);
                         limits.enterPathSegment(key, value);
                         if (trackValidationPath) {
@@ -711,33 +712,7 @@ public final class Merger implements NodeResolver {
             appendChildren(targetChildren, sourceChildren, 1, limits, itemType);
             return;
         }
-
-        if (sourceChildren.size() < targetChildren.size())
-            throw new IllegalArgumentException(String.format(
-                    "Subtype of element must not have more items (%d) than the element itself (%d).",
-                    targetChildren.size(), sourceChildren.size()
-            ));
-
-        for (int i = 0; i < sourceChildren.size(); i++) {
-            if (i >= targetChildren.size()) {
-                Node resolvedChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i), itemType);
-                if (resolvedChild != null) {
-                    targetChildren.add(resolvedChild);
-                }
-                continue;
-            }
-            Node sourceChild = resolveListChild(sourceChildren.get(i), limits, String.valueOf(i), itemType);
-            if (sourceChild == null) {
-                continue;
-            }
-            String sourceBlueId = BlueIdCalculator.calculateBlueId(sourceChild);
-            String targetBlueId = BlueIdCalculator.calculateBlueId(targetChildren.get(i));
-            if (!sourceBlueId.equals(targetBlueId))
-                throw new IllegalArgumentException(String.format(
-                        "Append-only list cannot modify inherited item at index %d: source item has blueId '%s', but target item has blueId '%s'.",
-                        i, sourceBlueId, targetBlueId
-                ));
-        }
+        appendChildren(targetChildren, sourceChildren, 0, limits, itemType);
     }
 
     private void mergePositionalChildren(List<Node> targetChildren, List<Node> sourceChildren, Limits limits, Node itemType) {
@@ -809,7 +784,7 @@ public final class Merger implements NodeResolver {
                     continue;
                 }
                 boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
-                        || limits.shouldExtendPathSegment(segment, sourceChild);
+                        || limits.shouldExpandPathSegment(segment, sourceChild);
                 limits.enterPathSegment(segment, sourceChild);
                 enterValidationPath(segment, referenceExpansionAllowed);
                 try {
@@ -851,7 +826,7 @@ public final class Merger implements NodeResolver {
             if (resolvedOverlay != null) {
                 String segment = String.valueOf(position);
                 boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
-                        || limits.shouldExtendPathSegment(segment, resolvedOverlay);
+                                || limits.shouldExpandPathSegment(segment, resolvedOverlay);
                 limits.enterPathSegment(segment, resolvedOverlay);
                 enterValidationPath(segment, referenceExpansionAllowed);
                 try {
@@ -872,7 +847,7 @@ public final class Merger implements NodeResolver {
             return;
         }
         boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
-                || limits.shouldExtendPathSegment(segment, overlay);
+                || limits.shouldExpandPathSegment(segment, overlay);
         limits.enterPathSegment(segment, overlay);
         enterValidationPath(segment, referenceExpansionAllowed);
         try {
@@ -973,7 +948,7 @@ public final class Merger implements NodeResolver {
             return null;
         }
         boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
-                || limits.shouldExtendPathSegment(segment, child);
+                || limits.shouldExpandPathSegment(segment, child);
         limits.enterPathSegment(segment, child);
         enterValidationPath(segment, referenceExpansionAllowed);
         try {

@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
@@ -691,36 +693,54 @@ public class Schema implements Cloneable {
         return this;
     }
 
-    /** Returns a deep mutable copy of every keyword node and enum value. */
-    @Override
-    public Schema clone() {
+    /**
+     * Creates a subtype-preserving copy while delegating Node-edge ownership to
+     * the caller. The package-private hook lets the iterative Node copier keep a
+     * single traversal stack across Node and Schema boundaries.
+     */
+    final Schema copyWithNodeMapper(Function<Node, Node> nodeMapper) {
+        Objects.requireNonNull(nodeMapper, "nodeMapper must not be null");
+        Schema cloned = shallowClone();
+        cloned.required = mapNullable(required, nodeMapper);
+        cloned.minLength = mapNullable(minLength, nodeMapper);
+        cloned.maxLength = mapNullable(maxLength, nodeMapper);
+        cloned.minimum = mapNullable(minimum, nodeMapper);
+        cloned.maximum = mapNullable(maximum, nodeMapper);
+        cloned.exclusiveMinimum = mapNullable(exclusiveMinimum, nodeMapper);
+        cloned.exclusiveMaximum = mapNullable(exclusiveMaximum, nodeMapper);
+        cloned.multipleOf = mapNullable(multipleOf, nodeMapper);
+        cloned.minItems = mapNullable(minItems, nodeMapper);
+        cloned.maxItems = mapNullable(maxItems, nodeMapper);
+        cloned.uniqueItems = mapNullable(uniqueItems, nodeMapper);
+        cloned.minFields = mapNullable(minFields, nodeMapper);
+        cloned.maxFields = mapNullable(maxFields, nodeMapper);
+        cloned.enumValues = enumValues != null
+                ? enumValues.stream()
+                        .map(value -> nodeMapper.apply(Objects.requireNonNull(
+                                value, "Schema enum value must not be null")))
+                        .collect(Collectors.toList())
+                : null;
+        return cloned;
+    }
+
+    private static Node mapNullable(
+            Node value,
+            Function<Node, Node> nodeMapper) {
+        return value != null ? nodeMapper.apply(value) : null;
+    }
+
+    private Schema shallowClone() {
         try {
-            Schema cloned = (Schema) super.clone();
-
-            if (this.required != null) cloned.required = this.required.clone();
-            if (this.minLength != null) cloned.minLength = this.minLength.clone();
-            if (this.maxLength != null) cloned.maxLength = this.maxLength.clone();
-            if (this.minimum != null) cloned.minimum = this.minimum.clone();
-            if (this.maximum != null) cloned.maximum = this.maximum.clone();
-            if (this.exclusiveMinimum != null) cloned.exclusiveMinimum = this.exclusiveMinimum.clone();
-            if (this.exclusiveMaximum != null) cloned.exclusiveMaximum = this.exclusiveMaximum.clone();
-            if (this.multipleOf != null) cloned.multipleOf = this.multipleOf.clone();
-            if (this.minItems != null) cloned.minItems = this.minItems.clone();
-            if (this.maxItems != null) cloned.maxItems = this.maxItems.clone();
-            if (this.uniqueItems != null) cloned.uniqueItems = this.uniqueItems.clone();
-            if (this.minFields != null) cloned.minFields = this.minFields.clone();
-            if (this.maxFields != null) cloned.maxFields = this.maxFields.clone();
-
-            if (this.enumValues != null) {
-                cloned.enumValues = this.enumValues.stream()
-                        .map(Node::clone)
-                        .collect(Collectors.toList());
-            }
-
-            return cloned;
+            return (Schema) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new AssertionError("Schema must be cloneable", e);
         }
+    }
+
+    /** Returns a deep mutable copy of every keyword node and enum value. */
+    @Override
+    public Schema clone() {
+        return copyWithNodeMapper(Node::clone);
     }
 
     @Override

@@ -8,6 +8,7 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -492,7 +493,7 @@ class ExecutableBodyFieldMetadataTest {
 
     private static final class Fixture {
         private static final String SET_PROPERTY_TYPE_BLUE_ID =
-                "8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts";
+                ProcessorTestTypeBlueIds.SET_PROPERTY;
         private final Node programType =
                 new Node()
                         .name("Program body")

@@ -3,6 +3,7 @@ package blue.language.utils;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -522,7 +523,9 @@ public class BlueIdCalculatorTest {
                 Node node = YAML_MAPPER.readValue(yaml, Node.class);
                 String blueId = BlueIdCalculator.calculateBlueId(node);
 
-                String json = "{\"text\":{\"type\":{\"blueId\":\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"},\"value\":\"abc\\ndef\"}}";
+                String json = "{\"text\":{\"type\":{\"blueId\":\""
+                                + TEXT_TYPE_BLUE_ID
+                                + "\"},\"value\":\"abc\\ndef\"}}";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
                 // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
@@ -541,7 +544,9 @@ public class BlueIdCalculatorTest {
                 Node node = YAML_MAPPER.readValue(yaml, Node.class);
                 String blueId = BlueIdCalculator.calculateBlueId(node);
 
-                String json = "{\"text\":{\"type\":{\"blueId\":\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"},\"value\":\"abc def\"}}\n";
+                String json = "{\"text\":{\"type\":{\"blueId\":\""
+                                + TEXT_TYPE_BLUE_ID
+                                + "\"},\"value\":\"abc def\"}}\n";
                 Node node2 = JSON_MAPPER.readValue(json, Node.class);
                 // when
                 String blueId2 = BlueIdCalculator.calculateBlueId(node2);
@@ -761,7 +766,7 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
-        public void shouldAcceptAuthoredBlueDirectiveForSemanticBlueId() {
+        public void shouldRejectLegacyBlueItemsForSemanticBlueId() {
                 // given
                 Node node = YAML_MAPPER.readValue(
                                 "blue:\n" +
@@ -769,10 +774,12 @@ public class BlueIdCalculatorTest {
                                 "value: hello", Node.class);
 
                 // when
-                String blueId = new Blue().calculateSemanticBlueId(node);
+                IllegalArgumentException failure = captureFailure(
+                                () -> new Blue().calculateSemanticBlueId(node));
 
                 // then
-                assertTrue(blueId != null);
+                assertTrue(failure.getMessage().contains(
+                                "invalid portable shape"));
         }
 
         @Test
@@ -941,9 +948,9 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
-        public void shouldMatchPublishedLanguage10IdentityForCheckpointEntry() throws Exception {
+        public void shouldMatchPublishedContracts10IdentityForCheckpointEntry() throws Exception {
                 // given
-                String expected = "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY";
+                String expected = RuntimeBlueIds.CHECKPOINT_ENTRY;
 
                 // when
                 boolean resourcePresent;

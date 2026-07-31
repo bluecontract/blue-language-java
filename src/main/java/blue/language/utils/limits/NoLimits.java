@@ -6,8 +6,14 @@ import blue.language.model.Node;
 class NoLimits implements Limits {
 
     @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+    public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
         return true;
+    }
+
+    /** Legacy binary-API spelling delegated to the canonical method. */
+    @Override
+    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+        return shouldExpandPathSegment(pathSegment, currentNode);
     }
 
     @Override

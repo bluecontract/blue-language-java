@@ -46,6 +46,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
 
     @Test
     void shouldReconfigureStrictVerifierWhenReplacingPlanDeriver() {
+        // given
         Node root = rootWithChannels(
                 channel("alpha", 0, true));
         Node event = event("topic");
@@ -61,6 +62,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         DocumentProcessor processor =
                 processor(null, null, null);
 
+        // when
         DocumentProcessor configured =
                 processor.externalDeliveryPlanDeriver(
                         (suppliedRoot, suppliedEvent) -> {
@@ -70,6 +72,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         DocumentProcessingResult result =
                 processor.processDocument(root, event);
 
+        // then
         assertSame(processor, configured);
         assertEquals(1, derivations.get());
         assertEquals(
@@ -1377,6 +1380,29 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         }
 
         @Override
+        public boolean matches(
+                TraceHandler contract,
+                HandlerMatchContext context) {
+            if (!"observeBridge".equals(
+                    context.handlerKey())) {
+                return true;
+            }
+            Node wireEvent = context.event();
+            Node occurrenceEvent =
+                    context.occurrenceEvent();
+            return wireEvent != null
+                    && wireEvent.getType() != null
+                    && RuntimeBlueIds
+                    .EMBEDDED_EVENT_DELIVERY.equals(
+                            wireEvent.getType()
+                                    .getBlueId())
+                    && occurrenceEvent != null
+                    && "child-event".equals(
+                            occurrenceEvent.getAsText(
+                                    "/id"));
+        }
+
+        @Override
         public void execute(TraceHandler contract,
                             ProcessorExecutionContext context) {
             if ("emit".equals(context.contractKey())) {
@@ -1390,6 +1416,11 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             } else if ("observeBridge".equals(
                     context.contractKey())) {
                 Node wrapper = context.event();
+                if (!"child-event".equals(
+                        context.occurrenceEvent()
+                                .getAsText("/id"))) {
+                    return;
+                }
                 Node eventReference =
                         wrapper.getProperties() != null
                                 ? wrapper.getProperties().get("event")

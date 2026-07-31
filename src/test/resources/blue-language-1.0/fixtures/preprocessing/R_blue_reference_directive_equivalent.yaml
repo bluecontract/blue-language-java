@@ -1,0 +1,34 @@
+id: R_blue_reference_directive_equivalent
+category: Resolution
+operation: preprocess
+description: a directive pure reference and the equivalent inline directive preprocess identically
+source:
+  blue:
+    blueId: 7a4cQNDA9XKdPRcSNiGJA6mP5cCEH1Z6vqfp5Xu8rfBF
+  name: Alice
+alsoEquivalentTo:
+  blue:
+    imports:
+      Person:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+    transformations:
+      - type:
+          blueId: DS4rHtvxTg1S3tn6e9ciuMNDkeEQtk4VTdiw8KUCfMAu
+        field: type
+        value: Person
+  name: Alice
+provider:
+  - requestedBlueId: 7a4cQNDA9XKdPRcSNiGJA6mP5cCEH1Z6vqfp5Xu8rfBF
+    node:
+      imports:
+        Person:
+          blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+      transformations:
+        - type:
+            blueId: DS4rHtvxTg1S3tn6e9ciuMNDkeEQtk4VTdiw8KUCfMAu
+          field: type
+          value: Person
+expectedPreprocessed:
+  name: Alice
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy

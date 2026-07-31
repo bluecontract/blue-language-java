@@ -10,6 +10,7 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.HandlerContract;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -319,7 +320,7 @@ class DocumentProcessorInitializationTest {
                         "  contracts:\n" +
                         "    lifecycle:\n" +
                         "      type:\n" +
-                        "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                        "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                         "    captureChildId:\n" +
                         "      channel: lifecycle\n" +
                         "      type:\n" +
@@ -328,12 +329,12 @@ class DocumentProcessorInitializationTest {
                         "contracts:\n" +
                         "  embedded:\n" +
                         "    type:\n" +
-                        "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                        "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                         "    paths:\n" +
                         "      - /child\n" +
                         "  lifecycle:\n" +
                         "    type:\n" +
-                        "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                        "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                         "  captureRootId:\n" +
                         "    channel: lifecycle\n" +
                         "    type:\n" +
@@ -384,7 +385,7 @@ class DocumentProcessorInitializationTest {
                         "contracts:\n" +
                         "  embedded:\n" +
                         "    type:\n" +
-                        "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                        "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                         "    paths:\n" +
                         "      - /child\n");
         String exactInput = original.toString();
@@ -522,36 +523,36 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  setRoot:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 3\n" +
                 "  setNested:\n" +
                 "    order: 1\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    path: /nested/branch/\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 7\n" +
                 "  setExplicit:\n" +
                 "    order: 2\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    path: a/x\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: x\n" +
                 "    propertyValue: 11\n";
 
@@ -590,11 +591,11 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 5\n";
 
@@ -688,18 +689,18 @@ class DocumentProcessorInitializationTest {
         String yaml = "name: Remove Doc\n" +
                 "x:\n" +
                 "  type:\n" +
-                "    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\n" +
+                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  removeX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 2REa15BDY5EWq4tJsbUaBwhhTG2xSdk2ZyFL1aCpqTVF\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.REMOVE_PROPERTY + "\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: /x\n";
 
         Blue blue = ProcessorTestSupport.blue();
@@ -727,7 +728,7 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR\n";
+                "      blueId: " + RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT + "\n";
 
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
@@ -747,7 +748,7 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: 33kfH8pfk7F1P5zMsuK1Jm3GcSdmTXoFHKjP16DesEco\n";
+                "      blueId: " + ProcessorTestTypeBlueIds.PROCESSING_FAILURE_MARKER + "\n";
 
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
@@ -768,10 +769,10 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR\n" +
+                "      blueId: " + RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT + "\n" +
                 "  extraCheckpoint:\n" +
                 "    type:\n" +
-                "      blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR\n";
+                "      blueId: " + RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT + "\n";
 
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
@@ -792,23 +793,23 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  triggeredChannel:\n" +
                 "    type:\n" +
-                "      blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf\n" +
+                "      blueId: " + RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL + "\n" +
                 "  handleLifecycle:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: /lifecycle\n" +
                 "    propertyValue: 1\n" +
                 "  triggeredHandler:\n" +
                 "    channel: triggeredChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /triggered\n" +
                 "    propertyValue: 1\n";
 
@@ -836,17 +837,17 @@ class DocumentProcessorInitializationTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  childBridge:\n" +
                 "    type:\n" +
-                "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
+                "      blueId: " + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n" +
                 "    sourcePath: /child\n" +
                 "  captureChildLifecycle:\n" +
                 "    channel: childBridge\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /childLifecycle\n" +
                 "    propertyValue: 1\n";
 
@@ -877,24 +878,24 @@ class DocumentProcessorInitializationTest {
                         "contracts:\n" +
                         "  lifecycleChannel:\n" +
                         "    type:\n" +
-                        "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                        "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                         "  setX:\n" +
                         "    channel: lifecycleChannel\n" +
                         "    type:\n" +
-                        "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                        "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                         "    event:\n" +
                         "      type:\n" +
-                        "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                        "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                         "    propertyKey: /x\n" +
                         "    propertyValue: 5\n" +
                         "  setXLater:\n" +
                         "    order: 1\n" +
                         "    channel: lifecycleChannel\n" +
                         "    type:\n" +
-                        "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                        "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                         "    event:\n" +
                         "      type:\n" +
-                        "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                        "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                         "    propertyKey: /x\n" +
                         "    propertyValue: 10\n");
     }
@@ -964,7 +965,7 @@ class DocumentProcessorInitializationTest {
                         + "contracts:\n"
                         + "  lifecycleWithList:\n"
                         + "    type:\n"
-                        + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                        + "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n"
                         + "    values:\n"
                         + "      - [a, b]\n"
                         + "      - {kind: c}\n",
@@ -977,7 +978,7 @@ class DocumentProcessorInitializationTest {
                         + "contracts:\n"
                         + "  embedded:\n"
                         + "    type:\n"
-                        + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                        + "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n"
                         + "    paths:\n"
                         + "      - /child\n");
     }

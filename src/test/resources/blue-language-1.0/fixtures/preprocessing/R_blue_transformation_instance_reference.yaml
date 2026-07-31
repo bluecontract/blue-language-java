@@ -1,0 +1,23 @@
+id: R_blue_transformation_instance_reference
+category: Resolution
+operation: preprocess
+description: a transformation item may be an exact pure reference
+source:
+  blue:
+    transformations:
+      - blueId: 4JS1ePbYvBqDg7Xo9TkZZNpvgfskT3K5rs8qMrDikP1L
+  text:
+    type: Text
+    value: A
+provider:
+  - requestedBlueId: 4JS1ePbYvBqDg7Xo9TkZZNpvgfskT3K5rs8qMrDikP1L
+    node:
+      type:
+        blueId: D2DxVxaddbJT5k2YYj3sG35cSdotw1Mz9GpxrdP43nzN
+      field: text
+      suffix: B
+expectedPreprocessed:
+  text:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: AB

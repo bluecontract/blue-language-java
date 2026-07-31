@@ -14,9 +14,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SelectedExecutableBodyProviderProvenanceTest {
@@ -182,6 +185,177 @@ class SelectedExecutableBodyProviderProvenanceTest {
                         .errorCategory());
     }
 
+    @Test
+    void shouldPropagateInvalidEvidenceFromSelectedBodyMaterialization() {
+        // given
+        Node body =
+                new Node().value(
+                        "selected body");
+        String bodyBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        body);
+        InvalidExecutionEvidenceException invalidEvidence =
+                new InvalidExecutionEvidenceException(
+                        "forged selected-body evidence");
+        ActiveProviderManager manager =
+                new ActiveProviderManager(
+                        bodyBlueId,
+                        body,
+                        invalidEvidence);
+        CapturingMockHandlerProcessor handlerProcessor =
+                new CapturingMockHandlerProcessor();
+        DocumentProcessor owner =
+                owner(
+                        manager,
+                        handlerProcessor);
+        ContractBundle bundle =
+                selectedHandlerBundle(
+                        new Node().blueId(
+                                bodyBlueId),
+                        Collections.singletonList(
+                                "result"));
+        ProcessorEngine.Execution execution =
+                new ProcessorEngine.Execution(
+                        owner,
+                        manager.fromDocument(
+                                new Node()));
+        ChannelRunner runner =
+                runner(
+                        owner,
+                        execution);
+
+        // when
+        Throwable failure =
+                captureFailure(
+                        () -> runner.runHandlers(
+                                "/",
+                                bundle,
+                                "events",
+                                new Node()));
+
+        // then
+        assertInstanceOf(
+                InvalidExecutionEvidenceException.class,
+                failure);
+        assertSame(
+                invalidEvidence,
+                failure);
+    }
+
+    @Test
+    void shouldPropagateInvalidEvidenceFromHandlerExecution() {
+        // given
+        Node body =
+                new Node().value(
+                        "inline body");
+        String bodyBlueId =
+                BlueIdCalculator.calculateBlueId(
+                        body);
+        ActiveProviderManager manager =
+                new ActiveProviderManager(
+                        bodyBlueId,
+                        body);
+        InvalidExecutionEvidenceException invalidEvidence =
+                new InvalidExecutionEvidenceException(
+                        "forged handler evidence");
+        ThrowingMockHandlerProcessor handlerProcessor =
+                new ThrowingMockHandlerProcessor(
+                        invalidEvidence);
+        DocumentProcessor owner =
+                owner(
+                        manager,
+                        handlerProcessor);
+        ContractBundle bundle =
+                selectedHandlerBundle(
+                        body,
+                        Collections.<String>emptyList());
+        ProcessorEngine.Execution execution =
+                new ProcessorEngine.Execution(
+                        owner,
+                        manager.fromDocument(
+                                new Node()));
+        ChannelRunner runner =
+                runner(
+                        owner,
+                        execution);
+
+        // when
+        Throwable failure =
+                captureFailure(
+                        () -> runner.runHandlers(
+                                "/",
+                                bundle,
+                                "events",
+                                new Node()));
+
+        // then
+        assertInstanceOf(
+                InvalidExecutionEvidenceException.class,
+                failure);
+        assertSame(
+                invalidEvidence,
+                failure);
+    }
+
+    private static DocumentProcessor owner(
+            ProcessingSnapshotManager manager,
+            HandlerProcessor<MockHandler> handlerProcessor) {
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                handlerProcessor)
+                        .build();
+        return DocumentProcessor.builder()
+                .withRegistry(
+                        registry)
+                .withSnapshotManager(
+                        manager)
+                .build();
+    }
+
+    private static ContractBundle selectedHandlerBundle(
+            Node result,
+            List<String> executableBodyFields) {
+        MockHandler selected =
+                new MockHandler();
+        selected.setTypeBlueId(
+                MockTypeBlueIds.MOCK_HANDLER);
+        selected.setChannelKey(
+                "events");
+        selected.setResult(
+                result);
+        Node selectedNode =
+                new Node()
+                        .type(new Node().blueId(
+                                MockTypeBlueIds.MOCK_HANDLER))
+                        .properties(
+                                "channel",
+                                new Node().value(
+                                        "events"))
+                        .properties(
+                                "result",
+                                result.clone());
+        return ContractBundle.builder()
+                .addHandler(
+                        "selected",
+                        selected,
+                        FrozenNode.fromResolvedNode(
+                                selectedNode),
+                        executableBodyFields)
+                .build();
+    }
+
+    private static ChannelRunner runner(
+            DocumentProcessor owner,
+            ProcessorEngine.Execution execution) {
+        return new ChannelRunner(
+                owner,
+                execution,
+                execution.runtime(),
+                new CheckpointManager(
+                        execution.runtime()));
+    }
+
     private static Throwable captureFailure(Runnable operation) {
         try {
             operation.run();
@@ -213,18 +387,58 @@ class SelectedExecutableBodyProviderProvenanceTest {
         }
     }
 
+    private static final class ThrowingMockHandlerProcessor
+            implements HandlerProcessor<MockHandler> {
+        private final InvalidExecutionEvidenceException
+                invalidEvidence;
+
+        private ThrowingMockHandlerProcessor(
+                InvalidExecutionEvidenceException
+                        invalidEvidence) {
+            this.invalidEvidence =
+                    invalidEvidence;
+        }
+
+        @Override
+        public Class<MockHandler> contractType() {
+            return MockHandler.class;
+        }
+
+        @Override
+        public void execute(
+                MockHandler contract,
+                ProcessorExecutionContext context) {
+            throw invalidEvidence;
+        }
+    }
+
     private static final class ActiveProviderManager
             implements ProcessingSnapshotManager {
         private final String bodyBlueId;
         private final FrozenNode materializedBody;
+        private final RuntimeException
+                materializationFailure;
         private int materializations;
 
         private ActiveProviderManager(
                 String bodyBlueId,
                 Node body) {
+            this(
+                    bodyBlueId,
+                    body,
+                    null);
+        }
+
+        private ActiveProviderManager(
+                String bodyBlueId,
+                Node body,
+                RuntimeException
+                        materializationFailure) {
             this.bodyBlueId = bodyBlueId;
             this.materializedBody =
                     FrozenNode.fromResolvedNode(body);
+            this.materializationFailure =
+                    materializationFailure;
         }
 
         @Override
@@ -245,6 +459,9 @@ class SelectedExecutableBodyProviderProvenanceTest {
             assertEquals(bodyBlueId,
                     reference.getReferenceBlueId());
             materializations++;
+            if (materializationFailure != null) {
+                throw materializationFailure;
+            }
             return materializedBody;
         }
 

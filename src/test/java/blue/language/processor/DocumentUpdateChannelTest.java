@@ -8,6 +8,8 @@ import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.AssertDocumentUpdateContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -69,34 +71,34 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  documentUpdateChannelX:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /x\n" +
                 "  documentUpdateChannelY:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /y\n" +
                 "  setX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n" +
                 "  setY:\n" +
                 "    channel: documentUpdateChannelX\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /y\n" +
                 "    propertyValue: 1\n" +
                 "  setZ:\n" +
                 "    channel: documentUpdateChannelY\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /z\n" +
                 "    propertyValue: 1\n";
 
@@ -127,34 +129,34 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  documentUpdateA:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /a\n" +
                 "  setAX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: /a/x\n" +
                 "    propertyValue: 1\n" +
                 "  setABX:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    order: 1\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "    propertyKey: /a/b/x\n" +
                 "    propertyValue: 1\n" +
                 "  incrementYOnA:\n" +
                 "    channel: documentUpdateA\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    propertyKey: /y\n";
 
         Blue blue = ProcessorTestSupport.blue();
@@ -193,46 +195,46 @@ class DocumentUpdateChannelTest {
                 "    contracts:\n" +
                 "      life:\n" +
                 "        type:\n" +
-                "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "          blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "      setInner:\n" +
                 "        channel: life\n" +
                 "        event:\n" +
                 "          type:\n" +
-                "            blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "            blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "        type:\n" +
-                "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "          blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "        propertyKey: /a\n" +
                 "        propertyValue: 1\n" +
                 "  contracts:\n" +
                 "    embedded:\n" +
                 "      type:\n" +
-                "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "        blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "      paths:\n" +
                 "        - /y\n" +
                 "    documentUpdateFromY:\n" +
                 "      type:\n" +
-                "        blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "      path: /y/a\n" +
                 "    setFromY:\n" +
                 "      channel: documentUpdateFromY\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /a\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /x\n" +
                 "  documentUpdateFromChild:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /x/y/a\n" +
                 "  setFromChild:\n" +
                 "    channel: documentUpdateFromChild\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /a\n" +
                 "    propertyValue: 1\n";
 
@@ -277,24 +279,24 @@ class DocumentUpdateChannelTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: life\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "    watchX:\n" +
                 "      type:\n" +
-                "        blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "        blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "      path: /x\n" +
                 "    assertA:\n" +
                 "      channel: watchX\n" +
                 "      type:\n" +
-                "        blueId: 2QCfZuct9TQRCmgE4q6PneDoZFcshqMLYpsNGpxvfwMd\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.ASSERT_DOCUMENT_UPDATE + "\n" +
                 "      expectedPath: /x\n" +
                 "      expectedOp: add\n" +
                 "      expectBeforeNull: true\n" +
@@ -302,17 +304,17 @@ class DocumentUpdateChannelTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "  watchRoot:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /a/x\n" +
                 "  assertRoot:\n" +
                 "    channel: watchRoot\n" +
                 "    type:\n" +
-                "      blueId: 2QCfZuct9TQRCmgE4q6PneDoZFcshqMLYpsNGpxvfwMd\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.ASSERT_DOCUMENT_UPDATE + "\n" +
                 "    expectedPath: /a/x\n" +
                 "    expectedOp: add\n" +
                 "    expectBeforeNull: true\n" +

@@ -618,7 +618,7 @@ def runtimeTraceEvidenceJson = layout.buildDirectory.file(
         'reports/runtime-trace/runtime-work-session.json')
 tasks.register('releaseConformanceTest', JavaExec) {
     group = 'verification'
-    description = 'Runs all tests and the strict 128/128 Language plus 140/140 Contracts release gate.'
+    description = 'Runs all tests and the strict 153/153 Language plus 140/140 Contracts release gate.'
     dependsOn tasks.named('test')
     dependsOn tasks.named('verifyNoDeprecatedProductionApi')
     dependsOn tasks.named('verifyNoAmbiguousReverseApi')
@@ -1743,7 +1743,7 @@ tasks.register('fragmentedProcessingReport') {
                         + "|---|---:|---:|\n"
                         + "| Main tests | 1,765/1,765 | "
                         + "${allTests.passed}/${allTests.tests} |\n"
-                        + "| Language fixtures | 128/128 | "
+                        + "| Language fixtures | 153/153 | "
                         + "${releaseSuitesByName.language.passed}/"
                         + "${releaseSuitesByName.language.tests} |\n"
                         + "| Contracts fixtures | 140/140 | "
@@ -1860,13 +1860,13 @@ tasks.register('verifyReleaseEvidenceReport') {
             [(it.name): it]
         }
         failUnless(
-                fixtureSuites.language?.tests == 128
-                        && fixtureSuites.language?.passed == 128
+                fixtureSuites.language?.tests == 153
+                        && fixtureSuites.language?.passed == 153
                         && fixtureSuites.contracts?.tests == 140
                         && fixtureSuites.contracts?.passed == 140
                         && report.releaseConformance.failed == 0
                         && report.releaseConformance.skipped == 0,
-                'Release evidence does not prove 128/128 Language and '
+                'Release evidence does not prove 153/153 Language and '
                         + '140/140 Contracts fixtures')
         failUnless(
                 report.artifacts.values().every {

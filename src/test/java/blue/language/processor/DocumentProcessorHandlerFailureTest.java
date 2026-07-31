@@ -7,6 +7,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
@@ -45,11 +46,11 @@ class DocumentProcessorHandlerFailureTest {
                 "      blueId: " + EXISTING_DOCUMENT_BLUE_ID + "\n" +
                 "  events:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  fail:\n" +
                 "    channel: events\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /throwWithoutPatch\n" +
                 "    propertyValue: 1\n");
 
@@ -91,11 +92,11 @@ class DocumentProcessorHandlerFailureTest {
                 "      blueId: " + EXISTING_DOCUMENT_BLUE_ID + "\n" +
                 "  events:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  fail:\n" +
                 "    channel: events\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /shouldNotApply\n" +
                 "    propertyValue: 2\n");
 
@@ -141,11 +142,11 @@ class DocumentProcessorHandlerFailureTest {
                         + "\n"
                         + "  events:\n"
                         + "    type:\n"
-                        + "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n"
                         + "  fail:\n"
                         + "    channel: events\n"
                         + "    type:\n"
-                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                         + "    propertyKey: /invalidLaterPatch\n"
                         + "    propertyValue: -999\n");
         String input = document.toString();
@@ -206,19 +207,19 @@ class DocumentProcessorHandlerFailureTest {
                 "      blueId: " + EXISTING_DOCUMENT_BLUE_ID + "\n" +
                 "  events:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  first:\n" +
                 "    order: 0\n" +
                 "    channel: events\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /prior\n" +
                 "    propertyValue: 7\n" +
                 "  fail:\n" +
                 "    order: 1\n" +
                 "    channel: events\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /shouldNotApply\n" +
                 "    propertyValue: 9\n");
 
@@ -265,11 +266,11 @@ class DocumentProcessorHandlerFailureTest {
                         + "\n"
                         + "  events:\n"
                         + "    type:\n"
-                        + "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n"
                         + "  exhaust:\n"
                         + "    channel: events\n"
                         + "    type:\n"
-                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                         + "    propertyKey: /neverApplied\n"
                         + "    propertyValue: 1\n");
         String input = document.toString();

@@ -35,8 +35,14 @@ public final class DeferredReferencePathLimits implements Limits {
     }
 
     @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+    public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
         return !isDeferred(potentialPath(pathSegment));
+    }
+
+    /** Legacy binary-API spelling delegated to the canonical method. */
+    @Override
+    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+        return shouldExpandPathSegment(pathSegment, currentNode);
     }
 
     @Override

@@ -3,44 +3,46 @@ package blue.language.preprocess;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
-import blue.language.preprocess.processor.NormalizeListPlaceholders;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
 import blue.language.provider.BootstrapProvider;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
-import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
-import blue.language.utils.Nodes;
 import blue.language.utils.Properties;
-import blue.language.utils.limits.PathLimits;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
-import static blue.language.utils.Properties.DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP;
-
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-
 /**
- * Applies Blue source transformations before resolution.
+ * Applies the complete Blue Language 1.0 Source preprocessing algorithm.
  *
- * <p>The standard path normalizes list placeholders, applies the bundled
- * Default Blue aliases and primitive inference, resolves portable
- * {@code blue.imports}, then executes explicitly declared transformations.
- * Input documents are cloned before transformation.</p>
+ * <p>Every entry point establishes and verifies the complete root
+ * {@code blue} directive before executing a transformation. It then removes
+ * the directive, executes the frozen transformations once in declaration
+ * order, and finally applies the mandatory Language baseline. The baseline is
+ * intrinsic Language behavior; it is not an injected transformation list.</p>
  */
 public class Preprocessor {
 
-    /** Classpath resource containing the released Default Blue directives. */
-    public static final String DEFAULT_BLUE_RESOURCE =
-            "transformation/DefaultBlue.blue";
-    /** Structural BlueId of the bundled Default Blue transformation list. */
-    public static final String DEFAULT_BLUE_BLUE_ID = calculateDefaultBlueBlueId();
+    /**
+     * Legacy structural identity retained for API compatibility.
+     *
+     * <p>This identity is not part of the final preprocessing environment and
+     * is never loaded, resolved, or injected into a Source Document.</p>
+     */
+    public static final String DEFAULT_BLUE_BLUE_ID =
+            "Dme8eKnAKW54HrUeCuzKkhURFbDsLd2BsD7b9JCwcYRB";
+
+    private static final String REPLACE_INLINE_TYPES_BLUE_ID =
+            "27B7fuxQCS1VAptiCPc2RMkKoutP5qxkh3uDxZ7dr6Eo";
+    private static final String LEGACY_REPLACE_INLINE_TYPES_BLUE_ID =
+            "53yFLQ3dpuGwa2svHubDyzyhYz9RQNmctiJRdi3gRYr7";
+    private static final String INFER_BASIC_TYPES_BLUE_ID =
+            "FGYuTXwaoSKfZmpTysLTLsb8WzSqf43384rKZDkXhxD4";
+    private static final String LEGACY_INFER_BASIC_TYPES_BLUE_ID =
+            "49hrWpkoXavNmK8PpZag11zB2vYwzhQZahwioz6vDk2i";
     private static final String STANDARD_TYPE_BLUE_ID_POINTER =
             JsonPointer.append(
                     JsonPointer.append(
@@ -48,214 +50,197 @@ public class Preprocessor {
                             Properties.OBJECT_TYPE),
                     Properties.OBJECT_BLUE_ID);
 
-    private TransformationProcessorProvider processorProvider;
-    private NodeProvider nodeProvider;
-    private Node defaultSimpleBlue;
+    private final TransformationProcessorProvider processorProvider;
+    private final NodeProvider nodeProvider;
+    private final Map<String, String> directiveAliases;
+    private final Map<String, String> environmentImports;
+    private final StandardPreprocessingPipeline standardPipeline;
 
     /**
-     * Creates a preprocessor with an explicit transformation registry and provider.
+     * Creates a preprocessor with an explicit transformation registry and
+     * provider, canonical core imports, and no directive aliases.
      *
-     * @param processorProvider registry used to resolve declared transformations
-     * @param nodeProvider provider used to resolve transformation references
+     * @param processorProvider registry used to resolve exact transformation types
+     * @param nodeProvider provider used to obtain referenced directive content
      */
-    public Preprocessor(TransformationProcessorProvider processorProvider, NodeProvider nodeProvider) {
-        this.processorProvider = processorProvider;
-        this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
-        loadDefaultSimpleBlue();
+    public Preprocessor(
+            TransformationProcessorProvider processorProvider,
+            NodeProvider nodeProvider) {
+        this(processorProvider, nodeProvider,
+                Collections.emptyMap(), Collections.emptyMap());
     }
 
     /**
-     * Creates a preprocessor with the standard transformation registry.
+     * Creates a preprocessor for an explicitly declared host environment.
      *
-     * @param nodeProvider provider used to resolve transformation references
+     * <p>Directive aliases bind string-valued root {@code blue} forms to exact
+     * directive BlueIds. Environment imports supplement canonical core aliases
+     * for a host such as the Contracts runtime; they are not Language core.</p>
+     *
+     * @param processorProvider registry used to resolve exact transformation types
+     * @param nodeProvider provider used to obtain referenced directive content
+     * @param directiveAliases string directive aliases mapped to exact BlueIds
+     * @param environmentImports host type aliases mapped to exact BlueIds
+     */
+    public Preprocessor(
+            TransformationProcessorProvider processorProvider,
+            NodeProvider nodeProvider,
+            Map<String, String> directiveAliases,
+            Map<String, String> environmentImports) {
+        this.processorProvider = Objects.requireNonNull(
+                processorProvider, "processorProvider");
+        this.nodeProvider = NodeProviderWrapper.wrap(
+                Objects.requireNonNull(nodeProvider, "nodeProvider"));
+        this.directiveAliases = immutableCopy(directiveAliases);
+        this.environmentImports = immutableCopy(environmentImports);
+        this.standardPipeline = new StandardPreprocessingPipeline();
+    }
+
+    /**
+     * Creates a preprocessor with the standard explicit transformation
+     * registry, canonical core imports, and no directive aliases.
+     *
+     * @param nodeProvider provider used to obtain referenced directive content
      */
     public Preprocessor(NodeProvider nodeProvider) {
         this(getStandardProvider(), nodeProvider);
     }
 
     /**
-     * Creates a preprocessor backed by the bootstrap provider and standard registry.
+     * Creates a preprocessor backed by the bootstrap provider and standard
+     * explicit transformation registry.
      */
     public Preprocessor() {
         this(BootstrapProvider.INSTANCE);
     }
 
     /**
-     * Applies the complete standard preprocessing pipeline.
+     * Applies the complete mandatory preprocessing algorithm.
      *
-     * @param document source document to preprocess
-     * @return transformed clone of the source document
+     * @param document parsed Source Document
+     * @return independent validated Preprocessed Document
      */
     public Node preprocess(Node document) {
-        return preprocessWithDefaultBlue(document);
+        Objects.requireNonNull(document, "document");
+        PreprocessingLimits.requireGraphWithinBounds(
+                document, "Source Document");
+        PreprocessingDirectiveResolver resolver =
+                new PreprocessingDirectiveResolver(
+                        processorProvider,
+                        nodeProvider,
+                        directiveAliases,
+                        environmentImports);
+        PreprocessingPlan plan = resolver.resolve(document);
+        PreprocessingContext context = new PreprocessingContext(
+                plan.effectiveImports(), nodeProvider);
+
+        Node working = document.clone();
+        working.blue(null);
+        for (TransformationSnapshot transformation
+                : plan.transformations()) {
+            working = transformation.apply(working, context);
+            PreprocessingLimits.requireGraphWithinBounds(
+                    working, "transformation output");
+            standardPipeline.rejectBlueDirective(working);
+        }
+        Node preprocessed = standardPipeline.apply(
+                working, plan.effectiveImports());
+        PreprocessingLimits.requireGraphWithinBounds(
+                preprocessed, "Preprocessed Document");
+        return preprocessed;
     }
 
     /**
-     * Applies declared transformations without Default Blue aliases or inference.
+     * Compatibility bridge for the former baseline-disabling entry point.
      *
-     * @param document source document to preprocess
-     * @return transformed clone of the source document
+     * <p>Blue Language 1.0 has no mode that disables mandatory baseline
+     * preprocessing, so this method is equivalent to {@link #preprocess(Node)}.</p>
+     *
+     * @param document parsed Source Document
+     * @return independent validated Preprocessed Document
      */
     public Node preprocessWithoutDefaultBlue(Node document) {
-        return preprocess(document, null);
+        return preprocess(document);
     }
 
     /**
-     * Applies the complete standard preprocessing pipeline.
+     * Compatibility bridge for the former injected-Default-Blue entry point.
      *
-     * @param document source document to preprocess
-     * @return transformed clone of the source document
+     * @param document parsed Source Document
+     * @return independent validated Preprocessed Document
      */
     public Node preprocessWithDefaultBlue(Node document) {
-        return preprocess(document, defaultSimpleBlue);
+        return preprocess(document);
     }
 
     /**
-     * Applies preprocessing and uses a non-null {@code defaultBlue} as the
-     * signal to enable the standard baseline transformations.
+     * Compatibility bridge for the former nullable Default Blue switch.
      *
-     * @param document source document to preprocess
-     * @param defaultBlue non-null to enable standard aliases and primitive inference
-     * @return transformed clone of the source document
+     * <p>The second argument is intentionally ignored. Mandatory baseline
+     * behavior cannot be replaced or disabled by caller-supplied content.</p>
+     *
+     * @param document parsed Source Document
+     * @param ignoredDefaultBlue legacy argument with no Language 1.0 meaning
+     * @return independent validated Preprocessed Document
      */
-    public Node preprocess(Node document, Node defaultBlue) {
-        Node processedDocument = new NormalizeListPlaceholders().process(document.clone());
-        if (defaultBlue != null) {
-            processedDocument = applyStandardBaseline(processedDocument);
-        }
-        processedDocument = applyPortableImports(processedDocument);
-
-        Node blueNode = processedDocument.getBlue();
-        if (blueNode != null) {
-            processedDocument = applyDeclaredBlueTransformations(processedDocument, blueNode);
-        }
-
-        return processedDocument;
-    }
-
-    private Node applyStandardBaseline(Node document) {
-        Node transformed = new ReplaceInlineValuesForTypeAttributesWithImports(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP)
-                .process(document);
-        return new InferBasicTypesForUntypedValues().process(transformed);
-    }
-
-    private Node applyDeclaredBlueTransformations(Node processedDocument, Node blueNode) {
-        Node extendedBlue = blueNode.clone();
-        new NodeExtender(nodeProvider).extend(extendedBlue, PathLimits.withSinglePath("/*"));
-
-        if (extendedBlue.getItems() != null) {
-            List<Node> transformations = extendedBlue.getItems();
-
-            for (Node transformation : transformations) {
-                Optional<TransformationProcessor> processor = processorProvider.getProcessor(transformation);
-                if (processor.isPresent()) {
-                    processedDocument = processor.get().process(processedDocument);
-                } else {
-                    throw new IllegalArgumentException("No processor found for transformation: " + transformation);
-                }
-            }
-        }
-
-        processedDocument.blue(null);
-        return processedDocument;
-    }
-
-    private Node applyPortableImports(Node document) {
-        Node blueNode = document.getBlue();
-        if (blueNode == null || blueNode.getProperties() == null
-                || !blueNode.getProperties().containsKey(
-                Properties.BLUE_DIRECTIVE_IMPORTS)) {
-            return document;
-        }
-
-        Node importsNode = blueNode.getProperties().get(
-                Properties.BLUE_DIRECTIVE_IMPORTS);
-        if (importsNode == null || importsNode.getProperties() == null || importsNode.getValue() != null
-                || importsNode.getItems() != null || importsNode.getBlueId() != null) {
-            throw new IllegalArgumentException("\"blue.imports\" must be an object mapping aliases to pure references.");
-        }
-
-        Map<String, String> mappings = new LinkedHashMap<>();
-        for (Map.Entry<String, Node> entry : importsNode.getProperties().entrySet()) {
-            String alias = entry.getKey();
-            Node reference = entry.getValue();
-            if (reference == null || !reference.isReferenceOnly()) {
-                throw new IllegalArgumentException("\"blue.imports." + alias + "\" must be a pure reference.");
-            }
-            String blueId = BlueIds.requirePlainBlueId(reference.getBlueId(), "blue.imports." + alias);
-            String defaultBlueId = DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get(alias);
-            if (defaultBlueId != null && !defaultBlueId.equals(blueId)) {
-                throw new IllegalArgumentException("\"blue.imports\" cannot redefine default Blue alias \"" + alias + "\".");
-            }
-            mappings.put(alias, blueId);
-        }
-
-        Node transformed = new ReplaceInlineValuesForTypeAttributesWithImports(mappings).process(document);
-        Node transformedBlue = transformed.getBlue();
-        if (transformedBlue != null && transformedBlue.getProperties() != null) {
-            Map<String, Node> remainingProperties = new LinkedHashMap<>(transformedBlue.getProperties());
-            remainingProperties.remove(
-                    Properties.BLUE_DIRECTIVE_IMPORTS);
-            transformedBlue.properties(remainingProperties.isEmpty() ? null : remainingProperties);
-        }
-        if (transformedBlue != null && Nodes.isEmptyNode(transformedBlue)) {
-            transformed.blue(null);
-        }
-        return transformed;
+    public Node preprocess(
+            Node document,
+            Node ignoredDefaultBlue) {
+        return preprocess(document);
     }
 
     /**
-     * Returns the built-in registry for current and legacy standard transformations.
+     * Returns the registry for the released explicit source transformations
+     * retained by this implementation.
      *
-     * @return standard transformation processor registry
+     * <p>These processors run only when a directive explicitly lists a node
+     * with one of their exact type BlueIds. They are never injected as the
+     * Language baseline.</p>
+     *
+     * @return standard explicit transformation registry
      */
     public static TransformationProcessorProvider getStandardProvider() {
         return new TransformationProcessorProvider() {
-            private static final String REPLACE_INLINE_TYPES = "27B7fuxQCS1VAptiCPc2RMkKoutP5qxkh3uDxZ7dr6Eo";
-            private static final String LEGACY_REPLACE_INLINE_TYPES = "53yFLQ3dpuGwa2svHubDyzyhYz9RQNmctiJRdi3gRYr7";
-            private static final String INFER_BASIC_TYPES = "FGYuTXwaoSKfZmpTysLTLsb8WzSqf43384rKZDkXhxD4";
-            private static final String LEGACY_INFER_BASIC_TYPES = "49hrWpkoXavNmK8PpZag11zB2vYwzhQZahwioz6vDk2i";
+            @Override
+            public Optional<TransformationProcessor> getProcessor(
+                    Node transformation) {
+                if (transformation == null) {
+                    return Optional.empty();
+                }
+                String typeBlueId = transformation.getAsText(
+                        STANDARD_TYPE_BLUE_ID_POINTER);
+                return processorFor(typeBlueId, transformation);
+            }
 
             @Override
-            public Optional<TransformationProcessor> getProcessor(Node transformation) {
-                String blueId = transformation.getAsText(
-                        STANDARD_TYPE_BLUE_ID_POINTER);
-                if (REPLACE_INLINE_TYPES.equals(blueId) || LEGACY_REPLACE_INLINE_TYPES.equals(blueId))
-                    return Optional.of(new ReplaceInlineValuesForTypeAttributesWithImports(transformation));
-                else if (INFER_BASIC_TYPES.equals(blueId) || LEGACY_INFER_BASIC_TYPES.equals(blueId))
-                    return Optional.of(new InferBasicTypesForUntypedValues());
+            public Optional<TransformationProcessor> processorFor(
+                    String exactTypeBlueId,
+                    Node exactTransformationNode) {
+                if (REPLACE_INLINE_TYPES_BLUE_ID.equals(exactTypeBlueId)
+                        || LEGACY_REPLACE_INLINE_TYPES_BLUE_ID
+                        .equals(exactTypeBlueId)) {
+                    return Optional.of(
+                            new ReplaceInlineValuesForTypeAttributesWithImports(
+                                    exactTransformationNode));
+                }
+                if (INFER_BASIC_TYPES_BLUE_ID.equals(exactTypeBlueId)
+                        || LEGACY_INFER_BASIC_TYPES_BLUE_ID
+                        .equals(exactTypeBlueId)) {
+                    return Optional.of(
+                            new InferBasicTypesForUntypedValues());
+                }
                 return Optional.empty();
             }
         };
     }
 
-    private void loadDefaultSimpleBlue() {
-        try (InputStream inputStream = getClass()
-                .getClassLoader()
-                .getResourceAsStream(DEFAULT_BLUE_RESOURCE)) {
-            if (inputStream == null) {
-                throw new RuntimeException("Unable to find DefaultBlue.blue in classpath");
-            }
-            this.defaultSimpleBlue = YAML_MAPPER.readValue(inputStream, Node.class);
-        } catch (IOException e) {
-            throw new RuntimeException("Error loading DefaultBlue.blue from classpath", e);
+    private static Map<String, String> immutableCopy(
+            Map<String, String> values) {
+        if (values == null || values.isEmpty()) {
+            return Collections.emptyMap();
         }
+        return Collections.unmodifiableMap(
+                new LinkedHashMap<>(values));
     }
 
-    private static String calculateDefaultBlueBlueId() {
-        try (InputStream inputStream = Preprocessor.class
-                .getClassLoader()
-                .getResourceAsStream(DEFAULT_BLUE_RESOURCE)) {
-            if (inputStream == null) {
-                throw new RuntimeException("Unable to find DefaultBlue.blue in classpath");
-            }
-            Node defaultBlue = YAML_MAPPER.readValue(inputStream, Node.class);
-            if (defaultBlue.getItems() != null) {
-                return BlueIdCalculator.calculateBlueId(defaultBlue.getItems());
-            }
-            return BlueIdCalculator.calculateBlueId(defaultBlue);
-        } catch (IOException e) {
-            throw new RuntimeException("Error loading DefaultBlue.blue from classpath", e);
-        }
-    }
 }

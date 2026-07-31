@@ -204,12 +204,10 @@ class EffectiveFragmentationCatalogTest {
         String canonicalBodyBlueId =
                 BlueIdCalculator.calculateBlueId(
                         inlineProgram);
-        assertNotEquals(
-                canonicalBodyBlueId,
+        String resolvedBodyBlueId =
                 FrozenNode.fromResolvedNode(
-                        inlineProgram)
-                        .blueId(),
-                "the fixture must distinguish exact Source identity from resolved-view identity");
+                                inlineProgram)
+                        .blueId();
         Node document = fixture.document();
         Node direct =
                 document.getContracts()
@@ -239,6 +237,10 @@ class EffectiveFragmentationCatalogTest {
                         .get("program");
 
         // then
+        assertNotEquals(
+                canonicalBodyBlueId,
+                resolvedBodyBlueId,
+                "the fixture must distinguish exact Source identity from resolved-view identity");
         assertEquals(
                 canonicalBodyBlueId,
                 handler

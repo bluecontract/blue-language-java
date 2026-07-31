@@ -15,6 +15,7 @@ properties:
   candidate: {}
   category:
     type: string
+  cuts: {}
   description:
     type: string
   directElementIdentitiesOnly: {}
@@ -36,6 +37,8 @@ properties:
   expectedCollapsed: {}
   expectedCollapsedRoot: {}
   expectedContentBlueIdEqualsCanonicalIdentityInput: {}
+  expectedDefensiveCopies:
+    type: boolean
   expectedDescendantRequests: {}
   expectedDirectResolvedBlueIdMayDiffer: {}
   expectedDirectResultStillContainsAllOrderedElementIdentities: {}
@@ -48,14 +51,22 @@ properties:
   expectedExpanded: {}
   expectedExpandedDescendantRequests: {}
   expectedFieldCount: {}
+  expectedFragmentBlueIds: {}
+  expectedFragmentCount:
+    type: integer
+    minimum: 0
+  expectedIdempotent:
+    type: boolean
   expectedIdentityEqual:
     type: boolean
+  expectedLocalProviderOutcome: {}
   expectedMatch:
     type: boolean
   expectedMergePolicy: {}
   expectedMinimizedMayContain: {}
   expectedNodeBlueId: {}
   expectedNotRequestedBlueIds: {}
+  expectedOpaqueEdges: {}
   expectedOutcome: {}
   expectedOutstandingBlueIds: {}
   expectedParsed: {}
@@ -63,6 +74,7 @@ properties:
   expectedProviderOutcome: {}
   expectedPublishedBlueId: {}
   expectedReason: {}
+  expectedReferencePaths: {}
   expectedRequestedBlueIds: {}
   expectedResolutionOutcome: {}
   expectedResolved: {}
@@ -70,6 +82,8 @@ properties:
   expectedRoundTripEqual: {}
   expectedRoundTripItems: {}
   expectedSameAsCompleteResolution: {}
+  expectedSameContentBlueIdThroughPipeline:
+    type: boolean
   expectedSameNodeBlueId: {}
   expectedSameRootNodeBlueId: {}
   expectedSameSemanticCoverage: {}
@@ -135,6 +149,10 @@ properties:
   parent: {}
   path: {}
   pattern: {}
+  preprocessingAliases:
+    type: object
+    additionalProperties:
+      type: string
   provider: {}
   providerNode: {}
   providerResult: {}
@@ -150,16 +168,6 @@ properties:
   source: {}
   storedOptimization: {}
   variants: {}
-  expectedFragmentCount:
-    type: integer
-    minimum: 0
-  expectedFragmentBlueIds: {}
-  expectedReferencePaths: {}
-  expectedOpaqueEdges: {}
-  expectedLocalProviderOutcome: {}
-  expectedDefensiveCopies:
-    type: boolean
-  cuts: {}
 $defs:
   limitedOutcome:
     enum:

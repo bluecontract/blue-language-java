@@ -1,0 +1,13 @@
+id: R_append_canonicalization_final_payload_three_items
+category: Canonicalization
+operation: canonicalize
+description: canonicalization writes the final append-only list payload rather than a minimized $previous overlay
+parent:
+  type: List
+  mergePolicy: append-only
+  items: [A, B]
+source:
+  items: [C]
+expectedCanonicalItems: [A, B, C]
+expectedCanonicalContainsControls: false
+expectedContentBlueIdEqualsCanonicalIdentityInput: true

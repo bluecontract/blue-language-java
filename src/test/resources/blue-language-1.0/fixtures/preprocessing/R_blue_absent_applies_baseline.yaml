@@ -1,0 +1,11 @@
+id: R_blue_absent_applies_baseline
+category: Resolution
+operation: preprocess
+description: omitting blue supplies no custom directive but still runs the mandatory baseline
+source:
+  count: 7
+expectedPreprocessed:
+  count:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+    value: 7

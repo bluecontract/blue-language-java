@@ -26,8 +26,24 @@ public class DictionaryProcessor implements MergingProcessor {
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        if ((source.getKeyType() != null || source.getValueType() != null) && !Types.isDictionaryType(source.getType(), nodeProvider)) {
-            throw new IllegalArgumentException("Source node with keyType or valueType must have a Dictionary type");
+        if (source.getKeyType() != null
+                || source.getValueType() != null) {
+            /*
+             * TypeAssigner runs before this processor, so target carries the
+             * effective inherited collection type. An explicit source type
+             * still wins for validation and cannot borrow Dictionary
+             * compatibility from the target.
+             */
+            Node effectiveCollectionType =
+                    source.getType() != null
+                            ? source.getType()
+                            : target.getType();
+            if (!Types.isDictionaryType(
+                    effectiveCollectionType,
+                    nodeProvider)) {
+                throw new IllegalArgumentException(
+                        "Source node with keyType or valueType must have a Dictionary type");
+            }
         }
 
         processKeyType(target, source, nodeProvider);

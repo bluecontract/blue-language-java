@@ -25,8 +25,15 @@ public class CompositeLimits implements blue.language.utils.limits.Limits {
     }
 
     @Override
+    public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
+        return limitsList.stream().allMatch(
+                limit -> limit.shouldExpandPathSegment(pathSegment, currentNode));
+    }
+
+    /** Legacy binary-API spelling delegated to the canonical method. */
+    @Override
     public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-        return limitsList.stream().allMatch(l -> l.shouldExtendPathSegment(pathSegment, currentNode));
+        return shouldExpandPathSegment(pathSegment, currentNode);
     }
 
     @Override

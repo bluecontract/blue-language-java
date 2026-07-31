@@ -1,0 +1,18 @@
+id: R_blue_imports_only_type_positions
+category: Resolution
+operation: preprocess
+description: imports replace aliases only in type-bearing positions
+source:
+  blue:
+    imports:
+      Person:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  type: Person
+  label: Person
+expectedPreprocessed:
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  label:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: Person

@@ -27,8 +27,6 @@ class MinimizedOverlayInlineTypeTest {
                 "    - A\n" +
                 "    - B\n" +
                 "items:\n" +
-                "  - A\n" +
-                "  - B\n" +
                 "  - C");
 
         // when
@@ -132,8 +130,6 @@ class MinimizedOverlayInlineTypeTest {
                 "      - A\n" +
                 "      - B\n" +
                 "  items:\n" +
-                "    - A\n" +
-                "    - B\n" +
                 "    - C");
 
         // when

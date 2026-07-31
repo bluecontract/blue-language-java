@@ -126,8 +126,21 @@ public class NodeToMapListOrValue {
             result.put(OBJECT_CONTRACTS, get(node.getContracts(), strategy));
         if (node.getBlue() != null)
             result.put(OBJECT_BLUE, get(node.getBlue(), strategy));
-        if (node.getProperties() != null)
-            node.getProperties().forEach((key, propertyValue) -> result.put(key, get(propertyValue, strategy)));
+        if (node.getProperties() != null) {
+            node.getProperties().forEach((key, propertyValue) -> {
+                if (OBJECT_VALUE.equals(key)
+                        && node.isPreprocessingTransformationConfiguration()
+                        && node.getType() != null
+                        && node.getType().isReferenceOnly()) {
+                    result.put(key, get(
+                            propertyValue,
+                            propertyValue.isInlineValue()
+                                    ? SIMPLE : OFFICIAL));
+                } else {
+                    result.put(key, get(propertyValue, strategy));
+                }
+            });
+        }
         return result;
     }
 

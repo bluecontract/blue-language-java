@@ -11,6 +11,7 @@ import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.TestEventChannel;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -75,11 +76,11 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
 
@@ -111,18 +112,18 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  emitter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.EMIT_EVENTS + "\n" +
                 "    events:\n" +
                 "      - type:\n" +
-                "          blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
+                "          blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT + "\n" +
                 "        kind: emitted\n" +
                 "  triggered:\n" +
                 "    type:\n" +
-                "      blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf\n";
+                "      blueId: " + RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL + "\n";
 
         Node initialized = blue.initializeDocument(blue.yamlToNode(yaml)).document().clone();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-emit"));
@@ -472,7 +473,7 @@ class DocumentProcessorGasTest {
         String yaml = "contracts:\n" +
                 "  unsupported:\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    channel: missing\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
@@ -569,11 +570,11 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    path: /balance\n" +
                 "    propertyKey: cents\n" +
                 "    propertyValue: 1\n", Node.class);
@@ -669,11 +670,11 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    path: /secondary/balance\n" +
                 "    propertyKey: cents\n" +
                 "    propertyValue: 1\n",
@@ -730,7 +731,7 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /primary\n" +
                 "      - /secondary\n", Node.class);
@@ -758,11 +759,11 @@ class DocumentProcessorGasTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    setter:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      path: /balance\n" +
                 "      propertyKey: cents\n" +
                 "      propertyValue: 1\n" +
@@ -778,18 +779,18 @@ class DocumentProcessorGasTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    setter:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      path: /balance\n" +
                 "      propertyKey: cents\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /primary\n" +
                 "      - /secondary\n", Node.class);
@@ -935,9 +936,9 @@ class DocumentProcessorGasTest {
 final class DocumentProcessorExactFeederSupport {
 
     private static final String TEST_EVENT_CHANNEL_BLUE_ID =
-            "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
+            ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
     private static final String TEST_EVENT_BLUE_ID =
-            "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
+            ProcessorTestTypeBlueIds.TEST_EVENT;
     private static final long ROOT_REVISION = 1L;
 
     private DocumentProcessorExactFeederSupport() {

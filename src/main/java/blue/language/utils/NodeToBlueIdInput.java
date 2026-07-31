@@ -229,10 +229,41 @@ public final class NodeToBlueIdInput {
             result.put(OBJECT_CONTRACTS, get(node.getContracts(), appendPath(path, OBJECT_CONTRACTS), Context.METADATA, -1, allowCyclicPlaceholders));
         }
         if (node.getProperties() != null) {
-            node.getProperties().forEach((key, propertyValue) ->
-                    result.put(key, get(propertyValue, appendPath(path, key), Context.OBJECT_FIELD, -1, allowCyclicPlaceholders)));
+            node.getProperties().forEach((key, propertyValue) -> {
+                if (isTransformationConfigurationValue(
+                        node, key)) {
+                    result.put(key,
+                            transformationConfigurationValue(
+                                    propertyValue));
+                } else {
+                    result.put(key, get(
+                            propertyValue,
+                            appendPath(path, key),
+                            Context.OBJECT_FIELD,
+                            -1,
+                            allowCyclicPlaceholders));
+                }
+            });
         }
         return result;
+    }
+
+    private static boolean isTransformationConfigurationValue(
+            Node node,
+            String key) {
+        return OBJECT_VALUE.equals(key)
+                && node.isPreprocessingTransformationConfiguration()
+                && node.getType() != null
+                && node.getType().isReferenceOnly();
+    }
+
+    private static Object transformationConfigurationValue(
+            Node value) {
+        return NodeToMapListOrValue.get(
+                value,
+                value.isInlineValue()
+                        ? NodeToMapListOrValue.Strategy.SIMPLE
+                        : NodeToMapListOrValue.Strategy.OFFICIAL);
     }
 
     private static boolean isPayloadOnlyList(Node node) {

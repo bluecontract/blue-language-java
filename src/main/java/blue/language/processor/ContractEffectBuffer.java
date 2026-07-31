@@ -20,7 +20,8 @@ final class ContractEffectBuffer implements AutoCloseable {
 
     private final List<PatchInput> patches = new ArrayList<>();
     private final List<PatchBatch> patchBatches = new ArrayList<>();
-    private final List<Node> emittedEvents = new ArrayList<>();
+    private final List<EventEmission> emittedEvents =
+            new ArrayList<>();
     private TerminationRequest terminationRequest;
     private boolean closed;
 
@@ -66,10 +67,19 @@ final class ContractEffectBuffer implements AutoCloseable {
 
     void emit(Node event) {
         ensureOpen();
-        emittedEvents.add(event != null ? event.clone() : null);
+        emittedEvents.add(
+                EventEmission.mutable(
+                        event));
     }
 
-    List<Node> emittedEvents() {
+    void emit(ExactBlueValue event) {
+        ensureOpen();
+        emittedEvents.add(
+                EventEmission.exact(
+                        event));
+    }
+
+    List<EventEmission> emittedEvents() {
         return Collections.unmodifiableList(emittedEvents);
     }
 
@@ -138,6 +148,46 @@ final class ContractEffectBuffer implements AutoCloseable {
 
         String reason() {
             return reason;
+        }
+    }
+
+    static final class EventEmission {
+        private final Node event;
+        private final ExactBlueValue exactValue;
+
+        private EventEmission(
+                Node event,
+                ExactBlueValue exactValue) {
+            this.event = event;
+            this.exactValue = exactValue;
+        }
+
+        private static EventEmission mutable(
+                Node event) {
+            return new EventEmission(
+                    event != null
+                            ? event.clone()
+                            : null,
+                    null);
+        }
+
+        private static EventEmission exact(
+                ExactBlueValue event) {
+            ExactBlueValue checked =
+                    java.util.Objects.requireNonNull(
+                            event,
+                            "event");
+            return new EventEmission(
+                    checked.toNode(),
+                    checked);
+        }
+
+        Node event() {
+            return event;
+        }
+
+        ExactBlueValue exactValue() {
+            return exactValue;
         }
     }
 

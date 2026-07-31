@@ -67,7 +67,69 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                 true);
     }
 
+    /**
+     * Parses a provider-returned preprocessing directive with the same
+     * contextual transformation-configuration rules used below root
+     * {@code blue} in a complete Source Document.
+     *
+     * @param directive exact directive JSON/YAML tree
+     * @return parsed directive node
+     */
+    public static Node parsePreprocessingDirective(
+            JsonNode directive) {
+        return new NodeDeserializer().handleNode(
+                directive,
+                BLUE_DIRECTIVE_PATH,
+                false,
+                ParseContext.DIRECTIVE);
+    }
+
+    /**
+     * Parses a provider-returned transformation list. Exact transformation
+     * specifications may use reserved-looking configuration keys through
+     * their closed configuration grammar without changing ordinary Source
+     * parsing rules.
+     *
+     * @param transformations exact transformation-list tree
+     * @return parsed list node
+     */
+    public static Node parsePreprocessingTransformations(
+            JsonNode transformations) {
+        return new NodeDeserializer().handleTransformationList(
+                transformations,
+                JsonPointer.append(
+                        BLUE_DIRECTIVE_PATH,
+                        Properties.BLUE_DIRECTIVE_TRANSFORMATIONS));
+    }
+
+    /**
+     * Parses one provider-returned transformation configuration.
+     *
+     * @param transformation exact transformation tree
+     * @return parsed transformation configuration node
+     */
+    public static Node parsePreprocessingTransformation(
+            JsonNode transformation) {
+        return new NodeDeserializer().handleNode(
+                transformation,
+                JsonPointer.append(
+                        JsonPointer.append(
+                                BLUE_DIRECTIVE_PATH,
+                                Properties.BLUE_DIRECTIVE_TRANSFORMATIONS),
+                        "0"),
+                false,
+                ParseContext.TRANSFORMATION_CONFIGURATION);
+    }
+
     private Node handleNode(JsonNode node, String path, boolean root) {
+        return handleNode(node, path, root, ParseContext.NORMAL);
+    }
+
+    private Node handleNode(
+            JsonNode node,
+            String path,
+            boolean root,
+            ParseContext parseContext) {
         if (node == null || node.isNull()) {
             if (root) {
                 throw new IllegalArgumentException("Root null is not a valid Blue document.");
@@ -115,9 +177,17 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         obj.mergePolicy(requireString(value, key, appendPath(path, key)));
                         break;
                     case OBJECT_VALUE:
-                        rejectNullReserved(value, key, appendPath(path, key));
-                        hasValuePayload = true;
-                        obj.value(handleValue(value));
+                        if (parseContext
+                                == ParseContext.TRANSFORMATION_CONFIGURATION) {
+                            properties.put(key, handleNode(
+                                    value,
+                                    appendPath(path, key),
+                                    false));
+                        } else {
+                            rejectNullReserved(value, key, appendPath(path, key));
+                            hasValuePayload = true;
+                            obj.value(handleValue(value));
+                        }
                         break;
                     case OBJECT_BLUE_ID:
                         if (node.size() != 1) {
@@ -138,7 +208,11 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         if (value.isArray()) {
                             throw new IllegalArgumentException("\"blue\" must be a string or object directive. Path: " + appendPath(path, key));
                         }
-                        obj.blue(handleNode(value, appendPath(path, key), false));
+                        obj.blue(handleNode(
+                                value,
+                                appendPath(path, key),
+                                false,
+                                ParseContext.DIRECTIVE));
                         break;
                     case LIST_CONTROL_PREVIOUS:
                         if (node.size() != 1) {
@@ -172,7 +246,19 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         if (LEGACY_OBJECT_PROPERTIES.equals(key)) {
                             throw new IllegalArgumentException("\"properties\" is an internal field and must not appear in Blue documents.");
                         }
-                        properties.put(key, handleNode(value, appendPath(path, key), false));
+                        if (parseContext == ParseContext.DIRECTIVE
+                                && Properties.BLUE_DIRECTIVE_TRANSFORMATIONS
+                                .equals(key)) {
+                            properties.put(key,
+                                    handleTransformationList(
+                                            value,
+                                            appendPath(path, key)));
+                        } else {
+                            properties.put(key, handleNode(
+                                    value,
+                                    appendPath(path, key),
+                                    false));
+                        }
                         break;
                 }
             }
@@ -200,12 +286,40 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             if (!properties.isEmpty()) {
                 obj.properties(properties);
             }
+            if (parseContext
+                    == ParseContext.TRANSFORMATION_CONFIGURATION
+                    && obj.getBlueId() == null) {
+                obj.preprocessingTransformationConfiguration(true);
+            }
             return obj;
         } else if (node.isArray()) {
             return new Node().items(handleArray(node, path));
         } else {
             return new Node().value(handleValue(node)).inlineValue(true);
         }
+    }
+
+    private Node handleTransformationList(
+            JsonNode value,
+            String path) {
+        if (!value.isArray()) {
+            return handleNode(value, path, false);
+        }
+        List<Node> transformations = new ArrayList<>();
+        for (int index = 0; index < value.size(); index++) {
+            transformations.add(handleNode(
+                    value.get(index),
+                    appendPath(path, index),
+                    false,
+                    ParseContext.TRANSFORMATION_CONFIGURATION));
+        }
+        return new Node().items(transformations);
+    }
+
+    private enum ParseContext {
+        NORMAL,
+        DIRECTIVE,
+        TRANSFORMATION_CONFIGURATION
     }
 
     private Object handleValue(JsonNode node) {

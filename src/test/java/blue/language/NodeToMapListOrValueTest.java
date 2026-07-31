@@ -15,6 +15,7 @@ import java.util.Map;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.NodeToMapListOrValue.Strategy.SIMPLE;
+import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -255,7 +256,7 @@ public class NodeToMapListOrValueTest {
                 .position(2)
                 .value("C");
         Node listControl = new Node()
-                .type(new Node().blueId("8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF"))
+                .type(new Node().blueId(LIST_TYPE_BLUE_ID))
                 .mergePolicy("append-only")
                 .items(new Node().value("A"));
         Map<String, Object> previousReference = new LinkedHashMap<>();

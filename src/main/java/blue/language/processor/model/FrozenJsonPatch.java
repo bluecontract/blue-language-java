@@ -3,6 +3,7 @@ package blue.language.processor.model;
 import blue.language.utils.Properties;
 
 import blue.language.model.Node;
+import blue.language.processor.ExactBlueValue;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.ParsedJsonPointer;
@@ -24,6 +25,7 @@ public final class FrozenJsonPatch {
     private final String authoredPath;
     private final ParsedJsonPointer parsedPath;
     private final FrozenNode value;
+    private final ExactBlueValue exactValue;
     private final long authoredCanonicalSizeBytes;
     private volatile String valueBlueId;
     private volatile FrozenNode.ResolvedStructuralKey valueStructuralKey;
@@ -31,12 +33,14 @@ public final class FrozenJsonPatch {
     private FrozenJsonPatch(JsonPatch.Op op,
                             String path,
                             FrozenNode value,
+                            ExactBlueValue exactValue,
                             long authoredCanonicalSizeBytes) {
         this.op = Objects.requireNonNull(op, "op");
         this.authoredPath = Objects.requireNonNull(path, "path");
         this.parsedPath = ParsedJsonPointer.parse(path);
         if (op == JsonPatch.Op.REMOVE) {
             this.value = null;
+            this.exactValue = null;
             this.authoredCanonicalSizeBytes = 0L;
         } else {
             FrozenNode checked = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
@@ -44,6 +48,14 @@ public final class FrozenJsonPatch {
                 throw new IllegalArgumentException(
                         "Frozen patch values must be authored canonical values, not resolved document views");
             }
+            if (exactValue != null
+                    && !exactValue.blueId().equals(
+                            checked.blueId())) {
+                throw new IllegalArgumentException(
+                        "Exact patch capability identity does not match "
+                                + "its frozen value");
+            }
+            this.exactValue = exactValue;
             this.value = checked;
             if (authoredCanonicalSizeBytes < 0L) {
                 throw new IllegalArgumentException(
@@ -68,8 +80,25 @@ public final class FrozenJsonPatch {
      */
     public static FrozenJsonPatch add(String path, FrozenNode value) {
         FrozenNode checked = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
-        return new FrozenJsonPatch(JsonPatch.Op.ADD, path, checked,
+        return new FrozenJsonPatch(JsonPatch.Op.ADD, path, checked, null,
                 NodeCanonicalizer.canonicalFrozenSize(checked));
+    }
+
+    /**
+     * Creates an immutable add patch retaining an invocation-issued exact
+     * value capability.
+     *
+     * @param path authored JSON Pointer path
+     * @param value processor-admitted exact value
+     * @return immutable exact add patch
+     */
+    public static FrozenJsonPatch add(
+            String path,
+            ExactBlueValue value) {
+        return exact(
+                JsonPatch.Op.ADD,
+                path,
+                value);
     }
 
     /**
@@ -88,8 +117,25 @@ public final class FrozenJsonPatch {
      */
     public static FrozenJsonPatch replace(String path, FrozenNode value) {
         FrozenNode checked = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
-        return new FrozenJsonPatch(JsonPatch.Op.REPLACE, path, checked,
+        return new FrozenJsonPatch(JsonPatch.Op.REPLACE, path, checked, null,
                 NodeCanonicalizer.canonicalFrozenSize(checked));
+    }
+
+    /**
+     * Creates an immutable replace patch retaining an invocation-issued exact
+     * value capability.
+     *
+     * @param path authored JSON Pointer path
+     * @param value processor-admitted exact value
+     * @return immutable exact replace patch
+     */
+    public static FrozenJsonPatch replace(
+            String path,
+            ExactBlueValue value) {
+        return exact(
+                JsonPatch.Op.REPLACE,
+                path,
+                value);
     }
 
     /**
@@ -100,7 +146,12 @@ public final class FrozenJsonPatch {
      * @throws NullPointerException if {@code path} is {@code null}
      */
     public static FrozenJsonPatch remove(String path) {
-        return new FrozenJsonPatch(JsonPatch.Op.REMOVE, path, null, 0L);
+        return new FrozenJsonPatch(
+                JsonPatch.Op.REMOVE,
+                path,
+                null,
+                null,
+                0L);
     }
 
     /**
@@ -138,7 +189,38 @@ public final class FrozenJsonPatch {
         return new FrozenJsonPatch(op,
                 path,
                 freeze(authored),
+                null,
                 NodeCanonicalizer.canonicalSize(authored));
+    }
+
+    private static FrozenJsonPatch exact(
+            JsonPatch.Op op,
+            String path,
+            ExactBlueValue exactValue) {
+        ExactBlueValue admitted =
+                Objects.requireNonNull(
+                        exactValue,
+                        "exactValue");
+        FrozenNode retained =
+                admitted.frozenValue();
+        if (!retained.isStrictCanonical()) {
+            if (!retained.isReferenceOnly()) {
+                throw new IllegalArgumentException(
+                        "Exact patch values must retain canonical content "
+                                + "or a pure exact reference");
+            }
+            retained =
+                    FrozenNode.fromNode(
+                            admitted.toNode());
+        }
+        return new FrozenJsonPatch(
+                op,
+                path,
+                retained,
+                admitted,
+                NodeCanonicalizer
+                        .canonicalFrozenSize(
+                                retained));
     }
 
     /**
@@ -166,6 +248,36 @@ public final class FrozenJsonPatch {
      */
     public FrozenNode getValue() {
         return value;
+    }
+
+    /**
+     * Returns the invocation-issued exact capability retained with this value.
+     *
+     * @return exact capability, or {@code null} for ordinary frozen input
+     */
+    public ExactBlueValue getExactValue() {
+        return exactValue;
+    }
+
+    /**
+     * Rebinds this patch to a capability admitted by the consuming invocation.
+     *
+     * @param admitted invocation-owned exact value
+     * @return this patch when already bound, otherwise an equivalent patch
+     */
+    public FrozenJsonPatch withExactValue(
+            ExactBlueValue admitted) {
+        if (op == JsonPatch.Op.REMOVE) {
+            throw new IllegalStateException(
+                    "Remove patches cannot carry an exact value");
+        }
+        if (exactValue == admitted) {
+            return this;
+        }
+        return exact(
+                op,
+                authoredPath,
+                admitted);
     }
 
     /**

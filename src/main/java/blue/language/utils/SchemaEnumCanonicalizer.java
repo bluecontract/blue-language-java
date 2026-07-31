@@ -71,10 +71,16 @@ public final class SchemaEnumCanonicalizer {
 
     private static Node normalized(Node value) {
         requireScalarIdentityShape(value);
+        if (value.isReferenceOnly()) {
+            return new Node().blueId(value.getBlueId());
+        }
         return ScalarNodeIdentity.normalized(value);
     }
 
     private static void requireScalarIdentityShape(Node value) {
+        if (value != null && value.isReferenceOnly()) {
+            return;
+        }
         if (value == null
                 || value.getValue() == null
                 || value.getName() != null
@@ -92,7 +98,8 @@ public final class SchemaEnumCanonicalizer {
                 || value.getPosition() != null
                 || value.getBlue() != null) {
             throw new IllegalArgumentException(
-                    "Schema enum entries must be scalar values or explicit type/value scalar nodes.");
+                    "Schema enum entries must be scalar values, explicit "
+                            + "type/value scalar nodes, or pure references.");
         }
     }
 

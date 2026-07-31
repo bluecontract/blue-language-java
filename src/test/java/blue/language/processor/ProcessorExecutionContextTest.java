@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,87 @@ final class ProcessorExecutionContextTest {
         assertEquals("payload",
                 execution.runtime().rootEmissions().get(0).getValue());
         assertTrue(execution.runtime().totalGas() >= 20L);
+    }
+
+    @Test
+    void shouldCarryAdmittedPatchAndEventValuesWithoutSecondConstructionCharge() {
+        try (blue.language.Blue blue =
+                     new blue.language.Blue()) {
+            // given
+            Node document =
+                    new Node().properties(
+                            "target",
+                            new Node().value(
+                                    "before"));
+            ProcessorEngine.Execution execution =
+                    new ProcessorEngine.Execution(
+                            blue.getDocumentProcessor(),
+                            document);
+            execution.preflightScope("/");
+            ProcessorExecutionContext context =
+                    execution.createContext(
+                            "/",
+                            execution.bundleForScope("/"),
+                            new Node(),
+                            false);
+            ExactBlueValue exactPatch =
+                    context.semanticOutputBoundary()
+                            .admit(
+                                    new Node().value(
+                                            "after"));
+            ExactBlueValue exactEvent =
+                    context.semanticOutputBoundary()
+                            .admit(
+                                    new Node().properties(
+                                            "message",
+                                            new Node().value(
+                                                    "admitted")));
+            long constructedBeforeEffects =
+                    execution.runtime()
+                            .conformanceTrace()
+                            .counterQuantity(
+                                    "semantic",
+                                    "textBlockConstructed");
+
+            // when
+            context.applyFrozenPatch(
+                    FrozenJsonPatch.replace(
+                            "/target",
+                            exactPatch));
+            context.emitEvent(
+                    exactEvent);
+            context.applyBufferedEffects();
+            long constructedAfterEffects =
+                    execution.runtime()
+                            .conformanceTrace()
+                            .counterQuantity(
+                                    "semantic",
+                                    "textBlockConstructed");
+
+            // then
+            assertEquals(
+                    "after",
+                    execution.runtime()
+                            .nodeAt("/target")
+                            .getValue());
+            assertEquals(
+                    1,
+                    execution.runtime()
+                            .rootEmissions()
+                            .size());
+            assertEquals(
+                    "admitted",
+                    execution.runtime()
+                            .rootEmissions()
+                            .get(0)
+                            .getAsText(
+                                    "/message"));
+            assertEquals(
+                    constructedBeforeEffects,
+                    constructedAfterEffects,
+                    "same-invocation exact effects must not reconstruct "
+                            + "their already admitted text");
+        }
     }
 
     @Test

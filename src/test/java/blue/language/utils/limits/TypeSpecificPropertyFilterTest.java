@@ -3,7 +3,7 @@ package blue.language.utils.limits;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.NodeExtender;
+import blue.language.utils.NodeExpander;
 import blue.language.utils.NodeTypeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,13 +49,13 @@ public class TypeSpecificPropertyFilterTest {
 
         // when
         List<Boolean> atRoot =
-                extensionDecisions(nodeWithType, "x", "y", "z");
+                expansionDecisions(nodeWithType, "x", "y", "z");
         typeSpecificPropertyFilter.enterPathSegment("", nodeWithType);
         List<Boolean> insideTarget =
-                extensionDecisions(nodeWithType, "x", "y", "z");
+                expansionDecisions(nodeWithType, "x", "y", "z");
         typeSpecificPropertyFilter.enterPathSegment("x", nodeWithType);
         List<Boolean> insideTargetChild =
-                extensionDecisions(
+                expansionDecisions(
                         nodeWithType,
                         "nestedX",
                         "y",
@@ -63,9 +63,9 @@ public class TypeSpecificPropertyFilterTest {
         typeSpecificPropertyFilter.exitPathSegment();
         typeSpecificPropertyFilter.exitPathSegment();
         List<Boolean> afterExit =
-                extensionDecisions(nodeWithType, "x", "y", "z");
+                expansionDecisions(nodeWithType, "x", "y", "z");
         boolean unrelatedTypeDecision =
-                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                typeSpecificPropertyFilter.shouldExpandPathSegment(
                         "otherProperty", mockNode);
 
         // then
@@ -81,11 +81,11 @@ public class TypeSpecificPropertyFilterTest {
     @Test
     public void shouldSkipIgnoredPropertiesOnlyWithinMatchingNestedStructures() throws Exception {
         // given
-        Node validExtensionNode1 = new Node().name("ValidExtension1");
-        Node validExtensionNode2 = new Node().name("ValidExtension2");
+        Node validExpansionNode1 = new Node().name("ValidExpansion1");
+        Node validExpansionNode2 = new Node().name("ValidExpansion2");
 
-        String validBlueId1 = calculateBlueId(validExtensionNode1);
-        String validBlueId2 = calculateBlueId(validExtensionNode2);
+        String validBlueId1 = calculateBlueId(validExpansionNode1);
+        String validBlueId2 = calculateBlueId(validExpansionNode2);
 
         String complexYaml = "a:\n" +
                              "  b:\n" +
@@ -105,20 +105,25 @@ public class TypeSpecificPropertyFilterTest {
                              "    y:\n" +
                              "      blueId: " + validBlueId2;
 
-        BasicNodeProvider nodeProvider = new BasicNodeProvider(typeNode, validExtensionNode1, validExtensionNode2);
+        BasicNodeProvider nodeProvider = new BasicNodeProvider(
+                typeNode, validExpansionNode1, validExpansionNode2);
         Blue blue = new Blue(nodeProvider);
 
         Node complexNode = blue.yamlToNode(complexYaml);
 
-        NodeExtender nodeExtender = new NodeExtender(nodeProvider);
+        NodeExpander nodeExpander = new NodeExpander(nodeProvider);
         // when
-        nodeExtender.extend(complexNode, typeSpecificPropertyFilter);
+        nodeExpander.expand(complexNode, typeSpecificPropertyFilter);
 
         // then
-        assertNull(complexNode.getAsNode("/a/b/c/y").getName(), "Extension should not occur for matching type");
-        assertNull(complexNode.getAsNode("/a/l/0/y/name").getName(), "Extension should not occur for matching type in list");
-        assertEquals("ValidExtension1", complexNode.get("/a/l/1/y/name"), "Extension should occur for non-matching type in list");
-        assertEquals("ValidExtension2", complexNode.get("/a/d/y/name"), "Extension should occur for non-matching type");
+        assertNull(complexNode.getAsNode("/a/b/c/y").getName(),
+                "Expansion should not occur for matching type");
+        assertNull(complexNode.getAsNode("/a/l/0/y/name").getName(),
+                "Expansion should not occur for matching type in list");
+        assertEquals("ValidExpansion1", complexNode.get("/a/l/1/y/name"),
+                "Expansion should occur for non-matching type in list");
+        assertEquals("ValidExpansion2", complexNode.get("/a/d/y/name"),
+                "Expansion should occur for non-matching type");
     }
 
     @Test
@@ -162,23 +167,23 @@ public class TypeSpecificPropertyFilterTest {
 
         // when
         List<Boolean> decisions =
-                extensionDecisions(nonTargetNode, "x", "y", "z");
+                expansionDecisions(nonTargetNode, "x", "y", "z");
 
         // then
         assertEquals(Arrays.asList(true, true, true), decisions);
     }
 
-    private List<Boolean> extensionDecisions(
+    private List<Boolean> expansionDecisions(
             Node node,
             String first,
             String second,
             String third) {
         return Arrays.asList(
-                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                typeSpecificPropertyFilter.shouldExpandPathSegment(
                         first, node),
-                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                typeSpecificPropertyFilter.shouldExpandPathSegment(
                         second, node),
-                typeSpecificPropertyFilter.shouldExtendPathSegment(
+                typeSpecificPropertyFilter.shouldExpandPathSegment(
                         third, node));
     }
 }

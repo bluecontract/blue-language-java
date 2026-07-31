@@ -1,0 +1,23 @@
+id: R_blue_transformations_reverse_order
+category: Resolution
+operation: preprocess
+description: reversing noncommutative transformations changes the result deterministically
+source:
+  blue:
+    transformations:
+      - type:
+          blueId: D2DxVxaddbJT5k2YYj3sG35cSdotw1Mz9GpxrdP43nzN
+        field: text
+        suffix: C
+      - type:
+          blueId: D2DxVxaddbJT5k2YYj3sG35cSdotw1Mz9GpxrdP43nzN
+        field: text
+        suffix: B
+  text:
+    type: Text
+    value: A
+expectedPreprocessed:
+  text:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: ACB

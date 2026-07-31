@@ -980,7 +980,7 @@ Implemented and covered by tests:
 - strict canonical language core;
 - RFC 8785-style canonical BlueId hashing for supported scalar/list/object
   cases;
-- exact Blue Language 1.0 registry and closed 128-fixture conformance package;
+- exact Blue Language 1.0 registry and closed 153-fixture conformance package;
 - deterministic integer and typed-Double handling;
 - reference-only `blueId` semantics;
 - payload-kind exclusivity;
@@ -1055,6 +1055,7 @@ The retained documents describe distinct parts of the final implementation:
 | --- | --- |
 | [Developer process](docs/developer-process.md) | Step-by-step setup, implementation, test, fixture, verification, review, and contribution workflow |
 | [Canonical Language Core](docs/canonical-language-core.md) | Canonical node rules, BlueId calculation, strict references, schemas, and provider ingestion |
+| [Blue Language 1.0 Final Clarifications](docs/blue-language-1.0-final-clarifications.md) | Final preprocessing directive, specialization terminology, identity pipeline, canonicalization/minimization, and conformance bindings |
 | [List Controls And Circular BlueIds](docs/list-controls-and-circular-references.md) | List merge controls and single/multi-document cyclic reference behavior |
 | [Snapshots, Patching, And Generalization](docs/snapshots-patching-and-generalization.md) | Immutable snapshots, patch planning, minimization, and type generalization |
 | [Frozen Type Matching](docs/frozen-type-matching.md) | Mutable/frozen matching paths, limits, references, schemas, and performance boundaries |
@@ -1108,9 +1109,9 @@ fixture IDs, and fixture categories. `new Blue().runConformanceSuite()` executes
 the manifest-driven fixture suite and returns passed fixture IDs plus detailed
 failures with fixture ID, category, operation, exception class, and message.
 The fixture package under `src/test/resources/blue-language-1.0/fixtures` is an
-exact vendored copy of the canonical Blue Language 1.0 package. It contains 128
+exact vendored copy of the canonical Blue Language 1.0 package. It contains 153
 fixtures and has identity
-`sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5`.
+`sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55`.
 The registry package identity is
 `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e`.
 Verify the fixture contents with
@@ -1124,27 +1125,27 @@ fixture suite. The contracts fixture package under
 `src/test/resources/blue-contracts-1.0/fixtures` is an exact vendored copy of
 the release package. It contains 82 behavior and 58 gas fixtures and has
 identity
-`sha256:753a2176b1d9441ee278f4bec1322079ffc00d61bc6a8f07ac3b42c8556877ca`.
+`sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18`.
 The runtime registry package identity is
-`sha256:6deb2d086df518804e4a6dcdfe297e0cc39059152c736ca0c04c42490d2908d8`,
+`sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b`,
 and the gas manifest package identity is
 `sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5`.
 Verify fixture content with
 `BlueContractsConformanceReport.fixturePackageIdentityMatchesFixtureFiles()`
 and `contractsConformanceReport().isOfficialContracts10FixturePackage()`.
 `new Blue().runReleaseConformanceSuites()` emits one machine-readable record
-for each of the 268 manifest-listed fixtures and has no skip outcome. The exact
-bound release records 128/128 Language passes and 140/140 Contracts passes:
-268 pass, zero fail, and zero skipped overall.
+for each of the 293 manifest-listed fixtures and has no skip outcome. The exact
+bound release records 153/153 Language passes and 140/140 Contracts passes:
+293 pass, zero fail, and zero skipped overall.
 
 The bound final implementation baseline is
 `blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline`,
 with release package identity
-`sha256:1059e8250bce470febfe281bade2ebc4a0b2da5ce9bb297a50283eebe70ab747`.
+`sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70`.
 The vendored Language and Contracts specifications have SHA-256 digests
-`ac1ac47e10c91be82ebe45e2406f33ad5073cc3f3684bc1651704117b5008852`
+`41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e`
 and
-`75e8d212a3818ad756bd8227d8bda877fb27df9192cff312e347d7742daaed0f`,
+`3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0`,
 respectively.
 
 Run the hard release gate:
@@ -1154,7 +1155,7 @@ Run the hard release gate:
 ```
 
 The task runs the project tests, rejects deprecated or ambiguous preview API
-surface, validates every manifest/package identity, executes all 268 fixtures,
+surface, validates every manifest/package identity, executes all 293 fixtures,
 and writes:
 
 ```text
@@ -1176,7 +1177,7 @@ recorded by `clean`. Task exclusions such as `-x test` deliberately suppress
 that evidence.
 Keep `clean build` separate from `rcVerify`: deleting outputs in the task graph
 that consumes them is unsafe. The RC gate covers the
-project tests, all 268 fixtures, binary-API verification, independently
+project tests, all 293 fixtures, binary-API verification, independently
 repeated archive assembly, source-release verification, and the observed
 runtime-trace and fragmented-processing scenarios. It writes JAR repeatability evidence to
 `build/reports/reproducibility/jar-repeatability.json`, and independently
@@ -1237,7 +1238,7 @@ src/main/java/blue/language
   Blue.java                         primary facade
   model/                            Node, Schema, serializers, annotations
   merge/                            type resolution and merge pipeline
-  preprocess/                       alias/default-blue preprocessing
+  preprocess/                       directive and mandatory baseline preprocessing
   provider/                         BlueId content providers
   snapshot/                         FrozenNode and ResolvedSnapshot
   processor/                        generic document processor runtime
@@ -1247,6 +1248,7 @@ src/main/java/blue/language
 docs/
   developer-process.md              contribution and release workflow
   canonical-language-core.md        identity and canonical language rules
+  blue-language-1.0-final-clarifications.md
   list-controls-and-circular-references.md
   snapshots-patching-and-generalization.md
   frozen-type-matching.md

@@ -5,6 +5,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.ChannelEventCheckpoint;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.NormalizingTestEventChannelProcessor;
@@ -12,6 +13,8 @@ import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.utils.BlueIdCalculator;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,131 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 final class ChannelRunnerTest {
 
     @Test
+    void shouldMergeSourceCheckpointsFromDifferentStaleBundles() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                new IncrementPropertyContractProcessor());
+        String yaml = "contracts:\n"
+                + "  zSource:\n"
+                + "    type:\n"
+                + "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n"
+                + "  aSource:\n"
+                + "    type:\n"
+                + "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n"
+                + "  incrementZ:\n"
+                + "    channel: zSource\n"
+                + "    type:\n"
+                + "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n"
+                + "    propertyKey: /zCount\n"
+                + "  incrementA:\n"
+                + "    channel: aSource\n"
+                + "    type:\n"
+                + "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n"
+                + "    propertyKey: /aCount\n";
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = execution(
+                owner,
+                document,
+                Arrays.asList("zSource", "aSource"));
+        execution.preflightScope("/");
+        ContractBundle zBundle = execution.bundleForScope("/");
+        CheckpointManager checkpointManager =
+                new CheckpointManager(
+                        execution.runtime(),
+                        ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(
+                owner,
+                execution,
+                execution.runtime(),
+                checkpointManager);
+        Node event = blue.objectToNode(
+                new TestEvent()
+                        .eventId("coalesced")
+                        .kind("direct"));
+
+        // when
+        runner.runExternalChannel(
+                "/",
+                zBundle,
+                zBundle.channelBinding("zSource"),
+                event);
+        execution.preflightScope("/");
+        ContractBundle aBundle = execution.bundleForScope("/");
+        runner.runExternalChannel(
+                "/",
+                aBundle,
+                aBundle.channelBinding("aSource"),
+                event);
+        runner.persistPendingCheckpoints("/");
+        Node entries = execution.runtime().document().getAsNode(
+                "/contracts/checkpoint/entries");
+
+        // then
+        assertNotNull(entries.getProperties().get("zSource"));
+        assertNotNull(entries.getProperties().get("aSource"));
+        assertEquals(
+                Arrays.asList("aSource", "zSource"),
+                new ArrayList<>(entries.getProperties().keySet()));
+        assertNull(entries.getProperties().get("incrementZ"));
+        assertNull(entries.getProperties().get("incrementA"));
+    }
+
+    @Test
+    void shouldDiscardTentativeCheckpointAfterDeliveryFailure() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                new IncrementPropertyContractProcessor());
+        String yaml = "contracts:\n"
+                + "  testChannel:\n"
+                + "    type:\n"
+                + "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n"
+                + "  increment:\n"
+                + "    channel: testChannel\n"
+                + "    type:\n"
+                + "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n"
+                + "    propertyKey: /counter\n";
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = execution(owner, document);
+        execution.preflightScope("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+        ChannelRunner runner = new ChannelRunner(
+                owner,
+                execution,
+                execution.runtime(),
+                new CheckpointManager(
+                        execution.runtime(),
+                        ProcessorEngine::canonicalSignature));
+        Node event = blue.objectToNode(
+                new TestEvent()
+                        .eventId("will-fail")
+                        .kind("direct"));
+        runner.runExternalChannel(
+                "/",
+                bundle,
+                bundle.channelBinding("testChannel"),
+                event);
+
+        // when
+        execution.fail(
+                ProcessorStatus.RUNTIME_FATAL,
+                ProcessorDiagnostic.of(
+                        ProcessorErrorCategory.RuntimeExecutionFailure,
+                        "forced failure after pending source"));
+        runner.persistAllPendingCheckpoints();
+
+        // then
+        assertNull(ProcessorEngine.nodeAt(
+                execution.runtime().document(),
+                "/contracts/checkpoint"));
+    }
+
+    @Test
     void shouldSkipDuplicateEventsAndProcessNewEventsUsingCheckpoint() {
         // given
         Blue blue = ProcessorTestSupport.blue();
@@ -35,11 +163,11 @@ final class ChannelRunnerTest {
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -98,11 +226,11 @@ final class ChannelRunnerTest {
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -152,11 +280,11 @@ final class ChannelRunnerTest {
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -202,11 +330,11 @@ final class ChannelRunnerTest {
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setFlag:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT + "\n" +
                 "    expectedKind: " + NormalizingTestEventChannelProcessor.NORMALIZED_KIND + "\n" +
                 "    propertyKey: /flag\n" +
                 "    propertyValue: 7\n";
@@ -251,11 +379,11 @@ final class ChannelRunnerTest {
         String yaml = "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  increment:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    propertyKey: /counter\n";
 
         Node document = blue.yamlToNode(yaml);
@@ -292,17 +420,41 @@ final class ChannelRunnerTest {
     private static ProcessorEngine.Execution execution(
             DocumentProcessor owner,
             Node document) {
-        Node channel = document.getContracts()
-                .getProperties().get("testChannel");
-        String contributionBlueId =
-                BlueIdCalculator.calculateBlueId(channel);
-        String effectiveTypeBlueId =
-                channel.getType().getBlueId();
+        return execution(
+                owner,
+                document,
+                Collections.singletonList("testChannel"));
+    }
+
+    private static ProcessorEngine.Execution execution(
+            DocumentProcessor owner,
+            Node document,
+            List<String> channelKeys) {
         Node bindingEvent = new TestEvent()
                 .eventId("runner-binding")
                 .toNode();
-        ExternalDeliverySnapshot delivery =
-                ExternalDeliverySnapshot.builder("/", "testChannel")
+        VerifiedExecutionEvidence.Builder evidence =
+                VerifiedExecutionEvidence.builder(
+                                BlueIdCalculator.calculateBlueId(
+                                        document),
+                                BlueIdCalculator.calculateBlueId(
+                                        bindingEvent))
+                        .revisions(0L, 0L)
+                        .runtimeRegistryIdentity(
+                                owner.runtimeRegistryIdentity())
+                        .eventOrderKey(
+                                ExternalOrderKey.of(
+                                        Collections.<Object>singletonList(
+                                                "runner")));
+        for (String channelKey : channelKeys) {
+            Node channel = document.getContracts()
+                    .getProperties().get(channelKey);
+            String contributionBlueId =
+                    BlueIdCalculator.calculateBlueId(channel);
+            String effectiveTypeBlueId =
+                    channel.getType().getBlueId();
+            evidence.delivery(
+                    ExternalDeliverySnapshot.builder("/", channelKey)
                         .sourceContribution(contributionBlueId)
                         .effectiveTypeBlueId(effectiveTypeBlueId)
                         .subscriptionKey(
@@ -316,26 +468,12 @@ final class ChannelRunnerTest {
                         .checkpointSubjectBlueId(
                                 BlueIdCalculator.calculateBlueId(
                                         bindingEvent))
-                        .build();
-        VerifiedExecutionEvidence evidence =
-                VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(
-                                        document),
-                                BlueIdCalculator.calculateBlueId(
-                                        bindingEvent))
-                        .revisions(0L, 0L)
-                        .runtimeRegistryIdentity(
-                                owner.runtimeRegistryIdentity())
-                        .eventOrderKey(
-                                ExternalOrderKey.of(
-                                        Collections.<Object>singletonList(
-                                                "runner")))
-                        .delivery(delivery)
-                        .build();
+                        .build());
+        }
         return new ProcessorEngine.Execution(
                 owner,
                 document.clone(),
                 bindingEvent,
-                evidence);
+                evidence.build());
     }
 }

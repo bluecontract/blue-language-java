@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import blue.language.processor.contracts.MutateEventContractProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,16 +35,16 @@ class DocumentProcessorEventImmutabilityTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  mutator:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: EgL9wruNhEJTS5RspenxoyRngKEbXzMwDM4ZZ8gCHsiv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.MUTATE_EVENT + "\n" +
                 "  recorder:\n" +
                 "    channel: testChannel\n" +
                 "    order: 1\n" +
                 "    type:\n" +
-                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT + "\n" +
                 "    expectedKind: original\n" +
                 "    propertyKey: /result\n" +
                 "    propertyValue: 42\n";

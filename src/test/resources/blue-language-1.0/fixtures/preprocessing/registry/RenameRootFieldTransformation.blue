@@ -1,0 +1,5 @@
+name: Blue Language Conformance Rename Root Field Transformation
+description: >
+  Conformance-only deterministic preprocessing transformation that renames one
+  direct root object field. It fails when the source field is absent or the
+  destination field is already present.

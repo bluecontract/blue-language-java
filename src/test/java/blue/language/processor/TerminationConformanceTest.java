@@ -7,6 +7,7 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.TestEventChannel;
@@ -34,10 +35,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 final class TerminationConformanceTest {
 
-    private static final String TEST_EVENT_CHANNEL = "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
-    private static final String TEST_EVENT_TYPE = "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
-    private static final String TERMINATE_SCOPE = "AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4";
-    private static final String SET_PROPERTY = "8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts";
+    private static final String TEST_EVENT_CHANNEL = ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
+    private static final String TEST_EVENT_TYPE = ProcessorTestTypeBlueIds.TEST_EVENT;
+    private static final String TERMINATE_SCOPE = ProcessorTestTypeBlueIds.TERMINATE_SCOPE;
+    private static final String SET_PROPERTY = ProcessorTestTypeBlueIds.SET_PROPERTY;
     private static final String LIFECYCLE_CHANNEL = RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL;
 
     @Test

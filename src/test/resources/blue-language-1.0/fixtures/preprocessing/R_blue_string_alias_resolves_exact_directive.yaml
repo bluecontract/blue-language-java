@@ -1,0 +1,24 @@
+id: R_blue_string_alias_resolves_exact_directive
+category: Resolution
+operation: preprocess
+description: a configured string directive alias resolves to one exact directive BlueId
+preprocessingAliases:
+  Ticket Details v1.0: 7a4cQNDA9XKdPRcSNiGJA6mP5cCEH1Z6vqfp5Xu8rfBF
+source:
+  blue: Ticket Details v1.0
+  name: Alice
+provider:
+  - requestedBlueId: 7a4cQNDA9XKdPRcSNiGJA6mP5cCEH1Z6vqfp5Xu8rfBF
+    node:
+      imports:
+        Person:
+          blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+      transformations:
+        - type:
+            blueId: DS4rHtvxTg1S3tn6e9ciuMNDkeEQtk4VTdiw8KUCfMAu
+          field: type
+          value: Person
+expectedPreprocessed:
+  name: Alice
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy

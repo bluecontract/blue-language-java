@@ -19,9 +19,13 @@ public final class HandlerMatchContext {
     private final String channelKey;
     private final Node event;
     private final FrozenNode eventFrozen;
+    private final Node occurrenceEvent;
+    private final FrozenNode occurrenceEventFrozen;
     private final Map<String, MarkerContract> markers;
     private final ContractMatchingService matchingService;
     private final RuntimeWorkSession runtimeWorkSession;
+    private final ExternalChannelFunctionEvaluation.MatcherSession
+            matcherSession;
 
     HandlerMatchContext(String scopePath,
                         String handlerKey,
@@ -33,8 +37,10 @@ public final class HandlerMatchContext {
                 handlerKey,
                 channelKey,
                 event,
+                event,
                 markers,
                 matchingService,
+                null,
                 null);
     }
 
@@ -45,16 +51,47 @@ public final class HandlerMatchContext {
                         Map<String, MarkerContract> markers,
                         ContractMatchingService matchingService,
                         RuntimeWorkSession runtimeWorkSession) {
+        this(scopePath,
+                handlerKey,
+                channelKey,
+                event,
+                event,
+                markers,
+                matchingService,
+                runtimeWorkSession,
+                null);
+    }
+
+    HandlerMatchContext(String scopePath,
+                        String handlerKey,
+                        String channelKey,
+                        Node event,
+                        Node occurrenceEvent,
+                        Map<String, MarkerContract> markers,
+                        ContractMatchingService matchingService,
+                        RuntimeWorkSession runtimeWorkSession,
+                        ExternalChannelFunctionEvaluation.MatcherSession
+                                matcherSession) {
         this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
         this.handlerKey = handlerKey;
         this.channelKey = channelKey;
         this.event = event != null ? event.clone() : null;
         this.eventFrozen = event != null ? FrozenNode.fromResolvedNode(event) : null;
+        this.occurrenceEvent =
+                occurrenceEvent != null
+                        ? occurrenceEvent.clone()
+                        : null;
+        this.occurrenceEventFrozen =
+                occurrenceEvent != null
+                        ? FrozenNode.fromResolvedNode(
+                                occurrenceEvent)
+                        : null;
         this.markers = markers == null
                 ? Collections.emptyMap()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(markers));
         this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
         this.runtimeWorkSession = runtimeWorkSession;
+        this.matcherSession = matcherSession;
     }
 
     /**
@@ -103,6 +140,30 @@ public final class HandlerMatchContext {
     }
 
     /**
+     * Returns the semantic event occurrence offered to the current Channel.
+     *
+     * <p>For ordinary deliveries this is identical to {@link #event()}. An
+     * adapter Channel may retain its own wire payload while exposing the exact
+     * originating occurrence here for semantic matching.</p>
+     *
+     * @return detached occurrence event, or {@code null}
+     */
+    public Node occurrenceEvent() {
+        return occurrenceEvent != null
+                ? occurrenceEvent.clone()
+                : null;
+    }
+
+    /**
+     * Returns the immutable semantic occurrence used for exact matching.
+     *
+     * @return frozen occurrence event, or {@code null}
+     */
+    public FrozenNode occurrenceEventFrozen() {
+        return occurrenceEventFrozen;
+    }
+
+    /**
      * Returns the immutable same-scope Marker snapshot.
      *
      * @return immutable marker map
@@ -124,8 +185,28 @@ public final class HandlerMatchContext {
      *         descends from {@code expectedType}
      */
     public boolean eventDeclaredTypeIsSameOrDescendantOf(Node expectedType) {
+        if (matcherSession != null) {
+            FrozenNode candidateType =
+                    occurrenceEventFrozen != null
+                            ? occurrenceEventFrozen.getType()
+                            : null;
+            FrozenNode expected =
+                    expectedType != null
+                            ? FrozenNode.fromResolvedNode(
+                                    expectedType)
+                            : null;
+            if (candidateType == null
+                    || expected == null) {
+                return false;
+            }
+            return matcherSession.isAssignableToType(
+                    candidateType.blueId(),
+                    expected.blueId());
+        }
         return matchingService.eventDeclaredTypeIsSameOrDescendantOf(
-                event != null ? event.getType() : null,
+                occurrenceEvent != null
+                        ? occurrenceEvent.getType()
+                        : null,
                 expectedType);
     }
 
@@ -139,10 +220,51 @@ public final class HandlerMatchContext {
         if (pattern == null) {
             return true;
         }
-        if (eventFrozen == null) {
+        if (occurrenceEventFrozen == null) {
             return false;
         }
-        return matchingService.matches(eventFrozen, FrozenNode.fromResolvedNode(pattern));
+        FrozenNode frozenPattern =
+                FrozenNode.fromResolvedNode(pattern);
+        return matcherSession != null
+                ? matcherSession.matches(
+                        occurrenceEventFrozen,
+                        frozenPattern)
+                : matchingService.matches(
+                        occurrenceEventFrozen,
+                        frozenPattern);
+    }
+
+    /**
+     * Materializes one exact reference through the invocation-owned verified
+     * provider boundary used by this handler match.
+     *
+     * <p>Inline exact content is returned as a detached copy. Referenced
+     * content is never preprocessed or re-inferred at this boundary.</p>
+     *
+     * @param value exact inline content or pure reference
+     * @return detached exact content
+     * @throws IllegalStateException when out-of-band matching has no verified
+     *                               materializer
+     */
+    public Node materializeExactReference(Node value) {
+        if (value == null) {
+            return null;
+        }
+        if (!value.isReferenceOnly()) {
+            return value.clone();
+        }
+        if (matcherSession == null) {
+            throw new IllegalStateException(
+                    "Exact reference materialization is unavailable "
+                            + "in this out-of-band handler match");
+        }
+        FrozenNode materialized =
+                matcherSession.materializeExactReference(
+                        FrozenNode.fromNode(value));
+        return Objects.requireNonNull(
+                materialized,
+                "materialized exact reference")
+                .toNode();
     }
 
     /**

@@ -7,6 +7,7 @@ import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
@@ -36,17 +37,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class GasReactionBoundaryTest {
 
     private static final String TEST_EVENT_CHANNEL =
-            "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
+            ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
     private static final String TEST_EVENT =
-            "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
+            ProcessorTestTypeBlueIds.TEST_EVENT;
     private static final String SET_PROPERTY =
-            "8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts";
+            ProcessorTestTypeBlueIds.SET_PROPERTY;
     private static final String INCREMENT_PROPERTY =
-            "GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv";
+            ProcessorTestTypeBlueIds.INCREMENT_PROPERTY;
     private static final String EMIT_EVENTS =
-            "8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5";
+            ProcessorTestTypeBlueIds.EMIT_EVENTS;
     private static final String TERMINATE_SCOPE =
-            "AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4";
+            ProcessorTestTypeBlueIds.TERMINATE_SCOPE;
 
     @Test
     void shouldVerifyDocumentUpdateCycleStopsOnLiveGasAndRollsBackExactRunState() {

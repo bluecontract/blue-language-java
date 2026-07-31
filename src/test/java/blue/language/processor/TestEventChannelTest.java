@@ -8,6 +8,7 @@ import blue.language.processor.contracts.EmitEventsContractProcessor;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.SetPropertyOnEvent;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -37,11 +38,11 @@ class TestEventChannelTest {
                 "contracts:\n" +
                 "  testEventsChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setX:\n" +
                 "    channel: testEventsChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
         Node document = blue.yamlToNode(documentYaml);
@@ -86,25 +87,25 @@ class TestEventChannelTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "    triggered:\n" +
                 "      type:\n" +
-                "        blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf\n" +
+                "        blueId: " + RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL + "\n" +
                 "    emitOnInit:\n" +
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "      type:\n" +
-                "        blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.EMIT_EVENTS + "\n" +
                 "      events:\n" +
                 "        - type:\n" +
-                "            blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
+                "            blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT + "\n" +
                 "          kind: first\n" +
                 "    setLocalFirst:\n" +
                 "      channel: triggered\n" +
                 "      type:\n" +
-                "        blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT + "\n" +
                 "      expectedKind: first\n" +
                 "      propertyKey: /localFirst\n" +
                 "      propertyValue: 1\n" +
@@ -112,34 +113,34 @@ class TestEventChannelTest {
                 "      channel: triggered\n" +
                 "      order: 1\n" +
                 "      type:\n" +
-                "        blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.EMIT_EVENTS + "\n" +
                 "      expectedKind: first\n" +
                 "      events:\n" +
                 "        - type:\n" +
-                "            blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
+                "            blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT + "\n" +
                 "          kind: second\n" +
                 "    setLocalSecond:\n" +
                 "      channel: triggered\n" +
                 "      order: 2\n" +
                 "      type:\n" +
-                "        blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT + "\n" +
                 "      expectedKind: second\n" +
                 "      propertyKey: /localSecond\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "  embeddedEvents:\n" +
                 "    type:\n" +
-                "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
+                "      blueId: " + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n" +
                 "    sourcePath: /a\n" +
                 "  setRootFromChild:\n" +
                 "    channel: embeddedEvents\n" +
                 "    type:\n" +
-                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT + "\n" +
                 "    expectedKind: second\n" +
                 "    propertyKey: /fromChild\n" +
                 "    propertyValue: 1\n";
@@ -181,11 +182,11 @@ class TestEventChannelTest {
                 "contracts:\n" +
                 "  testEventsChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  incrementX:\n" +
                 "    channel: testEventsChannel\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    propertyKey: /x\n";
         Node document = blue.yamlToNode(yaml);
         Node event1 = blue.objectToNode(
@@ -247,18 +248,18 @@ class TestEventChannelTest {
                 "contracts:\n" +
                 "  testEventsChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  incrementX:\n" +
                 "    channel: testEventsChannel\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    propertyKey: /x\n";
         Node firstEvent = blue.yamlToNode(
-                "type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: alpha\n");
+                "type:\n  blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT + "\nkind: alpha\n");
         Node identicalEvent = blue.yamlToNode(
-                "type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: alpha\n");
+                "type:\n  blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT + "\nkind: alpha\n");
         Node changedEvent = blue.yamlToNode(
-                "type:\n  blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\nkind: beta\n");
+                "type:\n  blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT + "\nkind: beta\n");
 
         // when
         Node initialized = blue.initializeDocument(blue.yamlToNode(yaml)).document();

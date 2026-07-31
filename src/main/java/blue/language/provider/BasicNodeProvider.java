@@ -50,7 +50,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider implements CyclicAw
         this.cyclicSetProofByMasterBlueId = new HashMap<>();
 
         Preprocessor defaultPreprocessor = new Preprocessor(this);
-        this.preprocessor = defaultPreprocessor::preprocessWithDefaultBlue;
+        this.preprocessor = defaultPreprocessor::preprocess;
 
         nodes.forEach(this::processNode);
     }

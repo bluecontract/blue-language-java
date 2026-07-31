@@ -255,8 +255,7 @@ public class Blue implements NodeResolver, AutoCloseable {
     /**
      * Resolves a node under the current global limits.
      *
-     * @param node non-null mutable source; resolution may normalize nested type
-     *             metadata while constructing the returned graph
+     * @param node non-null source; it is not mutated
      * @return a newly materialized resolved node
      */
     public Node resolve(Node node) {
@@ -266,8 +265,7 @@ public class Blue implements NodeResolver, AutoCloseable {
     /**
      * Resolves a node under the intersection of method and global limits.
      *
-     * @param node non-null mutable source; resolution may normalize nested type
-     *             metadata while constructing the returned graph
+     * @param node non-null source; it is not mutated
      * @param limits non-null per-call traversal limits
      * @return a newly materialized resolved node
      */
@@ -277,7 +275,7 @@ public class Blue implements NodeResolver, AutoCloseable {
         try {
             Limits effectiveLimits = combineWithGlobalLimits(limits);
             Merger merger = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache);
-            return merger.resolve(node, effectiveLimits);
+            return merger.resolve(node.clone(), effectiveLimits);
         } finally {
             endDirectCacheOperation();
         }
@@ -1357,7 +1355,7 @@ public class Blue implements NodeResolver, AutoCloseable {
 
     /**
      * Executes both exact release fixture packages and returns one
-     * machine-readable 268-result report with no skip outcome.
+     * machine-readable 293-result report with no skip outcome.
      *
      * @return the combined completed release report
      */
@@ -1373,17 +1371,32 @@ public class Blue implements NodeResolver, AutoCloseable {
      * Expands eligible references directly in a mutable graph under the
      * intersection of method and global limits.
      *
+     * <p>This limited overload mutates {@code node} in place. The one-argument
+     * {@link #expand(Node)} overload instead returns a fully expanded copy.</p>
+     *
      * @param node mutable graph to modify in place
      * @param limits non-null per-call traversal limits
      */
-    public void extend(Node node, Limits limits) {
+    public void expand(Node node, Limits limits) {
         beginDirectCacheOperation();
         try {
             Limits effectiveLimits = combineWithGlobalLimits(limits);
-            new NodeExtender(nodeProvider).extend(node, effectiveLimits);
+            new NodeExpander(nodeProvider).expand(node, effectiveLimits);
         } finally {
             endDirectCacheOperation();
         }
+    }
+
+    /**
+     * Compatibility name for {@link #expand(Node, Limits)}.
+     *
+     * @param node mutable graph to modify in place
+     * @param limits non-null per-call traversal limits
+     * <p>New code should use {@link #expand(Node, Limits)}. This descriptor is
+     * retained only for the frozen 1.x binary API.</p>
+     */
+    public void extend(Node node, Limits limits) {
+        expand(node, limits);
     }
 
     /**
@@ -2152,25 +2165,12 @@ public class Blue implements NodeResolver, AutoCloseable {
     private Node preprocess(Node node,
                             NodeProvider preprocessingNodeProvider,
                             Map<String, String> aliases) {
-        if (node.getBlue() != null && node.getBlue().getValue() instanceof String) {
-            String blueValue = (String) node.getBlue().getValue();
-
-            if (aliases.containsKey(blueValue)) {
-                Node clonedNode = node.clone();
-                clonedNode.blue(new Node().blueId(aliases.get(blueValue)));
-                return new Preprocessor(preprocessingNodeProvider)
-                        .preprocessWithDefaultBlue(clonedNode);
-            } else if (BlueIds.isPotentialBlueId(blueValue)) {
-                Node clonedNode = node.clone();
-                clonedNode.blue(new Node().blueId(blueValue));
-                return new Preprocessor(preprocessingNodeProvider)
-                        .preprocessWithDefaultBlue(clonedNode);
-            } else {
-                throw new IllegalArgumentException("Invalid blue value: " + blueValue);
-            }
-        }
-
-        return new Preprocessor(preprocessingNodeProvider).preprocessWithDefaultBlue(node);
+        return new Preprocessor(
+                Preprocessor.getStandardProvider(),
+                preprocessingNodeProvider,
+                aliases,
+                Properties.BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP)
+                .preprocess(node);
     }
 
     /**
@@ -4190,8 +4190,14 @@ public class Blue implements NodeResolver, AutoCloseable {
         }
 
         @Override
-        public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+        public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
             return isDemandedClosure(potentialPath(pathSegment));
+        }
+
+        /** Legacy binary-API spelling delegated to the canonical method. */
+        @Override
+        public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
+            return shouldExpandPathSegment(pathSegment, currentNode);
         }
 
         @Override

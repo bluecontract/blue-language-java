@@ -390,8 +390,6 @@ final class ScopeExecutor {
                     classifications,
                     checkpointBundle);
         }
-        channelRunner.persistPendingCheckpoints(
-                normalizedScope);
     }
 
     ContractBundle preflightEvidenceScope(String scopePath) {
@@ -969,6 +967,7 @@ final class ScopeExecutor {
                 channelRunner.cleanupInactiveCheckpoints(scopePath, bundle);
             }
         }
+        channelRunner.persistAllPendingCheckpoints();
     }
 
     void requestInternalEventDrain() {
@@ -1195,7 +1194,8 @@ final class ScopeExecutor {
                     receivingPath,
                     currentBundle,
                     channel.key(),
-                    wrapper.clone());
+                    wrapper.clone(),
+                    occurrence.event());
         }
     }
 

@@ -1,0 +1,12 @@
+id: R_blue_unsupported_transformation
+category: Resolution
+operation: preprocess
+description: an unsupported required transformation fails instead of being ignored
+expectError: true
+expectedErrorCategory: UnsupportedPreprocessingTransform
+source:
+  blue:
+    transformations:
+      - type:
+          blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  value: x

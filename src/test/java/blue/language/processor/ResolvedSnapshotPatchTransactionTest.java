@@ -65,8 +65,11 @@ class ResolvedSnapshotPatchTransactionTest {
         assertEquals(fixture.blue.nodeToJson(result.resolvedRoot()),
                 fixture.blue.nodeToJson(runtime.document()));
         assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalRoot()), result.blueId());
-        assertEquals(fixture.blue.calculateSemanticBlueId(runtime.document()), result.blueId(),
-                "the canonical identity companion must describe the returned resolved selection");
+        assertEquals(
+                BlueIdCalculator.calculateUncheckedBlueId(
+                        result.canonicalRoot()),
+                result.blueId(),
+                "the snapshot identity must be derived from its canonical lane, not its resolved view");
 
         assertEquals(1, manager.inputs.size());
         assertEquals(fixture.activeId, manager.inputs.get(0).getAsText("/status/type/blueId"));

@@ -15,6 +15,8 @@ public enum BlueFixtureCategory {
     SCHEMA("Schema"),
     /** Resolution behavior. */
     RESOLUTION("Resolution"),
+    /** Type-and-overlay specialization behavior. */
+    SPECIALIZATION("Specialization"),
     /** Canonicalization behavior. */
     CANONICALIZATION("Canonicalization"),
     /** Overlay minimization. */

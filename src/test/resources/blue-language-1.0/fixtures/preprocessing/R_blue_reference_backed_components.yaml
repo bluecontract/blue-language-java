@@ -1,0 +1,30 @@
+id: R_blue_reference_backed_components
+category: Resolution
+operation: preprocess
+description: imports and transformations may themselves be reference-backed exact nodes
+source:
+  blue:
+    imports:
+      blueId: 2WL5rwKv44FXKEcZQH8QotfT4Y6jSfUvEvePq2sSGpyj
+    transformations:
+      blueId: B2tbCDXr75kgUKkNuXJkKa1eXvv2NjBPs2ZNVVhGwMwW
+  type: Person
+  Display Name: Alice
+provider:
+  - requestedBlueId: 2WL5rwKv44FXKEcZQH8QotfT4Y6jSfUvEvePq2sSGpyj
+    node:
+      Person:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  - requestedBlueId: B2tbCDXr75kgUKkNuXJkKa1eXvv2NjBPs2ZNVVhGwMwW
+    node:
+      - type:
+          blueId: 7kEewGH6vogsgUXw3Gdyi73rtb5oQK1L8LWtHbYcG7pB
+        from: Display Name
+        to: displayName
+expectedPreprocessed:
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  displayName:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: Alice

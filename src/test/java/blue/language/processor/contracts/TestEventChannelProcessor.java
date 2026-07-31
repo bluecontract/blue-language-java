@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.ChannelEvaluationContext;
 import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.TestEventChannel;
 
@@ -12,7 +13,7 @@ import java.util.List;
 
 public class TestEventChannelProcessor implements ChannelProcessor<TestEventChannel> {
 
-    private static final String DEFAULT_EVENT_TYPE = "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
+    private static final String DEFAULT_EVENT_TYPE = ProcessorTestTypeBlueIds.TEST_EVENT;
     private final ExternalChannelSubscriptionFunctions<TestEventChannel>
             subscriptionFunctions =
             new ExternalChannelSubscriptionFunctions<TestEventChannel>() {

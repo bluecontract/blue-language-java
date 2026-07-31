@@ -7,12 +7,13 @@ import blue.language.merge.processor.DictionaryProcessor;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.NodeExtender;
+import blue.language.utils.NodeExpander;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
 import static blue.language.utils.Properties.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -81,7 +82,7 @@ public class DictionaryProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictOfAToBNode = nodeProvider.getNodeByName("DictOfAToB");
-        new NodeExtender(nodeProvider).extend(dictOfAToBNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(dictOfAToBNode, Limits.NO_LIMITS);
         // when
         Node result = merger.resolve(dictOfAToBNode);
 
@@ -114,7 +115,7 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictNode = nodeProvider.findNodeByName("DictWithInvalidKeyType").orElseThrow(() -> new IllegalStateException("No \"DictWithInvalidKeyType\" available for NodeProvider."));
         // when
-        new NodeExtender(nodeProvider).extend(dictNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(dictNode, Limits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(dictNode));
@@ -147,7 +148,7 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictNode = nodeProvider.findNodeByName("DictWithInvalidValue").orElseThrow(() -> new IllegalStateException("No \"DictWithInvalidValue\" available for NodeProvider."));
         // when
-        new NodeExtender(nodeProvider).extend(dictNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(dictNode, Limits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(dictNode));
@@ -173,10 +174,90 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node nonDictNode = nodeProvider.findNodeByName("NonDictWithKeyType").orElseThrow(() -> new IllegalStateException("No \"NonDictWithKeyType\" available for NodeProvider."));
         // when
-        new NodeExtender(nodeProvider).extend(nonDictNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(nonDictNode, Limits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nonDictNode));
+    }
+
+    @Test
+    void shouldValidateTypelessOverlayAgainstInheritedDictionaryType() {
+        // given
+        BasicNodeProvider nodeProvider =
+                new BasicNodeProvider();
+        Node target =
+                new Node()
+                        .type(new Node().blueId(
+                                DICTIONARY_TYPE_BLUE_ID))
+                        .keyType(new Node().blueId(
+                                TEXT_TYPE_BLUE_ID))
+                        .valueType(new Node().blueId(
+                                INTEGER_TYPE_BLUE_ID));
+        Node source =
+                new Node()
+                        .keyType(new Node().blueId(
+                                TEXT_TYPE_BLUE_ID))
+                        .valueType(new Node().blueId(
+                                INTEGER_TYPE_BLUE_ID))
+                        .properties(
+                                "answer",
+                                new Node()
+                                        .type(new Node().blueId(
+                                                INTEGER_TYPE_BLUE_ID))
+                                        .value(42));
+        DictionaryProcessor processor =
+                new DictionaryProcessor();
+
+        // when
+        processor.process(
+                target,
+                source,
+                nodeProvider,
+                null);
+
+        // then
+        assertEquals(
+                DICTIONARY_TYPE_BLUE_ID,
+                target.getType().getBlueId());
+        assertEquals(
+                INTEGER_TYPE_BLUE_ID,
+                target.getValueType().getBlueId());
+    }
+
+    @Test
+    void shouldRejectExplicitNonDictionaryTypeDespiteInheritedDictionaryTarget() {
+        // given
+        BasicNodeProvider nodeProvider =
+                new BasicNodeProvider();
+        Node target =
+                new Node().type(
+                        new Node().blueId(
+                                DICTIONARY_TYPE_BLUE_ID));
+        Node source =
+                new Node()
+                        .type(new Node().blueId(
+                                TEXT_TYPE_BLUE_ID))
+                        .keyType(new Node().blueId(
+                                TEXT_TYPE_BLUE_ID));
+        DictionaryProcessor processor =
+                new DictionaryProcessor();
+
+        // when
+        Throwable failure =
+                captureFailure(
+                        () -> processor.process(
+                                target,
+                                source,
+                                nodeProvider,
+                                null));
+
+        // then
+        assertInstanceOf(
+                IllegalArgumentException.class,
+                failure);
+        assertEquals(
+                "Source node with keyType or valueType must have a Dictionary type",
+                failure.getMessage());
     }
 
 }

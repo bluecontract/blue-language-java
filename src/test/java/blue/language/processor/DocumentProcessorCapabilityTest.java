@@ -6,6 +6,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.ApplyBatchPatchContractProcessor;
 import blue.language.processor.model.TerminateScope;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
@@ -21,11 +22,11 @@ class DocumentProcessorCapabilityTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  handler:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
         Blue blue = ProcessorTestSupport.blue();
@@ -94,11 +95,11 @@ class DocumentProcessorCapabilityTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  handler:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
         Node initialized = blue.initializeDocument(blue.yamlToNode(baseYaml)).document().clone();
@@ -140,11 +141,11 @@ class DocumentProcessorCapabilityTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  handler:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
         Node initialized = blue.initializeDocument(blue.yamlToNode(baseYaml)).document().clone();
@@ -182,7 +183,7 @@ class DocumentProcessorCapabilityTest {
                 "  addUnsupported:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.APPLY_BATCH_PATCH + "\n" +
                 "    addUnsupportedContract: true\n";
 
         // when
@@ -226,7 +227,7 @@ class DocumentProcessorCapabilityTest {
                 "    unsupported:\n" +
                 "      channel: missing\n" +
                 "      type:\n" +
-                "        blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
@@ -267,7 +268,7 @@ class DocumentProcessorCapabilityTest {
                 "  unsupported:\n" +
                 "    channel: missing\n" +
                 "    type:\n" +
-                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n";
+                "      blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n";
 
         // when
         Node document = blue.yamlToNode(yaml);

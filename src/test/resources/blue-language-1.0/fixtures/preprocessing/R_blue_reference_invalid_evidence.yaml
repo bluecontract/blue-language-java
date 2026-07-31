@@ -1,0 +1,16 @@
+id: R_blue_reference_invalid_evidence
+category: Resolution
+operation: preprocess
+description: a referenced directive must verify against its requested BlueId
+expectError: true
+expectedErrorCategory: ProviderBlueIdMismatch
+source:
+  blue:
+    blueId: 7a4cQNDA9XKdPRcSNiGJA6mP5cCEH1Z6vqfp5Xu8rfBF
+  name: Alice
+provider:
+  - requestedBlueId: 7a4cQNDA9XKdPRcSNiGJA6mP5cCEH1Z6vqfp5Xu8rfBF
+    returnedNode:
+      imports:
+        Person:
+          blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC

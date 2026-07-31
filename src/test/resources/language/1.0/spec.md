@@ -2,7 +2,7 @@
 
 > **Status.** Final Implementation Baseline. Blue Language 1.0 is the first public-version Language specification and the normative implementation target for this package. Final public publication MUST bind this prose, the canonical core-type registry, published BlueIds, the machine-readable conformance fixtures, and implementation-conformance evidence in one content-addressed release manifest.
 
-> **Scope.** This document defines Blue's content language: the node model, Blue Graph, Blue Documents, typing, overlays, schema constraints, preprocessing, complete and demand-limited resolution, expansion, collapse, canonicalization, minimization, and BlueId. It defines the semantic equivalence of verified pure references and their materializations. It does **not** define runtime execution, handlers, events, channels, gas prices, provider transport, storage layout, or contract processing. Those belong to runtime specifications and implementations.
+> **Scope.** This document defines Blue's content language: the node model, Blue Graph, Blue Documents, typing, specialization through overlays, schema constraints, preprocessing, complete and demand-limited resolution, expansion, collapse, canonicalization, minimization, and BlueId. It defines the semantic equivalence of verified pure references and their materializations. It does **not** define runtime execution, handlers, events, channels, gas prices, provider transport, storage layout, or contract processing. Those belong to runtime specifications and implementations.
 
 Where this document references core types such as **Text**, **Integer**, **Double**, **Boolean**, **Dictionary**, and **List**, their canonical type definitions and canonical BlueIds are supplied by the canonical Blue type registry. Appendix A defines their normative semantics and shows the intended canonical registry nodes. The registry is the authority for the exact node content and BlueIds.
 
@@ -58,7 +58,14 @@ Expansion and collapse change representation only. Resolution and minimization c
 
 Expansion and resolution are independent dimensions. A processor may expand and resolve only the paths needed for its next decision while leaving unrelated branches collapsed. Limits are supplied out-of-band to the Language operation and do not become Blue content, affect BlueId, or change semantic meaning.
 
-Blue also permits **extension through typing and overlays**. Extension is not a fifth graph operation. To extend a node is to create a new, more specific node that uses another node as its `type` and adds compatible overlay content. The extended node normally has a new BlueId. By contrast, expanding a node only reveals more of the same node and preserves its BlueId.
+Blue also permits **specialization through typing and overlays**. Specialization is not a fifth graph operation. To specialize a node is to create a new, more specific node that uses another node as its `type` and adds compatible overlay content. The specialized node is a new node and normally has a new BlueId. By contrast, expanding a node only reveals more of the same existing node and preserves its BlueId.
+
+A useful test is:
+
+```text
+same node, more of it visible     -> expand
+new node, more specific meaning   -> specialize
+```
 
 Blue content commonly appears in the following forms:
 
@@ -71,18 +78,27 @@ Blue content commonly appears in the following forms:
 | **Minimized Overlay** | A reduced author-facing overlay that resolves to the same complete Resolved Form. | Produces the same Content BlueId through the full identity pipeline. |
 | **Canonical Identity Input** | The one deterministic identity form derived from a complete Resolved Form. | Direct input to Node BlueId; produces Content BlueId. |
 
-Canonicalization is separate from minimization. Canonicalization produces the deterministic BlueId input. Minimization produces a convenient smaller Source overlay and is not necessarily unique.
+Canonicalization is separate from minimization. Canonicalization produces the one deterministic BlueId input. Minimization produces a convenient smaller Source overlay and is not necessarily unique. **Minimization is not a step in Content BlueId calculation.**
 
-The identity pipeline for a Source Document is:
+The two paths from a complete Resolved Form are:
 
 ```text
 Source Document
    -- preprocess    --> Preprocessed Document
    -- fully resolve --> complete Resolved Form
-   -- canonicalize  --> Canonical Identity Input
-   -- BlueId algorithm --> Node BlueId
-                         = Content BlueId of the Source Document
+                          |                         \
+                          | canonicalize             \ minimize
+                          v                           v
+                 Canonical Identity Input      Minimized Overlay
+                          |                           |
+                  Node BlueId algorithm         ordinary Source form
+                          |                           |
+                          v                           `-- if processed again,
+                    Content BlueId                   follows the full pipeline
+                                                    to the same Content BlueId
 ```
+
+A Source Document, Resolved Form, or Minimized Overlay MUST NOT be directly hashed and assumed to produce its Content BlueId. Only the Canonical Identity Input has that guarantee.
 
 Ordinary processors do not need to run this entire pipeline merely to inspect or update a document. They may expand and resolve only demanded fields, preserve unchanged children by BlueId, and collapse the result again.
 
@@ -413,7 +429,7 @@ Mixed `blueId` forms MUST be rejected in Source Documents, Preprocessed Document
 
 A non-Blue envelope is packaging metadata outside the Blue Document root. It is not part of the Blue node and is not included in BlueId calculation.
 
-A pure reference cannot carry sibling fields. To refine or extend referenced content, the reference MUST appear in a type position or be resolved as an ancestor/type, and the overlay MUST be written as ordinary instance content outside the pure reference object.
+A pure reference cannot carry sibling fields. To specialize referenced content, the reference MUST appear in a type position or be resolved as an ancestor/type, and the overlay MUST be written as ordinary instance content outside the pure reference object.
 
 Invalid:
 
@@ -558,7 +574,7 @@ Implementations MUST validate reserved field value types.
 | `value` | string, number, boolean, or absent |
 | `items` | list, or absent |
 | `blueId` | string BlueId, only in pure references |
-| `blue` | string or object directive; root Source Document only |
+| `blue` | root Source Document only; string directive alias, inline preprocessing-directive node, or pure reference to one |
 | `schema` | object using only schema keywords from §9, pure reference to such an object, or absent |
 | `mergePolicy` | `append-only`, `positional`, or absent |
 | `contracts` | object, pure reference to such an object, or absent; runtime semantics out of scope |
@@ -687,16 +703,80 @@ The BlueId algorithm operates on the abstract node model after canonical input n
 
 ## 6. Preprocessing and the `blue` Directive
 
-### 6.1 Purpose (normative)
+### 6.1 Purpose and governing model (normative)
 
-The root of a Source Document MAY contain a `blue` field. The `blue` directive declares preprocessing transforms that normalize authoring conveniences before the document is treated as identity-bearing content.
+Every Blue Source Document is processed by the standard preprocessing algorithm defined by this specification. The absence of a root `blue` directive means that the document supplies no document-specific preprocessing configuration; it does **not** disable standard preprocessing.
 
-A string-valued `blue` directive identifies a preprocessing environment or import document according to the implementation's declared preprocessing configuration.
-An object-valued `blue` directive declares imports and preprocessing transforms directly. The exact object fields supported by a preprocessing environment MUST be deterministic and documented by that environment.
+The standard preprocessing algorithm is part of Blue Language 1.0. It is not represented by an implicit, injected, or hidden `blue` directive.
+
+The root of a Source Document MAY contain a `blue` field. The optional `blue` directive supplements standard preprocessing with:
+
+- document-local type aliases declared through `imports`; and
+- an ordered list of explicitly identified source transformations declared through `transformations`.
+
+The `blue` directive cannot replace, reorder, or disable mandatory baseline preprocessing.
 
 Preprocessing is part of Content BlueId calculation. It is not part of direct Node BlueId calculation, because direct Node BlueId accepts only BlueId Input.
 
-A conforming implementation MUST support this portable `blue.imports` shape:
+The portable value of `blue` is either:
+
+1. an inline preprocessing-directive node; or
+2. a pure reference to an exact preprocessing-directive node:
+
+```yaml
+blue:
+  blueId: <PreprocessingDirectiveBlueId>
+```
+
+An inline directive and a verified materialization of a referenced directive are equivalent. The directive may therefore be expanded or collapsed like any other exact Blue node. Expansion or collapse of the directive MUST NOT change the preprocessed result.
+
+A pure reference under `blue` MUST remain a pure reference. It cannot carry sibling fields. To combine or change a referenced directive, an author creates another exact directive node containing the desired combined imports and transformations, and may then reference that new node by BlueId.
+
+A string-valued `blue` MAY be supported as authoring shorthand for an implementation-configured directive alias:
+
+```yaml
+blue: Ticket Details v1.51
+```
+
+The alias MUST resolve to one exact preprocessing-directive BlueId before preprocessing begins. An unbound alias fails deterministically. A Source Document that depends on a string alias has a portable Content BlueId only when the exact alias-to-BlueId binding is itself identity-bound by the declared preprocessing environment or release artifact. The portable self-contained form is the pure reference form.
+
+Raw URL fetching is not a portable meaning of a string-valued `blue`. A URL MAY be used by a provider as a transport location for an expected BlueId, but unverified URL content MUST NOT define preprocessing semantics.
+
+### 6.2 Portable preprocessing-directive node (normative)
+
+A portable materialized preprocessing-directive node MAY contain the following directive fields:
+
+```text
+imports
+transformations
+```
+
+It MAY also contain ordinary identity-bearing node metadata such as `name`, `description`, and an exact `type` reference. Such metadata identifies the directive node itself but does not become content of the preprocessed Source Document.
+
+The `imports` field, when present, MUST be either:
+
+- an object mapping aliases to pure references; or
+- a pure reference to such an object.
+
+The `transformations` field, when present, MUST be either:
+
+- a list of transformation nodes; or
+- a pure reference to such a list.
+
+Each transformation list item MAY be materialized inline or represented by a pure reference. Every referenced directive, imports object, transformations list, or transformation node required by preprocessing MUST be fetched through the configured provider and verified against its requested BlueId before use.
+
+A preprocessing-directive node MUST NOT itself contain a `blue` directive. Blue Language 1.0 does not define recursive directive composition or a separate `profile` field. Reuse is achieved by placing the complete directive in an exact node and using:
+
+```yaml
+blue:
+  blueId: <DirectiveBlueId>
+```
+
+Unknown directive fields are not portable. A conforming strict implementation MUST reject an unknown directive field unless an exact separately published preprocessing extension defines that field, its ordering, its identity, and its conformance behavior.
+
+### 6.3 Imports (normative)
+
+A conforming implementation MUST support this portable shape:
 
 ```yaml
 blue:
@@ -705,51 +785,175 @@ blue:
       blueId: <BlueId>
 ```
 
-Each key under `imports` is an authoring alias. Each value MUST be a pure reference object. During preprocessing, occurrences of that alias in `type`, `itemType`, `keyType`, or `valueType` positions are replaced by the corresponding pure reference.
+Each key under `imports` is an authoring alias. Each value MUST be a pure reference to a plain BlueId. Cyclic-member identities and algorithm-internal placeholders are not valid import targets in Blue Language 1.0.
 
-Aliases declared in `blue.imports` are scoped to the Source Document being preprocessed. They are removed with the `blue` directive and are not identity content after preprocessing.
+The effective import map consists of:
 
-An alias name MUST NOT be declared more than once in the same `imports` object. An alias declared in `blue.imports` MUST NOT redefine a built-in core type name unless it maps to the same canonical BlueId.
+1. the canonical built-in core aliases supplied by the Blue Language 1.0 core registry; and
+2. the aliases declared by the effective preprocessing directive.
 
-### 6.2 Standard baseline preprocessing (normative)
+An alias name MUST NOT be declared more than once in the effective imports object. A directive import MUST NOT redefine a built-in core alias unless it maps to the same canonical BlueId.
 
-A conforming implementation MUST support the standard baseline preprocessing environment:
+Imports are scoped to the Source Document being preprocessed. Automatic alias substitution applies only in these type-bearing positions:
 
-1. **Core type aliases to BlueIds.** Core aliases such as `Text`, `Integer`, `Double`, `Boolean`, `Dictionary`, and `List` are replaced by canonical type references supplied by the canonical Blue type registry.
-2. **Document-declared aliases to BlueIds.** Aliases other than the built-in core type names MUST be declared by the Source Document, for example through the root `blue` directive, or by content-addressed import documents referenced from it.
-3. **Primitive scalar inference.** Bare scalar payloads with no explicit type are assigned the corresponding core primitive type: `Text`, `Integer`, `Double`, or `Boolean`.
-4. **Wrapper normalization.** Scalar and list sugar are normalized into the abstract node model.
-5. **List placeholder normalization.** In Source Documents, list elements that are `null`, `{}`, or that recursively normalize to an empty object after object-field cleaning are normalized to `$empty: true` (§11.5).
+```text
+type
+itemType
+keyType
+valueType
+```
 
-If the root `blue` directive is omitted, conforming implementations MUST still apply the standard baseline preprocessing environment. If a `blue` directive is present, it MAY configure imports and additional declared supported transforms, but it MUST NOT disable the mandatory baseline transforms required for interoperability.
+The same Text value in an ordinary data field is not replaced merely because it equals an alias name.
 
-Implementation-local alias configuration MAY be used for authoring convenience, but documents depending on undeclared implementation-local aliases do not have portable Content BlueIds.
+The effective import map is established and verified before transformation execution, but automatic alias substitution is performed only during mandatory baseline preprocessing **after all declared transformations have completed**. This permits a transformation to emit a type alias that is then resolved by the document's imports.
 
-### 6.3 Additional preprocessing transforms (normative)
+An imported alias that is not used does not affect the resulting Preprocessed Document or Content BlueId.
 
-Additional preprocessing transforms MAY be used only when they are explicitly declared by the root `blue` directive and supported by the implementation.
-Such transforms MUST be deterministic. If a Source Document requires a transform that the implementation does not support, preprocessing MUST fail.
-Any imported preprocessing document that affects Content BlueId MUST itself be identified by BlueId or by a deterministic registry binding declared by the Source Document.
-A document that depends on implementation-local transforms not declared by the Source Document does not have a portable Content BlueId.
+### 6.4 Transformations (normative)
 
-### 6.4 Preprocessing rules (normative)
+The portable transformation list has this shape:
+
+```yaml
+blue:
+  transformations:
+    - type:
+        blueId: <TransformationTypeBlueId>
+      # transformation-specific configuration
+```
+
+A transformation node MUST have an exact effective transformation type that can be established without applying the Source Document's aliases or transformations. In the portable form, the transformation's `type` is a pure BlueId reference, or the transformation item is itself a pure reference to a verified node whose transformation type can be established from exact content.
+
+The exact transformation type BlueId selects the deterministic transformation implementation. Human-readable `name` values do not select transformation semantics.
+
+A required transformation whose type is unsupported MUST cause deterministic preprocessing failure. An implementation MUST NOT ignore, approximate, reorder, or substitute a required transformation.
+
+Declared transformations execute under these rules:
+
+1. the list order is semantic;
+2. each transformation is applied exactly once;
+3. transformation `i + 1` receives the complete output of transformation `i`;
+4. the first transformation receives the parsed Source Document with the root `blue` field removed;
+5. transformations run before mandatory baseline preprocessing;
+6. automatic import substitution and primitive inference have not yet been applied when a transformation begins;
+7. a transformation MAY consult the already established effective import map when its exact transformation specification defines such access, but this does not itself perform alias substitution;
+8. a transformation MUST NOT introduce a `blue` field at any path;
+9. a transformation's output may use ordinary Source syntax, wrapper sugar, imported aliases, bare primitive values, and list placeholders; mandatory baseline preprocessing normalizes that output afterward.
+
+The transformation list is not repeatedly evaluated and is not applied until reaching a fixed point.
+
+A portable transformation type MUST define, through its exact published semantics and fixtures:
+
+- accepted input and configuration shape;
+- exact deterministic output rules;
+- collision and duplicate-key behavior;
+- Unicode, locale, date/time, and numeric behavior where applicable;
+- error behavior;
+- resource limits or a deterministic bound;
+- whether and how the effective import map is available;
+- conformance fixtures.
+
+Transformations MUST be pure and deterministic. They MUST NOT depend on ambient time, randomness, locale, time zone, environment variables, local files, unverified network content, mutable databases, cache state, thread scheduling, or any other hidden state.
+
+### 6.5 Exact preprocessing order (normative)
+
+A conforming implementation MUST produce the result defined by the following conceptual algorithm. Implementations MAY fuse or optimize stages only when the observable result and deterministic failures remain identical.
+
+#### Stage 1 — Parse the Source Document
+
+Parse JSON or portable YAML under §§2.1–2.3. Preserve the root `blue` value for directive processing. Reject duplicate keys and invalid Blue source syntax.
+
+#### Stage 2 — Establish the effective directive without mutating the Source Document
+
+1. If `blue` is absent, use an empty document-specific directive.
+2. If `blue` is a string, resolve it through the declared directive-alias binding to one exact BlueId.
+3. If `blue` is a pure reference, fetch and verify the referenced preprocessing-directive node.
+4. If `blue` is inline, validate it as a preprocessing-directive node.
+5. Materialize and verify any referenced `imports`, `transformations`, and transformation items required by the directive.
+6. Build and validate the effective import map.
+7. Resolve every transformation to a supported exact transformation implementation.
+8. Freeze the ordered transformation list.
+
+If this stage cannot complete, preprocessing fails before any transformation executes.
+
+#### Stage 3 — Remove `blue`
+
+Create the working Source Document by removing the root `blue` field. The directive is not passed as ordinary document content to transformations.
+
+#### Stage 4 — Execute declared transformations
+
+Apply the frozen transformations exactly once each, in declared list order. Each transformation consumes the prior working result and produces the next working Source Document.
+
+If any transformation fails, produces invalid Source structure, introduces `blue`, exceeds its deterministic limit, or requires unavailable/invalid evidence, preprocessing fails. No partially transformed document is a successful result.
+
+#### Stage 5 — Apply mandatory baseline preprocessing
+
+Apply the following baseline operations to the transformed Source Document in this order:
+
+1. **Wrapper normalization.** Normalize scalar and list authoring sugar into the abstract Blue node model (§5).
+2. **List placeholder normalization.** Normalize Source list elements that are `null`, `{}`, or recursively clean to an empty object into `$empty: true` (§11.5).
+3. **Type-alias substitution.** Replace built-in and document-import aliases in `type`, `itemType`, `keyType`, and `valueType` positions with their canonical pure references.
+4. **Primitive scalar inference.** Assign `Text`, `Integer`, `Double`, or `Boolean` to untyped primitive scalar payloads under §§2.4–2.5 and §14.3.
+5. **Preprocessed-form validation.** Reject unresolved authoring aliases in type-bearing positions, nested or transformation-introduced `blue`, invalid payload combinations, malformed list controls, and any other invalid Preprocessed Document content.
+
+This ordering is normative. In particular:
+
+- transformations see the source before automatic import substitution and primitive inference;
+- a transformation may emit `type: Person`, after which the `Person` import is substituted in Stage 5;
+- a transformation may emit `count: 7`, after which Integer inference occurs in Stage 5;
+- a transformation that replaces an alias with an exact pure reference prevents later import substitution at that position because no alias remains there.
+
+Applying preprocessing to an already valid Preprocessed Document that contains no `blue`, no unresolved aliases, and no Source-only placeholder forms MUST be idempotent.
+
+### 6.6 Identity and provenance (normative/informative)
+
+The `blue` directive is preprocessing configuration, not semantic content of the resulting document. Successful preprocessing removes it completely.
+
+Therefore:
+
+- an inline directive and the same directive supplied as `{ blueId: X }` produce the same result;
+- different directive nodes may produce the same Preprocessed Document and Content BlueId;
+- different alias names that resolve to the same exact type may produce the same Content BlueId;
+- unused imports do not affect Content BlueId;
+- source language, field spelling before a rename transformation, and preprocessing configuration are not recoverable from Content BlueId alone.
+
+Systems that require authoring provenance SHOULD retain an out-of-band preprocessing receipt containing, as applicable:
+
+```text
+source artifact identity
+Blue Language release identity
+directive BlueId or alias binding identity
+ordered transformation node identities
+effective imports identity
+preprocessed result Node BlueId
+final Content BlueId
+diagnostics
+```
+
+The receipt is not part of the resulting Blue document unless an application explicitly stores it as content.
+
+### 6.7 Security and acquisition (normative)
+
+Remote acquisition of directive and transformation nodes is disabled by default unless the host explicitly configures a provider capable of obtaining exact BlueIds.
+
+Any directive, imports object, transformations list, transformation node, or transformation dependency fetched by BlueId MUST verify against that BlueId before use. Verification failure causes deterministic preprocessing failure.
+
+An implementation-local directive alias MUST resolve to one exact BlueId. It MUST NOT resolve directly to mutable or unverified content.
+
+A provider MAY use HTTP, a database, a filesystem, or another transport internally, but transport location is not preprocessing meaning. The requested BlueId and verified returned content define the acquired node.
+
+Implementations MUST impose deterministic hosted bounds on preprocessing, including suitable limits for transformation count, directive graph depth, referenced preprocessing resources, input/output node count, and text processed. Exceeding a bound causes preprocessing failure and MUST NOT return a partial successful document.
+
+### 6.8 General preprocessing rules (normative)
 
 - The `blue` directive is valid only on the root of a Source Document.
-- The `blue` directive is not semantic content.
-- A document containing `blue` is not valid BlueId Input.
-- Preprocessing MUST remove the `blue` directive after applying it.
+- A nested `blue` field is invalid.
+- The `blue` directive is not semantic content of the resulting document.
+- A document containing `blue` is not valid direct BlueId Input.
+- Preprocessing MUST remove `blue` before resolution, canonicalization, or Content BlueId hashing.
 - Direct Node BlueId calculation MUST reject a node containing `blue`.
-- Content BlueId calculation MUST preprocess the document and remove `blue` before hashing.
-
-Simply ignoring `blue` is not correct. The directive may define aliases and transforms that change the canonical content. A direct hasher that sees `blue` MUST reject the input rather than hash a partially processed structure.
-
-### 6.5 Security (normative)
-
-Remote fetch of preprocessing imports or transforms is DISABLED by default. Implementations MAY support remote preprocessing documents only through explicit opt-in configuration and deterministic caching rules.
-
-Any preprocessing import document or transform document fetched by BlueId MUST be verified against that BlueId before use. If verification fails, preprocessing MUST fail deterministically.
-
-A preprocessing import that is not identified by BlueId MUST be supplied by a deterministic registry binding declared by the Source Document or by the implementation's declared preprocessing configuration. Such bindings are outside the portable Source Document unless their identity is included in the conformance fixture or release artifact.
+- Simply ignoring `blue` is not conforming.
+- Unsupported required transformations fail deterministically.
+- Missing directive or transformation evidence is not treated as an empty directive.
 
 ---
 
@@ -757,9 +961,11 @@ A preprocessing import that is not identified by BlueId MUST be supplied by a de
 
 ### 7.1 BlueId summary (normative)
 
-Every Blue node has a content identity called its **BlueId**. The BlueId of a Blue Document is the BlueId of its root node.
+Every valid exact Blue node has a content identity called its **Node BlueId**. The Node BlueId of a Blue Document is the Node BlueId of its root node.
 
-BlueId is a content address: equivalent representations of the same content produce the same identity after the relevant language operations have been applied.
+A Source Document is an authoring input. It may require preprocessing, complete resolution, and canonicalization before its semantic identity can be established. The Node BlueId of that Source Document's Canonical Identity Input is called its **Content BlueId**.
+
+BlueId is a content address. A human-readable `name` may help people discuss a node, but only the BlueId identifies its exact immutable content. Equivalent expanded and collapsed representations of one exact node have the same Node BlueId. Equivalent Source Documents have the same Content BlueId after the complete identity pipeline.
 
 This section defines BlueId conceptually. The algorithmic details are in §14.
 
@@ -777,6 +983,45 @@ Blue defines two related identities.
 4. compute the Node BlueId of the Canonical Identity Input (§14).
 
 All conforming implementations MUST produce the same Content BlueId for equivalent Source Documents under the same declared Language release and canonical registry bindings when every demanded reference resolves to the same verified node. Provider location, cache contents, lookup order, and other ambient provider state are not identity inputs.
+
+Node BlueId and Content BlueId use the same BlueId v1 syntax and hash algorithm. They are distinguished by how the hashed input was obtained:
+
+```text
+exact valid node
+   -> Node BlueId algorithm
+   -> Node BlueId
+
+Source Document
+   -> preprocess
+   -> complete resolution
+   -> canonicalization
+   -> Canonical Identity Input
+   -> Node BlueId algorithm
+   -> Content BlueId
+```
+
+Content BlueId is therefore not a second hash format. It is the Node BlueId of one specially derived exact node.
+
+### 7.2.1 Intermediate forms and direct hashing (normative)
+
+The following forms may all participate in describing the same semantic content:
+
+```text
+Source Document
+Preprocessed Document
+Resolved Form
+Minimized Overlay
+Canonical Identity Input
+```
+
+They are not interchangeable as direct BlueId inputs.
+
+- A Source Document may contain `blue`, aliases, or Source-only controls and therefore may not be valid direct BlueId Input.
+- A Resolved Form may contain inherited materialized content that canonicalization will omit as derivable.
+- A Minimized Overlay is Source form and may contain `$previous`, `$pos`, `$replace`, or optional collapse choices.
+- A Canonical Identity Input is the unique exact node whose direct Node BlueId is the Source Document's Content BlueId.
+
+A conforming implementation MUST NOT directly hash a Source Document, Resolved Form, or Minimized Overlay and label that direct result the Content BlueId unless the form has first been proven identical to the Canonical Identity Input.
 
 ### 7.3 Identity preservation across forms (normative)
 
@@ -1021,16 +1266,16 @@ This is valid only if the merged result still satisfies all overlay obligations,
 
 If the overlay forces `x = 1` but `Some` forces `x = 2`, resolution MUST fail.
 
-### 8.7 Extension versus expansion (normative distinction)
+### 8.7 Specialization versus expansion (normative distinction)
 
 **Expansion** materializes a verified reference to an existing node. It reveals more of the same exact node and MUST preserve Node BlueId.
 
-**Extension** is the authoring act of creating a new node whose `type` points to another node and whose overlay adds compatible meaning. Extension is governed by the fixed-value, subtype, merge, and schema rules in this section. An extended node is not the node it extends and normally has a different BlueId.
+**Specialization** is the authoring act of creating a new node whose `type` points to another node and whose overlay adds compatible, more specific meaning. Specialization is governed by the fixed-value, subtype, merge, and schema rules in this section. A specialized node is not the node it specializes and normally has a different BlueId.
 
 Example:
 
 ```yaml
-# Existing type
+# Existing node used as a type
 name: Price
 amount:
   type: Integer
@@ -1039,14 +1284,16 @@ currency:
 ```
 
 ```yaml
-# New, more specific node
+# New specialization
 name: PLN Price
 type:
   blueId: <Price>
 currency: PLN
 ```
 
-Expanding `<Price>` reveals the existing `Price` node. Creating `PLN Price` extends it. Implementations and documentation MUST NOT use these terms interchangeably.
+Expanding `<Price>` reveals the existing `Price` node. Creating `PLN Price` specializes `Price` and creates a new node. Implementations and documentation MUST NOT use these terms interchangeably.
+
+The word **extension** remains appropriate for unrelated concepts such as implementation extensions or separately specified preprocessing extensions. In this specification, the formal type-and-overlay concept is **specialization**.
 
 ---
 
@@ -1916,19 +2163,54 @@ The current BlueId algorithm requires a complete direct manifest to verify an or
 
 ### 13.1 Distinction (normative)
 
-Blue defines two operations that may both reduce explicit content but serve different purposes.
+Blue defines two operations that may both remove explicit content but serve different purposes.
 
-**Minimization** takes a complete Resolved Form and produces a smaller Source overlay that resolves back to the same complete Resolved Form. Resolution and minimization are semantic counterparts, but minimization is not necessarily unique.
+**Minimization** takes a complete Resolved Form and produces a smaller Source overlay that resolves back to the same complete Resolved Form. Resolution and minimization are semantic counterparts. A minimizer may choose among several valid Source encodings, so minimization is not necessarily unique.
 
-**Canonicalization** derives the one deterministic BlueId Input used to compute Content BlueId. Canonicalization is an identity operation, not an authoring preference.
+**Canonicalization** derives the one deterministic BlueId Input used to compute Content BlueId. Canonicalization is an identity operation, not an authoring preference and not necessarily the smallest serialized form.
 
-A runtime processor does not need to minimize a whole document after every read or patch. It may preserve unchanged nodes by BlueId and use ordinary collapse. Whole-node minimization is needed only when a reduced Source overlay is requested.
+The distinction is:
+
+| Question | Canonicalization | Minimization |
+|---|---|---|
+| Purpose | Produce identity input | Produce convenient Source form |
+| Input | Complete Resolved Form | Complete Resolved Form |
+| Output | Canonical Identity Input | Minimized Overlay |
+| Unique | Yes | Not necessarily |
+| Valid direct BlueId Input | Yes | Not necessarily |
+| May contain `$previous`, `$pos`, `$replace` | No | Yes, when valid Source controls |
+| Used in Content BlueId calculation | Yes | No |
+| Must re-resolve as ordinary Source | No | Yes |
+
+The Content BlueId path is:
+
+```text
+complete Resolved Form
+   -> canonicalize
+   -> Canonical Identity Input
+   -> Node BlueId algorithm
+   -> Content BlueId
+```
+
+The optional authoring path is:
+
+```text
+complete Resolved Form
+   -> minimize
+   -> Minimized Overlay
+   -> when processed again: preprocess -> resolve -> canonicalize -> hash
+   -> same Content BlueId
+```
+
+**Minimization is not a step in Content BlueId calculation.** A runtime processor does not need to minimize a whole document after every read or patch. It may preserve unchanged nodes by BlueId and use ordinary collapse. Whole-node minimization is needed only when a reduced Source overlay is requested.
 
 ### 13.2 Canonical Identity Input (normative)
 
 A **Canonical Identity Input** is the deterministic identity form derived from a complete Resolved Form. It contains the deterministic identity-bearing content needed for BlueId calculation. It may contain final canonical payloads, including final list payloads, that are not ordinary Source overlays. A Canonical Identity Input MUST be valid BlueId Input. It is not required to be accepted as a Source Document or to re-resolve under ordinary Source overlay semantics.
 
 The Content BlueId of a Source Document is the Node BlueId of its Canonical Identity Input.
+
+**Blue semantic canonicalization** in this section derives the Canonical Identity Input. **RFC 8785 canonical JSON serialization** is a later byte-serialization rule used inside the Node BlueId algorithm (§14.1). They are distinct operations: semantic canonicalization decides *what exact Blue node is hashed*; RFC 8785 decides *how helper values are serialized deterministically while hashing it*.
 
 A Canonical Identity Input is unique for a given complete Resolved Form under the selected Blue Language release and canonical registry bindings. The provider may be needed to obtain verified referenced nodes, but its cache, location, response order, availability history, and other ambient state do not participate in canonical identity.
 
@@ -1941,6 +2223,47 @@ A conforming implementation MUST implement canonicalization. A conforming implem
 Different minimizers MAY produce different valid Minimized Overlays. Such overlays MAY have different direct Node BlueIds, but when processed through the full identity pipeline they MUST produce the same Content BlueId.
 
 A Minimized Overlay MAY use authoring controls such as `$previous`, `$pos`, and `$replace` when valid, and MAY collapse complete subtrees to verified pure references under §13.7.
+
+### 13.3.1 Why list minimization and canonicalization differ (informative)
+
+Assume an inherited append-only list contributes:
+
+```yaml
+items:
+  - A
+  - B
+```
+
+and the specialized Source adds `C`. The complete Resolved Form contains:
+
+```yaml
+items:
+  - A
+  - B
+  - C
+```
+
+A useful Minimized Overlay may retain only the relationship to the inherited prefix and the new item:
+
+```yaml
+items:
+  - $previous:
+      blueId: <BlueId-of-the-inherited-[A,B]-list>
+  - C
+```
+
+That is compact Source syntax. It is not the canonical identity form.
+
+The Canonical Identity Input MUST contain the final list payload and no overlay controls:
+
+```yaml
+items:
+  - A
+  - B
+  - C
+```
+
+Similarly, a positional Minimized Overlay may use `$pos` to describe only a changed inherited position, while canonicalization applies the overlay and writes the final ordinary list payload. This is why the correct identity pipeline is `resolve -> canonicalize -> BlueId`, not `resolve -> minimize -> BlueId`.
 
 ### 13.4 Canonicalization requirements (normative)
 
@@ -2573,6 +2896,32 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **R45.** A demand-limited exact-node-identity request returns the same Node BlueId for inline, collapsed, and partially expanded forms.
 - **R46.** A pure reference used as `schema` or `contracts` is semantically equivalent to its verified materialization; operations expand it only when its contents are demanded.
 - **R47.** A source pure reference used for `schema` or `contracts`, when materialized only for resolution or validation, is preserved as the source pure reference by canonicalization unless a non-derivable instance overlay must be represented.
+- **R48.** Omitting `blue` still applies the complete mandatory baseline preprocessing algorithm.
+- **R49.** An empty inline `blue` directive and an omitted directive produce the same Preprocessed Document.
+- **R50.** An inline preprocessing directive and a pure reference to that exact directive produce the same Preprocessed Document.
+- **R51.** A referenced directive, imports object, transformations list, or transformation item is used only after exact provider verification; invalid evidence fails.
+- **R52.** Declared transformations execute exactly once each in declared list order, and each transformation receives the prior transformation's complete output.
+- **R53.** Transformations execute before automatic alias substitution and primitive inference; mandatory baseline preprocessing normalizes transformation output afterward.
+- **R54.** When one directive contains both `imports` and `transformations`, the import map is established before execution, transformations execute first, and remaining aliases are substituted afterward.
+- **R55.** `blue.imports` substitutes aliases only in `type`, `itemType`, `keyType`, and `valueType` positions; identical ordinary Text values remain data.
+- **R56.** A transformation item may be inline or a verified pure reference without changing the preprocessing result.
+- **R57.** `imports` and `transformations` may themselves be verified reference-backed exact nodes.
+- **R58.** An unsupported required transformation causes deterministic `UnsupportedPreprocessingTransform` failure and is never ignored.
+- **R59.** A transformation that introduces `blue` at any path fails preprocessing.
+- **R60.** A string-valued directive alias resolves to one exact directive BlueId under the declared preprocessing environment; an unbound alias fails.
+- **R61.** A built-in alias may be repeated only with its canonical BlueId; rebinding it to a different BlueId fails.
+- **R62.** `blue` is valid only at the Source Document root; nested directives fail.
+- **R63.** Preprocessing is idempotent for an already valid Preprocessed Document.
+- **R64.** An unused import does not change the Preprocessed Document or Content BlueId.
+- **R65.** Blue Language 1.0 defines no `blue.profile` wrapper; reusable directives use `blue: { blueId: X }` directly.
+- **R66.** The portable transformation list is declared by `blue.transformations`; a legacy `blue.items` list-payload directive is invalid.
+- **R67.** A portable transformation's type must be exact and cannot depend on Source-document import alias substitution.
+- **R68.** Expansion of a verified existing node preserves that node's Node BlueId, while specialization through `type` and compatible overlay content creates a new node and normally a different Node BlueId.
+- **R69.** The Content BlueId pipeline is `preprocess -> complete resolve -> canonicalize -> Node BlueId`; minimization is not a step in that pipeline.
+- **R70.** A Source Document's Content BlueId is exactly the Node BlueId of its unique Canonical Identity Input.
+- **R71.** Directly hashing a Source Document, noncanonical Resolved Form, or Minimized Overlay MUST NOT be assumed to produce Content BlueId.
+- **R72.** For an inherited append-only list, canonicalization produces the final ordinary list payload, while minimization may use a valid `$previous` overlay; both reach the same Content BlueId only through the complete identity pipeline.
+- **R73.** For an inherited positional list, canonicalization produces the final ordinary list payload, while minimization may use `$pos` or `$replace`; both reach the same Content BlueId only through the complete identity pipeline.
 
 ### 16.3 Provider, expansion, and collapse vectors
 
@@ -2603,12 +2952,12 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 
 The Blue Language 1.0 conformance suite MUST publish machine-readable fixtures with exact expected BlueIds.
 
-The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. The fixture package included with this freeze candidate contains 125 machine-readable fixtures and a complete vector-to-fixture coverage map.
+The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. The fixture package included with this final implementation baseline contains 153 machine-readable fixtures and a complete vector-to-fixture coverage map.
 
 Its fixture-package identity is:
 
 ```text
-sha256:267145c335c26e5a27121c31986ff53cc630a2ce1755aad97c376ef234560dd5
+sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55
 ```
 
 The canonical core-registry package identity bound by this fixture package is:
@@ -2670,6 +3019,17 @@ The fixture suite MUST cover:
 - root null rejection;
 - plain BlueId validation;
 - portable `blue.imports` alias resolution;
+- mandatory baseline preprocessing when `blue` is absent;
+- inline and pure-reference preprocessing-directive equivalence;
+- reference-backed `imports`, `transformations`, and transformation items;
+- exact provider verification for preprocessing resources;
+- ordered, exactly-once transformation execution;
+- transformations-before-baseline ordering when imports and transformations coexist;
+- baseline normalization of transformation-produced aliases and primitive values;
+- string directive aliases bound to exact directive BlueIds;
+- rejection of unbound aliases, unsupported transformation types, nested `blue`, `blue.profile`, and legacy `blue.items`;
+- built-in alias collision rules and import substitution only in type-bearing positions;
+- preprocessing idempotence and unused-import neutrality;
 - portable YAML rejection of anchors, aliases, merge keys, custom tags, YAML-only types, and implicit timestamp typing;
 - YAML multiline block scalar identity;
 - schema keyword value-shape validation;
@@ -2773,21 +3133,49 @@ spent:
 # => Content BlueId: 3JTd8s...
 ```
 
-Expanding the demanded type links makes the required nodes available. Resolving them produces the same semantic values as complete resolution. Complete resolution followed by canonicalization produces a Canonical Identity Input whose Node BlueId is the Content BlueId of the instance.
+Expanding the demanded type links makes the existing type nodes available without changing their Node BlueIds. The instance itself is a specialization: it uses `Person` as its type and supplies more specific content, so it is a new node. Resolving produces the complete semantic values. Complete resolution followed by canonicalization produces a Canonical Identity Input whose Node BlueId is the Content BlueId of the instance.
 
 ### 17.2 `blue` directive (informative)
+
+A document may declare imports and ordered transformations inline:
 
 ```yaml
 blue:
   imports:
-    Person:
-      blueId: GRwTYs...
-name: Alice
-type: Person
-age: 25
+    Ticket:
+      blueId: <TicketTypeBlueId>
+    DateTime:
+      blueId: <DateTimeTypeBlueId>
+  transformations:
+    - type:
+        blueId: <RenameFieldsTransformationTypeBlueId>
+      mappings:
+        Ticket Serial No.: ticketSerial
+        Departure: departure
+    - type:
+        blueId: <ParseDateTimeTransformationTypeBlueId>
+      path: /departure
+      pattern: yyyy-MM-dd HH:mm
+
+type: Ticket
+Ticket Serial No.: HL-923554
+Departure: 2025-03-27 15:25
 ```
 
-Preprocessing replaces `Person` with its BlueId reference, infers primitive scalar types, and removes `blue` before hashing.
+The processor first resolves and verifies the directive, imports, and transformation nodes. It removes `blue`, applies the rename transformation, then applies the DateTime transformation. Only after both transformations finish does mandatory baseline preprocessing replace `Ticket` and `DateTime` aliases, normalize wrappers and placeholders, and infer types for bare primitive values.
+
+The same complete directive can be stored as an exact Blue node and collapsed in the Source Document:
+
+```yaml
+blue:
+  blueId: <TicketDirectiveBlueId>
+
+type: Ticket
+Ticket Serial No.: HL-923554
+Departure: 2025-03-27 15:25
+```
+
+When the referenced directive verifies to the inline directive above, both Source Documents preprocess identically. Blue Language 1.0 defines no separate `blue.profile` wrapper.
 
 ### 17.3 Large integer (informative)
 
@@ -2919,18 +3307,36 @@ spent:
 
 Node BlueId is unchanged if the hydrated content verifies to the referenced BlueIds.
 
-### 17.9 Canonicalization (informative)
+### 17.9 Canonicalization and minimization (informative)
 
-From a complete Resolved Form with the type content required for canonicalization, canonicalization:
+From a complete Resolved Form with the type content required for identity, canonicalization:
 
-- collapses type objects to `{ blueId: ... }` when available;
-- removes structure derivable from the type chain;
-- consumes `$pos` overlays;
+- represents type objects by exact references where required;
+- removes structure fully derivable from the type chain;
+- consumes `$pos`, `$replace`, and `$previous` controls;
 - normalizes list placeholders to `$empty: true`;
-- keeps instance contributions;
-- produces valid BlueId Input.
+- keeps non-derivable instance contributions;
+- produces one valid BlueId Input.
 
-The Canonical Identity Input yields the Content BlueId. A Minimized Overlay, when produced, re-resolves to the same Resolved Form through ordinary Source overlay semantics.
+Consider an inherited append-only list `[A, B]` with `C` appended. A Minimized Overlay may say only:
+
+```yaml
+items:
+  - $previous:
+      blueId: <BlueId-of-[A,B]>
+  - C
+```
+
+The Canonical Identity Input contains the final payload:
+
+```yaml
+items:
+  - A
+  - B
+  - C
+```
+
+The first is convenient authoring compression. The second is the unique identity input. The Content BlueId is calculated from the second. The minimized form reaches the same Content BlueId only after it is processed through preprocessing, complete resolution, canonicalization, and the Node BlueId algorithm again.
 
 ### 17.10 Contracts merge as content (informative)
 
@@ -3166,7 +3572,19 @@ A semantic graph lookup must treat `{ blueId: X }` as node `X`, not as an applic
 
 Cache hits, provider pages, network bytes, batching, and host allocations are not Blue content. They must not change a Language operation's established, absent, incomplete, or invalid outcome.
 
-### C.11 Do not require transitive expansion to verify a direct node
+### C.11 Do not confuse expansion with specialization
+
+Expansion reveals more of an existing exact node and preserves its Node BlueId. Specialization creates a new node through `type` and compatible overlay content and normally creates a new BlueId.
+
+### C.12 Do not minimize before hashing
+
+Minimization is optional authoring compression. Content BlueId is calculated by complete resolution, canonicalization, and the Node BlueId algorithm. Directly hashing a Minimized Overlay does not establish its Content BlueId.
+
+### C.13 Do not confuse semantic canonicalization with JSON serialization
+
+Blue semantic canonicalization derives the Canonical Identity Input. RFC 8785 canonical JSON is used later inside the BlueId algorithm. JSON key sorting alone is not Blue semantic canonicalization.
+
+### C.14 Do not require transitive expansion to verify a direct node
 
 The existing map and list BlueId algorithms verify one direct node from direct child identities. Fetching all descendants is unnecessary.
 

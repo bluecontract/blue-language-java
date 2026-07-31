@@ -7,6 +7,7 @@ import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.ChannelEventCheckpoint;
+import blue.language.processor.model.CheckpointEntry;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.HandlerContract;
@@ -219,12 +220,17 @@ final class ContractLoader {
                         "declaredDependencies"));
         if (includeProcessEmbedded) {
             /*
-             * Contracts 1.0 fixes Process Embedded at the reserved raw key.
-             * Looking up that key avoids an unmetered speculative scan of
-             * unrelated Phase-B headers.
+             * Process Embedded is a contract type, not a raw-key convention.
+             * Restrict the scan to the selected/effective same-scope contract
+             * maps, then retain only declarations whose effective header is
+             * Process Embedded. LinkedHashMap encounter order makes the scan
+             * deterministic without broadening Phase-B classification to
+             * unrelated contract bodies.
              */
-            retainedKeys.add(
-                    ProcessorContractConstants.KEY_EMBEDDED);
+            collectProcessEmbeddedKeys(
+                    selectedScopeNode, retainedKeys);
+            collectProcessEmbeddedKeys(
+                    effectiveScopeNode, retainedKeys);
         }
         Node selectedScope = filterScopeContracts(
                 selectedScopeNode, retainedKeys);
@@ -271,6 +277,7 @@ final class ContractLoader {
         if (selectedContracts != null) {
             selectedScope.contracts(selectedContracts.toNode());
         }
+        MaterializationProvenance.clear(selectedScope);
         return selectedScope;
     }
 
@@ -305,10 +312,12 @@ final class ContractLoader {
         }
         FrozenNode contracts = property(scopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null) {
+            MaterializationProvenance.clear(filtered);
             return filtered;
         }
         if (contracts.getProperties() == null) {
             filtered.contracts(contracts.toNode());
+            MaterializationProvenance.clear(filtered);
             return filtered;
         }
         Node retained = new Node();
@@ -325,6 +334,7 @@ final class ContractLoader {
                 && !retained.getProperties().isEmpty()) {
             filtered.contracts(retained);
         }
+        MaterializationProvenance.clear(filtered);
         return filtered;
     }
 
@@ -550,9 +560,11 @@ final class ContractLoader {
     }
 
     /**
-     * Rejects an unsupported direct contract header before resolving the
-     * surrounding scope. This preserves must-understand precedence when the
-     * unknown type's provider content is intentionally unavailable.
+     * Rejects an explicitly unsupported direct contract header before
+     * resolving the surrounding scope. A direct overlay may legally omit its
+     * type and inherit the effective contract type; the effective build below
+     * remains responsible for rejecting a contract for which no resulting
+     * type exists.
      *
      * <p>Reference-only contract entries are deferred to ordinary effective
      * resolution because their header is not directly present.</p>
@@ -593,9 +605,7 @@ final class ContractLoader {
         }
         String typeBlueId = typeBlueId(contractNode);
         if (typeBlueId == null) {
-            throw new MustUnderstandFailureException(
-                    "Contract '" + key + "' must declare a type",
-                    ProcessorErrorCategory.UnsupportedRuntimeType);
+            return;
         }
         Class<?> contractClass = typeResolver.resolveClass(typeBlueId);
         if (contractClass == null
@@ -1382,11 +1392,51 @@ final class ContractLoader {
                     throw new IllegalStateException("Duplicate Channel Event Checkpoint markers detected in same contracts map");
                 }
                 checkpointDeclared = true;
+                restoreExactCheckpointSubjects(
+                        (ChannelEventCheckpoint) marker,
+                        selectedNode);
             }
             markers.put(key, marker);
             markerNodes.put(key, node);
         }
         return new RuntimeMarkers(markers, markerNodes, checkpointDeclared);
+    }
+
+    /**
+     * Restores checkpoint subjects from the selected/direct lane after the
+     * marker header and domain data have been converted from the effective
+     * lane.
+     *
+     * <p>Resolution may add inherited type fields and schemas to an inline
+     * subject. Those fields are useful in the effective view but are not part
+     * of the exact subject whose BlueId defines checkpoint newness.</p>
+     */
+    private void restoreExactCheckpointSubjects(
+            ChannelEventCheckpoint checkpoint,
+            Node selectedCheckpoint) {
+        Node selectedEntries = selectedCheckpoint != null
+                && selectedCheckpoint.getProperties() != null
+                ? selectedCheckpoint.getProperties().get(
+                ProcessorContractConstants.KEY_ENTRIES)
+                : null;
+        if (selectedEntries == null
+                || selectedEntries.getProperties() == null) {
+            return;
+        }
+        for (Map.Entry<String, Node> selectedEntry
+                : selectedEntries.getProperties().entrySet()) {
+            CheckpointEntry checkpointEntry = checkpoint.entry(
+                    selectedEntry.getKey());
+            Node entryNode = selectedEntry.getValue();
+            Node exactSubject = entryNode != null
+                    && entryNode.getProperties() != null
+                    ? entryNode.getProperties().get(
+                    ProcessorContractConstants.KEY_SUBJECT)
+                    : null;
+            if (checkpointEntry != null && exactSubject != null) {
+                checkpointEntry.subject(exactSubject);
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")

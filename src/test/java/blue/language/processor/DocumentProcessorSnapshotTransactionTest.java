@@ -6,6 +6,8 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -194,7 +196,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "  currency: EUR\n", Node.class));
         document.contracts(new Node().properties("generalization",
                 new Node()
-                        .type(new Node().blueId("8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz"))
+                        .type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
                         .properties("rules", new Node().items(java.util.Collections.singletonList(
                                 new Node().properties("path", new Node().value("/price"),
                                         "mode", new Node().value("nearest-valid-ancestor"),
@@ -591,11 +593,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 7\n", Node.class);
 
@@ -637,15 +639,15 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  initialized:\n" +
                 "    type:\n" +
-                "      blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER + "\n" +
                 "    document: doc-1\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 9\n", Node.class);
         FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(initialized);
@@ -678,11 +680,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 7\n", Node.class);
         DocumentProcessor nodeProcessor =
@@ -806,11 +808,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    path: /balance\n" +
                 "    propertyKey: cents\n" +
                 "    propertyValue: 0\n", Node.class);
@@ -838,11 +840,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 42\n");
         Blue blue = ProcessorTestSupport.blue(
@@ -890,11 +892,11 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 42\n");
         Blue blue = ProcessorTestSupport.blue(
@@ -913,10 +915,10 @@ class DocumentProcessorSnapshotTransactionTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n", Node.class);
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n", Node.class);
 
         // when
         DocumentProcessingResult initialized = blue.initializeDocument(document);

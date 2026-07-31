@@ -42,6 +42,9 @@ import java.util.function.Supplier;
  */
 public final class DocumentProcessingRuntime {
 
+    private static final String DIRECT_WRITE_ANCESTOR_PURPOSE =
+            "Direct-write ancestor";
+
     private final MaterializedDocumentView materializedView;
     private final EmissionRegistry emissionRegistry;
     private final GasMeter gasMeter;
@@ -1358,6 +1361,7 @@ public final class DocumentProcessingRuntime {
         }
         ProcessingSnapshotManager manager = currentSnapshotManager();
         Node recognitionScope = null;
+        FrozenNode refreshedEffectiveScope = null;
         for (String key : selectedScope.getContracts().getProperties().keySet()) {
             FrozenNode effectiveContract = resolvedScope.getContracts().property(key);
             if (effectiveContract == null || !effectiveContract.isReferenceOnly()) {
@@ -1368,7 +1372,40 @@ public final class DocumentProcessingRuntime {
                         "Contract Recognition Resolution requires provider content for contract '"
                                 + key + "' at scope without a ProcessingSnapshotManager");
             }
-            FrozenNode materialized = manager.materializeVerifiedReference(effectiveContract);
+            FrozenNode materialized =
+                    manager.materializeVerifiedReference(
+                            effectiveContract);
+            if (materialized.getType() == null) {
+                /*
+                 * A preserved canonical contract reference can point at a
+                 * direct typeless overlay. Materializing that reference alone
+                 * drops the type and constraints inherited from the selected
+                 * scope's type. Refresh the current selected scope once and
+                 * use its effective contract instead. Ordinary typed
+                 * references retain the prior path-local materialization.
+                 */
+                if (refreshedEffectiveScope == null) {
+                    refreshedEffectiveScope =
+                            resolveCanonicalTransient(
+                                    manager,
+                                    selectedScope,
+                                    Collections.singleton(
+                                            JsonPointer.ROOT),
+                                    executableBodyFieldsByType)
+                                    .frozenResolvedRoot();
+                }
+                FrozenNode refreshedContract =
+                        refreshedEffectiveScope.getContracts() != null
+                                ? refreshedEffectiveScope
+                                .getContracts()
+                                .property(key)
+                                : null;
+                if (refreshedContract != null
+                        && !refreshedContract.isReferenceOnly()) {
+                    materialized =
+                            refreshedContract;
+                }
+            }
             if (recognitionScope == null) {
                 recognitionScope = resolvedScope.toNode();
             }
@@ -1665,7 +1702,8 @@ public final class DocumentProcessingRuntime {
                 PointerUtils.normalizePointer(path),
                 value == null ? JsonPatch.Op.REMOVE : JsonPatch.Op.REPLACE,
                 value,
-                null);
+                null,
+                false);
         if (usesAuthoritativeSelectedSnapshot()) {
             directWriteSelected(path, value);
             changedPaths.add(PointerUtils.normalizePointer(path));
@@ -1706,12 +1744,15 @@ public final class DocumentProcessingRuntime {
         Node selectedRollback = materializedView.copyRoot();
         ResolvedSnapshot snapshotRollback = snapshot;
         try {
-            Node before = ImmutablePatchPlanner.readNode(selectedRollback, path);
+            Node tentativeSelected = selectedRollback.clone();
+            materializeDirectWriteReferenceAncestors(
+                    tentativeSelected, path);
+            Node before = ImmutablePatchPlanner.readNode(
+                    tentativeSelected, path);
             JsonPatch patch = directWritePatch(path, before, value);
             if (patch == null) {
                 return;
             }
-            Node tentativeSelected = selectedRollback.clone();
             applyMaterializedDirectWrite(tentativeSelected, path, value);
             ResolvedSnapshot authoritative = snapshotFromDocument(tentativeSelected);
             boolean published =
@@ -1727,6 +1768,44 @@ public final class DocumentProcessingRuntime {
             snapshot = snapshotRollback;
             materializedViewStale = false;
             throw ex;
+        }
+    }
+
+    /**
+     * Opens every proper reference ancestor of a processor-owned write through
+     * the invocation's verified exact-materialization boundary.
+     *
+     * <p>Writing below a pure reference without opening it would create a
+     * forbidden mixed {@code blueId + payload} Source node. Exact
+     * materialization also makes the pre-write value visible so add, replace,
+     * remove, and no-op classification remain correct.</p>
+     */
+    private void materializeDirectWriteReferenceAncestors(
+            Node root,
+            String path) {
+        List<String> segments = JsonPointer.split(path);
+        ProcessingSnapshotManager manager = currentSnapshotManager();
+        for (int depth = 0; depth < segments.size(); depth++) {
+            String prefix = JsonPointer.toPointer(
+                    segments.subList(0, depth));
+            Node ancestor = NodePathEditor.getOrNull(root, prefix);
+            if (ancestor == null) {
+                return;
+            }
+            if (!ancestor.isReferenceOnly()) {
+                continue;
+            }
+            if (manager == null) {
+                throw new IllegalStateException(
+                        "Direct-write ancestor materialization requires the active "
+                                + "ProcessingSnapshotManager");
+            }
+            Node exact = verifiedExactMaterialization(
+                    manager,
+                    FrozenNode.fromNode(ancestor),
+                    DIRECT_WRITE_ANCESTOR_PURPOSE)
+                    .toNode();
+            NodePathEditor.put(root, prefix, exact);
         }
     }
 
@@ -2041,7 +2120,8 @@ public final class DocumentProcessingRuntime {
                     PointerUtils.normalizePointer(patch.authoredPath()),
                     patch.op(),
                     patch.mutableValue(),
-                    patch.frozenValue());
+                    patch.frozenValue(),
+                    patch.exactValue() != null);
         }
     }
 
@@ -2108,17 +2188,20 @@ public final class DocumentProcessingRuntime {
     private void chargeSemanticIdentityWork(String path,
                                             JsonPatch.Op operation,
                                             Node mutableValue,
-                                            FrozenNode frozenValue) {
+                                            FrozenNode frozenValue,
+                                            boolean valueAlreadyAdmitted) {
         SemanticGasMeter semantic = gasMeter.semantic();
         GasChargeContext context = GasChargeContext.of(
                 null, null, path, "identity-rebuild");
-        if (mutableValue != null) {
+        if (!valueAlreadyAdmitted
+                && mutableValue != null) {
             chargeMutableIdentitySubtree(
                     mutableValue,
                     semantic,
                     context,
                     new IdentityHashMap<Node, Boolean>());
-        } else if (frozenValue != null) {
+        } else if (!valueAlreadyAdmitted
+                && frozenValue != null) {
             chargeFrozenIdentitySubtree(
                     frozenValue,
                     semantic,

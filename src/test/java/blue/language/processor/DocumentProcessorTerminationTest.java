@@ -5,6 +5,8 @@ import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,11 +39,11 @@ class DocumentProcessorTerminationTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  terminate:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "    mode: graceful\n" +
                 "    emitAfter: true\n" +
                 "    patchAfter: true\n");
@@ -82,11 +84,11 @@ class DocumentProcessorTerminationTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  terminate:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "    mode: fatal\n" +
                 "    reason: panic\n");
 
@@ -117,26 +119,26 @@ class DocumentProcessorTerminationTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    terminate:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "      mode: graceful\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  childBridge:\n" +
                 "    type:\n" +
-                "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
+                "      blueId: " + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n" +
                 "    sourcePath: /child\n" +
                 "  captureChild:\n" +
                 "    channel: childBridge\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /fromChild\n" +
                 "    propertyValue: 7\n");
 

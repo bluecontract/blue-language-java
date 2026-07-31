@@ -313,3 +313,92 @@
   fixtures:
   - R_reference_backed_schema
   - R_reference_backed_contracts
+- id: R48
+  fixtures:
+  - R_blue_absent_applies_baseline
+- id: R49
+  fixtures:
+  - R_blue_empty_directive_equals_absent
+- id: R50
+  fixtures:
+  - R_blue_reference_directive_equivalent
+- id: R51
+  fixtures:
+  - R_blue_reference_invalid_evidence
+  - R_blue_reference_backed_components
+  - R_blue_transformation_instance_reference
+- id: R52
+  fixtures:
+  - R_blue_transformations_declared_order
+  - R_blue_transformations_reverse_order
+- id: R53
+  fixtures:
+  - R_blue_inline_imports_and_transformations
+- id: R54
+  fixtures:
+  - R_blue_inline_imports_and_transformations
+- id: R55
+  fixtures:
+  - R_blue_imports_only_type_positions
+- id: R56
+  fixtures:
+  - R_blue_transformation_instance_reference
+- id: R57
+  fixtures:
+  - R_blue_reference_backed_components
+- id: R58
+  fixtures:
+  - R_blue_unsupported_transformation
+- id: R59
+  fixtures:
+  - R_blue_transform_introduces_blue_rejected
+- id: R60
+  fixtures:
+  - R_blue_string_alias_resolves_exact_directive
+  - R_blue_unbound_string_alias_rejected
+- id: R61
+  fixtures:
+  - R_blue_builtin_alias_same_allowed
+  - R_blue_builtin_alias_override_rejected
+- id: R62
+  fixtures:
+  - R_blue_nested_directive_rejected
+- id: R63
+  fixtures:
+  - R_blue_preprocessing_idempotent
+- id: R64
+  fixtures:
+  - R_blue_unused_import_no_effect
+- id: R65
+  fixtures:
+  - R_blue_profile_field_rejected
+  - R_blue_reference_directive_equivalent
+- id: R66
+  fixtures:
+  - R_blue_legacy_items_field_rejected
+- id: R67
+  fixtures:
+  - R_blue_transformation_type_alias_rejected
+- id: R68
+  fixtures:
+  - R_specialization_creates_new_node
+  - F_expand_preserves_node_blueid
+- id: R69
+  fixtures:
+  - R_content_blueid_is_canonical_node_blueid
+  - R_minimized_overlay_round_trip
+- id: R70
+  fixtures:
+  - R_content_blueid_is_canonical_node_blueid
+- id: R71
+  fixtures:
+  - R_resolved_form_not_direct_content_id
+  - R_minimized_overlay_round_trip
+- id: R72
+  fixtures:
+  - R_append_canonicalization_final_payload_three_items
+  - R_append_minimized_previous_round_trip
+- id: R73
+  fixtures:
+  - R_positional_canonical_final_payload
+  - R_positional_minimized_round_trip

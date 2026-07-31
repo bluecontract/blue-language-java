@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.processor.registry.RuntimeBlueIds;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -46,6 +48,9 @@ public class Properties {
     public static final String OBJECT_BLUE = "blue";
     /** Portable-import map nested under the root {@link #OBJECT_BLUE} directive. */
     public static final String BLUE_DIRECTIVE_IMPORTS = "imports";
+    /** Ordered transformation list nested under the root {@link #OBJECT_BLUE} directive. */
+    public static final String BLUE_DIRECTIVE_TRANSFORMATIONS =
+            "transformations";
     /** Rejected legacy wrapper that exposed the internal object-property map. */
     public static final String LEGACY_OBJECT_PROPERTIES = "properties";
     /** Rejected pre-1.0 constraints wrapper. */
@@ -161,33 +166,33 @@ public class Properties {
      * exposed compatibility list must be treated as read-only.
      */
     public static final List<String> BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_IDS = Arrays.asList(
-            "CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR",
-            "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR",
-            "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY",
-            "4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4",
-            "3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv",
-            "Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C",
-            "xaVhnN73YeTiJ1vaLGwndpYQE2RsbckfvzihLQsp2Yi",
-            "7HZ6UDNxDdGdvhowi92mwB4EAqKfeynpJEFUFVvjmTJ2",
-            "4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An",
-            "58trfDqLwD1F8JiPg86korUKEjgH1NXxgHSMjeLFRSFC",
-            "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN",
-            "4wXKQivSASbs6PLnR562Q2XcT52x1bBViGk7cxhQ3swq",
-            "5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX",
-            "2Ag2NfcWpCfPqBAR7bFAEL9L3roX3UWGUkDq7nN3D4gV",
-            "5UihWoxkyiUbv9TZk7HcHsa82sz2R3ex1WifQQpKtHpP",
-            "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo",
-            "8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD",
-            "D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr",
-            "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB",
-            "4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v",
-            "2fQHvWpJRfkPW9rqcqZKdcEKx4586LDkYR2bWTPRDZEo",
-            "EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2",
-            "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt",
-            "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw",
-            "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf",
-            "8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz",
-            "5BwjjfvodMVCfD2cKChbUMmjEBd83vv5kbEQwAFHcSnv"
+            RuntimeBlueIds.CHANNEL,
+            RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT,
+            RuntimeBlueIds.CHECKPOINT_ENTRY,
+            RuntimeBlueIds.CONTRACT,
+            RuntimeBlueIds.CONTRACT_EXECUTION_RESULT,
+            RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
+            RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
+            RuntimeBlueIds.DOCUMENT_UPDATE,
+            RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL,
+            RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY,
+            RuntimeBlueIds.EMBEDDED_NODE_CHANNEL,
+            RuntimeBlueIds.EXTERNAL_CHANNEL,
+            RuntimeBlueIds.FIXTURE_EVENT,
+            RuntimeBlueIds.HANDLER,
+            RuntimeBlueIds.JSON_PATCH_ENTRY,
+            RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL,
+            RuntimeBlueIds.MARKER,
+            RuntimeBlueIds.PROCESS_EMBEDDED,
+            RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
+            RuntimeBlueIds.PROCESSING_TERMINATED_MARKER,
+            RuntimeBlueIds.RUNTIME_COUNTER_ENTRY,
+            RuntimeBlueIds.RUNTIME_LEDGER,
+            RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL,
+            RuntimeBlueIds.SCRIPTED_HANDLER,
+            RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL,
+            RuntimeBlueIds.TYPE_GENERALIZATION_POLICY,
+            RuntimeBlueIds.TYPE_GENERALIZATION_RULE
     );
 
     /** Released mutable compatibility lookup maps; callers must treat them as read-only. */

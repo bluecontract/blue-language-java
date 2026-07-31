@@ -65,7 +65,7 @@ language operations such as `resolve` do not themselves run contracts, and
 ```text
 authored YAML/JSON
     -> raw parse (`parseSource*`)
-    -> preprocessing (`blue` directive, aliases, Default Blue)
+    -> preprocessing (verified `blue` plan + mandatory Language baseline)
     -> resolution (provider references, type merge, schema/list semantics)
     -> canonical overlay + resolved runtime view
     -> immutable `ResolvedSnapshot`
@@ -95,7 +95,7 @@ the preferred boundary for repeated processing and patching, while mutable
 | 8–32 | Language transformations | Resolve, preserve/select, canonicalize/minimize, expand/collapse, limited operations, and snapshot loading |
 | 33–44 | Canonical patches and caches | Immutable patch entry points, authoritative snapshot pinning, bounded derived caches, statistics, and invalidation |
 | 45–51 | Conformance | Language/Contracts version metadata, fixture reports, isolated engines, and suite execution |
-| 52–59 | Extension, conversion, matching, limits | In-place reference extension, Java conversion, type matching, and global resolution limits |
+| 52–59 | Expansion, conversion, matching, limits | In-place reference expansion, Java conversion, type matching, and global resolution limits |
 | 60–85 | Parsing, export, dictionaries, identity | YAML/JSON boundaries, dictionary-aware export, cloning, and structural/semantic BlueIds |
 | 86–101 | Preprocessing and Contracts runtime | Aliases, processor/type registration, document initialize/process operations, and object/type bridges |
 | 102–111 | Configuration and lifecycle | Runtime dependencies, fluent reconfiguration, defensive configuration views, and close semantics |
@@ -1238,16 +1238,20 @@ machine-readable check while retaining the two layers’ distinct result sets.
 **Direct test caller.**
 `processor.conformance.BlueContractsConformanceReportTest`.
 
-## Extension, conversion, matching, and limits
+## Expansion, conversion, matching, and limits
 
-### 52. `public void extend(Node node, Limits limits)`
+### 52. `public void expand(Node node, Limits limits)`
 
 **Purpose and library role.** Mutates a node in place by recursively replacing
 eligible references with provider content under combined global/per-call
-limits, including list reconstruction where requested. It is a legacy
-materialization utility, distinct from merge-based `resolve`.
+limits, including list reconstruction where requested. It is the bounded,
+in-place expansion utility and is distinct from merge-based `resolve`.
 
-**Direct test caller.** `BlueCacheLifecycleTest`.
+The former `extend(Node, Limits)` descriptor remains as a deprecated 1.x
+compatibility bridge and delegates to this method; it is scheduled for removal
+in 2.0.
+
+**Direct test callers.** `BlueCacheLifecycleTest` and `NodeExpanderTest`.
 
 ### 53. `public Node objectToNode(Object object)`
 
@@ -1322,8 +1326,9 @@ It is the compatibility getter paired with `setGlobalLimits`.
 ### 60. `public Node yamlToNode(String yaml)`
 
 **Purpose and library role.** Parses Blue YAML as source and immediately
-preprocesses it, including `blue` directives, aliases, and Default Blue. It is
-the normal authored-YAML ingestion API.
+establishes the complete verified `blue` plan, executes declared
+transformations, and applies the mandatory Language baseline. It is the normal
+authored-YAML ingestion API.
 
 **Direct test callers.** `BlueCacheLifecycleTest`, `ListControlFormsTest`,
 `MaskedResolutionTest`, `MaterializedSelectedProcessingDocumentFailFirstTest`,
@@ -1374,7 +1379,8 @@ as `yamlToNode`.
 
 **Purpose and library role.** Performs raw YAML-to-`Node` parsing without
 preprocessing. It is the correct boundary when a caller must inspect or control
-source directives before applying the language’s Default Blue step.
+source directives before establishing the verified plan and applying the
+mandatory Language baseline.
 
 **Direct test caller.** No exact direct call found. It is reached by the heavily
 tested `yamlToNode()` wrapper and by `BlueConformanceSuiteRunner`, whose report
@@ -1809,10 +1815,12 @@ storage omissions and inherited/effective marker state.
 
 ### 98. `public Node preprocess(Node node)`
 
-**Purpose and library role.** Applies the current source preprocessing
-environment: resolves a configured alias or potential BlueId in the `blue`
-directive and applies Default Blue through the active provider. It converts
-authored source into the form expected by resolution and identity operations.
+**Purpose and library role.** Applies the complete source preprocessing
+environment: resolves and verifies the root `blue` directive and all referenced
+components, freezes and executes its ordered transformations exactly once, then
+applies mandatory wrapper/placeholder normalization, type-position alias
+substitution, primitive inference, and validation. It converts authored source
+into the form expected by resolution and identity operations.
 
 **Direct test callers.** `BlueCacheLifecycleTest`, `OverlayBuildersTest`,
 `NodeDeserializerTest`, `PreprocessorTest`, `RecursiveTypeResolutionTest`,
@@ -2118,8 +2126,8 @@ caller, so no public test route can execute it without reflection.
 | N33 | [Blue.java](../src/main/java/blue/language/Blue.java) | `LimitedExpansionContext`: `private boolean tryAcquire(String blueId)` | Charges only the first expansion of each BlueId and records an outstanding id when capped. | `expandLimited(...)` through P04; indirect language-conformance coverage as described for N32. |
 | N34 | [Blue.java](../src/main/java/blue/language/Blue.java) | `ReferenceBudget`: `private ReferenceBudget(int maximum)` | Initializes distinct provider-request budget and outcome state for limited resolution. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
 | N35 | [Blue.java](../src/main/java/blue/language/Blue.java) | `ReferenceBudget`: `private boolean tryAcquire(String blueId)` | Allows repeated known ids but rejects and records new ids beyond the maximum. | `resolveLimited(...)` through N02; `BlueLimitedOperationTest`. |
-| N36 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `private SemanticDemandLimits(List<List<String>> demands)` | Initializes path-aware merge/extension limits for demanded segment lists. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
-| N37 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public boolean shouldExtendPathSegment(String pathSegment, Node currentNode)` | Allows extension only on the ancestor/descendant closure of a demanded path. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
+| N36 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `private SemanticDemandLimits(List<List<String>> demands)` | Initializes path-aware merge/expansion limits for demanded segment lists. | `resolveLimited(...)`; `BlueLimitedOperationTest`. |
+| N37 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public boolean shouldExpandPathSegment(String pathSegment, Node currentNode)` | Allows expansion only on the ancestor/descendant closure of a demanded path. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
 | N38 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public boolean shouldMergePathSegment(String pathSegment, Node currentNode)` | Allows merge only on the ancestor/descendant closure of a demanded path. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
 | N39 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public void enterPathSegment(String pathSegment, Node currentNode)` | Pushes a nonempty traversal segment while recording balanced entry state. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |
 | N40 | [Blue.java](../src/main/java/blue/language/Blue.java) | `SemanticDemandLimits`: `@Override public void exitPathSegment()` | Pops the most recent entered segment and safely ignores excess exits. | `resolveLimited(...)` through `Merger`; `BlueLimitedOperationTest`. |

@@ -743,7 +743,7 @@ public class NodeTypeMatcherTest {
                                 new Node().blueId(delegate.getBlueIdByName("Active Status"))))
         );
         String bundleBlueId = NodeContentHandler
-                .parseAndCalculateBlueId(bundledItems, new Preprocessor(delegate)::preprocessWithDefaultBlue)
+                .parseAndCalculateBlueId(bundledItems, new Preprocessor(delegate)::preprocess)
                 .blueId;
         delegate.addListAndItsItems(bundledItems);
         CountingNodeProvider provider = new CountingNodeProvider(delegate);

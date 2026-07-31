@@ -5,7 +5,7 @@ import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.ApplyBatchPatch;
 import blue.language.processor.model.JsonPatch;
-import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 
 import java.util.Arrays;
 
@@ -19,7 +19,8 @@ public class ApplyBatchPatchContractProcessor implements HandlerProcessor<ApplyB
     @Override
     public void execute(ApplyBatchPatch contract, ProcessorExecutionContext context) {
         if (contract.isAddUnsupportedContract()) {
-            Node unsupported = new Node().type(new Node().blueId(RuntimeBlueIds.BLUE_ID_TYPE));
+            Node unsupported = new Node().type(new Node().blueId(
+                    ProcessorTestTypeBlueIds.LEGACY_BLUE_ID_TYPE));
             context.applyPatch(JsonPatch.add(context.resolvePointer("/contracts/runtimeUnsupported"), unsupported));
             return;
         }

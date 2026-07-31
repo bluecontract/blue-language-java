@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.TestEventChannel;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
@@ -24,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class EffectiveSubscriptionSurfaceValidatorTest {
 
     private static final String TEST_CHANNEL_TYPE =
-            "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
+            ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
 
     @Test
     void shouldVerifyInheritedReferencedCustomChannelUsesOrderedSourceAndAttemptInterval() {

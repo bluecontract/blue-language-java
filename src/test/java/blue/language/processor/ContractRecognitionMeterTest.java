@@ -267,6 +267,48 @@ final class ContractRecognitionMeterTest {
     }
 
     @Test
+    void shouldRetainEffectiveProcessEmbeddedDeclarationAtArbitraryKey() {
+        // given
+        DocumentProcessor processor =
+                DocumentProcessor.builder().build();
+        FrozenNode selected =
+                processEmbeddedScope(
+                        "workflowSubscriptions",
+                        false,
+                        "/child",
+                        "/child/grandchild");
+        FrozenNode effective =
+                processEmbeddedScope(
+                        "workflowSubscriptions",
+                        true,
+                        "/child",
+                        "/child/grandchild");
+
+        // when
+        ContractBundle bundle =
+                processor.contractLoader()
+                        .loadExternalClassification(
+                                selected,
+                                effective,
+                                "/",
+                                null,
+                                true,
+                                ProcessingMetricsSink.NOOP);
+
+        // then
+        assertEquals(
+                Arrays.asList(
+                        "/child",
+                        "/child/grandchild"),
+                bundle.embeddedPaths());
+        assertEquals(
+                RuntimeBlueIds.PROCESS_EMBEDDED,
+                bundle.effectiveContractSnapshot(
+                        "workflowSubscriptions")
+                        .effectiveTypeBlueId());
+    }
+
+    @Test
     void shouldVerifyPathEntryExhaustionStopsBeforeTheSecondEntryAndHeader() {
         // given
         DocumentProcessor processor =
@@ -342,20 +384,34 @@ final class ContractRecognitionMeterTest {
 
     private static FrozenNode processEmbeddedScope(
             String... paths) {
+        return processEmbeddedScope(
+                "embedded",
+                true,
+                paths);
+    }
+
+    private static FrozenNode processEmbeddedScope(
+            String key,
+            boolean includeType,
+            String... paths) {
         Node pathList = new Node();
         List<Node> items = new ArrayList<>();
         for (String path : paths) {
             items.add(new Node().value(path));
         }
         pathList.items(items);
-        Node embedded = new Node()
-                .type(reference(
-                        RuntimeBlueIds.PROCESS_EMBEDDED))
-                .properties("paths", pathList);
+        Node embedded =
+                new Node().properties(
+                        "paths",
+                        pathList);
+        if (includeType) {
+            embedded.type(reference(
+                    RuntimeBlueIds.PROCESS_EMBEDDED));
+        }
         return FrozenNode.fromResolvedNode(
                 new Node().contracts(
                         new Node().properties(
-                                "embedded",
+                                key,
                                 embedded)));
     }
 

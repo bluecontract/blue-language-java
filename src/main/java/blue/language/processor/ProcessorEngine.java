@@ -1617,8 +1617,6 @@ final class ProcessorEngine {
                     new ArrayList<>();
             Map<String, List<EvidenceRouteStep>> routes =
                     new LinkedHashMap<>();
-            Map<String, ExternalDeliverySnapshot> acceptedEvidence =
-                    new LinkedHashMap<>();
             Set<String> openedScopes = new LinkedHashSet<>();
             Map<String, List<EvidenceRouteStep>> plannedRoutes =
                     new LinkedHashMap<>();
@@ -1717,9 +1715,6 @@ final class ProcessorEngine {
                         routes.put(
                                 occurrence,
                                 route);
-                        acceptedEvidence.put(
-                                occurrence,
-                                delivery);
                     }
                 } finally {
                     contractRecognitionMeter
@@ -1773,17 +1768,16 @@ final class ProcessorEngine {
                         .preflightEvidenceScopeAfterSelectedHeaders(
                         scopePath);
             }
-            for (Map.Entry<String, ExternalDeliverySnapshot> entry
-                    : acceptedEvidence.entrySet()) {
-                ExternalDeliverySnapshot delivery =
-                        entry.getValue();
-                validateDeliveryBinding(
-                        delivery,
-                        bundles.get(
-                                normalizeScope(
-                                        delivery.scopePath())),
-                        "accepted-new preflight");
-            }
+            /*
+             * Delivery binding is frozen and validated while Phase B still
+             * observes the admitted external-source surface.  Phase C may
+             * initialize participating scopes and refresh their effective
+             * contracts before dispatch.  Comparing that post-initialization
+             * surface with the entry-bound delivery would reject legitimate
+             * processor-owned state changes as forged evidence.  The
+             * independently verified plan, exact input identities and the
+             * Phase-B binding check remain the trust boundary.
+             */
 
             List<List<ChannelRunner.ExternalClassification>>
                     logicalDeliveryGroups =
@@ -2233,9 +2227,28 @@ final class ProcessorEngine {
                                                 String contractKey,
                                                 FrozenNode contractNode,
                                                 boolean allowReservedMutation) {
+            return createContext(
+                    scopePath,
+                    bundle,
+                    event,
+                    event,
+                    contractKey,
+                    contractNode,
+                    allowReservedMutation);
+        }
+
+        ProcessorExecutionContext createContext(String scopePath,
+                                                ContractBundle bundle,
+                                                Node event,
+                                                Node occurrenceEvent,
+                                                String contractKey,
+                                                FrozenNode contractNode,
+                                                boolean allowReservedMutation) {
             return new ProcessorExecutionContext(this, bundle, scopePath,
                     contractKey, contractNode,
-                    cloneEvent(event), allowReservedMutation);
+                    cloneEvent(event),
+                    cloneEvent(occurrenceEvent),
+                    allowReservedMutation);
         }
 
         DocumentProcessingResult result() {
@@ -2254,7 +2267,8 @@ final class ProcessorEngine {
             if (snapshot != null) {
                 ResolvedSnapshot publishedSnapshot = publishableSnapshot(snapshot, owner.metricsSink());
                 resultSnapshot = publishedSnapshot;
-                return DocumentProcessingResult.completed(runtime.selectedDocument(),
+                return DocumentProcessingResult.completed(
+                        publishedSnapshot.canonicalRoot(),
                         runtime.rootEmissions(),
                         runtime.totalGas(),
                         status,

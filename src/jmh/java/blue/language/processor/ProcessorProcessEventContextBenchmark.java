@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.SetProperty;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
@@ -25,9 +26,10 @@ import org.openjdk.jmh.annotations.State;
 @State(Scope.Benchmark)
 public class ProcessorProcessEventContextBenchmark {
 
-    private static final String TEST_EVENT_TYPE = "Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf";
-    private static final String TEST_EVENT_CHANNEL_TYPE = "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
-    private static final String SET_PROPERTY_TYPE = "8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts";
+    private static final String TEST_EVENT_TYPE = ProcessorTestTypeBlueIds.TEST_EVENT;
+    private static final String TEST_EVENT_CHANNEL_TYPE =
+            ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
+    private static final String SET_PROPERTY_TYPE = ProcessorTestTypeBlueIds.SET_PROPERTY;
 
     @Param({"wide", "deep"})
     public String shape;

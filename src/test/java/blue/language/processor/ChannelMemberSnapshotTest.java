@@ -12,6 +12,7 @@ final class ChannelMemberSnapshotTest {
 
     @Test
     void shouldIgnoreNestedNominalTypeMaterializationProvenance() {
+        // given
         Node nominalType = new Node()
                 .name("Test Actor")
                 .properties(
@@ -28,6 +29,7 @@ final class ChannelMemberSnapshotTest {
                 .type(nominalType.clone().blueId(
                         nominalTypeBlueId));
 
+        // when
         ChannelMemberSnapshot collapsed =
                 ChannelMemberSnapshot.from(snapshot(
                         collapsedActor));
@@ -35,6 +37,7 @@ final class ChannelMemberSnapshotTest {
                 ChannelMemberSnapshot.from(snapshot(
                         materializedActor));
 
+        // then
         assertEquals(
                 collapsed.headerIdentityBlueId(),
                 materialized.headerIdentityBlueId());

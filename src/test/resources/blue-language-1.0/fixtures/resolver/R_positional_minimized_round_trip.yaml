@@ -4,8 +4,15 @@ operation: minimizeAndResolve
 parent:
   type: List
   mergePolicy: positional
-  items: [A, B]
-resolvedItems: [A, C]
+  items:
+  - A
+  - B
+resolvedItems:
+- A
+- C
 expectedMinimizedMayContain:
-  - $pos
-expectedRoundTripItems: [A, C]
+- $pos
+expectedRoundTripItems:
+- A
+- C
+expectedSameContentBlueIdThroughPipeline: true

@@ -162,10 +162,10 @@ class NodeToPathLimitsConverterTest {
         PathLimits limits = NodeToPathLimitsConverter.convert(node);
         List<String> segments = JsonPointer.split(pointer);
         if (segments.isEmpty()) {
-            return limits.shouldExtendPathSegment("", mockNode);
+            return limits.shouldExpandPathSegment("", mockNode);
         }
         for (String segment : segments) {
-            if (!limits.shouldExtendPathSegment(segment, mockNode)) {
+            if (!limits.shouldExpandPathSegment(segment, mockNode)) {
                 return false;
             }
             limits.enterPathSegment(segment, mockNode);

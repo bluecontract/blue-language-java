@@ -10,6 +10,7 @@ import blue.language.processor.contracts.MutateEmbeddedPathsContractProcessor;
 import blue.language.processor.contracts.RemoveIfPresentContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
@@ -38,20 +39,20 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /a\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /x\n";
         Blue blue = ProcessorTestSupport.blue();
@@ -122,9 +123,9 @@ class ProcessEmbeddedTest {
                         + "    channel: rootLife\n"
                         + "    event:\n"
                         + "      type:\n"
-                        + "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                        + "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                         + "    type:\n"
-                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                         + "    propertyKey: /x/b\n"
                         + "    propertyValue: 1\n");
 
@@ -176,9 +177,9 @@ class ProcessEmbeddedTest {
                         + "    channel: life\n"
                         + "    event:\n"
                         + "      type:\n"
-                        + "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                        + "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                         + "    type:\n"
-                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                         + "    propertyKey: /x/y/a\n"
                         + "    propertyValue: 2\n");
 
@@ -212,14 +213,14 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "b:\n" +
@@ -227,14 +228,14 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "c:\n" +
@@ -242,49 +243,49 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    life:\n" +
                 "      type:\n" +
-                "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n" +
+                "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: life\n" +
                 "      event:\n" +
                 "        type:\n" +
-                "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n" +
+                "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "      - /b\n" +
                 "  updateA:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /a/x\n" +
                 "  handleA:\n" +
                 "    channel: updateA\n" +
                 "    type:\n" +
-                "      blueId: AYLVESeD9WrEegNra57vKC2RT65VCBqTz5n9f5MieEkA\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.MUTATE_EMBEDDED_PATHS + "\n" +
                 "  updateB:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /b/x\n" +
                 "  flagB:\n" +
                 "    channel: updateB\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /mustNotHappen\n" +
                 "    propertyValue: 1\n" +
                 "  updateC:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /c/x\n" +
                 "  flagC:\n" +
                 "    channel: updateC\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /itShouldHappen\n" +
                 "    propertyValue: 1\n";
 
@@ -385,11 +386,11 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    testEvents:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: testEvents\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "b:\n" +
@@ -397,11 +398,11 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    testEvents:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: testEvents\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "c:\n" +
@@ -409,46 +410,46 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    testEvents:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    setX:\n" +
                 "      channel: testEvents\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      propertyKey: /x\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /a\n" +
                 "      - /b\n" +
                 "  updateA:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /a/x\n" +
                 "  mutatePaths:\n" +
                 "    channel: updateA\n" +
                 "    type:\n" +
-                "      blueId: AYLVESeD9WrEegNra57vKC2RT65VCBqTz5n9f5MieEkA\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.MUTATE_EMBEDDED_PATHS + "\n" +
                 "  updateB:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /b/x\n" +
                 "  flagB:\n" +
                 "    channel: updateB\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /mustNotHappen\n" +
                 "    propertyValue: 1\n" +
                 "  updateC:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /c/x\n" +
                 "  flagC:\n" +
                 "    channel: updateC\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /itShouldHappen\n" +
                 "    propertyValue: 1\n";
 
@@ -493,11 +494,11 @@ class ProcessEmbeddedTest {
                 "  contracts:\n" +
                 "    childChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    probe:\n" +
                 "      channel: childChannel\n" +
                 "      type:\n" +
-                "        blueId: A8kbVbinjJAPFnbaQgBRCDU6h64xydTHe69kPakvgjbU\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.CUT_OFF_PROBE + "\n" +
                 "      emitBefore: true\n" +
                 "      preEmitKind: pre\n" +
                 "      patchPointer: /marker\n" +
@@ -509,35 +510,35 @@ class ProcessEmbeddedTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  embeddedBridge:\n" +
                 "    type:\n" +
-                "      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN\n" +
+                "      blueId: " + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n" +
                 "    sourcePath: /child\n" +
                 "  bridgePre:\n" +
                 "    channel: embeddedBridge\n" +
                 "    type:\n" +
-                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT + "\n" +
                 "    expectedKind: pre\n" +
                 "    propertyKey: /bridged\n" +
                 "    propertyValue: 1\n" +
                 "  bridgePost:\n" +
                 "    channel: embeddedBridge\n" +
                 "    type:\n" +
-                "      blueId: H1qKGon7JWgUU9P8oUiHjxoR5hWbkAzVWWNukXf4cHz\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY_ON_EVENT + "\n" +
                 "    expectedKind: post\n" +
                 "    propertyKey: /postSeen\n" +
                 "    propertyValue: 1\n" +
                 "  childUpdates:\n" +
                 "    type:\n" +
-                "      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An\n" +
+                "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /child\n" +
                 "  cutChild:\n" +
                 "    channel: childUpdates\n" +
                 "    type:\n" +
-                "      blueId: 72r7LSWk5VP9Wh1e5KJX2x8Mrr7Yk8d8Zey9QTbDaHBe\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.REMOVE_IF_PRESENT + "\n" +
                 "    propertyKey: /child\n";
 
         Node source = blue.yamlToNode(yaml);
@@ -573,7 +574,7 @@ class ProcessEmbeddedTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /\n";
         Blue blue = ProcessorTestSupport.blue();
@@ -602,7 +603,7 @@ class ProcessEmbeddedTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "      - /child\n";
@@ -626,7 +627,7 @@ class ProcessEmbeddedTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n";
         Blue blue = ProcessorTestSupport.blue();
@@ -695,12 +696,12 @@ class ProcessEmbeddedTest {
                 "contracts:\n" +
                 "  embeddedPrimary:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /x\n" +
                 "  embeddedSecondary:\n" +
                 "    type:\n" +
-                "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /y\n";
         Blue blue = ProcessorTestSupport.blue();
@@ -727,32 +728,32 @@ class ProcessEmbeddedTest {
                 + "  contracts:\n"
                 + "    life:\n"
                 + "      type:\n"
-                + "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n"
                 + "    setX:\n"
                 + "      channel: life\n"
                 + "      event:\n"
                 + "        type:\n"
-                + "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                 + "      type:\n"
-                + "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                 + "      propertyKey: /a\n"
                 + "      propertyValue: 1\n"
                 + "contracts:\n"
                 + "  rootLife:\n"
                 + "    type:\n"
-                + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n"
                 + "  embedded:\n"
                 + "    type:\n"
-                + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n"
                 + "    paths:\n"
                 + "      - /x\n"
                 + "  setRootY:\n"
                 + "    channel: rootLife\n"
                 + "    event:\n"
                 + "      type:\n"
-                + "        blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "        blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                 + "    type:\n"
-                + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                 + "    propertyKey: /y\n"
                 + "    propertyValue: 1\n";
     }
@@ -766,34 +767,34 @@ class ProcessEmbeddedTest {
                 + "    contracts:\n"
                 + "      life:\n"
                 + "        type:\n"
-                + "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "          blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n"
                 + "      setY:\n"
                 + "        channel: life\n"
                 + "        event:\n"
                 + "          type:\n"
-                + "            blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "            blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                 + "        type:\n"
-                + "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "          blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                 + "        propertyKey: /a\n"
                 + "        propertyValue: 1\n"
                 + "  contracts:\n"
                 + "    life:\n"
                 + "      type:\n"
-                + "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n"
                 + "    embedded:\n"
                 + "      type:\n"
-                + "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "        blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n"
                 + "      paths:\n"
                 + "        - /y\n"
                 + "contracts:\n"
                 + "  embedded:\n"
                 + "    type:\n"
-                + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n"
                 + "    paths:\n"
                 + "      - /x\n"
                 + "  life:\n"
                 + "    type:\n"
-                + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n";
+                + "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n";
     }
 
     private String parentScopeViolationYaml() {
@@ -805,23 +806,23 @@ class ProcessEmbeddedTest {
                 + "    contracts:\n"
                 + "      life:\n"
                 + "        type:\n"
-                + "          blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "          blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n"
                 + "      setY:\n"
                 + "        channel: life\n"
                 + "        event:\n"
                 + "          type:\n"
-                + "            blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "            blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                 + "        type:\n"
-                + "          blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "          blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                 + "        propertyKey: /a\n"
                 + "        propertyValue: 1\n"
                 + "  contracts:\n"
                 + "    life:\n"
                 + "      type:\n"
-                + "        blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n"
+                + "        blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n"
                 + "    embedded:\n"
                 + "      type:\n"
-                + "        blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "        blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n"
                 + "      paths:\n"
                 + "        - /y\n"
                 + "    setIllegalFromX:\n"
@@ -829,20 +830,20 @@ class ProcessEmbeddedTest {
                 + "      order: 1\n"
                 + "      event:\n"
                 + "        type:\n"
-                + "          blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C\n"
+                + "          blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                 + "      type:\n"
-                + "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                + "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                 + "      propertyKey: /y/a\n"
                 + "      propertyValue: 2\n"
                 + "contracts:\n"
                 + "  embedded:\n"
                 + "    type:\n"
-                + "      blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr\n"
+                + "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n"
                 + "    paths:\n"
                 + "      - /x\n"
                 + "  life:\n"
                 + "    type:\n"
-                + "      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo\n";
+                + "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n";
     }
 
     private static final class EmbeddedMembershipObservation {

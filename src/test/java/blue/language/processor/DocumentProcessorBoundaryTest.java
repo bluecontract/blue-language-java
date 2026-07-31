@@ -5,6 +5,7 @@ import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessEmbedded;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.ContractBundle;
 import blue.language.processor.model.SetProperty;
 import blue.language.utils.BlueIdCalculator;
@@ -442,7 +443,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node embedded = new Node()
                 .type(new Node().blueId(
-                        "D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr"))
+                        RuntimeBlueIds.PROCESS_EMBEDDED))
                 .properties("paths", new Node().items(new Node().value("/child")));
         Node contracts = new Node().properties("embedded", embedded);
         Node source = new Node().properties("scope", new Node().contracts(contracts));

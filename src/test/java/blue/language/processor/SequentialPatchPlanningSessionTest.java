@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
@@ -176,7 +176,7 @@ class SequentialPatchPlanningSessionTest {
 
     private Node typedRoot() {
         return new Node()
-                .type(new Node().blueId(RuntimeBlueIds.BLUE_ID_TYPE))
+                .type(new Node().blueId(ProcessorTestTypeBlueIds.LEGACY_BLUE_ID_TYPE))
                 .properties("seed", new Node().value("value"));
     }
 

@@ -6,6 +6,7 @@ import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -187,11 +188,11 @@ final class ContractExecutionResultPortableLimitTest {
                         + "contracts:\n"
                         + "  events:\n"
                         + "    type:\n"
-                        + "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n"
                         + "  overflow:\n"
                         + "    channel: events\n"
                         + "    type:\n"
-                        + "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n"
+                        + "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
                         + "    propertyKey: " + mode + "\n"
                         + "    propertyValue: 1\n");
         DocumentProcessingResult initialization =

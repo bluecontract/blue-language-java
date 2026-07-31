@@ -6,7 +6,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.CircularBlueIdCalculator;
-import blue.language.utils.NodeExtender;
+import blue.language.utils.NodeExpander;
 import blue.language.utils.limits.PathLimits;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
@@ -59,11 +59,12 @@ public class SelfReferenceTest {
 
         Node aNode = nodeProvider.findNodeByName("A").orElseThrow(() -> new IllegalArgumentException("No A node found"));
         String aNodeBlueId = nodeProvider.getBlueIdByName("A");
-        Node extended = aNode.clone();
+        Node expanded = aNode.clone();
 
         // when
         IllegalArgumentException failure = captureFailure(
-                () -> new NodeExtender(nodeProvider).extend(extended, PathLimits.withSinglePath("/x/x/x/x")));
+                () -> new NodeExpander(nodeProvider).expand(
+                        expanded, PathLimits.withSinglePath("/x/x/x/x")));
 
         // then
         assertTrue(failure instanceof IllegalArgumentException);
@@ -86,7 +87,7 @@ public class SelfReferenceTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(YAML_MAPPER.readValue(selfReferencing, Node.class));
         // when
         Node preprocessedPlaceholder = new Preprocessor(new BasicNodeProvider())
-                .preprocessWithDefaultBlue(YAML_MAPPER.readValue(withPlaceholder, Node.class));
+                .preprocess(YAML_MAPPER.readValue(withPlaceholder, Node.class));
 
         // then
         assertEquals(
@@ -113,26 +114,26 @@ public class SelfReferenceTest {
     }
 
     @Test
-    public void shouldExtendTwoInterconnectedDocumentsAcrossFinitePaths() {
+    public void shouldExpandTwoInterconnectedDocumentsAcrossFinitePaths() {
         // given
         InterconnectedFixture fixture = new InterconnectedFixture();
-        Node extendedA = fixture.documentA().clone();
-        Node extendedB = fixture.documentB().clone();
+        Node expandedA = fixture.documentA().clone();
+        Node expandedB = fixture.documentB().clone();
 
         // when
-        new NodeExtender(fixture.provider).extend(
-                extendedA,
+        new NodeExpander(fixture.provider).expand(
+                expandedA,
                 PathLimits.withSinglePath("/x/y/x/y"));
-        new NodeExtender(fixture.provider).extend(
-                extendedB,
+        new NodeExpander(fixture.provider).expand(
+                expandedB,
                 PathLimits.withSinglePath("/y/x/y/x"));
 
         // then
-        assertEquals(fixture.bBlueId, extendedA.getAsNode("/x/type").getBlueId());
-        assertEquals("B", extendedA.getAsText("/x/type/name"));
-        assertEquals(fixture.aBlueId, extendedB.getAsNode("/y/type").getBlueId());
-        assertEquals("A", extendedB.getAsText("/y/type/name"));
-        assertEquals(fixture.aBlueId, extendedA.getAsNode("/x/type/y/type").getBlueId());
+        assertEquals(fixture.bBlueId, expandedA.getAsNode("/x/type").getBlueId());
+        assertEquals("B", expandedA.getAsText("/x/type/name"));
+        assertEquals(fixture.aBlueId, expandedB.getAsNode("/y/type").getBlueId());
+        assertEquals("A", expandedB.getAsText("/y/type/name"));
+        assertEquals(fixture.aBlueId, expandedA.getAsNode("/x/type/y/type").getBlueId());
     }
 
     @Test

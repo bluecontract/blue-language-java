@@ -137,7 +137,7 @@ class ListControlFormsTest {
     }
 
     @Test
-    void shouldRejectChangedInheritedPrefixForAppendOnlyListWithoutPreviousAnchor() {
+    void shouldAppendNormalItemsWithoutRequiringPreviousAnchor() {
         // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
@@ -155,11 +155,13 @@ class ListControlFormsTest {
                 "  - B");
 
         // when
-        Throwable failure = captureFailure(
-                () -> new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived")));
+        Node resolved = new Blue(nodeProvider)
+                .resolve(nodeProvider.getNodeByName("Derived"));
 
         // then
-        assertInstanceOf(IllegalArgumentException.class, failure);
+        assertEquals(Arrays.asList("A", "B"), Arrays.asList(
+                resolved.getItems().get(0).getValue(),
+                resolved.getItems().get(1).getValue()));
     }
 
     @Test

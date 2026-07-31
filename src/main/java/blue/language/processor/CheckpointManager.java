@@ -172,9 +172,17 @@ final class CheckpointManager {
                             + calculatedSubjectBlueId);
         }
         ensureCheckpointMarker(scopePath, bundle);
-        CheckpointRecord active = record.checkpoint != null
-                ? record
-                : findCheckpoint(bundle, record.channelKey, record.checkpointDomainBlueId);
+        /*
+         * Every pending update is merged through the invocation's active
+         * mutation bundle. A classification-time record may point at a stale
+         * bundle mirror shared by only one logical delivery group; using that
+         * mirror here could recreate an empty marker and erase an earlier
+         * source checkpoint.
+         */
+        CheckpointRecord active = findCheckpoint(
+                bundle,
+                record.channelKey,
+                record.checkpointDomainBlueId);
         String pointer = PointerUtils.resolvePointer(scopePath,
                 ProcessorPointerConstants.relativeCheckpointEntry(
                         active.markerKey, active.channelKey));
@@ -198,6 +206,9 @@ final class CheckpointManager {
         active.lastEventNode =
                 storedSubject.clone();
         active.lastEventSignature = subjectBlueId;
+        record.lastEventNode =
+                storedSubject.clone();
+        record.lastEventSignature = subjectBlueId;
         identityCache.updateStoredIdentity(
                 active.checkpoint,
                 active.channelKey,
