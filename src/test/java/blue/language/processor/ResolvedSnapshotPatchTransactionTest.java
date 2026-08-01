@@ -108,7 +108,7 @@ class ResolvedSnapshotPatchTransactionTest {
     }
 
     @Test
-    void shouldVerifySnapshotAddToExistingMemberAlsoReplacesTheCompleteValue() {
+    void shouldRenderSnapshotAddToExistingMemberAsSemanticReplace() {
         // given
         Fixture fixture = new Fixture();
         RecordingSnapshotManager manager = new RecordingSnapshotManager(fixture.blue);
@@ -122,7 +122,7 @@ class ResolvedSnapshotPatchTransactionTest {
                 "/", JsonPatch.add("/status", reference(fixture.activeId)));
 
         // then
-        assertEquals(JsonPatch.Op.ADD, update.op());
+        assertEquals(JsonPatch.Op.REPLACE, update.op());
         assertEquals("active", runtime.document().getAsText("/status/mode"));
         assertMissing(runtime.document(), "/status/pendingOnly");
         assertEquals(fixture.activeId,
