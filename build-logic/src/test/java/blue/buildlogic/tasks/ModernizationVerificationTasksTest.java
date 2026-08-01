@@ -114,6 +114,21 @@ final class ModernizationVerificationTasksTest {
     }
 
     @Test
+    void shouldRejectAnEmptyArchiveReplicaProof() throws Exception {
+        // given
+        Project project = project("empty-archive-project");
+        CompareArchiveReplicasTask task = project.getTasks().register(
+                "compareEmptyReplicas", CompareArchiveReplicasTask.class).get();
+        task.getReportFile().set(project.getLayout().getBuildDirectory().file("replicas.json"));
+
+        // when
+        GradleException failure = assertThrows(GradleException.class, task::compare);
+
+        // then
+        assertTrue(failure.getMessage().contains("requires at least one"));
+    }
+
+    @Test
     void shouldGenerateAndVerifyAggregateReceiptUntilAnInputChanges() throws Exception {
         // given
         Project project = project("receipt-project");

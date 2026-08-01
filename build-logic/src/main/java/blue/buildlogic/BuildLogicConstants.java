@@ -7,6 +7,9 @@ public final class BuildLogicConstants {
 
     public static final String TASK_API_BASELINE_DIFF = "apiBaselineDiff";
     public static final String TASK_COMPARE_ARCHIVE_REPLICAS = "compareArchiveReplicas";
+    public static final String TASK_JAR_REPLICA = "jarReplica";
+    public static final String TASK_JAVADOC_JAR_REPLICA = "javadocJarReplica";
+    public static final String TASK_SOURCES_JAR_REPLICA = "sourcesJarReplica";
     public static final String TASK_GENERATE_AGGREGATE_RELEASE_RECEIPT =
             "generateAggregateReleaseReceipt";
     public static final String TASK_GENERATE_MODULE_STRUCTURE_INVENTORY =
@@ -18,6 +21,8 @@ public final class BuildLogicConstants {
     public static final String TASK_VERIFY_JAVA_PACKAGE_CYCLES =
             "verifyJavaPackageCycles";
     public static final String TASK_VERIFY_MODULE_STRUCTURE = "verifyModuleStructure";
+    public static final String TASK_VERIFY_REPRODUCIBLE_ARCHIVES =
+            "verifyReproducibleArchives";
 
     public static final String REPORT_AGGREGATE_RELEASE_RECEIPT =
             "reports/release-evidence/aggregate-release-receipt.json";
@@ -34,6 +39,8 @@ public final class BuildLogicConstants {
             "reports/architecture/module-structure.json";
     public static final String REPORT_PACKAGE_CYCLES =
             "reports/architecture/package-cycles.json";
+    public static final String DIRECTORY_ARCHIVE_REPLICAS =
+            "reproducibility/archive-replicas";
 
     private BuildLogicConstants() {}
 }

@@ -23,6 +23,9 @@ import org.gradle.api.tasks.TaskAction;
 @CacheableTask
 public abstract class CompareArchiveReplicasTask extends DefaultTask {
 
+    private static final String EMPTY_ARCHIVE_SET_MESSAGE =
+            "Archive replica comparison requires at least one reference and replica archive";
+
     @InputFiles
     @PathSensitive(PathSensitivity.NAME_ONLY)
     public abstract ConfigurableFileCollection getReferenceArchives();
@@ -36,6 +39,9 @@ public abstract class CompareArchiveReplicasTask extends DefaultTask {
 
     @TaskAction
     public void compare() {
+        if (getReferenceArchives().isEmpty() || getReplicaArchives().isEmpty()) {
+            throw new GradleException(EMPTY_ARCHIVE_SET_MESSAGE);
+        }
         ArchiveReplicaComparison.Result result = ArchiveReplicaComparison.compare(
                 paths(getReferenceArchives()), paths(getReplicaArchives()));
         write(result.toJson());
