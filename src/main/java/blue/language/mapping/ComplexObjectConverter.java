@@ -7,7 +7,6 @@ import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.JacksonPropertyNames;
 import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 

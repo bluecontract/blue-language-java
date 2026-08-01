@@ -9,8 +9,8 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
-import static blue.language.utils.TypeUtils.*;
+import static blue.language.model.value.ScalarValues.*;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
 
 /**
  * Mutable representation of the closed Blue Language core schema vocabulary.

@@ -1,6 +1,7 @@
 package blue.language.utils;
 
 import blue.language.model.*;
+import blue.language.mapping.BlueAnnotationsBeanSerializerModifier;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonFactory;

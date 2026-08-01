@@ -1,9 +1,8 @@
 package blue.language.model;
 
-import blue.language.utils.BlueNumbers;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.Properties;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.model.value.BlueNumbers;
+import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.wire.JsonPointer;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,8 +16,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static blue.language.utils.Properties.*;
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
  * Strict Jackson deserializer for Blue source nodes.
@@ -33,10 +32,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     private static final String BLUE_DIRECTIVE_PATH =
             JsonPointer.append(
                     JsonPointer.ROOT,
-                    Properties.OBJECT_BLUE);
+                    BlueLanguageConstants.OBJECT_BLUE);
 
     private static final Set<String> ALLOWED_SCHEMA_KEYS = new HashSet<>(Arrays.asList(
-            Properties.OBJECT_BLUE_ID,
+            BlueLanguageConstants.OBJECT_BLUE_ID,
             KEY_REQUIRED,
             KEY_MIN_LENGTH,
             KEY_MAX_LENGTH,
@@ -99,7 +98,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                 transformations,
                 JsonPointer.append(
                         BLUE_DIRECTIVE_PATH,
-                        Properties.BLUE_DIRECTIVE_TRANSFORMATIONS));
+                        BlueLanguageConstants.BLUE_DIRECTIVE_TRANSFORMATIONS));
     }
 
     /**
@@ -115,7 +114,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                 JsonPointer.append(
                         JsonPointer.append(
                                 BLUE_DIRECTIVE_PATH,
-                                Properties.BLUE_DIRECTIVE_TRANSFORMATIONS),
+                                BlueLanguageConstants.BLUE_DIRECTIVE_TRANSFORMATIONS),
                         "0"),
                 false,
                 ParseContext.TRANSFORMATION_CONFIGURATION);
@@ -247,7 +246,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                             throw new IllegalArgumentException("\"properties\" is an internal field and must not appear in Blue documents.");
                         }
                         if (parseContext == ParseContext.DIRECTIVE
-                                && Properties.BLUE_DIRECTIVE_TRANSFORMATIONS
+                                && BlueLanguageConstants.BLUE_DIRECTIVE_TRANSFORMATIONS
                                 .equals(key)) {
                             properties.put(key,
                                     handleTransformationList(
@@ -416,7 +415,86 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             }
         }
         validateSchemaValueShapes(schemaNode, path);
-        return UncheckedObjectMapper.YAML_MAPPER.convertValue(schemaNode, Schema.class);
+        return parseSchemaKeywords(schemaNode, path);
+    }
+
+    private Schema parseSchemaKeywords(JsonNode schemaNode, String path) {
+        Schema schema = new Schema();
+        for (Iterator<Map.Entry<String, JsonNode>> iterator =
+                schemaNode.fields(); iterator.hasNext(); ) {
+            Map.Entry<String, JsonNode> entry = iterator.next();
+            String keyword = entry.getKey();
+            JsonNode value = entry.getValue();
+            switch (keyword) {
+                case KEY_REQUIRED:
+                    schema.required(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MIN_LENGTH:
+                    schema.minLength(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MAX_LENGTH:
+                    schema.maxLength(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MINIMUM:
+                    schema.minimum(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MAXIMUM:
+                    schema.maximum(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_EXCLUSIVE_MINIMUM:
+                    schema.exclusiveMinimum(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_EXCLUSIVE_MAXIMUM:
+                    schema.exclusiveMaximum(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MULTIPLE_OF:
+                    schema.multipleOf(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MIN_ITEMS:
+                    schema.minItems(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MAX_ITEMS:
+                    schema.maxItems(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_UNIQUE_ITEMS:
+                    schema.uniqueItems(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MIN_FIELDS:
+                    schema.minFields(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_MAX_FIELDS:
+                    schema.maxFields(handleNode(
+                            value, appendPath(path, keyword), false));
+                    break;
+                case KEY_ENUM:
+                    List<Node> enumValues = new ArrayList<>(value.size());
+                    for (int index = 0; index < value.size(); index++) {
+                        enumValues.add(handleNode(
+                                value.get(index),
+                                appendPath(
+                                        appendPath(path, keyword), index),
+                                false));
+                    }
+                    schema.enumValues(enumValues);
+                    break;
+                default:
+                    throw new IllegalArgumentException(
+                            "Unsupported schema keyword: " + keyword);
+            }
+        }
+        return schema;
     }
 
     /**

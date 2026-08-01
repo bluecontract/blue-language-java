@@ -8,6 +8,7 @@ import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.registry.RegistryManifestConstants;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.CanonicalIdentityConstants;
 import blue.language.utils.Properties;
 import blue.language.utils.SchemaPropertyConstants;
@@ -349,8 +350,9 @@ final class SourceStyleConventionsTest {
         // when
         List<String> violations = new ArrayList<>();
         for (Path source : productionSources) {
-            if ("Properties.java".equals(
-                    source.getFileName().toString())) {
+            String fileName = source.getFileName().toString();
+            if ("BlueLanguageConstants.java".equals(fileName)
+                    || "Properties.java".equals(fileName)) {
                 continue;
             }
             Set<String> stringLiterals =
@@ -359,7 +361,7 @@ final class SourceStyleConventionsTest {
                 if (stringLiterals.contains(wireLiteral)) {
                     violations.add(source + ": Blue wire literal \""
                             + wireLiteral
-                            + "\" must use Properties");
+                            + "\" must use BlueLanguageConstants");
                 }
             }
         }
@@ -551,7 +553,8 @@ final class SourceStyleConventionsTest {
         for (Path source : sources) {
             String fileName = source.getFileName().toString();
             String content = read(source);
-            if (!"Properties.java".equals(fileName)) {
+            if (!"BlueLanguageConstants.java".equals(fileName)
+                    && !"Properties.java".equals(fileName)) {
                 rejectContainedLiterals(
                         source,
                         content,

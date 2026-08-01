@@ -1,7 +1,7 @@
 package blue.language.model;
 
-import blue.language.utils.NodePathAccessor;
-import blue.language.utils.BlueNumbers;
+import blue.language.model.path.NodePath;
+import blue.language.model.value.BlueNumbers;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -10,7 +10,7 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
 
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**
  * Mutable Java representation of a Blue node.
@@ -700,7 +700,7 @@ public class Node implements Cloneable {
      * @return terminal scalar value or structural node
      */
     public Object get(String path) {
-        return NodePathAccessor.get(this, path);
+        return NodePath.get(this, path);
     }
 
     /**
@@ -712,7 +712,7 @@ public class Node implements Cloneable {
      * @return terminal scalar value or structural node
      */
     public Object get(String path, Function<Node, Node> linkingProvider) {
-        return NodePathAccessor.get(this, path, linkingProvider);
+        return NodePath.get(this, path, linkingProvider);
     }
 
     /**
@@ -732,7 +732,7 @@ public class Node implements Cloneable {
      * @return structural node at the path
      */
     public Node getNode(String path) {
-        return NodePathAccessor.getNode(this, path);
+        return NodePath.getNode(this, path);
     }
 
     /**
