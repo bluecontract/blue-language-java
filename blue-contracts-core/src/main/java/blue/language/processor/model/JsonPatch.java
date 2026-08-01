@@ -14,7 +14,8 @@ import java.util.Objects;
  * <p>Remove operations never carry a value; add and replace operations always
  * do. Factory methods enforce that invariant at construction time. Operation
  * and path fields are immutable, but add/replace values are retained and
- * returned by reference; use {@link FrozenJsonPatch} when the value must be
+ * returned by reference; use
+ * {@link blue.language.processor.FrozenJsonPatch} when the value must be
  * isolated from caller mutation.</p>
  */
 @TypeBlueId(RuntimeBlueIds.JSON_PATCH_ENTRY)
