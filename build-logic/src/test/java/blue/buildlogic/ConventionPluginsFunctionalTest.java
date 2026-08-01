@@ -1,6 +1,7 @@
 package blue.buildlogic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -8,6 +9,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.gradle.testkit.runner.BuildResult;
@@ -21,6 +26,9 @@ final class ConventionPluginsFunctionalTest {
 
     private static final int JAVA_EIGHT_CLASS_MAJOR_VERSION = 52;
     private static final String ARTIFACT_FILE_PREFIX = "blue-language-fixture-1.2.3";
+    private static final String FIXTURE_COMMIT =
+            "0123456789abcdef0123456789abcdef01234567";
+    private static final String FIXTURE_SOURCE_DATE_EPOCH = "1700000000";
 
     @TempDir
     Path temporaryDirectory;
@@ -69,6 +77,63 @@ final class ConventionPluginsFunctionalTest {
         assertPublicationPom();
     }
 
+    @Test
+    void shouldVerifyEvidenceFromPriorCleanBuildInvocation() throws Exception {
+        // given
+        writeReleaseEvidenceFixture();
+        BuildResult cleanBuild = runReleaseEvidence(false, "clean", "build");
+
+        // when
+        BuildResult verification = runReleaseEvidence(false, "verifyCleanBuildEvidence");
+
+        // then
+        assertEquals(TaskOutcome.SUCCESS,
+                cleanBuild.task(":generateCleanSourceEvidence").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS,
+                cleanBuild.task(":generateCleanBuildEvidence").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS,
+                verification.task(":verifyCleanBuildEvidence").getOutcome());
+        String report = Files.readString(temporaryDirectory.resolve(
+                "build/reports/release-evidence/clean-build-verification.json"));
+        assertTrue(report.contains("\"reason\":\"verified\""));
+        assertTrue(report.contains("\"verified\":true"));
+    }
+
+    @Test
+    void shouldRejectPriorCleanBuildEvidenceAfterSourceChanges() throws Exception {
+        // given
+        writeReleaseEvidenceFixture();
+        runReleaseEvidence(false, "clean", "build");
+        write("source-input.txt", "changed\n");
+
+        // when
+        BuildResult verification = runReleaseEvidence(true, "verifyCleanBuildEvidence");
+
+        // then
+        assertEquals(TaskOutcome.FAILED,
+                verification.task(":verifyCleanBuildEvidence").getOutcome());
+        String report = Files.readString(temporaryDirectory.resolve(
+                "build/reports/release-evidence/clean-build-verification.json"));
+        assertTrue(report.contains(
+                "\"reason\":\"source-inputs-changed-since-clean-build\""));
+        assertTrue(report.contains("\"verified\":false"));
+    }
+
+    @Test
+    void shouldInvalidatePriorCleanBuildEvidenceWhenLaterBuildFails() throws Exception {
+        // given
+        writeReleaseEvidenceFixture();
+        runReleaseEvidence(false, "clean", "build");
+
+        // when
+        BuildResult failedBuild = runReleaseEvidence(true, "build", "-PfixtureFail");
+
+        // then
+        assertEquals(TaskOutcome.FAILED, failedBuild.task(":fixtureFailure").getOutcome());
+        assertFalse(Files.exists(temporaryDirectory.resolve(
+                "build/reports/release-evidence/clean-build.json")));
+    }
+
     private void writeFixture() throws Exception {
         write(
                 "settings.gradle",
@@ -97,12 +162,49 @@ final class ConventionPluginsFunctionalTest {
                         "")));
     }
 
+    private void writeReleaseEvidenceFixture() throws Exception {
+        write("settings.gradle", "rootProject.name = 'release-evidence-fixture'\n");
+        write(
+                "build.gradle",
+                String.join("\n", Arrays.asList(
+                        "plugins {",
+                        "    id 'base'",
+                        "    id 'blue.release-evidence'",
+                        "}",
+                        "version = '1.2.3'",
+                        "tasks.register('fixtureFailure') {",
+                        "    doLast {",
+                        "        if (providers.gradleProperty('fixtureFail').isPresent()) {",
+                        "            throw new GradleException('fixture failure')",
+                        "        }",
+                        "    }",
+                        "}",
+                        "tasks.named('build') { dependsOn tasks.named('fixtureFailure') }",
+                        "")));
+        write("source-input.txt", "stable\n");
+    }
+
     private BuildResult run(String taskName) {
         return GradleRunner.create()
                 .withProjectDir(temporaryDirectory.toFile())
                 .withPluginClasspath()
                 .withArguments(taskName, "--offline", "--stacktrace")
                 .build();
+    }
+
+    private BuildResult runReleaseEvidence(boolean expectFailure, String... taskNames) {
+        List<String> arguments = new ArrayList<>(Arrays.asList(taskNames));
+        arguments.add("--offline");
+        arguments.add("--stacktrace");
+        Map<String, String> environment = new HashMap<>(System.getenv());
+        environment.put("GIT_COMMIT", FIXTURE_COMMIT);
+        environment.put("SOURCE_DATE_EPOCH", FIXTURE_SOURCE_DATE_EPOCH);
+        GradleRunner runner = GradleRunner.create()
+                .withProjectDir(temporaryDirectory.toFile())
+                .withPluginClasspath()
+                .withArguments(arguments)
+                .withEnvironment(environment);
+        return expectFailure ? runner.buildAndFail() : runner.build();
     }
 
     private void assertReplicaEquals(String artifactName) throws Exception {

@@ -1,42 +1,31 @@
 package blue.buildlogic;
 
 import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.GenerateCleanBuildEvidenceTask;
+import blue.buildlogic.tasks.GenerateCleanSourceEvidenceTask;
 import blue.buildlogic.tasks.GenerateReleaseEvidenceTask;
 import blue.buildlogic.tasks.VerifyAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.VerifyCleanBuildEvidenceTask;
 import blue.buildlogic.tasks.VerifyInputIdentityTask;
 import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
+import blue.buildlogic.support.RepositorySourceFiles;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.file.ConfigurableFileTree;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.TaskProvider;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
+import java.util.ArrayList;
+import java.util.Collections;
 
 /** Adds generation and stale-input verification for deterministic release evidence. */
 public final class ReleaseEvidencePlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        ConfigurableFileTree sourceInputs = project.fileTree(project.getRootDir());
-        sourceInputs.include("**/*");
-        sourceInputs.exclude(
-                "**/.git/**",
-                "**/.gradle/**",
-                "**/build/**",
-                "**/.DS_Store",
-                "**/._*",
-                "**/*.jfr",
-                "**/*.hprof",
-                "**/*.heapdump",
-                "**/*.db",
-                "**/*.sqlite*",
-                "**/node_modules/**",
-                "**/__pycache__/**",
-                "**/*.pyc",
-                "**/*.pyo",
-                "**/*.zip",
-                "**/*.tar",
-                "**/*.tar.gz",
-                "**/*.tgz");
+        ConfigurableFileTree sourceInputs = RepositorySourceFiles.create(project);
 
         Provider<String> gitCommit = project.getProviders()
                 .environmentVariable("GIT_COMMIT")
@@ -48,9 +37,18 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                 .environmentVariable("SOURCE_DATE_EPOCH")
                 .orElse("0");
         Provider<RegularFile> evidenceFile = project.getLayout().getBuildDirectory()
-                .file("reports/release-evidence/source-input.json");
+                .file(BuildLogicConstants.REPORT_SOURCE_INPUT_EVIDENCE);
         Provider<RegularFile> aggregateReceiptFile = project.getLayout().getBuildDirectory()
                 .file(BuildLogicConstants.REPORT_AGGREGATE_RELEASE_RECEIPT);
+        Provider<RegularFile> cleanSourceEvidenceFile = project.getLayout().getBuildDirectory()
+                .file(BuildLogicConstants.REPORT_CLEAN_SOURCE_EVIDENCE);
+        Provider<RegularFile> cleanBuildEvidenceFile = project.getLayout().getBuildDirectory()
+                .file(BuildLogicConstants.REPORT_CLEAN_BUILD_EVIDENCE);
+        java.util.List<String> invocationTasks =
+                new ArrayList<>(project.getGradle().getStartParameter().getTaskNames());
+        java.util.List<String> excludedTasks =
+                new ArrayList<>(project.getGradle().getStartParameter().getExcludedTaskNames());
+        Collections.sort(excludedTasks);
 
         ConfigurableFileTree artifactInputs = project.fileTree(project.getRootDir());
         artifactInputs.include("**/build/libs/*.jar", "**/build/libs/*.zip");
@@ -99,6 +97,66 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                     task.getSourceRoot().set(project.getRootProject().getLayout()
                             .getProjectDirectory());
                     task.getEvidenceFile().set(evidenceFile);
+                });
+
+        TaskProvider<GenerateCleanSourceEvidenceTask> generateCleanSource =
+                project.getTasks().register(
+                BuildLogicConstants.TASK_GENERATE_CLEAN_SOURCE_EVIDENCE,
+                GenerateCleanSourceEvidenceTask.class,
+                task -> {
+                    task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                    task.setDescription("Captures source identity immediately after root clean.");
+                    task.getSourceFiles().from(sourceInputs);
+                    task.getSourceRoot().set(project.getRootProject().getLayout()
+                            .getProjectDirectory());
+                    task.getSourceCommit().convention(gitCommit);
+                    task.getSourceDateEpoch().convention(sourceDateEpoch);
+                    task.getCleanTaskPath().set(BuildLogicConstants.ROOT_CLEAN_TASK_PATH);
+                    task.getInvocationTasks().set(invocationTasks);
+                    task.getExcludedTasks().set(excludedTasks);
+                    task.getOutputFile().set(cleanSourceEvidenceFile);
+                });
+
+        TaskProvider<GenerateCleanBuildEvidenceTask> generateCleanBuild =
+                project.getTasks().register(
+                BuildLogicConstants.TASK_GENERATE_CLEAN_BUILD_EVIDENCE,
+                GenerateCleanBuildEvidenceTask.class,
+                task -> {
+                    task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                    task.setDescription(
+                            "Records a successful exclusion-free build over captured clean source.");
+                    task.getSourceFiles().from(sourceInputs);
+                    task.getSourceRoot().set(project.getRootProject().getLayout()
+                            .getProjectDirectory());
+                    task.getCleanSourceEvidenceFile().set(cleanSourceEvidenceFile);
+                    task.getSourceCommit().convention(gitCommit);
+                    task.getSourceDateEpoch().convention(sourceDateEpoch);
+                    task.getCleanTaskPath().set(BuildLogicConstants.ROOT_CLEAN_TASK_PATH);
+                    task.getBuildTaskPath().set(BuildLogicConstants.ROOT_BUILD_TASK_PATH);
+                    task.getInvocationTasks().set(invocationTasks);
+                    task.getExcludedTasks().set(excludedTasks);
+                    task.getOutputFile().set(cleanBuildEvidenceFile);
+                });
+
+        configureCleanBuildLifecycle(project, generateCleanSource, generateCleanBuild);
+
+        project.getTasks().register(
+                BuildLogicConstants.TASK_VERIFY_CLEAN_BUILD_EVIDENCE,
+                VerifyCleanBuildEvidenceTask.class,
+                task -> {
+                    task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                    task.setDescription(
+                            "Verifies a prior clean build against current source and epoch.");
+                    task.getSourceFiles().from(sourceInputs);
+                    task.getSourceRoot().set(project.getRootProject().getLayout()
+                            .getProjectDirectory());
+                    task.getEvidenceFile().set(cleanBuildEvidenceFile);
+                    task.getSourceCommit().convention(gitCommit);
+                    task.getSourceDateEpoch().convention(sourceDateEpoch);
+                    task.getCleanTaskPath().set(BuildLogicConstants.ROOT_CLEAN_TASK_PATH);
+                    task.getBuildTaskPath().set(BuildLogicConstants.ROOT_BUILD_TASK_PATH);
+                    task.getReportFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_CLEAN_BUILD_VERIFICATION));
                 });
 
         project.getTasks().register(
@@ -156,5 +214,43 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                     task.getReportFile().set(project.getLayout().getBuildDirectory()
                             .file(BuildLogicConstants.REPORT_MODULE_STRUCTURE));
                 });
+    }
+
+    private static void configureCleanBuildLifecycle(
+            Project project,
+            TaskProvider<GenerateCleanSourceEvidenceTask> cleanSource,
+            TaskProvider<GenerateCleanBuildEvidenceTask> cleanBuild) {
+        project.getPluginManager().withPlugin("base", ignored -> {
+            TaskProvider<Task> clean = project.getTasks().named(
+                    LifecycleBasePlugin.CLEAN_TASK_NAME);
+            TaskProvider<Task> build = project.getTasks().named(
+                    LifecycleBasePlugin.BUILD_TASK_NAME);
+            clean.configure(task -> task.finalizedBy(cleanSource));
+            cleanSource.configure(task -> task.mustRunAfter(clean));
+            build.configure(task -> {
+                task.mustRunAfter(clean, cleanSource);
+                task.finalizedBy(cleanBuild);
+            });
+            cleanBuild.configure(task -> {
+                task.mustRunAfter(build);
+                task.getCleanTaskExecuted().set(project.provider(() -> {
+                    Task cleanTask = clean.get();
+                    return project.getGradle().getTaskGraph().hasTask(cleanTask)
+                            && cleanTask.getState().getExecuted()
+                            && cleanTask.getState().getFailure() == null;
+                }));
+                task.getBuildTaskSuccessful().set(project.provider(() -> {
+                    Task buildTask = build.get();
+                    return project.getGradle().getTaskGraph().hasTask(buildTask)
+                            && buildTask.getState().getExecuted()
+                            && buildTask.getState().getFailure() == null;
+                }));
+            });
+            project.getGradle().getTaskGraph().whenReady(graph -> {
+                if (graph.hasTask(build.get())) {
+                    project.delete(cleanBuild.get().getOutputFile().get().getAsFile());
+                }
+            });
+        });
     }
 }

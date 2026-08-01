@@ -8,11 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import blue.buildlogic.tasks.CompareApiBaselineTask;
 import blue.buildlogic.tasks.CompareArchiveReplicasTask;
 import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.GenerateCleanBuildEvidenceTask;
+import blue.buildlogic.tasks.GenerateCleanSourceEvidenceTask;
 import blue.buildlogic.tasks.GenerateFileIdentityTask;
 import blue.buildlogic.tasks.GenerateJavaApiInventoryTask;
 import blue.buildlogic.tasks.GenerateJavaModuleInventoryTask;
 import blue.buildlogic.tasks.GenerateReleaseEvidenceTask;
 import blue.buildlogic.tasks.VerifyAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.VerifyCleanBuildEvidenceTask;
 import blue.buildlogic.tasks.VerifyInputIdentityTask;
 import blue.buildlogic.tasks.VerifyJavaPackageCyclesTask;
 import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
@@ -204,6 +207,12 @@ final class ConventionPluginsTest {
                 instanceof GenerateReleaseEvidenceTask);
         assertTrue(project.getTasks().getByName("verifyReleaseEvidenceInputs")
                 instanceof VerifyInputIdentityTask);
+        assertTrue(project.getTasks().getByName("generateCleanSourceEvidence")
+                instanceof GenerateCleanSourceEvidenceTask);
+        assertTrue(project.getTasks().getByName("generateCleanBuildEvidence")
+                instanceof GenerateCleanBuildEvidenceTask);
+        assertTrue(project.getTasks().getByName("verifyCleanBuildEvidence")
+                instanceof VerifyCleanBuildEvidenceTask);
         assertTrue(project.getTasks().getByName("generateAggregateReleaseReceipt")
                 instanceof GenerateAggregateReleaseReceiptTask);
         assertTrue(project.getTasks().getByName("verifyAggregateReleaseReceipt")

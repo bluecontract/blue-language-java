@@ -1,12 +1,17 @@
 package blue.buildlogic;
 
+import blue.buildlogic.tasks.CompareArchiveReplicasTask;
+import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.GenerateChecksumFileTask;
 import blue.buildlogic.tasks.GenerateJavaApiInventoryTask;
 import blue.buildlogic.tasks.GenerateJavaModuleInventoryTask;
-import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.GenerateSourceReleaseMetadataTask;
 import blue.buildlogic.tasks.VerifyAggregateReleaseReceiptTask;
 import blue.buildlogic.tasks.VerifyBuildScriptShapeTask;
 import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import blue.buildlogic.tasks.VerifyPublishedRepositoryTask;
+import blue.buildlogic.tasks.VerifySourceReleaseArchiveTask;
+import blue.buildlogic.support.RepositorySourceFiles;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,6 +24,7 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.ConfigurableFileTree;
+import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.JavaExec;
@@ -28,6 +34,7 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
+import org.gradle.api.tasks.bundling.Zip;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
@@ -39,7 +46,13 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin;
 public final class RootOrchestrationPlugin implements Plugin<Project> {
 
     private static final int JAVA_VERSION = 8;
+    private static final int EXECUTABLE_FILE_MODE = 0755;
+    private static final int REGULAR_FILE_MODE = 0644;
     private static final String GROUP = BuildLogicConstants.VERIFICATION_GROUP;
+    private static final String DISTRIBUTION_GROUP = "distribution";
+    private static final String SOURCE_RELEASE_BASE_NAME = "blue-language-java";
+    private static final String SOURCE_RELEASE_CLASSIFIER = "source-release";
+    private static final String SOURCE_RELEASE_METADATA_FILE = ".cz.toml";
     private static final List<String> PUBLISHED_MODULES = Collections.unmodifiableList(Arrays.asList(
             "blue-language-model",
             "blue-language-core",
@@ -81,6 +94,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         project.getPluginManager().apply(ReleaseEvidencePlugin.class);
         configureRootJava(project);
         configureDependencies(project);
+        SourceReleaseTasks sourceRelease = registerSourceReleaseTasks(project);
 
         TaskProvider<Task> moduleCheck = lifecycle(project, "moduleCheck",
                 "Runs checks for every module and the root compatibility tests.");
@@ -193,7 +207,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
 
         registerFocusedTests(project);
         registerEvidenceExecutions(project);
-        registerCompatibilityAliases(project, moduleApiVerify, moduleArchiveVerify);
+        registerCompatibilityAliases(
+                project, moduleApiVerify, moduleArchiveVerify, sourceRelease);
 
         project.getGradle().projectsEvaluated(gradle -> configureModuleGraph(
                 project,
@@ -209,7 +224,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 verifyReceipt,
                 scriptShape,
                 publishedRepository,
-                publishedSmoke));
+                publishedSmoke,
+                sourceRelease));
 
         TaskProvider<Task> releaseVerify = lifecycle(project, "releaseVerify",
                 "Runs all modular release-candidate gates and emits aggregate evidence.");
@@ -224,6 +240,11 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 project.getTasks().named("releaseConformanceTest"),
                 project.getTasks().named("runtimeTraceEvidence"),
                 project.getTasks().named("fragmentedProcessingTest"),
+                project.getTasks().named(
+                        BuildLogicConstants.TASK_VERIFY_CLEAN_BUILD_EVIDENCE),
+                sourceRelease.checksum,
+                sourceRelease.comparison,
+                sourceRelease.verification,
                 verifyReceipt));
         lifecycle(project, "rcVerify", "Alias for releaseVerify.")
                 .configure(task -> task.dependsOn(releaseVerify));
@@ -291,6 +312,129 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         dependencies.add("jmhImplementation", project.project(":blue-language-java"));
     }
 
+    private static SourceReleaseTasks registerSourceReleaseTasks(Project project) {
+        ConfigurableFileTree sourceFiles = RepositorySourceFiles.createForSourceRelease(project);
+        org.gradle.api.provider.Provider<String> releaseVersion = project.provider(
+                () -> project.getVersion().toString());
+        org.gradle.api.provider.Provider<String> rootPrefix = releaseVersion.map(
+                version -> SOURCE_RELEASE_BASE_NAME + "-" + version);
+        org.gradle.api.provider.Provider<String> archiveName = releaseVersion.map(
+                version -> SOURCE_RELEASE_BASE_NAME + "-" + version + "-"
+                        + SOURCE_RELEASE_CLASSIFIER + ".zip");
+
+        TaskProvider<GenerateSourceReleaseMetadataTask> metadata = project.getTasks().register(
+                BuildLogicConstants.TASK_GENERATE_SOURCE_RELEASE_METADATA,
+                GenerateSourceReleaseMetadataTask.class,
+                task -> {
+                    task.setGroup(DISTRIBUTION_GROUP);
+                    task.setDescription(
+                            "Creates release metadata without modifying the tracked .cz.toml.");
+                    task.getSourceFile().set(project.getLayout().getProjectDirectory()
+                            .file(SOURCE_RELEASE_METADATA_FILE));
+                    task.getReleaseVersion().set(releaseVersion);
+                    task.getOutputFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.DIRECTORY_SOURCE_RELEASE_METADATA
+                                    + "/" + SOURCE_RELEASE_METADATA_FILE));
+                });
+
+        TaskProvider<Zip> primary = registerSourceReleaseArchive(
+                project,
+                BuildLogicConstants.TASK_SOURCE_RELEASE_ARCHIVE,
+                "Creates the complete deterministic source-release ZIP.",
+                BuildLogicConstants.DIRECTORY_SOURCE_RELEASE,
+                sourceFiles,
+                metadata,
+                releaseVersion,
+                rootPrefix);
+        TaskProvider<Zip> replica = registerSourceReleaseArchive(
+                project,
+                BuildLogicConstants.TASK_SOURCE_RELEASE_ARCHIVE_REPLICA,
+                "Independently creates the source-release ZIP repeatability replica.",
+                BuildLogicConstants.DIRECTORY_SOURCE_RELEASE_REPLICA,
+                sourceFiles,
+                metadata,
+                releaseVersion,
+                rootPrefix);
+
+        TaskProvider<GenerateChecksumFileTask> checksum = project.getTasks().register(
+                BuildLogicConstants.TASK_GENERATE_SOURCE_RELEASE_CHECKSUM,
+                GenerateChecksumFileTask.class,
+                task -> {
+                    task.setGroup(DISTRIBUTION_GROUP);
+                    task.setDescription("Writes the source-release ZIP SHA-256 sidecar.");
+                    task.getInputFile().set(primary.flatMap(Zip::getArchiveFile));
+                    task.getOutputFile().set(project.getLayout().getBuildDirectory().file(
+                            archiveName.map(name -> BuildLogicConstants.DIRECTORY_SOURCE_RELEASE
+                                    + "/" + name + ".sha256")));
+                });
+        primary.configure(task -> task.finalizedBy(checksum));
+
+        TaskProvider<CompareArchiveReplicasTask> comparison = project.getTasks().register(
+                BuildLogicConstants.TASK_COMPARE_SOURCE_RELEASE_REPLICA,
+                CompareArchiveReplicasTask.class,
+                task -> {
+                    task.setGroup(GROUP);
+                    task.setDescription(
+                            "Requires independently assembled source-release ZIPs to match.");
+                    task.getReferenceArchives().from(primary.flatMap(Zip::getArchiveFile));
+                    task.getReplicaArchives().from(replica.flatMap(Zip::getArchiveFile));
+                    task.getReportFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_SOURCE_RELEASE_REPLICA));
+                    task.dependsOn(primary, replica);
+                });
+        TaskProvider<VerifySourceReleaseArchiveTask> verification =
+                project.getTasks().register(
+                        BuildLogicConstants.TASK_VERIFY_SOURCE_RELEASE_ARCHIVE,
+                        VerifySourceReleaseArchiveTask.class,
+                        task -> {
+                            task.setGroup(GROUP);
+                            task.setDescription(
+                                    "Checks the source-release ZIP for exact inputs and no debris.");
+                            task.getArchiveFile().set(primary.flatMap(Zip::getArchiveFile));
+                            task.getSourceFiles().from(sourceFiles);
+                            task.getSourceRoot().set(project.getLayout().getProjectDirectory());
+                            task.getRootPrefix().set(rootPrefix);
+                            task.getGeneratedMetadataEntry().set(SOURCE_RELEASE_METADATA_FILE);
+                            task.getReportFile().set(project.getLayout().getBuildDirectory()
+                                    .file(BuildLogicConstants.REPORT_SOURCE_RELEASE_VERIFICATION));
+                            task.dependsOn(primary);
+                        });
+        return new SourceReleaseTasks(primary, checksum, comparison, verification);
+    }
+
+    private static TaskProvider<Zip> registerSourceReleaseArchive(
+            Project project,
+            String taskName,
+            String description,
+            String destination,
+            ConfigurableFileTree sourceFiles,
+            TaskProvider<GenerateSourceReleaseMetadataTask> metadata,
+            org.gradle.api.provider.Provider<String> releaseVersion,
+            org.gradle.api.provider.Provider<String> rootPrefix) {
+        return project.getTasks().register(taskName, Zip.class, task -> {
+            task.setGroup(DISTRIBUTION_GROUP);
+            task.setDescription(description);
+            task.getArchiveBaseName().set(SOURCE_RELEASE_BASE_NAME);
+            task.getArchiveVersion().set(releaseVersion);
+            task.getArchiveClassifier().set(SOURCE_RELEASE_CLASSIFIER);
+            task.getDestinationDirectory().set(project.getLayout().getBuildDirectory()
+                    .dir(destination));
+            task.setPreserveFileTimestamps(false);
+            task.setReproducibleFileOrder(true);
+            task.setIncludeEmptyDirs(false);
+            task.setDuplicatesStrategy(DuplicatesStrategy.FAIL);
+            task.dependsOn(metadata);
+            task.into(rootPrefix, contents -> {
+                contents.from(sourceFiles);
+                contents.from(metadata.flatMap(GenerateSourceReleaseMetadataTask::getOutputFile));
+            });
+            task.eachFile(details -> details.permissions(permissions -> permissions.unix(
+                    details.getPath().endsWith("/gradlew")
+                            || details.getPath().endsWith(".sh")
+                            ? EXECUTABLE_FILE_MODE : REGULAR_FILE_MODE)));
+        });
+    }
+
     private static void configureModuleGraph(
             Project root,
             TaskProvider<Task> moduleCheck,
@@ -305,7 +449,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             TaskProvider<VerifyAggregateReleaseReceiptTask> verifyReceipt,
             TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
             TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
-            TaskProvider<GradleBuild> publishedSmoke) {
+            TaskProvider<GradleBuild> publishedSmoke,
+            SourceReleaseTasks sourceRelease) {
         for (String name : PUBLISHED_MODULES) {
             Project module = root.project(":" + name);
             moduleCheck.configure(task -> task.dependsOn(module.getTasks().named("check")));
@@ -365,7 +510,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 moduleStructure,
                 scriptShape,
                 publishedRepository,
-                publishedSmoke);
+                publishedSmoke,
+                sourceRelease);
     }
 
     private static void configureAggregateReceipt(
@@ -378,7 +524,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             TaskProvider<VerifyJavaModuleStructureTask> moduleStructure,
             TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
             TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
-            TaskProvider<GradleBuild> publishedSmoke) {
+            TaskProvider<GradleBuild> publishedSmoke,
+            SourceReleaseTasks sourceRelease) {
         java.util.List<Object> api = new java.util.ArrayList<>();
         java.util.List<Object> verification = new java.util.ArrayList<>();
         for (String name : PUBLISHED_MODULES) {
@@ -416,11 +563,18 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         verification.add(publishedSmoke);
         verification.add(root.getTasks().named("runtimeTraceEvidence"));
         verification.add(root.getTasks().named("generateReleaseEvidence"));
+        verification.add(root.getTasks().named(
+                BuildLogicConstants.TASK_VERIFY_CLEAN_BUILD_EVIDENCE));
+        verification.add(sourceRelease.comparison);
+        verification.add(sourceRelease.verification);
         root.getTasks().named("verifyReleaseEvidenceInputs").configure(task ->
                 task.dependsOn(root.getTasks().named("generateReleaseEvidence")));
 
         generateReceipt.configure(task -> {
             task.getArtifacts().setFrom(artifacts);
+            task.getArtifacts().from(
+                    sourceRelease.primary.flatMap(Zip::getArchiveFile),
+                    sourceRelease.checksum.flatMap(GenerateChecksumFileTask::getOutputFile));
             task.getTestEvidence().setFrom(testEvidence);
             task.getFixtureEvidence().setFrom(fixtures);
             task.getApiEvidence().setFrom(api);
@@ -432,6 +586,11 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                     moduleStructure,
                     scriptShape,
                     publishedSmoke,
+                    root.getTasks().named(
+                            BuildLogicConstants.TASK_VERIFY_CLEAN_BUILD_EVIDENCE),
+                    sourceRelease.checksum,
+                    sourceRelease.comparison,
+                    sourceRelease.verification,
                     root.getTasks().named("releaseConformanceTest"),
                     root.getTasks().named("runtimeTraceEvidence"),
                     root.getTasks().named("verifyReleaseEvidenceInputs"));
@@ -439,6 +598,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         });
         verifyReceipt.configure(task -> {
             task.getArtifacts().setFrom(artifacts);
+            task.getArtifacts().from(
+                    sourceRelease.primary.flatMap(Zip::getArchiveFile),
+                    sourceRelease.checksum.flatMap(GenerateChecksumFileTask::getOutputFile));
             task.getTestEvidence().setFrom(testEvidence);
             task.getFixtureEvidence().setFrom(fixtures);
             task.getApiEvidence().setFrom(api);
@@ -539,7 +701,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
     private static void registerCompatibilityAliases(
             Project project,
             TaskProvider<Task> moduleApiVerify,
-            TaskProvider<Task> moduleArchiveVerify) {
+            TaskProvider<Task> moduleArchiveVerify,
+            SourceReleaseTasks sourceRelease) {
         lifecycle(project, "verifyFinalApiBaseline",
                 "Checks all tracked module API baselines.")
                 .configure(task -> task.dependsOn(moduleApiVerify));
@@ -548,7 +711,10 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 .configure(task -> task.dependsOn(moduleArchiveVerify));
         lifecycle(project, "verifyDeterministicSourceArchives",
                 "Checks every published sources archive and replica.")
-                .configure(task -> task.dependsOn(moduleArchiveVerify));
+                .configure(task -> task.dependsOn(
+                        moduleArchiveVerify,
+                        sourceRelease.comparison,
+                        sourceRelease.verification));
         lifecycle(project, "fragmentedProcessingReport",
                 "Reserved for the typed semantic locality report assembler.")
                 .configure(task -> {
@@ -580,6 +746,26 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         if (project != project.getRootProject()) {
             throw new org.gradle.api.GradleException(
                     "blue.root-orchestration may only be applied to the root project");
+        }
+    }
+
+    /** Providers for the independently assembled source-release outputs and gates. */
+    private static final class SourceReleaseTasks {
+
+        private final TaskProvider<Zip> primary;
+        private final TaskProvider<GenerateChecksumFileTask> checksum;
+        private final TaskProvider<CompareArchiveReplicasTask> comparison;
+        private final TaskProvider<VerifySourceReleaseArchiveTask> verification;
+
+        private SourceReleaseTasks(
+                TaskProvider<Zip> primary,
+                TaskProvider<GenerateChecksumFileTask> checksum,
+                TaskProvider<CompareArchiveReplicasTask> comparison,
+                TaskProvider<VerifySourceReleaseArchiveTask> verification) {
+            this.primary = primary;
+            this.checksum = checksum;
+            this.comparison = comparison;
+            this.verification = verification;
         }
     }
 
