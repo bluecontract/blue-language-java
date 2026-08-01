@@ -239,6 +239,11 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                         sourceRelease.comparison,
                         sourceRelease.verification,
                         benchmarkClasses);
+        DocumentationQualityOrchestration.register(
+                project,
+                PUBLISHED_MODULES,
+                apiUnion,
+                moduleStructure);
 
         project.getGradle().projectsEvaluated(gradle -> configureModuleGraph(
                 project,

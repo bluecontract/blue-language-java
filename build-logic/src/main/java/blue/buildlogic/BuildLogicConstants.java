@@ -22,6 +22,10 @@ public final class BuildLogicConstants {
             "generateModuleStructureInventory";
     public static final String TASK_GENERATE_PUBLIC_API_INVENTORY = "generatePublicApiInventory";
     public static final String TASK_GENERATE_PUBLIC_API_UNION = "generatePublicApiUnion";
+    public static final String TASK_GENERATE_DOCUMENTATION_REFERENCES =
+            "generateDocumentationReferences";
+    public static final String TASK_GENERATE_DOCUMENTATION_REPORT =
+            "generateDocumentationVerificationReport";
     public static final String TASK_GENERATE_SOURCE_RELEASE_CHECKSUM =
             "generateSourceReleaseChecksum";
     public static final String TASK_GENERATE_SOURCE_RELEASE_METADATA =
@@ -57,6 +61,9 @@ public final class BuildLogicConstants {
     public static final String TASK_VERIFY_PUBLISHED_REPOSITORY = "verifyPublishedRepository";
     public static final String TASK_VERIFY_SOURCE_RELEASE_ARCHIVE =
             "verifySourceReleaseArchive";
+    public static final String TASK_DOCUMENTATION_VERIFY = "documentationVerify";
+    public static final String TASK_UPDATE_DOCUMENTATION_REFERENCES =
+            "updateGeneratedDocumentationReferences";
 
     public static final String REPORT_AGGREGATE_RELEASE_RECEIPT =
             "reports/release-evidence/aggregate-release-receipt.json";
@@ -81,6 +88,10 @@ public final class BuildLogicConstants {
             "reports/architecture/package-cycles.json";
     public static final String REPORT_BUILD_SCRIPT_SHAPE =
             "reports/architecture/build-script-shape.json";
+    public static final String REPORT_DOCUMENTATION_ANALYSIS =
+            "reports/documentation/analysis.json";
+    public static final String REPORT_DOCUMENTATION_VERIFICATION =
+            "reports/documentation/verification.json";
     public static final String REPORT_PUBLISHED_REPOSITORY =
             "reports/published-repository/verification.json";
     public static final String REPORT_SOURCE_RELEASE_REPLICA =
@@ -108,6 +119,8 @@ public final class BuildLogicConstants {
     public static final String DIRECTORY_SOURCE_RELEASE_REPLICA =
             "reproducibility/source-release-replica";
     public static final String DIRECTORY_SOURCE_RELEASE = "release";
+    public static final String DIRECTORY_GENERATED_DOCUMENTATION =
+            "generated/documentation";
 
     private BuildLogicConstants() {}
 }

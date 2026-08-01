@@ -30,7 +30,10 @@ final class ModernizationVerificationTasksTest {
                 VerifyJavaModuleStructureTask.class,
                 CompareArchiveReplicasTask.class,
                 GenerateAggregateReleaseReceiptTask.class,
-                VerifyAggregateReleaseReceiptTask.class);
+                VerifyAggregateReleaseReceiptTask.class,
+                GenerateDocumentationReferencesTask.class,
+                GenerateDocumentationVerificationReportTask.class,
+                VerifyDocumentationReportTask.class);
 
         // when / then
         taskTypes.forEach(type -> assertTrue(

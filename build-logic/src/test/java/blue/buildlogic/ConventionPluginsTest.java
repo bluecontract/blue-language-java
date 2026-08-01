@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import blue.buildlogic.tasks.CompareApiBaselineTask;
 import blue.buildlogic.tasks.CompareArchiveReplicasTask;
@@ -40,6 +41,7 @@ import org.gradle.external.javadoc.StandardJavadocDocletOptions;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.gradle.plugins.signing.SigningExtension;
 import org.junit.jupiter.api.Test;
+import org.gradle.api.InvalidUserDataException;
 import org.junit.jupiter.api.io.TempDir;
 
 final class ConventionPluginsTest {
@@ -237,6 +239,28 @@ final class ConventionPluginsTest {
         // then
         assertTrue(project.getPluginManager().hasPlugin("me.champeau.jmh"));
         assertNotNull(project.getTasks().findByName("jmh"));
+    }
+
+    @Test
+    void shouldParseTypedJmhIncludeFiltersDeterministically() {
+        // given
+        String filters = "DeepGraph.*processSelectedLeaf, ReferenceBlueId.*,DeepGraph.*processSelectedLeaf";
+
+        // when
+        java.util.List<String> parsed = JmhConventionsPlugin.parseIncludes(filters);
+
+        // then
+        assertEquals(java.util.Arrays.asList(
+                "DeepGraph.*processSelectedLeaf", "ReferenceBlueId.*"), parsed);
+    }
+
+    @Test
+    void shouldRejectEmptyOrMalformedJmhIncludeFilters() {
+        // given / when / then
+        assertThrows(InvalidUserDataException.class,
+                () -> JmhConventionsPlugin.parseIncludes("first,,second"));
+        assertThrows(InvalidUserDataException.class,
+                () -> JmhConventionsPlugin.parseIncludes("[unterminated"));
     }
 
     @Test
