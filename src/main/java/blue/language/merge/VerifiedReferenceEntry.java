@@ -1,4 +1,6 @@
-package blue.language.snapshot;
+package blue.language.merge;
+
+import blue.language.snapshot.FrozenNode;
 
 /** Immutable canonical/resolved evidence pair retained under one BlueId. */
 final class VerifiedReferenceEntry {

@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 

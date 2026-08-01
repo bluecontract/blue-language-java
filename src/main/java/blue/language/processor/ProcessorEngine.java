@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 /**
  * Internal orchestration kernel for one initialization or PROCESS invocation.

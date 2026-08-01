@@ -4,7 +4,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
+import blue.language.merge.ResolvedReferenceCache;
 import blue.language.utils.limits.Limits;
 
 /**

@@ -141,12 +141,12 @@ public class SchemaValidationResolutionBenchmark {
     }
 
     @Benchmark
-    public blue.language.snapshot.ResolvedSnapshot sparseResolveToSnapshot() {
+    public blue.language.merge.ResolvedSnapshot sparseResolveToSnapshot() {
         return sparseBlue.resolveToSnapshot(sparseTemplate.clone());
     }
 
     @Benchmark
-    public blue.language.snapshot.ResolvedSnapshot alternatingEquivalentDirectAndReferencedSnapshots() {
+    public blue.language.merge.ResolvedSnapshot alternatingEquivalentDirectAndReferencedSnapshots() {
         Node source = (alternatingSnapshotOrder.getAndIncrement() & 1) == 0
                 ? directSnapshotTemplate
                 : referencedSnapshotTemplate;
@@ -154,7 +154,7 @@ public class SchemaValidationResolutionBenchmark {
     }
 
     @Benchmark
-    public blue.language.snapshot.ResolvedSnapshot alternatingEquivalentNestedReferenceAndMaterializedSnapshots() {
+    public blue.language.merge.ResolvedSnapshot alternatingEquivalentNestedReferenceAndMaterializedSnapshots() {
         Node source = (alternatingNestedSnapshotOrder.getAndIncrement() & 1) == 0
                 ? nestedMaterializedSnapshotTemplate
                 : nestedReferencedSnapshotTemplate;

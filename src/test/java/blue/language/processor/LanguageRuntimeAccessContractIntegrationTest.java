@@ -7,7 +7,7 @@ import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 

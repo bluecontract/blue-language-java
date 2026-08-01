@@ -2,15 +2,15 @@ package blue.language.processor;
 
 import blue.language.api.BlueCachePolicy;
 import blue.language.runtime.BlueLanguageRuntime;
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.BlueIds;
 
 import java.util.ArrayList;

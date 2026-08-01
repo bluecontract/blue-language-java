@@ -1,10 +1,10 @@
 package blue.language.processor;
 
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

@@ -18,7 +18,7 @@ import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodePathEditor;
 import org.junit.jupiter.api.Test;

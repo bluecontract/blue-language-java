@@ -1,10 +1,10 @@
-package blue.language.snapshot;
+package blue.language.merge;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
-import blue.language.merge.VerifiedReferenceResolution;
 import blue.language.model.Node;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.Collections;
 import java.util.HashSet;

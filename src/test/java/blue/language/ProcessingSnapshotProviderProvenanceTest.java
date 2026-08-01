@@ -10,7 +10,7 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
@@ -27,7 +27,7 @@ import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeTypeKey;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

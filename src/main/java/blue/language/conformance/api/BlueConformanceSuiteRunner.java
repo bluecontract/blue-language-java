@@ -19,7 +19,7 @@ import blue.language.provider.CyclicSetProof;
 import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.DirectNodeManifest;
 import blue.language.provider.ExactNodeGraphFragments;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.ProviderEvidenceVerifier;
 import blue.language.provider.ProviderMode;

@@ -8,7 +8,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.mapping.TypeClassResolver;
 
 import java.util.Map;

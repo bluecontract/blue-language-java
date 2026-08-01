@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 import java.util.Collections;
 import java.util.List;

@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.api.NodeProviderOutcome;
+
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 

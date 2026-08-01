@@ -1,4 +1,6 @@
-package blue.language.snapshot;
+package blue.language.merge;
+
+import blue.language.snapshot.FrozenNode;
 
 import java.util.HashSet;
 import java.util.Set;

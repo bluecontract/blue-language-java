@@ -8,7 +8,7 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.conformance.ConformanceEngine;
@@ -27,7 +27,7 @@ import blue.language.processor.RecordingProcessingObserver;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.preprocess.provider.BasicNodeProvider;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;

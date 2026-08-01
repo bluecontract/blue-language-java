@@ -7,7 +7,7 @@ import blue.language.matching.BlueMatching;
 import blue.language.matching.MatchingRuntime;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.matching.NodeTypeMatcher;
 import blue.language.utils.limits.Limits;
 

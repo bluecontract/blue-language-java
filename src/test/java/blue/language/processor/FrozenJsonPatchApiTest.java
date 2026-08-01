@@ -7,7 +7,7 @@ import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

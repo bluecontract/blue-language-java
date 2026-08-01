@@ -3,9 +3,10 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
+import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -307,7 +308,8 @@ class ProcessorPreviewOwnershipTest {
 
         @Override
         public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
-            CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
+            CanonicalPatchResult patched = new CanonicalOverlayPatchEngine(
+                    snapshot.frozenCanonicalRoot()).apply(patch);
             return new ResolvedSnapshot(patched.root(),
                     FrozenNode.fromResolvedNode(patched.root().toNode()),
                     patched.blueId());

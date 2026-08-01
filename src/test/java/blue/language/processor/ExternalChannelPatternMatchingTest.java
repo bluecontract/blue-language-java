@@ -8,7 +8,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.matching.FrozenTypeMatcher;
 import org.junit.jupiter.api.Test;

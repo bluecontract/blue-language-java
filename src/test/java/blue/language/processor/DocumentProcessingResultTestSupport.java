@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 
 public final class DocumentProcessingResultTestSupport {

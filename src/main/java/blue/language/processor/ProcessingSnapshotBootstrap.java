@@ -5,7 +5,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.NodePathEditor;
 

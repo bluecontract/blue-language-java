@@ -1,5 +1,6 @@
 package blue.language.snapshot;
 
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.openjdk.jmh.annotations.Benchmark;

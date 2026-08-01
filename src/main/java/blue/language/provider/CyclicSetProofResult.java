@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.api.NodeProviderOutcome;
+
 import java.util.Objects;
 import java.util.Optional;
 

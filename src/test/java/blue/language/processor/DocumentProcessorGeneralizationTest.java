@@ -11,7 +11,7 @@ import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.model.wire.BlueLanguageConstants;

@@ -1,4 +1,4 @@
-package blue.language.snapshot;
+package blue.language.merge;
 
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
@@ -8,6 +8,7 @@ import blue.language.merge.VerifiedReferenceResolution;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;

@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.model.Node;
 
 import java.util.Map;

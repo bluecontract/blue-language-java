@@ -9,9 +9,10 @@ import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -1040,7 +1041,8 @@ class DocumentProcessorSnapshotTransactionTest {
             if (returnCurrentSnapshotOnApplyPatch) {
                 return snapshot;
             }
-            CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
+            CanonicalPatchResult patched = new CanonicalOverlayPatchEngine(
+                    snapshot.frozenCanonicalRoot()).apply(patch);
             Node resolved = patched.root().toNode();
             return new ResolvedSnapshot(patched.root(),
                     FrozenNode.fromResolvedNode(resolved),

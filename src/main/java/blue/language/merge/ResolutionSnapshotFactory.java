@@ -2,7 +2,7 @@ package blue.language.merge;
 
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
+import blue.language.merge.ResolvedReferenceCache;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.limits.Limits;
 

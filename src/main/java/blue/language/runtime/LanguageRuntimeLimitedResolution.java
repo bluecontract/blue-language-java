@@ -10,7 +10,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.utils.limits.Limits;

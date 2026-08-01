@@ -2,7 +2,7 @@ package blue.language.preprocess;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.ProviderUnavailableException;
 import blue.language.utils.BlueIds;

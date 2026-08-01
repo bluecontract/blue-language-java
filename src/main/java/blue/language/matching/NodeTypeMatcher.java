@@ -3,7 +3,7 @@ package blue.language.matching;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.Limits;

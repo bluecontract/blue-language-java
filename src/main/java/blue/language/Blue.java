@@ -13,7 +13,7 @@ import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.runtime.LanguageMatchingService;
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.runtime.LanguageRuntimeServices;
 import blue.language.runtime.WeightedLruCache;
 import blue.language.model.wire.BlueLanguageConstants;
@@ -55,8 +55,8 @@ import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeTypeAliases;
-import blue.language.patching.BluePatch;
-import blue.language.patching.BluePatchOperation;
+import blue.language.snapshot.BluePatch;
+import blue.language.snapshot.BluePatchOperation;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.StandardBluePreprocessing;
@@ -64,7 +64,7 @@ import blue.language.registry.BootstrapProvider;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.provider.NodeProvider;
 import blue.language.registry.NodeProviderWrapper;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
@@ -75,8 +75,8 @@ import blue.language.provider.Types;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedReferenceCache;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.DeferredReferencePathLimits;
@@ -3154,7 +3154,8 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             ResolvedSnapshot snapshot,
             JsonPatch patch,
             Function<FrozenNode, ResolvedSnapshot> snapshotResolver) {
-        CanonicalPatchResult patched = snapshot.applyCanonicalPatch(patch);
+        CanonicalPatchResult patched = new CanonicalOverlayPatchEngine(
+                snapshot.frozenCanonicalRoot()).apply(patch);
         ResolvedSnapshot patchedSnapshot = snapshotResolver.apply(patched.root());
         if (!canMinimizePatchedOverride(patch)) {
             return patchedSnapshot;

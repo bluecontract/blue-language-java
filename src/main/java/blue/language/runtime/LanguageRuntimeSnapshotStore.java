@@ -3,8 +3,8 @@ package blue.language.runtime;
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedReferenceCache;
+import blue.language.merge.ResolvedSnapshot;
 
 import java.lang.ref.WeakReference;
 import java.util.LinkedHashMap;

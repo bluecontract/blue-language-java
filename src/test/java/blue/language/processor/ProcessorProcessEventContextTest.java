@@ -10,7 +10,7 @@ import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

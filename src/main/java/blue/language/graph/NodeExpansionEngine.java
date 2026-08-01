@@ -7,7 +7,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.NodeDeserializer;
 import blue.language.model.Schema;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodeWireForm;

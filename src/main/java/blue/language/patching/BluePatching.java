@@ -1,8 +1,9 @@
 package blue.language.patching;
 
 import blue.language.model.Node;
+import blue.language.snapshot.BluePatch;
 import blue.language.snapshot.CanonicalPatchResult;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 /** Applies Language-owned patches to canonical inputs and snapshots. */
 public interface BluePatching {

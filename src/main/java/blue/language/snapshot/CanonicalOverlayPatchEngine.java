@@ -3,8 +3,6 @@ package blue.language.snapshot;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.patching.BluePatch;
-import blue.language.patching.BluePatchOperation;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 

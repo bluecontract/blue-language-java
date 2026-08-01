@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.api.NodeProviderOutcome;
+
 import blue.language.registry.BootstrapProvider;
 import blue.language.registry.NodeProviderWrapper;
 

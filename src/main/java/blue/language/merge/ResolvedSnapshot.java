@@ -1,13 +1,10 @@
-package blue.language.snapshot;
+package blue.language.merge;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.merge.ResolutionProvenance;
-import blue.language.merge.ResolutionSnapshot;
-import blue.language.merge.VerifiedReferenceResolution;
 import blue.language.model.Node;
-import blue.language.patching.BluePatch;
 import blue.language.model.wire.JsonPointer;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.Map;
 import java.util.Objects;
@@ -323,25 +320,6 @@ public final class ResolvedSnapshot {
      */
     public boolean isResolutionComplete() {
         return resolutionComplete;
-    }
-
-    /**
-     * Creates a patch engine rooted at this snapshot's canonical content.
-     *
-     * @return a new immutable canonical overlay patch engine
-     */
-    public CanonicalOverlayPatchEngine canonicalPatchEngine() {
-        return new CanonicalOverlayPatchEngine(canonicalRoot);
-    }
-
-    /**
-     * Applies a JSON patch to this snapshot's canonical content.
-     *
-     * @param patch patch operation to apply
-     * @return the canonical patch result
-     */
-    public CanonicalPatchResult applyCanonicalPatch(BluePatch patch) {
-        return canonicalPatchEngine().apply(patch);
     }
 
 }

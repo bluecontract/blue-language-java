@@ -8,15 +8,15 @@ import blue.language.identity.BlueIdentity;
 import blue.language.identity.CanonicalJsonHasher;
 import blue.language.matching.BlueMatching;
 import blue.language.model.Node;
-import blue.language.patching.BluePatch;
+import blue.language.snapshot.BluePatch;
 import blue.language.patching.BluePatching;
 import blue.language.preprocess.BluePreprocessing;
 import blue.language.preprocess.StandardBluePreprocessing;
 import blue.language.resolve.BlueResolution;
-import blue.language.snapshot.BlueSnapshots;
+import blue.language.merge.BlueSnapshots;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 import java.util.Collection;
 import java.util.Map;

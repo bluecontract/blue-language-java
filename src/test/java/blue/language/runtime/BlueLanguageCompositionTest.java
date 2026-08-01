@@ -7,10 +7,10 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.codec.BlueFormat;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
-import blue.language.patching.ImmutableBluePatch;
+import blue.language.snapshot.ImmutableBluePatch;
 import blue.language.provider.NodeProvider;
 import blue.language.snapshot.CanonicalPatchResult;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 

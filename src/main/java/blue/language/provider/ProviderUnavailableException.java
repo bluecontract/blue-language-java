@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.api.NodeProviderOutcome;
+
 /**
  * Signals that exact provider evidence may exist but cannot currently be
  * acquired.

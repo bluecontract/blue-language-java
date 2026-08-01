@@ -39,7 +39,7 @@ public class ProcessorProcessEventContextBenchmark {
 
     private DocumentProcessor processor;
     private Node initializedDocument;
-    private blue.language.snapshot.ResolvedSnapshot initializedSnapshot;
+    private blue.language.merge.ResolvedSnapshot initializedSnapshot;
     private Node event;
 
     @Setup(Level.Trial)

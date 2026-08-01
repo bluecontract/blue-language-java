@@ -1,4 +1,4 @@
-package blue.language.snapshot;
+package blue.language.merge;
 
 import java.util.ArrayList;
 import java.util.HashMap;

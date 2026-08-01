@@ -8,7 +8,7 @@ import blue.language.codec.BlueFormat;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -146,7 +146,7 @@ final class LanguageFixtureRuntime implements AutoCloseable {
     /** Applies one Language-owned patch to a processing snapshot. */
     public ResolvedSnapshot applyCanonicalPatch(
             ResolvedSnapshot snapshot,
-            blue.language.patching.BluePatch patch) {
+            blue.language.snapshot.BluePatch patch) {
         return runtime.patching().apply(snapshot, patch);
     }
 

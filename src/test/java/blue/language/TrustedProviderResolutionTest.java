@@ -8,11 +8,11 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.ProviderEvidenceVerifier;
 import blue.language.provider.ProviderMode;

@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;

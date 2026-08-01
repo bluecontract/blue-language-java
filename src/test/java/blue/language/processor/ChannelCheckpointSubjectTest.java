@@ -9,7 +9,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.TestEventChannel;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 

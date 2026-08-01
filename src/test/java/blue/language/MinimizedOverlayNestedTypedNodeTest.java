@@ -8,13 +8,13 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.MinimizedOverlayBuilder;
 import org.junit.jupiter.api.Test;
 

@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.api.NodeProviderOutcome;
+
 import blue.language.preprocess.provider.BasicNodeProvider;
 
 import blue.language.Blue;

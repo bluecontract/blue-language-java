@@ -1,7 +1,5 @@
 package blue.language.snapshot;
 
-import blue.language.patching.BluePatchOperation;
-
 /**
  * Immutable evidence produced by one canonical overlay patch.
  *

@@ -1,7 +1,5 @@
 package blue.language.api;
 
-import blue.language.provider.NodeProviderOutcome;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;

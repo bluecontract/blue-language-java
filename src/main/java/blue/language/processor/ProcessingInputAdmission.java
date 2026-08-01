@@ -5,7 +5,7 @@ import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.BlueIds;

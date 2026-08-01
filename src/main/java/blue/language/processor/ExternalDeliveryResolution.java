@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.PointerUtils;
 

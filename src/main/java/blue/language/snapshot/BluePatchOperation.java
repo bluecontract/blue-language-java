@@ -1,4 +1,4 @@
-package blue.language.patching;
+package blue.language.snapshot;
 
 /** Patch operations supported by the immutable canonical overlay engine. */
 public enum BluePatchOperation {

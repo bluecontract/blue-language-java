@@ -10,7 +10,7 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;
 

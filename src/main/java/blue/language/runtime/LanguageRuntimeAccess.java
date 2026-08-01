@@ -1,5 +1,6 @@
-package blue.language.api;
+package blue.language.runtime;
 
+import blue.language.api.BlueCachePolicy;
 import blue.language.matching.MatchingRuntime;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;

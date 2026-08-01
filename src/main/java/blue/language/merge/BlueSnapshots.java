@@ -1,4 +1,4 @@
-package blue.language.snapshot;
+package blue.language.merge;
 
 import blue.language.api.BlueCacheStats;
 import blue.language.model.Node;

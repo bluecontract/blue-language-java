@@ -5,7 +5,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
+import blue.language.merge.ResolvedReferenceCache;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.registry.NodeProviderWrapper;
 import blue.language.provider.Types;

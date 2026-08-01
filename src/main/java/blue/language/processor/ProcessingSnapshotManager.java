@@ -4,7 +4,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collection;

@@ -4,7 +4,6 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationResult;
-import blue.language.api.LanguageRuntimeAccess;
 import blue.language.codec.BlueCodec;
 import blue.language.codec.StandardBlueCodec;
 import blue.language.conformance.ConformanceEngine;
@@ -26,10 +25,10 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
-import blue.language.patching.BluePatch;
-import blue.language.patching.BluePatchOperation;
+import blue.language.snapshot.BluePatch;
+import blue.language.snapshot.BluePatchOperation;
 import blue.language.patching.BluePatching;
-import blue.language.patching.ImmutableBluePatch;
+import blue.language.snapshot.ImmutableBluePatch;
 import blue.language.preprocess.BluePreprocessing;
 import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.StandardBluePreprocessing;
@@ -38,11 +37,11 @@ import blue.language.provider.SourceContentVerificationRuntime;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.resolve.BlueResolution;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
-import blue.language.snapshot.BlueSnapshots;
+import blue.language.merge.BlueSnapshots;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.MinimizedOverlayBuilder;
@@ -569,9 +568,12 @@ public final class BlueLanguageRuntime implements NodeResolver,
             ResolvedSnapshot snapshot,
             BluePatch patch) {
         return call(() -> {
-            CanonicalPatchResult patched = Objects.requireNonNull(
-                    snapshot, "snapshot").applyCanonicalPatch(
-                    Objects.requireNonNull(patch, "patch"));
+            ResolvedSnapshot requiredSnapshot = Objects.requireNonNull(
+                    snapshot, "snapshot");
+            CanonicalPatchResult patched =
+                    new CanonicalOverlayPatchEngine(
+                            requiredSnapshot.frozenCanonicalRoot())
+                            .apply(Objects.requireNonNull(patch, "patch"));
             ResolvedSnapshot patchedSnapshot =
                     loadCanonical(patched.root());
             if (!canMinimizePatchedOverride(patch)) {

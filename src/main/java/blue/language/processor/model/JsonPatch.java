@@ -2,8 +2,8 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
-import blue.language.patching.BluePatch;
-import blue.language.patching.BluePatchOperation;
+import blue.language.snapshot.BluePatch;
+import blue.language.snapshot.BluePatchOperation;
 import blue.language.processor.registry.RuntimeBlueIds;
 
 import java.util.Objects;

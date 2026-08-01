@@ -9,7 +9,7 @@ import blue.language.matching.BlueMatching;
 import blue.language.patching.BluePatching;
 import blue.language.preprocess.BluePreprocessing;
 import blue.language.resolve.BlueResolution;
-import blue.language.snapshot.BlueSnapshots;
+import blue.language.merge.BlueSnapshots;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

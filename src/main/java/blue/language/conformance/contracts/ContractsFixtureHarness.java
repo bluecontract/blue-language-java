@@ -44,7 +44,7 @@ import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.NodeWireForm;

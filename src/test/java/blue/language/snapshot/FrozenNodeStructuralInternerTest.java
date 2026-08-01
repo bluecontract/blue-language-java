@@ -1,6 +1,8 @@
 package blue.language.snapshot;
 
 import blue.language.Blue;
+import blue.language.merge.ResolvedReferenceCache;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;

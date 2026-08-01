@@ -11,7 +11,7 @@ import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.provider.DirectNodeManifest;
-import blue.language.provider.NodeProviderOutcome;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;

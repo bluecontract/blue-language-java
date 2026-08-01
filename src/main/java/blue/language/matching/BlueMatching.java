@@ -4,7 +4,7 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationResult;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 /** Type and structural matching over mutable or immutable Language values. */
 public interface BlueMatching {

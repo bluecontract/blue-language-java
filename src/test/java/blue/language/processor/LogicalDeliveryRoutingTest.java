@@ -7,7 +7,7 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.ExactNodeGraphFragments;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 

@@ -1,4 +1,4 @@
-package blue.language.patching;
+package blue.language.snapshot;
 
 import blue.language.model.wire.BlueLanguageConstants;
 

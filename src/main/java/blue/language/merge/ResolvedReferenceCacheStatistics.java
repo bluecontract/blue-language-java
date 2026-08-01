@@ -1,4 +1,4 @@
-package blue.language.snapshot;
+package blue.language.merge;
 
 /**
  * Immutable accounting value shared by the public compatibility view and the

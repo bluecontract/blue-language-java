@@ -5,7 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

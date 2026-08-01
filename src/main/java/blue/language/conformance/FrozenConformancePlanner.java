@@ -7,7 +7,7 @@ import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
+import blue.language.merge.ResolvedReferenceCache;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.MinimizedOverlayBuilder;

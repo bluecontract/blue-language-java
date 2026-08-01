@@ -1,4 +1,4 @@
-package blue.language.provider;
+package blue.language.api;
 
 /** Exhaustive transport-neutral outcomes for one provider lookup. */
 public enum NodeProviderOutcome {

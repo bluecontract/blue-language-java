@@ -5,7 +5,8 @@ import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -60,8 +61,7 @@ final class CyclicProcessingBoundaryTest {
 
         // then
         assertEquals(
-                blue.language.provider.NodeProviderOutcome
-                        .INVALID_EVIDENCE,
+                NodeProviderOutcome.INVALID_EVIDENCE,
                 verifying.fetchResultByBlueId(
                         ordinaryBlueId + "#0")
                         .outcome());

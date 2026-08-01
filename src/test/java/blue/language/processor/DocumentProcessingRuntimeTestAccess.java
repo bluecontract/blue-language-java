@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 
 /** Package bridge for black-box tests of the package-private invocation runtime. */
 public final class DocumentProcessingRuntimeTestAccess {

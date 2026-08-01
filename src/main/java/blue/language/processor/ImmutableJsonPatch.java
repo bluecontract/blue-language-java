@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.patching.BluePatchOperation;
+import blue.language.snapshot.BluePatchOperation;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.ParsedJsonPointer;
 

@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.api.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.util.NodeCanonicalizer;

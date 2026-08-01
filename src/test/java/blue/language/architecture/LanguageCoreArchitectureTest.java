@@ -54,8 +54,6 @@ class LanguageCoreArchitectureTest {
             oversizedAllowlist();
     private static final Map<String, Integer> FOCUSED_SERVICE_BUDGETS =
             focusedServiceBudgets();
-    private static final Set<String> PHASE_FOUR_CYCLE_BOUNDARY =
-            phaseFourCycleBoundary();
     private static final List<String> REMOVED_API_SYMBOLS =
             Collections.unmodifiableList(Arrays.asList(
                     "calculateSemanticBlueId",
@@ -69,6 +67,7 @@ class LanguageCoreArchitectureTest {
             Collections.unmodifiableList(Arrays.asList(
                     "blue.language.api.BlueLanguage",
                     "blue.language.api.BlueLanguageRuntime",
+                    "blue.language.api.LanguageRuntimeAccess",
                     "blue.language.api.LanguageMatchingService",
                     "blue.language.api.LanguageRuntimeLimitedResolution",
                     "blue.language.api.LanguageRuntimeServices",
@@ -81,7 +80,23 @@ class LanguageCoreArchitectureTest {
                     "blue.language.provider.BootstrapProvider",
                     "blue.language.provider.BundledTransformationProvider",
                     "blue.language.provider.DirectoryBasedNodeProvider",
+                    "blue.language.provider.NodeProviderOutcome",
                     "blue.language.provider.NodeProviderWrapper",
+                    "blue.language.patching.BluePatch",
+                    "blue.language.patching.BluePatchOperation",
+                    "blue.language.patching.CanonicalOverlayPatchEngine",
+                    "blue.language.patching.CanonicalPatchResult",
+                    "blue.language.patching.ImmutableBluePatch",
+                    "blue.language.snapshot.BlueSnapshots",
+                    "blue.language.snapshot.ResolvedReferenceCache",
+                    "blue.language.snapshot.ResolvedReferenceCacheAccounting",
+                    "blue.language.snapshot.ResolvedReferenceCacheGeneration",
+                    "blue.language.snapshot.ResolvedReferenceCacheLifecycle",
+                    "blue.language.snapshot.ResolvedReferenceCacheStatistics",
+                    "blue.language.snapshot.ResolvedReferenceGraphIndex",
+                    "blue.language.snapshot.ResolvedSnapshot",
+                    "blue.language.snapshot.VerifiedCanonicalLoadCoordinator",
+                    "blue.language.snapshot.VerifiedReferenceEntry",
                     "blue.language.utils.Base58",
                     "blue.language.utils.Base58Sha256Provider",
                     "blue.language.utils.BlueIdCalculator",
@@ -337,30 +352,20 @@ class LanguageCoreArchitectureTest {
     }
 
     @Test
-    void shouldKeepKnownPackageCyclesInsideDocumentedPhaseFourBoundary()
+    void shouldKeepProductionPackageGraphAcyclic()
             throws IOException {
         // given
         PackageGraph complete = PackageGraph.from(
                 readProductionSources());
-        PackageGraph core = complete.retainPackages(
-                LanguageCoreArchitectureTest::isLanguageCorePackage);
 
         // when
         List<Set<String>> stronglyConnectedComponents =
-                core.cyclicStronglyConnectedComponents();
-        Set<String> cyclicPackages = stronglyConnectedComponents
-                .stream()
-                .flatMap(Set::stream)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        Set<String> unexpected = new LinkedHashSet<>(cyclicPackages);
-        unexpected.removeAll(PHASE_FOUR_CYCLE_BOUNDARY);
+                complete.cyclicStronglyConnectedComponents();
 
         // then
-        assertTrue(unexpected.isEmpty(),
-                "New package cycles escaped the documented Phase 4 "
-                        + "decomposition boundary. Actual SCCs: "
-                        + stronglyConnectedComponents
-                        + "; unexpected packages: " + unexpected);
+        assertTrue(stronglyConnectedComponents.isEmpty(),
+                "Production packages must remain acyclic. Actual SCCs: "
+                        + stronglyConnectedComponents);
     }
 
     private static List<SourceFile> readProductionSources()
@@ -532,21 +537,13 @@ class LanguageCoreArchitectureTest {
                 MAX_FOCUSED_SERVICE_METHODS);
         result.put("blue/language/identity/BlueIdentity.java",
                 MAX_FOCUSED_SERVICE_METHODS);
-        result.put("blue/language/snapshot/BlueSnapshots.java",
+        result.put("blue/language/merge/BlueSnapshots.java",
                 MAX_FOCUSED_SERVICE_METHODS);
         result.put("blue/language/matching/BlueMatching.java",
                 MAX_FOCUSED_SERVICE_METHODS);
         result.put("blue/language/patching/BluePatching.java",
                 MAX_FOCUSED_SERVICE_METHODS);
         return Collections.unmodifiableMap(result);
-    }
-
-    private static Set<String> phaseFourCycleBoundary() {
-        return Collections.unmodifiableSet(new LinkedHashSet<>(
-                Arrays.asList(
-                        "blue.language.merge",
-                        "blue.language.patching",
-                        "blue.language.snapshot")));
     }
 
     private static final class SourceFile {

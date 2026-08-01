@@ -12,7 +12,7 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;

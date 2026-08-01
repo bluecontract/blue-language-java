@@ -6,7 +6,7 @@ import blue.language.model.NodeDeserializer;
 import blue.language.model.Schema;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
+import blue.language.merge.ResolvedReferenceCache;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodeWireForm;

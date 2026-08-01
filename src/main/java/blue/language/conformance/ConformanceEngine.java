@@ -8,7 +8,7 @@ import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
+import blue.language.merge.ResolvedReferenceCache;
 import blue.language.registry.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
 

@@ -1,11 +1,14 @@
-package blue.language.snapshot;
+package blue.language.merge;
 
 import blue.language.Blue;
+import blue.language.snapshot.CanonicalOverlayPatchEngine;
+import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -124,7 +127,8 @@ class ResolvedSnapshotTest {
         ResolvedSnapshot snapshot = new Blue().loadSnapshot(canonical);
 
         // when
-        CanonicalPatchResult result = snapshot.applyCanonicalPatch(
+        CanonicalPatchResult result = new CanonicalOverlayPatchEngine(
+                snapshot.frozenCanonicalRoot()).apply(
                 JsonPatch.replace("/right/child", new Node().value("new")));
 
         // then
