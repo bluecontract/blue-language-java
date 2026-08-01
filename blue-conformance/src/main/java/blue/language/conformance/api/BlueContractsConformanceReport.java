@@ -176,78 +176,54 @@ public final class BlueContractsConformanceReport {
     }
 
     /**
-
      * Returns the Contracts specification version.
-
      *
-
      * @return specification version
-
      */
     public String getSpecVersion() {
         return specVersion;
     }
 
     /**
-
      * Returns the release name.
-
      *
-
      * @return release name
-
      */
     public String getReleaseName() {
         return releaseName;
     }
 
     /**
-
      * Returns the release package identity.
-
      *
-
      * @return release package identity
-
      */
     public String getReleasePackageIdentity() {
         return releasePackageIdentity;
     }
 
     /**
-
      * Returns the language registry identity.
-
      *
-
      * @return language registry identity
-
      */
     public String getLanguageRegistryPackageIdentity() {
         return languageRegistryPackageIdentity;
     }
 
     /**
-
      * Returns the language fixture identity.
-
      *
-
      * @return language fixture identity
-
      */
     public String getLanguageFixturePackageIdentity() {
         return languageFixturePackageIdentity;
     }
 
     /**
-
      * Returns the Contracts registry identity.
-
      *
-
      * @return Contracts registry identity
-
      */
     public String getContractsRegistryPackageIdentity() {
         return contractsRegistryPackageIdentity;
