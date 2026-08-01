@@ -23,6 +23,9 @@ final class ProcessingObservations {
             ProcessingObserver observer,
             ProcessingMetricId metricId,
             long value) {
+        if (isDisabled(observer)) {
+            return;
+        }
         record(observer, metricId, value, ProcessingObservationContext.empty());
     }
 
@@ -35,7 +38,7 @@ final class ProcessingObservations {
     static void record(
             ProcessingObserver observer,
             ProcessingObservation observation) {
-        if (observer == null || observation == null) {
+        if (isDisabled(observer) || observation == null) {
             return;
         }
         try {
@@ -62,7 +65,7 @@ final class ProcessingObservations {
             ProcessingMetricId metricId,
             long value,
             ProcessingObservationContext context) {
-        if (observer == null) {
+        if (isDisabled(observer)) {
             return;
         }
         try {
@@ -81,7 +84,7 @@ final class ProcessingObservations {
             String legacyName,
             ObservationKind kind,
             long value) {
-        if (observer == null) {
+        if (isDisabled(observer)) {
             return;
         }
         try {
@@ -97,5 +100,9 @@ final class ProcessingObservations {
         } catch (Throwable ignored) {
             // Legacy adapters have the same isolation contract as typed calls.
         }
+    }
+
+    private static boolean isDisabled(ProcessingObserver observer) {
+        return observer == null || observer == NoOpProcessingObserver.INSTANCE;
     }
 }
