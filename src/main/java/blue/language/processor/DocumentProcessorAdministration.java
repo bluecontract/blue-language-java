@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
@@ -139,22 +139,15 @@ final class DocumentProcessorAdministration {
         }
         ContractMatchingService matchingService =
                 processor.matchingService();
-        Blue languageRuntime = matchingService != null
+        LanguageRuntimeAccess languageRuntime = matchingService != null
                 ? matchingService.blue()
                 : null;
         if (languageRuntime == null) {
             return new RegisteredContractScopeIdentitySnapshotManager(
                     processor.registry());
         }
-        DocumentProcessor languageProcessor =
-                languageRuntime.getDocumentProcessor();
-        ProcessingSnapshotManager languageManager =
-                languageProcessor != processor
-                        ? languageProcessor.snapshotManager()
-                        : null;
-        return languageManager != null
-                ? languageManager.transientSequence()
-                : null;
+        return new RegisteredContractScopeIdentitySnapshotManager(
+                processor.registry(), languageRuntime);
     }
 
     /** Loads an immutable marker view for one exact resolved scope. */

@@ -1,7 +1,7 @@
 package blue.language.processor;
 
-import blue.language.Blue;
 import blue.language.BlueCachePolicy;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
@@ -13,13 +13,13 @@ import java.util.Objects;
  * Shared, bounded matcher facade for contract-level event patterns.
  *
  * <p>Structural matching and verified declared-type lineage use separate
- * caches under one {@link BlueCachePolicy}. A service without a {@link Blue}
- * context can match exact inline values but fails closed when provider-backed
- * ancestry is required.</p>
+ * caches under one {@link BlueCachePolicy}. A service without a
+ * {@link LanguageRuntimeAccess} context can match exact inline values but
+ * fails closed when provider-backed ancestry is required.</p>
  */
 public final class ContractMatchingService {
 
-    private final Blue blue;
+    private final LanguageRuntimeAccess languageRuntime;
     private final BlueCachePolicy cachePolicy;
     private final FrozenTypeMatcher matcher;
     private final DeclaredTypeLineageMatcher declaredTypeLineageMatcher;
@@ -32,24 +32,28 @@ public final class ContractMatchingService {
     }
 
     /**
-     * Creates a bounded matcher using the supplied Blue resolution context.
+     * Creates a bounded matcher using the supplied Language runtime context.
      *
-     * @param blue resolution context, or {@code null} to disable provider-backed ancestry
+     * @param languageRuntime resolution context, or {@code null} to disable
+     *        provider-backed ancestry
      */
-    public ContractMatchingService(Blue blue) {
-        this.blue = blue;
-        this.cachePolicy = blue != null
-                ? blue.cachePolicy()
+    public ContractMatchingService(
+            LanguageRuntimeAccess languageRuntime) {
+        this.languageRuntime = languageRuntime;
+        this.cachePolicy = languageRuntime != null
+                ? languageRuntime.cachePolicy()
                 : BlueCachePolicy.boundedDefaults();
-        this.matcher = new FrozenTypeMatcher(blue);
+        this.matcher = new FrozenTypeMatcher(languageRuntime);
         this.declaredTypeLineageMatcher = new DeclaredTypeLineageMatcher(
-                blue != null ? blue.getNodeProvider() : null,
+                languageRuntime != null
+                        ? languageRuntime.getNodeProvider()
+                        : null,
                 cachePolicy);
     }
 
     /**
      * Creates a matcher for an immutable processor configuration without
-     * constructing the aggregate {@link Blue} facade.
+     * constructing an aggregate facade.
      *
      * @param nodeProvider verified provider used for declared-type ancestry
      * @param cachePolicy bounds for matcher-owned caches
@@ -57,7 +61,7 @@ public final class ContractMatchingService {
     ContractMatchingService(
             NodeProvider nodeProvider,
             BlueCachePolicy cachePolicy) {
-        this.blue = null;
+        this.languageRuntime = null;
         this.cachePolicy = Objects.requireNonNull(
                 cachePolicy, "cachePolicy");
         this.matcher = FrozenTypeMatcher.withoutRuntime(this.cachePolicy);
@@ -66,8 +70,8 @@ public final class ContractMatchingService {
                 this.cachePolicy);
     }
 
-    Blue blue() {
-        return blue;
+    LanguageRuntimeAccess blue() {
+        return languageRuntime;
     }
 
     boolean eventDeclaredTypeIsSameOrDescendantOf(Node eventType, Node expectedType) {

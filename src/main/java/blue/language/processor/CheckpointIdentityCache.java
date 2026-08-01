@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelEventCheckpoint;
 
@@ -17,13 +17,15 @@ import java.util.Map;
  * shared across processing invocations.</p>
  */
 final class CheckpointIdentityCache {
-    private final Blue blue;
+    private final LanguageRuntimeAccess languageRuntime;
     private final ProcessingObserver metrics;
     private final IdentityHashMap<Node, String> eventIdentities = new IdentityHashMap<>();
     private final Map<StoredCheckpointKey, String> storedIdentities = new LinkedHashMap<>();
 
-    CheckpointIdentityCache(Blue blue, ProcessingObserver metrics) {
-        this.blue = blue;
+    CheckpointIdentityCache(
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingObserver metrics) {
+        this.languageRuntime = languageRuntime;
         this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
     }
 
@@ -38,7 +40,8 @@ final class CheckpointIdentityCache {
         }
         ProcessingObservations.record(metrics,
                 ProcessingMetricId.CHECKPOINT_IDENTITY_CACHE_MISSES, 1L);
-        String identity = CheckpointIdentityCalculator.identity(event, blue, metrics);
+        String identity = CheckpointIdentityCalculator.identity(
+                event, languageRuntime, metrics);
         eventIdentities.put(event, identity);
         return identity;
     }
@@ -55,7 +58,8 @@ final class CheckpointIdentityCache {
         }
         ProcessingObservations.record(metrics,
                 ProcessingMetricId.CHECKPOINT_STORED_IDENTITY_CACHE_MISSES, 1L);
-        String identity = CheckpointIdentityCalculator.identity(event, blue, metrics);
+        String identity = CheckpointIdentityCalculator.identity(
+                event, languageRuntime, metrics);
         storedIdentities.put(key, identity);
         return identity;
     }

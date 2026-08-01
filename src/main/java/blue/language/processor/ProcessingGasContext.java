@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 
 import java.util.Map;
 import java.util.Objects;
@@ -53,15 +53,15 @@ final class ProcessingGasContext {
     }
 
     RuntimeWorkSession newRuntimeWorkSession(
-            Blue blue,
+            LanguageRuntimeAccess languageRuntime,
             ProcessingSnapshotManager snapshotManager) {
         RuntimeWorkSession session = new RuntimeWorkSession(
                 meter, RuntimeWorkSession.Mode.PROCESSING);
-        if (blue != null) {
+        if (languageRuntime != null) {
             session.attachSemanticOutputBoundary(
                     new SemanticOutputBoundary(
                             session,
-                            blue,
+                            languageRuntime,
                             snapshotManager,
                             meter.semantic(),
                             outputAdmissionMemo));

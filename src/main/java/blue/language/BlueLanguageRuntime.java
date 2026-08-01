@@ -75,7 +75,8 @@ import static blue.language.utils.limits.Limits.NO_LIMITS;
  * state, and causes subsequent semantic operations to fail.</p>
  */
 public final class BlueLanguageRuntime implements NodeResolver,
-        MatchingRuntime, SourceContentVerificationRuntime, AutoCloseable {
+        LanguageRuntimeAccess, MatchingRuntime,
+        SourceContentVerificationRuntime, AutoCloseable {
 
     private static final ReferenceCacheAdmissionPolicy
             REFERENCE_CACHE_ADMISSION = blueId -> true;
@@ -199,6 +200,12 @@ public final class BlueLanguageRuntime implements NodeResolver,
         return nodeProvider;
     }
 
+    /** Returns the verified provider graph through the host access contract. */
+    @Override
+    public NodeProvider getNodeProvider() {
+        return nodeProvider;
+    }
+
     /** Returns the immutable cache policy selected for this runtime. */
     @Override
     public BlueCachePolicy matchingCachePolicy() {
@@ -296,7 +303,8 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 Objects.requireNonNull(source, "source")));
     }
 
-    Node canonicalize(Node source) {
+    @Override
+    public Node canonicalize(Node source) {
         return call(() -> {
             Node preprocessed = rawPreprocess(
                     Objects.requireNonNull(source, "source").clone());
@@ -304,6 +312,12 @@ public final class BlueLanguageRuntime implements NodeResolver,
             return new CanonicalIdentityInputBuilder().build(
                     resolved, preprocessed);
         });
+    }
+
+    /** Calculates Source identity through this runtime's frozen environment. */
+    @Override
+    public String calculateSourceDocumentBlueId(Node source) {
+        return identity.sourceDocumentBlueId(source);
     }
 
     Node resolveAuthored(Node source) {

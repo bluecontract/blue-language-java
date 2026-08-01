@@ -96,7 +96,7 @@ import static blue.language.utils.limits.Limits.NO_LIMITS;
  * is explicitly described as a pure serialization helper, admitted operations
  * throw {@link IllegalStateException} after close.</p>
  */
-public class Blue implements NodeResolver,
+public class Blue implements NodeResolver, LanguageRuntimeAccess,
         SourceContentVerificationRuntime, MatchingRuntime, AutoCloseable {
 
     private static final int RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT = 32;

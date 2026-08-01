@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
@@ -11,7 +11,8 @@ import org.erdtman.jcs.JsonCanonicalizer;
 /**
  * Establishes the deterministic identity used for checkpoint newness.
  *
- * <p>Exact BlueId input is preferred. When a {@link Blue} context is
+ * <p>Exact BlueId input is preferred. When a
+ * {@link LanguageRuntimeAccess} context is
  * available, authored values may fall back to semantic canonicalization and
  * finally to the processor's canonical signature. Each path is timed
  * independently for production diagnostics.</p>
@@ -25,11 +26,19 @@ final class CheckpointIdentityCalculator {
         return identity(event, null);
     }
 
-    static String identity(Node event, Blue blue) {
-        return identity(event, blue, NoOpProcessingObserver.INSTANCE);
+    static String identity(
+            Node event,
+            LanguageRuntimeAccess languageRuntime) {
+        return identity(
+                event,
+                languageRuntime,
+                NoOpProcessingObserver.INSTANCE);
     }
 
-    static String identity(Node event, Blue blue, ProcessingObserver metrics) {
+    static String identity(
+            Node event,
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingObserver metrics) {
         if (event == null) {
             return null;
         }
@@ -56,14 +65,14 @@ final class CheckpointIdentityCalculator {
             ProcessingObservations.record(observer,
                     ProcessingMetricId.CHECKPOINT_DIRECT_BLUE_ID_NANOS,
                     System.nanoTime() - directStart);
-            if (blue == null) {
+            if (languageRuntime == null) {
                 throw new IllegalStateException(
                         "Checkpoint event identity requires valid BlueId Input or a Blue canonicalization context",
                         directFailure);
             }
             long contentStart = System.nanoTime();
             try {
-                String identity = blue.calculateSourceDocumentBlueId(
+                String identity = languageRuntime.calculateSourceDocumentBlueId(
                         sourceProjection.clone());
                 ProcessingObservations.record(observer,
                         ProcessingMetricId.CHECKPOINT_CONTENT_BLUE_ID_NANOS,

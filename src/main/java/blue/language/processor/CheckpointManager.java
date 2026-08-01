@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.CheckpointEntry;
@@ -32,23 +32,29 @@ final class CheckpointManager {
     private final CheckpointIdentityCache identityCache;
 
     CheckpointManager(DocumentProcessingRuntime runtime) {
-        this(runtime, (Blue) null, NoOpProcessingObserver.INSTANCE);
+        this(runtime, (LanguageRuntimeAccess) null,
+                NoOpProcessingObserver.INSTANCE);
     }
 
-    CheckpointManager(DocumentProcessingRuntime runtime, Blue blue) {
-        this(runtime, blue, NoOpProcessingObserver.INSTANCE);
+    CheckpointManager(
+            DocumentProcessingRuntime runtime,
+            LanguageRuntimeAccess languageRuntime) {
+        this(runtime, languageRuntime,
+                NoOpProcessingObserver.INSTANCE);
     }
 
     CheckpointManager(DocumentProcessingRuntime runtime,
-                      Blue blue,
+                      LanguageRuntimeAccess languageRuntime,
                       ProcessingObserver metrics) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
-        this.identityCache = new CheckpointIdentityCache(blue, metrics);
+        this.identityCache = new CheckpointIdentityCache(
+                languageRuntime, metrics);
     }
 
     CheckpointManager(DocumentProcessingRuntime runtime,
                       Function<Node, String> ignoredSignatureFn) {
-        this(runtime, (Blue) null, NoOpProcessingObserver.INSTANCE);
+        this(runtime, (LanguageRuntimeAccess) null,
+                NoOpProcessingObserver.INSTANCE);
     }
 
     void ensureCheckpointMarker(String scopePath, ContractBundle bundle) {

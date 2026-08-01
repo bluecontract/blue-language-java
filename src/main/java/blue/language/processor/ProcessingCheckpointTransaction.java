@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.model.Node;
 
 import java.util.Map;
@@ -18,9 +18,10 @@ final class ProcessingCheckpointTransaction {
 
     ProcessingCheckpointTransaction(
             DocumentProcessingRuntime runtime,
-            Blue blue,
+            LanguageRuntimeAccess languageRuntime,
             ProcessingObserver observer) {
-        this.state = new CheckpointManager(runtime, blue, observer);
+        this.state = new CheckpointManager(
+                runtime, languageRuntime, observer);
     }
 
     ProcessingCheckpointTransaction(CheckpointManager state) {

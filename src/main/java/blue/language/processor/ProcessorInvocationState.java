@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
@@ -460,7 +460,7 @@ final class ProcessorInvocationState {
         return contractRecognitionMeter;
     }
 
-    Blue blue() {
+    LanguageRuntimeAccess blue() {
         return owner.matchingService().blue();
     }
 

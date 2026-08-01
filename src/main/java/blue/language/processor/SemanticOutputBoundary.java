@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.utils.Properties;
 
-import blue.language.Blue;
+import blue.language.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.util.NodeCanonicalizer;
@@ -28,7 +28,7 @@ import java.util.Objects;
 public final class SemanticOutputBoundary {
 
     private final RuntimeWorkSession workSession;
-    private final Blue blue;
+    private final LanguageRuntimeAccess languageRuntime;
     private final ProcessingSnapshotManager snapshotManager;
     private final SemanticGasMeter semantic;
     private final AdmissionMemo admissionMemo;
@@ -37,25 +37,26 @@ public final class SemanticOutputBoundary {
             admittedByCanonicalStructure;
 
     SemanticOutputBoundary(RuntimeWorkSession workSession,
-                           Blue blue,
+                           LanguageRuntimeAccess languageRuntime,
                            ProcessingSnapshotManager snapshotManager,
                            SemanticGasMeter semantic) {
         this(
                 workSession,
-                blue,
+                languageRuntime,
                 snapshotManager,
                 semantic,
                 new AdmissionMemo());
     }
 
     SemanticOutputBoundary(RuntimeWorkSession workSession,
-                           Blue blue,
+                           LanguageRuntimeAccess languageRuntime,
                            ProcessingSnapshotManager snapshotManager,
                            SemanticGasMeter semantic,
                            AdmissionMemo admissionMemo) {
         this.workSession =
                 Objects.requireNonNull(workSession, "workSession");
-        this.blue = Objects.requireNonNull(blue, Properties.OBJECT_BLUE);
+        this.languageRuntime = Objects.requireNonNull(
+                languageRuntime, Properties.OBJECT_BLUE);
         this.snapshotManager = snapshotManager;
         this.semantic = Objects.requireNonNull(semantic, "semantic");
         this.admissionMemo =
@@ -117,7 +118,7 @@ public final class SemanticOutputBoundary {
             try {
                 normalized =
                         FrozenNode.fromResolvedNode(
-                                blue.canonicalize(
+                                languageRuntime.canonicalize(
                                         exactInput.toNode()));
             } catch (ExecutionEvidenceUnavailableException ex) {
                 throw ex;
@@ -567,7 +568,7 @@ public final class SemanticOutputBoundary {
             RuntimeWorkSession session) {
         return new SemanticOutputBoundary(
                 session,
-                blue,
+                languageRuntime,
                 snapshotManager,
                 sessionSemanticMeter(session),
                 new AdmissionMemo(admissionMemo));
