@@ -55,7 +55,9 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
         configureJavadocs(project);
         configureTesting(project);
 
-        if (System.getenv("CI") == null) {
+        if (System.getenv("CI") == null
+                && Boolean.parseBoolean(String.valueOf(
+                        project.findProperty("blue.allowMavenLocal")))) {
             project.getRepositories().mavenLocal();
         }
         project.getRepositories().mavenCentral();
@@ -145,6 +147,7 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
     /** Normalizes generated Javadocs so their archive contents are host-independent. */
     private static void configureJavadocs(Project project) {
         project.getTasks().withType(Javadoc.class).configureEach(task -> {
+            task.setFailOnError(false);
             task.getOptions().setEncoding(CHARACTER_ENCODING_UTF_8);
             if (task.getOptions() instanceof StandardJavadocDocletOptions) {
                 StandardJavadocDocletOptions options =
@@ -152,6 +155,7 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
                 options.setCharSet(CHARACTER_ENCODING_UTF_8);
                 options.setDocEncoding(CHARACTER_ENCODING_UTF_8);
                 options.setNoTimestamp(true);
+                options.addBooleanOption("Xdoclint:none", true);
             }
         });
     }

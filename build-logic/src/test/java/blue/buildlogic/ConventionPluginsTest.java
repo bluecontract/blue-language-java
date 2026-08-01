@@ -253,7 +253,7 @@ final class ConventionPluginsTest {
                 publishing.getPublications().getByName("mavenJava");
         MavenArtifactRepository staging = (MavenArtifactRepository)
                 publishing.getRepositories().getByName("staging");
-        assertTrue(project.getPluginManager().hasPlugin("org.jreleaser"));
+        assertFalse(project.getPluginManager().hasPlugin("org.jreleaser"));
         assertTrue(project.getPluginManager().hasPlugin("maven-publish"));
         assertTrue(project.getPluginManager().hasPlugin("signing"));
         assertEquals("blue.language", publication.getGroupId());
@@ -269,11 +269,6 @@ final class ConventionPluginsTest {
         assertNotNull(project.getTasks().findByName("signMavenJavaPublication"));
         assertTrue(project.getTasks().getByName("verifyReleaseEnvironment")
                 instanceof VerifyReleaseEnvironmentTask);
-        assertTrue(project.getTasks().getByName("jreleaserConfig")
-                .getTaskDependencies()
-                .getDependencies(null)
-                .stream()
-                .anyMatch(task -> task.getName().equals("verifyReleaseEnvironment")));
         assertTrue(project.getTasks()
                 .getByName("publishMavenJavaPublicationToStagingRepository")
                 .getTaskDependencies()

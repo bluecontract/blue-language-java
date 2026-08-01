@@ -23,6 +23,8 @@ public final class BuildLogicConstants {
     public static final String TASK_VERIFY_MODULE_STRUCTURE = "verifyModuleStructure";
     public static final String TASK_VERIFY_REPRODUCIBLE_ARCHIVES =
             "verifyReproducibleArchives";
+    public static final String TASK_VERIFY_BUILD_SCRIPT_SHAPE = "verifyBuildScriptShape";
+    public static final String TASK_VERIFY_PUBLISHED_REPOSITORY = "verifyPublishedRepository";
 
     public static final String REPORT_AGGREGATE_RELEASE_RECEIPT =
             "reports/release-evidence/aggregate-release-receipt.json";
@@ -39,6 +41,10 @@ public final class BuildLogicConstants {
             "reports/architecture/module-structure.json";
     public static final String REPORT_PACKAGE_CYCLES =
             "reports/architecture/package-cycles.json";
+    public static final String REPORT_BUILD_SCRIPT_SHAPE =
+            "reports/architecture/build-script-shape.json";
+    public static final String REPORT_PUBLISHED_REPOSITORY =
+            "reports/published-repository/verification.json";
     public static final String DIRECTORY_ARCHIVE_REPLICAS =
             "reproducibility/archive-replicas";
 

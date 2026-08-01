@@ -56,6 +56,10 @@ gradlePlugin {
             id = 'blue.jmh-conventions'
             implementationClass = 'blue.buildlogic.JmhConventionsPlugin'
         }
+        rootOrchestration {
+            id = 'blue.root-orchestration'
+            implementationClass = 'blue.buildlogic.RootOrchestrationPlugin'
+        }
     }
 }
 

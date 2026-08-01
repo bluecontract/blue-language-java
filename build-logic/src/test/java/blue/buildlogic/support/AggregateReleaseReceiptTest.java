@@ -26,6 +26,7 @@ final class AggregateReleaseReceiptTest {
         Path test = write("build/test-results/test.xml", "tests");
         Path fixture = write("build/reports/conformance/fixtures.json", "fixtures");
         Path api = write("build/reports/api/current-api.txt", "api");
+        Path verification = write("build/reports/architecture/modules.json", "verification");
         Map<String, String> forwardMetadata = new LinkedHashMap<>();
         forwardMetadata.put("version", "1.0.0");
         forwardMetadata.put("channel", "rc");
@@ -40,6 +41,7 @@ final class AggregateReleaseReceiptTest {
                 Collections.singletonList(test),
                 Collections.singletonList(fixture),
                 Collections.singletonList(api),
+                Collections.singletonList(verification),
                 "commit",
                 "0007",
                 forwardMetadata);
@@ -49,6 +51,7 @@ final class AggregateReleaseReceiptTest {
                 Collections.singletonList(test),
                 Collections.singletonList(fixture),
                 Collections.singletonList(api),
+                Collections.singletonList(verification),
                 "commit",
                 "7",
                 reverseMetadata);
@@ -59,6 +62,7 @@ final class AggregateReleaseReceiptTest {
         assertTrue(forward.contains("\"tests\":{"));
         assertTrue(forward.contains("\"fixtures\":{"));
         assertTrue(forward.contains("\"api\":{"));
+        assertTrue(forward.contains("\"verification\":{"));
         assertTrue(forward.contains("\"sourceDateEpoch\":\"7\""));
     }
 
@@ -86,6 +90,7 @@ final class AggregateReleaseReceiptTest {
         return AggregateReleaseReceipt.create(
                 temporaryDirectory,
                 Collections.singletonList(artifact),
+                Collections.emptyList(),
                 Collections.emptyList(),
                 Collections.emptyList(),
                 Collections.emptyList(),

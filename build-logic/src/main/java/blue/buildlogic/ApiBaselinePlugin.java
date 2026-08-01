@@ -6,6 +6,7 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 /** Adds the module-local, line-oriented public API baseline comparison task. */
 public final class ApiBaselinePlugin implements Plugin<Project> {
@@ -46,7 +47,7 @@ public final class ApiBaselinePlugin implements Plugin<Project> {
                     task.dependsOn(moduleInventory);
                 });
 
-        project.getTasks().register(
+        TaskProvider<CompareApiBaselineTask> apiDiff = project.getTasks().register(
                 BuildLogicConstants.TASK_API_BASELINE_DIFF,
                 CompareApiBaselineTask.class,
                 task -> {
@@ -61,5 +62,11 @@ public final class ApiBaselinePlugin implements Plugin<Project> {
                             .file(BuildLogicConstants.REPORT_API_BASELINE_DIFF));
                     task.dependsOn(moduleInventory);
                 });
+        project.getPluginManager().withPlugin("base", ignored -> {
+            if (project.file("api/public-api.txt").isFile()) {
+                project.getTasks().named(LifecycleBasePlugin.CHECK_TASK_NAME)
+                        .configure(task -> task.dependsOn(apiDiff));
+            }
+        });
     }
 }

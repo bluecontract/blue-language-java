@@ -12,7 +12,6 @@ import org.gradle.plugins.signing.SigningExtension;
 /** Provides Maven/JReleaser publication conventions guarded by release validation. */
 public final class JReleaserPublishingPlugin implements Plugin<Project> {
 
-    private static final String CI_ENVIRONMENT_VARIABLE = "CI";
     private static final String MAVEN_JAVA_PUBLICATION = "mavenJava";
     private static final String STAGING_REPOSITORY_NAME = "staging";
     private static final String STAGING_REPOSITORY_DIRECTORY = "staging-deploy";
@@ -40,7 +39,6 @@ public final class JReleaserPublishingPlugin implements Plugin<Project> {
     public void apply(Project project) {
         project.getPluginManager().apply(MAVEN_PUBLISH_PLUGIN);
         project.getPluginManager().apply(SIGNING_PLUGIN);
-        project.getPluginManager().apply("org.jreleaser");
         TaskProvider<VerifyReleaseEnvironmentTask> verification = project.getTasks().register(
                 "verifyReleaseEnvironment", VerifyReleaseEnvironmentTask.class, task -> {
                     task.setGroup("verification");
@@ -76,15 +74,15 @@ public final class JReleaserPublishingPlugin implements Plugin<Project> {
         if (publishing.getRepositories().findByName(STAGING_REPOSITORY_NAME) == null) {
             publishing.getRepositories().maven(repository -> {
                 repository.setName(STAGING_REPOSITORY_NAME);
-                repository.setUrl(project.getLayout().getBuildDirectory()
+                repository.setUrl(project.getRootProject().getLayout().getBuildDirectory()
                         .dir(STAGING_REPOSITORY_DIRECTORY));
             });
         }
 
         SigningExtension signing = project.getExtensions().getByType(SigningExtension.class);
         signing.setRequired(project.getProviders()
-                .environmentVariable(CI_ENVIRONMENT_VARIABLE)
-                .map(value -> !value.trim().isEmpty())
+                .environmentVariable("BLUE_RELEASE_SIGNING_REQUIRED")
+                .map(Boolean::parseBoolean)
                 .orElse(false));
         signing.sign(publication);
     }

@@ -85,9 +85,9 @@ jobs:
         with:
           name: artifacts
           path: |
-            build/libs
-            build/publications
+            blue-*/build/libs
+            blue-*/build/publications
+            build/staging-deploy
             build/release
-            build/reports/binary-api
-            build/reports/conformance
+            build/reports
             build/jreleaser

@@ -68,6 +68,13 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                 "**/build/reports/api/*.json");
         ConfigurableFileTree moduleInventories = project.fileTree(project.getRootDir());
         moduleInventories.include("**/build/reports/module/module-inventory.txt");
+        ConfigurableFileTree verificationEvidenceInputs = project.fileTree(project.getRootDir());
+        verificationEvidenceInputs.include(
+                "**/build/reports/architecture/**/*.json",
+                "**/build/reports/reproducibility/**/*.json",
+                "**/build/reports/published-repository/**/*.json",
+                "**/build/reports/published-smoke/**/*.json",
+                "**/build/reports/runtime-trace/**/*.json");
 
         project.getTasks().register("generateReleaseEvidence", GenerateReleaseEvidenceTask.class,
                 task -> {
@@ -107,6 +114,7 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                     task.getTestEvidence().from(testEvidenceInputs);
                     task.getFixtureEvidence().from(fixtureEvidenceInputs);
                     task.getApiEvidence().from(apiEvidenceInputs);
+                    task.getVerificationEvidence().from(verificationEvidenceInputs);
                     task.getSourceCommit().convention(gitCommit);
                     task.getSourceDateEpoch().convention(sourceDateEpoch);
                     task.getMetadata().put("projectPath", project.getPath());
@@ -127,6 +135,7 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                     task.getTestEvidence().from(testEvidenceInputs);
                     task.getFixtureEvidence().from(fixtureEvidenceInputs);
                     task.getApiEvidence().from(apiEvidenceInputs);
+                    task.getVerificationEvidence().from(verificationEvidenceInputs);
                     task.getSourceCommit().convention(gitCommit);
                     task.getSourceDateEpoch().convention(sourceDateEpoch);
                     task.getMetadata().put("projectPath", project.getPath());

@@ -53,6 +53,10 @@ public abstract class GenerateAggregateReleaseReceiptTask extends DefaultTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract ConfigurableFileCollection getApiEvidence();
 
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract ConfigurableFileCollection getVerificationEvidence();
+
     @Input
     public abstract Property<String> getSourceCommit();
 
@@ -73,6 +77,7 @@ public abstract class GenerateAggregateReleaseReceiptTask extends DefaultTask {
                 paths(getTestEvidence()),
                 paths(getFixtureEvidence()),
                 paths(getApiEvidence()),
+                paths(getVerificationEvidence()),
                 getSourceCommit().get(),
                 getSourceDateEpoch().get(),
                 getMetadata().get());

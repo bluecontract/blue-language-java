@@ -1,0 +1,600 @@
+package blue.buildlogic;
+
+import blue.buildlogic.tasks.GenerateJavaApiInventoryTask;
+import blue.buildlogic.tasks.GenerateJavaModuleInventoryTask;
+import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.VerifyAggregateReleaseReceiptTask;
+import blue.buildlogic.tasks.VerifyBuildScriptShapeTask;
+import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
+import blue.buildlogic.tasks.VerifyPublishedRepositoryTask;
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import org.gradle.api.Action;
+import org.gradle.api.DefaultTask;
+import org.gradle.api.Plugin;
+import org.gradle.api.Project;
+import org.gradle.api.Task;
+import org.gradle.api.artifacts.dsl.DependencyHandler;
+import org.gradle.api.file.ConfigurableFileTree;
+import org.gradle.api.plugins.JavaPlugin;
+import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.tasks.JavaExec;
+import org.gradle.api.tasks.Delete;
+import org.gradle.api.tasks.GradleBuild;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.TaskProvider;
+import org.gradle.api.tasks.bundling.Jar;
+import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.api.tasks.testing.Test;
+import org.gradle.jvm.toolchain.JavaLanguageVersion;
+import org.gradle.jvm.toolchain.JavaLauncher;
+import org.gradle.jvm.toolchain.JavaToolchainService;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
+
+/** Configures the root as a verification-only orchestrator over the published modules. */
+public final class RootOrchestrationPlugin implements Plugin<Project> {
+
+    private static final int JAVA_VERSION = 8;
+    private static final String GROUP = BuildLogicConstants.VERIFICATION_GROUP;
+    private static final List<String> PUBLISHED_MODULES = Collections.unmodifiableList(Arrays.asList(
+            "blue-language-model",
+            "blue-language-core",
+            "blue-language-mapping",
+            "blue-language-ipfs",
+            "blue-contracts-core",
+            "blue-conformance",
+            "blue-language-java"));
+    private static final List<String> API_BASELINE_MODULES = Collections.unmodifiableList(Arrays.asList(
+            "blue-language-model",
+            "blue-language-core",
+            "blue-language-mapping",
+            "blue-language-ipfs",
+            "blue-contracts-core",
+            "blue-language-java"));
+    private static final List<String> ALLOWED_MODULE_EDGES = Collections.unmodifiableList(Arrays.asList(
+            "blue-language-core->blue-language-model",
+            "blue-language-mapping->blue-language-model",
+            "blue-language-mapping->blue-language-core",
+            "blue-language-ipfs->blue-language-core",
+            "blue-contracts-core->blue-language-model",
+            "blue-contracts-core->blue-language-core",
+            "blue-contracts-core->blue-language-mapping",
+            "blue-conformance->blue-language-model",
+            "blue-conformance->blue-language-core",
+            "blue-conformance->blue-language-mapping",
+            "blue-conformance->blue-contracts-core",
+            "blue-language-java->blue-language-model",
+            "blue-language-java->blue-language-core",
+            "blue-language-java->blue-language-mapping",
+            "blue-language-java->blue-language-ipfs",
+            "blue-language-java->blue-contracts-core"));
+
+    @Override
+    public void apply(Project project) {
+        requireRoot(project);
+        project.getPluginManager().apply(JavaPlugin.class);
+        project.getPluginManager().apply("me.champeau.jmh");
+        project.getPluginManager().apply(ReleaseEvidencePlugin.class);
+        configureRootJava(project);
+        configureDependencies(project);
+
+        TaskProvider<Task> moduleCheck = lifecycle(project, "moduleCheck",
+                "Runs checks for every module and the root compatibility tests.");
+        TaskProvider<Task> moduleArchiveVerify = lifecycle(project, "moduleArchiveVerify",
+                "Verifies deterministic archives and independent replicas for every publication.");
+        TaskProvider<Task> moduleApiVerify = lifecycle(project, "moduleApiVerify",
+                "Generates module API inventories and checks tracked module baselines.");
+        TaskProvider<Task> stagePublications = lifecycle(project, "stagePublications",
+                "Stages all seven Maven publications in the root repository.");
+        TaskProvider<Task> benchmarkClasses = lifecycle(project, "benchmarkClasses",
+                "Compiles root and module-specific JMH entry points without running benchmarks.");
+
+        TaskProvider<VerifyJavaModuleStructureTask> moduleStructure = project.getTasks().named(
+                BuildLogicConstants.TASK_VERIFY_MODULE_STRUCTURE,
+                VerifyJavaModuleStructureTask.class,
+                task -> {
+                    task.setGroup(GROUP);
+                    task.setDescription(
+                            "Rejects split packages, module cycles, and undeclared module edges.");
+                    task.getModuleInventories().setFrom(Collections.emptyList());
+                    task.getAllowedEdges().set(ALLOWED_MODULE_EDGES);
+                    task.getEnforceAllowedEdges().set(true);
+                    task.getReportFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_MODULE_STRUCTURE));
+                });
+        TaskProvider<GenerateJavaApiInventoryTask> apiUnion = project.getTasks().register(
+                BuildLogicConstants.TASK_GENERATE_PUBLIC_API_UNION,
+                GenerateJavaApiInventoryTask.class,
+                task -> {
+                    task.setGroup(GROUP);
+                    task.setDescription("Unions the public APIs of all published modules.");
+                    task.getModuleName().set("blue-language-java-distribution");
+                    task.getOutputFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_API_UNION));
+                });
+        moduleApiVerify.configure(task -> task.dependsOn(apiUnion));
+
+        TaskProvider<VerifyBuildScriptShapeTask> scriptShape = project.getTasks().register(
+                BuildLogicConstants.TASK_VERIFY_BUILD_SCRIPT_SHAPE,
+                VerifyBuildScriptShapeTask.class,
+                task -> {
+                    task.setGroup(GROUP);
+                    task.setDescription("Enforces compact declarative Gradle build scripts.");
+                    task.getRepositoryRoot().set(project.getLayout().getProjectDirectory());
+                    task.getBuildScripts().from(project.fileTree(project.getRootDir(), tree -> {
+                        tree.include("**/build.gradle", "**/build.gradle.kts");
+                        tree.exclude("**/build/**");
+                    }));
+                    task.getReportFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_BUILD_SCRIPT_SHAPE));
+                });
+
+        TaskProvider<Delete> prepareStaging = project.getTasks().register(
+                "prepareStagingRepository", Delete.class, task -> {
+                    task.setGroup("build");
+                    task.setDescription("Clears the invocation-owned staged Maven repository.");
+                    task.delete(project.getLayout().getBuildDirectory().dir("staging-deploy"));
+                });
+        TaskProvider<VerifyPublishedRepositoryTask> publishedRepository =
+                project.getTasks().register(
+                        BuildLogicConstants.TASK_VERIFY_PUBLISHED_REPOSITORY,
+                        VerifyPublishedRepositoryTask.class,
+                        task -> {
+                            task.setGroup(GROUP);
+                            task.setDescription(
+                                    "Verifies all staged coordinates, POMs, and Java 8 bytecode.");
+                            task.dependsOn(stagePublications);
+                            task.getRepositoryDirectory().set(project.getLayout()
+                                    .getBuildDirectory().dir("staging-deploy"));
+                            task.getVersionValue().set(project.provider(
+                                    () -> project.getVersion().toString()));
+                            task.getExpectedArtifacts().set(PUBLISHED_MODULES);
+                            task.getAllowedModuleEdges().set(ALLOWED_MODULE_EDGES);
+                            task.getReportFile().set(project.getLayout().getBuildDirectory()
+                                    .file(BuildLogicConstants.REPORT_PUBLISHED_REPOSITORY));
+                        });
+        TaskProvider<GradleBuild> publishedSmoke = project.getTasks().register(
+                "publishedArtifactSmoke", GradleBuild.class, task -> {
+                    task.setGroup(GROUP);
+                    task.setDescription(
+                            "Resolves and executes an independent staged-coordinate consumer.");
+                    task.dependsOn(publishedRepository);
+                    task.setDir(project.file("smoke-tests/published"));
+                    task.setTasks(Collections.singletonList("cleanPublishedSmoke"));
+                    task.getStartParameter().setRefreshDependencies(true);
+                    task.getStartParameter().setProjectProperties(new TreeMapBuilder()
+                            .put("stagingRepository", project.getLayout().getBuildDirectory()
+                                    .dir("staging-deploy").get().getAsFile().getAbsolutePath())
+                            .put("blueVersion", project.provider(
+                                    () -> project.getVersion().toString()).get())
+                            .put("smokeReport", project.getLayout().getBuildDirectory()
+                                    .file("reports/published-smoke/verification.json")
+                                    .get().getAsFile().getAbsolutePath())
+                            .build());
+                    task.getInputs().dir(project.getLayout().getBuildDirectory()
+                            .dir("staging-deploy"));
+                    task.getInputs().property("blueVersion", project.provider(
+                            () -> project.getVersion().toString()));
+                    task.getOutputs().file(project.getLayout().getBuildDirectory()
+                            .file("reports/published-smoke/verification.json"));
+                });
+        TaskProvider<GenerateAggregateReleaseReceiptTask> generateReceipt =
+                project.getTasks().named(
+                        BuildLogicConstants.TASK_GENERATE_AGGREGATE_RELEASE_RECEIPT,
+                        GenerateAggregateReleaseReceiptTask.class);
+        TaskProvider<VerifyAggregateReleaseReceiptTask> verifyReceipt =
+                project.getTasks().named(
+                        BuildLogicConstants.TASK_VERIFY_AGGREGATE_RELEASE_RECEIPT,
+                        VerifyAggregateReleaseReceiptTask.class);
+
+        registerFocusedTests(project);
+        registerEvidenceExecutions(project);
+        registerCompatibilityAliases(project, moduleApiVerify, moduleArchiveVerify);
+
+        project.getGradle().projectsEvaluated(gradle -> configureModuleGraph(
+                project,
+                moduleCheck,
+                moduleArchiveVerify,
+                moduleApiVerify,
+                stagePublications,
+                prepareStaging,
+                benchmarkClasses,
+                moduleStructure,
+                apiUnion,
+                generateReceipt,
+                verifyReceipt,
+                scriptShape,
+                publishedRepository,
+                publishedSmoke));
+
+        TaskProvider<Task> releaseVerify = lifecycle(project, "releaseVerify",
+                "Runs all modular release-candidate gates and emits aggregate evidence.");
+        releaseVerify.configure(task -> task.dependsOn(
+                scriptShape,
+                moduleCheck,
+                moduleArchiveVerify,
+                moduleApiVerify,
+                moduleStructure,
+                benchmarkClasses,
+                publishedSmoke,
+                project.getTasks().named("releaseConformanceTest"),
+                project.getTasks().named("runtimeTraceEvidence"),
+                project.getTasks().named("fragmentedProcessingTest"),
+                verifyReceipt));
+        lifecycle(project, "rcVerify", "Alias for releaseVerify.")
+                .configure(task -> task.dependsOn(releaseVerify));
+    }
+
+    private static void configureRootJava(Project project) {
+        JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
+        java.setSourceCompatibility(org.gradle.api.JavaVersion.VERSION_1_8);
+        java.setTargetCompatibility(org.gradle.api.JavaVersion.VERSION_1_8);
+        SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
+        sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).getJava().setSrcDirs(Collections.emptyList());
+        sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).getResources()
+                .setSrcDirs(Collections.emptyList());
+        project.getTasks().named(JavaPlugin.JAR_TASK_NAME, Jar.class)
+                .configure(task -> task.setEnabled(false));
+        project.getTasks().withType(JavaCompile.class).configureEach(task -> {
+            task.getOptions().setEncoding("UTF-8");
+            task.getOptions().getRelease().set(JAVA_VERSION);
+        });
+        JavaToolchainService toolchains =
+                project.getExtensions().getByType(JavaToolchainService.class);
+        org.gradle.api.provider.Provider<JavaLauncher> javaEight = toolchains.launcherFor(
+                spec -> spec.getLanguageVersion().set(JavaLanguageVersion.of(JAVA_VERSION)));
+        project.getTasks().withType(Test.class).configureEach(task -> {
+            task.getJavaLauncher().set(javaEight);
+            task.useJUnitPlatform();
+            task.systemProperty("junit.jupiter.execution.parallel.enabled", "false");
+            task.getReports().getJunitXml().getRequired().set(true);
+            task.getReports().getHtml().getRequired().set(true);
+        });
+        project.getTasks().withType(JavaExec.class).configureEach(task ->
+                task.getJavaLauncher().set(javaEight));
+    }
+
+    private static void configureDependencies(Project project) {
+        if (System.getenv("CI") == null
+                && Boolean.parseBoolean(String.valueOf(
+                        project.findProperty("blue.allowMavenLocal")))) {
+            project.getRepositories().mavenLocal();
+        }
+        project.getRepositories().mavenCentral();
+        DependencyHandler dependencies = project.getDependencies();
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                project.project(":blue-language-java"));
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                project.project(":blue-conformance"));
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                dependencies.platform("org.junit:junit-bom:5.10.2"));
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                "org.junit.jupiter:junit-jupiter");
+        dependencies.add(JavaPlugin.TEST_RUNTIME_ONLY_CONFIGURATION_NAME,
+                "org.junit.platform:junit-platform-launcher");
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                "org.mockito:mockito-core:3.12.4");
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                "com.fasterxml.jackson.core:jackson-databind:2.15.2");
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2");
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                "org.apache.httpcomponents:httpclient:4.5.14");
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                "org.reflections:reflections:0.10.2");
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                "io.github.erdtman:java-json-canonicalization:1.1");
+        dependencies.add("jmhImplementation", project.project(":blue-language-java"));
+    }
+
+    private static void configureModuleGraph(
+            Project root,
+            TaskProvider<Task> moduleCheck,
+            TaskProvider<Task> moduleArchiveVerify,
+            TaskProvider<Task> moduleApiVerify,
+            TaskProvider<Task> stagePublications,
+            TaskProvider<Delete> prepareStaging,
+            TaskProvider<Task> benchmarkClasses,
+            TaskProvider<VerifyJavaModuleStructureTask> moduleStructure,
+            TaskProvider<GenerateJavaApiInventoryTask> apiUnion,
+            TaskProvider<GenerateAggregateReleaseReceiptTask> generateReceipt,
+            TaskProvider<VerifyAggregateReleaseReceiptTask> verifyReceipt,
+            TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
+            TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
+            TaskProvider<GradleBuild> publishedSmoke) {
+        for (String name : PUBLISHED_MODULES) {
+            Project module = root.project(":" + name);
+            moduleCheck.configure(task -> task.dependsOn(module.getTasks().named("check")));
+            moduleArchiveVerify.configure(task -> task.dependsOn(
+                    module.getTasks().named(BuildLogicConstants.TASK_VERIFY_REPRODUCIBLE_ARCHIVES),
+                    module.getTasks().named(BuildLogicConstants.TASK_COMPARE_ARCHIVE_REPLICAS)));
+            TaskProvider<GenerateJavaModuleInventoryTask> inventory = module.getTasks().named(
+                    BuildLogicConstants.TASK_GENERATE_MODULE_STRUCTURE_INVENTORY,
+                    GenerateJavaModuleInventoryTask.class);
+            moduleStructure.configure(task -> {
+                task.getModuleInventories().from(inventory.flatMap(
+                        GenerateJavaModuleInventoryTask::getOutputFile));
+                task.dependsOn(inventory);
+            });
+            TaskProvider<GenerateJavaApiInventoryTask> api = module.getTasks().named(
+                    BuildLogicConstants.TASK_GENERATE_PUBLIC_API_INVENTORY,
+                    GenerateJavaApiInventoryTask.class);
+            apiUnion.configure(task -> {
+                task.getUnionInputs().from(api.flatMap(GenerateJavaApiInventoryTask::getOutputFile));
+                task.dependsOn(api);
+            });
+            stagePublications.configure(task -> task.dependsOn(module.getTasks().named(
+                    "publishMavenJavaPublicationToStagingRepository")));
+            module.getTasks().named("publishMavenJavaPublicationToStagingRepository")
+                    .configure(task -> task.dependsOn(prepareStaging));
+            if (module.getTasks().findByName("jmhClasses") != null) {
+                benchmarkClasses.configure(task -> task.dependsOn(
+                        module.getTasks().named("jmhClasses")));
+            }
+        }
+        moduleCheck.configure(task -> task.dependsOn(root.getTasks().named("test"),
+                root.project(":examples").getTasks().named("check")));
+        for (String name : API_BASELINE_MODULES) {
+            Project module = root.project(":" + name);
+            moduleApiVerify.configure(task -> task.dependsOn(
+                    module.getTasks().named(BuildLogicConstants.TASK_API_BASELINE_DIFF)));
+        }
+        benchmarkClasses.configure(task -> task.dependsOn(root.getTasks().named("jmhClasses")));
+        root.getTasks().named(LifecycleBasePlugin.BUILD_TASK_NAME).configure(task -> {
+            for (String name : PUBLISHED_MODULES) {
+                task.dependsOn(root.project(":" + name).getTasks().named("build"));
+            }
+            task.dependsOn(root.project(":examples").getTasks().named("build"));
+        });
+        root.getTasks().named(LifecycleBasePlugin.CLEAN_TASK_NAME).configure(task -> {
+            for (Project module : root.getSubprojects()) {
+                task.dependsOn(module.getTasks().named("clean"));
+            }
+        });
+        configureAggregateReceipt(
+                root,
+                generateReceipt,
+                verifyReceipt,
+                moduleCheck,
+                moduleArchiveVerify,
+                moduleApiVerify,
+                moduleStructure,
+                scriptShape,
+                publishedRepository,
+                publishedSmoke);
+    }
+
+    private static void configureAggregateReceipt(
+            Project root,
+            TaskProvider<GenerateAggregateReleaseReceiptTask> generateReceipt,
+            TaskProvider<VerifyAggregateReleaseReceiptTask> verifyReceipt,
+            TaskProvider<Task> moduleCheck,
+            TaskProvider<Task> moduleArchiveVerify,
+            TaskProvider<Task> moduleApiVerify,
+            TaskProvider<VerifyJavaModuleStructureTask> moduleStructure,
+            TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
+            TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
+            TaskProvider<GradleBuild> publishedSmoke) {
+        java.util.List<Object> api = new java.util.ArrayList<>();
+        java.util.List<Object> verification = new java.util.ArrayList<>();
+        for (String name : PUBLISHED_MODULES) {
+            Project module = root.project(":" + name);
+            api.add(module.getTasks().named(
+                    BuildLogicConstants.TASK_GENERATE_PUBLIC_API_INVENTORY));
+            verification.add(module.getTasks().named(
+                    BuildLogicConstants.TASK_COMPARE_ARCHIVE_REPLICAS));
+            verification.add(module.getTasks().named(
+                    BuildLogicConstants.TASK_VERIFY_JAVA_PACKAGE_CYCLES));
+        }
+        java.util.List<Object> tests = Arrays.asList(
+                root.getTasks().named("test"),
+                root.getTasks().named("identityDifferentialTest"),
+                root.getTasks().named("patchSequenceDifferentialTest"),
+                root.getTasks().named("memoryIntegrationTest"),
+                root.getTasks().named("cacheLifecycleTest"),
+                root.getTasks().named("fragmentedProcessingTest"));
+        ConfigurableFileTree artifacts = root.fileTree(
+                root.getLayout().getBuildDirectory().dir("staging-deploy"));
+        artifacts.include("**/*.jar", "**/*.pom", "**/*.module");
+        ConfigurableFileTree testEvidence = root.fileTree(root.getRootDir());
+        testEvidence.include(
+                "build/test-results/**/*.xml",
+                "blue-*/build/test-results/**/*.xml",
+                "examples/build/test-results/**/*.xml");
+        java.util.List<Object> fixtures = Arrays.asList(
+                root.project(":blue-conformance").getTasks().named(
+                        "releaseConformanceTest"),
+                root.project(":blue-conformance").getTasks().named(
+                        "generateConformancePackageIdentity"));
+        verification.add(moduleStructure);
+        verification.add(scriptShape);
+        verification.add(publishedRepository);
+        verification.add(publishedSmoke);
+        verification.add(root.getTasks().named("runtimeTraceEvidence"));
+        verification.add(root.getTasks().named("generateReleaseEvidence"));
+        root.getTasks().named("verifyReleaseEvidenceInputs").configure(task ->
+                task.dependsOn(root.getTasks().named("generateReleaseEvidence")));
+
+        generateReceipt.configure(task -> {
+            task.getArtifacts().setFrom(artifacts);
+            task.getTestEvidence().setFrom(testEvidence);
+            task.getFixtureEvidence().setFrom(fixtures);
+            task.getApiEvidence().setFrom(api);
+            task.getVerificationEvidence().setFrom(verification);
+            task.dependsOn(
+                    moduleCheck,
+                    moduleArchiveVerify,
+                    moduleApiVerify,
+                    moduleStructure,
+                    scriptShape,
+                    publishedSmoke,
+                    root.getTasks().named("releaseConformanceTest"),
+                    root.getTasks().named("runtimeTraceEvidence"),
+                    root.getTasks().named("verifyReleaseEvidenceInputs"));
+            task.dependsOn(tests);
+        });
+        verifyReceipt.configure(task -> {
+            task.getArtifacts().setFrom(artifacts);
+            task.getTestEvidence().setFrom(testEvidence);
+            task.getFixtureEvidence().setFrom(fixtures);
+            task.getApiEvidence().setFrom(api);
+            task.getVerificationEvidence().setFrom(verification);
+            task.dependsOn(generateReceipt);
+        });
+    }
+
+    private static void registerFocusedTests(Project project) {
+        registerFocusedTest(project, "identityDifferentialTest",
+                "Runs identity, Base58, and canonical digest differential coverage.", task -> {
+                    include(task, "blue.language.identity.Base58Test",
+                            "blue.language.identity.Base58Sha256ProviderTest",
+                            "blue.language.identity.DirectBlueIdCalculatorTest",
+                            "blue.language.snapshot.FrozenNodeTest",
+                            "blue.language.snapshot.FrozenNodeStructuralInternerTest",
+                            "blue.language.snapshot.FrozenCanonicalDigesterTest");
+                });
+        registerFocusedTest(project, "patchSequenceDifferentialTest",
+                "Runs deterministic patch-sequence differential coverage.", task -> include(task,
+                        "blue.language.processor.PatchSequenceRandomizedDifferentialTest",
+                        "blue.language.processor.SequentialPatchPlanningSessionTest",
+                        "blue.language.processor.PreparedPatchSequenceTest",
+                        "blue.language.processor.DocumentProcessorBatchPatchTest"));
+        registerFocusedTest(project, "memoryIntegrationTest",
+                "Runs bounded retention and weak-reference integration coverage.", task -> {
+                    task.setMaxHeapSize("512m");
+                    task.setForkEvery(1L);
+                    include(task, "blue.language.processor.PatchSequenceRetentionStressTest");
+                });
+        registerFocusedTest(project, "cacheLifecycleTest",
+                "Runs cache ownership, weight, and lifecycle contracts.", task -> include(task,
+                        "blue.language.BlueCacheLifecycleTest",
+                        "blue.language.BlueCachePolicyTest",
+                        "blue.language.runtime.WeightedLruCacheTest",
+                        "blue.language.processor.ProcessorOwnedCacheLifecycleTest",
+                        "blue.language.snapshot.FrozenNodeRetainedWeightTest",
+                        "blue.language.merge.ResolvedReferenceCacheContractTest",
+                        "blue.language.matching.FrozenTypeMatcherCachePolicyTest"));
+        registerFocusedTest(project, "fragmentedProcessingTest",
+                "Runs provider-fragment admission and deterministic locality coverage.", task -> {
+                    task.systemProperty("blue.semantic.locality.evidence.dir",
+                            project.getLayout().getBuildDirectory().dir(
+                                    "reports/semantic-baseline/locality").get().getAsFile()
+                                    .getAbsolutePath());
+                    task.getFilter().includeTestsMatching("blue.language.provider.*FragmentsTest");
+                    task.getFilter().includeTestsMatching("blue.language.processor.*Locality*Test");
+                    task.getFilter().includeTestsMatching("blue.language.processor.*LogicalDelivery*Test");
+                    task.getFilter().includeTestsMatching("blue.language.processor.*Routing*Test");
+                    task.getFilter().includeTestsMatching("blue.language.processor.EffectiveFragmentationCatalogTest");
+                    task.getFilter().includeTestsMatching("blue.language.processor.ProcessingInputAdmissionTest");
+                });
+    }
+
+    private static TaskProvider<Test> registerFocusedTest(
+            Project project, String name, String description, Action<Test> configuration) {
+        SourceSet testSourceSet = project.getExtensions().getByType(SourceSetContainer.class)
+                .getByName(SourceSet.TEST_SOURCE_SET_NAME);
+        return project.getTasks().register(name, Test.class, task -> {
+            task.setGroup(GROUP);
+            task.setDescription(description);
+            task.dependsOn(project.getTasks().named(JavaPlugin.TEST_CLASSES_TASK_NAME));
+            task.setTestClassesDirs(testSourceSet.getOutput().getClassesDirs());
+            task.setClasspath(testSourceSet.getRuntimeClasspath());
+            task.useJUnitPlatform();
+            configuration.execute(task);
+        });
+    }
+
+    private static void include(Test task, String... tests) {
+        for (String test : tests) {
+            task.getFilter().includeTestsMatching(test);
+        }
+    }
+
+    private static void registerEvidenceExecutions(Project project) {
+        SourceSet test = project.getExtensions().getByType(SourceSetContainer.class)
+                .getByName(SourceSet.TEST_SOURCE_SET_NAME);
+        project.getTasks().register("releaseConformanceTest", DefaultTask.class, task -> {
+            task.setGroup(GROUP);
+            task.setDescription("Root alias for the exact conformance module release gate.");
+            task.dependsOn(":blue-conformance:releaseConformanceTest");
+        });
+        project.getTasks().register("runtimeTraceEvidence", JavaExec.class, task -> {
+            task.setGroup(GROUP);
+            task.setDescription("Records ordered RuntimeWorkSession trace evidence.");
+            task.dependsOn(project.getTasks().named(JavaPlugin.TEST_CLASSES_TASK_NAME));
+            task.setClasspath(test.getRuntimeClasspath());
+            task.getMainClass().set("blue.language.processor.RuntimeTraceEvidenceCli");
+            task.args(project.getLayout().getBuildDirectory().file(
+                    "reports/runtime-trace/runtime-work-session.json")
+                    .get().getAsFile().getAbsolutePath());
+            task.getOutputs().file(project.getLayout().getBuildDirectory().file(
+                    "reports/runtime-trace/runtime-work-session.json"));
+        });
+    }
+
+    private static void registerCompatibilityAliases(
+            Project project,
+            TaskProvider<Task> moduleApiVerify,
+            TaskProvider<Task> moduleArchiveVerify) {
+        lifecycle(project, "verifyFinalApiBaseline",
+                "Checks all tracked module API baselines.")
+                .configure(task -> task.dependsOn(moduleApiVerify));
+        lifecycle(project, "verifyDeterministicJar",
+                "Checks every published module archive and replica.")
+                .configure(task -> task.dependsOn(moduleArchiveVerify));
+        lifecycle(project, "verifyDeterministicSourceArchives",
+                "Checks every published sources archive and replica.")
+                .configure(task -> task.dependsOn(moduleArchiveVerify));
+        lifecycle(project, "fragmentedProcessingReport",
+                "Reserved for the typed semantic locality report assembler.")
+                .configure(task -> {
+                    task.dependsOn(project.getTasks().named("fragmentedProcessingTest"));
+                    task.doLast(ignored -> {
+                        throw new org.gradle.api.GradleException(
+                                "fragmentedProcessingReport has not yet been ported to typed build logic; "
+                                        + "the locality tests ran, but no semantic report was claimed");
+                    });
+                });
+        lifecycle(project, "semanticBaselineVerify",
+                "Reserved for typed semantic baseline verification.")
+                .configure(task -> task.dependsOn(project.getTasks().named(
+                        "fragmentedProcessingReport")));
+        lifecycle(project, "semanticBaselineCapture",
+                "Reserved for deliberate typed semantic baseline capture.")
+                .configure(task -> task.dependsOn(project.getTasks().named(
+                        "fragmentedProcessingReport")));
+    }
+
+    private static TaskProvider<Task> lifecycle(Project project, String name, String description) {
+        return project.getTasks().register(name, task -> {
+            task.setGroup(GROUP);
+            task.setDescription(description);
+        });
+    }
+
+    private static void requireRoot(Project project) {
+        if (project != project.getRootProject()) {
+            throw new org.gradle.api.GradleException(
+                    "blue.root-orchestration may only be applied to the root project");
+        }
+    }
+
+    /** Small insertion-ordered map builder that keeps GradleBuild properties explicit. */
+    private static final class TreeMapBuilder {
+
+        private final java.util.Map<String, String> values = new java.util.TreeMap<>();
+
+        private TreeMapBuilder put(String key, String value) {
+            values.put(key, value);
+            return this;
+        }
+
+        private java.util.Map<String, String> build() {
+            return values;
+        }
+    }
+}

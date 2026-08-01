@@ -33,6 +33,7 @@ public final class AggregateReleaseReceipt {
     private static final String KEY_SOURCE_DATE_EPOCH = "sourceDateEpoch";
     private static final String KEY_TESTS = "tests";
     private static final String KEY_VERIFIED = "verified";
+    private static final String KEY_VERIFICATION = "verification";
 
     private AggregateReleaseReceipt() {}
 
@@ -42,6 +43,7 @@ public final class AggregateReleaseReceipt {
             Collection<Path> testEvidence,
             Collection<Path> fixtureEvidence,
             Collection<Path> apiEvidence,
+            Collection<Path> verificationEvidence,
             String sourceCommit,
             String sourceDateEpoch,
             Map<String, String> metadata) {
@@ -54,6 +56,7 @@ public final class AggregateReleaseReceipt {
         receipt.put(KEY_SOURCE_COMMIT, oneLine(sourceCommit, "source commit"));
         receipt.put(KEY_SOURCE_DATE_EPOCH, SourceDateEpoch.normalize(sourceDateEpoch));
         receipt.put(KEY_TESTS, group(root, testEvidence));
+        receipt.put(KEY_VERIFICATION, group(root, verificationEvidence));
         return DeterministicJson.write(receipt);
     }
 
