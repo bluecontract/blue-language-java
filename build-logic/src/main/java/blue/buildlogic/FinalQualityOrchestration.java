@@ -4,6 +4,7 @@ import blue.buildlogic.tasks.GenerateFinalQualityReportTask;
 import blue.buildlogic.tasks.GenerateJavaApiInventoryTask;
 import blue.buildlogic.tasks.VerifyFinalQualityReportTask;
 import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -45,9 +46,9 @@ final class FinalQualityOrchestration {
         ConfigurableFileTree apiInventories = project.fileTree(project.getRootDir(), tree ->
                 tree.include("blue-*/build/reports/api/current-api.txt"));
         ConfigurableFileTree tests = project.fileTree(project.getRootDir(), tree -> tree.include(
-                "build/test-results/test/*.xml",
-                "blue-*/build/test-results/test/*.xml",
-                "examples/build/test-results/test/*.xml"));
+                "build/test-results/**/*.xml",
+                "blue-*/build/test-results/**/*.xml",
+                "examples/build/test-results/**/*.xml"));
         ConfigurableFileTree packageCycles = project.fileTree(project.getRootDir(), tree ->
                 tree.include("blue-*/build/reports/architecture/package-cycles.json"));
         ConfigurableFileCollection moduleArtifacts = project.files();
@@ -83,6 +84,9 @@ final class FinalQualityOrchestration {
         Provider<org.gradle.api.file.RegularFile> conformance = project.project(":blue-conformance")
                 .getLayout().getBuildDirectory()
                 .file("reports/conformance/release-conformance.json");
+        List<String> excludedTasks = new ArrayList<>(
+                project.getGradle().getStartParameter().getExcludedTaskNames());
+        Collections.sort(excludedTasks);
 
         TaskProvider<GenerateFinalQualityReportTask> report = project.getTasks().register(
                 BuildLogicConstants.TASK_GENERATE_FINAL_QUALITY_REPORT,
@@ -112,6 +116,7 @@ final class FinalQualityOrchestration {
                     task.getPublishedSmokeReport().set(project.getLayout().getBuildDirectory()
                             .file("reports/published-smoke/verification.json"));
                     task.getSourceCommit().set(sourceCommit);
+                    task.getExcludedTasks().set(excludedTasks);
                     task.getClassSizeRationales().set(CLASS_SIZE_RATIONALES);
                     task.getRequiredSmokeBenchmarks().set(REQUIRED_SMOKE_BENCHMARKS);
                     task.getExpectedModuleCount().set(publishedModules.size());

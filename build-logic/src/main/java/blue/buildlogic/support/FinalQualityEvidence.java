@@ -40,8 +40,12 @@ public final class FinalQualityEvidence {
         ApiSummary api = api(inputs.apiInventories);
         JsonNode conformance = json(inputs.releaseConformanceReport, "release conformance report");
         JsonNode documentation = json(inputs.documentationReport, "documentation analysis");
-        if (inputs.sourceCommit == null || !inputs.sourceCommit.matches("[0-9a-f]{40}")) {
+        if (inputs.sourceCommit == null
+                || !inputs.sourceCommit.matches("(?:[0-9a-f]{40}|[0-9a-f]{64})")) {
             blockers.add("SOURCE_COMMIT_IDENTITY");
+        }
+        if (!inputs.excludedTasks.isEmpty()) {
+            blockers.add("TASK_EXCLUSIONS");
         }
 
         Map<String, Object> identities = identities(
@@ -120,6 +124,10 @@ public final class FinalQualityEvidence {
         report.put("benchmarkSummary", benchmarks);
         report.put("documentation", docs);
         report.put("fixtureTotals", fixtures);
+        Map<String, Object> invocation = new TreeMap<>();
+        invocation.put("excludedTasks", new ArrayList<>(inputs.excludedTasks));
+        invocation.put("exclusionFree", inputs.excludedTasks.isEmpty());
+        report.put("invocation", invocation);
         report.put("largestClassReport", classQuality);
         report.put("moduleArtifactHashes", artifacts);
         report.put("packageCycles", cycles);
@@ -586,6 +594,7 @@ public final class FinalQualityEvidence {
         private final Path publishedRepositoryReport;
         private final Path publishedSmokeReport;
         private final String sourceCommit;
+        private final List<String> excludedTasks;
         private final Map<String, String> classSizeRationales;
         private final List<String> requiredSmokeBenchmarks;
         private final int expectedModuleCount;
@@ -615,6 +624,7 @@ public final class FinalQualityEvidence {
                 Path publishedRepositoryReport,
                 Path publishedSmokeReport,
                 String sourceCommit,
+                List<String> excludedTasks,
                 Map<String, String> classSizeRationales,
                 List<String> requiredSmokeBenchmarks,
                 int expectedModuleCount,
@@ -642,6 +652,8 @@ public final class FinalQualityEvidence {
             this.publishedRepositoryReport = publishedRepositoryReport;
             this.publishedSmokeReport = publishedSmokeReport;
             this.sourceCommit = sourceCommit;
+            this.excludedTasks = new ArrayList<>(excludedTasks);
+            Collections.sort(this.excludedTasks);
             this.classSizeRationales = new LinkedHashMap<>(classSizeRationales);
             this.requiredSmokeBenchmarks = new ArrayList<>(requiredSmokeBenchmarks);
             this.expectedModuleCount = expectedModuleCount;

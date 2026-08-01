@@ -147,7 +147,7 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
     /** Normalizes generated Javadocs so their archive contents are host-independent. */
     private static void configureJavadocs(Project project) {
         project.getTasks().withType(Javadoc.class).configureEach(task -> {
-            task.setFailOnError(false);
+            task.setFailOnError(true);
             task.getOptions().setEncoding(CHARACTER_ENCODING_UTF_8);
             if (task.getOptions() instanceof StandardJavadocDocletOptions) {
                 StandardJavadocDocletOptions options =
@@ -155,7 +155,8 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
                 options.setCharSet(CHARACTER_ENCODING_UTF_8);
                 options.setDocEncoding(CHARACTER_ENCODING_UTF_8);
                 options.setNoTimestamp(true);
-                options.addBooleanOption("Xdoclint:none", true);
+                options.addBooleanOption("Xdoclint:all", true);
+                options.addBooleanOption("Werror", true);
             }
         });
     }

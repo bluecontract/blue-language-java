@@ -78,6 +78,7 @@ final class FinalQualityEvidenceTest {
                         published,
                         smoke,
                         repeat('a'),
+                        Collections.singletonList(":releaseVerify"),
                         Collections.emptyMap(),
                         Collections.singletonList("RequiredBenchmark.run"),
                         1,
@@ -107,6 +108,7 @@ final class FinalQualityEvidenceTest {
         assertTrue(blockers.contains("JMH_REQUIRED_SMOKE"));
         assertTrue(blockers.contains("README_LINE_LIMIT"));
         assertTrue(blockers.contains("ROOT_BUILD_LINE_LIMIT"));
+        assertTrue(blockers.contains("TASK_EXCLUSIONS"));
     }
 
     private String conformance(String languageHash, String contractsHash) {

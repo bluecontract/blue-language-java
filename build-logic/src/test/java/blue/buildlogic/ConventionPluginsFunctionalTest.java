@@ -159,6 +159,28 @@ final class ConventionPluginsFunctionalTest {
                 "typed-jmh-includes=DeepGraph.*processSelectedLeaf|ReferenceBlueId.*"));
     }
 
+    @Test
+    void shouldRejectJavadocWarnings() throws Exception {
+        // given
+        write(
+                "settings.gradle",
+                "rootProject.name = 'javadoc-warning-fixture'\n");
+        write(
+                "build.gradle",
+                "plugins { id 'blue.java8-library-conventions' }\n");
+        write(
+                "src/main/java/example/UndocumentedApi.java",
+                "package example;\npublic class UndocumentedApi {\n"
+                        + "    public void action() {}\n}\n");
+
+        // when
+        BuildResult result = runAndFail("javadoc");
+
+        // then
+        assertEquals(TaskOutcome.FAILED, result.task(":javadoc").getOutcome());
+        assertTrue(result.getOutput().contains("warnings found and -Werror specified"));
+    }
+
     private void writeFixture() throws Exception {
         write(
                 "settings.gradle",
@@ -218,6 +240,17 @@ final class ConventionPluginsFunctionalTest {
                 .withPluginClasspath()
                 .withArguments(arguments)
                 .build();
+    }
+
+    private BuildResult runAndFail(String... taskNames) {
+        List<String> arguments = new ArrayList<>(Arrays.asList(taskNames));
+        arguments.add("--offline");
+        arguments.add("--stacktrace");
+        return GradleRunner.create()
+                .withProjectDir(temporaryDirectory.toFile())
+                .withPluginClasspath()
+                .withArguments(arguments)
+                .buildAndFail();
     }
 
     private BuildResult runReleaseEvidence(boolean expectFailure, String... taskNames) {

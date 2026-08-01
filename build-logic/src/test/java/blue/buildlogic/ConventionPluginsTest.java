@@ -76,6 +76,7 @@ final class ConventionPluginsTest {
         assertEquals("UTF-8", javadocOptions.getCharSet());
         assertEquals("UTF-8", javadocOptions.getDocEncoding());
         assertTrue(javadocOptions.isNoTimestamp());
+        assertTrue(javadoc.isFailOnError());
     }
 
     @Test

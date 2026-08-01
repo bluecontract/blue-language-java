@@ -44,6 +44,7 @@ public abstract class GenerateFinalQualityReportTask extends DefaultTask {
         getPublicFacadeMemberLimit().convention(100);
         getClassSizeRationales().convention(java.util.Collections.emptyMap());
         getRequiredSmokeBenchmarks().convention(java.util.Collections.emptyList());
+        getExcludedTasks().convention(java.util.Collections.emptyList());
         getJavadocsSuccessful().convention(false);
         getExamplesCompiled().convention(false);
         getBenchmarksCompiled().convention(false);
@@ -109,6 +110,9 @@ public abstract class GenerateFinalQualityReportTask extends DefaultTask {
     public abstract Property<String> getSourceCommit();
 
     @Input
+    public abstract ListProperty<String> getExcludedTasks();
+
+    @Input
     public abstract MapProperty<String, String> getClassSizeRationales();
 
     @Input
@@ -166,6 +170,7 @@ public abstract class GenerateFinalQualityReportTask extends DefaultTask {
                 getPublishedRepositoryReport().get().getAsFile().toPath(),
                 getPublishedSmokeReport().get().getAsFile().toPath(),
                 getSourceCommit().get(),
+                getExcludedTasks().get(),
                 getClassSizeRationales().get(),
                 getRequiredSmokeBenchmarks().get(),
                 getExpectedModuleCount().get(),
