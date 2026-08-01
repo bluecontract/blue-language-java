@@ -8,36 +8,6 @@ plugins {
 
 description = 'Deterministic Blue Language semantics and provider SPI.'
 
-sourceSets {
-    main {
-        java {
-            srcDirs = [rootProject.file('src/main/java')]
-            include 'blue/language/api/**'
-            include 'blue/language/codec/**'
-            include 'blue/language/conformance/*.java'
-            include 'blue/language/graph/**'
-            include 'blue/language/identity/**'
-            include 'blue/language/matching/**'
-            include 'blue/language/merge/**'
-            include 'blue/language/patching/**'
-            include 'blue/language/preprocess/**'
-            include 'blue/language/provider/*.java'
-            include 'blue/language/registry/**'
-            include 'blue/language/resolve/**'
-            include 'blue/language/runtime/**'
-            include 'blue/language/snapshot/**'
-            include 'blue/language/utils/**'
-        }
-        resources {
-            srcDirs = [rootProject.file('src/main/resources')]
-            include 'META-INF/services/blue.language.model.NodeIdentityProvider'
-            include 'registry/blue-language-1.0/**'
-            include 'specifications/blue-language-specification-1.0.md'
-            include 'transformation/**'
-        }
-    }
-}
-
 dependencies {
     api project(':blue-language-model')
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'

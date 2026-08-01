@@ -7,16 +7,6 @@ plugins {
 
 description = 'Optional IPFS provider and HTTP gateway integration.'
 
-sourceSets {
-    main {
-        java {
-            srcDirs = [rootProject.file('src/main/java')]
-            include 'blue/language/provider/ipfs/**'
-        }
-        resources.srcDirs = []
-    }
-}
-
 dependencies {
     api project(':blue-language-core')
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'

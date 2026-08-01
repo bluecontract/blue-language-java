@@ -294,6 +294,10 @@ compileTestJava {
 
 
 dependencies {
+    testImplementation(project(":blue-language-java"))
+    testImplementation(project(":blue-conformance"))
+    jmhImplementation(project(":blue-language-java"))
+
     // JUnit Jupiter (JUnit 5)
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -396,9 +400,11 @@ tasks.register('cacheLifecycleTest', Test) {
 tasks.register('verifyNoDeprecatedProductionApi') {
     group = 'verification'
     description = 'Fails when production Java source declares a deprecated preview API.'
-    def productionSources = fileTree('src/main/java') {
-        include '**/*.java'
-    }
+    def productionSources = files(subprojects.collect { module ->
+        module.fileTree('src/main/java') {
+            include '**/*.java'
+        }
+    })
     inputs.files(productionSources)
     doLast {
         def violations = []
@@ -420,9 +426,11 @@ tasks.register('verifyNoDeprecatedProductionApi') {
 tasks.register('verifyNoAmbiguousReverseApi') {
     group = 'verification'
     description = 'Fails when production Java source reintroduces ambiguous bare reverse semantics.'
-    def productionSources = fileTree('src/main/java') {
-        include '**/*.java'
-    }
+    def productionSources = files(subprojects.collect { module ->
+        module.fileTree('src/main/java') {
+            include '**/*.java'
+        }
+    })
     inputs.files(productionSources)
     doLast {
         def reverseCall = ~/\breverse\s*\(/
@@ -639,13 +647,20 @@ tasks.register('releaseConformanceTest', JavaExec) {
     }
     args releaseConformanceJson.get().asFile.absolutePath,
             releaseConformanceText.get().asFile.absolutePath
-    inputs.files(fileTree('src/test/resources/blue-language-1.0/fixtures'))
-    inputs.files(fileTree('src/test/resources/blue-contracts-1.0/fixtures'))
-    inputs.files(fileTree('src/main/resources/registry'))
-    inputs.file('src/main/resources/blue/language/processor/contracts-gas-1.0.yaml')
-    inputs.files(fileTree('src/main/resources/specifications'))
+    inputs.files(fileTree(
+            'blue-conformance/src/main/resources/blue-language-1.0/fixtures'))
+    inputs.files(fileTree(
+            'blue-conformance/src/main/resources/blue-contracts-1.0/fixtures'))
+    inputs.files(fileTree('blue-language-core/src/main/resources/registry'))
+    inputs.files(fileTree('blue-contracts-core/src/main/resources/registry'))
     inputs.file(
-            'src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml')
+            'blue-contracts-core/src/main/resources/blue/language/processor/contracts-gas-1.0.yaml')
+    inputs.files(fileTree(
+            'blue-language-core/src/main/resources/specifications'))
+    inputs.files(fileTree(
+            'blue-contracts-core/src/main/resources/specifications'))
+    inputs.file(
+            'blue-conformance/src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml')
     outputs.file(releaseConformanceJson)
     outputs.file(releaseConformanceText)
 }
@@ -661,9 +676,9 @@ tasks.register('runtimeTraceEvidence', JavaExec) {
     }
     args runtimeTraceEvidenceJson.get().asFile.absolutePath
     inputs.files(
-            'src/main/java/blue/language/processor/RuntimeWorkSession.java',
-            'src/main/java/blue/language/processor/GasMeter.java',
-            'src/main/java/blue/language/processor/GasTraceEntry.java',
+            'blue-contracts-core/src/main/java/blue/language/processor/RuntimeWorkSession.java',
+            'blue-contracts-core/src/main/java/blue/language/processor/GasMeter.java',
+            'blue-contracts-core/src/main/java/blue/language/processor/GasTraceEntry.java',
             'src/test/java/blue/language/processor/RuntimeTraceEvidenceCli.java')
     outputs.file(runtimeTraceEvidenceJson)
 }

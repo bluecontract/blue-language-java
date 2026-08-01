@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
+import java.io.InputStream;
+import java.net.JarURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,13 +15,15 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -305,10 +309,11 @@ public class BlueLanguageConformanceFixtureTest {
 
         // when
         URL resource = getClass().getClassLoader().getResource(FIXTURE_PATH);
-        Path fixtureRoot = resource == null ? null : Paths.get(resource.toURI());
-        JsonNode manifest = fixtureRoot == null
-                ? null
-                : YAML_MAPPER.readTree(new String(Files.readAllBytes(fixtureRoot.resolve("manifest.yaml"))));
+        JsonNode manifest;
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream(FIXTURE_PATH + "/manifest.yaml")) {
+            manifest = input == null ? null : YAML_MAPPER.readTree(input);
+        }
         JsonNode manifestFiles = manifest == null ? null : manifest.get("files");
         String packageIdentity = manifest != null && manifest.hasNonNull("packageIdentity")
                 ? manifest.get("packageIdentity").asText()
@@ -318,7 +323,7 @@ public class BlueLanguageConformanceFixtureTest {
                 : null;
         Set<String> knownOperations = BlueConformanceSuiteRunner.knownOperations();
         Set<String> fixtureIds = new LinkedHashSet<>();
-        Set<Path> listedPaths = new HashSet<>();
+        Set<String> listedPaths = new HashSet<>();
         List<String> manifestViolations = new ArrayList<>();
         if (manifestFiles != null && manifestFiles.isArray()) {
             for (JsonNode entry : manifestFiles) {
@@ -336,64 +341,83 @@ public class BlueLanguageConformanceFixtureTest {
                 if (!entry.hasNonNull("bytes")) {
                     manifestViolations.add("Manifest entry is missing bytes: " + entry);
                 }
-                if (entryPath == null || fixtureRoot == null) {
+                if (entryPath == null || resource == null) {
                     continue;
                 }
 
-                Path fixturePath = fixtureRoot.resolve(entryPath).normalize();
-                if (!Files.isRegularFile(fixturePath)) {
-                    manifestViolations.add("Missing fixture file: " + fixturePath);
-                    continue;
-                }
-                listedPaths.add(fixturePath.toAbsolutePath().normalize());
-                if (!"behavior-fixture".equals(role)) {
-                    if (!"support".equals(role)) {
-                        manifestViolations.add("Unknown fixture role '" + role + "' for " + fixturePath);
+                String fixtureResource = FIXTURE_PATH + "/" + entryPath;
+                listedPaths.add(entryPath);
+                try (InputStream input = getClass().getClassLoader()
+                        .getResourceAsStream(fixtureResource)) {
+                    if (input == null) {
+                        manifestViolations.add(
+                                "Missing fixture resource: " + fixtureResource);
+                        continue;
                     }
-                    continue;
-                }
-
-                JsonNode fixture = YAML_MAPPER.readTree(new String(Files.readAllBytes(fixturePath)));
-                if (fixture.has("profile")) {
-                    manifestViolations.add("Fixture metadata must use category, not profile: " + fixturePath);
-                }
-                JsonNode idNode = fixture.get("id");
-                if (idNode == null || idNode.isNull()) {
-                    manifestViolations.add("Fixture is missing required field 'id': " + fixturePath);
-                } else if (!fixtureIds.add(idNode.asText())) {
-                    manifestViolations.add("Duplicate fixture id: " + idNode.asText());
-                }
-
-                JsonNode categoryNode = fixture.get("category");
-                if (categoryNode == null || categoryNode.isNull()) {
-                    manifestViolations.add("Fixture is missing required field 'category': " + fixturePath);
-                } else {
-                    Throwable categoryFailure = captureFailure(
-                            () -> BlueFixtureCategory.fromLabel(categoryNode.asText()));
-                    if (categoryFailure != null) {
-                        manifestViolations.add("Unknown fixture category in " + fixturePath
-                                + ": " + categoryFailure.getMessage());
+                    if (!"behavior-fixture".equals(role)) {
+                        if (!"support".equals(role)) {
+                            manifestViolations.add("Unknown fixture role '"
+                                    + role + "' for " + fixtureResource);
+                        }
+                        continue;
                     }
-                }
 
-                JsonNode operationNode = fixture.get("operation");
-                if (operationNode == null || operationNode.isNull()) {
-                    manifestViolations.add("Fixture is missing required field 'operation': " + fixturePath);
-                } else if (!knownOperations.contains(operationNode.asText())) {
-                    manifestViolations.add("Unknown fixture operation in " + fixturePath);
-                }
+                    JsonNode fixture = YAML_MAPPER.readTree(input);
+                    if (fixture.has("profile")) {
+                        manifestViolations.add(
+                                "Fixture metadata must use category, not profile: "
+                                        + fixtureResource);
+                    }
+                    JsonNode idNode = fixture.get("id");
+                    if (idNode == null || idNode.isNull()) {
+                        manifestViolations.add(
+                                "Fixture is missing required field 'id': "
+                                        + fixtureResource);
+                    } else if (!fixtureIds.add(idNode.asText())) {
+                        manifestViolations.add(
+                                "Duplicate fixture id: " + idNode.asText());
+                    }
 
-                Throwable metadataFailure = captureFailure(
-                        () -> BlueConformanceSuiteRunner.validateFixtureMetadataForTest(fixture));
-                if (metadataFailure != null) {
-                    manifestViolations.add("Invalid fixture metadata in " + fixturePath
-                            + ": " + metadataFailure.getMessage());
+                    JsonNode categoryNode = fixture.get("category");
+                    if (categoryNode == null || categoryNode.isNull()) {
+                        manifestViolations.add(
+                                "Fixture is missing required field 'category': "
+                                        + fixtureResource);
+                    } else {
+                        Throwable categoryFailure = captureFailure(
+                                () -> BlueFixtureCategory.fromLabel(
+                                        categoryNode.asText()));
+                        if (categoryFailure != null) {
+                            manifestViolations.add("Unknown fixture category in "
+                                    + fixtureResource + ": "
+                                    + categoryFailure.getMessage());
+                        }
+                    }
+
+                    JsonNode operationNode = fixture.get("operation");
+                    if (operationNode == null || operationNode.isNull()) {
+                        manifestViolations.add(
+                                "Fixture is missing required field 'operation': "
+                                        + fixtureResource);
+                    } else if (!knownOperations.contains(operationNode.asText())) {
+                        manifestViolations.add(
+                                "Unknown fixture operation in " + fixtureResource);
+                    }
+
+                    Throwable metadataFailure = captureFailure(
+                            () -> BlueConformanceSuiteRunner
+                                    .validateFixtureMetadataForTest(fixture));
+                    if (metadataFailure != null) {
+                        manifestViolations.add("Invalid fixture metadata in "
+                                + fixtureResource + ": "
+                                + metadataFailure.getMessage());
+                    }
                 }
             }
         }
-        Set<Path> actualFixturePaths = fixtureRoot == null
+        Set<String> actualFixturePaths = resource == null
                 ? Collections.emptySet()
-                : fixtureYamlFiles(fixtureRoot);
+                : fixtureYamlResources(resource);
 
         // then
         assertTrue(resource != null);
@@ -405,19 +429,53 @@ public class BlueLanguageConformanceFixtureTest {
         assertEquals(listedPaths, actualFixturePaths);
     }
 
-    private Set<Path> fixtureYamlFiles(Path fixtureRoot) throws Exception {
-        try (Stream<Path> paths = Files.walk(fixtureRoot)) {
-            return paths
-                    .filter(Files::isRegularFile)
-                    .filter(path -> {
-                        String name = path.getFileName().toString();
-                        return !"manifest.yaml".equals(name)
-                                && !"manifest.yml".equals(name);
-                    })
-                    .sorted(Comparator.comparing(Path::toString))
-                    .map(path -> path.toAbsolutePath().normalize())
+    private Set<String> fixtureYamlResources(URL fixtureRoot) throws Exception {
+        if ("file".equals(fixtureRoot.getProtocol())) {
+            Path root = Paths.get(fixtureRoot.toURI());
+            try (Stream<Path> paths = Files.walk(root)) {
+                return paths
+                        .filter(Files::isRegularFile)
+                        .map(root::relativize)
+                        .map(Path::toString)
+                        .map(path -> path.replace('\\', '/'))
+                        .filter(this::isFixtureResource)
+                        .sorted()
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+            }
+        }
+        if ("jar".equals(fixtureRoot.getProtocol())) {
+            JarURLConnection connection =
+                    (JarURLConnection) fixtureRoot.openConnection();
+            connection.setUseCaches(false);
+            String prefix = connection.getEntryName() + "/";
+            Set<String> resources = new LinkedHashSet<>();
+            try (JarFile jar = connection.getJarFile()) {
+                Enumeration<JarEntry> entries = jar.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    if (!entry.isDirectory()
+                            && entry.getName().startsWith(prefix)) {
+                        String relative = entry.getName()
+                                .substring(prefix.length());
+                        if (isFixtureResource(relative)) {
+                            resources.add(relative);
+                        }
+                    }
+                }
+            }
+            return resources.stream()
+                    .sorted()
                     .collect(Collectors.toCollection(LinkedHashSet::new));
         }
+        throw new IllegalArgumentException(
+                "Unsupported fixture resource protocol: "
+                        + fixtureRoot.getProtocol());
+    }
+
+    private boolean isFixtureResource(String path) {
+        String name = path.substring(path.lastIndexOf('/') + 1);
+        return !"manifest.yaml".equals(name)
+                && !"manifest.yml".equals(name);
     }
 
     private String failureMessage(BlueConformanceFailure failure) {

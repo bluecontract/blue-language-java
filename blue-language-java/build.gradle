@@ -7,16 +7,6 @@ plugins {
 
 description = 'One-dependency aggregate and compatibility facade for Blue Language Java.'
 
-sourceSets {
-    main {
-        java {
-            srcDirs = [rootProject.file('src/main/java')]
-            include 'blue/language/Blue.java'
-        }
-        resources.srcDirs = []
-    }
-}
-
 dependencies {
     api project(':blue-language-model')
     api project(':blue-language-core')

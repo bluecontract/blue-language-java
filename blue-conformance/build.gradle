@@ -8,29 +8,6 @@ plugins {
 
 description = 'Executable Language and Contracts conformance fixtures and release reports.'
 
-sourceSets {
-    main {
-        java {
-            srcDirs = [rootProject.file('src/main/java')]
-            include 'blue/language/conformance/api/**'
-            include 'blue/language/conformance/cli/**'
-            include 'blue/language/conformance/contracts/**'
-            include 'blue/language/conformance/runner/**'
-        }
-        resources {
-            srcDirs = [
-                    rootProject.file('src/main/resources'),
-                    rootProject.file('src/test/resources')
-            ]
-            include 'blue-contracts-1.0/**'
-            include 'blue-language-1.0/**'
-            include 'contract/1.0/**'
-            include 'language/1.0/**'
-            include 'release/**'
-        }
-    }
-}
-
 dependencies {
     api project(':blue-language-model')
     api project(':blue-language-core')
