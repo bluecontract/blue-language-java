@@ -112,7 +112,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
     public void apply(Project project) {
         requireRoot(project);
         project.getPluginManager().apply(JavaPlugin.class);
-        project.getPluginManager().apply("me.champeau.jmh");
+        project.getPluginManager().apply(JmhConventionsPlugin.class);
         project.getPluginManager().apply(ReleaseEvidencePlugin.class);
         configureRootJava(project);
         configureDependencies(project);
@@ -241,11 +241,12 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                         sourceRelease.comparison,
                         sourceRelease.verification,
                         benchmarkClasses);
-        DocumentationQualityOrchestration.register(
-                project,
-                PUBLISHED_MODULES,
-                apiUnion,
-                moduleStructure);
+        DocumentationQualityOrchestration.Tasks documentation =
+                DocumentationQualityOrchestration.register(
+                        project,
+                        PUBLISHED_MODULES,
+                        apiUnion,
+                        moduleStructure);
 
         project.getGradle().projectsEvaluated(gradle -> configureModuleGraph(
                 project,
@@ -286,6 +287,14 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 semanticEvidence.releaseEvidenceVerification,
                 semanticEvidence.semanticBaselineVerification,
                 verifyReceipt));
+        FinalQualityOrchestration.register(
+                project,
+                PUBLISHED_MODULES,
+                releaseVerify,
+                benchmarkClasses,
+                apiUnion,
+                moduleStructure,
+                documentation);
         lifecycle(project, "rcVerify", "Alias for releaseVerify.")
                 .configure(task -> task.dependsOn(releaseVerify));
     }

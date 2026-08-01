@@ -33,7 +33,8 @@ final class ModernizationVerificationTasksTest {
                 VerifyAggregateReleaseReceiptTask.class,
                 GenerateDocumentationReferencesTask.class,
                 GenerateDocumentationVerificationReportTask.class,
-                VerifyDocumentationReportTask.class);
+                VerifyDocumentationReportTask.class,
+                VerifyFinalQualityReportTask.class);
 
         // when / then
         taskTypes.forEach(type -> assertTrue(

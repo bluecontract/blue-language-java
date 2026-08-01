@@ -134,6 +134,46 @@ final class DocumentationQualityTest {
         assertEquals(1, examples.get("sourceCount"));
     }
 
+    @Test
+    void shouldIgnoreRemovedApiNamesInsideGeneratedInventories() throws Exception {
+        // given
+        Path generated = write(
+                "docs/reference/public-api.md",
+                DocumentationReferences.MARKER + "\n\n`blue.removed.LegacyType`\n");
+        Path languageSpec = write("language.md", "language\n");
+        Path contractsSpec = write("contracts.md", "contracts\n");
+        Path release = write("release.json", conformance(
+                bare(languageSpec), bare(contractsSpec)));
+        Path ledger = write(
+                "ledger.json",
+                "{\"types\":[{\"type\":\"blue.removed.LegacyType\","
+                        + "\"classification\":\"internal-type-removed-from-public-surface\","
+                        + "\"previousTypes\":[]}]}");
+
+        // when
+        Map<String, Object> report = DocumentationVerification.analyze(
+                new DocumentationVerification.Inputs(
+                        temporaryDirectory,
+                        Collections.singletonList(generated),
+                        temporaryDirectory.resolve("generated"),
+                        Collections.emptyList(),
+                        Collections.emptyList(),
+                        Collections.emptyList(),
+                        release,
+                        languageSpec,
+                        contractsSpec,
+                        ledger,
+                        0,
+                        0));
+
+        // then
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> violations =
+                (List<Map<String, Object>>) report.get("violations");
+        assertTrue(violations.stream().noneMatch(value ->
+                "REMOVED_PUBLIC_API_REFERENCE".equals(value.get("code"))));
+    }
+
     private String conformance(String languageHash, String contractsHash) {
         return "{\"schema\":\"blue-language-java-release-conformance-report/1.0\","
                 + "\"packages\":{\"fixtures\":\"sha256:" + repeat('b') + "\"},"

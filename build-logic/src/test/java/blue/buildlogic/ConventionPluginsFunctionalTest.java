@@ -134,6 +134,31 @@ final class ConventionPluginsFunctionalTest {
                 "build/reports/release-evidence/clean-build.json")));
     }
 
+    @Test
+    void shouldApplyTypedJmhIncludesFromTheGradleProperty() throws Exception {
+        // given
+        write("settings.gradle", "rootProject.name = 'jmh-filter-fixture'\n");
+        write(
+                "build.gradle",
+                String.join("\n", Arrays.asList(
+                        "plugins { id 'blue.jmh-conventions' }",
+                        "tasks.register('printJmhIncludes') {",
+                        "    doLast {",
+                        "        println 'typed-jmh-includes=' + jmh.includes.get().join('|')",
+                        "    }",
+                        "}",
+                        "")));
+
+        // when
+        BuildResult result = run(
+                "printJmhIncludes",
+                "-PblueJmhIncludes=DeepGraph.*processSelectedLeaf,ReferenceBlueId.*");
+
+        // then
+        assertTrue(result.getOutput().contains(
+                "typed-jmh-includes=DeepGraph.*processSelectedLeaf|ReferenceBlueId.*"));
+    }
+
     private void writeFixture() throws Exception {
         write(
                 "settings.gradle",
@@ -184,11 +209,14 @@ final class ConventionPluginsFunctionalTest {
         write("source-input.txt", "stable\n");
     }
 
-    private BuildResult run(String taskName) {
+    private BuildResult run(String... taskNames) {
+        List<String> arguments = new ArrayList<>(Arrays.asList(taskNames));
+        arguments.add("--offline");
+        arguments.add("--stacktrace");
         return GradleRunner.create()
                 .withProjectDir(temporaryDirectory.toFile())
                 .withPluginClasspath()
-                .withArguments(taskName, "--offline", "--stacktrace")
+                .withArguments(arguments)
                 .build();
     }
 

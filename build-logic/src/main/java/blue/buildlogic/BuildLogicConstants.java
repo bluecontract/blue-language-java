@@ -26,6 +26,8 @@ public final class BuildLogicConstants {
             "generateDocumentationReferences";
     public static final String TASK_GENERATE_DOCUMENTATION_REPORT =
             "generateDocumentationVerificationReport";
+    public static final String TASK_GENERATE_FINAL_QUALITY_REPORT =
+            "generateFinalQualityReport";
     public static final String TASK_GENERATE_SOURCE_RELEASE_CHECKSUM =
             "generateSourceReleaseChecksum";
     public static final String TASK_GENERATE_SOURCE_RELEASE_METADATA =
@@ -62,6 +64,7 @@ public final class BuildLogicConstants {
     public static final String TASK_VERIFY_SOURCE_RELEASE_ARCHIVE =
             "verifySourceReleaseArchive";
     public static final String TASK_DOCUMENTATION_VERIFY = "documentationVerify";
+    public static final String TASK_FINAL_QUALITY_VERIFY = "finalQualityVerify";
     public static final String TASK_UPDATE_DOCUMENTATION_REFERENCES =
             "updateGeneratedDocumentationReferences";
 
@@ -92,6 +95,10 @@ public final class BuildLogicConstants {
             "reports/documentation/analysis.json";
     public static final String REPORT_DOCUMENTATION_VERIFICATION =
             "reports/documentation/verification.json";
+    public static final String REPORT_FINAL_QUALITY =
+            "reports/final-quality/final-quality.json";
+    public static final String REPORT_FINAL_QUALITY_VERIFICATION =
+            "reports/final-quality/verification.json";
     public static final String REPORT_PUBLISHED_REPOSITORY =
             "reports/published-repository/verification.json";
     public static final String REPORT_SOURCE_RELEASE_REPLICA =

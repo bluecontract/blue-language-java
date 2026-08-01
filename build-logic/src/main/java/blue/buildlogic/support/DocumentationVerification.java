@@ -437,6 +437,9 @@ public final class DocumentationVerification {
                 continue;
             }
             String content = read(document.getValue(), "removed API documentation input");
+            if (content.contains(DocumentationReferences.MARKER)) {
+                continue;
+            }
             for (String removedType : removedTypes) {
                 if (!removedType.isBlank() && content.contains(removedType)) {
                     violations.add(new Violation(
