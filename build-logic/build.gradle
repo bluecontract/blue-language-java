@@ -1,0 +1,75 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+group = 'blue.buildlogic'
+
+repositories {
+    gradlePluginPortal()
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    implementation 'org.jreleaser:org.jreleaser.gradle.plugin:1.24.0'
+    implementation 'me.champeau.jmh:me.champeau.jmh.gradle.plugin:0.7.3'
+
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+gradlePlugin {
+    plugins {
+        java8LibraryConventions {
+            id = 'blue.java8-library-conventions'
+            implementationClass = 'blue.buildlogic.Java8LibraryConventionsPlugin'
+        }
+        reproducibleArchives {
+            id = 'blue.reproducible-archives'
+            implementationClass = 'blue.buildlogic.ReproducibleArchivesPlugin'
+        }
+        apiBaseline {
+            id = 'blue.api-baseline'
+            implementationClass = 'blue.buildlogic.ApiBaselinePlugin'
+        }
+        conformancePackage {
+            id = 'blue.conformance-package'
+            implementationClass = 'blue.buildlogic.ConformancePackagePlugin'
+        }
+        releaseEvidence {
+            id = 'blue.release-evidence'
+            implementationClass = 'blue.buildlogic.ReleaseEvidencePlugin'
+        }
+        jreleaserPublishing {
+            id = 'blue.jreleaser-publishing'
+            implementationClass = 'blue.buildlogic.JReleaserPublishingPlugin'
+        }
+        jmhConventions {
+            id = 'blue.jmh-conventions'
+            implementationClass = 'blue.buildlogic.JmhConventionsPlugin'
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+
+tasks.named('compileTestJava') {
+    options.compilerArgs.add('-Xlint:deprecation')
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat = 'full'
+    }
+}
