@@ -1,7 +1,5 @@
 package blue.language.provider.ipfs;
 
-import blue.language.utils.Base58;
-
 /**
  * Converts a Base58 SHA-256 BlueId to a CIDv1 raw-content identifier using the
  * Base32 multibase representation.
@@ -34,7 +32,7 @@ public class BlueIdToCid {
      * @throws IllegalArgumentException when the identity is not valid Base58
      */
     public static String convert(String blueId) {
-        byte[] sha256Bytes = Base58.decode(blueId);
+        byte[] sha256Bytes = IpfsBase58.decode(blueId);
 
         // A CID embeds the hash algorithm and digest length before the digest.
         byte[] multihash = new byte[2 + sha256Bytes.length];
