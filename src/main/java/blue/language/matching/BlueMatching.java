@@ -1,7 +1,7 @@
 package blue.language.matching;
 
-import blue.language.BlueOperationLimits;
-import blue.language.BlueOperationResult;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationResult;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;

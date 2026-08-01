@@ -1,5 +1,18 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueLanguageRuntime;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.api.LanguageRuntimeAccess;
+import blue.language.api.WeightedLruCache;
+import blue.language.provider.NodeProvider;
+
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.BasicTypesVerifier;
 import blue.language.merge.processor.DictionaryProcessor;
@@ -496,12 +509,12 @@ class ResolvedSchemaValidationLifecycleTest {
         }
     }
 
-    private static final class CountingProvider implements blue.language.NodeProvider {
-        private final blue.language.NodeProvider delegate;
+    private static final class CountingProvider implements blue.language.provider.NodeProvider {
+        private final blue.language.provider.NodeProvider delegate;
         private final java.util.concurrent.ConcurrentHashMap<String, AtomicInteger> counts =
                 new java.util.concurrent.ConcurrentHashMap<>();
 
-        private CountingProvider(blue.language.NodeProvider delegate) {
+        private CountingProvider(blue.language.provider.NodeProvider delegate) {
             this.delegate = delegate;
         }
 

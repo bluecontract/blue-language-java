@@ -1,7 +1,7 @@
 package blue.language.provider;
 
 import blue.language.Blue;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;

@@ -1,6 +1,6 @@
 package blue.language.snapshot;
 
-import blue.language.BlueCachePolicy;
+import blue.language.api.BlueCachePolicy;
 
 import java.util.HashSet;
 import java.util.LinkedHashSet;

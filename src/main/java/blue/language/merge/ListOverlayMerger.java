@@ -1,6 +1,6 @@
 package blue.language.merge;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Properties;

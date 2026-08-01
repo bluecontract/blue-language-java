@@ -1,6 +1,6 @@
 package blue.language.utils;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.provider.BootstrapProvider;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;

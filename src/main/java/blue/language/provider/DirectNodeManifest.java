@@ -2,8 +2,8 @@ package blue.language.provider;
 
 import blue.language.utils.Properties;
 
-import blue.language.BlueOperationResult;
-import blue.language.BlueViewPath;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.JsonPointer;

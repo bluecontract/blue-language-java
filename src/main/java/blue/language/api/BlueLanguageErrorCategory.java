@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 /**
  * Stable semantic failure categories emitted by the Language conformance

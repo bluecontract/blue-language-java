@@ -1,6 +1,6 @@
 package blue.language.processor.registry;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.registry.RegistryManifestConstants;
 import blue.language.utils.BlueIdCalculator;

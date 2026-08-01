@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 import blue.language.graph.BlueGraph;
 import blue.language.identity.BlueIdentity;
@@ -21,12 +21,12 @@ import java.util.Optional;
 import java.util.TreeMap;
 
 /** Shared construction helpers for focused runtime service adapters. */
-final class LanguageRuntimeServices {
+public final class LanguageRuntimeServices {
 
     private LanguageRuntimeServices() {
     }
 
-    static String preprocessingEnvironmentIdentity(
+    public static String preprocessingEnvironmentIdentity(
             Map<String, String> aliases) {
         if (aliases == null || aliases.isEmpty()) {
             return StandardBluePreprocessing

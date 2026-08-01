@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 import blue.language.provider.NodeProviderOutcome;
 

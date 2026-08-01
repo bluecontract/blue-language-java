@@ -1,8 +1,8 @@
 package blue.language.api;
 
-import blue.language.BlueCachePolicy;
-import blue.language.BlueLanguageRuntime;
-import blue.language.NodeProvider;
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueLanguageRuntime;
+import blue.language.provider.NodeProvider;
 import blue.language.codec.BlueCodec;
 import blue.language.graph.BlueGraph;
 import blue.language.identity.BlueIdentity;

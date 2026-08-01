@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.LanguageRuntimeAccess;
+import blue.language.api.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;

@@ -1,6 +1,6 @@
 package blue.language.preprocess;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.provider.NodeProviderResult;
 
 import java.util.Collections;

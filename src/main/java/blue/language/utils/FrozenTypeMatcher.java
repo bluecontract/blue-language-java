@@ -1,6 +1,6 @@
 package blue.language.utils;
 
-import blue.language.BlueCachePolicy;
+import blue.language.api.BlueCachePolicy;
 import blue.language.matching.MatchingRuntime;
 import blue.language.matching.internal.FrozenSchemaMatcher;
 import blue.language.matching.internal.LabelNeutralTypeIdentity;

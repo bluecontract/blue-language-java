@@ -454,10 +454,13 @@ class LanguageCoreArchitectureTest {
         return Collections.unmodifiableSet(new LinkedHashSet<>(
                 Arrays.asList(
                         "blue.language.identity",
+                        "blue.language.mapping",
                         "blue.language.matching",
                         "blue.language.matching.internal",
                         "blue.language.merge",
                         "blue.language.model",
+                        "blue.language.model.path",
+                        "blue.language.model.wire",
                         "blue.language.patching",
                         "blue.language.preprocess",
                         "blue.language.preprocess.processor",

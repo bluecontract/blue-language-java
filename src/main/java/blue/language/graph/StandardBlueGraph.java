@@ -1,8 +1,8 @@
 package blue.language.graph;
 
-import blue.language.BlueOperationLimits;
-import blue.language.BlueOperationResult;
-import blue.language.NodeProvider;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationResult;
+import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;

@@ -1,7 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.Blue;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.SnapshotResolution;
 import blue.language.merge.VerifiedReferenceResolution;

@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorCategory;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -3,7 +3,7 @@ package blue.language.processor;
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.contracts.EmitEventsContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;

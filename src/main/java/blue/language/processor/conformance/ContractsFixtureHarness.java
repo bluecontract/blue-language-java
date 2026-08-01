@@ -4,7 +4,7 @@ import blue.language.utils.Properties;
 
 import blue.language.Blue;
 import blue.language.BlueContractsConformanceReport;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.processor.ConformanceChangedPath;

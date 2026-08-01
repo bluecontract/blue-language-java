@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 /**
  * Semantic conclusion of a demand-limited Language operation.

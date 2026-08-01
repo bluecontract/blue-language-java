@@ -1,6 +1,6 @@
 package blue.language.merge.processor;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.IncrementalMergingProcessorCapability;

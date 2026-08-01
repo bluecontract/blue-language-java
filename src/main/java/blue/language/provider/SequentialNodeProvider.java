@@ -1,7 +1,7 @@
 package blue.language.provider;
 
 import blue.language.model.Node;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;

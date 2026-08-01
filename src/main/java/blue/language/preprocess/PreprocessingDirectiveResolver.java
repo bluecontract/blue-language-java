@@ -1,6 +1,6 @@
 package blue.language.preprocess;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 
 import java.util.ArrayList;

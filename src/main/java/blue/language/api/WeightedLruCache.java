@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -10,7 +10,7 @@ import java.util.Map;
  * Values rejected by a disabled or undersized policy remain usable by their
  * caller but are not retained.</p>
  */
-final class WeightedLruCache<K, V> {
+public final class WeightedLruCache<K, V> {
 
     /** Calculates the approximate retained weight of a cache value. */
     public interface Weigher<V> {

@@ -2,7 +2,7 @@ package blue.language.conformance;
 
 import blue.language.utils.Properties;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;

@@ -1,8 +1,8 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.BlueLanguageErrorCategory;
-import blue.language.BlueLanguageErrorClassifier;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;

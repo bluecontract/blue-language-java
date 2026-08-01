@@ -1,7 +1,8 @@
-package blue.language;
+package blue.language.api;
 
 import blue.language.matching.MatchingRuntime;
 import blue.language.model.Node;
+import blue.language.provider.NodeProvider;
 import blue.language.provider.SourceContentVerificationRuntime;
 
 /**

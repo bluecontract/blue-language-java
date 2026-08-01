@@ -1,7 +1,7 @@
 package blue.language.conformance;
 
-import blue.language.BlueCachePolicy;
-import blue.language.NodeProvider;
+import blue.language.api.BlueCachePolicy;
+import blue.language.provider.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.IncrementalMergingProcessorCapability;
 import blue.language.merge.IncrementalValueResolutionRequest;

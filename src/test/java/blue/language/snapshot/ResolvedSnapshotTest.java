@@ -1,7 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.Blue;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;

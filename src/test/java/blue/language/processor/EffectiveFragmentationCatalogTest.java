@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;

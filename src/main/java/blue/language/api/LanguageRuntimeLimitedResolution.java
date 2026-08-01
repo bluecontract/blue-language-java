@@ -1,4 +1,6 @@
-package blue.language;
+package blue.language.api;
+
+import blue.language.provider.NodeProvider;
 
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;

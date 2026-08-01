@@ -1,6 +1,6 @@
 package blue.language.provider;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 
 /**
  * Final Language-owned capability proving that provider results cross the

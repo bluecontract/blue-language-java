@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 import blue.language.codec.BlueCodec;
 import blue.language.codec.StandardBlueCodec;
@@ -27,6 +27,7 @@ import blue.language.patching.ImmutableBluePatch;
 import blue.language.preprocess.BluePreprocessing;
 import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.StandardBluePreprocessing;
+import blue.language.provider.NodeProvider;
 import blue.language.provider.SourceContentVerificationRuntime;
 import blue.language.resolve.BlueResolution;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;

@@ -1,5 +1,7 @@
 package blue.language;
 
+import blue.language.api.BlueLanguageErrorCategory;
+
 /**
  * Immutable diagnostic for one failed Blue Language conformance fixture.
  *

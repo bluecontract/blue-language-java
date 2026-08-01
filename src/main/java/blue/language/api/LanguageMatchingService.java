@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 import blue.language.matching.BlueMatching;
 import blue.language.matching.MatchingRuntime;
@@ -14,14 +14,14 @@ import java.util.function.BiFunction;
 /**
  * Shared focused matching implementation for core and compatibility hosts.
  */
-final class LanguageMatchingService implements BlueMatching {
+public final class LanguageMatchingService implements BlueMatching {
 
     private final MatchingRuntime runtime;
     private final Limits defaultLimits;
     private final BiFunction<Node, BlueOperationLimits,
             BlueOperationResult<Node>> limitedResolver;
 
-    LanguageMatchingService(
+    public LanguageMatchingService(
             MatchingRuntime runtime,
             Limits defaultLimits,
             BiFunction<Node, BlueOperationLimits,

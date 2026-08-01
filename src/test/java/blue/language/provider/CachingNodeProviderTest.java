@@ -1,7 +1,7 @@
 package blue.language.provider;
 
 import blue.language.model.Node;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.BeforeEach;

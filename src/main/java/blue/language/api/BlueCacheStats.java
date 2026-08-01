@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -6,7 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Immutable cache-ownership and weight snapshot for one {@link Blue} runtime.
+ * Immutable cache-ownership and weight snapshot for one
+ * {@link BlueLanguageRuntime}.
  * Weights are conservative estimates intended for bounding and operational
  * observability rather than exact heap-size measurements.
  */
@@ -15,7 +16,7 @@ public final class BlueCacheStats {
     private final Map<String, Region> regions;
     private final boolean closed;
 
-    BlueCacheStats(Map<String, Region> regions, boolean closed) {
+    public BlueCacheStats(Map<String, Region> regions, boolean closed) {
         this.regions = Collections.unmodifiableMap(new LinkedHashMap<>(
                 Objects.requireNonNull(regions, "regions")));
         this.closed = closed;
@@ -93,7 +94,7 @@ public final class BlueCacheStats {
         private final long oversizedRejections;
         private final boolean pinned;
 
-        Region(int entries,
+        public Region(int entries,
                long currentWeightBytes,
                long highWaterWeightBytes,
                long hits,

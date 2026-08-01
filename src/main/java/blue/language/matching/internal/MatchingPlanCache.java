@@ -1,6 +1,6 @@
 package blue.language.matching.internal;
 
-import blue.language.BlueCachePolicy;
+import blue.language.api.BlueCachePolicy;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Iterator;

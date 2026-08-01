@@ -2,7 +2,7 @@ package blue.language.merge;
 
 import blue.language.utils.Properties;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;

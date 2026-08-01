@@ -1,6 +1,6 @@
 package blue.language.provider;
 
-import blue.language.BlueViewPath;
+import blue.language.api.BlueViewPath;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;

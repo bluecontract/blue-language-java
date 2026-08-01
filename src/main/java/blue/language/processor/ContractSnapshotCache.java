@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.BlueCachePolicy;
+import blue.language.api.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;

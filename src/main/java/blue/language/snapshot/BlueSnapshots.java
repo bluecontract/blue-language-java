@@ -1,6 +1,6 @@
 package blue.language.snapshot;
 
-import blue.language.BlueCacheStats;
+import blue.language.api.BlueCacheStats;
 import blue.language.model.Node;
 
 import java.util.Collection;

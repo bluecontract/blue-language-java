@@ -1,6 +1,6 @@
 package blue.language.matching;
 
-import blue.language.BlueCachePolicy;
+import blue.language.api.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;

@@ -1,6 +1,6 @@
 package blue.language.merge;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.Properties;

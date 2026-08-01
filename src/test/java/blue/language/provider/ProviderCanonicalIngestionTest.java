@@ -248,7 +248,7 @@ class ProviderCanonicalIngestionTest {
     }
 
     private static final class CyclicAwareWrongContentProvider
-            implements blue.language.NodeProvider, CyclicAwareNodeProvider {
+            implements blue.language.provider.NodeProvider, CyclicAwareNodeProvider {
 
         @Override
         public List<Node> fetchByBlueId(String blueId) {
@@ -262,7 +262,7 @@ class ProviderCanonicalIngestionTest {
     }
 
     private static final class LyingCyclicProvider
-            implements blue.language.NodeProvider, CyclicAwareNodeProvider {
+            implements blue.language.provider.NodeProvider, CyclicAwareNodeProvider {
         private final List<Node> returned;
         private final CyclicSetProof proof;
 

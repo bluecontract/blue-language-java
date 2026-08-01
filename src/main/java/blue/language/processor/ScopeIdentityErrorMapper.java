@@ -1,7 +1,7 @@
 package blue.language.processor;
 
-import blue.language.BlueLanguageErrorCategory;
-import blue.language.BlueLanguageErrorClassifier;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
 
 /**
  * Maps Blue Language failures raised while calculating scope identity to the

@@ -1,7 +1,7 @@
 package blue.language.graph;
 
-import blue.language.BlueOperationLimits;
-import blue.language.BlueOperationResult;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationResult;
 import blue.language.model.Node;
 
 /** Exact graph operations that do not apply type-resolution semantics. */

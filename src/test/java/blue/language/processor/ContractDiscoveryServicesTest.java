@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.BlueCachePolicy;
+import blue.language.api.BlueCachePolicy;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;

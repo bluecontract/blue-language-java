@@ -1,8 +1,8 @@
 package blue.language.processor;
 
-import blue.language.BlueCachePolicy;
-import blue.language.BlueLanguageRuntime;
-import blue.language.NodeProvider;
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueLanguageRuntime;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;

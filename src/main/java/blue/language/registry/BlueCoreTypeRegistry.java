@@ -2,7 +2,7 @@ package blue.language.registry;
 
 import blue.language.utils.Properties;
 
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.BlueIdCalculator;

@@ -1,9 +1,9 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.BlueLanguageErrorCategory;
-import blue.language.BlueLanguageErrorClassifier;
-import blue.language.NodeProvider;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.model.MarkerContract;

@@ -1,4 +1,4 @@
-package blue.language;
+package blue.language.api;
 
 import blue.language.utils.JsonPointer;
 
@@ -89,7 +89,7 @@ public final class BlueOperationLimits {
         return maxReferenceExpansions;
     }
 
-    List<List<String>> demandedSegments() {
+    public List<List<String>> demandedSegments() {
         List<List<String>> result = new ArrayList<>(demandedPaths.size());
         for (String path : demandedPaths) {
             result.add(Collections.unmodifiableList(JsonPointer.split(path)));

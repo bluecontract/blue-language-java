@@ -1,7 +1,7 @@
 package blue.language.processor;
 
-import blue.language.BlueLanguageErrorCategory;
-import blue.language.BlueLanguageErrorClassifier;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
