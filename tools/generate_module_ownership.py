@@ -95,6 +95,19 @@ PLUGIN_PATTERN = re.compile(
     r"(?m)^\s*id\s*(?:\(\s*)?[\"']([^\"']+)[\"']\s*\)?"
     r"\s+version\s+[\"']([^\"']+)[\"']"
 )
+TYPED_LITERAL_DEPENDENCY_PATTERN = re.compile(
+    r"dependencies\.add\(\s*([^,]+),\s*"
+    r"(?:dependencies\.platform\(\s*)?"
+    r"[\"']([A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+)"
+    r"(?::([^\"']+))?[\"']",
+    re.MULTILINE,
+)
+TYPED_COORDINATE_CONSTANT_PATTERN = re.compile(
+    r"(?m)^\s*private\s+static\s+final\s+String\s+"
+    r"([A-Z0-9_]*COORDINATE)\s*=\s*"
+    r"[\"']([A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+)"
+    r"(?::([^\"']+))?[\"']"
+)
 
 DEPENDENCY_POLICIES = {
     "com.fasterxml.jackson.core:jackson-databind": (
@@ -171,6 +184,12 @@ DEPENDENCY_POLICIES = {
         "testRuntimeOnly",
         "1.10.2 (from org.junit:junit-bom)",
         "Launches build-logic tests without entering published artifacts.",
+    ),
+    "org.mockito:mockito-core": (
+        MODULE_BUILD_LOGIC,
+        "testImplementation",
+        "3.12.4",
+        "Supports root compatibility tests without entering published artifacts.",
     ),
 }
 
@@ -837,7 +856,37 @@ def declaring_project(script):
     raise ValueError("Build script has no declared project owner: " + str(relative))
 
 
-def dependency_declarations(scripts):
+def typed_build_logic_sources():
+    root = PROJECT_ROOT / "build-logic/src/main/java"
+    if not root.is_dir():
+        return []
+    result = []
+    for path in sorted(root.rglob("*.java")):
+        content = path.read_text(encoding="utf-8")
+        if (TYPED_LITERAL_DEPENDENCY_PATTERN.search(content)
+                or TYPED_COORDINATE_CONSTANT_PATTERN.search(content)):
+            result.append(path)
+    return result
+
+
+def typed_configuration(expression, coordinate_name=None):
+    if coordinate_name and "LAUNCHER" in coordinate_name:
+        return "testRuntimeOnly"
+    if coordinate_name:
+        return "testImplementation"
+    normalized = expression.strip().strip("\"'")
+    if "TEST_RUNTIME_ONLY" in normalized:
+        return "testRuntimeOnly"
+    if "TEST_IMPLEMENTATION" in normalized:
+        return "testImplementation"
+    return normalized
+
+
+def append_declaration(result, component, declaration):
+    result.setdefault(component, []).append(declaration)
+
+
+def dependency_declarations(scripts, typed_sources):
     result = {}
     for script in scripts:
         relative = script.relative_to(PROJECT_ROOT).as_posix()
@@ -850,7 +899,39 @@ def dependency_declarations(scripts):
                 "configuration": configuration,
                 "declaredVersion": version or "managed",
             }
-            result.setdefault(component, []).append(declaration)
+            append_declaration(result, component, declaration)
+    for source in typed_sources:
+        relative = source.relative_to(PROJECT_ROOT).as_posix()
+        content = source.read_text(encoding="utf-8")
+        declaring = (
+            ":root"
+            if source.name == "RootOrchestrationPlugin.java"
+            else MODULE_BUILD_LOGIC
+        )
+        for match in TYPED_LITERAL_DEPENDENCY_PATTERN.finditer(content):
+            expression, component, version = match.groups()
+            append_declaration(
+                result,
+                component,
+                {
+                    "path": relative,
+                    "declaringProject": declaring,
+                    "configuration": typed_configuration(expression),
+                    "declaredVersion": version or "managed",
+                },
+            )
+        for match in TYPED_COORDINATE_CONSTANT_PATTERN.finditer(content):
+            name, component, version = match.groups()
+            append_declaration(
+                result,
+                component,
+                {
+                    "path": relative,
+                    "declaringProject": MODULE_BUILD_LOGIC,
+                    "configuration": typed_configuration("", name),
+                    "declaredVersion": version or "managed",
+                },
+            )
     for declarations in result.values():
         declarations.sort(
             key=lambda value: (
@@ -889,7 +970,8 @@ def plugin_declarations(scripts):
 
 def dependency_ownership():
     scripts = build_scripts()
-    declarations = dependency_declarations(scripts)
+    typed_sources = typed_build_logic_sources()
+    declarations = dependency_declarations(scripts, typed_sources)
     plugins = plugin_declarations(scripts)
     unknown_dependencies = sorted(set(declarations) - set(DEPENDENCY_POLICIES))
     missing_dependencies = sorted(set(DEPENDENCY_POLICIES) - set(declarations))
@@ -963,11 +1045,19 @@ def dependency_ownership():
     script_paths = [
         path.relative_to(PROJECT_ROOT).as_posix() for path in scripts
     ]
+    typed_source_paths = [
+        path.relative_to(PROJECT_ROOT).as_posix()
+        for path in typed_sources
+    ]
     return {
         "schema": "blue-language-java-dependency-ownership/1.0",
         "inventory": {
             "buildScriptCount": len(script_paths),
             "buildScriptPathIdentity": digest_lines(script_paths),
+            "typedBuildLogicSourceCount": len(typed_source_paths),
+            "typedBuildLogicSourcePathIdentity": digest_lines(
+                typed_source_paths
+            ),
             "ownedLibraries": len(libraries),
             "ownedPlugins": len(plugin_entries),
             "removedLibraries": 1,
@@ -982,6 +1072,7 @@ def dependency_ownership():
             ],
         },
         "scannedBuildScripts": script_paths,
+        "scannedTypedBuildLogicSources": typed_source_paths,
         "libraries": libraries,
         "plugins": plugin_entries,
         "removedLibraries": [

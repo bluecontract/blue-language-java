@@ -3,7 +3,9 @@
   "inventory": {
     "buildScriptCount": 12,
     "buildScriptPathIdentity": "sha256:cace7a9f9b968b1dfc058aba4e85a5b2446161249df2768f167e26253e9c2881",
-    "ownedLibraries": 12,
+    "typedBuildLogicSourceCount": 2,
+    "typedBuildLogicSourcePathIdentity": "sha256:476d632583eed63e48f9910eaa2f2533f7b3c6a64fe0698c068cedb5f94669ec",
+    "ownedLibraries": 13,
     "ownedPlugins": 2,
     "removedLibraries": 1
   },
@@ -58,6 +60,10 @@
     "examples/build.gradle",
     "settings.gradle.kts"
   ],
+  "scannedTypedBuildLogicSources": [
+    "build-logic/src/main/java/blue/buildlogic/Java8LibraryConventionsPlugin.java",
+    "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java"
+  ],
   "libraries": [
     {
       "component": "com.fasterxml.jackson.core:jackson-databind",
@@ -101,6 +107,12 @@
           "declaringProject": ":blue-language-model",
           "configuration": "api",
           "declaredVersion": "2.15.2"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
+          "declaredVersion": "2.15.2"
         }
       ]
     },
@@ -121,6 +133,12 @@
           "path": "blue-language-core/build.gradle",
           "declaringProject": ":blue-language-core",
           "configuration": "implementation",
+          "declaredVersion": "2.15.2"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
           "declaredVersion": "2.15.2"
         }
       ]
@@ -148,6 +166,12 @@
           "path": "blue-language-core/build.gradle",
           "declaringProject": ":blue-language-core",
           "configuration": "implementation",
+          "declaredVersion": "1.1"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
           "declaredVersion": "1.1"
         }
       ]
@@ -179,6 +203,12 @@
           "declaringProject": ":blue-language-ipfs",
           "configuration": "implementation",
           "declaredVersion": "4.5.14"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
+          "declaredVersion": "4.5.14"
         }
       ]
     },
@@ -209,6 +239,18 @@
           "declaringProject": ":build-logic",
           "configuration": "testImplementation",
           "declaredVersion": "managed"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/Java8LibraryConventionsPlugin.java",
+          "declaringProject": ":build-logic",
+          "configuration": "testImplementation",
+          "declaredVersion": "managed"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
+          "declaredVersion": "managed"
         }
       ]
     },
@@ -222,6 +264,18 @@
         {
           "path": "build-logic/build.gradle",
           "declaringProject": ":build-logic",
+          "configuration": "testRuntimeOnly",
+          "declaredVersion": "managed"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/Java8LibraryConventionsPlugin.java",
+          "declaringProject": ":build-logic",
+          "configuration": "testRuntimeOnly",
+          "declaredVersion": "managed"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
           "configuration": "testRuntimeOnly",
           "declaredVersion": "managed"
         }
@@ -239,6 +293,33 @@
           "declaringProject": ":build-logic",
           "configuration": "testImplementation",
           "declaredVersion": "5.10.2"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/Java8LibraryConventionsPlugin.java",
+          "declaringProject": ":build-logic",
+          "configuration": "testImplementation",
+          "declaredVersion": "5.10.2"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
+          "declaredVersion": "5.10.2"
+        }
+      ]
+    },
+    {
+      "component": "org.mockito:mockito-core",
+      "currentVersion": "3.12.4",
+      "owner": ":build-logic",
+      "targetConfiguration": "testImplementation",
+      "reason": "Supports root compatibility tests without entering published artifacts.",
+      "declarations": [
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
+          "declaredVersion": "3.12.4"
         }
       ]
     },
@@ -268,6 +349,12 @@
           "path": "blue-language-mapping/build.gradle",
           "declaringProject": ":blue-language-mapping",
           "configuration": "implementation",
+          "declaredVersion": "0.10.2"
+        },
+        {
+          "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
+          "declaringProject": ":root",
+          "configuration": "testImplementation",
           "declaredVersion": "0.10.2"
         }
       ]

@@ -93,17 +93,18 @@ baselines enforce the final binary surface.
 ### External dependency ownership
 
 All root, module, and included-build Gradle scripts are discovered on every
-generation. Every directly declared external library and every versioned
-plugin has one reviewed owner, version, target configuration, rationale, and a
-sorted list of its actual declaration sites.
+generation. Typed convention sources that add dependencies programmatically
+are discovered as well. Every directly declared external library and every
+versioned plugin has one reviewed owner, version, target configuration,
+rationale, and a sorted list of its actual declaration sites.
 
 - Jackson databind belongs to the model wire boundary.
 - YAML and RFC 8785 implementations belong to Language core.
 - classpath discovery belongs to mapping and is not a semantic input;
 - Apache HTTP belongs only to IPFS;
 - fixture-manifest SnakeYAML belongs only to conformance;
-- JReleaser, JMH, ASM, and build-logic test dependencies belong to the included
-  build.
+- JReleaser, JMH, ASM, Mockito, and build-logic test dependencies belong to the
+  included build or root verification scope.
 
 The report separately records direct runtime allowlists per published module.
 HTTP, reflection scanning, and fixture-manifest YAML are forbidden in Language

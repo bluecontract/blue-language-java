@@ -99,6 +99,17 @@ final class PhaseFourModuleOwnershipArchitectureTest {
     private static final Pattern VERSIONED_PLUGIN = Pattern.compile(
             "(?m)^\\s*id\\s*(?:\\(\\s*)?['\"]([^'\"]+)['\"]\\s*\\)?"
                     + "\\s+version\\s+['\"]([^'\"]+)['\"]");
+    private static final Pattern TYPED_LITERAL_DEPENDENCY = Pattern.compile(
+            "dependencies\\.add\\(\\s*([^,]+),\\s*"
+                    + "(?:dependencies\\.platform\\(\\s*)?['\"]"
+                    + "([A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+)"
+                    + "(?::([^'\"]+))?['\"]",
+            Pattern.MULTILINE);
+    private static final Pattern TYPED_COORDINATE_CONSTANT = Pattern.compile(
+            "(?m)^\\s*private\\s+static\\s+final\\s+String\\s+"
+                    + "([A-Z0-9_]*COORDINATE)\\s*=\\s*['\"]"
+                    + "([A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+)"
+                    + "(?::([^'\"]+))?['\"]");
     private static final Pattern ROOT_SOURCE_REDIRECTION = Pattern.compile(
             "(?i)(?:rootProject|rootDir)[^\\n]*(?:src[/\\\\](?:main|test|jmh))"
                     + "|(?:srcDirs?|setSrcDirs)[^\\n]*(?:\\.\\.[/\\\\])+[^\\n]*src"
@@ -265,10 +276,11 @@ final class PhaseFourModuleOwnershipArchitectureTest {
         // given
         JsonNode report = readJson(DEPENDENCY_REPORT);
         List<Path> scripts = buildScripts();
-        Set<String> discoveredLibraries = externalLibraries(scripts);
+        List<Path> typedSources = typedBuildLogicSources();
+        Set<String> discoveredLibraries = externalLibraries(scripts, typedSources);
         Set<String> discoveredPlugins = versionedPlugins(scripts);
         Map<String, List<String>> actualLibraryDeclarations =
-                externalDeclarationEvidence(scripts);
+                externalDeclarationEvidence(scripts, typedSources);
         Map<String, List<String>> actualPluginDeclarations =
                 pluginDeclarationEvidence(scripts);
         List<String> reportedLibraries = textValues(report.path("libraries"), "component");
@@ -306,12 +318,21 @@ final class PhaseFourModuleOwnershipArchitectureTest {
                 "Dependency entries must have one known owner and rationale: "
                         + invalidEntries);
         List<String> scannedScripts = textElements(report.path("scannedBuildScripts"));
+        List<String> scannedTypedSources = textElements(
+                report.path("scannedTypedBuildLogicSources"));
         assertEquals(scripts.stream().map(PhaseFourModuleOwnershipArchitectureTest::relative)
                         .collect(Collectors.toList()), scannedScripts);
+        assertEquals(typedSources.stream()
+                        .map(PhaseFourModuleOwnershipArchitectureTest::relative)
+                        .collect(Collectors.toList()), scannedTypedSources);
         assertEquals(scripts.size(), report.path("inventory")
                 .path("buildScriptCount").asInt());
         assertEquals(digestLines(scannedScripts), report.path("inventory")
                 .path("buildScriptPathIdentity").asText());
+        assertEquals(typedSources.size(), report.path("inventory")
+                .path("typedBuildLogicSourceCount").asInt());
+        assertEquals(digestLines(scannedTypedSources), report.path("inventory")
+                .path("typedBuildLogicSourcePathIdentity").asText());
         assertEquals(reportedLibraries.size(), report.path("inventory")
                 .path("ownedLibraries").asInt());
         assertEquals(reportedPlugins.size(), report.path("inventory")
@@ -629,16 +650,32 @@ final class PhaseFourModuleOwnershipArchitectureTest {
         return true;
     }
 
-    private static Set<String> externalLibraries(List<Path> scripts)
-            throws IOException {
-        Set<String> result = new LinkedHashSet<>();
-        for (Path script : scripts) {
-            Matcher matcher = EXTERNAL_DEPENDENCY.matcher(read(script));
-            while (matcher.find()) {
-                result.add(matcher.group(2));
-            }
+    private static List<Path> typedBuildLogicSources() throws IOException {
+        Path root = PROJECT_ROOT.resolve("build-logic/src/main/java");
+        if (!Files.isDirectory(root)) {
+            return Collections.emptyList();
         }
-        return result.stream().sorted()
+        try (Stream<Path> paths = Files.walk(root)) {
+            List<Path> result = new ArrayList<>();
+            for (Path path : paths.filter(Files::isRegularFile)
+                    .filter(file -> file.getFileName().toString().endsWith(".java"))
+                    .sorted(Comparator.comparing(
+                            PhaseFourModuleOwnershipArchitectureTest::relative))
+                    .collect(Collectors.toList())) {
+                String content = read(path);
+                if (TYPED_LITERAL_DEPENDENCY.matcher(content).find()
+                        || TYPED_COORDINATE_CONSTANT.matcher(content).find()) {
+                    result.add(path);
+                }
+            }
+            return result;
+        }
+    }
+
+    private static Set<String> externalLibraries(
+            List<Path> scripts, List<Path> typedSources) throws IOException {
+        return externalDeclarationEvidence(scripts, typedSources).keySet()
+                .stream().sorted()
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
@@ -656,7 +693,7 @@ final class PhaseFourModuleOwnershipArchitectureTest {
     }
 
     private static Map<String, List<String>> externalDeclarationEvidence(
-            List<Path> scripts) throws IOException {
+            List<Path> scripts, List<Path> typedSources) throws IOException {
         Map<String, List<String>> result = new LinkedHashMap<>();
         for (Path script : scripts) {
             Matcher matcher = EXTERNAL_DEPENDENCY.matcher(read(script));
@@ -670,7 +707,50 @@ final class PhaseFourModuleOwnershipArchitectureTest {
                         matcher.group(2), ignored -> new ArrayList<>()).add(evidence);
             }
         }
+        for (Path source : typedSources) {
+            String content = read(source);
+            String declaringProject = source.getFileName().toString()
+                    .equals("RootOrchestrationPlugin.java")
+                    ? ":root" : MODULE_BUILD_LOGIC;
+            Matcher literal = TYPED_LITERAL_DEPENDENCY.matcher(content);
+            while (literal.find()) {
+                String evidence = relative(source)
+                        + "|" + declaringProject
+                        + "|" + typedConfiguration(literal.group(1), null)
+                        + "|" + (literal.group(3) == null
+                        ? "managed" : literal.group(3));
+                result.computeIfAbsent(
+                        literal.group(2), ignored -> new ArrayList<>()).add(evidence);
+            }
+            Matcher constant = TYPED_COORDINATE_CONSTANT.matcher(content);
+            while (constant.find()) {
+                String evidence = relative(source)
+                        + "|" + MODULE_BUILD_LOGIC
+                        + "|" + typedConfiguration("", constant.group(1))
+                        + "|" + (constant.group(3) == null
+                        ? "managed" : constant.group(3));
+                result.computeIfAbsent(
+                        constant.group(2), ignored -> new ArrayList<>()).add(evidence);
+            }
+        }
         return sortedEvidence(result);
+    }
+
+    private static String typedConfiguration(
+            String expression, String coordinateName) {
+        if (coordinateName != null) {
+            return coordinateName.contains("LAUNCHER")
+                    ? "testRuntimeOnly" : "testImplementation";
+        }
+        String normalized = expression.trim().replace("\"", "")
+                .replace("'", "");
+        if (normalized.contains("TEST_RUNTIME_ONLY")) {
+            return "testRuntimeOnly";
+        }
+        if (normalized.contains("TEST_IMPLEMENTATION")) {
+            return "testImplementation";
+        }
+        return normalized;
     }
 
     private static Map<String, List<String>> pluginDeclarationEvidence(
