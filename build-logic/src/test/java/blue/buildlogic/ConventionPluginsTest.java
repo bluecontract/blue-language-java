@@ -14,6 +14,7 @@ import blue.buildlogic.tasks.GenerateJavaModuleInventoryTask;
 import blue.buildlogic.tasks.GenerateReleaseEvidenceTask;
 import blue.buildlogic.tasks.VerifyAggregateReleaseReceiptTask;
 import blue.buildlogic.tasks.VerifyInputIdentityTask;
+import blue.buildlogic.tasks.VerifyJavaPackageCyclesTask;
 import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import blue.buildlogic.tasks.VerifyReleaseEnvironmentTask;
 import blue.buildlogic.tasks.VerifyReproducibleArchivesTask;
@@ -58,6 +59,13 @@ final class ConventionPluginsTest {
                 instanceof CompareArchiveReplicasTask);
         assertTrue(project.getTasks().getByName("generateModuleStructureInventory")
                 instanceof GenerateJavaModuleInventoryTask);
+        assertTrue(project.getTasks().getByName("verifyJavaPackageCycles")
+                instanceof VerifyJavaPackageCyclesTask);
+        assertTrue(project.getTasks().getByName("check")
+                .getTaskDependencies()
+                .getDependencies(null)
+                .stream()
+                .anyMatch(task -> task.getName().equals("verifyJavaPackageCycles")));
     }
 
     @Test

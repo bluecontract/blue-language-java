@@ -1,6 +1,7 @@
 package blue.buildlogic;
 
 import blue.buildlogic.tasks.GenerateJavaModuleInventoryTask;
+import blue.buildlogic.tasks.VerifyJavaPackageCyclesTask;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -8,6 +9,8 @@ import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.TaskProvider;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 /** Shared Java 8 bytecode, source/Javadoc artifact, encoding, and repository conventions. */
 public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
@@ -46,5 +49,25 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
                             .file(BuildLogicConstants.REPORT_MODULE_INVENTORY));
                     task.dependsOn(project.getTasks().named("classes"));
                 });
+
+        TaskProvider<VerifyJavaPackageCyclesTask> packageCycles =
+                project.getTasks().register(
+                        BuildLogicConstants.TASK_VERIFY_JAVA_PACKAGE_CYCLES,
+                        VerifyJavaPackageCyclesTask.class,
+                        task -> {
+                            task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                            task.setDescription(
+                                    "Rejects strongly connected components in this module's "
+                                            + "compiled Java package graph.");
+                            task.getCompiledInputs().from(
+                                    sourceSets.getByName("main")
+                                            .getOutput().getClassesDirs());
+                            task.getReportFile().convention(
+                                    project.getLayout().getBuildDirectory()
+                                            .file(BuildLogicConstants.REPORT_PACKAGE_CYCLES));
+                            task.dependsOn(project.getTasks().named("classes"));
+                        });
+        project.getTasks().named(LifecycleBasePlugin.CHECK_TASK_NAME)
+                .configure(task -> task.dependsOn(packageCycles));
     }
 }

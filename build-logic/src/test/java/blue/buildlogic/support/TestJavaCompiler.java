@@ -10,20 +10,20 @@ import java.util.List;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-/** Small deterministic Java fixture compiler shared by compiled-artifact inventory tests. */
-final class TestJavaCompiler {
+/** Small deterministic Java fixture compiler shared by compiled-artifact tests. */
+public final class TestJavaCompiler {
 
     private static final String RELEASE_VERSION = "17";
 
     private TestJavaCompiler() {}
 
-    static Path source(Path root, String relativePath, String content) throws Exception {
+    public static Path source(Path root, String relativePath, String content) throws Exception {
         Path source = root.resolve(relativePath);
         Files.createDirectories(source.getParent());
         return Files.writeString(source, content, StandardCharsets.UTF_8);
     }
 
-    static void compile(Path output, Path... sources) throws Exception {
+    public static void compile(Path output, Path... sources) throws Exception {
         Files.createDirectories(output);
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         List<String> arguments = new ArrayList<>();

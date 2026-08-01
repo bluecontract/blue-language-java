@@ -26,6 +26,7 @@ final class ModernizationVerificationTasksTest {
         java.util.List<Class<?>> taskTypes = Arrays.asList(
                 GenerateJavaApiInventoryTask.class,
                 GenerateJavaModuleInventoryTask.class,
+                VerifyJavaPackageCyclesTask.class,
                 VerifyJavaModuleStructureTask.class,
                 CompareArchiveReplicasTask.class,
                 GenerateAggregateReleaseReceiptTask.class,

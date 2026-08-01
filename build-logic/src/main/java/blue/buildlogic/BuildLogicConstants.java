@@ -15,6 +15,8 @@ public final class BuildLogicConstants {
     public static final String TASK_GENERATE_PUBLIC_API_UNION = "generatePublicApiUnion";
     public static final String TASK_VERIFY_AGGREGATE_RELEASE_RECEIPT =
             "verifyAggregateReleaseReceipt";
+    public static final String TASK_VERIFY_JAVA_PACKAGE_CYCLES =
+            "verifyJavaPackageCycles";
     public static final String TASK_VERIFY_MODULE_STRUCTURE = "verifyModuleStructure";
 
     public static final String REPORT_AGGREGATE_RELEASE_RECEIPT =
@@ -30,6 +32,8 @@ public final class BuildLogicConstants {
             "reports/module/module-inventory.txt";
     public static final String REPORT_MODULE_STRUCTURE =
             "reports/architecture/module-structure.json";
+    public static final String REPORT_PACKAGE_CYCLES =
+            "reports/architecture/package-cycles.json";
 
     private BuildLogicConstants() {}
 }
