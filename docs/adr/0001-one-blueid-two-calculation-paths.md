@@ -27,8 +27,8 @@ shorthand for the resulting BlueId, not a second identifier type.
 
 - A direct calculator rejects Source-only syntax rather than guessing intent.
 - Both paths produce the same BlueId for the same exact canonical node.
-- APIs, diagnostics, and documentation must not revive Node, Content, or
-  Semantic BlueId as distinct identifier kinds.
+- APIs, diagnostics, and documentation must not revive multiple identifier
+  kinds for differently prepared inputs.
 - Conformance vectors can compare both paths against one identity oracle.
 
 See [Nodes, graphs, and BlueIds](../guides/nodes-graphs-and-blueids.md).

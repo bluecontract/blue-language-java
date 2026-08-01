@@ -5,7 +5,7 @@ This guide explains how a host should interpret a completed Contracts 1.0
 surface failures. For channel and handler execution rules, see
 [Processor contract matching](processor-contract-matching.md). For the complete
 normative model, see the
-[bundled Contracts specification](../src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md).
+[bundled Contracts specification](../blue-contracts-core/src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md).
 
 ## Completed result contract
 
@@ -115,7 +115,7 @@ reason. They are not one-to-one. For example, `runtime-fatal` can carry
 but may preserve a more precise underlying category.
 
 The exact current Java protocol vocabulary is the
-[`ProcessorErrorCategory` enum](../src/main/java/blue/language/processor/ProcessorErrorCategory.java):
+[`ProcessorErrorCategory` enum](../blue-contracts-core/src/main/java/blue/language/processor/ProcessorErrorCategory.java):
 
 - input: `InvalidProcessingDocument`, `InvalidProcessingEvent`;
 - runtime pointers, contracts, and patches: `InvalidRuntimePointer`,
@@ -161,7 +161,7 @@ Portable limits are different from gas:
 - increasing only the gas budget cannot repair a portable-limit failure.
 
 The exact names and values come from the
-[bundled Contracts gas manifest](../src/main/resources/blue/language/processor/contracts-gas-1.0.yaml).
+[bundled Contracts gas manifest](../blue-contracts-core/src/main/resources/blue/language/processor/contracts-gas-1.0.yaml).
 It binds limits for contract-result patches and events, internal and Root event
 queues, participating and embedded scopes, pointer and key sizes, direct
 containers and identity input, type chains, cascade depth, and runtime-ledger

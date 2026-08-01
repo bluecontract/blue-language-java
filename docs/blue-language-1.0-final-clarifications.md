@@ -5,7 +5,7 @@ identity pipeline without changing SHA-256, Base58, RFC 8785, list folding,
 cyclic-set identities, schema rules, or the six canonical core-type BlueIds.
 
 The normative source is
-[`blue-language-specification-1.0.md`](../src/main/resources/specifications/blue-language-specification-1.0.md).
+[`blue-language-specification-1.0.md`](../blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md).
 This page is an implementation-oriented guide to the revised surface.
 
 ## Expansion And Specialization

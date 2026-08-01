@@ -26,6 +26,7 @@ graph branches.
 - Use specialization to construct a new typed value.
 - Tests for expansion assert identity preservation; tests for specialization
   assert the newly constructed value and unchanged inputs.
-- Documentation must not call specialization “type extension.”
+- Documentation must use “specialization” consistently and avoid older
+  extension-oriented terminology.
 
 See [Types and specialization](../guides/types-and-specialization.md).
