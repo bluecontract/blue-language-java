@@ -106,6 +106,11 @@ public final class BlueLanguage implements AutoCloseable {
         return processing;
     }
 
+    /** Returns whether terminal shutdown has released runtime-owned state. */
+    public boolean isClosed() {
+        return runtime.isClosed();
+    }
+
     /** Releases bounded caches and rejects later admitted runtime operations. */
     @Override
     public void close() {
