@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "phase": "03-contracts-kernel",
+  "status": "implemented-with-deferred-phase-04-debt",
+  "source": {
+    "finalCommit": "3a9f1d2524c38bcfc0ea48eba34253ee586697ca",
+    "benchmarkedProductionCommit": "6116764333a864343cedf4e84cbf7b505eefc155",
+    "sourceDateEpoch": "1785599023",
+    "sourceInputIdentity": "sha256:511aa6d684349a3d56f99c178e16edc280c829b7fc26fe9dae1c59722dbfd2e6"
+  },
+  "scope": {
+    "productionRoot": "src/main/java/blue/language/processor",
+    "objective": "Compose the Contracts processor as explicit deterministic phases with immutable invocation state, typed observations, and bounded public service surfaces",
+    "semanticChangesPermitted": false,
+    "newRuntimeDependencies": 0
+  },
+  "verification": {
+    "finalUncontendedCleanBuild": {
+      "executed": 2192,
+      "passed": 2192,
+      "failed": 0,
+      "skipped": 0,
+      "buildResult": "BUILD SUCCESSFUL",
+      "evidence": "build/reports/release-evidence/clean-build.json"
+    },
+    "semanticBaselineVerify": {
+      "verified": true,
+      "languageFixtures": 153,
+      "contractsFixtures": 140,
+      "gasFixtures": 58,
+      "localityAssertions": 4,
+      "releaseConformanceFixtures": 293,
+      "releaseConformanceFailures": 0,
+      "approvedIncompatibleApiChanges": 66,
+      "approvedAdditiveApiChanges": 134,
+      "unapprovedApiChanges": 0,
+      "deterministicJarVerified": true,
+      "deterministicSourceArchivesVerified": true,
+      "evidence": "build/reports/semantic-baseline/verification.json"
+    },
+    "phase03ApiLedger": {
+      "approvedIncompatibleChanges": 26,
+      "approvedAdditiveChanges": 28
+    },
+    "runtimeTrace": {
+      "scenarios": 8,
+      "passed": 8,
+      "maximumObservedOrderedEntries": 4096,
+      "evidence": "build/reports/runtime-trace/runtime-work-session.json"
+    },
+    "focusedTests": {
+      "testFiles": 17,
+      "testMethods": 62,
+      "processingInputAdmissionTests": 15,
+      "independentPostAdmissionPhaseTests": 9
+    }
+  },
+  "architecture": {
+    "processorEngine": {
+      "lines": 196,
+      "limit": 250,
+      "public": false
+    },
+    "processorInvocationState": {
+      "lines": 622,
+      "public": false
+    },
+    "namedCompositionRoots": {
+      "DocumentProcessingRuntime": 797,
+      "DocumentProcessor": 770,
+      "ChannelRunner": 598,
+      "ScopeExecutor": 582,
+      "ContractLoader": 282
+    },
+    "publicServiceMethodBudget": {
+      "limit": 30,
+      "ProcessorExecutionContext": 30,
+      "SemanticGasMeter": 30,
+      "violations": 0
+    },
+    "processorSourceBudget": {
+      "sourceFiles": 227,
+      "topLevelTypes": 228,
+      "lines": 50521,
+      "maximumFileLines": 800,
+      "filesOverLimit": 0
+    },
+    "ownership": {
+      "processingPhaseStateDefensiveCopying": true,
+      "documentUpdateOccurrenceImmutable": true,
+      "typedObserverOnly": true,
+      "legacyMetricsSinkPresent": false,
+      "publicEngineLeaks": 0
+    },
+    "documentation": {
+      "requiredDocuments": 13,
+      "present": 13,
+      "linkedFromReadme": 13,
+      "concreteApplicationRuntimeReferences": 0
+    }
+  },
+  "performanceComparison": {
+    "status": "pass",
+    "baselineCommit": "57c6efd9d3b233cf327d6f3f43c3f0b027ae379f",
+    "candidateCommit": "6116764333a864343cedf4e84cbf7b505eefc155",
+    "jdk": "17.0.10",
+    "jmh": "1.37",
+    "configuration": {
+      "warmupIterations": 3,
+      "measurementIterations": 5,
+      "forks": 2,
+      "iterationMilliseconds": 500,
+      "threads": 1,
+      "profiler": "gc"
+    },
+    "comparedRows": 17,
+    "thresholdPercent": 10.0,
+    "maximumPrimaryRegressionPercent": 2.431,
+    "rowsOverThreshold": 0,
+    "benchmarks": [
+      {
+        "name": "ProcessingSelectionCacheBenchmark.processResolvedRootNode",
+        "mode": "throughput",
+        "baseline": 956.890777,
+        "candidate": 971.703414,
+        "regressionPercent": -1.548,
+        "allocationChangePercent": 2.897
+      },
+      {
+        "name": "ProcessingSelectionCacheBenchmark.processResolvedSnapshot",
+        "mode": "throughput",
+        "baseline": 1054.639813,
+        "candidate": 1064.712505,
+        "regressionPercent": -0.955,
+        "allocationChangePercent": 1.585
+      },
+      {
+        "name": "ProcessingSelectionCacheBenchmark.processWarmClone",
+        "mode": "throughput",
+        "baseline": 3926.879397,
+        "candidate": 3831.40356,
+        "regressionPercent": 2.431,
+        "allocationChangePercent": 5.859
+      },
+      {
+        "name": "ProcessingSelectionCacheBenchmark.processWarmSameNode",
+        "mode": "throughput",
+        "baseline": 3906.166649,
+        "candidate": 3876.12996,
+        "regressionPercent": 0.769,
+        "allocationChangePercent": 2.449
+      },
+      {
+        "name": "ProcessingSnapshotProviderBenchmark.exactOrdinaryProviderInitialization",
+        "mode": "throughput",
+        "baseline": 1197.175327,
+        "candidate": 1218.569036,
+        "regressionPercent": -1.787,
+        "allocationChangePercent": 1.894
+      },
+      {
+        "name": "ProcessingSnapshotProviderBenchmark.schemaFreeInitialization",
+        "mode": "throughput",
+        "baseline": 1459.883974,
+        "candidate": 1487.329281,
+        "regressionPercent": -1.88,
+        "allocationChangePercent": 2.316
+      },
+      {
+        "name": "RecursiveTypeResolutionBenchmark.acyclicTypeResolution",
+        "mode": "throughput",
+        "baseline": 14961.124348,
+        "candidate": 14719.827691,
+        "regressionPercent": 1.613,
+        "allocationChangePercent": 0.011
+      },
+      {
+        "name": "ReferenceBlueIdValidationBenchmark.resolveWideSchemaFreeDocument",
+        "mode": "throughput",
+        "baseline": 2325.010638,
+        "candidate": 2294.805585,
+        "regressionPercent": 1.299,
+        "allocationChangePercent": 0.233
+      },
+      {
+        "name": "SchemaValidationResolutionBenchmark.wideSparseSchemaMaterializedDocument",
+        "mode": "throughput",
+        "baseline": 2249.17172,
+        "candidate": 2218.763665,
+        "regressionPercent": 1.352,
+        "allocationChangePercent": -0.204
+      },
+      {
+        "name": "DeepGraphPhysicalLocalityBenchmark.processSelectedLeaf.inline",
+        "mode": "average-time-us-per-operation",
+        "baseline": 562159.8584,
+        "candidate": 556643.2624,
+        "regressionPercent": -0.981,
+        "allocationChangePercent": -0.029
+      },
+      {
+        "name": "DeepGraphPhysicalLocalityBenchmark.processSelectedLeaf.reference",
+        "mode": "average-time-us-per-operation",
+        "baseline": 556594.3792,
+        "candidate": 545705.4708,
+        "regressionPercent": -1.956,
+        "allocationChangePercent": 0.836
+      },
+      {
+        "name": "PatchSequenceBenchmark.publicAtomicBatch.deep-sibling-64",
+        "mode": "throughput",
+        "baseline": 95.02151,
+        "candidate": 96.849059,
+        "regressionPercent": -1.923,
+        "allocationChangePercent": -0.268
+      },
+      {
+        "name": "PatchSequenceBenchmark.reusableSequentialPlanningSession.deep-sibling-64",
+        "mode": "throughput",
+        "baseline": 180.6621,
+        "candidate": 181.86683,
+        "regressionPercent": -0.667,
+        "allocationChangePercent": 0.101
+      },
+      {
+        "name": "PatchSequenceBenchmark.standaloneSingletonPlanning.deep-sibling-64",
+        "mode": "throughput",
+        "baseline": 180.943236,
+        "candidate": 182.380349,
+        "regressionPercent": -0.794,
+        "allocationChangePercent": -0.148
+      },
+      {
+        "name": "FrozenCanonicalDigestBenchmark.streamingFrozenIdentity.width500",
+        "mode": "throughput",
+        "baseline": 2589.620215,
+        "candidate": 2597.423279,
+        "regressionPercent": -0.301,
+        "allocationChangePercent": -0.055
+      },
+      {
+        "name": "FrozenNodeIdentityBenchmark.strictFrozenListIdentity",
+        "mode": "throughput",
+        "baseline": 1124.696051,
+        "candidate": 1105.0222,
+        "regressionPercent": 1.749,
+        "allocationChangePercent": 0.0
+      },
+      {
+        "name": "CanonicalHashBenchmark.optimizedCanonicalHash",
+        "mode": "average-time-us-per-operation",
+        "baseline": 25.432603,
+        "candidate": 25.301614,
+        "regressionPercent": -0.515,
+        "allocationChangePercent": 0.0
+      }
+    ],
+    "unavailableBaselineLanes": [
+      {
+        "lane": "phase3-event-context",
+        "reason": "The committed Phase 2 benchmark throws ExecutionEvidenceUnavailableException before warmup"
+      },
+      {
+        "lane": "phase3-patch-sequence/deep-repeated",
+        "reason": "The committed Phase 2 fixture applies an object patch to the reserved value intrinsic"
+      }
+    ],
+    "materialRegressionDetected": false
+  },
+  "packageDependencyGraph": {
+    "wholeProduction": {
+      "sourceFiles": 511,
+      "topLevelTypes": 512,
+      "packages": 29,
+      "edges": 156
+    },
+    "contracts": {
+      "sourceFiles": 269,
+      "topLevelTypes": 270,
+      "packages": 5,
+      "edges": 11,
+      "cyclicStronglyConnectedComponents": [
+        [
+          "blue.language.processor",
+          "blue.language.processor.model",
+          "blue.language.processor.util"
+        ]
+      ]
+    }
+  },
+  "deferredPhase04Blockers": [
+    {
+      "id": "P04-PROCESSOR-PACKAGE-DECOMPOSITION",
+      "directPackageSourceFiles": 227,
+      "limit": 30
+    },
+    {
+      "id": "P04-PACKAGE-CYCLE-REMOVAL",
+      "cyclicContractsPackages": 3
+    },
+    {
+      "id": "P04-CONFORMANCE-EXTRACTION",
+      "productionConformanceFiles": 15,
+      "oversizedFiles": {
+        "ContractsFixtureHarness.java": 4336,
+        "ClosedContractsFixtureValidator.java": 912
+      }
+    }
+  ],
+  "isolation": {
+    "blueRepoDependencyOrSourceReferences": 0,
+    "bexOrCoordinationRuntimeDependencies": 0,
+    "archivalReleaseManifestPromptPathReferences": 2,
+    "siblingProjectsModified": false,
+    "czTomlModified": false,
+    "ignoredLangZipModified": false
+  }
+}
