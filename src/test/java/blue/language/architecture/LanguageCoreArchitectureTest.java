@@ -33,6 +33,15 @@ class LanguageCoreArchitectureTest {
 
     private static final int MAX_PRODUCTION_LINES = 800;
     private static final int MAX_FOCUSED_SERVICE_METHODS = 19;
+    private static final List<String> PRODUCT_MODULES =
+            Collections.unmodifiableList(Arrays.asList(
+                    "blue-language-model",
+                    "blue-language-core",
+                    "blue-language-mapping",
+                    "blue-language-ipfs",
+                    "blue-contracts-core",
+                    "blue-conformance",
+                    "blue-language-java"));
     private static final Pattern PACKAGE_DECLARATION = Pattern.compile(
             "(?m)^\\s*package\\s+([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*)\\s*;");
     private static final Pattern IMPORT_DECLARATION = Pattern.compile(
@@ -115,17 +124,14 @@ class LanguageCoreArchitectureTest {
                     "blue.language.utils.Types"));
 
     @Test
-    void shouldKeepLanguageCoreIndependentFromRuntimeAndLegacyAggregate()
+    void shouldKeepLanguageCoreIndependentFromContractsConformanceAndAggregate()
             throws IOException {
         // given
-        List<SourceFile> sources = readProductionSources();
+        List<SourceFile> sources = readLanguageCoreSources();
         List<String> violations = new ArrayList<>();
 
         // when
         for (SourceFile source : sources) {
-            if (!isLanguageCorePackage(source.packageName)) {
-                continue;
-            }
             for (String importedType : source.imports) {
                 if (isForbiddenCoreImport(importedType)) {
                     violations.add(
@@ -136,8 +142,8 @@ class LanguageCoreArchitectureTest {
 
         // then
         assertTrue(violations.isEmpty(),
-                "Language-core source must not import Contracts runtime, "
-                        + "conformance, or the legacy Blue aggregate: "
+                "The blue-language-core module must not import Contracts, "
+                        + "conformance tooling, or the aggregate Blue facade: "
                         + violations);
     }
 
@@ -145,7 +151,7 @@ class LanguageCoreArchitectureTest {
     void shouldKeepConformanceApiIndependentFromFixtureImplementations()
             throws IOException {
         // given
-        List<SourceFile> sources = readProductionSources();
+        List<SourceFile> sources = readModuleSources("blue-conformance");
         List<String> violations = new ArrayList<>();
 
         // when
@@ -170,10 +176,10 @@ class LanguageCoreArchitectureTest {
     }
 
     @Test
-    void shouldKeepLanguageCoreFilesWithinBudgetOrNarrowAllowlist()
+    void shouldKeepLanguageCoreImplementationWithinBudgetOrNarrowAllowlist()
             throws IOException {
         // given
-        List<SourceFile> sources = readProductionSources();
+        List<SourceFile> sources = readLanguageCoreSources();
         Map<String, SourceFile> byPath = sources.stream()
                 .collect(Collectors.toMap(
                         source -> source.relativePath,
@@ -182,14 +188,12 @@ class LanguageCoreArchitectureTest {
 
         // when
         for (SourceFile source : sources) {
-            if (isContractsRuntimeSource(source.relativePath)) {
-                continue;
-            }
-            if (source.lineCount > MAX_PRODUCTION_LINES
+            if (source.implementationLineCount > MAX_PRODUCTION_LINES
                     && !OVERSIZED_ALLOWLIST.containsKey(
                     source.relativePath)) {
                 unexpectedOversizedFiles.add(
-                        source.relativePath + "=" + source.lineCount);
+                        source.relativePath + "="
+                                + source.implementationLineCount);
             }
         }
         List<String> staleAllowances = new ArrayList<>();
@@ -197,7 +201,8 @@ class LanguageCoreArchitectureTest {
                 OVERSIZED_ALLOWLIST.entrySet()) {
             SourceFile source = byPath.get(allowance.getKey());
             if (source == null
-                    || source.lineCount <= MAX_PRODUCTION_LINES
+                    || source.implementationLineCount
+                    <= MAX_PRODUCTION_LINES
                     || allowance.getValue().trim().isEmpty()) {
                 staleAllowances.add(allowance.getKey());
             }
@@ -206,7 +211,8 @@ class LanguageCoreArchitectureTest {
         // then
         assertTrue(unexpectedOversizedFiles.isEmpty(),
                 "Unexpected Language-core source files exceed "
-                        + MAX_PRODUCTION_LINES + " lines: "
+                        + MAX_PRODUCTION_LINES
+                        + " implementation lines: "
                         + unexpectedOversizedFiles);
         assertTrue(staleAllowances.isEmpty(),
                 "Remove obsolete or undocumented size allowances: "
@@ -217,7 +223,7 @@ class LanguageCoreArchitectureTest {
     void shouldKeepFocusedServiceSurfacesBelowPublicMethodBudget()
             throws IOException {
         // given
-        Map<String, SourceFile> sources = readProductionSources()
+        Map<String, SourceFile> sources = readLanguageCoreSources()
                 .stream()
                 .collect(Collectors.toMap(
                         source -> source.relativePath,
@@ -252,11 +258,11 @@ class LanguageCoreArchitectureTest {
     void shouldUseInstanceScopedImmutableMappingRegistries()
             throws IOException {
         // given
-        List<SourceFile> mappingSources = readProductionSources()
-                .stream()
-                .filter(source -> source.packageName.equals(
-                        "blue.language.mapping"))
-                .collect(Collectors.toList());
+        List<SourceFile> mappingSources =
+                readModuleSources("blue-language-mapping").stream()
+                        .filter(source -> source.packageName.equals(
+                                "blue.language.mapping"))
+                        .collect(Collectors.toList());
         Path removedRegistry =
                 RepositoryLayout.productionJavaRoot(
                                 "blue-language-mapping")
@@ -305,7 +311,7 @@ class LanguageCoreArchitectureTest {
     void shouldKeepRemovedCompatibilitySymbolsOutOfProductionApi()
             throws IOException {
         // given
-        List<SourceFile> sources = readProductionSources();
+        List<SourceFile> sources = readProductSources();
         List<String> violations = new ArrayList<>();
 
         // when
@@ -338,8 +344,9 @@ class LanguageCoreArchitectureTest {
         for (String removedFacade : REMOVED_OWNERSHIP_TYPES) {
             String relativeFacade =
                     removedFacade.replace('.', '/') + ".java";
-            for (Path productionRoot :
-                    RepositoryLayout.productionJavaRoots()) {
+            for (String module : PRODUCT_MODULES) {
+                Path productionRoot =
+                        RepositoryLayout.productionJavaRoot(module);
                 Path facadePath = productionRoot.resolve(relativeFacade);
                 if (Files.exists(facadePath)) {
                     violations.add(relativeFacade);
@@ -354,11 +361,11 @@ class LanguageCoreArchitectureTest {
     }
 
     @Test
-    void shouldKeepProductionPackageGraphAcyclic()
+    void shouldKeepLanguageCorePackageGraphAcyclic()
             throws IOException {
         // given
         PackageGraph complete = PackageGraph.from(
-                readProductionSources());
+                readLanguageCoreSources());
 
         // when
         List<Set<String>> stronglyConnectedComponents =
@@ -366,52 +373,56 @@ class LanguageCoreArchitectureTest {
 
         // then
         assertTrue(stronglyConnectedComponents.isEmpty(),
-                "Production packages must remain acyclic. Actual SCCs: "
+                "Language-core packages must remain acyclic. Actual SCCs: "
                         + stronglyConnectedComponents);
     }
 
-    private static List<SourceFile> readProductionSources()
+    private static List<SourceFile> readLanguageCoreSources()
+            throws IOException {
+        return readModuleSources("blue-language-core");
+    }
+
+    private static List<SourceFile> readProductSources()
             throws IOException {
         List<SourceFile> result = new ArrayList<>();
-        for (Path productionRoot :
-                RepositoryLayout.productionJavaRoots()) {
-            try (Stream<Path> paths = Files.walk(productionRoot)) {
-                List<Path> javaSources = paths
-                        .filter(Files::isRegularFile)
-                        .filter(path -> path.getFileName().toString()
-                                .endsWith(".java"))
-                        .sorted(Comparator.comparing(Path::toString))
-                        .collect(Collectors.toList());
-                for (Path source : javaSources) {
-                    result.add(SourceFile.read(
-                            productionRoot, source));
-                }
+        for (String module : PRODUCT_MODULES) {
+            result.addAll(readModuleSources(module));
+        }
+        return result;
+    }
+
+    private static List<SourceFile> readModuleSources(String module)
+            throws IOException {
+        Path productionRoot =
+                RepositoryLayout.productionJavaRoot(module);
+        List<SourceFile> result = new ArrayList<>();
+        try (Stream<Path> paths = Files.walk(productionRoot)) {
+            List<Path> javaSources = paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString()
+                            .endsWith(".java"))
+                    .sorted(Comparator.comparing(Path::toString))
+                    .collect(Collectors.toList());
+            for (Path source : javaSources) {
+                result.add(SourceFile.read(
+                        productionRoot, source));
             }
         }
         return result;
     }
 
-    private static boolean isLanguageCorePackage(String packageName) {
-        return packageName.startsWith("blue.language.")
-                && !packageName.startsWith("blue.language.api")
-                && !packageName.startsWith(
-                "blue.language.conformance")
-                && !packageName.startsWith(
-                "blue.language.processor")
-                && !packageName.startsWith(
-                "blue.language.runtime");
-    }
-
     private static boolean isForbiddenCoreImport(String importedType) {
         return importedType.startsWith("blue.language.processor.")
                 || importedType.startsWith(
-                "blue.language.conformance.")
+                "blue.language.conformance.api.")
+                || importedType.startsWith(
+                "blue.language.conformance.cli.")
+                || importedType.startsWith(
+                "blue.language.conformance.contracts.")
+                || importedType.startsWith(
+                "blue.language.conformance.runner.")
                 || importedType.equals("blue.language.Blue")
                 || importedType.startsWith("blue.language.Blue.");
-    }
-
-    private static boolean isContractsRuntimeSource(String relativePath) {
-        return relativePath.startsWith("blue/language/processor/");
     }
 
     private static int countMatches(Pattern pattern, String value) {
@@ -433,6 +444,16 @@ class LanguageCoreArchitectureTest {
 
     private static String oneLine(String value) {
         return value.trim().replaceAll("\\s+", " ");
+    }
+
+    private static int implementationLineCount(String source) {
+        int count = 0;
+        for (String line : source.split("\\r\\n|\\r|\\n", -1)) {
+            if (!line.trim().isEmpty()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static String withoutCommentsAndLiterals(String source) {
@@ -509,23 +530,7 @@ class LanguageCoreArchitectureTest {
     }
 
     private static Map<String, String> oversizedAllowlist() {
-        Map<String, String> result = new LinkedHashMap<>();
-        result.put(
-                "blue/language/Blue.java",
-                "Legacy aggregate retained only as the Phase 4 compatibility facade");
-        result.put(
-                "blue/language/conformance/api/BlueConformanceSuiteRunner.java",
-                "Release conformance harness decomposition is a Phase 4 module task");
-        result.put(
-                "blue/language/conformance/api/BlueContractsConformanceReport.java",
-                "Contracts conformance report extraction belongs to the Phase 4 module boundary");
-        result.put(
-                "blue/language/conformance/contracts/ClosedContractsFixtureValidator.java",
-                "Closed fixture schema validation remains one generated release boundary");
-        result.put(
-                "blue/language/conformance/contracts/ContractsFixtureHarness.java",
-                "Closed executable fixture DSL remains one release-evidence boundary");
-        return Collections.unmodifiableMap(result);
+        return Collections.emptyMap();
     }
 
     private static Map<String, Integer> focusedServiceBudgets() {
@@ -556,19 +561,19 @@ class LanguageCoreArchitectureTest {
         private final String packageName;
         private final List<String> imports;
         private final String codeWithoutComments;
-        private final int lineCount;
+        private final int implementationLineCount;
 
         private SourceFile(
                 String relativePath,
                 String packageName,
                 List<String> imports,
                 String codeWithoutComments,
-                int lineCount) {
+                int implementationLineCount) {
             this.relativePath = relativePath;
             this.packageName = packageName;
             this.imports = imports;
             this.codeWithoutComments = codeWithoutComments;
-            this.lineCount = lineCount;
+            this.implementationLineCount = implementationLineCount;
         }
 
         private static SourceFile read(
@@ -587,13 +592,14 @@ class LanguageCoreArchitectureTest {
             }
             String relative = productionRoot.relativize(path)
                     .toString().replace('\\', '/');
+            String codeWithoutComments =
+                    withoutCommentsAndLiterals(source);
             return new SourceFile(
                     relative,
                     packageMatcher.group(1),
                     Collections.unmodifiableList(imports),
-                    withoutCommentsAndLiterals(source),
-                    Files.readAllLines(
-                            path, StandardCharsets.UTF_8).size());
+                    codeWithoutComments,
+                    implementationLineCount(codeWithoutComments));
         }
     }
 

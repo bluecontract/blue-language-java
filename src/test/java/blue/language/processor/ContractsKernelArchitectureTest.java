@@ -35,11 +35,7 @@ final class ContractsKernelArchitectureTest {
 
         // when
         for (Path source : directProcessorSources()) {
-            long lines;
-            try (Stream<String> content = Files.lines(
-                    source, StandardCharsets.UTF_8)) {
-                lines = content.count();
-            }
+            long lines = implementationLineCount(source);
             if (lines > MAX_IMPLEMENTATION_LINES) {
                 oversized.add(source.getFileName() + "=" + lines);
             }
@@ -48,7 +44,9 @@ final class ContractsKernelArchitectureTest {
         // then
         assertTrue(oversized.isEmpty(),
                 "Contracts implementation sources exceed "
-                        + MAX_IMPLEMENTATION_LINES + " lines: " + oversized);
+                        + MAX_IMPLEMENTATION_LINES
+                        + " non-comment implementation lines: "
+                        + oversized);
     }
 
     @Test
@@ -90,16 +88,13 @@ final class ContractsKernelArchitectureTest {
                 "ProcessorEngine.java");
 
         // when
-        long lineCount;
-        try (Stream<String> lines = Files.lines(
-                engineSource, StandardCharsets.UTF_8)) {
-            lineCount = lines.count();
-        }
+        long lineCount = implementationLineCount(engineSource);
 
         // then
         assertTrue(lineCount <= MAX_COMPOSITION_ROOT_LINES,
                 "ProcessorEngine has " + lineCount
-                        + " lines; composition-root budget is "
+                        + " non-comment implementation lines; "
+                        + "composition-root budget is "
                         + MAX_COMPOSITION_ROOT_LINES);
     }
 
@@ -161,5 +156,86 @@ final class ContractsKernelArchitectureTest {
                     .sorted()
                     .collect(Collectors.toList());
         }
+    }
+
+    /**
+     * Counts non-blank source lines after removing comments while preserving
+     * literal boundaries. This keeps the architectural budget focused on
+     * implementation structure instead of penalizing release-quality Javadocs.
+     */
+    private static long implementationLineCount(Path source)
+            throws IOException {
+        String content = new String(
+                Files.readAllBytes(source), StandardCharsets.UTF_8);
+        return Arrays.stream(withoutComments(content).split(
+                        "\\r\\n|\\r|\\n", -1))
+                .filter(line -> !line.trim().isEmpty())
+                .count();
+    }
+
+    /** Removes Java comments without mistaking comment markers in literals. */
+    private static String withoutComments(String source) {
+        final int code = 0;
+        final int lineComment = 1;
+        final int blockComment = 2;
+        final int stringLiteral = 3;
+        final int characterLiteral = 4;
+        int state = code;
+        StringBuilder result = new StringBuilder(source.length());
+        for (int index = 0; index < source.length(); index++) {
+            char current = source.charAt(index);
+            char next = index + 1 < source.length()
+                    ? source.charAt(index + 1)
+                    : '\0';
+            if (state == code) {
+                if (current == '/' && next == '/') {
+                    result.append("  ");
+                    index++;
+                    state = lineComment;
+                } else if (current == '/' && next == '*') {
+                    result.append("  ");
+                    index++;
+                    state = blockComment;
+                } else {
+                    result.append(current);
+                    if (current == '"') {
+                        state = stringLiteral;
+                    } else if (current == '\'') {
+                        state = characterLiteral;
+                    }
+                }
+                continue;
+            }
+            if (state == lineComment) {
+                if (current == '\n' || current == '\r') {
+                    result.append(current);
+                    state = code;
+                } else {
+                    result.append(' ');
+                }
+                continue;
+            }
+            if (state == blockComment) {
+                if (current == '*' && next == '/') {
+                    result.append("  ");
+                    index++;
+                    state = code;
+                } else {
+                    result.append(current == '\n' || current == '\r'
+                            ? current
+                            : ' ');
+                }
+                continue;
+            }
+            result.append(current);
+            if (current == '\\' && next != '\0') {
+                result.append(next);
+                index++;
+            } else if ((state == stringLiteral && current == '"')
+                    || (state == characterLiteral && current == '\'')) {
+                state = code;
+            }
+        }
+        return result.toString();
     }
 }

@@ -16,14 +16,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ProcessorStaticSafetyTest {
 
-    private static final Path MAIN = Paths.get("src/main/java");
-    private static final Path PROCESSOR_MAIN = Paths.get("src/main/java/blue/language/processor");
+    private static final Path CONTRACTS_CORE_MAIN_JAVA =
+            moduleMainJava("blue-contracts-core");
+    private static final Path PROCESSOR_MAIN = CONTRACTS_CORE_MAIN_JAVA.resolve(
+            Paths.get("blue", "language", "processor"));
+    private static final Path CONFORMANCE_MAIN_JAVA =
+            moduleMainJava("blue-conformance");
+    private static final Path CONTRACTS_CONFORMANCE_MAIN =
+            CONFORMANCE_MAIN_JAVA.resolve(
+                    Paths.get("blue", "language", "conformance", "contracts"));
+    private static final Path CONTRACTS_CONFORMANCE_SUITE =
+            CONTRACTS_CONFORMANCE_MAIN.resolve("ContractsConformanceSuite.java");
+    private static final Path SCRIPTED_CONTRACTS_RUNTIME =
+            CONTRACTS_CONFORMANCE_MAIN.resolve("ScriptedContractsRuntime.java");
+
     @Test
     void shouldVerifyNoCoreProcessorManagedTypeUsesDisplayNameAsBlueId() throws IOException {
         // given
         List<String> offenders = new ArrayList<>();
         // when
-        for (Path file : javaFiles(MAIN)) {
+        for (Path file : javaFiles(CONTRACTS_CORE_MAIN_JAVA)) {
             String source = read(file);
             if (source.contains("PROCESSOR_MANAGED_TYPE_BLUE_IDS")) {
                 offenders.add(file + ": PROCESSOR_MANAGED_TYPE_BLUE_IDS");
@@ -39,7 +51,7 @@ final class ProcessorStaticSafetyTest {
         // given
         List<String> offenders = new ArrayList<>();
         // when
-        for (Path file : javaFiles(MAIN)) {
+        for (Path file : javaFiles(CONTRACTS_CORE_MAIN_JAVA)) {
             String source = read(file);
             if (source.contains("new Node().name(type.getSimpleName())")) {
                 offenders.add(file + ": fabricated type node from Java simple name");
@@ -143,9 +155,7 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerDoesNotNormalizeOfficialFixtureResults() throws IOException {
         // given
-        String source = read(Paths.get(
-                "src/main/java/blue/language/conformance/contracts/"
-                        + "ContractsConformanceSuite.java"));
+        String source = read(CONTRACTS_CONFORMANCE_SUITE);
 
         // when
         List<String> offenders = presentFragments(
@@ -166,9 +176,7 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerDoesNotSynthesizeExpectedGasOrEvents() throws IOException {
         // given
-        String source = read(Paths.get(
-                "src/main/java/blue/language/conformance/contracts/"
-                        + "ContractsConformanceSuite.java"));
+        String source = read(CONTRACTS_CONFORMANCE_SUITE);
 
         // when
         List<String> offenders = presentFragments(
@@ -185,9 +193,7 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerUsesTypedStatusAndErrorCategories() throws IOException {
         // given
-        String source = read(Paths.get(
-                "src/main/java/blue/language/conformance/contracts/"
-                        + "ContractsConformanceSuite.java"));
+        String source = read(CONTRACTS_CONFORMANCE_SUITE);
 
         // when
         List<String> offenders = presentFragments(
@@ -220,9 +226,7 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerDoesNotContainLegacyOrderLogTraceMethod() throws IOException {
         // given
-        String source = read(Paths.get(
-                "src/main/java/blue/language/conformance/contracts/"
-                        + "ScriptedContractsRuntime.java"));
+        String source = read(SCRIPTED_CONTRACTS_RUNTIME);
 
         // when
         boolean legacyMethodAbsent =
@@ -248,9 +252,7 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyScriptedRuntimeDoesNotMutateDocumentForTraceCollection() throws IOException {
         // given
-        String source = read(Paths.get(
-                "src/main/java/blue/language/conformance/contracts/"
-                        + "ScriptedContractsRuntime.java"));
+        String source = read(SCRIPTED_CONTRACTS_RUNTIME);
 
         // when
         List<String> offenders = presentFragments(
@@ -265,15 +267,29 @@ final class ProcessorStaticSafetyTest {
     }
 
     private static List<Path> javaFiles(Path root) throws IOException {
+        if (!Files.isDirectory(root)) {
+            throw new IOException("Expected source directory is missing: " + root);
+        }
         try (Stream<Path> stream = Files.walk(root)) {
-            return stream
+            List<Path> sources = stream
                     .filter(path -> path.toString().endsWith(".java"))
                     .collect(Collectors.toList());
+            if (sources.isEmpty()) {
+                throw new IOException("Expected Java sources under: " + root);
+            }
+            return sources;
         }
     }
 
     private static String read(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) {
+            throw new IOException("Expected source file is missing: " + path);
+        }
         return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+    }
+
+    private static Path moduleMainJava(String moduleName) {
+        return Paths.get(moduleName, "src", "main", "java");
     }
 
     private static List<String> presentFragments(
