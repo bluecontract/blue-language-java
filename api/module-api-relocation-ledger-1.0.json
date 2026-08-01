@@ -4,12 +4,13 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 388,
-    "publicTypeIdentity": "sha256:c9047e7e63aa5a5bfd63671fd77aca2df2fc7a35368a252eeaaf30e822e0fc3f",
+    "publicProductionTypeCount": 377,
+    "publicTypeIdentity": "sha256:84d23ddb8e5526b25e1a4f198ab1140283538b5945714f83120279815be12085",
     "classificationCounts": {
-      "compatible-relocation-through-aggregate-facade": 208,
-      "internal-type-removed-from-public-surface": 132,
-      "new-supported-api-spi": 48
+      "compatible-relocation-through-aggregate-facade": 200,
+      "intentional-next-major-break": 17,
+      "internal-type-removed-from-public-surface": 105,
+      "new-supported-api-spi": 55
     }
   },
   "allowedClassifications": [
@@ -29,6 +30,28 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.BlueRuntime",
+      "sourcePath": "blue-language-java/src/main/java/blue/language/BlueRuntime.java",
+      "currentArtifact": "blue.language:blue-language-java",
+      "targetModule": ":blue-language-java",
+      "targetType": "blue.language.BlueRuntime",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The modernization phase introduced the supported aggregate composition root for Language, Contracts, and mapping services."
+    },
+    {
+      "type": "blue.language.BlueRuntime$Builder",
+      "sourcePath": "blue-language-java/src/main/java/blue/language/BlueRuntime.java",
+      "currentArtifact": "blue.language:blue-language-java",
+      "targetModule": ":blue-language-java",
+      "targetType": "blue.language.BlueRuntime$Builder",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The aggregate composition root exposes its supported immutable-generation builder."
     },
     {
       "type": "blue.language.api.BlueCachePolicy",
@@ -211,6 +234,63 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.codec.jackson.UncheckedObjectMapper",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.codec.jackson.UncheckedObjectMapper",
+      "previousTypes": [
+        "blue.language.utils.UncheckedObjectMapper"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.UncheckedObjectMapper",
+          "to": "blue.language.codec.jackson.UncheckedObjectMapper",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "The Jackson adapter moved out of the removed catch-all utility package into the codec-owned Jackson boundary."
+    },
+    {
+      "type": "blue.language.codec.jackson.UncheckedObjectMapper$JsonException",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.codec.jackson.UncheckedObjectMapper$JsonException",
+      "previousTypes": [
+        "blue.language.utils.UncheckedObjectMapper$JsonException"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.UncheckedObjectMapper$JsonException",
+          "to": "blue.language.codec.jackson.UncheckedObjectMapper$JsonException",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "The codec exception follows its Jackson adapter into the codec-owned package."
+    },
+    {
+      "type": "blue.language.codec.jackson.UncheckedObjectMapper$NestedJsonException",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.codec.jackson.UncheckedObjectMapper$NestedJsonException",
+      "previousTypes": [
+        "blue.language.utils.UncheckedObjectMapper$NestedJsonException"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.UncheckedObjectMapper$NestedJsonException",
+          "to": "blue.language.codec.jackson.UncheckedObjectMapper$NestedJsonException",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "The nested codec exception follows its Jackson adapter into the codec-owned package."
     },
     {
       "type": "blue.language.conformance.CanonicalGeneralizationPatch",
@@ -586,6 +666,25 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.identity.BlueIdReferenceValidator",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/BlueIdReferenceValidator.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.BlueIdReferenceValidator",
+      "previousTypes": [
+        "blue.language.utils.BlueIdReferenceValidator"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.BlueIdReferenceValidator",
+          "to": "blue.language.identity.BlueIdReferenceValidator",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "BlueId reference validation moved from the removed utility package to the identity-owned API."
+    },
+    {
       "type": "blue.language.identity.BlueIdentity",
       "sourcePath": "blue-language-core/src/main/java/blue/language/identity/BlueIdentity.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -595,6 +694,63 @@
       "relocationHistory": [],
       "classification": "new-supported-api-spi",
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.identity.BlueIds",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/BlueIds.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.BlueIds",
+      "previousTypes": [
+        "blue.language.utils.BlueIds"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.BlueIds",
+          "to": "blue.language.identity.BlueIds",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "BlueId protocol tokens moved from the removed utility package to the identity-owned API."
+    },
+    {
+      "type": "blue.language.identity.CanonicalIdentityConstants",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityConstants.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.CanonicalIdentityConstants",
+      "previousTypes": [
+        "blue.language.utils.CanonicalIdentityConstants"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.CanonicalIdentityConstants",
+          "to": "blue.language.identity.CanonicalIdentityConstants",
+          "commit": "ea19cbd4d79ced8b1e1dd4f57f8cb33238f84d3f"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Canonical list identity wire tokens moved into the identity-owned protocol package."
+    },
+    {
+      "type": "blue.language.identity.CanonicalIdentityInputBuilder",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputBuilder.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.CanonicalIdentityInputBuilder",
+      "previousTypes": [
+        "blue.language.utils.CanonicalIdentityInputBuilder"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.CanonicalIdentityInputBuilder",
+          "to": "blue.language.identity.CanonicalIdentityInputBuilder",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Canonical identity input construction moved from the removed utility package to its identity owner."
     },
     {
       "type": "blue.language.identity.CanonicalJsonHasher",
@@ -674,6 +830,25 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.identity.NodeToBlueIdInput",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/NodeToBlueIdInput.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.NodeToBlueIdInput",
+      "previousTypes": [
+        "blue.language.utils.NodeToBlueIdInput"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.NodeToBlueIdInput",
+          "to": "blue.language.identity.NodeToBlueIdInput",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Node identity-input projection moved from the removed utility package to the identity-owned API."
+    },
+    {
       "type": "blue.language.identity.ObjectBlueIdHasher",
       "sourcePath": "blue-language-core/src/main/java/blue/language/identity/ObjectBlueIdHasher.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -694,6 +869,44 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.identity.ScalarNodeIdentity",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/ScalarNodeIdentity.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.ScalarNodeIdentity",
+      "previousTypes": [
+        "blue.language.utils.ScalarNodeIdentity"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.ScalarNodeIdentity",
+          "to": "blue.language.identity.ScalarNodeIdentity",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Scalar identity normalization moved from the removed utility package to the identity-owned API."
+    },
+    {
+      "type": "blue.language.identity.SchemaEnumCanonicalizer",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/SchemaEnumCanonicalizer.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.SchemaEnumCanonicalizer",
+      "previousTypes": [
+        "blue.language.utils.SchemaEnumCanonicalizer"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.SchemaEnumCanonicalizer",
+          "to": "blue.language.identity.SchemaEnumCanonicalizer",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Schema enum canonicalization moved from the removed utility package to the identity-owned API."
     },
     {
       "type": "blue.language.identity.SourceDocumentBlueIdCalculator",
@@ -749,19 +962,6 @@
       "targetType": "blue.language.mapping.BlueAnnotationsSerializer",
       "previousTypes": [
         "blue.language.model.BlueAnnotationsSerializer"
-      ],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.mapping.BlueIdResolver",
-      "sourcePath": "blue-language-mapping/src/main/java/blue/language/mapping/BlueIdResolver.java",
-      "currentArtifact": "blue.language:blue-language-mapping",
-      "targetModule": ":blue-language-mapping",
-      "targetType": "blue.language.mapping.BlueIdResolver",
-      "previousTypes": [
-        "blue.language.utils.BlueIdResolver"
       ],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
@@ -840,19 +1040,6 @@
       "targetModule": ":blue-language-mapping",
       "targetType": "blue.language.mapping.EnumConverter",
       "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.mapping.JacksonPropertyNames",
-      "sourcePath": "blue-language-mapping/src/main/java/blue/language/mapping/JacksonPropertyNames.java",
-      "currentArtifact": "blue.language:blue-language-mapping",
-      "targetModule": ":blue-language-mapping",
-      "targetType": "blue.language.mapping.JacksonPropertyNames",
-      "previousTypes": [
-        "blue.language.utils.JacksonPropertyNames"
-      ],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
@@ -1015,61 +1202,6 @@
       "previousTypes": [
         "blue.language.utils.NodeTypeMatcher"
       ],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.matching.internal.FrozenSchemaMatcher",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/matching/internal/FrozenSchemaMatcher.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.matching.internal.FrozenSchemaMatcher",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.matching.internal.LabelNeutralTypeIdentity",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/matching/internal/LabelNeutralTypeIdentity.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.matching.internal.LabelNeutralTypeIdentity",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.matching.internal.MatchingPlanCache",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/matching/internal/MatchingPlanCache.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.matching.internal.MatchingPlanCache",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.matching.internal.MatchingPlanCache$Region",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/matching/internal/MatchingPlanCache.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.matching.internal.MatchingPlanCache$Region",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.matching.internal.MatchingPlanCache$Weighted",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/matching/internal/MatchingPlanCache.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.matching.internal.MatchingPlanCache$Weighted",
-      "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
@@ -1483,6 +1615,31 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.model.NodePathEditor",
+      "sourcePath": "blue-language-model/src/main/java/blue/language/model/NodePathEditor.java",
+      "currentArtifact": "blue.language:blue-language-model",
+      "targetModule": ":blue-language-model",
+      "targetType": "blue.language.model.NodePathEditor",
+      "previousTypes": [
+        "blue.language.utils.NodePathEditor",
+        "blue.language.utils.NodePathSelector"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.NodePathEditor",
+          "to": "blue.language.model.NodePathEditor",
+          "commit": "b833169"
+        },
+        {
+          "from": "blue.language.utils.NodePathSelector",
+          "to": "blue.language.model.NodePathEditor",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Public node-path editing and selection moved into the model owner; the selector implementation is now package-private."
+    },
+    {
       "type": "blue.language.model.NodeSerializer",
       "sourcePath": "blue-language-model/src/main/java/blue/language/model/NodeSerializer.java",
       "currentArtifact": "blue.language:blue-language-model",
@@ -1514,6 +1671,44 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.model.Nodes",
+      "sourcePath": "blue-language-model/src/main/java/blue/language/model/Nodes.java",
+      "currentArtifact": "blue.language:blue-language-model",
+      "targetModule": ":blue-language-model",
+      "targetType": "blue.language.model.Nodes",
+      "previousTypes": [
+        "blue.language.utils.Nodes"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.Nodes",
+          "to": "blue.language.model.Nodes",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Node construction helpers moved from the removed utility package into the model owner."
+    },
+    {
+      "type": "blue.language.model.Nodes$NodeField",
+      "sourcePath": "blue-language-model/src/main/java/blue/language/model/Nodes.java",
+      "currentArtifact": "blue.language:blue-language-model",
+      "targetModule": ":blue-language-model",
+      "targetType": "blue.language.model.Nodes$NodeField",
+      "previousTypes": [
+        "blue.language.utils.Nodes$NodeField"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.Nodes$NodeField",
+          "to": "blue.language.model.Nodes$NodeField",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "The node-field vocabulary follows its model-owned helper."
     },
     {
       "type": "blue.language.model.Schema",
@@ -1595,6 +1790,25 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.model.wire.ParsedJsonPointer",
+      "sourcePath": "blue-language-model/src/main/java/blue/language/model/wire/ParsedJsonPointer.java",
+      "currentArtifact": "blue.language:blue-language-model",
+      "targetModule": ":blue-language-model",
+      "targetType": "blue.language.model.wire.ParsedJsonPointer",
+      "previousTypes": [
+        "blue.language.utils.ParsedJsonPointer"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.ParsedJsonPointer",
+          "to": "blue.language.model.wire.ParsedJsonPointer",
+          "commit": "1c1cc2886181cc0ac45bff762edece4ae6094cb4"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "The immutable parsed wire pointer moved from the utility package into the model wire owner."
     },
     {
       "type": "blue.language.model.wire.SchemaPropertyConstants",
@@ -1860,6 +2074,28 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.BlueContracts",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/BlueContracts.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.BlueContracts",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The modernization phase introduced the focused generic Contracts processing composition root."
+    },
+    {
+      "type": "blue.language.processor.BlueContracts$Builder",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/BlueContracts.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.BlueContracts$Builder",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The focused Contracts composition root exposes its supported immutable-generation builder."
     },
     {
       "type": "blue.language.processor.ChannelCheckpointContext",
@@ -3852,6 +4088,25 @@
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
+      "type": "blue.language.resolve.MinimizedOverlayBuilder",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayBuilder.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.resolve.MinimizedOverlayBuilder",
+      "previousTypes": [
+        "blue.language.utils.MinimizedOverlayBuilder"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.MinimizedOverlayBuilder",
+          "to": "blue.language.resolve.MinimizedOverlayBuilder",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Minimized overlay construction moved from the removed utility package to the resolution owner."
+    },
+    {
       "type": "blue.language.resolve.ReferenceCacheAdmissionPolicy",
       "sourcePath": "blue-language-core/src/main/java/blue/language/resolve/ReferenceCacheAdmissionPolicy.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -3861,6 +4116,80 @@
       "relocationHistory": [],
       "classification": "new-supported-api-spi",
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.resolve.ResolutionLimits",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/resolve/ResolutionLimits.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.resolve.ResolutionLimits",
+      "previousTypes": [
+        "blue.language.utils.limits.CompositeLimits",
+        "blue.language.utils.limits.DeferredReferencePathLimits",
+        "blue.language.utils.limits.ExcludedPathLimits",
+        "blue.language.utils.limits.Limits",
+        "blue.language.utils.limits.NodeToPathLimitsConverter",
+        "blue.language.utils.limits.PathLimits",
+        "blue.language.utils.limits.TypeSpecificPropertyFilter"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.limits.CompositeLimits",
+          "to": "blue.language.resolve.ResolutionLimits",
+          "commit": "b833169"
+        },
+        {
+          "from": "blue.language.utils.limits.DeferredReferencePathLimits",
+          "to": "blue.language.resolve.ResolutionLimits",
+          "commit": "b833169"
+        },
+        {
+          "from": "blue.language.utils.limits.ExcludedPathLimits",
+          "to": "blue.language.resolve.ResolutionLimits",
+          "commit": "b833169"
+        },
+        {
+          "from": "blue.language.utils.limits.Limits",
+          "to": "blue.language.resolve.ResolutionLimits",
+          "commit": "b833169"
+        },
+        {
+          "from": "blue.language.utils.limits.NodeToPathLimitsConverter",
+          "to": "blue.language.resolve.ResolutionLimits",
+          "commit": "b833169"
+        },
+        {
+          "from": "blue.language.utils.limits.PathLimits",
+          "to": "blue.language.resolve.ResolutionLimits",
+          "commit": "b833169"
+        },
+        {
+          "from": "blue.language.utils.limits.TypeSpecificPropertyFilter",
+          "to": "blue.language.resolve.ResolutionLimits",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "The limits family became one resolution-owned interface with factories while concrete stateful implementations became package-private."
+    },
+    {
+      "type": "blue.language.resolve.ResolutionLimits$Builder",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/resolve/ResolutionLimits.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.resolve.ResolutionLimits$Builder",
+      "previousTypes": [
+        "blue.language.utils.limits.PathLimits$Builder"
+      ],
+      "relocationHistory": [
+        {
+          "from": "blue.language.utils.limits.PathLimits$Builder",
+          "to": "blue.language.resolve.ResolutionLimits$Builder",
+          "commit": "b833169"
+        }
+      ],
+      "classification": "intentional-next-major-break",
+      "reason": "Path-limit construction moved behind the resolution-owned supported builder."
     },
     {
       "type": "blue.language.runtime.BlueLanguage",
@@ -3905,6 +4234,39 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.runtime.LanguageProcessing",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.runtime.LanguageProcessing",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The modernization phase introduced the Language-owned bridge for deterministic downstream processing scopes."
+    },
+    {
+      "type": "blue.language.runtime.LanguageProcessing$Observer",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.runtime.LanguageProcessing$Observer",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The processing bridge exposes a Language-neutral operational observation SPI."
+    },
+    {
+      "type": "blue.language.runtime.LanguageProcessing$Scope",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.runtime.LanguageProcessing$Scope",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The processing bridge exposes an explicitly owned closeable runtime scope."
     },
     {
       "type": "blue.language.runtime.LanguageRuntimeAccess",
@@ -4146,314 +4508,6 @@
       ],
       "classification": "new-supported-api-spi",
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
-    },
-    {
-      "type": "blue.language.utils.BlueIdReferenceValidator",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/BlueIdReferenceValidator.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.BlueIdReferenceValidator",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.BlueIdResolver",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/BlueIdResolver.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.BlueIdResolver",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.BlueIds",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/BlueIds.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.BlueIds",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.CanonicalIdentityConstants",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityConstants.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.CanonicalIdentityConstants",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.CanonicalIdentityInputBuilder",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityInputBuilder.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.CanonicalIdentityInputBuilder",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.JacksonPropertyNames",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/JacksonPropertyNames.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.JacksonPropertyNames",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.LeastCommonMultiple",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/LeastCommonMultiple.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.LeastCommonMultiple",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.MinimizedOverlayBuilder",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/MinimizedOverlayBuilder.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.MinimizedOverlayBuilder",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.NodePathEditor",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/NodePathEditor.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.NodePathEditor",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.NodePathSelector",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/NodePathSelector.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.NodePathSelector",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.NodeToBlueIdInput",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/NodeToBlueIdInput.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.NodeToBlueIdInput",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.NodeTransformer",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/NodeTransformer.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.NodeTransformer",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.Nodes",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/Nodes.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.Nodes",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.Nodes$NodeField",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/Nodes.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.Nodes$NodeField",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.ParsedJsonPointer",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/ParsedJsonPointer.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.ParsedJsonPointer",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.ScalarNodeIdentity",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/ScalarNodeIdentity.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.ScalarNodeIdentity",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.SchemaEnumCanonicalizer",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/SchemaEnumCanonicalizer.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.SchemaEnumCanonicalizer",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.UncheckedObjectMapper",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/UncheckedObjectMapper.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.UncheckedObjectMapper",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.UncheckedObjectMapper$JsonException",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/UncheckedObjectMapper.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.UncheckedObjectMapper$JsonException",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.UncheckedObjectMapper$NestedJsonException",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/UncheckedObjectMapper.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.UncheckedObjectMapper$NestedJsonException",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.utils.limits.CompositeLimits",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/CompositeLimits.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.CompositeLimits",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
-    },
-    {
-      "type": "blue.language.utils.limits.DeferredReferencePathLimits",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/DeferredReferencePathLimits.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.DeferredReferencePathLimits",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
-    },
-    {
-      "type": "blue.language.utils.limits.ExcludedPathLimits",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/ExcludedPathLimits.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.ExcludedPathLimits",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
-    },
-    {
-      "type": "blue.language.utils.limits.Limits",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/Limits.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.Limits",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
-    },
-    {
-      "type": "blue.language.utils.limits.NodeToPathLimitsConverter",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/NodeToPathLimitsConverter.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.NodeToPathLimitsConverter",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
-    },
-    {
-      "type": "blue.language.utils.limits.PathLimits",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/PathLimits.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.PathLimits",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
-    },
-    {
-      "type": "blue.language.utils.limits.PathLimits$Builder",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/PathLimits.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.PathLimits$Builder",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
-    },
-    {
-      "type": "blue.language.utils.limits.TypeSpecificPropertyFilter",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/utils/limits/TypeSpecificPropertyFilter.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.utils.limits.TypeSpecificPropertyFilter",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "compatible-relocation-through-aggregate-facade",
-      "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     }
   ]
 }
