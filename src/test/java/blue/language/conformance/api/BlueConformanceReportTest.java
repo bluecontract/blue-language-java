@@ -12,14 +12,17 @@ import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
+import blue.language.testing.RepositoryLayout;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -328,16 +331,16 @@ class BlueConformanceReportTest {
     @Test
     void shouldAlignConformanceManifestWithRequiredFixtureSet() throws Exception {
         // given
-        String fixtureResourcePath = "blue-language-1.0/fixtures";
+        String fixtureResourcePath = "blue-language-1.0/fixtures/";
+        Path fixtureSourceRoot =
+                RepositoryLayout.productionResourceRoot("blue-conformance")
+                        .resolve("blue-language-1.0/fixtures");
 
         // when
-        URL resource = getClass().getClassLoader()
-                .getResource(fixtureResourcePath);
-        Path fixtureRoot = Paths.get(resource.toURI());
         com.fasterxml.jackson.databind.JsonNode manifest = YAML_MAPPER.readTree(
-                new String(Files.readAllBytes(fixtureRoot.resolve("manifest.yaml"))));
+                readPackagedResource(fixtureResourcePath + "manifest.yaml"));
         Set<String> manifestIds = new LinkedHashSet<>();
-        Set<Path> manifestPaths = new LinkedHashSet<>();
+        Set<String> manifestPaths = new LinkedHashSet<>();
         List<String> manifestViolations = new java.util.ArrayList<>();
         for (com.fasterxml.jackson.databind.JsonNode file : manifest.get("files")) {
             if (!file.hasNonNull("path")) {
@@ -352,11 +355,17 @@ class BlueConformanceReportTest {
             if (!file.hasNonNull("bytes")) {
                 manifestViolations.add("missing bytes: " + file);
             }
-            Path fixturePath = fixtureRoot.resolve(file.get("path").asText()).normalize();
-            if (!Files.isRegularFile(fixturePath)) {
-                manifestViolations.add("missing fixture file: " + fixturePath);
+            String fixturePath = file.get("path").asText();
+            byte[] fixtureBytes;
+            try {
+                fixtureBytes = readPackagedResource(
+                        fixtureResourcePath + fixturePath);
+            } catch (AssertionError missingResource) {
+                manifestViolations.add("missing fixture resource: "
+                        + fixturePath);
+                continue;
             }
-            manifestPaths.add(fixturePath.toAbsolutePath().normalize());
+            manifestPaths.add(fixturePath);
             if (!"behavior-fixture".equals(file.get("role").asText())) {
                 if (!"support".equals(file.get("role").asText())) {
                     manifestViolations.add(
@@ -366,7 +375,7 @@ class BlueConformanceReportTest {
             }
 
             com.fasterxml.jackson.databind.JsonNode fixtureContent = YAML_MAPPER.readTree(
-                    new String(Files.readAllBytes(fixturePath)));
+                    fixtureBytes);
             if (fixtureContent.has("profile")) {
                 manifestViolations.add(
                         "fixture metadata uses profile: " + fixturePath);
@@ -396,20 +405,23 @@ class BlueConformanceReportTest {
             }
             BlueConformanceSuiteRunner.validateFixtureMetadataForTest(fixtureContent);
         }
-        List<Path> fixtureFiles;
-        try (Stream<Path> paths = Files.walk(fixtureRoot)) {
+        Set<String> fixtureFiles;
+        try (Stream<Path> paths = Files.walk(fixtureSourceRoot)) {
             fixtureFiles = paths
                     .filter(Files::isRegularFile)
                     .filter(path -> !"manifest.yaml".equals(path.getFileName().toString()))
-                    .map(path -> path.toAbsolutePath().normalize())
-                    .collect(Collectors.toList());
+                    .map(fixtureSourceRoot::relativize)
+                    .map(path -> path.toString().replace('\\', '/'))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
         }
+        boolean manifestIsPackaged = getClass().getClassLoader()
+                .getResource(fixtureResourcePath + "manifest.yaml") != null;
         boolean fixtureIdentityMatches =
                 BlueConformanceReport
                         .fixturePackageIdentityMatchesFixtureFiles();
 
         // then
-        assertTrue(resource != null);
+        assertTrue(manifestIsPackaged);
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 manifest.get("packageIdentity").asText());
         assertEquals(153, manifest.get("behaviorFixtureCount").asInt());
@@ -417,7 +429,7 @@ class BlueConformanceReportTest {
                 manifestViolations.toString());
         assertEquals(BlueConformanceReport.requiredFixtureIdsForBlueLanguage10(), manifestIds);
         assertTrue(fixtureIdentityMatches);
-        assertEquals(manifestPaths, new LinkedHashSet<>(fixtureFiles));
+        assertEquals(manifestPaths, fixtureFiles);
     }
 
     @Test
@@ -448,38 +460,35 @@ class BlueConformanceReportTest {
     @Test
     void shouldNotContainTodoDescriptionsInMainResources() throws Exception {
         // given
-        Path resourceRoot = Paths.get("src/main/resources");
+        List<Path> resourceRoots =
+                RepositoryLayout.productionResourceRoots();
+
         // when
-        try (Stream<Path> paths = Files.walk(resourceRoot)) {
-            List<Path> incomplete = paths
-                    .filter(Files::isRegularFile)
-                    .filter(path -> {
-                        try {
-                            String content = new String(Files.readAllBytes(path));
-                            return content.contains("TODO")
-                                    || content.contains("description: This transformation replaces");
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
-                    .collect(Collectors.toList());
-            // then
-            assertEquals(Collections.emptyList(), incomplete);
+        List<Path> incomplete = new java.util.ArrayList<>();
+        for (Path resourceRoot : resourceRoots) {
+            try (Stream<Path> paths = Files.walk(resourceRoot)) {
+                incomplete.addAll(paths
+                        .filter(Files::isRegularFile)
+                        .filter(path -> containsIncompleteDescription(path))
+                        .collect(Collectors.toList()));
+            }
         }
+
+        // then
+        assertEquals(Collections.emptyList(), incomplete);
     }
 
     @Test
     void shouldResolveReadmeLinksToExistingFiles() throws Exception {
         // given
-        Path readme = Paths.get("README.md");
+        Path readme = RepositoryLayout.repositoryRoot()
+                .resolve("README.md");
         String content = new String(Files.readAllBytes(readme));
         Matcher matcher = Pattern.compile("\\[[^\\]]+]\\((docs/[^)]+\\.md)\\)").matcher(content);
         // when
         List<String> missingTargets = new java.util.ArrayList<>();
         while (matcher.find()) {
-            Path target = readme.getParent() == null
-                    ? Paths.get(matcher.group(1))
-                    : readme.getParent().resolve(matcher.group(1));
+            Path target = readme.getParent().resolve(matcher.group(1));
             if (!Files.isRegularFile(target)) {
                 missingTargets.add(matcher.group(1));
             }
@@ -488,5 +497,37 @@ class BlueConformanceReportTest {
         // then
         assertTrue(missingTargets.isEmpty(),
                 "README link targets are missing: " + missingTargets);
+    }
+
+    private static byte[] readPackagedResource(String resource)
+            throws IOException {
+        try (InputStream input = BlueConformanceReportTest.class
+                .getClassLoader().getResourceAsStream(resource)) {
+            if (input == null) {
+                throw new AssertionError(
+                        "Missing packaged resource: " + resource);
+            }
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) >= 0) {
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        }
+    }
+
+    private static boolean containsIncompleteDescription(Path path) {
+        try {
+            String content = new String(
+                    Files.readAllBytes(path), StandardCharsets.UTF_8);
+            return content.contains("TODO")
+                    || content.contains(
+                    "description: This transformation replaces");
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "Cannot inspect production resource " + path,
+                    exception);
+        }
     }
 }

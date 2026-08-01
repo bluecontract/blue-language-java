@@ -20,6 +20,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.registry.RegistryManifestConstants;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.testing.RepositoryLayout;
 import blue.language.utils.CanonicalIdentityConstants;
 import blue.language.model.wire.SchemaPropertyConstants;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -334,8 +334,7 @@ final class SourceStyleConventionsTest {
     @Test
     void shouldDocumentEveryProductionSourceFile() throws IOException {
         // given
-        List<Path> productionSources = javaSources(
-                Paths.get("src/main/java"));
+        List<Path> productionSources = productionJavaSources();
 
         // when
         List<String> violations = new ArrayList<>();
@@ -354,8 +353,7 @@ final class SourceStyleConventionsTest {
     @Test
     void shouldCentralizeBlueWireVocabulary() throws IOException {
         // given
-        List<Path> productionSources = javaSources(
-                Paths.get("src/main/java"));
+        List<Path> productionSources = productionJavaSources();
 
         // when
         List<String> violations = new ArrayList<>();
@@ -383,8 +381,7 @@ final class SourceStyleConventionsTest {
     void shouldCentralizeIdentityAndSchemaVocabulary()
             throws IOException {
         // given
-        List<Path> productionSources = javaSources(
-                Paths.get("src/main/java"));
+        List<Path> productionSources = productionJavaSources();
 
         // when
         List<String> violations = new ArrayList<>();
@@ -437,7 +434,8 @@ final class SourceStyleConventionsTest {
     void shouldCentralizeProcessorWireVocabulary() throws IOException {
         // given
         List<Path> processorSources = javaSources(
-                Paths.get("src/main/java/blue/language/processor"));
+                RepositoryLayout.productionJavaRoot("blue-contracts-core")
+                        .resolve("blue/language/processor"));
 
         // when
         List<String> violations = new ArrayList<>();
@@ -476,11 +474,11 @@ final class SourceStyleConventionsTest {
         // given
         List<Path> registrySources = new ArrayList<>();
         registrySources.addAll(javaSources(
-                Paths.get(
-                        "src/main/java/blue/language/registry")));
+                RepositoryLayout.productionJavaRoot("blue-language-core")
+                        .resolve("blue/language/registry")));
         registrySources.addAll(javaSources(
-                Paths.get(
-                        "src/main/java/blue/language/processor/registry")));
+                RepositoryLayout.productionJavaRoot("blue-contracts-core")
+                        .resolve("blue/language/processor/registry")));
 
         // when
         List<String> violations = new ArrayList<>();
@@ -505,33 +503,28 @@ final class SourceStyleConventionsTest {
     void shouldCentralizeContractsFixtureVocabulary()
             throws IOException {
         // given
-        Path vocabularyOwner = Paths.get(
-                "src/main/java/blue/language/conformance/contracts/"
-                        + "ContractsFixtureConstants.java");
+        Path contractsFixtureRoot =
+                RepositoryLayout.productionJavaRoot("blue-conformance")
+                        .resolve("blue/language/conformance/contracts");
+        Path vocabularyOwner = contractsFixtureRoot.resolve(
+                "ContractsFixtureConstants.java");
         Set<String> vocabulary =
                 stringLiterals(read(vocabularyOwner));
         List<Path> coreConsumers = Arrays.asList(
-                Paths.get(
-                        "src/main/java/blue/language/conformance/contracts/"
-                                + "ClosedContractsFixtureValidator.java"),
-                Paths.get(
-                        "src/main/java/blue/language/conformance/contracts/"
-                                + "ContractsFixtureHarness.java"),
-                Paths.get(
-                        "src/main/java/blue/language/conformance/contracts/"
-                                + "ContractsGasSchedule.java"),
-                Paths.get(
-                        "src/main/java/blue/language/conformance/contracts/"
-                                + "ContractsAssertionEvaluator.java"),
-                Paths.get(
-                        "src/main/java/blue/language/conformance/contracts/"
-                                + "ContractsProjectionCatalog.java"),
-                Paths.get(
-                        "src/main/java/blue/language/conformance/contracts/"
-                                + "ContractsConformanceProjection.java"),
-                Paths.get(
-                        "src/main/java/blue/language/conformance/contracts/"
-                                + "ScriptedContractsRuntime.java"));
+                contractsFixtureRoot.resolve(
+                        "ClosedContractsFixtureValidator.java"),
+                contractsFixtureRoot.resolve(
+                        "ContractsFixtureHarness.java"),
+                contractsFixtureRoot.resolve(
+                        "ContractsGasSchedule.java"),
+                contractsFixtureRoot.resolve(
+                        "ContractsAssertionEvaluator.java"),
+                contractsFixtureRoot.resolve(
+                        "ContractsProjectionCatalog.java"),
+                contractsFixtureRoot.resolve(
+                        "ContractsConformanceProjection.java"),
+                contractsFixtureRoot.resolve(
+                        "ScriptedContractsRuntime.java"));
 
         // when
         List<String> violations = new ArrayList<>();
@@ -553,9 +546,12 @@ final class SourceStyleConventionsTest {
             throws IOException {
         // given
         List<Path> sources = new ArrayList<>();
-        sources.addAll(javaSources(Paths.get("src/main/java")));
-        sources.addAll(javaSources(Paths.get("src/test/java")));
-        sources.addAll(javaSources(Paths.get("src/jmh/java")));
+        sources.addAll(productionJavaSources());
+        sources.addAll(javaSources(
+                RepositoryLayout.repositoryRoot().resolve("src/test/java")));
+        for (Path root : RepositoryLayout.benchmarkJavaRoots()) {
+            sources.addAll(javaSources(root));
+        }
 
         // when
         List<String> violations = new ArrayList<>();
@@ -604,7 +600,8 @@ final class SourceStyleConventionsTest {
 
     private static List<TestMethod> allTestMethods() throws IOException {
         List<TestMethod> result = new ArrayList<>();
-        for (Path source : javaSources(Paths.get("src/test/java"))) {
+        for (Path source : javaSources(
+                RepositoryLayout.repositoryRoot().resolve("src/test/java"))) {
             String content = read(source);
             Matcher annotation = JUNIT_ANNOTATION.matcher(content);
             while (annotation.find()) {
@@ -872,6 +869,15 @@ final class SourceStyleConventionsTest {
                     .sorted()
                     .collect(Collectors.toList());
         }
+    }
+
+    private static List<Path> productionJavaSources()
+            throws IOException {
+        List<Path> result = new ArrayList<>();
+        for (Path root : RepositoryLayout.productionJavaRoots()) {
+            result.addAll(javaSources(root));
+        }
+        return result;
     }
 
     private static String read(Path path) throws IOException {

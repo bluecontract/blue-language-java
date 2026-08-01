@@ -1,12 +1,12 @@
 package blue.language.architecture;
 
+import blue.language.testing.RepositoryLayout;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,8 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Source-level architecture gates that require no bytecode-analysis library. */
 class LanguageCoreArchitectureTest {
 
-    private static final Path PRODUCTION_ROOT =
-            Paths.get("src", "main", "java");
     private static final int MAX_PRODUCTION_LINES = 800;
     private static final int MAX_FOCUSED_SERVICE_METHODS = 19;
     private static final Pattern PACKAGE_DECLARATION = Pattern.compile(
@@ -259,9 +257,11 @@ class LanguageCoreArchitectureTest {
                 .filter(source -> source.packageName.equals(
                         "blue.language.mapping"))
                 .collect(Collectors.toList());
-        Path removedRegistry = PRODUCTION_ROOT.resolve(
-                Paths.get("blue", "language", "mapping",
-                        "TypeCreatorRegistry.java"));
+        Path removedRegistry =
+                RepositoryLayout.productionJavaRoot(
+                                "blue-language-mapping")
+                        .resolve("blue/language/mapping/"
+                                + "TypeCreatorRegistry.java");
         List<String> mutableStaticFields = new ArrayList<>();
         List<String> legacyReferences = new ArrayList<>();
 
@@ -336,12 +336,14 @@ class LanguageCoreArchitectureTest {
             }
         }
         for (String removedFacade : REMOVED_OWNERSHIP_TYPES) {
-            Path facadePath = PRODUCTION_ROOT.resolve(
-                    removedFacade.replace('.', '/') + ".java");
-            if (Files.exists(facadePath)) {
-                violations.add(
-                        PRODUCTION_ROOT.relativize(facadePath)
-                                .toString().replace('\\', '/'));
+            String relativeFacade =
+                    removedFacade.replace('.', '/') + ".java";
+            for (Path productionRoot :
+                    RepositoryLayout.productionJavaRoots()) {
+                Path facadePath = productionRoot.resolve(relativeFacade);
+                if (Files.exists(facadePath)) {
+                    violations.add(relativeFacade);
+                }
             }
         }
 
@@ -370,20 +372,23 @@ class LanguageCoreArchitectureTest {
 
     private static List<SourceFile> readProductionSources()
             throws IOException {
-        try (Stream<Path> paths = Files.walk(PRODUCTION_ROOT)) {
-            List<Path> javaSources = paths
-                    .filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString()
-                            .endsWith(".java"))
-                    .sorted(Comparator.comparing(Path::toString))
-                    .collect(Collectors.toList());
-            List<SourceFile> result = new ArrayList<>(
-                    javaSources.size());
-            for (Path source : javaSources) {
-                result.add(SourceFile.read(source));
+        List<SourceFile> result = new ArrayList<>();
+        for (Path productionRoot :
+                RepositoryLayout.productionJavaRoots()) {
+            try (Stream<Path> paths = Files.walk(productionRoot)) {
+                List<Path> javaSources = paths
+                        .filter(Files::isRegularFile)
+                        .filter(path -> path.getFileName().toString()
+                                .endsWith(".java"))
+                        .sorted(Comparator.comparing(Path::toString))
+                        .collect(Collectors.toList());
+                for (Path source : javaSources) {
+                    result.add(SourceFile.read(
+                            productionRoot, source));
+                }
             }
-            return result;
         }
+        return result;
     }
 
     private static boolean isLanguageCorePackage(String packageName) {
@@ -566,7 +571,8 @@ class LanguageCoreArchitectureTest {
             this.lineCount = lineCount;
         }
 
-        private static SourceFile read(Path path) throws IOException {
+        private static SourceFile read(
+                Path productionRoot, Path path) throws IOException {
             String source = new String(
                     Files.readAllBytes(path), StandardCharsets.UTF_8);
             Matcher packageMatcher = PACKAGE_DECLARATION.matcher(source);
@@ -579,7 +585,7 @@ class LanguageCoreArchitectureTest {
             while (importMatcher.find()) {
                 imports.add(importMatcher.group(1));
             }
-            String relative = PRODUCTION_ROOT.relativize(path)
+            String relative = productionRoot.relativize(path)
                     .toString().replace('\\', '/');
             return new SourceFile(
                     relative,

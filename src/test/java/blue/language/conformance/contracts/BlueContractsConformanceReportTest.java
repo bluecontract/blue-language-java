@@ -4,6 +4,7 @@ import blue.language.conformance.api.BlueConformanceSuiteRunner;
 import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.conformance.api.BlueReleaseConformanceReport;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.testing.RepositoryLayout;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -324,17 +324,14 @@ class BlueContractsConformanceReportTest {
     void shouldVerifyEveryBundledLanguageRegistryBindingUsesTheAuthoritativeIdentity()
             throws Exception {
         // given
-        Path repository = Paths.get("")
-                .toAbsolutePath()
-                .normalize();
-        List<Path> roots = java.util.Arrays.asList(
-                repository.resolve("README.md"),
-                repository.resolve("CHANGELOG.md"),
-                repository.resolve("docs"),
-                repository.resolve("src/main/resources"),
-                repository.resolve("src/test/resources"),
-                repository.resolve(
-                        "src/main/java/blue/language"));
+        Path repository = RepositoryLayout.repositoryRoot();
+        List<Path> roots = new ArrayList<>();
+        roots.add(repository.resolve("README.md"));
+        roots.add(repository.resolve("CHANGELOG.md"));
+        roots.add(repository.resolve("docs"));
+        roots.add(repository.resolve("src/test/resources"));
+        roots.addAll(RepositoryLayout.productionResourceRoots());
+        roots.addAll(RepositoryLayout.productionJavaRoots());
         List<String> bindings = new ArrayList<>();
 
         // when

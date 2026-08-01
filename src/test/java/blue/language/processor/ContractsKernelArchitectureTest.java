@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.testing.RepositoryLayout;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -7,7 +8,6 @@ import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,8 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Source-level guards for the final generic Contracts composition. */
 final class ContractsKernelArchitectureTest {
 
-    private static final Path PROCESSOR_SOURCE = Paths.get(
-            "src", "main", "java", "blue", "language", "processor");
+    private static final Path PROCESSOR_SOURCE =
+            RepositoryLayout.productionJavaRoot("blue-contracts-core")
+                    .resolve("blue/language/processor");
     private static final int MAX_IMPLEMENTATION_LINES = 800;
     private static final int MAX_COMPOSITION_ROOT_LINES = 250;
     private static final int MAX_PUBLIC_SERVICE_METHODS = 30;

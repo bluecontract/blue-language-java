@@ -1,12 +1,12 @@
 package blue.language.model;
 
+import blue.language.testing.RepositoryLayout;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,8 +27,9 @@ class ModelDependencyBoundaryTest {
     @Test
     void shouldKeepModelSourcesIndependentOfHigherLayers() throws IOException {
         // given
-        Path modelSources = Paths.get(
-                "src", "main", "java", "blue", "language", "model");
+        Path modelSources =
+                RepositoryLayout.productionJavaRoot("blue-language-model")
+                        .resolve("blue/language/model");
         List<String> violations = new ArrayList<>();
 
         // when
