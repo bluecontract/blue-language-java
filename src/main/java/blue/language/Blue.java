@@ -64,7 +64,6 @@ import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.SourceContentVerificationRuntime;
 import blue.language.provider.VerifiedNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
-import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -1250,92 +1249,6 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                 return null;
             }
         }
-    }
-
-    /**
-     * Creates an unexecuted Language report bound to the packaged registry and
-     * fixture inventory.
-     *
-     * @return a report with no pass/fail fixture outcomes yet
-     */
-    public BlueConformanceReport conformanceReport() {
-        String fixturePackageIdentity = BlueConformanceReport.loadFixturePackageIdentity("blue-language-1.0-fixtures:unavailable");
-        List<String> fixtureIds = BlueConformanceReport.loadFixtureIds();
-        Map<String, BlueFixtureCategory> fixtureCategories = BlueConformanceReport.loadFixtureCategories();
-        return new BlueConformanceReport(
-                languageVersion(),
-                new LinkedHashMap<>(BlueCoreTypeRegistry.INSTANCE.blueIdsByName()),
-                fixturePackageIdentity,
-                fixtureIds,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                fixtureCategories
-        );
-    }
-
-    /**
-     * Executes the exact packaged Language conformance fixture inventory.
-     *
-     * @return the completed Language conformance report
-     */
-    public BlueConformanceReport runConformanceSuite() {
-        return BlueConformanceSuiteRunner.run(this);
-    }
-
-    /**
-     * Creates an unexecuted Contracts report bound to packaged release
-     * identities and fixture inventory.
-     *
-     * @return a report with no pass/fail fixture outcomes yet
-     */
-    public BlueContractsConformanceReport contractsConformanceReport() {
-        String fixturePackageIdentity = BlueContractsConformanceReport.loadFixturePackageIdentity(
-                "blue-contracts-1.0-fixtures:unavailable");
-        List<String> fixtureIds = BlueContractsConformanceReport.loadFixtureIds();
-        Map<String, BlueContractsFixtureCategory> fixtureCategories =
-                BlueContractsConformanceReport.loadFixtureCategories();
-        return new BlueContractsConformanceReport(
-                "1.0",
-                BlueContractsConformanceReport.RELEASE_NAME,
-                BlueContractsConformanceReport.RELEASE_PACKAGE_IDENTITY,
-                BlueContractsConformanceReport
-                        .LANGUAGE_REGISTRY_PACKAGE_IDENTITY,
-                BlueContractsConformanceReport
-                        .LANGUAGE_FIXTURE_PACKAGE_IDENTITY,
-                BlueContractsConformanceReport
-                        .CONTRACTS_REGISTRY_PACKAGE_IDENTITY,
-                BlueContractsConformanceReport
-                        .CONTRACTS_GAS_PACKAGE_IDENTITY,
-                fixturePackageIdentity,
-                fixtureIds,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                fixtureCategories,
-                Collections.emptyList(),
-                Collections.emptyList());
-    }
-
-    /**
-     * Executes the exact packaged Contracts conformance fixture inventory.
-     *
-     * @return the completed Contracts conformance report
-     */
-    public BlueContractsConformanceReport runContractsConformanceSuite() {
-        return BlueContractsConformanceSuiteRunner.run(this);
-    }
-
-    /**
-     * Executes both exact release fixture packages and returns one
-     * machine-readable 293-result report with no skip outcome.
-     *
-     * @return the combined completed release report
-     */
-    public BlueReleaseConformanceReport runReleaseConformanceSuites() {
-        BlueConformanceReport languageReport = runConformanceSuite();
-        BlueContractsConformanceReport contractsReport =
-                runContractsConformanceSuite();
-        return new BlueReleaseConformanceReport(
-                languageReport, contractsReport);
     }
 
     /**

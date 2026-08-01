@@ -510,31 +510,31 @@ final class SourceStyleConventionsTest {
             throws IOException {
         // given
         Path vocabularyOwner = Paths.get(
-                "src/main/java/blue/language/processor/conformance/"
+                "src/main/java/blue/language/conformance/contracts/"
                         + "ContractsFixtureConstants.java");
         Set<String> vocabulary =
                 stringLiterals(read(vocabularyOwner));
         List<Path> coreConsumers = Arrays.asList(
                 Paths.get(
-                        "src/main/java/blue/language/processor/conformance/"
+                        "src/main/java/blue/language/conformance/contracts/"
                                 + "ClosedContractsFixtureValidator.java"),
                 Paths.get(
-                        "src/main/java/blue/language/processor/conformance/"
+                        "src/main/java/blue/language/conformance/contracts/"
                                 + "ContractsFixtureHarness.java"),
                 Paths.get(
-                        "src/main/java/blue/language/processor/conformance/"
+                        "src/main/java/blue/language/conformance/contracts/"
                                 + "ContractsGasSchedule.java"),
                 Paths.get(
-                        "src/main/java/blue/language/processor/conformance/"
+                        "src/main/java/blue/language/conformance/contracts/"
                                 + "ContractsAssertionEvaluator.java"),
                 Paths.get(
-                        "src/main/java/blue/language/processor/conformance/"
+                        "src/main/java/blue/language/conformance/contracts/"
                                 + "ContractsProjectionCatalog.java"),
                 Paths.get(
-                        "src/main/java/blue/language/processor/conformance/"
+                        "src/main/java/blue/language/conformance/contracts/"
                                 + "ContractsConformanceProjection.java"),
                 Paths.get(
-                        "src/main/java/blue/language/processor/conformance/"
+                        "src/main/java/blue/language/conformance/contracts/"
                                 + "ScriptedContractsRuntime.java"));
 
         // when

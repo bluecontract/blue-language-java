@@ -419,11 +419,17 @@ class LanguageCoreArchitectureTest {
                 "blue/language/Blue.java",
                 "Legacy aggregate retained only as the Phase 4 compatibility facade");
         result.put(
-                "blue/language/BlueConformanceSuiteRunner.java",
+                "blue/language/conformance/api/BlueConformanceSuiteRunner.java",
                 "Release conformance harness decomposition is a Phase 4 module task");
         result.put(
-                "blue/language/BlueContractsConformanceReport.java",
+                "blue/language/conformance/api/BlueContractsConformanceReport.java",
                 "Contracts conformance report extraction belongs to the Phase 4 module boundary");
+        result.put(
+                "blue/language/conformance/contracts/ClosedContractsFixtureValidator.java",
+                "Closed fixture schema validation remains one generated release boundary");
+        result.put(
+                "blue/language/conformance/contracts/ContractsFixtureHarness.java",
+                "Closed executable fixture DSL remains one release-evidence boundary");
         return Collections.unmodifiableMap(result);
     }
 

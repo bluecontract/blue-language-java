@@ -2,6 +2,7 @@ package blue.language.api;
 
 import blue.language.codec.BlueCodec;
 import blue.language.codec.StandardBlueCodec;
+import blue.language.conformance.ConformanceEngine;
 import blue.language.graph.BlueGraph;
 import blue.language.graph.StandardBlueGraph;
 import blue.language.identity.BlueIdentity;
@@ -43,6 +44,8 @@ import blue.language.utils.NodePathEditor;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.NodeTypeMatcher;
 import blue.language.utils.Types;
+import blue.language.utils.limits.CompositeLimits;
+import blue.language.utils.limits.DeferredReferencePathLimits;
 import blue.language.utils.limits.ExcludedPathLimits;
 import blue.language.utils.limits.Limits;
 
@@ -65,11 +68,11 @@ import static blue.language.utils.limits.Limits.NO_LIMITS;
 /**
  * Immutable, Language-only runtime owned by the focused service composition.
  *
- * <p>The runtime contains no Contracts, conformance, mapping, or aggregate
- * facade dependency. It is therefore the narrow dependency boundary for
- * hosts that need provider access, cache policy, identity, resolution,
- * snapshots, matching, or patching without depending on the legacy aggregate
- * facade.</p>
+ * <p>The runtime contains no Contracts, fixture-conformance, mapping, or
+ * aggregate-facade dependency. It is therefore the narrow dependency boundary
+ * for hosts that need provider access, cache policy, identity, resolution,
+ * snapshots, matching, patching, or semantic generalization without depending
+ * on the legacy aggregate facade.</p>
  *
  * <p>Configuration is frozen at creation. Runtime-owned caches are bounded by
  * the supplied policy. Close waits for admitted operations, clears all owned
@@ -84,6 +87,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
 
     private final NodeProvider nodeProvider;
     private final BlueCachePolicy cachePolicy;
+    private final ReferenceCacheAdmissionPolicy referenceCacheAdmission;
     private final Map<String, String> preprocessingAliases;
     private final MergingProcessor mergingProcessor;
     private final LanguageRuntimeSnapshotStore snapshotsStore;
@@ -105,11 +109,16 @@ public final class BlueLanguageRuntime implements NodeResolver,
 
     private BlueLanguageRuntime(NodeProvider nodeProvider,
                                 BlueCachePolicy cachePolicy,
-                                Map<String, String> preprocessingAliases) {
+                                Map<String, String> preprocessingAliases,
+                                ReferenceCacheAdmissionPolicy
+                                        referenceCacheAdmission) {
         this.nodeProvider = blue.language.utils.NodeProviderWrapper.wrap(
                 Objects.requireNonNull(nodeProvider, "nodeProvider"));
         this.cachePolicy = Objects.requireNonNull(
                 cachePolicy, "cachePolicy");
+        this.referenceCacheAdmission = Objects.requireNonNull(
+                referenceCacheAdmission,
+                "referenceCacheAdmission");
         this.preprocessingAliases = immutableAliases(
                 preprocessingAliases);
         this.mergingProcessor = defaultMergingProcessor();
@@ -153,7 +162,38 @@ public final class BlueLanguageRuntime implements NodeResolver,
             BlueCachePolicy cachePolicy,
             Map<String, String> preprocessingAliases) {
         return new BlueLanguageRuntime(
-                nodeProvider, cachePolicy, preprocessingAliases);
+                nodeProvider,
+                cachePolicy,
+                preprocessingAliases,
+                REFERENCE_CACHE_ADMISSION);
+    }
+
+    /**
+     * Creates a Language runtime with an explicit verified-reference cache
+     * admission boundary.
+     *
+     * <p>The policy changes retained evidence and later cache reuse only; it
+     * cannot change resolution results, identities, or diagnostics for the
+     * same provider evidence. Excluded references may be read again by a later
+     * operation. The default {@link #create(NodeProvider, BlueCachePolicy, Map)}
+     * overload admits all verified references.</p>
+     *
+     * @param nodeProvider borrowed external-content provider
+     * @param cachePolicy runtime-owned cache bounds
+     * @param preprocessingAliases explicit directive aliases to freeze
+     * @param referenceCacheAdmission retention policy for verified references
+     * @return a new focused runtime
+     */
+    public static BlueLanguageRuntime create(
+            NodeProvider nodeProvider,
+            BlueCachePolicy cachePolicy,
+            Map<String, String> preprocessingAliases,
+            ReferenceCacheAdmissionPolicy referenceCacheAdmission) {
+        return new BlueLanguageRuntime(
+                nodeProvider,
+                cachePolicy,
+                preprocessingAliases,
+                referenceCacheAdmission);
     }
 
     /** Returns the stateless strict JSON/YAML codec. */
@@ -194,6 +234,21 @@ public final class BlueLanguageRuntime implements NodeResolver,
     /** Returns immutable canonical patching operations. */
     public BluePatching patching() {
         return patching;
+    }
+
+    /**
+     * Creates an independently owned semantic conformance engine using this
+     * runtime's frozen provider, merge pipeline, and cache bounds.
+     *
+     * <p>The returned engine owns its isolated cache and may be closed without
+     * affecting this runtime. Creating a handle after this runtime is closed is
+     * rejected in the same way as every other admitted runtime operation.</p>
+     *
+     * @return independently closeable semantic conformance engine
+     */
+    public ConformanceEngine newConformanceEngine() {
+        return call(() -> ConformanceEngine.withIsolatedCache(
+                nodeProvider, mergingProcessor, cachePolicy));
     }
 
     /** Returns the verified provider graph selected for this runtime. */
@@ -402,27 +457,22 @@ public final class BlueLanguageRuntime implements NodeResolver,
                                 merger(nodeProvider).resolveSnapshot(
                                         preprocessed, NO_LIMITS)));
             }
-            Node complete = rawResolve(
-                    preprocessed.clone(), NO_LIMITS);
-            FrozenNode canonical = FrozenNode.fromNode(
-                    new CanonicalIdentityInputBuilder().build(
-                            complete, preprocessed));
-            Node deferred;
-            if (paths.contains(JsonPointer.ROOT)) {
-                deferred = preprocessed;
-            } else {
-                deferred = rawResolve(
-                        preprocessed.clone(),
-                        ExcludedPathLimits.excluding(paths));
-                for (String path : paths) {
-                    Node authored = NodePathEditor.getOrNull(
-                            preprocessed, path);
-                    if (authored != null) {
-                        NodePathEditor.put(
-                                deferred, path, authored.clone());
-                    }
+            Node deferred = rawResolve(
+                    preprocessed.clone(),
+                    new CompositeLimits(
+                            NO_LIMITS,
+                            new DeferredReferencePathLimits(paths)));
+            for (String path : paths) {
+                Node authored = NodePathEditor.getOrNull(
+                        preprocessed, path);
+                if (authored != null) {
+                    NodePathEditor.put(
+                            deferred, path, authored.clone());
                 }
             }
+            FrozenNode canonical = FrozenNode.fromNode(
+                    new CanonicalIdentityInputBuilder().build(
+                            deferred.clone(), preprocessed));
             return ResolvedSnapshot.withDeferredResolution(
                     canonical,
                     snapshotsStore.referenceCache()
@@ -565,7 +615,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 mergingProcessor,
                 provider,
                 snapshotsStore.referenceCache(),
-                REFERENCE_CACHE_ADMISSION);
+                referenceCacheAdmission);
     }
 
     private ResolvedSnapshot loadCanonical(FrozenNode canonical) {

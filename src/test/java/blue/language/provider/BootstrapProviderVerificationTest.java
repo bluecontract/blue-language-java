@@ -1,10 +1,10 @@
 package blue.language.provider;
 
-import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.registry.RuntimeTypeAliases;
+import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +42,8 @@ class BootstrapProviderVerificationTest {
         // when
         Map<String, String> actualCoreAliases = new LinkedHashMap<>(CORE_TYPE_NAME_TO_BLUE_ID_MAP);
         Map<String, String> actualCoreNames = new LinkedHashMap<>(CORE_TYPE_BLUE_ID_TO_NAME_MAP);
-        Map<String, String> reportedCoreAliases = new Blue().conformanceReport().getCoreRegistryBlueIds();
+        Map<String, String> reportedCoreAliases = new LinkedHashMap<>(
+                BlueCoreTypeRegistry.INSTANCE.blueIdsByName());
 
         // then
         assertEquals(expectedCoreAliases, actualCoreAliases);

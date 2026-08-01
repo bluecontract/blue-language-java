@@ -143,7 +143,9 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerDoesNotNormalizeOfficialFixtureResults() throws IOException {
         // given
-        String source = read(Paths.get("src/main/java/blue/language/BlueContractsConformanceSuiteRunner.java"));
+        String source = read(Paths.get(
+                "src/main/java/blue/language/conformance/contracts/"
+                        + "ContractsConformanceSuite.java"));
 
         // when
         List<String> offenders = presentFragments(
@@ -164,7 +166,9 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerDoesNotSynthesizeExpectedGasOrEvents() throws IOException {
         // given
-        String source = read(Paths.get("src/main/java/blue/language/BlueContractsConformanceSuiteRunner.java"));
+        String source = read(Paths.get(
+                "src/main/java/blue/language/conformance/contracts/"
+                        + "ContractsConformanceSuite.java"));
 
         // when
         List<String> offenders = presentFragments(
@@ -181,7 +185,9 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerUsesTypedStatusAndErrorCategories() throws IOException {
         // given
-        String source = read(Paths.get("src/main/java/blue/language/BlueContractsConformanceSuiteRunner.java"));
+        String source = read(Paths.get(
+                "src/main/java/blue/language/conformance/contracts/"
+                        + "ContractsConformanceSuite.java"));
 
         // when
         List<String> offenders = presentFragments(
@@ -214,7 +220,9 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyContractsConformanceRunnerDoesNotContainLegacyOrderLogTraceMethod() throws IOException {
         // given
-        String source = read(Paths.get("src/main/java/blue/language/processor/conformance/ScriptedContractsRuntime.java"));
+        String source = read(Paths.get(
+                "src/main/java/blue/language/conformance/contracts/"
+                        + "ScriptedContractsRuntime.java"));
 
         // when
         boolean legacyMethodAbsent =
@@ -240,7 +248,9 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyScriptedRuntimeDoesNotMutateDocumentForTraceCollection() throws IOException {
         // given
-        String source = read(Paths.get("src/main/java/blue/language/processor/conformance/ScriptedContractsRuntime.java"));
+        String source = read(Paths.get(
+                "src/main/java/blue/language/conformance/contracts/"
+                        + "ScriptedContractsRuntime.java"));
 
         // when
         List<String> offenders = presentFragments(
