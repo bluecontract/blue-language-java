@@ -39,15 +39,59 @@ class ApiMigrationLedgerVerifierTest {
                 fixture.semanticBaseline,
                 fixture.currentApi,
                 fixture.currentApiPath,
-                MIGRATION_LEDGER,
-                BINARY_BASELINE,
+                fixture.migrationLedgerPath,
+                fixture.binaryBaselinePath,
                 fixture.binaryReportPath);
 
         // then
         assertTrue(evidence.path("verified").asBoolean());
         assertEquals(
-                SemanticBaselineSupport.sha256(MIGRATION_LEDGER),
+                SemanticBaselineSupport.sha256(fixture.migrationLedgerPath),
                 evidence.path("ledgerSha256").asText());
+        assertEquals(
+                "api/modernization-api-migration-ledger-1.0.json",
+                evidence.path("ledger").asText());
+    }
+
+    @Test
+    void shouldAcceptRepositoryRelativeEvidenceFromARelocatedWorkspace()
+            throws Exception {
+        // given
+        Path relocatedApi = temporaryDirectory
+                .resolve("relocated-repository")
+                .resolve("api");
+        Files.createDirectories(relocatedApi);
+        Path relocatedBaseline = Files.copy(
+                BINARY_BASELINE,
+                relocatedApi.resolve(BINARY_BASELINE.getFileName()));
+        Path relocatedLedger = Files.copy(
+                MIGRATION_LEDGER,
+                relocatedApi.resolve(MIGRATION_LEDGER.getFileName()));
+        Fixture fixture = fixture(
+                "0",
+                "0",
+                relocatedBaseline,
+                relocatedLedger,
+                "api/blue-language-java-1.0.json",
+                "api/modernization-api-migration-ledger-1.0.json");
+
+        // when
+        ObjectNode evidence = ApiMigrationLedgerVerifier.verify(
+                fixture.semanticBaseline,
+                fixture.currentApi,
+                fixture.currentApiPath,
+                fixture.migrationLedgerPath,
+                fixture.binaryBaselinePath,
+                fixture.binaryReportPath);
+
+        // then
+        assertTrue(evidence.path("verified").asBoolean());
+        assertEquals(
+                SemanticBaselineSupport.sha256(relocatedBaseline),
+                evidence.path("binaryBaselineSha256").asText());
+        assertEquals(
+                "api/modernization-api-migration-ledger-1.0.json",
+                evidence.path("ledger").asText());
     }
 
     @Test
@@ -60,8 +104,8 @@ class ApiMigrationLedgerVerifierTest {
                         fixture.semanticBaseline,
                         fixture.currentApi,
                         fixture.currentApiPath,
-                        MIGRATION_LEDGER,
-                        BINARY_BASELINE,
+                        fixture.migrationLedgerPath,
+                        fixture.binaryBaselinePath,
                         fixture.binaryReportPath);
 
         // then
@@ -71,9 +115,79 @@ class ApiMigrationLedgerVerifierTest {
         assertTrue(failure.getMessage().contains("unapprovedChanges"));
     }
 
+    @Test
+    void shouldRejectRepositoryRelativeEvidenceWithTraversal() throws Exception {
+        // given
+        Fixture fixture = fixture(
+                "0",
+                "0",
+                BINARY_BASELINE,
+                MIGRATION_LEDGER,
+                "../api/blue-language-java-1.0.json",
+                "api/modernization-api-migration-ledger-1.0.json");
+
+        // when
+        Executable verification = () -> ApiMigrationLedgerVerifier.verify(
+                fixture.semanticBaseline,
+                fixture.currentApi,
+                fixture.currentApiPath,
+                fixture.migrationLedgerPath,
+                fixture.binaryBaselinePath,
+                fixture.binaryReportPath);
+
+        // then
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                verification);
+        assertTrue(failure.getMessage().contains("must not traverse"));
+    }
+
+    @Test
+    void shouldRejectRepositoryRelativeEvidenceForAnotherFile() throws Exception {
+        // given
+        Fixture fixture = fixture(
+                "0",
+                "0",
+                BINARY_BASELINE,
+                MIGRATION_LEDGER,
+                "fixtures/blue-language-java-1.0.json",
+                "api/modernization-api-migration-ledger-1.0.json");
+
+        // when
+        Executable verification = () -> ApiMigrationLedgerVerifier.verify(
+                fixture.semanticBaseline,
+                fixture.currentApi,
+                fixture.currentApiPath,
+                fixture.migrationLedgerPath,
+                fixture.binaryBaselinePath,
+                fixture.binaryReportPath);
+
+        // then
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                verification);
+        assertTrue(failure.getMessage().contains("binary API report baseline"));
+    }
+
     private Fixture fixture(
             String unapprovedChanges,
             String missingApprovedChanges) throws Exception {
+        return fixture(
+                unapprovedChanges,
+                missingApprovedChanges,
+                BINARY_BASELINE,
+                MIGRATION_LEDGER,
+                BINARY_BASELINE.toAbsolutePath().toString(),
+                MIGRATION_LEDGER.toAbsolutePath().toString());
+    }
+
+    private Fixture fixture(
+            String unapprovedChanges,
+            String missingApprovedChanges,
+            Path binaryBaselinePath,
+            Path migrationLedgerPath,
+            String reportedBaseline,
+            String reportedLedger) throws Exception {
         JsonNode semanticBaseline =
                 SemanticBaselineSupport.readJson(SEMANTIC_BASELINE);
         JsonNode currentApi = SemanticBaselineSupport.required(
@@ -82,7 +196,8 @@ class ApiMigrationLedgerVerifierTest {
         Path currentApiPath = temporaryDirectory.resolve("current-api.json");
         SemanticBaselineSupport.writeJson(currentApiPath, currentApi);
 
-        JsonNode ledger = SemanticBaselineSupport.readJson(MIGRATION_LEDGER);
+        JsonNode ledger = SemanticBaselineSupport.readJson(
+                migrationLedgerPath);
         int approvedIncompatible = approvedCount(
                 ledger,
                 "incompatibleChanges");
@@ -91,20 +206,20 @@ class ApiMigrationLedgerVerifierTest {
                 currentApi,
                 "/classes").size();
         int baselineClasses = SemanticBaselineSupport.required(
-                SemanticBaselineSupport.readJson(BINARY_BASELINE),
+                SemanticBaselineSupport.readJson(binaryBaselinePath),
                 "/classes").size();
 
         List<String> report = new ArrayList<>();
-        report.add("baseline=" + BINARY_BASELINE.toAbsolutePath());
+        report.add("baseline=" + reportedBaseline);
         report.add("current=fixture.jar");
         report.add("baselineApiClasses=" + baselineClasses);
         report.add("currentApiClasses=" + currentClasses);
         report.add("currentClassMajorVersions=52");
         report.add("incompatibleChanges=0");
         report.add("additiveChanges=" + approvedAdditive);
-        report.add("migrationLedger=" + MIGRATION_LEDGER.toAbsolutePath());
+        report.add("migrationLedger=" + reportedLedger);
         report.add("migrationLedgerSha256="
-                + SemanticBaselineSupport.sha256(MIGRATION_LEDGER));
+                + SemanticBaselineSupport.sha256(migrationLedgerPath));
         report.add("migrationLedgerVerified=true");
         report.add("actualIncompatibleChanges=" + approvedIncompatible);
         report.add("approvedIncompatibleChanges=" + approvedIncompatible);
@@ -117,6 +232,8 @@ class ApiMigrationLedgerVerifierTest {
                 semanticBaseline,
                 currentApi,
                 currentApiPath,
+                migrationLedgerPath,
+                binaryBaselinePath,
                 binaryReportPath);
     }
 
@@ -136,16 +253,22 @@ class ApiMigrationLedgerVerifierTest {
         private final JsonNode semanticBaseline;
         private final JsonNode currentApi;
         private final Path currentApiPath;
+        private final Path migrationLedgerPath;
+        private final Path binaryBaselinePath;
         private final Path binaryReportPath;
 
         private Fixture(
                 JsonNode semanticBaseline,
                 JsonNode currentApi,
                 Path currentApiPath,
+                Path migrationLedgerPath,
+                Path binaryBaselinePath,
                 Path binaryReportPath) {
             this.semanticBaseline = semanticBaseline;
             this.currentApi = currentApi;
             this.currentApiPath = currentApiPath;
+            this.migrationLedgerPath = migrationLedgerPath;
+            this.binaryBaselinePath = binaryBaselinePath;
             this.binaryReportPath = binaryReportPath;
         }
     }

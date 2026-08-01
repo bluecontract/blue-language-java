@@ -3,6 +3,7 @@ package blue.language.conformance;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -62,7 +63,9 @@ final class ApiMigrationLedgerVerifier {
                 approvals);
 
         ObjectNode evidence = SemanticBaselineSupport.JSON.createObjectNode();
-        evidence.put("ledger", ledgerPath.toString());
+        evidence.put(
+                "ledger",
+                portableReportPath(report, "migrationLedger"));
         evidence.put(
                 "ledgerSha256",
                 SemanticBaselineSupport.sha256(ledgerPath));
@@ -247,10 +250,68 @@ final class ApiMigrationLedgerVerifier {
             String key,
             Path expected) {
         String value = requiredReportValue(report, key);
+        Path reported = Paths.get(value);
+        Path normalizedExpected = expected.toAbsolutePath().normalize();
+        if (reported.isAbsolute()) {
+            SemanticBaselineSupport.requireEquals(
+                    "binary API report " + key,
+                    normalizedExpected,
+                    reported.normalize());
+            return;
+        }
+        requirePortableRepositoryPath(key, reported);
+        Path normalizedReported = reported.normalize();
+        int componentCount = normalizedReported.getNameCount();
+        if (normalizedExpected.getNameCount() < componentCount) {
+            throw new IllegalStateException(
+                    "Binary API report " + key
+                            + " does not identify the expected repository file");
+        }
+        Path expectedSuffix = normalizedExpected.subpath(
+                normalizedExpected.getNameCount() - componentCount,
+                normalizedExpected.getNameCount());
         SemanticBaselineSupport.requireEquals(
                 "binary API report " + key,
-                expected.toAbsolutePath().normalize(),
-                Paths.get(value).toAbsolutePath().normalize());
+                expectedSuffix,
+                normalizedReported);
+    }
+
+    private static void requirePortableRepositoryPath(
+            String key,
+            Path reported) {
+        if (reported.getNameCount() < 2) {
+            throw new IllegalStateException(
+                    "Binary API report " + key
+                            + " must be a repository-qualified path");
+        }
+        for (Path component : reported) {
+            if ("..".equals(component.toString())) {
+                throw new IllegalStateException(
+                        "Binary API report " + key
+                                + " must not traverse outside its repository path");
+            }
+        }
+    }
+
+    private static String portableReportPath(
+            Map<String, String> report,
+            String key) {
+        Path reported = Paths.get(requiredReportValue(report, key));
+        if (!reported.isAbsolute()) {
+            requirePortableRepositoryPath(key, reported);
+            return reported.normalize().toString()
+                    .replace(File.separatorChar, '/');
+        }
+        Path normalized = reported.normalize();
+        if (normalized.getNameCount() < 2) {
+            throw new IllegalStateException(
+                    "Binary API report " + key
+                            + " must be a repository-qualified path");
+        }
+        return normalized.subpath(
+                        normalized.getNameCount() - 2,
+                        normalized.getNameCount())
+                .toString().replace(File.separatorChar, '/');
     }
 
     private static void requireReportValue(

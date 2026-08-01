@@ -465,23 +465,7 @@ public final class SemanticBaselineVerifierCli {
                             + compatibilityDeclarations);
         }
 
-        String blueSource = new String(
-                Files.readAllBytes(Paths.get(
-                        "src/main/java/blue/language/Blue.java")),
-                StandardCharsets.UTF_8);
-        int sourceMethod = blueSource.indexOf(
-                "calculateSourceDocumentBlueId(Node node)");
-        int nextMethod = blueSource.indexOf(
-                "calculateSourceDocumentBlueId(Object object)",
-                sourceMethod);
-        if (sourceMethod < 0
-                || nextMethod < 0
-                || blueSource.substring(sourceMethod, nextMethod)
-                .contains("minimize(")) {
-            throw new IllegalStateException(
-                    "Source Document BlueId path is absent or invokes "
-                            + "minimization");
-        }
+        verifySourceDocumentIdentityPath();
 
         try (Stream<Path> paths = Files.walk(Paths.get("docs"))) {
             for (Path path : (Iterable<Path>) paths
@@ -492,6 +476,182 @@ public final class SemanticBaselineVerifierCli {
             }
         }
         verifyPrimaryDocument(Paths.get("README.md"));
+    }
+
+    private static void verifySourceDocumentIdentityPath()
+            throws IOException {
+        String facade = readSource(
+                "src/main/java/blue/language/Blue.java");
+        requireIdentityMethod(
+                facade,
+                "public String calculateSourceDocumentBlueId(Node source)",
+                "aggregate Source Document identity",
+                "runtime.language().identity()",
+                ".sourceDocumentBlueId(source)");
+
+        String runtime = readSource(
+                "src/main/java/blue/language/runtime/BlueLanguageRuntime.java");
+        requireMethodContent(
+                runtime,
+                "private BlueLanguageRuntime(NodeProvider nodeProvider,",
+                "Language runtime identity wiring",
+                "new StandardBlueIdentity(this::canonicalize)");
+        requireOrderedIdentityMethod(
+                runtime,
+                "public Node canonicalize(Node source)",
+                "Language runtime canonicalization",
+                "rawPreprocess(",
+                "rawResolve(",
+                "new CanonicalIdentityInputBuilder().build(");
+
+        String runtimeServices = readSource(
+                "src/main/java/blue/language/runtime/LanguageRuntimeServices.java");
+        requireIdentityMethod(
+                runtimeServices,
+                "public String sourceDocumentBlueId(Node sourceDocument)",
+                "runtime Source Document identity adapter",
+                "runtime.admitted(",
+                "delegate.sourceDocumentBlueId(sourceDocument)");
+
+        String standardIdentity = readSource(
+                "src/main/java/blue/language/identity/StandardBlueIdentity.java");
+        requireIdentityMethod(
+                standardIdentity,
+                "public StandardBlueIdentity(\n"
+                        + "            DirectBlueIdCalculator directCalculator,",
+                "standard Source Document identity wiring",
+                "new SourceDocumentBlueIdCalculator(",
+                "canonicalIdentityInput",
+                "directCalculator");
+        requireIdentityMethod(
+                standardIdentity,
+                "public String sourceDocumentBlueId(Node sourceDocument)",
+                "standard Source Document identity",
+                "sourceCalculator.sourceDocumentBlueId(sourceDocument)");
+
+        String sourceCalculator = readSource(
+                "src/main/java/blue/language/identity/SourceDocumentBlueIdCalculator.java");
+        requireIdentityMethod(
+                sourceCalculator,
+                "public Node canonicalIdentityInput(Node sourceDocument)",
+                "Source Document canonical-input function",
+                "canonicalIdentityInput.apply(Objects.requireNonNull(",
+                "sourceDocument");
+        requireIdentityMethod(
+                sourceCalculator,
+                "public String sourceDocumentBlueId(Node sourceDocument)",
+                "Source Document identity calculator",
+                "directCalculator.directBlueId(",
+                "canonicalIdentityInput(sourceDocument)");
+
+        String directCalculator = readSource(
+                "src/main/java/blue/language/identity/DirectBlueIdCalculator.java");
+        requireIdentityMethod(
+                directCalculator,
+                "public String directBlueId(Node node)",
+                "direct BlueId calculator",
+                "calculateNormalized(normalizer.normalize(node))");
+    }
+
+    private static String readSource(String path) throws IOException {
+        return new String(
+                Files.readAllBytes(Paths.get(path)),
+                StandardCharsets.UTF_8);
+    }
+
+    private static void requireIdentityMethod(
+            String source,
+            String signature,
+            String label,
+            String... requiredContent) {
+        String body = requireMethodContent(
+                source,
+                signature,
+                label,
+                requiredContent);
+        requireNoMinimization(body, label);
+    }
+
+    private static void requireOrderedIdentityMethod(
+            String source,
+            String signature,
+            String label,
+            String... requiredContent) {
+        String body = requireOrderedMethodContent(
+                source,
+                signature,
+                label,
+                requiredContent);
+        requireNoMinimization(body, label);
+    }
+
+    private static void requireNoMinimization(
+            String body,
+            String label) {
+        if (body.contains("minimize(")
+                || body.contains("MinimizedOverlayBuilder")) {
+            throw new IllegalStateException(
+                    label + " invokes minimization");
+        }
+    }
+
+    private static String requireMethodContent(
+            String source,
+            String signature,
+            String label,
+            String... requiredContent) {
+        String body = methodBody(source, signature, label);
+        for (String required : requiredContent) {
+            if (!body.contains(required)) {
+                throw new IllegalStateException(
+                        label + " is missing required identity step: "
+                                + required);
+            }
+        }
+        return body;
+    }
+
+    private static String requireOrderedMethodContent(
+            String source,
+            String signature,
+            String label,
+            String... requiredContent) {
+        String body = methodBody(source, signature, label);
+        int previousEnd = 0;
+        for (String required : requiredContent) {
+            int occurrence = body.indexOf(required, previousEnd);
+            if (occurrence < 0) {
+                throw new IllegalStateException(
+                        label + " is missing or reorders identity step: "
+                                + required);
+            }
+            previousEnd = occurrence + required.length();
+        }
+        return body;
+    }
+
+    private static String methodBody(
+            String source,
+            String signature,
+            String label) {
+        int signatureStart = source.indexOf(signature);
+        if (signatureStart < 0) {
+            throw new IllegalStateException(label + " method is absent");
+        }
+        int bodyStart = source.indexOf('{', signatureStart);
+        if (bodyStart < 0) {
+            throw new IllegalStateException(label + " body is absent");
+        }
+        int depth = 0;
+        for (int index = bodyStart; index < source.length(); index++) {
+            char current = source.charAt(index);
+            if (current == '{') {
+                depth++;
+            } else if (current == '}' && --depth == 0) {
+                return source.substring(bodyStart + 1, index);
+            }
+        }
+        throw new IllegalStateException(label + " body is not closed");
     }
 
     private static void verifyPrimaryDocument(Path path) throws IOException {
