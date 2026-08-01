@@ -69,6 +69,13 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             "blue-language-ipfs",
             "blue-contracts-core",
             "blue-language-java"));
+    private static final List<String> COMPATIBILITY_RUNTIME_MODULES =
+            Collections.unmodifiableList(Arrays.asList(
+                    "blue-language-model",
+                    "blue-language-core",
+                    "blue-language-mapping",
+                    "blue-language-ipfs",
+                    "blue-contracts-core"));
     private static final List<String> REQUIRED_LOCALITY_TESTS =
             Collections.unmodifiableList(Arrays.asList(
                     "blue.language.processor.FragmentedProcessingLocalityIntegrationTest#"
@@ -352,8 +359,14 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         }
         project.getRepositories().mavenCentral();
         DependencyHandler dependencies = project.getDependencies();
-        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
-                project.project(":blue-language-java"));
+        // Compatibility sources provide Blue itself, so depend on its modules
+        // without also shading the aggregate module's thin Blue facade.
+        for (String module : COMPATIBILITY_RUNTIME_MODULES) {
+            dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                    project.project(":" + module));
+            dependencies.add("jmhImplementation",
+                    project.project(":" + module));
+        }
         dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
                 project.project(":blue-conformance"));
         dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
@@ -374,7 +387,6 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 "org.reflections:reflections:0.10.2");
         dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
                 "io.github.erdtman:java-json-canonicalization:1.1");
-        dependencies.add("jmhImplementation", project.project(":blue-language-java"));
     }
 
     private static SourceReleaseTasks registerSourceReleaseTasks(Project project) {

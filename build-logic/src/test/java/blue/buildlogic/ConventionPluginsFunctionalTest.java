@@ -156,7 +156,8 @@ final class ConventionPluginsFunctionalTest {
 
         // then
         assertTrue(result.getOutput().contains(
-                "typed-jmh-includes=DeepGraph.*processSelectedLeaf|ReferenceBlueId.*"));
+                "typed-jmh-includes=(?:DeepGraph.*processSelectedLeaf)"
+                        + "|(?:ReferenceBlueId.*)"));
     }
 
     @Test

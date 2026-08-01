@@ -1,6 +1,5 @@
 package blue.buildlogic;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,6 +59,26 @@ public final class JmhConventionsPlugin implements Plugin<Project> {
             }
             includes.add(include);
         }
-        return Collections.unmodifiableList(new ArrayList<>(includes));
+        return combineIncludePatterns(includes);
+    }
+
+    /**
+     * Converts logical include regexes to the one positional regex accepted by
+     * the pinned JMH Gradle plugin. Plugin 0.7.3 otherwise comma-joins list
+     * entries, and JMH interprets that comma literally.
+     */
+    static List<String> combineIncludePatterns(
+            Iterable<String> includes) {
+        StringBuilder combined = new StringBuilder();
+        for (String include : includes) {
+            if (combined.length() > 0) {
+                combined.append('|');
+            }
+            combined.append("(?:").append(include).append(')');
+        }
+        if (combined.length() == 0) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(combined.toString());
     }
 }

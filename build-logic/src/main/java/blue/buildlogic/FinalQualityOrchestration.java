@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import me.champeau.jmh.JMHTask;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -63,7 +64,7 @@ final class FinalQualityOrchestration {
         TaskProvider<JMHTask> jmh = project.getTasks().named("jmh", JMHTask.class);
         if (isFinalQualityInvocation(project)) {
             jmh.configure(task -> {
-                task.getIncludes().set(REQUIRED_SMOKE_BENCHMARKS);
+                task.getIncludes().set(requiredSmokeIncludes());
                 task.getWarmupIterations().set(0);
                 task.getIterations().set(1);
                 task.getFork().set(1);
@@ -161,6 +162,16 @@ final class FinalQualityOrchestration {
             }
         }
         return false;
+    }
+
+    /** Returns one exact alternation regex while retaining two report requirements. */
+    static List<String> requiredSmokeIncludes() {
+        List<String> exactPatterns = new ArrayList<>();
+        for (String benchmark : REQUIRED_SMOKE_BENCHMARKS) {
+            exactPatterns.add(Pattern.quote(benchmark));
+        }
+        return JmhConventionsPlugin.combineIncludePatterns(
+                exactPatterns);
     }
 
     private static Map<String, String> classSizeRationales() {

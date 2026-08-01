@@ -24,7 +24,10 @@ import blue.buildlogic.tasks.VerifyReleaseEnvironmentTask;
 import blue.buildlogic.tasks.VerifyReproducibleArchivesTask;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Project;
@@ -288,8 +291,37 @@ final class ConventionPluginsTest {
         java.util.List<String> parsed = JmhConventionsPlugin.parseIncludes(filters);
 
         // then
-        assertEquals(java.util.Arrays.asList(
-                "DeepGraph.*processSelectedLeaf", "ReferenceBlueId.*"), parsed);
+        assertEquals(java.util.Collections.singletonList(
+                "(?:DeepGraph.*processSelectedLeaf)|(?:ReferenceBlueId.*)"), parsed);
+        Pattern combined = Pattern.compile(parsed.get(0));
+        assertTrue(combined.matcher(
+                "DeepGraphPhysicalLocalityBenchmark.processSelectedLeaf").matches());
+        assertTrue(combined.matcher(
+                "ReferenceBlueIdValidationBenchmark.resolve").matches());
+    }
+
+    @Test
+    void shouldPassFinalQualitySmokeBenchmarksAsOneExactJmhRegex() {
+        // given
+        List<String> benchmarkNames = Arrays.asList(
+                "blue.language.ReferenceBlueIdValidationBenchmark."
+                        + "resolveDeepValidReferenceDocument",
+                "blue.language.ProcessingSelectionCacheBenchmark."
+                        + "processWarmSameNode");
+
+        // when
+        List<String> includes =
+                FinalQualityOrchestration.requiredSmokeIncludes();
+        Pattern combined = Pattern.compile(includes.get(0));
+
+        // then
+        assertEquals(1, includes.size());
+        for (String benchmarkName : benchmarkNames) {
+            assertTrue(combined.matcher(benchmarkName).matches());
+        }
+        assertFalse(combined.matcher(
+                "blue.language.ProcessingSelectionCacheBenchmark."
+                        + "processWarmClone").matches());
     }
 
     @Test
