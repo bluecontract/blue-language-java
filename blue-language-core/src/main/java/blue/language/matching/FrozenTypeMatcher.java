@@ -3,9 +3,6 @@ package blue.language.matching;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
-import blue.language.matching.internal.FrozenSchemaMatcher;
-import blue.language.matching.internal.LabelNeutralTypeIdentity;
-import blue.language.matching.internal.MatchingPlanCache;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
@@ -21,11 +18,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
-import static blue.language.matching.internal.MatchingPlanCache.Region.MATCH;
-import static blue.language.matching.internal.MatchingPlanCache.Region.RESOLVED_REFERENCE;
-import static blue.language.matching.internal.MatchingPlanCache.Region.SUBTYPE;
-import static blue.language.matching.internal.MatchingPlanCache.Region.TYPE_COMPATIBILITY;
-import static blue.language.matching.internal.MatchingPlanCache.Region.UNRESOLVED_REFERENCE;
+import static blue.language.matching.MatchingPlanCache.Region.MATCH;
+import static blue.language.matching.MatchingPlanCache.Region.RESOLVED_REFERENCE;
+import static blue.language.matching.MatchingPlanCache.Region.SUBTYPE;
+import static blue.language.matching.MatchingPlanCache.Region.TYPE_COMPATIBILITY;
+import static blue.language.matching.MatchingPlanCache.Region.UNRESOLVED_REFERENCE;
 import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**

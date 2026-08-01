@@ -1,4 +1,4 @@
-package blue.language.matching.internal;
+package blue.language.matching;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 /** Evaluates the released schema keywords against an immutable candidate. */
-public final class FrozenSchemaMatcher {
+final class FrozenSchemaMatcher {
 
     /**
      * Evaluates every populated keyword, failing closed for malformed schemas

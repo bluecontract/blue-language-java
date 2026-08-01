@@ -1,4 +1,4 @@
-package blue.language.matching.internal;
+package blue.language.matching;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -6,7 +6,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
 
 /** Computes type compatibility identity after removing descriptive labels. */
-public final class LabelNeutralTypeIdentity {
+final class LabelNeutralTypeIdentity {
 
     private LabelNeutralTypeIdentity() {
     }

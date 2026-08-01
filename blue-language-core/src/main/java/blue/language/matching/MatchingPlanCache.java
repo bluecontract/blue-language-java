@@ -1,4 +1,4 @@
-package blue.language.matching.internal;
+package blue.language.matching;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
@@ -19,7 +19,7 @@ import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
  * preventing subtype or reference workloads from starving structural match
  * plans indefinitely.</p>
  */
-public final class MatchingPlanCache {
+final class MatchingPlanCache {
 
     private static final long CACHE_ENTRY_OVERHEAD_BYTES = 80L;
     private static final long SIMPLE_VALUE_WEIGHT_BYTES = 16L;

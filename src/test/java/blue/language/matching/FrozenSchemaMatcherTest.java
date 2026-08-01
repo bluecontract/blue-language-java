@@ -1,4 +1,4 @@
-package blue.language.matching.internal;
+package blue.language.matching;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
