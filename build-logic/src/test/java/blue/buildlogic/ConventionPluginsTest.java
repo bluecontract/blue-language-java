@@ -25,10 +25,13 @@ import blue.buildlogic.tasks.VerifyReproducibleArchivesTask;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import me.champeau.jmh.JmhParameters;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -246,6 +249,9 @@ final class ConventionPluginsTest {
         // then
         assertTrue(project.getPluginManager().hasPlugin("me.champeau.jmh"));
         assertNotNull(project.getTasks().findByName("jmh"));
+        JmhParameters parameters = (JmhParameters)
+                project.getExtensions().getByName("jmh");
+        assertTrue(parameters.getIncludeTests().get());
     }
 
     @Test
@@ -280,6 +286,49 @@ final class ConventionPluginsTest {
                 .getJava().getSrcDirs().stream()
                 .map(file -> file.toPath().toAbsolutePath().normalize())
                 .anyMatch(compatibilityDirectory::equals));
+    }
+
+    @Test
+    void shouldSeparateAggregateTestsFromCompatibilityBenchmarks()
+            throws Exception {
+        // given
+        Project project = ProjectBuilder.builder()
+                .withName("root")
+                .withProjectDir(Files.createDirectories(
+                        temporaryDirectory.resolve("dependency-project"))
+                        .toFile())
+                .build();
+        List<String> implementationModules = Arrays.asList(
+                "blue-language-model",
+                "blue-language-core",
+                "blue-language-mapping",
+                "blue-language-ipfs",
+                "blue-contracts-core");
+        for (String module : implementationModules) {
+            childProject(project, module);
+        }
+        childProject(project, "blue-language-java");
+        project.getPluginManager().apply(JmhConventionsPlugin.class);
+
+        // when
+        RootOrchestrationPlugin.configureCompatibilityDependencies(
+                project, project.getDependencies());
+
+        // then
+        assertEquals(Collections.singleton("blue-language-java"),
+                dependencyNames(project.getConfigurations()
+                        .getByName("testImplementation")));
+        assertEquals(new LinkedHashSet<>(implementationModules),
+                dependencyNames(project.getConfigurations()
+                        .getByName("jmhImplementation")));
+        assertFalse(dependencyNames(project.getConfigurations()
+                        .getByName("jmhImplementation"))
+                .contains("blue-language-java"));
+        assertTrue(project.getConfigurations()
+                .getByName("jmhRuntimeClasspath")
+                .getExcludeRules().stream()
+                .anyMatch(rule -> "blue-language-java"
+                        .equals(rule.getModule())));
     }
 
     @Test
@@ -390,5 +439,22 @@ final class ConventionPluginsTest {
                 .map(dependency -> dependency.getGroup() + ":" + dependency.getName()
                         + (dependency.getVersion() == null ? "" : ":" + dependency.getVersion()))
                 .collect(Collectors.toSet());
+    }
+
+    private Project childProject(Project parent, String name)
+            throws Exception {
+        return ProjectBuilder.builder()
+                .withName(name)
+                .withParent(parent)
+                .withProjectDir(Files.createDirectories(
+                        temporaryDirectory.resolve("dependency-project")
+                                .resolve(name)).toFile())
+                .build();
+    }
+
+    private static Set<String> dependencyNames(Configuration configuration) {
+        return configuration.getDependencies().stream()
+                .map(org.gradle.api.artifacts.Dependency::getName)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }

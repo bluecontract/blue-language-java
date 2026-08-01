@@ -51,7 +51,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             "src/compat/java";
     private static final String GROUP = BuildLogicConstants.VERIFICATION_GROUP;
     private static final String DISTRIBUTION_GROUP = "distribution";
-    private static final String SOURCE_RELEASE_BASE_NAME = "blue-language-java";
+    private static final String AGGREGATE_MODULE = "blue-language-java";
+    private static final String SOURCE_RELEASE_BASE_NAME = AGGREGATE_MODULE;
     private static final String SOURCE_RELEASE_CLASSIFIER = "source-release";
     private static final String SOURCE_RELEASE_METADATA_FILE = ".cz.toml";
     private static final List<String> PUBLISHED_MODULES = Collections.unmodifiableList(Arrays.asList(
@@ -61,14 +62,14 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             "blue-language-ipfs",
             "blue-contracts-core",
             "blue-conformance",
-            "blue-language-java"));
+            AGGREGATE_MODULE));
     private static final List<String> API_BASELINE_MODULES = Collections.unmodifiableList(Arrays.asList(
             "blue-language-model",
             "blue-language-core",
             "blue-language-mapping",
             "blue-language-ipfs",
             "blue-contracts-core",
-            "blue-language-java"));
+            AGGREGATE_MODULE));
     private static final List<String> COMPATIBILITY_RUNTIME_MODULES =
             Collections.unmodifiableList(Arrays.asList(
                     "blue-language-model",
@@ -359,14 +360,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         }
         project.getRepositories().mavenCentral();
         DependencyHandler dependencies = project.getDependencies();
-        // Compatibility sources provide Blue itself, so depend on its modules
-        // without also shading the aggregate module's thin Blue facade.
-        for (String module : COMPATIBILITY_RUNTIME_MODULES) {
-            dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
-                    project.project(":" + module));
-            dependencies.add("jmhImplementation",
-                    project.project(":" + module));
-        }
+        configureCompatibilityDependencies(project, dependencies);
         dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
                 project.project(":blue-conformance"));
         dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
@@ -387,6 +381,24 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 "org.reflections:reflections:0.10.2");
         dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
                 "io.github.erdtman:java-json-canonicalization:1.1");
+    }
+
+    /** Separates aggregate test coverage from the compatibility JMH runtime. */
+    static void configureCompatibilityDependencies(
+            Project project,
+            DependencyHandler dependencies) {
+        dependencies.add(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                project.project(":" + AGGREGATE_MODULE));
+        // Compatibility benchmarks compile their own Blue facade, so their
+        // shaded runtime uses its implementation modules without the thin one.
+        for (String module : COMPATIBILITY_RUNTIME_MODULES) {
+            dependencies.add("jmhImplementation",
+                    project.project(":" + module));
+        }
+        project.getConfigurations().named("jmhRuntimeClasspath")
+                .configure(configuration -> configuration.exclude(
+                        Collections.singletonMap(
+                                "module", AGGREGATE_MODULE)));
     }
 
     private static SourceReleaseTasks registerSourceReleaseTasks(Project project) {

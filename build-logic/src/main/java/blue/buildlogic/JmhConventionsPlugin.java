@@ -23,6 +23,7 @@ public final class JmhConventionsPlugin implements Plugin<Project> {
     public void apply(Project project) {
         project.getPluginManager().apply("me.champeau.jmh");
         JmhParameters parameters = (JmhParameters) project.getExtensions().getByName("jmh");
+        parameters.getIncludeTests().set(true);
         parameters.getIncludes().set(project.getProviders()
                 .gradleProperty(INCLUDES_PROPERTY)
                 .map(JmhConventionsPlugin::parseIncludes)
