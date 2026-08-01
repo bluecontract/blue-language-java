@@ -1,27 +1,15 @@
-package blue.language;
+package blue.language.merge.processor;
 
-import blue.language.api.BlueCachePolicy;
-import blue.language.api.BlueCacheStats;
-import blue.language.api.BlueLanguageErrorCategory;
-import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueOperationLimits;
-import blue.language.api.BlueOperationOutcome;
-import blue.language.api.BlueOperationResult;
-import blue.language.api.BlueViewPath;
-import blue.language.runtime.LanguageRuntimeAccess;
-import blue.language.provider.NodeProvider;
-
-import blue.language.utils.LeastCommonMultiple;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-public class LeastCommonMultipleTest {
+final class LeastCommonMultipleTest {
 
     @Test
-    public void shouldCalculateLeastCommonMultiple() {
+    void shouldCalculateLeastCommonMultiple() {
         // given
         BigDecimal[][] inputs = {
                 {BigDecimal.valueOf(2), BigDecimal.valueOf(3)},

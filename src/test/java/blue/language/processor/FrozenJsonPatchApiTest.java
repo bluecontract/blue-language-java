@@ -173,7 +173,7 @@ class FrozenJsonPatchApiTest {
                     observation.frozen.parsedPath(),
                     observation.converted.parsedPath());
             assertEquals(
-                    blue.language.utils.ParsedJsonPointer.parse(
+                    blue.language.model.wire.ParsedJsonPointer.parse(
                             observation.path),
                     observation.frozen.parsedPath());
             assertEquals(

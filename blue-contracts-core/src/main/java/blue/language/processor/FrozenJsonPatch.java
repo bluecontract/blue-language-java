@@ -6,7 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.ParsedJsonPointer;
+import blue.language.model.wire.ParsedJsonPointer;
 
 import java.util.Objects;
 

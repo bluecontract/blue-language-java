@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.BluePatchOperation;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.ParsedJsonPointer;
+import blue.language.model.wire.ParsedJsonPointer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -4,7 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.ParsedJsonPointer;
+import blue.language.model.wire.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;

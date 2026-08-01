@@ -7,7 +7,6 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
-import blue.language.utils.LeastCommonMultiple;
 import blue.language.utils.SchemaEnumCanonicalizer;
 
 import java.math.BigDecimal;

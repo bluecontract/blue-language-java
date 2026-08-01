@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.ParsedJsonPointer;
+import blue.language.model.wire.ParsedJsonPointer;
 
 import java.util.List;
 

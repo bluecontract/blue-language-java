@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.merge.processor;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -7,7 +7,7 @@ import java.math.RoundingMode;
  * Decimal greatest/least-common-multiple helper used when combining numeric
  * schema constraints.
  */
-public class LeastCommonMultiple {
+final class LeastCommonMultiple {
 
     private static final BigDecimal GCD_ZERO_TOLERANCE = BigDecimal.valueOf(0.001);
     private static final int GCD_SCALE = 10;
@@ -15,7 +15,7 @@ public class LeastCommonMultiple {
     /**
      * Creates a decimal least-common-multiple helper.
      */
-    public LeastCommonMultiple() {
+    LeastCommonMultiple() {
     }
 
     private static BigDecimal gcd(BigDecimal a, BigDecimal b) {
@@ -40,7 +40,7 @@ public class LeastCommonMultiple {
      * @param b second decimal value
      * @return non-negative decimal least common multiple
      */
-    public static BigDecimal lcm(BigDecimal a, BigDecimal b) {
+    static BigDecimal lcm(BigDecimal a, BigDecimal b) {
         if (BigDecimal.ZERO.equals(a) || BigDecimal.ZERO.equals(b)) {
             return BigDecimal.ZERO;
         }

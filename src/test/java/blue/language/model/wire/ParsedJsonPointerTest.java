@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.model.wire;
 
 import org.junit.jupiter.api.Test;
 

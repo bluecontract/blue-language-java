@@ -10,7 +10,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.ParsedJsonPointer;
+import blue.language.model.wire.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;

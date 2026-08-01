@@ -4,7 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.ParsedJsonPointer;
+import blue.language.model.wire.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.List;

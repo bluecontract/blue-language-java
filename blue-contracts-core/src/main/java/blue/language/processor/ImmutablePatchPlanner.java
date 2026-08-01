@@ -13,7 +13,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.ParsedJsonPointer;
+import blue.language.model.wire.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
