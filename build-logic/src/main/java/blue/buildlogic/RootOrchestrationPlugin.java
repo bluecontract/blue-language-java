@@ -47,6 +47,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
     private static final int JAVA_VERSION = 8;
     private static final int EXECUTABLE_FILE_MODE = 0755;
     private static final int REGULAR_FILE_MODE = 0644;
+    private static final String COMPATIBILITY_SOURCE_DIRECTORY =
+            "src/compat/java";
     private static final String GROUP = BuildLogicConstants.VERIFICATION_GROUP;
     private static final String DISTRIBUTION_GROUP = "distribution";
     private static final String SOURCE_RELEASE_BASE_NAME = "blue-language-java";
@@ -296,6 +298,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).getJava().setSrcDirs(Collections.emptyList());
         sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).getResources()
                 .setSrcDirs(Collections.emptyList());
+        configureCompatibilitySources(project, sourceSets);
         project.getTasks().named(JavaPlugin.JAR_TASK_NAME, Jar.class)
                 .configure(task -> task.setEnabled(false));
         project.getTasks().withType(JavaCompile.class).configureEach(task -> {
@@ -315,6 +318,21 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         });
         project.getTasks().withType(JavaExec.class).configureEach(task ->
                 task.getJavaLauncher().set(javaEight));
+    }
+
+    /**
+     * Compiles the legacy facade only with root characterization tests and
+     * benchmarks. Published module sources continue to expose the thin facade.
+     */
+    static void configureCompatibilitySources(
+            Project project,
+            SourceSetContainer sourceSets) {
+        Object compatibilitySources = project.file(
+                COMPATIBILITY_SOURCE_DIRECTORY);
+        sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME)
+                .getJava().srcDir(compatibilitySources);
+        sourceSets.getByName("jmh")
+                .getJava().srcDir(compatibilitySources);
     }
 
     private static void configureDependencies(Project project) {

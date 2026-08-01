@@ -31,10 +31,13 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.junitplatform.JUnitPlatformOptions;
 import org.gradle.external.javadoc.StandardJavadocDocletOptions;
@@ -239,6 +242,40 @@ final class ConventionPluginsTest {
         // then
         assertTrue(project.getPluginManager().hasPlugin("me.champeau.jmh"));
         assertNotNull(project.getTasks().findByName("jmh"));
+    }
+
+    @Test
+    void shouldIsolateCompatibilitySourcesToTestsAndBenchmarks()
+            throws Exception {
+        // given
+        Project project = ProjectBuilder.builder()
+                .withProjectDir(Files.createDirectories(
+                        temporaryDirectory.resolve("compat-project")).toFile())
+                .build();
+        project.getPluginManager().apply(JavaPlugin.class);
+        project.getPluginManager().apply("me.champeau.jmh");
+        SourceSetContainer sourceSets = project.getExtensions()
+                .getByType(SourceSetContainer.class);
+
+        // when
+        RootOrchestrationPlugin.configureCompatibilitySources(
+                project, sourceSets);
+
+        // then
+        Path compatibilityDirectory = project.file("src/compat/java")
+                .toPath().toAbsolutePath().normalize();
+        assertTrue(sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME)
+                .getJava().getSrcDirs().stream()
+                .map(file -> file.toPath().toAbsolutePath().normalize())
+                .anyMatch(compatibilityDirectory::equals));
+        assertTrue(sourceSets.getByName("jmh")
+                .getJava().getSrcDirs().stream()
+                .map(file -> file.toPath().toAbsolutePath().normalize())
+                .anyMatch(compatibilityDirectory::equals));
+        assertFalse(sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME)
+                .getJava().getSrcDirs().stream()
+                .map(file -> file.toPath().toAbsolutePath().normalize())
+                .anyMatch(compatibilityDirectory::equals));
     }
 
     @Test
