@@ -1,7 +1,8 @@
-package blue.language.provider;
+package blue.language.registry;
 
 import blue.language.model.Node;
-import blue.language.registry.BlueCoreTypeRegistry;
+import blue.language.provider.NodeProvider;
+import blue.language.provider.SequentialNodeProvider;
 
 import java.io.IOException;
 import java.util.List;

@@ -2,7 +2,7 @@ package blue.language.conformance;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.MinimizedOverlayBuilder;

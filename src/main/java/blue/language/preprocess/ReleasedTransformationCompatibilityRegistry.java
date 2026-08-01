@@ -3,8 +3,8 @@ package blue.language.preprocess;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
-import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
+import blue.language.preprocess.InferBasicTypesForUntypedValues;
+import blue.language.preprocess.ReplaceInlineValuesForTypeAttributesWithImports;
 
 import java.util.Optional;
 

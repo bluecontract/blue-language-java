@@ -1,4 +1,4 @@
-package blue.language.preprocess.processor;
+package blue.language.preprocess;
 
 import blue.language.model.wire.SchemaPropertyConstants;
 
@@ -6,7 +6,6 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.preprocess.TransformationProcessor;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.Nodes;
 

@@ -4,7 +4,7 @@ import blue.language.Blue;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.matching.FrozenTypeMatcher;

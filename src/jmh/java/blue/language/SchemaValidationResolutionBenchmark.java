@@ -2,7 +2,7 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.utils.limits.PathLimits;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;

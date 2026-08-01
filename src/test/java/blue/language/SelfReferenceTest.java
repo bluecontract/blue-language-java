@@ -13,8 +13,9 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
+import blue.language.utils.BlueIds;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.graph.NodeExpander;
@@ -93,7 +94,7 @@ public class SelfReferenceTest {
         String withPlaceholder = "name: A\n" +
                    "x:\n" +
                    "  type:\n" +
-                   "    blueId: \"" + NodeContentHandler.ZERO_BLUE_ID + "\"";
+                   "    blueId: \"" + BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER + "\"";
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider(YAML_MAPPER.readValue(selfReferencing, Node.class));
         // when
@@ -242,12 +243,12 @@ public class SelfReferenceTest {
         String aWithPlaceholder = "name: A\n" +
                     "x:\n" +
                     "  type:\n" +
-                    "    blueId: \"" + NodeContentHandler.ZERO_BLUE_ID + "\"\n" +
+                    "    blueId: \"" + BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER + "\"\n" +
                     "aVal: A";
         String bWithPlaceholder = "name: B\n" +
                     "y:\n" +
                     "  type:\n" +
-                    "    blueId: \"" + NodeContentHandler.ZERO_BLUE_ID + "\"\n" +
+                    "    blueId: \"" + BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER + "\"\n" +
                     "bVal: B";
 
         // when
@@ -407,7 +408,8 @@ public class SelfReferenceTest {
     @Test
     public void shouldRejectZeroPlaceholderInFinalBlueIdInput() {
         // given
-        Node placeholderReference = new Node().blueId(NodeContentHandler.ZERO_BLUE_ID);
+        Node placeholderReference = new Node().blueId(
+                BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER);
 
         // when
         RuntimeException failure = captureFailure(

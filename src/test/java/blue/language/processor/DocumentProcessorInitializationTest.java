@@ -4,7 +4,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
 import blue.language.model.TypeBlueId;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.processor.contracts.RemovePropertyContractProcessor;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;

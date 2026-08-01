@@ -16,7 +16,7 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.TransformationProcessor;
 import blue.language.preprocess.TransformationProcessorProvider;
 import blue.language.processor.registry.RuntimeTypeAliases;
-import blue.language.provider.BootstrapProvider;
+import blue.language.registry.BootstrapProvider;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodeTransformer;
 import blue.language.model.wire.BlueLanguageConstants;

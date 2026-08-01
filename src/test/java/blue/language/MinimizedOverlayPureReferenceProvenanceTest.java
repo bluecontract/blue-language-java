@@ -12,7 +12,7 @@ import blue.language.api.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.MinimizedOverlayBuilder;
 import org.junit.jupiter.api.Test;

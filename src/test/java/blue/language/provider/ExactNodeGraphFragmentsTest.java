@@ -1,11 +1,14 @@
 package blue.language.provider;
 
+import blue.language.preprocess.provider.BasicNodeProvider;
+
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.provider.NodeProviderWrapper;
+import blue.language.registry.NodeProviderWrapper;
+import blue.language.utils.BlueIds;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -488,7 +491,7 @@ class ExactNodeGraphFragmentsTest {
                         new Node().properties(
                                 "member",
                                 new Node().blueId(
-                                        NodeContentHandler.ZERO_BLUE_ID))));
+                                        BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER))));
         Throwable malformedMemberFailure = captureFailure(
                 () -> new ExactNodeGraphFragments(
                         new Node().properties(

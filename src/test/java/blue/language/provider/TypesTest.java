@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.preprocess.provider.BasicNodeProvider;
+
 import blue.language.Blue;
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;

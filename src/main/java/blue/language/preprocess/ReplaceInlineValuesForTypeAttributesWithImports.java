@@ -1,7 +1,6 @@
-package blue.language.preprocess.processor;
+package blue.language.preprocess;
 
 import blue.language.model.Node;
-import blue.language.preprocess.TransformationProcessor;
 import blue.language.utils.NodeTransformer;
 
 import java.util.HashMap;

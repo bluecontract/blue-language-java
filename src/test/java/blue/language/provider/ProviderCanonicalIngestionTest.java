@@ -1,8 +1,11 @@
 package blue.language.provider;
 
+import blue.language.preprocess.provider.BasicNodeProvider;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.utils.BlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -106,7 +109,8 @@ class ProviderCanonicalIngestionTest {
     void shouldNotUseCyclicRewriteFallbackForPlainProviderId() {
         // given
         String requestedBlueId = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(
-                new Node().properties("self", new Node().blueId(NodeContentHandler.ZERO_BLUE_ID)));
+                new Node().properties("self", new Node().blueId(
+                        BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER)));
         VerifyingNodeProvider provider = new VerifyingNodeProvider(blueId -> Collections.singletonList(
                 new Node().properties("self", new Node().blueId(requestedBlueId))));
 

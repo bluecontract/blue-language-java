@@ -13,7 +13,7 @@ import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;

@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.registry.BootstrapProvider;
+
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;

@@ -1,4 +1,10 @@
-package blue.language.provider;
+package blue.language.registry;
+
+import blue.language.provider.NodeProvider;
+import blue.language.provider.PotentialBlueIdNodeProvider;
+import blue.language.provider.SequentialNodeProvider;
+import blue.language.provider.VerifiedNodeProvider;
+import blue.language.provider.VerifyingNodeProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;

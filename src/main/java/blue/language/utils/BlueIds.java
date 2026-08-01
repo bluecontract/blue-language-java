@@ -31,6 +31,12 @@ public class BlueIds {
     /** Prefix for an indexed member placeholder in a cyclic document set. */
     public static final String THIS_MEMBER_PREFIX =
             THIS_PLACEHOLDER + CYCLIC_MEMBER_SEPARATOR;
+    /**
+     * Fixed-width zero placeholder used only while calculating a cyclic-set
+     * identity.
+     */
+    public static final String CYCLIC_CALCULATION_ZERO_PLACEHOLDER =
+            "00000000000000000000000000000000000000000000";
 
     private static final Pattern PLAIN_BLUE_ID_PATTERN = Pattern.compile("^[1-9A-HJ-NP-Za-km-z]+$");
     private static final Pattern CYCLIC_MEMBER_PATTERN = Pattern.compile(
@@ -39,7 +45,8 @@ public class BlueIds {
                     + "(0|[1-9]\\d*)$");
     private static final Pattern THIS_MEMBER_PATTERN = Pattern.compile(
             "^" + THIS_MEMBER_PREFIX + "(0|[1-9]\\d*)$");
-    private static final Pattern ZERO_PLACEHOLDER_PATTERN = Pattern.compile("^0{44}$");
+    private static final Pattern ZERO_PLACEHOLDER_PATTERN = Pattern.compile(
+            "^" + Pattern.quote(CYCLIC_CALCULATION_ZERO_PLACEHOLDER) + "$");
 
     /** Creates a compatibility facade over static identity checks. */
     public BlueIds() {

@@ -2,7 +2,6 @@ package blue.language.identity;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.provider.NodeContentHandler;
 import blue.language.utils.BlueIds;
 
 import java.util.ArrayList;
@@ -84,7 +83,8 @@ public final class CircularSetIdentityCalculator {
             Node preliminary = documents.get(index).clone();
             rewriteThisReferences(
                     preliminary,
-                    reference -> NodeContentHandler.ZERO_BLUE_ID);
+                    reference ->
+                            BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER);
             indexedNodes.add(new IndexedNode(
                     index,
                     documents.get(index),

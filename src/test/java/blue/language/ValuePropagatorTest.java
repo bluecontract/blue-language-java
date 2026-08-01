@@ -16,7 +16,7 @@ import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.ValuePropagator;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

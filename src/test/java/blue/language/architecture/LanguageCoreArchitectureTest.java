@@ -74,6 +74,14 @@ class LanguageCoreArchitectureTest {
                     "blue.language.api.LanguageRuntimeServices",
                     "blue.language.api.LanguageRuntimeSnapshotStore",
                     "blue.language.api.WeightedLruCache",
+                    "blue.language.preprocess.processor.InferBasicTypesForUntypedValues",
+                    "blue.language.preprocess.processor.NormalizeListPlaceholders",
+                    "blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports",
+                    "blue.language.provider.BasicNodeProvider",
+                    "blue.language.provider.BootstrapProvider",
+                    "blue.language.provider.BundledTransformationProvider",
+                    "blue.language.provider.DirectoryBasedNodeProvider",
+                    "blue.language.provider.NodeProviderWrapper",
                     "blue.language.utils.Base58",
                     "blue.language.utils.Base58Sha256Provider",
                     "blue.language.utils.BlueIdCalculator",
@@ -536,16 +544,8 @@ class LanguageCoreArchitectureTest {
     private static Set<String> phaseFourCycleBoundary() {
         return Collections.unmodifiableSet(new LinkedHashSet<>(
                 Arrays.asList(
-                        "blue.language.identity",
-                        "blue.language.matching",
-                        "blue.language.matching.internal",
                         "blue.language.merge",
                         "blue.language.patching",
-                        "blue.language.preprocess",
-                        "blue.language.preprocess.processor",
-                        "blue.language.provider",
-                        "blue.language.registry",
-                        "blue.language.resolve",
                         "blue.language.snapshot")));
     }
 

@@ -19,7 +19,7 @@ import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

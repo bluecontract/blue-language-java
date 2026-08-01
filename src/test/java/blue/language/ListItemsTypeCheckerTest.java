@@ -17,7 +17,7 @@ import blue.language.merge.processor.ListItemsTypeChecker;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.Types;
 import org.junit.jupiter.api.Test;

@@ -4,7 +4,7 @@ import blue.language.Blue;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.utils.limits.Limits;
 import blue.language.utils.limits.PathLimits;
 import com.fasterxml.jackson.databind.ObjectMapper;

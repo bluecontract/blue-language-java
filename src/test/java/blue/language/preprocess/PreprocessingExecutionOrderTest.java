@@ -3,7 +3,7 @@ package blue.language.preprocess;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.provider.BootstrapProvider;
+import blue.language.registry.BootstrapProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 

@@ -19,7 +19,7 @@ import blue.language.model.Node;
 import blue.language.merge.processor.DictionaryProcessor;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.graph.NodeExpander;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;

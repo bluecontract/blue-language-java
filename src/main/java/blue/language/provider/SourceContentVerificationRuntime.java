@@ -22,4 +22,20 @@ public interface SourceContentVerificationRuntime {
 
     /** Canonicalizes one authored source under the released identity strategy. */
     Node canonicalizeSourceContent(Node source);
+
+    /**
+     * Returns the exact canonical core-registry identity bound to this
+     * runtime.
+     *
+     * <p>The fail-closed default preserves binary compatibility for existing
+     * implementations while preventing them from silently accepting Source
+     * evidence without an explicit registry binding.</p>
+     *
+     * @return canonical registry package identity
+     */
+    default String canonicalRegistryIdentity() {
+        throw new UnsupportedOperationException(
+                "Source-content verification requires an explicit canonical registry identity.");
+    }
+
 }

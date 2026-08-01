@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.preprocess.provider.BasicNodeProvider;
+
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.provider.NodeProvider;

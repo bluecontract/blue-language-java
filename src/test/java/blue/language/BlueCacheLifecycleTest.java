@@ -26,7 +26,7 @@ import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.RecordingProcessingObserver;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.limits.Limits;

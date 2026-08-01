@@ -11,7 +11,7 @@ import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.MinimizedOverlayBuilder;
-import blue.language.provider.NodeProviderWrapper;
+import blue.language.registry.NodeProviderWrapper;
 import blue.language.utils.limits.DeferredReferencePathLimits;
 import blue.language.utils.limits.Limits;
 

@@ -13,8 +13,8 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
-import blue.language.provider.DirectoryBasedNodeProvider;
-import blue.language.provider.NodeProviderWrapper;
+import blue.language.preprocess.provider.DirectoryBasedNodeProvider;
+import blue.language.registry.NodeProviderWrapper;
 
 import java.io.IOException;
 import java.util.*;

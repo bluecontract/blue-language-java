@@ -4,7 +4,6 @@ import blue.language.model.wire.SchemaPropertyConstants;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -278,7 +277,7 @@ public final class ProviderEvidenceVerifier {
         payload.put(FIELD_LANGUAGE_RELEASE_IDENTITY,
                 SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY);
         payload.put(FIELD_CANONICAL_REGISTRY_IDENTITY,
-                BlueCoreTypeRegistry.INSTANCE.packageIdentity());
+                runtime.canonicalRegistryIdentity());
         payload.put(FIELD_PREPROCESSING_ALIASES,
                 new TreeMap<>(runtime.preprocessingAliases()));
         return sha256CanonicalIdentity(payload);
@@ -348,7 +347,7 @@ public final class ProviderEvidenceVerifier {
             throw new IllegalArgumentException(
                     "Bound source provider release identity does not match Blue Language 1.0.");
         }
-        if (!BlueCoreTypeRegistry.INSTANCE.packageIdentity().equals(
+        if (!runtime.canonicalRegistryIdentity().equals(
                 environment.canonicalRegistryIdentity())) {
             throw new IllegalArgumentException(
                     "Bound source provider canonical registry identity does not match this Blue runtime.");

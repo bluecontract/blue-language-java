@@ -21,7 +21,7 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.processor.FailureCapture;
 import blue.language.graph.NodeExpander;
 import blue.language.utils.limits.Limits;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

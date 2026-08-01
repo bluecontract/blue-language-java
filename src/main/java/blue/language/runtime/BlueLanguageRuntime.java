@@ -35,6 +35,7 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.StandardBluePreprocessing;
 import blue.language.provider.NodeProvider;
 import blue.language.provider.SourceContentVerificationRuntime;
+import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.resolve.BlueResolution;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.snapshot.BlueSnapshots;
@@ -117,7 +118,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
                                 Map<String, String> preprocessingAliases,
                                 ReferenceCacheAdmissionPolicy
                                         referenceCacheAdmission) {
-        this.nodeProvider = blue.language.provider.NodeProviderWrapper.wrap(
+        this.nodeProvider = blue.language.registry.NodeProviderWrapper.wrap(
                 Objects.requireNonNull(nodeProvider, "nodeProvider"));
         this.cachePolicy = Objects.requireNonNull(
                 cachePolicy, "cachePolicy");
@@ -294,6 +295,12 @@ public final class BlueLanguageRuntime implements NodeResolver,
     @Override
     public Node canonicalizeSourceContent(Node source) {
         return canonicalize(source);
+    }
+
+    /** Returns the canonical core-registry identity used by this runtime. */
+    @Override
+    public String canonicalRegistryIdentity() {
+        return BlueCoreTypeRegistry.INSTANCE.packageIdentity();
     }
 
     /** Applies the configured preprocessing environment for matching. */

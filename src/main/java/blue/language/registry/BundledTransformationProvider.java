@@ -1,5 +1,7 @@
-package blue.language.provider;
+package blue.language.registry;
 
+import blue.language.provider.AbstractNodeProvider;
+import blue.language.provider.NodeContentHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.ByteArrayOutputStream;

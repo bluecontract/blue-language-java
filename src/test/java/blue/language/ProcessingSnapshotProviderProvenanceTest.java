@@ -20,7 +20,7 @@ import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.model.MarkerContract;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;

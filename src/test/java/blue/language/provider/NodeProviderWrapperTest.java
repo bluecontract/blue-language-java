@@ -1,5 +1,8 @@
 package blue.language.provider;
 
+import blue.language.registry.BootstrapProvider;
+import blue.language.registry.NodeProviderWrapper;
+
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;

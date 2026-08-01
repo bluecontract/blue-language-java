@@ -14,7 +14,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.model.Node;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
-import blue.language.provider.BootstrapProvider;
+import blue.language.registry.BootstrapProvider;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.ResolvedReferenceCache;

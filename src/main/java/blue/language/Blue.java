@@ -60,9 +60,10 @@ import blue.language.patching.BluePatchOperation;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.StandardBluePreprocessing;
-import blue.language.provider.BootstrapProvider;
+import blue.language.registry.BootstrapProvider;
+import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.provider.NodeProvider;
-import blue.language.provider.NodeProviderWrapper;
+import blue.language.registry.NodeProviderWrapper;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.PotentialBlueIdNodeProvider;
@@ -1198,6 +1199,12 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                     getPreprocessingAliases());
             return sourceBlue.canonicalize(source);
         }
+    }
+
+    /** Returns the canonical core-registry identity used by this runtime. */
+    @Override
+    public String canonicalRegistryIdentity() {
+        return BlueCoreTypeRegistry.INSTANCE.packageIdentity();
     }
 
     /** Returns matcher-owned cache bounds for this runtime generation. */

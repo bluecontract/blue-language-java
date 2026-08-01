@@ -35,8 +35,6 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
  */
 public class NodeContentHandler {
 
-    /** Placeholder identity used only during cyclic-set BlueId calculation. */
-    public static final String ZERO_BLUE_ID = "00000000000000000000000000000000000000000000";
     private static final Pattern THIS_REFERENCE_PATTERN =
             Pattern.compile(
                     "^" + BlueIds.THIS_PLACEHOLDER
@@ -163,7 +161,9 @@ public class NodeContentHandler {
 
         validateSingleDocumentReferences(references);
         Node preliminary = node.clone();
-        rewriteThisReferences(preliminary, reference -> ZERO_BLUE_ID);
+        rewriteThisReferences(
+                preliminary,
+                reference -> BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER);
 
         String blueId = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary);
         return new ParsedContent(blueId, JSON_MAPPER.valueToTree(node), false);
@@ -182,7 +182,9 @@ public class NodeContentHandler {
         List<IndexedNode> indexedNodes = new ArrayList<>();
         for (int i = 0; i < nodes.size(); i++) {
             Node preliminary = nodes.get(i).clone();
-            rewriteThisReferences(preliminary, reference -> ZERO_BLUE_ID);
+            rewriteThisReferences(
+                    preliminary,
+                    reference -> BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER);
             indexedNodes.add(new IndexedNode(i, nodes.get(i),
                     DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary)));
         }

@@ -2,7 +2,7 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;

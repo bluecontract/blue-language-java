@@ -7,7 +7,7 @@ import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.provider.NodeProvider;
-import blue.language.provider.BootstrapProvider;
+import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifiedNodeProvider;
 import blue.language.conformance.ConformancePlan;

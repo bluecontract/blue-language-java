@@ -7,7 +7,7 @@ import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
-import blue.language.provider.NodeProviderWrapper;
+import blue.language.registry.NodeProviderWrapper;
 import blue.language.provider.Types;
 import blue.language.utils.limits.Limits;
 import blue.language.identity.DirectBlueIdCalculator;

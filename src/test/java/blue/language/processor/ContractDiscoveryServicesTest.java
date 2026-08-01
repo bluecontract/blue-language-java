@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.api.BlueCachePolicy;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;

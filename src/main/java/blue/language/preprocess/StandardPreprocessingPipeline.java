@@ -4,9 +4,9 @@ import blue.language.model.wire.SchemaPropertyConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
-import blue.language.preprocess.processor.NormalizeListPlaceholders;
-import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
+import blue.language.preprocess.InferBasicTypesForUntypedValues;
+import blue.language.preprocess.NormalizeListPlaceholders;
+import blue.language.preprocess.ReplaceInlineValuesForTypeAttributesWithImports;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.Nodes;
 

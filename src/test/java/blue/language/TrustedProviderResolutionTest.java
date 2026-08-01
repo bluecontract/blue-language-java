@@ -19,7 +19,7 @@ import blue.language.provider.ProviderMode;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.SourceProviderEnvironment;
 import blue.language.registry.BlueCoreTypeRegistry;
-import blue.language.provider.NodeProviderWrapper;
+import blue.language.registry.NodeProviderWrapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;

@@ -15,7 +15,7 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.merge.Merger;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;

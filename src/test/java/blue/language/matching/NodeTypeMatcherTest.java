@@ -7,7 +7,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;

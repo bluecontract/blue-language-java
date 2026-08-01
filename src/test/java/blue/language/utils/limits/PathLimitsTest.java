@@ -2,7 +2,7 @@ package blue.language.utils.limits;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.matching.NodeTypeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

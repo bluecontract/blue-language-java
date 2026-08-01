@@ -3,7 +3,7 @@ package blue.language.graph;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.provider.NodeProvider;
-import blue.language.provider.NodeProviderWrapper;
+import blue.language.registry.NodeProviderWrapper;
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
 
