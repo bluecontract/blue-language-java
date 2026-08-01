@@ -5,8 +5,8 @@ import blue.language.api.BlueOperationResult;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeSpecializer;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.merge.NodeSpecializer;
 
 import java.util.Objects;
 
@@ -54,7 +54,7 @@ public final class StandardBlueGraph implements BlueGraph {
             throw new IllegalArgumentException("node must not be null");
         }
         return new Node().blueId(
-                BlueIdCalculator.calculateBlueId(exactInput));
+                DirectBlueIdCalculator.calculateBlueId(exactInput));
     }
 
     @Override

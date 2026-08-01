@@ -6,7 +6,7 @@ import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.Nodes;
 
 import java.lang.reflect.*;
@@ -162,7 +162,7 @@ public class ComplexObjectConverter implements Converter<Object> {
         if (targetNode == null) {
             return null;
         }
-        return BlueIdCalculator.calculateUncheckedBlueId(targetNode);
+        return DirectBlueIdCalculator.calculateUncheckedBlueId(targetNode);
     }
 
     private String handleBlueNameAnnotation(Node node, Class<?> clazz, Field field) {

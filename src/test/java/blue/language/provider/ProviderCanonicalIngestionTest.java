@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -39,7 +39,7 @@ class ProviderCanonicalIngestionTest {
     @Test
     void shouldFailTypeResolutionWhenProviderContentHasWrongBlueId() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         Blue blue = new Blue(blueId -> Collections.singletonList(new Node().value("actual")));
         Node typedNode = new Node().type(new Node().blueId(requestedBlueId));
 
@@ -53,7 +53,7 @@ class ProviderCanonicalIngestionTest {
     @Test
     void shouldFailDeterministicallyWhenProviderContentIsMissing() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("missing"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("missing"));
         Blue blue = new Blue(blueId -> Collections.emptyList());
         Node typedNode = new Node()
                 .type(new Node().blueId(requestedBlueId));
@@ -88,7 +88,7 @@ class ProviderCanonicalIngestionTest {
     @Test
     void shouldNotSkipVerificationWhenProviderContentReferencesRequestedBlueId() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         VerifyingNodeProvider provider = new VerifyingNodeProvider(blueId -> Collections.singletonList(
                 new Node().properties(
                         "self", new Node().blueId(requestedBlueId),
@@ -105,7 +105,7 @@ class ProviderCanonicalIngestionTest {
     @Test
     void shouldNotUseCyclicRewriteFallbackForPlainProviderId() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(
                 new Node().properties("self", new Node().blueId(NodeContentHandler.ZERO_BLUE_ID)));
         VerifyingNodeProvider provider = new VerifyingNodeProvider(blueId -> Collections.singletonList(
                 new Node().properties("self", new Node().blueId(requestedBlueId))));
@@ -121,7 +121,7 @@ class ProviderCanonicalIngestionTest {
     @Test
     void shouldNotBypassPlainVerificationForCyclicAwareDelegate() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         VerifyingNodeProvider provider =
                 new VerifyingNodeProvider(
                         new CyclicAwareWrongContentProvider());
@@ -190,7 +190,7 @@ class ProviderCanonicalIngestionTest {
     @Test
     void shouldRequireCyclicAwareVerificationForCyclicMemberFetch() {
         // given
-        String baseBlueId = BlueIdCalculator.calculateBlueId(new Node().value("base"));
+        String baseBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("base"));
         String memberBlueId = baseBlueId + "#0";
         VerifyingNodeProvider provider = new VerifyingNodeProvider(blueId -> {
             if (memberBlueId.equals(blueId)) {

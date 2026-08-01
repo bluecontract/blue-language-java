@@ -7,7 +7,7 @@ import blue.language.processor.conformance.MockTypeBlueIds;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -30,7 +30,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
         Node body = new Node().properties(
                 "provenance", new Node().value("active-snapshot-manager"));
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(body);
+                DirectBlueIdCalculator.calculateBlueId(body);
         ActiveProviderManager activeManager =
                 new ActiveProviderManager(bodyBlueId, body);
 
@@ -109,7 +109,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
         // given
         Node body = new Node().value("owned");
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(body);
+                DirectBlueIdCalculator.calculateBlueId(body);
         ActiveProviderManager manager =
                 new ActiveProviderManager(bodyBlueId, body);
         DocumentProcessingRuntime runtime =
@@ -139,7 +139,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
         FrozenNode reference =
                 FrozenNode.fromResolvedNode(
                         new Node().blueId(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         new Node().value("body"))));
 
         // when
@@ -157,7 +157,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
         // given
         Node exact = new Node().value("exact");
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(exact);
+                DirectBlueIdCalculator.calculateBlueId(exact);
         ActiveProviderManager manager =
                 new ActiveProviderManager(
                         bodyBlueId,
@@ -192,7 +192,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 new Node().value(
                         "selected body");
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         body);
         InvalidExecutionEvidenceException invalidEvidence =
                 new InvalidExecutionEvidenceException(
@@ -249,7 +249,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 new Node().value(
                         "inline body");
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         body);
         ActiveProviderManager manager =
                 new ActiveProviderManager(
@@ -448,7 +448,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
             return new ResolvedSnapshot(
                     canonical,
                     canonical.clone(),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             canonical));
         }
 

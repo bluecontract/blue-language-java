@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ class CachingNodeProviderTest {
     void shouldReturnCachedNodeOnCacheHit() {
         // given
         Node node = new Node().name("Test1");
-        String blueId = BlueIdCalculator.calculateBlueId(node);
+        String blueId = DirectBlueIdCalculator.calculateBlueId(node);
         List<Node> nodes = Arrays.asList(node);
         when(mockDelegate.fetchResultByBlueId(blueId))
                 .thenReturn(NodeProviderResult.found(nodes));
@@ -54,7 +54,7 @@ class CachingNodeProviderTest {
     void shouldDelegateOnCacheMiss() {
         // given
         Node node = new Node().name("Test2");
-        String blueId = BlueIdCalculator.calculateBlueId(node);
+        String blueId = DirectBlueIdCalculator.calculateBlueId(node);
         when(mockDelegate.fetchResultByBlueId(blueId))
                 .thenReturn(NodeProviderResult.notFound());
 
@@ -69,7 +69,7 @@ class CachingNodeProviderTest {
     void shouldReturnDefensiveCopiesFromCachedFoundResult() {
         // given
         Node original = new Node().name("Original");
-        String blueId = BlueIdCalculator.calculateBlueId(original);
+        String blueId = DirectBlueIdCalculator.calculateBlueId(original);
         when(mockDelegate.fetchResultByBlueId(blueId))
                 .thenReturn(NodeProviderResult.found(
                         Collections.singletonList(original)));
@@ -115,8 +115,8 @@ class CachingNodeProviderTest {
         // given
         Node largeNode1 = new Node().name("Large1").value(createRepeatedString('A', 300));
         Node largeNode2 = new Node().name("Large2").value(createRepeatedString('B', 300));
-        String blueId1 = BlueIdCalculator.calculateBlueId(largeNode1);
-        String blueId2 = BlueIdCalculator.calculateBlueId(largeNode2);
+        String blueId1 = DirectBlueIdCalculator.calculateBlueId(largeNode1);
+        String blueId2 = DirectBlueIdCalculator.calculateBlueId(largeNode2);
 
         when(mockDelegate.fetchResultByBlueId(blueId1))
                 .thenReturn(NodeProviderResult.found(
@@ -195,9 +195,9 @@ class CachingNodeProviderTest {
         Node smallNode2 = new Node().name("Small2").value("Small content 2");
         Node smallNode3 = new Node().name("Small3").value("Small content 3");
 
-        String blueId1 = BlueIdCalculator.calculateBlueId(smallNode1);
-        String blueId2 = BlueIdCalculator.calculateBlueId(smallNode2);
-        String blueId3 = BlueIdCalculator.calculateBlueId(smallNode3);
+        String blueId1 = DirectBlueIdCalculator.calculateBlueId(smallNode1);
+        String blueId2 = DirectBlueIdCalculator.calculateBlueId(smallNode2);
+        String blueId3 = DirectBlueIdCalculator.calculateBlueId(smallNode3);
 
         when(mockDelegate.fetchResultByBlueId(blueId1))
                 .thenReturn(NodeProviderResult.found(

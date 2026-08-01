@@ -6,7 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -63,7 +63,7 @@ class EffectiveFragmentationCatalogTest {
                         .contains(fixture.programBlueId),
                 "catalog inspection demanded the executable body");
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         fixture.document()),
                 observation.catalog.rootBlueId());
     }
@@ -144,10 +144,10 @@ class EffectiveFragmentationCatalogTest {
                 "program",
                 inlineProgram.clone());
         String directBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         direct);
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         inlineProgram);
 
         // when
@@ -202,7 +202,7 @@ class EffectiveFragmentationCatalogTest {
                                         new Node().value(
                                                 "descendant")));
         String canonicalBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         inlineProgram);
         String resolvedBodyBlueId =
                 FrozenNode.fromResolvedNode(
@@ -217,7 +217,7 @@ class EffectiveFragmentationCatalogTest {
                 "program",
                 inlineProgram.clone());
         String directBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         direct);
 
         // when
@@ -271,7 +271,7 @@ class EffectiveFragmentationCatalogTest {
                 new Node().blueId(
                         fixture.programBlueId));
         String directBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         direct);
 
         // when
@@ -415,7 +415,7 @@ class EffectiveFragmentationCatalogTest {
         Node exactContracts =
                 inline.getContracts().clone();
         String contractsBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         exactContracts);
         Node fragmented =
                 inline.clone()
@@ -423,7 +423,7 @@ class EffectiveFragmentationCatalogTest {
                                 new Node().blueId(
                                         contractsBlueId));
         String rootBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         fragmented);
         fixture.content.put(
                 contractsBlueId,
@@ -568,7 +568,7 @@ class EffectiveFragmentationCatalogTest {
                                         "embedded",
                                         inheritedEmbedded));
         String rootTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         rootType);
         Node document =
                 new Node()
@@ -605,7 +605,7 @@ class EffectiveFragmentationCatalogTest {
             assertEquals("process-embedded", embedded.role());
             assertEquals(
                     Collections.singletonList(
-                            BlueIdCalculator.calculateBlueId(
+                            DirectBlueIdCalculator.calculateBlueId(
                                     inheritedEmbedded)),
                     embedded
                             .sourceContributionNodeBlueIds());
@@ -619,12 +619,12 @@ class EffectiveFragmentationCatalogTest {
                 "value",
                 new Node().value("embedded"));
         String childBlueId =
-                BlueIdCalculator.calculateBlueId(child);
+                DirectBlueIdCalculator.calculateBlueId(child);
         Node unrelated = new Node().properties(
                 "secret",
                 new Node().value("cold"));
         String unrelatedBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         unrelated);
         Node document = new Node()
                 .properties(
@@ -679,7 +679,7 @@ class EffectiveFragmentationCatalogTest {
                         "kind",
                         new Node().value("catalog-event"));
         String eventPatternBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         eventPattern);
         fixture.content.put(
                 eventPatternBlueId,
@@ -727,7 +727,7 @@ class EffectiveFragmentationCatalogTest {
                         "data",
                         new Node().value("unavailable"));
         String unavailableBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         unavailable);
         List<String> requests = new ArrayList<>();
 
@@ -760,12 +760,12 @@ class EffectiveFragmentationCatalogTest {
                         "secret",
                         new Node().value("cold"));
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(body);
+                DirectBlueIdCalculator.calculateBlueId(body);
         Node unknownType =
                 new Node().name(
                         "Unsupported catalog contract");
         String unknownTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         unknownType);
         Node document =
                 new Node().contracts(
@@ -1137,7 +1137,7 @@ class EffectiveFragmentationCatalogTest {
                         "operation",
                         new Node().value("cold"));
         private final String programBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         program);
         private final Node handlerType =
                 new Node()
@@ -1145,7 +1145,7 @@ class EffectiveFragmentationCatalogTest {
                         .type(new Node().blueId(
                                 RuntimeBlueIds.HANDLER));
         private final String handlerTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         handlerType);
         private final Node inheritedContribution =
                 new Node().properties(
@@ -1153,7 +1153,7 @@ class EffectiveFragmentationCatalogTest {
                         new Node().blueId(
                                 programBlueId));
         private final String inheritedContributionBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         inheritedContribution);
         private final Node scopeType =
                 new Node()
@@ -1163,7 +1163,7 @@ class EffectiveFragmentationCatalogTest {
                                         "run",
                                         inheritedContribution));
         private final String scopeTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         scopeType);
         private final Node directContribution =
                 new Node()
@@ -1178,7 +1178,7 @@ class EffectiveFragmentationCatalogTest {
                                 new Node().value(
                                         "instance-overlay"));
         private final String directContributionBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         directContribution);
         private final Map<String, Node> content =
                 new LinkedHashMap<>();

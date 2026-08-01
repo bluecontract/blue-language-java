@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.TypeBlueId;
 
+import java.math.BigInteger;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -15,6 +16,13 @@ import java.util.regex.Pattern;
  * {@code this} placeholders are accepted only by explicitly cyclic APIs.</p>
  */
 public class BlueIds {
+
+    private static final String BASE58_ALPHABET =
+            "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    private static final BigInteger BASE58_RADIX = BigInteger.valueOf(58L);
+    private static final int SHA_256_BYTE_COUNT = 32;
+    private static final int MAX_SHA_256_BASE58_LENGTH = 44;
+    private static final char BASE58_ZERO = BASE58_ALPHABET.charAt(0);
 
     /** Placeholder for the current document in a single-document cycle. */
     public static final String THIS_PLACEHOLDER = "this";
@@ -68,16 +76,35 @@ public class BlueIds {
         if (value == null || value.isEmpty() || !PLAIN_BLUE_ID_PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
         }
-        byte[] decoded;
-        try {
-            decoded = Base58.decode(value);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".", e);
-        }
-        if (decoded.length != 32 || !Base58.encode(decoded).equals(value)) {
+        if (!hasCanonicalSha256DecodedLength(value)) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
         }
         return value;
+    }
+
+    private static boolean hasCanonicalSha256DecodedLength(String value) {
+        if (value.length() > MAX_SHA_256_BASE58_LENGTH) {
+            return false;
+        }
+        int leadingZeroBytes = 0;
+        while (leadingZeroBytes < value.length()
+                && value.charAt(leadingZeroBytes) == BASE58_ZERO) {
+            leadingZeroBytes++;
+        }
+        // Base58.decode preserves its historical extra zero byte for an
+        // all-zero magnitude, so no all-'1' string round-trips canonically.
+        if (leadingZeroBytes == value.length()) {
+            return false;
+        }
+        BigInteger magnitude = BigInteger.ZERO;
+        for (int index = leadingZeroBytes; index < value.length(); index++) {
+            magnitude = magnitude.multiply(BASE58_RADIX).add(
+                    BigInteger.valueOf(
+                            BASE58_ALPHABET.indexOf(value.charAt(index))));
+        }
+        int magnitudeBytes = (magnitude.bitLength() + Byte.SIZE - 1)
+                / Byte.SIZE;
+        return leadingZeroBytes + magnitudeBytes == SHA_256_BYTE_COUNT;
     }
 
     /**

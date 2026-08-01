@@ -5,7 +5,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.Collections;
@@ -225,7 +225,7 @@ final class ProcessingDocumentView {
             throw new IllegalStateException(
                     "Exact selected scope is absent at " + normalized);
         }
-        return BlueIdCalculator.calculateBlueId(selectedScope);
+        return DirectBlueIdCalculator.calculateBlueId(selectedScope);
     }
 
     WorkingDocument workingDocument(

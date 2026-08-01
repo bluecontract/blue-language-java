@@ -4,7 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -25,7 +25,7 @@ final class CheckpointIdentityCalculatorTest {
         String identity = CheckpointIdentityCalculator.identity(event);
 
         // then
-        assertEquals(BlueIdCalculator.calculateBlueId(event), identity);
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(event), identity);
     }
 
     @Test

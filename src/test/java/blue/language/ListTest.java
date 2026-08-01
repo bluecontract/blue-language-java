@@ -4,13 +4,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.merge.Merger;
@@ -21,17 +19,17 @@ import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.processor.FailureCapture;
-import blue.language.utils.NodeExpander;
+import blue.language.graph.NodeExpander;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -208,7 +206,7 @@ public class ListTest {
         nodeProvider.addSingleNodes(aNode, bNode, cNode);
 
         List<Node> ab = Arrays.asList(aNode, bNode);
-        String abId = BlueIdCalculator.calculateBlueId(ab);
+        String abId = DirectBlueIdCalculator.calculateBlueId(ab);
         nodeProvider.addListAndItsItems(ab);
 
         String x1 = "name: X1\n" +
@@ -238,7 +236,7 @@ public class ListTest {
         Node bNode = YAML_MAPPER.readValue("B", Node.class);
         Node cNode = YAML_MAPPER.readValue("C", Node.class);
         List<Node> abc = Arrays.asList(aNode, bNode, cNode);
-        String abcId = BlueIdCalculator.calculateBlueId(abc);
+        String abcId = DirectBlueIdCalculator.calculateBlueId(abc);
         nodeProvider.addSingleNodes(aNode, bNode, cNode);
         nodeProvider.addListAndItsItems(abc);
         String invalid = "name: X1\n"

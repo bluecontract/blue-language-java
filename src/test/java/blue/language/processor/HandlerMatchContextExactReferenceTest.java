@@ -2,8 +2,8 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.FrozenTypeMatcher;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.matching.FrozenTypeMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -21,7 +21,7 @@ final class HandlerMatchContextExactReferenceTest {
                 new Node().value(
                         "  café\u00a0\u2126  ");
         String exactTextBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         exactText);
         Node event =
                 new Node().properties(

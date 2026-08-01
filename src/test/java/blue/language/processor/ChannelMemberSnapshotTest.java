@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,7 +19,7 @@ final class ChannelMemberSnapshotTest {
                         "kind",
                         new Node().value("actor"));
         String nominalTypeBlueId =
-                BlueIdCalculator.calculateBlueId(nominalType);
+                DirectBlueIdCalculator.calculateBlueId(nominalType);
         Node collapsedActor = new Node()
                 .type(new Node().blueId(nominalTypeBlueId))
                 .properties(
@@ -51,7 +51,7 @@ final class ChannelMemberSnapshotTest {
     private static EffectiveContractSnapshot snapshot(
             Node actor) {
         String channelTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().name("Test Channel"));
         return EffectiveContractSnapshot
                 .builder("/", "source")
@@ -59,7 +59,7 @@ final class ChannelMemberSnapshotTest {
                 .role(EffectiveContractSnapshotConstants
                         .Role.EXTERNAL_CHANNEL)
                 .sourceContribution(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 new Node().value(
                                         "source contribution")))
                 .headerField(

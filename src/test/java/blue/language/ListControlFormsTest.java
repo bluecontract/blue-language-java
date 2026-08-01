@@ -6,18 +6,16 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -45,7 +43,7 @@ class ListControlFormsTest {
                 "  - A\n" +
                 "  - B");
         Node base = nodeProvider.getNodeByName("Base");
-        String baseItemsBlueId = BlueIdCalculator.calculateBlueId(base.getItems());
+        String baseItemsBlueId = DirectBlueIdCalculator.calculateBlueId(base.getItems());
 
         nodeProvider.addSingleDocs(
                 "name: Derived\n" +
@@ -75,7 +73,7 @@ class ListControlFormsTest {
                 "items:\n" +
                 "  - A\n" +
                 "  - B");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(previous.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(previous.getItems());
         nodeProvider.addListAndItsItems(previous.getItems());
 
         Node next = YAML_MAPPER.readValue(
@@ -101,7 +99,7 @@ class ListControlFormsTest {
     void shouldRequirePreviousAnchorToMatchInheritedList() {
         // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        String wrongButValidBlueId = BlueIdCalculator.calculateBlueId(new Node().value("stale"));
+        String wrongButValidBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("stale"));
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
                 "type:\n" +
@@ -400,7 +398,7 @@ class ListControlFormsTest {
                 "  - A\n" +
                 "  - $empty: true");
         Node base = nodeProvider.getNodeByName("Base");
-        String baseItemsBlueId = BlueIdCalculator.calculateBlueId(base.getItems());
+        String baseItemsBlueId = DirectBlueIdCalculator.calculateBlueId(base.getItems());
         Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
@@ -432,7 +430,7 @@ class ListControlFormsTest {
 
         // when
         Throwable failure = captureFailure(
-                () -> BlueIdCalculator.calculateBlueId(sparseList));
+                () -> DirectBlueIdCalculator.calculateBlueId(sparseList));
 
         // then
         assertInstanceOf(IllegalArgumentException.class, failure);

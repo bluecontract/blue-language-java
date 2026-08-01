@@ -6,7 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.JsonPointer;
@@ -149,7 +149,7 @@ final class ProcessingInputAdmission {
         boolean copied = false;
         boolean materialized = admittedRoot.wasMaterialized();
         String expectedRootBlueId =
-                BlueIdCalculator.calculateBlueId(working);
+                DirectBlueIdCalculator.calculateBlueId(working);
 
         for (String scopePath : orderedPaths) {
             List<String> segments = JsonPointer.split(scopePath);
@@ -277,7 +277,7 @@ final class ProcessingInputAdmission {
             String label) {
         final String actualBlueId;
         try {
-            actualBlueId = BlueIdCalculator.calculateBlueId(exact);
+            actualBlueId = DirectBlueIdCalculator.calculateBlueId(exact);
         } catch (RuntimeException exception) {
             throw invalid(
                     label + " provider content is not exact canonical content for "

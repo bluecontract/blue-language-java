@@ -2,9 +2,9 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.utils.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -73,7 +73,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider implements CyclicAw
 
     private void processSingleNodeUnchecked(Node node) {
         Node preprocessed = preprocessor.apply(node);
-        String blueId = BlueIdCalculator.calculateUncheckedBlueId(preprocessed);
+        String blueId = DirectBlueIdCalculator.calculateUncheckedBlueId(preprocessed);
         blueIdToContentMap.put(blueId, JSON_MAPPER.valueToTree(preprocessed));
         blueIdToMultipleDocumentsMap.put(blueId, false);
         cyclicSetProofByMasterBlueId.remove(blueId);
@@ -180,7 +180,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider implements CyclicAw
         final List<String> calculatedMemberBlueIds;
         try {
             calculatedMemberBlueIds =
-                    CircularBlueIdCalculator.calculateCircularSetBlueIds(
+                    CircularSetIdentityCalculator.calculateCircularSetBlueIds(
                             placeholders);
         } catch (IllegalArgumentException notACyclicSet) {
             return;

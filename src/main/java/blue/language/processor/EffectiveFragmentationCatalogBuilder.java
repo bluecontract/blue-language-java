@@ -8,7 +8,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.NodePathEditor;
@@ -68,7 +68,7 @@ final class EffectiveFragmentationCatalogBuilder {
                             suppliedRoot,
                             "Fragmentation catalog Root");
             String rootBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             admitted.node());
             Set<String> participatingScopePaths =
                     new LinkedHashSet<>();
@@ -164,7 +164,7 @@ final class EffectiveFragmentationCatalogBuilder {
                             frame.scopePath);
             String exactScopeIdentity =
                     selected != null
-                            ? BlueIdCalculator.calculateBlueId(
+                            ? DirectBlueIdCalculator.calculateBlueId(
                                     selected)
                             : null;
             if (exactScopeIdentity != null
@@ -589,7 +589,7 @@ final class EffectiveFragmentationCatalogBuilder {
             String typeBlueId =
                     contract.getType().getBlueId() != null
                             ? contract.getType().getBlueId()
-                            : BlueIdCalculator.calculateBlueId(
+                            : DirectBlueIdCalculator.calculateBlueId(
                             contract.getType());
             Class<?> type =
                     typeResolver.resolveClass(typeBlueId);
@@ -653,7 +653,7 @@ final class EffectiveFragmentationCatalogBuilder {
                     return exact;
                 }
                 String actual =
-                        BlueIdCalculator.calculateBlueId(exact);
+                        DirectBlueIdCalculator.calculateBlueId(exact);
                 if (!Objects.equals(expected, actual)) {
                     throw new InvalidExecutionEvidenceException(
                             label + " provider content BlueId "
@@ -675,7 +675,7 @@ final class EffectiveFragmentationCatalogBuilder {
                     && reference.getBlueId() != null) {
                 return reference.getBlueId();
             }
-            return BlueIdCalculator.calculateBlueId(
+            return DirectBlueIdCalculator.calculateBlueId(
                     exact);
         }
 

@@ -3,7 +3,7 @@ package blue.language.matching.internal;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 /** Computes type compatibility identity after removing descriptive labels. */
 public final class LabelNeutralTypeIdentity {
@@ -18,7 +18,7 @@ public final class LabelNeutralTypeIdentity {
     public static String calculate(FrozenNode typeDefinition) {
         Node clone = typeDefinition.toNode();
         stripLabels(clone);
-        return BlueIdCalculator.calculateBlueId(clone);
+        return DirectBlueIdCalculator.calculateBlueId(clone);
     }
 
     private static void stripLabels(Node node) {

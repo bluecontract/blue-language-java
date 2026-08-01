@@ -3,7 +3,7 @@ package blue.language.snapshot;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +24,7 @@ class FrozenNodeDecompositionTest {
     @Test
     void shouldKeepResolvedListIdentityEqualToTheMutableCompatibilityOracle() {
         // given
-        String provenanceBlueId = BlueIdCalculator.calculateBlueId(
+        String provenanceBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().value("provenance"));
         Node resolved = new Node().items(Arrays.asList(
                 new Node()
@@ -40,7 +40,7 @@ class FrozenNodeDecompositionTest {
             canonicalItems.add(NodeToBlueIdInput
                     .stripResolvedBlueIdMetadata(item.clone()));
         }
-        String listBlueId = BlueIdCalculator.calculateBlueId(canonicalItems);
+        String listBlueId = DirectBlueIdCalculator.calculateBlueId(canonicalItems);
         Map<String, Object> expectedInput = new LinkedHashMap<>();
         expectedInput.put(
                 OBJECT_ITEMS,
@@ -51,7 +51,7 @@ class FrozenNodeDecompositionTest {
 
         // then
         assertEquals(
-                BlueIdCalculator.INSTANCE.calculate(expectedInput),
+                DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(expectedInput),
                 actual);
     }
 

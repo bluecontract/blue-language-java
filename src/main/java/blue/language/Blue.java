@@ -8,15 +8,14 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
-import blue.language.api.LanguageMatchingService;
+import blue.language.runtime.LanguageMatchingService;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.LanguageRuntimeServices;
-import blue.language.api.WeightedLruCache;
+import blue.language.runtime.LanguageRuntimeServices;
+import blue.language.runtime.WeightedLruCache;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.mapping.BlueMapper;
@@ -28,6 +27,8 @@ import blue.language.dictionary.DictionaryRegistry;
 import blue.language.dictionary.ExportContext;
 import blue.language.dictionary.TypeDictionary;
 import blue.language.graph.StandardBlueGraph;
+import blue.language.graph.NodeExpander;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.StandardBlueIdentity;
 import blue.language.merge.Merger;
 import blue.language.merge.IncrementalMergingProcessorCapability;
@@ -61,6 +62,7 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.StandardBluePreprocessing;
 import blue.language.provider.BootstrapProvider;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderWrapper;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.PotentialBlueIdNodeProvider;
@@ -68,6 +70,7 @@ import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.SourceContentVerificationRuntime;
 import blue.language.provider.VerifiedNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
+import blue.language.provider.Types;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -1455,7 +1458,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     public Node parseBlueIdInputYaml(String yaml) {
         Node node = YAML_MAPPER.readValue(yaml, Node.class);
         BlueIdReferenceValidator.validate(node);
-        BlueIdCalculator.calculateBlueId(node);
+        DirectBlueIdCalculator.calculateBlueId(node);
         return node;
     }
 
@@ -1470,7 +1473,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     public Node parseBlueIdInputJson(String json) {
         Node node = JSON_MAPPER.readValue(json, Node.class);
         BlueIdReferenceValidator.validate(node);
-        BlueIdCalculator.calculateBlueId(node);
+        DirectBlueIdCalculator.calculateBlueId(node);
         return node;
     }
 
@@ -3345,7 +3348,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
         Objects.requireNonNull(canonicalTypeNode, "canonicalTypeNode");
         Node canonical = canonicalTypeNode.clone();
-        String calculated = BlueIdCalculator.calculateBlueId(canonical);
+        String calculated = DirectBlueIdCalculator.calculateBlueId(canonical);
         if (!blueId.equals(calculated)) {
             throw new IllegalArgumentException("External contract type node hashes to " + calculated
                     + ", not declared BlueId " + blueId);

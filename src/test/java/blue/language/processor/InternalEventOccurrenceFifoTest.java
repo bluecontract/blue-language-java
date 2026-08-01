@@ -8,7 +8,7 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ final class InternalEventOccurrenceFifoTest {
     private static final Node PROBE_HANDLER_TYPE =
             new Node().name("Internal Event FIFO Probe Handler");
     private static final String PROBE_HANDLER_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(PROBE_HANDLER_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(PROBE_HANDLER_TYPE);
 
     private static final Node EVENT_A = applicationEvent("A");
     private static final Node EVENT_B = applicationEvent("B");
@@ -39,13 +39,13 @@ final class InternalEventOccurrenceFifoTest {
     private static final Node EVENT_D = applicationEvent("D");
 
     private static final String EVENT_A_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(EVENT_A);
+            DirectBlueIdCalculator.calculateBlueId(EVENT_A);
     private static final String EVENT_B_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(EVENT_B);
+            DirectBlueIdCalculator.calculateBlueId(EVENT_B);
     private static final String EVENT_C_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(EVENT_C);
+            DirectBlueIdCalculator.calculateBlueId(EVENT_C);
     private static final String EVENT_D_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(EVENT_D);
+            DirectBlueIdCalculator.calculateBlueId(EVENT_D);
 
     @Test
     void shouldPreserveGlobalFifoWhenAppendingDuringDeliveryAndContinuePastTerminatingAncestor() {
@@ -210,11 +210,11 @@ final class InternalEventOccurrenceFifoTest {
         assertEquals(2, publicEvents.size());
         assertEquals(
                 EVENT_D_BLUE_ID,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         publicEvents.get(0)));
         assertEquals(
                 EVENT_D_BLUE_ID,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         publicEvents.get(1)));
         assertNotSame(
                 publicEvents.get(0),

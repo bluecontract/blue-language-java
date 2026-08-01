@@ -1,32 +1,17 @@
 package blue.language.snapshot;
 
-import blue.language.model.wire.SchemaPropertyConstants;
-
+import blue.language.identity.CanonicalJsonValueWriter;
 import blue.language.model.NodeWireForm;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.model.value.BlueNumbers;
-import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.SchemaEnumCanonicalizer;
-import blue.language.utils.UncheckedObjectMapper;
-import org.erdtman.jcs.NumberToJSON;
-import org.erdtman.jcs.JsonCanonicalizer;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 
 import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
@@ -43,27 +28,13 @@ import static blue.language.model.wire.SchemaPropertyConstants.*;
 public final class FrozenCanonicalWriter {
 
     private static final byte[] TRUE = ascii("true");
-    private static final byte[] FALSE = ascii("false");
-    private static final byte[] NULL = ascii("null");
-    private static final int MAX_PLAIN_VALUE_DEPTH = 100;
-    private static final int MAX_PLAIN_MAP_FIELDS = 256;
-    private static final Class<?> SINGLETON_MAP_CLASS =
-            Collections.singletonMap("key", BlueLanguageConstants.OBJECT_VALUE).getClass();
-    private static final ThreadLocal<Set<String>> MAP_KEYS = new ThreadLocal<Set<String>>() {
-        @Override
-        protected Set<String> initialValue() {
-            return new HashSet<>();
-        }
-    };
 
     private FrozenCanonicalWriter() {
     }
 
     /** Receives canonical bytes in encounter order. */
-    interface CanonicalByteSink {
-        void writeByte(int value);
-
-        void write(byte[] bytes, int offset, int length);
+    interface CanonicalByteSink
+            extends CanonicalJsonValueWriter.ByteSink {
     }
 
     /**
@@ -114,85 +85,11 @@ public final class FrozenCanonicalWriter {
      * @return exact RFC 8785 representation of the value
      */
     public static byte[] canonicalValueBytes(Object value) {
-        ByteArraySink sink = new ByteArraySink();
-        writeCanonicalValue(value, sink);
-        return sink.toByteArray();
+        return CanonicalJsonValueWriter.write(value);
     }
 
     static void writeCanonicalValue(Object value, CanonicalByteSink sink) {
-        if (value == null) {
-            writeBytes(sink, NULL);
-            return;
-        }
-        if (value instanceof String) {
-            writeString((String) value, sink);
-            return;
-        }
-        if (value instanceof Character) {
-            writeString(String.valueOf(value), sink);
-            return;
-        }
-        if (value instanceof Boolean) {
-            writeBytes(sink, Boolean.TRUE.equals(value) ? TRUE : FALSE);
-            return;
-        }
-        if (value instanceof Enum) {
-            // Enum wire values may be customized by Jackson annotations. Keep the
-            // compatibility serializer as the source of truth instead of using name().
-            writeLegacyCanonicalValue(value, sink);
-            return;
-        }
-        if (value instanceof BigInteger) {
-            BigInteger integer = (BigInteger) value;
-            if (integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) < 0
-                    || integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) > 0) {
-                // UncheckedObjectMapper's registered BigInteger serializer uses
-                // a JSON string outside the interoperable integer range.
-                writeString(integer.toString(), sink);
-            } else {
-                writeNumber(integer.doubleValue(), sink);
-            }
-            return;
-        }
-        if (value instanceof BigDecimal) {
-            writeNumber(((BigDecimal) value).doubleValue(), sink);
-            return;
-        }
-        if (value instanceof Float) {
-            // Jackson preserves the source float's shortest decimal spelling.
-            // Widening the binary float directly would encode a different JSON number.
-            writeNumber(Double.parseDouble(Float.toString((Float) value)), sink);
-            return;
-        }
-        if (value instanceof Byte || value instanceof Short || value instanceof Integer
-                || value instanceof Long || value instanceof Double) {
-            writeNumber(((Number) value).doubleValue(), sink);
-            return;
-        }
-        if (value instanceof Map) {
-            writeMap((Map<?, ?>) value, sink);
-            return;
-        }
-        if (value instanceof List) {
-            writeList((List<?>) value, sink);
-            return;
-        }
-        if (value instanceof byte[]) {
-            // Jackson's default byte-array serializer uses the standard padded
-            // Base64 alphabet and emits a JSON string, not a numeric array.
-            writeString(Base64.getEncoder().encodeToString((byte[]) value), sink);
-            return;
-        }
-        if (value instanceof char[]) {
-            // Jackson's char-array serializer likewise emits one JSON string.
-            writeString(new String((char[]) value), sink);
-            return;
-        }
-        if (value.getClass().isArray()) {
-            writeLegacyCanonicalValue(value, sink);
-            return;
-        }
-        throw new UnsupportedCanonicalValueException(value.getClass());
+        CanonicalJsonValueWriter.write(value, sink);
     }
 
     /**
@@ -202,64 +99,7 @@ public final class FrozenCanonicalWriter {
      * @return {@code true} when the canonical writer supports the value directly
      */
     public static boolean supportsCanonicalValue(Object value) {
-        return supportsCanonicalValue(value, 0);
-    }
-
-    private static boolean supportsCanonicalValue(Object value, int depth) {
-        if (depth > MAX_PLAIN_VALUE_DEPTH) return false;
-        if (value == null) return true;
-
-        Class<?> type = value.getClass();
-        if (type == String.class || type == Boolean.class
-                || type == BigInteger.class
-                || type == Byte.class || type == Short.class || type == Integer.class
-                || type == Long.class) {
-            return true;
-        }
-        if (type == BigDecimal.class || type == Float.class || type == Double.class) {
-            return Double.isFinite(((Number) value).doubleValue());
-        }
-
-        // Only exact container implementations produced by the canonical helper-map
-        // builders are admitted. Subclasses may carry Jackson annotations or custom
-        // serializers that change their wire representation.
-        boolean plainList = type == ArrayList.class;
-        boolean plainMap = type == LinkedHashMap.class || type == TreeMap.class
-                || type == SINGLETON_MAP_CLASS;
-        if (!plainList && !plainMap) return false;
-        if (plainList) {
-            for (Object element : (List<?>) value) {
-                if (!supportsCanonicalValue(element, depth + 1)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        Map<?, ?> map = (Map<?, ?>) value;
-        if (map.size() > MAX_PLAIN_MAP_FIELDS) return false;
-        if (type == TreeMap.class && !hasUniqueStringKeys(map)) return false;
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            if (entry.getKey() == null || entry.getKey().getClass() != String.class
-                    || !supportsCanonicalValue(entry.getValue(), depth + 1)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean hasUniqueStringKeys(Map<?, ?> map) {
-        Set<String> keys = MAP_KEYS.get();
-        keys.clear();
-        try {
-            for (Object key : map.keySet()) {
-                if (!(key instanceof String) || !keys.add((String) key)) {
-                    return false;
-                }
-            }
-            return true;
-        } finally {
-            keys.clear();
-        }
+        return CanonicalJsonValueWriter.supports(value);
     }
 
     private enum Context {
@@ -529,62 +369,6 @@ public final class FrozenCanonicalWriter {
         sink.writeByte('}');
     }
 
-    private static void writeMap(Map<?, ?> map, CanonicalByteSink sink) {
-        Map<String, Object> retainedFields = new TreeMap<>();
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            if (entry.getValue() == null) {
-                // Match the legacy mapper's NON_NULL map-value inclusion.
-                continue;
-            }
-            Object key = entry.getKey();
-            if (!(key instanceof String)) {
-                throw new UnsupportedCanonicalValueException(key == null ? null : key.getClass());
-            }
-            String stringKey = (String) key;
-            if (retainedFields.containsKey(stringKey)) {
-                throw new UnsupportedCanonicalValueException(String.class);
-            }
-            retainedFields.put(stringKey, entry.getValue());
-        }
-        sink.writeByte('{');
-        boolean first = true;
-        for (Map.Entry<String, Object> entry : retainedFields.entrySet()) {
-            if (!first) {
-                sink.writeByte(',');
-            }
-            first = false;
-            writeString(entry.getKey(), sink);
-            sink.writeByte(':');
-            writeCanonicalValue(entry.getValue(), sink);
-        }
-        sink.writeByte('}');
-    }
-
-    private static void writeList(List<?> list, CanonicalByteSink sink) {
-        sink.writeByte('[');
-        for (int index = 0; index < list.size(); index++) {
-            if (index > 0) {
-                sink.writeByte(',');
-            }
-            writeCanonicalValue(list.get(index), sink);
-        }
-        sink.writeByte(']');
-    }
-
-    private static void writeLegacyCanonicalValue(Object value, CanonicalByteSink sink) {
-        try {
-            byte[] json = UncheckedObjectMapper.JSON_MAPPER.writeValueAsBytes(value);
-            byte[] wrapped = new byte[json.length + 2];
-            wrapped[0] = '[';
-            System.arraycopy(json, 0, wrapped, 1, json.length);
-            wrapped[wrapped.length - 1] = ']';
-            byte[] canonicalWrapped = new JsonCanonicalizer(wrapped).getEncodedUTF8();
-            sink.write(canonicalWrapped, 1, canonicalWrapped.length - 2);
-        } catch (Exception exception) {
-            throw new IllegalStateException("Failed to canonicalize legacy raw value", exception);
-        }
-    }
-
     private static void writeString(String value, CanonicalByteSink sink) {
         sink.writeByte('"');
         for (int index = 0; index < value.length(); index++) {
@@ -632,17 +416,6 @@ public final class FrozenCanonicalWriter {
             }
         }
         sink.writeByte('"');
-    }
-
-    private static void writeNumber(double value, CanonicalByteSink sink) {
-        if (!Double.isFinite(value)) {
-            throw new UnsupportedCanonicalValueException(Double.class);
-        }
-        try {
-            writeBytes(sink, ascii(NumberToJSON.serializeNumber(value)));
-        } catch (IOException exception) {
-            throw new IllegalArgumentException("Problem when generating canonized json.", exception);
-        }
     }
 
     private static void writeEscape(CanonicalByteSink sink, int escaped) {
@@ -698,27 +471,4 @@ public final class FrozenCanonicalWriter {
         }
     }
 
-    private static final class ByteArraySink implements CanonicalByteSink {
-        private final ByteArrayOutputStream output = new ByteArrayOutputStream(64);
-
-        @Override
-        public void writeByte(int value) {
-            output.write(value);
-        }
-
-        @Override
-        public void write(byte[] values, int offset, int length) {
-            output.write(values, offset, length);
-        }
-
-        private byte[] toByteArray() {
-            return output.toByteArray();
-        }
-    }
-
-    static final class UnsupportedCanonicalValueException extends RuntimeException {
-        UnsupportedCanonicalValueException(Class<?> type) {
-            super(type == null ? "Unsupported null map key" : "Unsupported canonical value: " + type.getName());
-        }
-    }
 }

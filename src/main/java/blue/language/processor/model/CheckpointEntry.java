@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 /**
  * Domain-bound checkpoint entry for one raw External Channel key.
@@ -84,7 +84,7 @@ public final class CheckpointEntry {
      */
     public String subjectBlueId() {
         return subject != null
-                ? BlueIdCalculator.calculateBlueId(
+                ? DirectBlueIdCalculator.calculateBlueId(
                         subject)
                 : null;
     }

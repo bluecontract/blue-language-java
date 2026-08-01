@@ -9,7 +9,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.value.BlueNumbers;
 import blue.language.model.NodeWireForm;
 import blue.language.utils.ScalarNodeIdentity;
@@ -331,7 +331,7 @@ public class SchemaVerifier implements MergingProcessor {
             int uniqueItemsCount = items.stream()
                     .map(NodeWireForm::get)
                     .map(doc -> YAML_MAPPER.convertValue(doc, Node.class))
-                    .map(BlueIdCalculator::calculateBlueId)
+                    .map(DirectBlueIdCalculator::calculateBlueId)
                     .collect(Collectors.toSet())
                     .size();
             if (items.size() != uniqueItemsCount)

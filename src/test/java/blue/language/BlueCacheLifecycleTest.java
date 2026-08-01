@@ -4,13 +4,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.conformance.ConformanceEngine;
@@ -30,7 +28,7 @@ import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
 
@@ -766,7 +764,7 @@ class BlueCacheLifecycleTest {
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
                 completedDocument.clone(),
-                BlueIdCalculator.calculateBlueId(completedDocument));
+                DirectBlueIdCalculator.calculateBlueId(completedDocument));
         BlockingDocumentProcessor processor = new BlockingDocumentProcessor(completedSnapshot);
         Blue blue = new Blue().documentProcessor(processor);
         Field ownership = Blue.class.getDeclaredField("documentProcessorOwned");
@@ -826,7 +824,7 @@ class BlueCacheLifecycleTest {
             throws Exception {
         // given
         Node canonical = document(52);
-        String blueId = BlueIdCalculator.calculateBlueId(canonical);
+        String blueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         CountDownLatch providerEntered = new CountDownLatch(1);
         CountDownLatch releaseProvider = new CountDownLatch(1);
         Blue blue = new Blue(requestedBlueId -> {
@@ -957,12 +955,12 @@ class BlueCacheLifecycleTest {
         CountDownLatch rootFetchEntered = new CountDownLatch(1);
         CountDownLatch releaseRootFetch = new CountDownLatch(1);
         Node originalLeaf = new Node().value("original");
-        String originalLeafBlueId = BlueIdCalculator.calculateBlueId(originalLeaf);
+        String originalLeafBlueId = DirectBlueIdCalculator.calculateBlueId(originalLeaf);
         Node originalRoot = new Node().properties(
                 "child", new Node().blueId(originalLeafBlueId));
-        String originalRootBlueId = BlueIdCalculator.calculateBlueId(originalRoot);
+        String originalRootBlueId = DirectBlueIdCalculator.calculateBlueId(originalRoot);
         Node replacementLeaf = new Node().value("replacement");
-        String replacementLeafBlueId = BlueIdCalculator.calculateBlueId(replacementLeaf);
+        String replacementLeafBlueId = DirectBlueIdCalculator.calculateBlueId(replacementLeaf);
         NodeProvider original = blueId -> {
             if (originalRootBlueId.equals(blueId)) {
                 rootFetchEntered.countDown();
@@ -1038,11 +1036,11 @@ class BlueCacheLifecycleTest {
             throws Exception {
         // given
         Node superType = new Node().name("Subtype gate supertype");
-        String superTypeBlueId = BlueIdCalculator.calculateBlueId(superType);
+        String superTypeBlueId = DirectBlueIdCalculator.calculateBlueId(superType);
         Node candidateType = new Node()
                 .name("Subtype gate candidate")
                 .type(new Node().blueId(superTypeBlueId));
-        String candidateTypeBlueId = BlueIdCalculator.calculateBlueId(candidateType);
+        String candidateTypeBlueId = DirectBlueIdCalculator.calculateBlueId(candidateType);
         CountDownLatch candidateFetchEntered = new CountDownLatch(1);
         CountDownLatch releaseCandidateFetch = new CountDownLatch(1);
         NodeProvider original = blueId -> {
@@ -1120,7 +1118,7 @@ class BlueCacheLifecycleTest {
     void shouldPreventRetainedConformanceEngineFromPublishingStaleEvidenceAfterRefresh() {
         // given
         Node type = new Node().properties("typeMarker", new Node().value(true));
-        String typeBlueId = BlueIdCalculator.calculateBlueId(type);
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(type);
         NodeProvider oldProvider = blueId -> typeBlueId.equals(blueId)
                 ? Collections.singletonList(type.clone()) : null;
         NodeProvider newProvider = blueId -> typeBlueId.equals(blueId)
@@ -1162,7 +1160,7 @@ class BlueCacheLifecycleTest {
     void shouldRetainCallerPinnedVerifiedSnapshotVisibilityInConformanceEngine() {
         // given
         Node type = new Node().properties("pinnedMarker", new Node().value(true));
-        String typeBlueId = BlueIdCalculator.calculateBlueId(type);
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(type);
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(type);
         Blue source = new Blue(provider);
@@ -1204,7 +1202,7 @@ class BlueCacheLifecycleTest {
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
                 completedDocument.clone(),
-                BlueIdCalculator.calculateBlueId(completedDocument));
+                DirectBlueIdCalculator.calculateBlueId(completedDocument));
         BlockingDocumentProcessor processor = new BlockingDocumentProcessor(completedSnapshot);
         Blue blue = new Blue().documentProcessor(processor);
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -1264,7 +1262,7 @@ class BlueCacheLifecycleTest {
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
                 completedDocument.clone(),
-                BlueIdCalculator.calculateBlueId(completedDocument));
+                DirectBlueIdCalculator.calculateBlueId(completedDocument));
         BlockingDocumentProcessor displaced = new BlockingDocumentProcessor(completedSnapshot);
         Blue blue = new Blue().documentProcessor(displaced);
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -1342,7 +1340,7 @@ class BlueCacheLifecycleTest {
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
                 completedDocument.clone(),
-                BlueIdCalculator.calculateBlueId(completedDocument));
+                DirectBlueIdCalculator.calculateBlueId(completedDocument));
         BlockingDocumentProcessor processor = new BlockingDocumentProcessor(completedSnapshot);
         Blue blue = new Blue().documentProcessor(processor);
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -1397,7 +1395,7 @@ class BlueCacheLifecycleTest {
         ResolvedSnapshot completedSnapshot = new ResolvedSnapshot(
                 completedDocument,
                 completedDocument.clone(),
-                BlueIdCalculator.calculateBlueId(completedDocument));
+                DirectBlueIdCalculator.calculateBlueId(completedDocument));
         BlockingDocumentProcessor processor = new BlockingDocumentProcessor(completedSnapshot);
         Blue blue = new Blue().documentProcessor(processor);
         AtomicReference<Throwable> failure = new AtomicReference<>();

@@ -6,7 +6,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.model.wire.JsonPointer;
 
@@ -215,7 +215,7 @@ final class ProcessorMarkerStore {
                 marker.getProperties().put(
                         ProcessorContractConstants.KEY_DOCUMENT,
                         new Node().blueId(
-                                BlueIdCalculator.calculateBlueId(exactDocument)));
+                                DirectBlueIdCalculator.calculateBlueId(exactDocument)));
             }
         }
         if (node.getItems() != null) {
@@ -251,7 +251,7 @@ final class ProcessorMarkerStore {
             return type.getBlueId();
         }
         try {
-            return BlueIdCalculator.calculateBlueId(type);
+            return DirectBlueIdCalculator.calculateBlueId(type);
         } catch (RuntimeException ignored) {
             return null;
         }

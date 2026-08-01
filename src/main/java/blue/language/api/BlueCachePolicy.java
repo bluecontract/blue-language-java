@@ -2,7 +2,7 @@ package blue.language.api;
 
 /**
  * Immutable bounds for reloadable acceleration data owned by one
- * {@link BlueLanguageRuntime}
+ * {@link blue.language.runtime.BlueLanguageRuntime}
  * runtime. These limits are not process-wide budgets. Explicitly registered
  * authoritative snapshots are not evicted by these limits; they remain pinned
  * until clear or close.

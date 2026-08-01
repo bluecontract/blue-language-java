@@ -27,7 +27,7 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -278,9 +278,9 @@ class ExternalContractIntegrationTest {
         assertEquals(new BigInteger("12"), fresh.document().get("/counter"));
         assertEquals(3, SequenceChannelProcessor.newnessChecks);
         assertEquals(Arrays.asList(
-                        BlueIdCalculator.calculateBlueId(acceptedEvent),
-                        BlueIdCalculator.calculateBlueId(acceptedEvent),
-                        BlueIdCalculator.calculateBlueId(freshEvent)),
+                        DirectBlueIdCalculator.calculateBlueId(acceptedEvent),
+                        DirectBlueIdCalculator.calculateBlueId(acceptedEvent),
+                        DirectBlueIdCalculator.calculateBlueId(freshEvent)),
                 SequenceChannelProcessor.observedSubjectBlueIds);
     }
 
@@ -466,7 +466,7 @@ class ExternalContractIntegrationTest {
             String channelTypeBlueId) {
         Node channel = root.getContracts().getProperties().get(channelKey);
         String contributionBlueId =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         String checkpointDomainBlueId = CheckpointDomain.derive(
                 channelTypeBlueId,
                 Collections.singletonList(contributionBlueId),
@@ -479,14 +479,14 @@ class ExternalContractIntegrationTest {
                         .subscriptionKey(channelKey)
                         .checkpointDomainBlueId(checkpointDomainBlueId)
                         .checkpointSubjectBlueId(
-                                BlueIdCalculator.calculateBlueId(event))
+                                DirectBlueIdCalculator.calculateBlueId(event))
                         .build();
         ExternalDeliveryPlan.Builder plan =
                 ExternalDeliveryPlan.builder()
                 .revisions(1L, 1L)
                 .eventOrderKey(ExternalOrderKey.of(
                         Collections.singletonList(
-                                BlueIdCalculator.calculateBlueId(event))))
+                                DirectBlueIdCalculator.calculateBlueId(event))))
                 .delivery(delivery)
                 .activeSubscriptionIntervals(
                         Collections.<SubscriptionDelta.Entry>emptyList())
@@ -501,7 +501,7 @@ class ExternalContractIntegrationTest {
                 continue;
             }
             String candidateContribution =
-                    BlueIdCalculator.calculateBlueId(candidate);
+                    DirectBlueIdCalculator.calculateBlueId(candidate);
             String candidateDomain = CheckpointDomain.derive(
                     candidateType,
                     Collections.singletonList(

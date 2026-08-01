@@ -4,13 +4,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
@@ -31,7 +29,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -429,7 +427,7 @@ class ResolvedInstanceSchemaValidationTest {
         List<Node> canonicalDocuments = Arrays.asList(
                 blue.preprocess(documents.get(0).clone()),
                 blue.preprocess(documents.get(1).clone()));
-        String referenceId = BlueIdCalculator.calculateBlueId(canonicalDocuments);
+        String referenceId = DirectBlueIdCalculator.calculateBlueId(canonicalDocuments);
         Node holder = new Node().name("Multi-document Holder")
                 .properties("payload", new Node().schema(new Schema().minItems(2)));
         provider.addSingleNodes(holder);
@@ -871,7 +869,7 @@ class ResolvedInstanceSchemaValidationTest {
         Node warm = fixture.blue.canonicalize(instance);
 
         // then
-        assertEquals(BlueIdCalculator.calculateBlueId(cold), BlueIdCalculator.calculateBlueId(warm));
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(cold), DirectBlueIdCalculator.calculateBlueId(warm));
         assertTrue(cold.getProperties().get("subject").isReferenceOnly());
         assertTrue(warm.getProperties().get("subject").isReferenceOnly());
     }
@@ -943,9 +941,9 @@ class ResolvedInstanceSchemaValidationTest {
 
     private static String blueIdOf(Node node) {
         BasicNodeProvider provider = new BasicNodeProvider(node);
-        List<Node> fetched = provider.fetchByBlueId(blue.language.utils.BlueIdCalculator.calculateBlueId(node));
+        List<Node> fetched = provider.fetchByBlueId(blue.language.identity.DirectBlueIdCalculator.calculateBlueId(node));
         if (fetched != null) {
-            return blue.language.utils.BlueIdCalculator.calculateBlueId(node);
+            return blue.language.identity.DirectBlueIdCalculator.calculateBlueId(node);
         }
         throw new AssertionError("Unable to calculate fixture BlueId");
     }

@@ -1,6 +1,6 @@
 package blue.language.identity;
 
-import blue.language.utils.Base58Sha256Provider;
+import blue.language.identity.Base58Sha256Provider;
 
 import java.util.function.Function;
 

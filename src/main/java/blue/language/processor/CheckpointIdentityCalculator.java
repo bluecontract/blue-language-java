@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.api.LanguageRuntimeAccess;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.UncheckedObjectMapper;
@@ -55,7 +55,7 @@ final class CheckpointIdentityCalculator {
                 : NoOpProcessingObserver.INSTANCE;
         long directStart = System.nanoTime();
         try {
-            String identity = BlueIdCalculator.calculateBlueId(
+            String identity = DirectBlueIdCalculator.calculateBlueId(
                     sourceProjection);
             ProcessingObservations.record(observer,
                     ProcessingMetricId.CHECKPOINT_DIRECT_BLUE_ID_NANOS,
@@ -155,7 +155,7 @@ final class CheckpointIdentityCalculator {
         }
         if (reference.getName() != null) {
             return new Node().blueId(
-                    BlueIdCalculator.calculateBlueId(reference));
+                    DirectBlueIdCalculator.calculateBlueId(reference));
         }
         return reference;
     }

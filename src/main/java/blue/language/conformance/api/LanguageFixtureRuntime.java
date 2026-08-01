@@ -1,7 +1,7 @@
 package blue.language.conformance.api;
 
 import blue.language.api.BlueCachePolicy;
-import blue.language.api.BlueLanguageRuntime;
+import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationResult;
 import blue.language.codec.BlueFormat;

@@ -65,16 +65,33 @@ class LanguageCoreArchitectureTest {
                     "preprocessWithDefaultBlue",
                     "preprocessWithoutDefaultBlue",
                     "DEFAULT_BLUE_BLUE_ID"));
-    private static final List<String> REMOVED_UTILS_FACADES =
+    private static final List<String> REMOVED_OWNERSHIP_TYPES =
             Collections.unmodifiableList(Arrays.asList(
+                    "blue.language.api.BlueLanguage",
+                    "blue.language.api.BlueLanguageRuntime",
+                    "blue.language.api.LanguageMatchingService",
+                    "blue.language.api.LanguageRuntimeLimitedResolution",
+                    "blue.language.api.LanguageRuntimeServices",
+                    "blue.language.api.LanguageRuntimeSnapshotStore",
+                    "blue.language.api.WeightedLruCache",
+                    "blue.language.utils.Base58",
+                    "blue.language.utils.Base58Sha256Provider",
+                    "blue.language.utils.BlueIdCalculator",
                     "blue.language.utils.BlueNumbers",
+                    "blue.language.utils.CircularBlueIdCalculator",
+                    "blue.language.utils.FrozenTypeMatcher",
                     "blue.language.utils.JsonPointer",
+                    "blue.language.utils.NodeExpander",
                     "blue.language.utils.NodePathAccessor",
+                    "blue.language.utils.NodeProviderWrapper",
+                    "blue.language.utils.NodeSpecializer",
                     "blue.language.utils.NodeToMapListOrValue",
+                    "blue.language.utils.NodeTypeMatcher",
                     "blue.language.utils.Properties",
                     "blue.language.utils.SchemaPropertyConstants",
                     "blue.language.utils.SchemaToMapListOrValue",
-                    "blue.language.utils.TypeUtils"));
+                    "blue.language.utils.TypeUtils",
+                    "blue.language.utils.Types"));
 
     @Test
     void shouldKeepLanguageCoreIndependentFromRuntimeAndLegacyAggregate()
@@ -284,7 +301,7 @@ class LanguageCoreArchitectureTest {
                         source.relativePath + " -> extend(...)");
             }
             for (String importedType : source.imports) {
-                for (String removedFacade : REMOVED_UTILS_FACADES) {
+                for (String removedFacade : REMOVED_OWNERSHIP_TYPES) {
                     if (importedType.equals(removedFacade)
                             || importedType.startsWith(
                             removedFacade + ".")) {
@@ -295,7 +312,7 @@ class LanguageCoreArchitectureTest {
                 }
             }
         }
-        for (String removedFacade : REMOVED_UTILS_FACADES) {
+        for (String removedFacade : REMOVED_OWNERSHIP_TYPES) {
             Path facadePath = PRODUCTION_ROOT.resolve(
                     removedFacade.replace('.', '/') + ".java");
             if (Files.exists(facadePath)) {
@@ -362,7 +379,9 @@ class LanguageCoreArchitectureTest {
                 && !packageName.startsWith(
                 "blue.language.conformance")
                 && !packageName.startsWith(
-                "blue.language.processor");
+                "blue.language.processor")
+                && !packageName.startsWith(
+                "blue.language.runtime");
     }
 
     private static boolean isForbiddenCoreImport(String importedType) {
@@ -493,7 +512,7 @@ class LanguageCoreArchitectureTest {
 
     private static Map<String, Integer> focusedServiceBudgets() {
         Map<String, Integer> result = new LinkedHashMap<>();
-        result.put("blue/language/api/BlueLanguage.java",
+        result.put("blue/language/runtime/BlueLanguage.java",
                 MAX_FOCUSED_SERVICE_METHODS);
         result.put("blue/language/codec/BlueCodec.java",
                 MAX_FOCUSED_SERVICE_METHODS);
@@ -518,7 +537,6 @@ class LanguageCoreArchitectureTest {
         return Collections.unmodifiableSet(new LinkedHashSet<>(
                 Arrays.asList(
                         "blue.language.identity",
-                        "blue.language.mapping",
                         "blue.language.matching",
                         "blue.language.matching.internal",
                         "blue.language.merge",
@@ -528,8 +546,7 @@ class LanguageCoreArchitectureTest {
                         "blue.language.provider",
                         "blue.language.registry",
                         "blue.language.resolve",
-                        "blue.language.snapshot",
-                        "blue.language.utils")));
+                        "blue.language.snapshot")));
     }
 
     private static final class SourceFile {

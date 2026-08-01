@@ -9,7 +9,7 @@ import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodePathEditor;
 import org.junit.jupiter.api.Test;
 
@@ -51,9 +51,9 @@ class ProcessingInputAdmissionTest {
                         "eventId",
                         new Node().value("facade-event"));
         String rootBlueId =
-                BlueIdCalculator.calculateBlueId(root);
+                DirectBlueIdCalculator.calculateBlueId(root);
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(
                         root, event);
@@ -79,7 +79,7 @@ class ProcessingInputAdmissionTest {
                     result.status());
             assertEquals(
                     rootBlueId,
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             result.document()));
             assertTrue(result.events().isEmpty());
             assertEquals(
@@ -95,7 +95,7 @@ class ProcessingInputAdmissionTest {
         Node unrelated = new Node().properties(
                 "payload", new Node().value("must remain cold"));
         String unrelatedBlueId =
-                BlueIdCalculator.calculateBlueId(unrelated);
+                DirectBlueIdCalculator.calculateBlueId(unrelated);
         Node root = new Node()
                 .properties("state", new Node().value("ready"))
                 .properties(
@@ -107,9 +107,9 @@ class ProcessingInputAdmissionTest {
                         new Node().value("none"))
                 .properties("eventId", new Node().value("E1"));
         String rootBlueId =
-                BlueIdCalculator.calculateBlueId(root);
+                DirectBlueIdCalculator.calculateBlueId(root);
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(root, event);
         StrictFragmentSnapshotManager fragments =
@@ -154,7 +154,7 @@ class ProcessingInputAdmissionTest {
         Node unrelated = new Node().value(
                 "snapshot sibling remains cold");
         String unrelatedBlueId =
-                BlueIdCalculator.calculateBlueId(unrelated);
+                DirectBlueIdCalculator.calculateBlueId(unrelated);
         Node root = new Node().properties(
                 "unrelated",
                 reference(unrelatedBlueId));
@@ -162,7 +162,7 @@ class ProcessingInputAdmissionTest {
                 "subscriptionKey",
                 new Node().value("none"));
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(event);
         StrictFragmentSnapshotManager fragments =
@@ -203,29 +203,29 @@ class ProcessingInputAdmissionTest {
         Node unrelated = new Node().value(
                 "unrelated root branch");
         String unrelatedBlueId =
-                BlueIdCalculator.calculateBlueId(unrelated);
+                DirectBlueIdCalculator.calculateBlueId(unrelated);
         Node selectedSide = new Node().value(
                 "unrelated selected sibling");
         String selectedSideBlueId =
-                BlueIdCalculator.calculateBlueId(selectedSide);
+                DirectBlueIdCalculator.calculateBlueId(selectedSide);
         Node nested = new Node().properties(
                 "leaf", new Node().value("selected"));
         String nestedBlueId =
-                BlueIdCalculator.calculateBlueId(nested);
+                DirectBlueIdCalculator.calculateBlueId(nested);
         Node selected = new Node()
                 .properties(
                         "nested", nested)
                 .properties(
                         "side", selectedSide);
         String selectedBlueId =
-                BlueIdCalculator.calculateBlueId(selected);
+                DirectBlueIdCalculator.calculateBlueId(selected);
         Node root = new Node()
                 .properties(
                         "selected", selected)
                 .properties(
                         "unrelated", unrelated);
         String rootBlueId =
-                BlueIdCalculator.calculateBlueId(root);
+                DirectBlueIdCalculator.calculateBlueId(root);
         ExactNodeGraphFragments graph =
                 new ExactNodeGraphFragments(root);
         StrictFragmentSnapshotManager fragments =
@@ -253,7 +253,7 @@ class ProcessingInputAdmissionTest {
                 fragments.requests());
         assertEquals(
                 rootBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         admitted.node()));
         assertFalse(NodePathEditor.getOrNull(
                 admitted.node(),
@@ -362,7 +362,7 @@ class ProcessingInputAdmissionTest {
         ResolvedSnapshot snapshot = new ResolvedSnapshot(
                 root.clone(),
                 root.clone(),
-                BlueIdCalculator.calculateBlueId(root));
+                DirectBlueIdCalculator.calculateBlueId(root));
         VerifiedExecutionEvidence evidence =
                 evidence(root, CYCLIC_MEMBER_BLUE_ID);
 
@@ -505,7 +505,7 @@ class ProcessingInputAdmissionTest {
         Node expected = new Node().properties(
                 "state", new Node().value("expected"));
         String requestedBlueId =
-                BlueIdCalculator.calculateBlueId(expected);
+                DirectBlueIdCalculator.calculateBlueId(expected);
         Node wrong = new Node().properties(
                 "state", new Node().value("wrong"));
         StrictFragmentSnapshotManager fragments =
@@ -548,7 +548,7 @@ class ProcessingInputAdmissionTest {
         Node expected = new Node().properties(
                 "state", new Node().value("not-found"));
         String requestedBlueId =
-                BlueIdCalculator.calculateBlueId(expected);
+                DirectBlueIdCalculator.calculateBlueId(expected);
         StrictFragmentSnapshotManager fragments =
                 new StrictFragmentSnapshotManager();
         AtomicInteger derivations = new AtomicInteger();
@@ -588,7 +588,7 @@ class ProcessingInputAdmissionTest {
         Node expected = new Node().properties(
                 "state", new Node().value("unavailable"));
         String requestedBlueId =
-                BlueIdCalculator.calculateBlueId(expected);
+                DirectBlueIdCalculator.calculateBlueId(expected);
         StrictFragmentSnapshotManager fragments =
                 new StrictFragmentSnapshotManager()
                         .unavailable(requestedBlueId);
@@ -631,9 +631,9 @@ class ProcessingInputAdmissionTest {
                 "subscriptionKey",
                 new Node().value("none"));
         String rootBlueId =
-                BlueIdCalculator.calculateBlueId(root);
+                DirectBlueIdCalculator.calculateBlueId(root);
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         ExactNodeGraphFragments rootFragments =
                 new ExactNodeGraphFragments(root);
         StrictFragmentSnapshotManager notFound =
@@ -754,7 +754,7 @@ class ProcessingInputAdmissionTest {
             Node root,
             String eventBlueId) {
         return VerifiedExecutionEvidence.builder(
-                        BlueIdCalculator.calculateBlueId(root),
+                        DirectBlueIdCalculator.calculateBlueId(root),
                         eventBlueId)
                 .revisions(7L, 7L)
                 .runtimeRegistryIdentity(
@@ -855,7 +855,7 @@ class ProcessingInputAdmissionTest {
             if (!unchecked.contains(blueId)) {
                 assertEquals(
                         blueId,
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 node));
             }
             return FrozenNode.fromNode(node);

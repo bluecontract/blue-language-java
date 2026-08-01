@@ -5,7 +5,7 @@ import blue.language.api.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.FrozenTypeMatcher;
+import blue.language.matching.FrozenTypeMatcher;
 
 import java.util.Objects;
 

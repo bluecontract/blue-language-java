@@ -3,7 +3,7 @@ package blue.language.processor.registry;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.registry.RegistryManifestConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -173,7 +173,7 @@ public final class BlueRuntimeTypeRegistry {
             }
             currentBlueId = declaredType.getBlueId() != null
                     ? declaredType.getBlueId()
-                    : BlueIdCalculator.calculateBlueId(declaredType);
+                    : DirectBlueIdCalculator.calculateBlueId(declaredType);
         }
         throw new IllegalStateException(
                 "Cyclic runtime registry type ancestry at "
@@ -320,7 +320,7 @@ public final class BlueRuntimeTypeRegistry {
              * schema values and change the published identity.
              */
             Node node = rawNode.clone();
-            String calculatedBlueId = BlueIdCalculator.calculateBlueId(node);
+            String calculatedBlueId = DirectBlueIdCalculator.calculateBlueId(node);
             if (!manifestEntry.blueId.equals(calculatedBlueId)) {
                 throw new IllegalStateException("Runtime registry BlueId mismatch for " + key
                         + ": calculated=" + calculatedBlueId

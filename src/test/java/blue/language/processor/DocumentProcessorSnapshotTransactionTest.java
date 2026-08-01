@@ -12,7 +12,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -618,11 +618,11 @@ class DocumentProcessorSnapshotTransactionTest {
         assertNotNull(processedDebug.resultingSnapshot());
         assertEquals(
                 processedDebug.resultingSnapshot().blueId(),
-                BlueIdCalculator.calculateBlueId(processed.document()));
+                DirectBlueIdCalculator.calculateBlueId(processed.document()));
         assertEquals(7, processed.document().getAsInteger("/x"));
         assertNotNull(processed.document().getAsText(
                 "/contracts/checkpoint/entries/testChannel/domain/blueId"));
-        assertEquals(BlueIdCalculator.calculateBlueId(event),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(event),
                 processed.document().getAsText(
                         "/contracts/checkpoint/entries/testChannel/subject/blueId"));
         assertTrue(manager.cacheSnapshotCalls >= 2);
@@ -711,7 +711,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 uncheckedSnapshot(snapshotInitialized.document()),
                 event.clone());
         String expectedSubject =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         String nodeDomain = nodeProcessed.document().getAsText(
                 "/contracts/checkpoint/entries/testChannel/domain/blueId");
         String snapshotDomain = snapshotProcessed.document().getAsText(
@@ -720,12 +720,12 @@ class DocumentProcessorSnapshotTransactionTest {
         // then
         assertEquals(nodeInitialized.totalGas(), snapshotInitialized.totalGas());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(nodeInitialized.document()),
-                BlueIdCalculator.calculateBlueId(snapshotInitialized.document()));
+                DirectBlueIdCalculator.calculateBlueId(nodeInitialized.document()),
+                DirectBlueIdCalculator.calculateBlueId(snapshotInitialized.document()));
         assertEquals(nodeProcessed.totalGas(), snapshotProcessed.totalGas());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(nodeProcessed.document()),
-                BlueIdCalculator.calculateBlueId(snapshotProcessed.document()));
+                DirectBlueIdCalculator.calculateBlueId(nodeProcessed.document()),
+                DirectBlueIdCalculator.calculateBlueId(snapshotProcessed.document()));
         assertEquals(7, snapshotProcessed.document().getAsInteger("/x"));
         assertNotNull(nodeDomain);
         assertEquals(nodeDomain, snapshotDomain);
@@ -970,7 +970,7 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     private static void assertSnapshotConsistent(ResolvedSnapshot snapshot) {
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(snapshot.canonicalRoot()), snapshot.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(snapshot.canonicalRoot()), snapshot.blueId());
     }
 
     private static ResolvedSnapshot uncheckedSnapshot(Node canonicalRoot) {

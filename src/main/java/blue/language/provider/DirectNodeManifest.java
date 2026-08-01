@@ -5,7 +5,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
@@ -81,7 +81,7 @@ public final class DirectNodeManifest {
         }
         String calculated;
         try {
-            calculated = BlueIdCalculator.calculateBlueId(directNode);
+            calculated = DirectBlueIdCalculator.calculateBlueId(directNode);
         } catch (RuntimeException invalid) {
             return BlueOperationResult.invalid(invalid.getMessage(),
                     NodeProviderOutcome.INVALID_EVIDENCE);
@@ -189,7 +189,7 @@ public final class DirectNodeManifest {
         }
         List<String> identities = new ArrayList<>(directNode.getItems().size());
         for (Node item : directNode.getItems()) {
-            identities.add(BlueIdCalculator.calculateBlueId(item));
+            identities.add(DirectBlueIdCalculator.calculateBlueId(item));
         }
         return BlueOperationResult.established(Collections.unmodifiableList(identities));
     }

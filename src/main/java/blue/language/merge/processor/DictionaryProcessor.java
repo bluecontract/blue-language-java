@@ -7,13 +7,13 @@ import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.Types;
+import blue.language.provider.Types;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Map;
 
-import static blue.language.utils.Types.isSubtype;
+import static blue.language.provider.Types.isSubtype;
 
 /**
  * Propagates Dictionary key/value type metadata and validates every contributed

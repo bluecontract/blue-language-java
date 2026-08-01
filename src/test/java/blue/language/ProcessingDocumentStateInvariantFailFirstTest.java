@@ -6,13 +6,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
@@ -27,7 +25,7 @@ import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
@@ -184,7 +182,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
-        String eventBlueId = BlueIdCalculator.calculateBlueId(eventA);
+        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(eventA);
         AtomicInteger executions = new AtomicInteger();
         Blue processor = fixture.newBlue(executions);
         // when
@@ -260,12 +258,12 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                                            boolean handlerPatches) {
         Node expected = selectedBefore.clone();
         Node channel = selectedBefore.getContracts().getProperties().get("incoming");
-        String contributionBlueId = BlueIdCalculator.calculateBlueId(channel);
+        String contributionBlueId = DirectBlueIdCalculator.calculateBlueId(channel);
         String domainBlueId = CheckpointDomain.derive(
                 fixture.channelBlueId,
                 Collections.singletonList(contributionBlueId),
                 "audit-kind-v1");
-        String subjectBlueId = BlueIdCalculator.calculateBlueId(event);
+        String subjectBlueId = DirectBlueIdCalculator.calculateBlueId(event);
         Node entry = new Node()
                 .properties("domain", reference(domainBlueId))
                 .properties("subject", reference(subjectBlueId));

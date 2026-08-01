@@ -7,7 +7,7 @@ import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.registry.RuntimeTypeAliases;
 import blue.language.registry.BlueCoreTypeRegistry;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -100,7 +100,7 @@ class BootstrapProviderVerificationTest {
         // when
         for (String resource : resources) {
             Node advertised = readResource(resource);
-            String blueId = BlueIdCalculator.calculateBlueId(advertised);
+            String blueId = DirectBlueIdCalculator.calculateBlueId(advertised);
             advertisedBlueIds.put(resource, blueId);
             fetchedByResource.put(resource, BootstrapProvider.INSTANCE.fetchByBlueId(blueId));
         }
@@ -111,7 +111,7 @@ class BootstrapProviderVerificationTest {
             List<Node> fetched = fetchedByResource.get(resource);
             assertNotNull(fetched, "Bootstrap provider returned null for " + resource);
             assertFalse(fetched.isEmpty(), "Bootstrap provider returned no content for " + resource);
-            assertEquals(blueId, BlueIdCalculator.calculateBlueId(withoutRootIdentity(fetched.get(0))), resource);
+            assertEquals(blueId, DirectBlueIdCalculator.calculateBlueId(withoutRootIdentity(fetched.get(0))), resource);
         }
     }
 

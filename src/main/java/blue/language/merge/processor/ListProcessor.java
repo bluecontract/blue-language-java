@@ -8,9 +8,9 @@ import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 import blue.language.model.NodeWireForm;
-import blue.language.utils.Types;
+import blue.language.provider.Types;
 
-import static blue.language.utils.Types.isSubtype;
+import static blue.language.provider.Types.isSubtype;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_POSITIONAL;
 

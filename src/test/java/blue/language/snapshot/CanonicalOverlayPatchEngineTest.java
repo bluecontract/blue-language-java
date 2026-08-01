@@ -2,7 +2,7 @@ package blue.language.snapshot;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -36,7 +36,7 @@ class CanonicalOverlayPatchEngineTest {
         assertSame(root.property("left"), patched.property("left"));
         assertNotSame(root.property("right"), patched.property("right"));
         assertNotSame(root, patched);
-        assertEquals(BlueIdCalculator.calculateBlueId(patched.toNode()), patched.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(patched.toNode()), patched.blueId());
     }
 
     @Test
@@ -51,7 +51,7 @@ class CanonicalOverlayPatchEngineTest {
         // then
         assertNull(root.property("a"));
         assertEquals(3, result.root().toNode().getAsInteger("/a/b/c/value"));
-        assertEquals(BlueIdCalculator.calculateBlueId(result.root().toNode()), result.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(result.root().toNode()), result.blueId());
     }
 
     @Test
@@ -119,7 +119,7 @@ class CanonicalOverlayPatchEngineTest {
         assertSame(root.property("rows").item(0), appended.property("rows").item(0));
         assertEquals("bb", replaced.toNode().getAsText("/rows/1/id/value"));
         assertEquals(2, removed.property("rows").getItems().size());
-        assertEquals(BlueIdCalculator.calculateBlueId(removed.toNode()), removed.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(removed.toNode()), removed.blueId());
     }
 
     @Test
@@ -139,7 +139,7 @@ class CanonicalOverlayPatchEngineTest {
         // then
         assertEquals("created", replacedMissing.property("b").getValue());
         assertEquals("new", addedExisting.property("a").getValue());
-        assertEquals(BlueIdCalculator.calculateBlueId(addedExisting.toNode()), addedExisting.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(addedExisting.toNode()), addedExisting.blueId());
     }
 
     @Test
@@ -198,7 +198,7 @@ class CanonicalOverlayPatchEngineTest {
                 () -> engine.apply(JsonPatch.replace("/items/5", new Node().value("bad"))));
 
         assertEquals("a", root.item(0).getValue());
-        assertEquals(BlueIdCalculator.calculateBlueId(root.toNode()), root.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(root.toNode()), root.blueId());
     }
 
     @Test
@@ -241,7 +241,7 @@ class CanonicalOverlayPatchEngineTest {
                         .property("documentId")
                         .getValue());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         patched.toNode()),
                 patched.blueId());
     }
@@ -275,7 +275,7 @@ class CanonicalOverlayPatchEngineTest {
                         .property("documentId")
                         .getValue());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         patched.toNode()),
                 patched.blueId());
     }

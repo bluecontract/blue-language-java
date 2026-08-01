@@ -3,7 +3,7 @@ package blue.language.conformance.contracts;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -548,7 +548,7 @@ final class ContractsAssertionEvaluator {
         try {
             Node node = UncheckedObjectMapper.JSON_MAPPER.convertValue(
                     value, Node.class);
-            return BlueIdCalculator.calculateBlueId(node);
+            return DirectBlueIdCalculator.calculateBlueId(node);
         } catch (RuntimeException notAnExactNode) {
             return null;
         }

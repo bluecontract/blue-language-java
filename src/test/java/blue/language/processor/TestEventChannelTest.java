@@ -12,7 +12,7 @@ import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.SetPropertyOnEvent;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -206,13 +206,13 @@ class TestEventChannelTest {
         // then
         assertNull(checkpointValue(initialized));
         assertEquals(new BigInteger("1"), afterFirst.getProperties().get("x").getValue());
-        assertEquals(BlueIdCalculator.calculateBlueId(event1),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(event1),
                 checkpointValue(afterFirst));
         assertEquals(new BigInteger("1"), afterStale.getProperties().get("x").getValue());
-        assertEquals(BlueIdCalculator.calculateBlueId(stale),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(stale),
                 checkpointValue(afterStale));
         assertEquals(new BigInteger("2"), afterFresh.getProperties().get("x").getValue());
-        assertEquals(BlueIdCalculator.calculateBlueId(fresh),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(fresh),
                 checkpointValue(afterFresh));
     }
 
@@ -272,14 +272,14 @@ class TestEventChannelTest {
         // then
         assertEquals(new BigInteger("1"), afterFirst.getProperties().get("x").getValue());
         assertNotNull(storedSubject);
-        assertEquals(BlueIdCalculator.calculateBlueId(firstEvent),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(firstEvent),
                 storedSubject.getBlueId());
         assertEquals(new BigInteger("1"), afterSecond.getProperties().get("x").getValue(),
                 "Identical payload should be gated by checkpoint");
         assertEquals(new BigInteger("2"), afterThird.getProperties().get("x").getValue(),
                 "Changed payload should be processed");
         assertNotNull(updatedSubject);
-        assertEquals(BlueIdCalculator.calculateBlueId(changedEvent),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(changedEvent),
                 updatedSubject.getBlueId());
     }
 

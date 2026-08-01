@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ final class SelectedExecutableBodyCapabilityTest {
                 new ArrayList<>();
         for (int index = 0; index < 15; index++) {
             blueIds.add(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             new Node().value(
                                     "schema-reference-"
                                             + index)));
@@ -144,7 +144,7 @@ final class SelectedExecutableBodyCapabilityTest {
                 (int) schedule.portableLimit(
                         "runtimeChildLedgerCounterKinds");
         String entry =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().value(
                                 "transitive-entry"));
         SelectedExecutableBody selected =
@@ -214,7 +214,7 @@ final class SelectedExecutableBodyCapabilityTest {
                         new Node().blueId(
                                 nestedBlueId));
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(body);
+                DirectBlueIdCalculator.calculateBlueId(body);
 
         try (Blue blue = new Blue(provider)) {
             ProcessorInvocationState execution =
@@ -240,7 +240,7 @@ final class SelectedExecutableBodyCapabilityTest {
                     context.selectedExecutableBody(
                             "script");
             String unrelated =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             new Node().value(
                                     "unrelated"));
 
@@ -374,7 +374,7 @@ final class SelectedExecutableBodyCapabilityTest {
                 new ArrayList<>(count);
         for (int index = 0; index < count; index++) {
             references.add(
-                    ref(BlueIdCalculator.calculateBlueId(
+                    ref(DirectBlueIdCalculator.calculateBlueId(
                             new Node().value(
                                     prefix + "-" + index))));
         }

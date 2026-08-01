@@ -6,7 +6,7 @@ import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
@@ -33,12 +33,12 @@ final class ContractDiscoveryServicesTest {
         Node baseType = new Node()
                 .name("Discovery base")
                 .contracts(new Node().properties("run", baseContribution));
-        String baseTypeBlueId = BlueIdCalculator.calculateBlueId(baseType);
+        String baseTypeBlueId = DirectBlueIdCalculator.calculateBlueId(baseType);
         Node derivedType = new Node()
                 .name("Discovery derived")
                 .type(new Node().blueId(baseTypeBlueId))
                 .contracts(new Node().properties("run", derivedContribution));
-        String derivedTypeBlueId = BlueIdCalculator.calculateBlueId(derivedType);
+        String derivedTypeBlueId = DirectBlueIdCalculator.calculateBlueId(derivedType);
         ContractContributionCollector collector =
                 new ContractContributionCollector(
                         new BasicNodeProvider(baseType, derivedType));
@@ -55,8 +55,8 @@ final class ContractDiscoveryServicesTest {
         // then
         assertEquals(
                 Arrays.asList(
-                        BlueIdCalculator.calculateBlueId(baseContribution),
-                        BlueIdCalculator.calculateBlueId(derivedContribution)),
+                        DirectBlueIdCalculator.calculateBlueId(baseContribution),
+                        DirectBlueIdCalculator.calculateBlueId(derivedContribution)),
                 resolution.sourceContributions());
         assertEquals(
                 resolution.sourceContributions().get(1),
@@ -225,6 +225,6 @@ final class ContractDiscoveryServicesTest {
     }
 
     private String blueId(String value) {
-        return BlueIdCalculator.calculateBlueId(new Node().value(value));
+        return DirectBlueIdCalculator.calculateBlueId(new Node().value(value));
     }
 }

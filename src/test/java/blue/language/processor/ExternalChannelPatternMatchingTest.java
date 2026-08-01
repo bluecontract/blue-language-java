@@ -9,8 +9,8 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.FrozenTypeMatcher;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.matching.FrozenTypeMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -38,11 +38,11 @@ final class ExternalChannelPatternMatchingTest {
     private static final Node LEAF_TYPE =
             new Node().name("Pattern Matching Leaf Channel");
     private static final String LEAF_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(LEAF_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(LEAF_TYPE);
     private static final Node AGGREGATE_TYPE =
             new Node().name("Pattern Matching Aggregate Channel");
     private static final String AGGREGATE_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     AGGREGATE_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(
@@ -154,7 +154,7 @@ final class ExternalChannelPatternMatchingTest {
                         "detail",
                         new Node().value("nested-retained"));
         String nestedBlueId =
-                BlueIdCalculator.calculateBlueId(nested);
+                DirectBlueIdCalculator.calculateBlueId(nested);
         Map<String, Node> supplied =
                 Collections.singletonMap(
                         nestedBlueId,
@@ -211,20 +211,20 @@ final class ExternalChannelPatternMatchingTest {
         Node baseType =
                 new Node().name("Pattern Base");
         String baseBlueId =
-                BlueIdCalculator.calculateBlueId(baseType);
+                DirectBlueIdCalculator.calculateBlueId(baseType);
         Node parentType =
                 new Node()
                         .name("Pattern Parent")
                         .type(reference(baseBlueId));
         String parentBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         parentType);
         Node childType =
                 new Node()
                         .name("Pattern Child")
                         .type(reference(parentBlueId));
         String childBlueId =
-                BlueIdCalculator.calculateBlueId(childType);
+                DirectBlueIdCalculator.calculateBlueId(childType);
         Map<String, Node> supplied =
                 new LinkedHashMap<>();
         supplied.put(baseBlueId, baseType);
@@ -298,7 +298,7 @@ final class ExternalChannelPatternMatchingTest {
         // given
         Node candidate = extendedCandidate();
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(candidate);
+                DirectBlueIdCalculator.calculateBlueId(candidate);
 
         // when
         RuntimeException failure =
@@ -317,7 +317,7 @@ final class ExternalChannelPatternMatchingTest {
         // given
         Node candidate = extendedCandidate();
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(candidate);
+                DirectBlueIdCalculator.calculateBlueId(candidate);
         Node wrong = new Node().value("wrong-content");
         NodeProvider provider = blueId ->
                 candidateBlueId.equals(blueId)
@@ -340,7 +340,7 @@ final class ExternalChannelPatternMatchingTest {
     void shouldPropagateVerifiedMaterializerFailure() {
         // given
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         extendedCandidate());
         IllegalStateException sentinel =
                 new IllegalStateException(
@@ -363,7 +363,7 @@ final class ExternalChannelPatternMatchingTest {
     void shouldRejectVerifiedMaterializerWithoutContent() {
         // given
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         extendedCandidate());
 
         // when
@@ -384,7 +384,7 @@ final class ExternalChannelPatternMatchingTest {
     void shouldRejectVerifiedMaterializerRetainingPureReference() {
         // given
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         extendedCandidate());
 
         // when
@@ -405,7 +405,7 @@ final class ExternalChannelPatternMatchingTest {
     void shouldRejectVerifiedMaterializerWithMismatchedContent() {
         // given
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         extendedCandidate());
         Node wrong = new Node().value("wrong-content");
 
@@ -478,7 +478,7 @@ final class ExternalChannelPatternMatchingTest {
         // given
         Node headerCandidate = extendedCandidate();
         String headerCandidateBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         headerCandidate);
         AtomicInteger providerFetches =
                 new AtomicInteger();
@@ -748,7 +748,7 @@ final class ExternalChannelPatternMatchingTest {
         // given
         Node candidate = extendedCandidate();
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(candidate);
+                DirectBlueIdCalculator.calculateBlueId(candidate);
         try (Blue blue = runtime(
                 null,
                 new PatternLeafProcessor(false),
@@ -790,7 +790,7 @@ final class ExternalChannelPatternMatchingTest {
         // given
         Node candidate = extendedCandidate();
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(candidate);
+                DirectBlueIdCalculator.calculateBlueId(candidate);
         AtomicInteger providerFetches =
                 new AtomicInteger();
         NodeProvider provider = blueId -> {
@@ -859,7 +859,7 @@ final class ExternalChannelPatternMatchingTest {
                             .subscriptionKey("topic")
                             .checkpointDomainBlueId(domain)
                             .checkpointSubjectBlueId(
-                                    BlueIdCalculator
+                                    DirectBlueIdCalculator
                                             .calculateBlueId(
                                                     event));
             for (String contribution
@@ -927,7 +927,7 @@ final class ExternalChannelPatternMatchingTest {
             boolean repeat) {
         Node extended = extendedCandidate();
         String candidateBlueId =
-                BlueIdCalculator.calculateBlueId(extended);
+                DirectBlueIdCalculator.calculateBlueId(extended);
         AtomicInteger providerFetches =
                 new AtomicInteger();
         NodeProvider provider = blueId -> {
@@ -961,9 +961,9 @@ final class ExternalChannelPatternMatchingTest {
                     : extended.clone();
             Node candidateEvent = event(candidate);
             String patternIdentity =
-                    BlueIdCalculator.calculateBlueId(pattern);
+                    DirectBlueIdCalculator.calculateBlueId(pattern);
             String eventIdentity =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             candidateEvent);
             ExternalChannelFunctionEvaluation first =
                     evaluate(
@@ -995,9 +995,9 @@ final class ExternalChannelPatternMatchingTest {
                     providerFetchesAfterFirst,
                     providerFetches.get(),
                     patternIdentity,
-                    BlueIdCalculator.calculateBlueId(pattern),
+                    DirectBlueIdCalculator.calculateBlueId(pattern),
                     eventIdentity,
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             candidateEvent),
                     extended.getAsText("/detail"));
         }

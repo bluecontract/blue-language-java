@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -51,7 +51,7 @@ class ContractContributionResolverTest {
         // then
         assertEquals(
                 Collections.singletonList(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 contribution)),
                 contributions);
     }
@@ -90,7 +90,7 @@ class ContractContributionResolverTest {
         String field = "body~/part";
         Node body = new Node().value("cold");
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(body);
+                DirectBlueIdCalculator.calculateBlueId(body);
         Node contribution =
                 new Node().properties(
                         field,
@@ -121,7 +121,7 @@ class ContractContributionResolverTest {
         // then
         assertEquals(
                 Collections.singletonList(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 contribution)),
                 resolution.sourceContributions());
         assertEquals(
@@ -145,7 +145,7 @@ class ContractContributionResolverTest {
                 new Node().name(
                         "Unavailable Source type");
         String typeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         type);
         Node selectedScope =
                 new Node().type(
@@ -197,7 +197,7 @@ class ContractContributionResolverTest {
                                         "run",
                                         baseContribution));
         String baseTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         baseType);
         Node derivedType =
                 new Node()
@@ -209,7 +209,7 @@ class ContractContributionResolverTest {
                                         "run",
                                         derivedContribution));
         String derivedTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         derivedType);
         BasicNodeProvider provider =
                 new BasicNodeProvider(
@@ -237,18 +237,18 @@ class ContractContributionResolverTest {
         // then
         assertEquals(
                 Arrays.asList(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 baseContribution),
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 derivedContribution)),
                 resolution.sourceContributions());
         assertEquals(
                 resolution.sourceContributions().get(1),
                 source.owningContributionBlueId());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         derivedBody),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         resolution.exactExecutableBodies()
                                 .get("program")));
         assertEquals("/program", source.sourcePointer());

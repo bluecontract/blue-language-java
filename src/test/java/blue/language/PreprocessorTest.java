@@ -4,13 +4,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
@@ -19,7 +17,7 @@ import blue.language.preprocess.TransformationProcessor;
 import blue.language.preprocess.TransformationProcessorProvider;
 import blue.language.processor.registry.RuntimeTypeAliases;
 import blue.language.provider.BootstrapProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodeTransformer;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
@@ -224,9 +222,9 @@ public class PreprocessorTest {
     @Test
     public void shouldReplaceTypeAliasesAndRemoveBlueImports() {
         // given
-        String personBlueId = BlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
-        String keyBlueId = BlueIdCalculator.calculateBlueId(new Node().value("KeyType"));
-        String valueBlueId = BlueIdCalculator.calculateBlueId(new Node().value("ValueType"));
+        String personBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
+        String keyBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("KeyType"));
+        String valueBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("ValueType"));
         String doc = "blue:\n" +
                      "  imports:\n" +
                      "    Person:\n" +
@@ -259,7 +257,7 @@ public class PreprocessorTest {
     @Test
     public void shouldRejectInvalidBlueImportShapes() {
         // given
-        String personBlueId = BlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
+        String personBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
         String valueImport = "blue:\n" +
                 "  imports:\n" +
                 "    Person:\n" +
@@ -325,7 +323,7 @@ public class PreprocessorTest {
     @Test
     public void shouldPreserveOtherBlueTransformsWhenProcessingImports() {
         // given
-        String personBlueId = BlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
+        String personBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("PersonType"));
         String doc = "blue:\n" +
                      "  imports:\n" +
                      "    Person:\n" +

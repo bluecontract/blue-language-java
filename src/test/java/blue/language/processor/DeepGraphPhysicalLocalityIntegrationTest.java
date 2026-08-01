@@ -19,7 +19,7 @@ import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodePathEditor;
 import org.junit.jupiter.api.Test;
 
@@ -71,7 +71,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             .name("Deep Graph Locality Relay Handler")
             .type(new Node().blueId(RuntimeBlueIds.HANDLER));
     private static final String RELAY_HANDLER_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(RELAY_HANDLER_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(RELAY_HANDLER_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.<Object>asList(
                     91, "deep-locality", 1));
@@ -171,7 +171,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                 Collections.<Node>
                                         emptyList()));
         String rootBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         rootBody);
         Node root = scenario.root.clone();
         Node rootChannelNode = new Node()
@@ -233,7 +233,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             Node exactChild =
                     Scenario.rootAt(root, child);
             String childBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             exactChild);
             embeddedChildBlueIds.add(childBlueId);
             providerContent.put(
@@ -246,9 +246,9 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                             childBlueId));
         }
         String rootBlueId =
-                BlueIdCalculator.calculateBlueId(root);
+                DirectBlueIdCalculator.calculateBlueId(root);
         String rootFragmentBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         rootFragment);
         providerContent.put(
                 rootBlueId,
@@ -303,7 +303,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                 .snapshotManager(),
                         preserved);
         String contribution =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         rootChannelNode);
         String checkpointDomain =
                 CheckpointDomain.derive(
@@ -851,8 +851,8 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                         SELECTED_HANDLER) + "/result"),
                 context + ": selected immutable body should be shared");
         assertEquals(
-                BlueIdCalculator.calculateBlueId(resulting.canonicalRoot()),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(resulting.canonicalRoot()),
+                DirectBlueIdCalculator.calculateBlueId(
                         run.debug.processResult().document()),
                 context + ": resulting snapshot/result Root identity drift");
     }
@@ -886,7 +886,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             List<Node> nodes) {
         List<String> result = new ArrayList<>();
         for (Node node : nodes) {
-            result.add(BlueIdCalculator.calculateBlueId(node));
+            result.add(DirectBlueIdCalculator.calculateBlueId(node));
         }
         return Collections.unmodifiableList(result);
     }
@@ -895,7 +895,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             List<ProcessingTraceRecord> records) {
         List<String> result = new ArrayList<>();
         for (ProcessingTraceRecord record : records) {
-            result.add(BlueIdCalculator.calculateBlueId(
+            result.add(DirectBlueIdCalculator.calculateBlueId(
                     record.node()));
         }
         return Collections.unmodifiableList(result);
@@ -1381,15 +1381,15 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                 ancestorIndex++;
             }
             String rootBlueId =
-                    BlueIdCalculator.calculateBlueId(root);
+                    DirectBlueIdCalculator.calculateBlueId(root);
             if (!rootBlueId.equals(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             fragmentedRoot))) {
                 throw new IllegalStateException(
                         "Deep locality Root fragmentation changed identity");
             }
             if (!rootBlueId.equals(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             mixedFragmentedRoot))) {
                 throw new IllegalStateException(
                         "Mixed deep fragment boundaries changed Root identity");
@@ -1403,7 +1403,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                     rootAt(root, contractPath(
                             leafPath, SELECTED_CHANNEL));
             String contribution =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             selectedChannel);
             String checkpointDomain =
                     CheckpointDomain.derive(
@@ -1413,9 +1413,9 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                     contribution),
                             CHECKPOINT_DISCRIMINATOR);
             String eventBlueId =
-                    BlueIdCalculator.calculateBlueId(event);
+                    DirectBlueIdCalculator.calculateBlueId(event);
             if (!eventBlueId.equals(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             partialEvent))) {
                 throw new IllegalStateException(
                         "Partial Event fragmentation changed identity");
@@ -1738,7 +1738,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                             .properties(
                                     "document",
                                     new Node().blueId(
-                                            BlueIdCalculator.calculateBlueId(
+                                            DirectBlueIdCalculator.calculateBlueId(
                                                     exactDocument))));
         }
 
@@ -1938,7 +1938,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                 Map<String, Node> providerBodies,
                 Node body) {
             String blueId =
-                    BlueIdCalculator.calculateBlueId(body);
+                    DirectBlueIdCalculator.calculateBlueId(body);
             providerBodies.put(blueId, body.clone());
             return blueId;
         }
@@ -2410,7 +2410,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                     debug.processResult();
             return new SemanticProjection(
                     result.status(),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             result.document()),
                     nodeBlueIds(result.events()),
                     result.totalGas(),
@@ -2459,7 +2459,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                 + "|" + record.logicalPath()
                                 + "|" + record.details()
                                 + "|" + (record.node() != null
-                                ? BlueIdCalculator
+                                ? DirectBlueIdCalculator
                                 .calculateBlueId(
                                         record.node())
                                 : null));

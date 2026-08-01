@@ -2,7 +2,7 @@ package blue.language.mapping;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ClasspathHelper;
@@ -212,7 +212,7 @@ public class TypeClassResolver {
         if (node.getType() != null && node.getType().getBlueId() != null) {
             return node.getType().getBlueId();
         } else if (node.getType() != null) {
-            return BlueIdCalculator.calculateBlueId(node.getType());
+            return DirectBlueIdCalculator.calculateBlueId(node.getType());
         }
         return null;
     }

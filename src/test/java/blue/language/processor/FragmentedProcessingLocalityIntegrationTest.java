@@ -13,7 +13,7 @@ import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.SequentialNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
 
@@ -141,7 +141,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
         Node resultingRoot =
                 run.debug.processResult().document();
         String resultingRootBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         resultingRoot);
         ExactNodeGraphFragments resultingFragments =
                 new ExactNodeGraphFragments(
@@ -158,7 +158,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
         Node domain = checkpointDomainNode(
                 MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL,
                 Collections.singletonList(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 scenario.inlineRoot
                                         .getContracts()
                                         .getProperties()
@@ -192,7 +192,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
             collapsedReferenceOnly = collapsed.isReferenceOnly();
             collapsedBlueId = collapsed.getBlueId();
             expandedBlueId =
-                    BlueIdCalculator.calculateBlueId(expanded);
+                    DirectBlueIdCalculator.calculateBlueId(expanded);
             recollapsedBlueId =
                     roundTripBlue.collapse(expanded).getBlueId();
             expandedValue = NodeWireForm.get(expanded);
@@ -205,7 +205,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
         // then
         assertEquals(
                 scenario.selectedCheckpointDomain,
-                BlueIdCalculator.calculateBlueId(domain));
+                DirectBlueIdCalculator.calculateBlueId(domain));
         assertTrue(collapsedReferenceOnly);
         assertEquals(resultingRootBlueId, collapsedBlueId);
         assertEquals(resultingRootBlueId, expandedBlueId);
@@ -454,9 +454,9 @@ final class FragmentedProcessingLocalityIntegrationTest {
                         + diagnosticProjection(
                         replay.diagnostic()));
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         result.document()),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         replay.document()),
                 context + ": replay mutated the checkpointed Root");
         assertEquals(
@@ -516,7 +516,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                 context);
         assertEquals(
                 scenario.eventBlueId,
-                BlueIdCalculator.calculateBlueId(subject),
+                DirectBlueIdCalculator.calculateBlueId(subject),
                 context);
         assertNull(
                 entries.getProperties()
@@ -551,7 +551,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                 new ArrayList<>(nodes.size());
         for (Node node : nodes) {
             result.add(
-                    BlueIdCalculator.calculateBlueId(node));
+                    DirectBlueIdCalculator.calculateBlueId(node));
         }
         return Collections.unmodifiableList(result);
     }
@@ -805,7 +805,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                             "id",
                             new Node().value("result-1"));
             String rootEventBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             emitted);
             Node selectedBody = new Node()
                     .properties(
@@ -900,7 +900,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                                         .get(index)));
             }
             String contractsBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             contracts);
             Node fragmentedContracts =
                     new Node();
@@ -930,7 +930,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
             }
             assertEquals(
                     contractsBlueId,
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             fragmentedContracts),
                     "separate exact contract headers must "
                             + "preserve the Contracts-map identity");
@@ -953,7 +953,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
             }
             assertEquals(
                     contractsBlueId,
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             inlineContracts),
                     "inline executable bodies must preserve "
                             + "the Contracts-map identity");
@@ -971,7 +971,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                             archive.clone())
                     .contracts(inlineContracts);
             String rootBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             inlineRoot);
             Node partialRoot = inlineRoot.clone();
             partialRoot.getProperties().put(
@@ -982,7 +982,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                     fragmentedContracts);
             assertEquals(
                     rootBlueId,
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             partialRoot),
                     "contracts-map collapse must preserve Root identity");
             allowed.put(
@@ -1016,7 +1016,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                             "message",
                             message);
             String eventBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             inlineEvent);
             Node partialEvent = inlineEvent.clone();
             partialEvent.getProperties().put(
@@ -1024,17 +1024,17 @@ final class FragmentedProcessingLocalityIntegrationTest {
                     new Node().blueId(messageBlueId));
             assertEquals(
                     eventBlueId,
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             partialEvent),
                     "message collapse must preserve Event identity");
             allowed.put(
                     eventBlueId, partialEvent.clone());
 
             String selectedContribution =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             selectedChannel);
             String rejectedContribution =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             rejectedChannel);
             String selectedDomain =
                     CheckpointDomain.derive(
@@ -1251,7 +1251,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                 Map<String, Node> target,
                 Node exact) {
             String blueId =
-                    BlueIdCalculator.calculateBlueId(exact);
+                    DirectBlueIdCalculator.calculateBlueId(exact);
             target.put(blueId, exact.clone());
             return blueId;
         }
@@ -1493,7 +1493,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
             return new SemanticProjection(
                     result.status(),
                     textAt(result.document(), "/state"),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             result.document()),
                     nodeBlueIds(result.events()),
                     diagnosticProjection(
@@ -1543,7 +1543,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                                 + "|" + record.logicalPath()
                                 + "|" + record.details()
                                 + "|" + (node != null
-                                ? BlueIdCalculator
+                                ? DirectBlueIdCalculator
                                 .calculateBlueId(node)
                                 : null));
             }

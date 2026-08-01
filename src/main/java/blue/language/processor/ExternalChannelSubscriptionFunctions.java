@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.util.ProcessorContractConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -372,7 +372,7 @@ public interface ExternalChannelSubscriptionFunctions<
                             + "event");
         }
         return new Node().blueId(
-                BlueIdCalculator.calculateBlueId(exactEvent));
+                DirectBlueIdCalculator.calculateBlueId(exactEvent));
     }
 
     /**

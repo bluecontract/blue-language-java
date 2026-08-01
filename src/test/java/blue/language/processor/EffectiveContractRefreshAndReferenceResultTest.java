@@ -9,7 +9,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -77,7 +77,7 @@ final class EffectiveContractRefreshAndReferenceResultTest {
         fixture.provider.addSingleNodes(
                 initialized.document());
         String initializedBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         initialized.document());
         Node pureReference =
                 new Node().blueId(initializedBlueId);
@@ -156,12 +156,12 @@ final class EffectiveContractRefreshAndReferenceResultTest {
                         "order",
                         new Node().value(7));
         String overlayBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         typelessOverlay);
         Node selected =
                 new Node()
                         .type(reference(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         new Node().name(
                                                 "Refresh Scope Type"))))
                         .contracts(

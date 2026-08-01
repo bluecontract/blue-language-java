@@ -1,6 +1,7 @@
 package blue.language.utils;
 
 import blue.language.model.Node;
+import blue.language.model.NodeIdentities;
 
 /**
  * Canonical identity of a scalar Blue node.
@@ -31,7 +32,7 @@ public final class ScalarNodeIdentity {
         if (type != null) {
             String typeBlueId = type.getBlueId() != null
                     ? type.getBlueId()
-                    : BlueIdCalculator.calculateBlueId(type);
+                    : NodeIdentities.calculate(type);
             normalized.type(new Node().blueId(typeBlueId));
         }
         return normalized;
@@ -44,7 +45,7 @@ public final class ScalarNodeIdentity {
      * @return canonical scalar BlueId
      */
     public static String blueId(Node node) {
-        return BlueIdCalculator.calculateBlueId(normalized(node));
+        return NodeIdentities.calculate(normalized(node));
     }
 
     /**

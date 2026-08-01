@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ final class ExternalChannelHostedOutputAdmissionTest {
             new Node().name(
                     "Generic Hosted Output Admission Channel");
     private static final String CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     CHANNEL_TYPE);
 
     @Test
@@ -288,7 +288,7 @@ final class ExternalChannelHostedOutputAdmissionTest {
                     new BasicNodeProvider(output),
                     returnReference
                             ? new Node().blueId(
-                                    BlueIdCalculator
+                                    DirectBlueIdCalculator
                                             .calculateBlueId(
                                                     output))
                             : output);

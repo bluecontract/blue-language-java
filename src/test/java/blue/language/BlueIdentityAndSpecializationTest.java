@@ -6,18 +6,16 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -85,7 +83,7 @@ final class BlueIdentityAndSpecializationTest {
                 new Node().value("source"));
 
         // then
-        assertEquals(BlueIdCalculator.calculateBlueId(
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(
                 canonicalIdentityInput), actual);
     }
 
@@ -152,7 +150,7 @@ final class BlueIdentityAndSpecializationTest {
     void shouldPreserveBlueIdWhenExpandingExactReference() {
         // given
         Node exact = new Node().value("exact content");
-        String exactBlueId = BlueIdCalculator.calculateBlueId(exact);
+        String exactBlueId = DirectBlueIdCalculator.calculateBlueId(exact);
         BasicNodeProvider provider = new BasicNodeProvider(exact);
         Blue blue = new Blue(provider);
 
@@ -161,7 +159,7 @@ final class BlueIdentityAndSpecializationTest {
 
         // then
         assertEquals(exactBlueId,
-                BlueIdCalculator.calculateBlueId(expanded));
+                DirectBlueIdCalculator.calculateBlueId(expanded));
         assertEquals("exact content", expanded.getValue());
     }
 

@@ -4,7 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.Blue;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.Nodes;
@@ -47,7 +47,7 @@ class FrozenNodeTest {
     @Test
     void shouldMatchMutableBlueIdCalculatorForObjectsScalarsAndPureReferences() {
         // given
-        String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
+        String referenceBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node node = YAML_MAPPER.readValue(
                 "name: Product\n" +
                 "count: 1\n" +
@@ -60,7 +60,7 @@ class FrozenNodeTest {
         FrozenNode frozen = FrozenNode.fromNode(node);
 
         // then
-        assertEquals(BlueIdCalculator.calculateBlueId(node), frozen.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(node), frozen.blueId());
         assertEquals(referenceBlueId, FrozenNode.fromNode(new Node().blueId(referenceBlueId)).blueId());
     }
 
@@ -79,7 +79,7 @@ class FrozenNodeTest {
 
             // then
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(input),
+                    DirectBlueIdCalculator.calculateBlueId(input),
                     FrozenNode.fromNode(input).blueId(),
                     "Frozen BlueId mismatch for fixture " + fixture.get("id").asText());
         }
@@ -88,8 +88,8 @@ class FrozenNodeTest {
     @Test
     void shouldMatchMutableBlueIdInputForCanonicalFrozenNodeShapes() {
         // given
-        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
-        String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().items());
+        String referenceBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node withSchema = new Node()
                 .schema(new blue.language.model.Schema().minimum(new Node().type(new Node().blueId(
                         blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID)).value("9007199254740992")));
@@ -126,8 +126,8 @@ class FrozenNodeTest {
 
             // then
             assertEquals(
-                    BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.get(input)),
-                    BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(FrozenNode.fromNode(input))),
+                    DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(NodeToBlueIdInput.get(input)),
+                    DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(FrozenNodeToBlueIdInput.get(FrozenNode.fromNode(input))),
                     "Frozen canonical input mismatch for fixture " + fixture.get("id").asText());
         }
     }
@@ -155,7 +155,7 @@ class FrozenNodeTest {
             // then
             assertThrows(
                     RuntimeException.class,
-                    () -> BlueIdCalculator.calculateBlueId(input),
+                    () -> DirectBlueIdCalculator.calculateBlueId(input),
                     "Mutable calculator accepted invalid fixture " + fixture.get("id").asText());
             assertThrows(
                     RuntimeException.class,
@@ -268,12 +268,12 @@ class FrozenNodeTest {
         // when
         FrozenNode frozen = FrozenNode.fromNode(node);
         String mutableBlueId =
-                BlueIdCalculator.calculateBlueId(node);
+                DirectBlueIdCalculator.calculateBlueId(node);
         FrozenNode emptyProperty = frozen.property("empty");
         FrozenNode nestedEmptyProperty =
                 frozen.property("nested").property("empty");
         String materializedBlueId =
-                BlueIdCalculator.calculateBlueId(frozen.toNode());
+                DirectBlueIdCalculator.calculateBlueId(frozen.toNode());
         String frozenBlueId = frozen.blueId();
 
         // then
@@ -292,15 +292,15 @@ class FrozenNodeTest {
 
         // when
         String mutableEmptyBlueId =
-                BlueIdCalculator.calculateBlueId(empty);
+                DirectBlueIdCalculator.calculateBlueId(empty);
         String frozenEmptyBlueId =
                 FrozenNode.fromNode(empty).blueId();
         String mutableSingletonBlueId =
-                BlueIdCalculator.calculateBlueId(singleton);
+                DirectBlueIdCalculator.calculateBlueId(singleton);
         String frozenSingletonBlueId =
                 FrozenNode.fromNode(singleton).blueId();
         String mutableNestedBlueId =
-                BlueIdCalculator.calculateBlueId(nested);
+                DirectBlueIdCalculator.calculateBlueId(nested);
         String frozenNestedBlueId =
                 FrozenNode.fromNode(nested).blueId();
 
@@ -334,7 +334,7 @@ class FrozenNodeTest {
         // when
         Node normalized = blue.yamlToNode(source);
         String mutableBlueId =
-                BlueIdCalculator.calculateBlueId(normalized);
+                DirectBlueIdCalculator.calculateBlueId(normalized);
         String frozenBlueId =
                 FrozenNode.fromNode(normalized).blueId();
 
@@ -345,7 +345,7 @@ class FrozenNodeTest {
     @Test
     void shouldRejectPositionedListsInDirectFrozenBlueIdInput() {
         // given
-        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().items());
         Node positioned = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - $pos: 0\n" +
@@ -361,7 +361,7 @@ class FrozenNodeTest {
         Throwable positionedFailure = captureFailure(
                 () -> FrozenNode.fromNode(positioned));
         String mutablePreviousBlueId =
-                BlueIdCalculator.calculateBlueId(previous);
+                DirectBlueIdCalculator.calculateBlueId(previous);
         String frozenPreviousBlueId =
                 FrozenNode.fromNode(previous).blueId();
 
@@ -374,7 +374,7 @@ class FrozenNodeTest {
     @Test
     void shouldRejectPositionControlsInDirectFrozenBlueId() {
         // given
-        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().items());
         Node node = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - $previous:\n" +
@@ -387,7 +387,7 @@ class FrozenNodeTest {
 
         // when
         String mutableBlueId =
-                BlueIdCalculator.calculateBlueId(node);
+                DirectBlueIdCalculator.calculateBlueId(node);
         String frozenBlueId = FrozenNode.fromNode(node).blueId();
         Throwable positionedFailure = captureFailure(
                 () -> FrozenNode.fromNode(positioned));
@@ -401,7 +401,7 @@ class FrozenNodeTest {
     @Test
     void shouldRejectRootPreviousOnlyNodeInStrictFrozenMode() {
         // given
-        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().items());
         Node previousOnly =
                 new Node().previousBlueId(previousBlueId);
 
@@ -416,7 +416,7 @@ class FrozenNodeTest {
     @Test
     void shouldAllowPreviousOnlyNodeSolelyAsFirstListElementInStrictFrozenMode() {
         // given
-        String previousBlueId = BlueIdCalculator.calculateBlueId(new Node().items());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().items());
         Node anchored = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - $previous:\n" +
@@ -425,7 +425,7 @@ class FrozenNodeTest {
 
         // when
         String mutableBlueId =
-                BlueIdCalculator.calculateBlueId(anchored);
+                DirectBlueIdCalculator.calculateBlueId(anchored);
         String frozenBlueId =
                 FrozenNode.fromNode(anchored).blueId();
 
@@ -443,7 +443,7 @@ class FrozenNodeTest {
 
         // when
         String mutableBlueId =
-                BlueIdCalculator.calculateBlueId(node);
+                DirectBlueIdCalculator.calculateBlueId(node);
         String frozenBlueId = FrozenNode.fromNode(node).blueId();
 
         // then
@@ -476,11 +476,11 @@ class FrozenNodeTest {
 
         // when
         String mutableScalarBlueId =
-                BlueIdCalculator.calculateBlueId(scalar);
+                DirectBlueIdCalculator.calculateBlueId(scalar);
         String frozenScalarBlueId =
                 FrozenNode.fromNode(scalar).blueId();
         String mutableListBlueId =
-                BlueIdCalculator.calculateBlueId(list);
+                DirectBlueIdCalculator.calculateBlueId(list);
         String frozenListBlueId =
                 FrozenNode.fromNode(list).blueId();
         Throwable invalidObjectFailure = captureFailure(
@@ -531,7 +531,7 @@ class FrozenNodeTest {
         Node second = frozen.toNode();
         first.getProperties().put("mutated", new Node().value(true));
         String secondIdentity =
-                BlueIdCalculator.calculateBlueId(second);
+                DirectBlueIdCalculator.calculateBlueId(second);
         String frozenIdentity = frozen.blueId();
 
         // then
@@ -631,7 +631,7 @@ class FrozenNodeTest {
         // given
         byte[] source = new byte[] {1, 2};
         FrozenNode frozen = FrozenNode.fromNode(new Node().value(source));
-        String expected = BlueIdCalculator.calculateBlueId(
+        String expected = DirectBlueIdCalculator.calculateBlueId(
                 new Node().value(new byte[] {1, 2}));
 
         source[0] = 9;
@@ -665,7 +665,7 @@ class FrozenNodeTest {
         for (Node authored : cases) {
             FrozenNode frozen = FrozenNode.fromNode(authored);
             // then
-            assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
+            assertEquals(DirectBlueIdCalculator.calculateBlueId(authored), frozen.blueId());
             assertEquals(authored.getValue().getClass(), frozen.getValue().getClass());
             assertEquals(authored.getValue().getClass(), frozen.toNode().getValue().getClass());
         }
@@ -694,7 +694,7 @@ class FrozenNodeTest {
         assertSame(AnnotatedWireEnum.ANNOTATED_VALUE, captured.get("annotated"));
         assertSame(DefaultWireEnum.DEFAULT_VALUE, materialized.get("default"));
         assertSame(AnnotatedWireEnum.ANNOTATED_VALUE, materialized.get("annotated"));
-        assertEquals(BlueIdCalculator.calculateBlueId(authored), frozen.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(authored), frozen.blueId());
         assertThrows(UnsupportedOperationException.class,
                 () -> captured.put("mutation", DefaultWireEnum.DEFAULT_VALUE));
     }
@@ -740,7 +740,7 @@ class FrozenNodeTest {
                             frozen.toNode()
                                     .getValue()
                                     .getClass(),
-                            BlueIdCalculator
+                            DirectBlueIdCalculator
                                     .calculateBlueId(authored),
                             identity,
                             frozen.blueId()));
@@ -781,7 +781,7 @@ class FrozenNodeTest {
                 new ArrayList<>();
         for (Object sourceArray : Arrays.asList(customArray, singletonArray)) {
             Node authored = new Node().value(sourceArray);
-            String expectedBlueId = BlueIdCalculator.calculateBlueId(authored);
+            String expectedBlueId = DirectBlueIdCalculator.calculateBlueId(authored);
             Node cloned = authored.clone();
             FrozenNode frozen = FrozenNode.fromNode(authored);
             observations.add(new FallbackArrayObservation(
@@ -789,7 +789,7 @@ class FrozenNodeTest {
                     frozen.getValue().getClass(),
                     frozen.toNode().getRawValue().getClass(),
                     expectedBlueId,
-                    BlueIdCalculator.calculateBlueId(cloned),
+                    DirectBlueIdCalculator.calculateBlueId(cloned),
                     frozen.blueId()));
         }
         customNested.set(0, "custom-after");
@@ -954,18 +954,18 @@ class FrozenNodeTest {
         FrozenNode two = FrozenNode.fromNode(new Node().value("two"));
         String frozenListId = FrozenNode.calculateBlueId(Arrays.asList(one, two));
         // when
-        String mutableListId = BlueIdCalculator.calculateBlueId(Arrays.asList(one.toNode(), two.toNode()));
+        String mutableListId = DirectBlueIdCalculator.calculateBlueId(Arrays.asList(one.toNode(), two.toNode()));
 
         // then
         assertEquals(mutableListId, frozenListId);
-        assertEquals(BlueIdCalculator.calculateBlueId(Collections.emptyList()), FrozenNode.calculateBlueId(Collections.emptyList()));
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(Collections.emptyList()), FrozenNode.calculateBlueId(Collections.emptyList()));
     }
 
     @Test
     void shouldPreservePreviousEmptyAndNestedListIdentityInCachedListFold() {
         // given
-        String previousBlueId = BlueIdCalculator.calculateBlueId(Collections.emptyList());
-        String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(Collections.emptyList());
+        String referenceBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node list = new Node().items(
                 new Node().previousBlueId(previousBlueId),
                 Nodes.emptyPlaceholder(),
@@ -979,9 +979,9 @@ class FrozenNodeTest {
         FrozenNode frozen = FrozenNode.fromNode(list);
 
         // then
-        assertEquals(BlueIdCalculator.calculateBlueId(list.getItems()),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(list.getItems()),
                 FrozenNode.calculateBlueId(frozen.getItems()));
-        assertEquals(BlueIdCalculator.calculateBlueId(list), frozen.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(list), frozen.blueId());
     }
 
     @Test
@@ -990,7 +990,7 @@ class FrozenNodeTest {
         FrozenNode invalidEmptyMarker = FrozenNode.fromNode(new Node().properties(
                 "$empty", new Node().value(false)));
         FrozenNode emptyObject = FrozenNode.empty();
-        String previousBlueId = BlueIdCalculator.calculateBlueId(Collections.emptyList());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(Collections.emptyList());
         // when
         FrozenNode anchored = FrozenNode.fromNode(new Node().items(
                 new Node().previousBlueId(previousBlueId),
@@ -1035,7 +1035,7 @@ class FrozenNodeTest {
                 .properties("replace", overlay.getProperties().get("replace").clone())
                 .properties("add", overlay.getProperties().get("add").clone());
         String expectedIdentity =
-                BlueIdCalculator.calculateBlueId(expected);
+                DirectBlueIdCalculator.calculateBlueId(expected);
         FrozenNode scalar = FrozenNode.fromNode(
                 new Node().value("replacement"));
         FrozenNode scalarOverlay =
@@ -1209,8 +1209,8 @@ class FrozenNodeTest {
         FrozenNode resolved = FrozenNode.fromResolvedNode(resolvedLike);
 
         // then
-        assertEquals(BlueIdCalculator.INSTANCE.calculate(Collections.singletonMap("name", "Expanded node")), resolved.blueId());
-        assertThrows(IllegalArgumentException.class, () -> BlueIdCalculator.calculateBlueId(resolved.toNode()));
+        assertEquals(DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(Collections.singletonMap("name", "Expanded node")), resolved.blueId());
+        assertThrows(IllegalArgumentException.class, () -> DirectBlueIdCalculator.calculateBlueId(resolved.toNode()));
         assertThrows(IllegalArgumentException.class, () -> FrozenNode.fromNode(resolvedLike));
     }
 

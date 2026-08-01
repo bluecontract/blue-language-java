@@ -4,8 +4,8 @@ import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeProviderWrapper;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.provider.NodeProviderWrapper;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +46,7 @@ class ExactNodeGraphFragmentsTest {
         ExactNodeGraphFragments.RootRepresentation root =
                 graph.roots().get(0);
         String originalBlueId =
-                BlueIdCalculator.calculateBlueId(fixture.root);
+                DirectBlueIdCalculator.calculateBlueId(fixture.root);
         Schema directSchema = root.directFragment().getSchema();
 
         // then
@@ -62,15 +62,15 @@ class ExactNodeGraphFragmentsTest {
             assertNull(fragment.getBlueId(),
                     "A fragment must not contain its own identity.");
             assertEquals(blueId,
-                    BlueIdCalculator.calculateBlueId(fragment));
+                    DirectBlueIdCalculator.calculateBlueId(fragment));
             assertDirectChildrenArePureReferences(fragment);
         }
 
         assertEquals(originalBlueId, root.blueId());
         assertEquals(originalBlueId,
-                BlueIdCalculator.calculateBlueId(root.original()));
+                DirectBlueIdCalculator.calculateBlueId(root.original()));
         assertEquals(originalBlueId,
-                BlueIdCalculator.calculateBlueId(root.directFragment()));
+                DirectBlueIdCalculator.calculateBlueId(root.directFragment()));
         assertEquals(originalBlueId,
                 root.pureReference().getBlueId());
         assertTrue(root.pureReference().isReferenceOnly());
@@ -97,7 +97,7 @@ class ExactNodeGraphFragmentsTest {
         List<String> sorted = new ArrayList<>(first.blueIds());
         Collections.sort(sorted);
         String unrelatedBlueId =
-                BlueIdCalculator.calculateBlueId(unrelated);
+                DirectBlueIdCalculator.calculateBlueId(unrelated);
         Node unrelatedFragment =
                 first.fragments().get(unrelatedBlueId);
 
@@ -107,17 +107,17 @@ class ExactNodeGraphFragmentsTest {
         assertEquals(first.blueIds(),
                 new ArrayList<>(first.fragments().keySet()));
 
-        assertEquals(BlueIdCalculator.calculateBlueId(fixture.root),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(fixture.root),
                 first.roots().get(0).blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(unrelated),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(unrelated),
                 first.roots().get(1).blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(unrelated),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(unrelated),
                 reversed.roots().get(0).blueId());
-        assertEquals(BlueIdCalculator.calculateBlueId(fixture.root),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(fixture.root),
                 reversed.roots().get(1).blueId());
 
         assertEquals(unrelatedBlueId,
-                BlueIdCalculator.calculateBlueId(unrelatedFragment));
+                DirectBlueIdCalculator.calculateBlueId(unrelatedFragment));
         assertFalse(unrelatedFragment.getProperties()
                 .containsKey("root-only"));
     }
@@ -148,7 +148,7 @@ class ExactNodeGraphFragmentsTest {
                         "/sibling"));
         ExactNodeGraphFragments.RootRepresentation forms =
                 graph.roots().get(0);
-        String rootBlueId = BlueIdCalculator.calculateBlueId(root);
+        String rootBlueId = DirectBlueIdCalculator.calculateBlueId(root);
         Node directRoot = forms.directFragment();
         Node directSelected = graph.provider().fetchByBlueId(
                 directRoot.getProperties()
@@ -163,7 +163,7 @@ class ExactNodeGraphFragmentsTest {
         assertEquals(5, graph.fragments().size());
         assertEquals(rootBlueId, forms.blueId());
         assertEquals(rootBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         forms.directFragment()));
         assertEquals(rootBlueId, forms.pureReference().getBlueId());
 
@@ -254,7 +254,7 @@ class ExactNodeGraphFragmentsTest {
         supplied.name("mutated-input");
         String retainedOriginalName = graph.roots().get(0).original().getName();
         String retainedOriginalBlueId =
-                BlueIdCalculator.calculateBlueId(graph.roots().get(0).original());
+                DirectBlueIdCalculator.calculateBlueId(graph.roots().get(0).original());
         UnsupportedOperationException blueIdsFailure = captureFailure(
                 () -> graph.blueIds().add(rootBlueId));
         UnsupportedOperationException fragmentsFailure = captureFailure(
@@ -291,7 +291,7 @@ class ExactNodeGraphFragmentsTest {
         assertEquals("retained", directNameAfterTamper);
         assertNotSame(firstFetch.get(0), secondFetch.get(0));
         assertEquals(rootBlueId,
-                BlueIdCalculator.calculateBlueId(secondFetch.get(0)));
+                DirectBlueIdCalculator.calculateBlueId(secondFetch.get(0)));
     }
 
     @Test
@@ -309,7 +309,7 @@ class ExactNodeGraphFragmentsTest {
         NodeProviderResult verifiedFound =
                 new VerifyingNodeProvider(provider)
                         .fetchResultByBlueId(rootBlueId);
-        String missingBlueId = BlueIdCalculator.calculateBlueId(
+        String missingBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().value("definitely-not-admitted"));
         NodeProviderOutcome missingOutcome =
                 provider.fetchResultByBlueId(missingBlueId).outcome();
@@ -321,7 +321,7 @@ class ExactNodeGraphFragmentsTest {
         // then
         assertEquals(NodeProviderOutcome.FOUND, found.outcome());
         assertEquals(rootBlueId,
-                BlueIdCalculator.calculateBlueId(found.nodes().get(0)));
+                DirectBlueIdCalculator.calculateBlueId(found.nodes().get(0)));
         assertEquals(NodeProviderOutcome.FOUND, verifiedFound.outcome());
         assertNotEquals(rootBlueId, missingBlueId);
         assertEquals(NodeProviderOutcome.NOT_FOUND, missingOutcome);
@@ -345,9 +345,9 @@ class ExactNodeGraphFragmentsTest {
                         "member",
                         new Node().blueId(cyclic.memberBlueId));
         String expectedRootBlueId =
-                BlueIdCalculator.calculateBlueId(root);
+                DirectBlueIdCalculator.calculateBlueId(root);
         String expectedEventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
 
         // when
         ExactNodeGraphFragments graph =
@@ -365,11 +365,11 @@ class ExactNodeGraphFragmentsTest {
         // then
         assertEquals(expectedRootBlueId, rootForms.blueId());
         assertEquals(expectedRootBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         rootForms.directFragment()));
         assertEquals(expectedEventBlueId, eventForms.blueId());
         assertEquals(expectedEventBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         eventForms.directFragment()));
         assertEquals(cyclic.memberBlueId,
                 rootForms.directFragment().getType().getBlueId());
@@ -458,14 +458,14 @@ class ExactNodeGraphFragmentsTest {
                 directSchemaValue.getSchema()
                         .getEnum().get(0).getBlueId());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         schemaReferenceRoot),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         directSchemaReference));
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         schemaValueRoot),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         directSchemaValue));
         assertFalse(graph.fragments().containsKey(
                 cyclic.memberBlueId));
@@ -592,7 +592,7 @@ class ExactNodeGraphFragmentsTest {
     }
 
     private static String ordinaryReferenceBlueId() {
-        return BlueIdCalculator.calculateBlueId(
+        return DirectBlueIdCalculator.calculateBlueId(
                 new Node().value("ordinary-reference-target"));
     }
 
@@ -625,7 +625,7 @@ class ExactNodeGraphFragmentsTest {
     }
 
     private static Fixture fixture() {
-        String externalBlueId = BlueIdCalculator.calculateBlueId(
+        String externalBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().value("external-content"));
         Node leaf = new Node().value("leaf");
         Node objectChild = new Node().properties(
@@ -664,7 +664,7 @@ class ExactNodeGraphFragmentsTest {
         if (node == null || node.isReferenceOnly() || !visited.add(node)) {
             return;
         }
-        nodes.put(BlueIdCalculator.calculateBlueId(node), node);
+        nodes.put(DirectBlueIdCalculator.calculateBlueId(node), node);
         collectInlineNodes(node.getType(), nodes, visited);
         collectInlineNodes(node.getItemType(), nodes, visited);
         collectInlineNodes(node.getKeyType(), nodes, visited);

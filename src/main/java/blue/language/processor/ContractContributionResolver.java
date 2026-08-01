@@ -6,7 +6,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 
 import java.util.ArrayList;
@@ -301,7 +301,7 @@ final class ContractContributionResolver {
             return canonicalContent;
         }
         String calculated =
-                BlueIdCalculator.calculateBlueId(canonicalContent);
+                DirectBlueIdCalculator.calculateBlueId(canonicalContent);
         if (!blueId.equals(calculated)) {
             throw new MustUnderstandFailureException(
                     "Type contribution BlueId mismatch for " + blueId,
@@ -334,14 +334,14 @@ final class ContractContributionResolver {
     private String referenceIdentity(Node node) {
         return node != null && node.getBlueId() != null
                 ? node.getBlueId()
-                : node != null ? BlueIdCalculator.calculateBlueId(node) : null;
+                : node != null ? DirectBlueIdCalculator.calculateBlueId(node) : null;
     }
 
     private String exactIdentity(Node node) {
         Objects.requireNonNull(node, "node");
         return node.getBlueId() != null
                 ? node.getBlueId()
-                : BlueIdCalculator.calculateBlueId(node);
+                : DirectBlueIdCalculator.calculateBlueId(node);
     }
 
     private boolean contributesContent(Node node) {

@@ -3,7 +3,7 @@ package blue.language.conformance.contracts;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
-import blue.language.api.BlueLanguageRuntime;
+import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.provider.NodeProvider;
@@ -45,7 +45,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
@@ -751,8 +751,8 @@ final class ContractsFixtureHarness {
         }
         if (input.deliveryPlan != null) {
             builder.withExternalDeliveryPlanDeriver((root, event) -> {
-                String rootBlueId = BlueIdCalculator.calculateBlueId(root);
-                String eventBlueId = BlueIdCalculator.calculateBlueId(event);
+                String rootBlueId = DirectBlueIdCalculator.calculateBlueId(root);
+                String eventBlueId = DirectBlueIdCalculator.calculateBlueId(event);
                 if (!input.evidence.rootBlueId().equals(rootBlueId)
                         || !input.evidence.eventBlueId().equals(eventBlueId)) {
                     throw new IllegalArgumentException(
@@ -820,7 +820,7 @@ final class ContractsFixtureHarness {
             applyVariant(rootJson, variant);
         }
         Node event = readNode(input.get(ContractsFixtureConstants.Field.EVENT));
-        String eventBlueId = BlueIdCalculator.calculateBlueId(event);
+        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(event);
         Node checkpointSubjectOverride =
                 variant != null && variant.has("checkpointSubject")
                         ? rawCheckpointSubject(
@@ -852,7 +852,7 @@ final class ContractsFixtureHarness {
         }
         Node materializedRoot = readNode(rootJson);
         String inlineRootBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         materializedRoot);
         String rootBlueId = inlineRootBlueId;
         Node exactProviderRoot = materializedRoot;
@@ -862,7 +862,7 @@ final class ContractsFixtureHarness {
                             materializedRoot,
                             providerNodes);
             rootBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             canonicalReference);
             if (!inlineRootBlueId.equals(rootBlueId)) {
                 throw new IllegalStateException(
@@ -1139,7 +1139,7 @@ final class ContractsFixtureHarness {
                 }
                 String reference = value.path(BlueLanguageConstants.OBJECT_BLUE_ID).asText();
                 if (reference.equals(
-                        BlueIdCalculator.calculateBlueId(readNode(exact)))) {
+                        DirectBlueIdCalculator.calculateBlueId(readNode(exact)))) {
                     ((ObjectNode) currentContracts).set(
                             key, exact.deepCopy());
                 }
@@ -1228,7 +1228,7 @@ final class ContractsFixtureHarness {
             Map<String, Node> providerNodes,
             String blueId,
             Node exactNode) {
-        if (!blueId.equals(BlueIdCalculator.calculateBlueId(exactNode))) {
+        if (!blueId.equals(DirectBlueIdCalculator.calculateBlueId(exactNode))) {
             throw new IllegalArgumentException(
                     "Derived provider content does not match " + blueId);
         }
@@ -1414,7 +1414,7 @@ final class ContractsFixtureHarness {
             return;
         }
         String preInitializationBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         readNode(root));
         ObjectNode initialized =
                 contracts.putObject(
@@ -1457,7 +1457,7 @@ final class ContractsFixtureHarness {
         }
         Node exactContract = readNode(contract);
         String contribution =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         exactContract);
         Node effectiveContract =
                 registry.resolve(exactContract.clone());
@@ -2283,7 +2283,7 @@ final class ContractsFixtureHarness {
                                         .isReferenceOnly()
                                         ? initialDocument
                                         .getBlueId()
-                                        : BlueIdCalculator
+                                        : DirectBlueIdCalculator
                                         .calculateBlueId(
                                                 initialDocument);
                     }
@@ -2780,7 +2780,7 @@ final class ContractsFixtureHarness {
                 }
                 JsonNode result = contract.get(ContractsFixtureConstants.Field.RESULT);
                 if (result != null) {
-                    return BlueIdCalculator.calculateBlueId(readNode(result));
+                    return DirectBlueIdCalculator.calculateBlueId(readNode(result));
                 }
             }
         }
@@ -3542,7 +3542,7 @@ final class ContractsFixtureHarness {
                 String blueId = entry.path(BlueLanguageConstants.OBJECT_BLUE_ID).asText();
                 String path = entry.path("path").asText();
                 Node node = readNode(readYaml(root + path));
-                String calculated = BlueIdCalculator.calculateBlueId(node);
+                String calculated = DirectBlueIdCalculator.calculateBlueId(node);
                 if (!blueId.equals(calculated)) {
                     throw new IllegalStateException(
                             "Registry node identity mismatch for "
@@ -3658,7 +3658,7 @@ final class ContractsFixtureHarness {
                 Node typeNode = new Node()
                         .type(new Node().blueId(parentBlueId));
                 String blueId =
-                        BlueIdCalculator.calculateBlueId(typeNode);
+                        DirectBlueIdCalculator.calculateBlueId(typeNode);
                 blueIds.put(candidates.get(index), blueId);
                 nodes.put(blueId, typeNode);
                 parentBlueId = blueId;
@@ -3977,7 +3977,7 @@ final class ContractsFixtureHarness {
         }
         nodes.fields().forEachRemaining(entry -> {
             Node node = readNode(entry.getValue());
-            String actual = BlueIdCalculator.calculateBlueId(node);
+            String actual = DirectBlueIdCalculator.calculateBlueId(node);
             if (!entry.getKey().equals(actual)) {
                 throw new IllegalArgumentException(
                         "Provider node identity mismatch: expected "
@@ -4056,7 +4056,7 @@ final class ContractsFixtureHarness {
                 JsonNode hint = hintByOccurrence.remove(key);
                 int order = contract.path(ContractsFixtureConstants.Field.ORDER).asInt(0);
                 Node contractNode = readNode(contract);
-                String contribution = BlueIdCalculator.calculateBlueId(contractNode);
+                String contribution = DirectBlueIdCalculator.calculateBlueId(contractNode);
                 String domain = contract.path("checkpointDomain").asText(null);
                 if (domain == null) {
                     throw new IllegalArgumentException(
@@ -4075,7 +4075,7 @@ final class ContractsFixtureHarness {
                         dependencies,
                         domain);
                 String domainBlueId =
-                        BlueIdCalculator.calculateBlueId(domainNode);
+                        DirectBlueIdCalculator.calculateBlueId(domainNode);
                 String canonicalDomainBlueId = CheckpointDomain.derive(
                         typeBlueId,
                         contributions,
@@ -4090,7 +4090,7 @@ final class ContractsFixtureHarness {
                 if (checkpointSubjectOverride != null) {
                     subjectNode = checkpointSubjectOverride.clone();
                     subjectBlueId =
-                            BlueIdCalculator.calculateBlueId(
+                            DirectBlueIdCalculator.calculateBlueId(
                                     subjectNode);
                 }
                 ExternalDeliverySnapshot.Builder snapshot =
@@ -4294,7 +4294,7 @@ final class ContractsFixtureHarness {
                 }
                 Node contractNode = readNode(contract);
                 String contribution =
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 contractNode);
                 String discriminator =
                         contract.path("checkpointDomain")
@@ -4345,7 +4345,7 @@ final class ContractsFixtureHarness {
                                          List<ScopeValue> result,
                                          Set<String> ancestry) {
         result.add(new ScopeValue(path, scope));
-        String identity = BlueIdCalculator.calculateBlueId(readNode(scope));
+        String identity = DirectBlueIdCalculator.calculateBlueId(readNode(scope));
         if (!ancestry.add(identity)) {
             throw new IllegalArgumentException(
                     "Embedded scope ancestry cycle at " + path);

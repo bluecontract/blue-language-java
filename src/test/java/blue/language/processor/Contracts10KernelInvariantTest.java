@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.utils.UncheckedObjectMapper;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -313,7 +313,7 @@ final class Contracts10KernelInvariantTest {
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(
                                 "forged-root",
-                                BlueIdCalculator.calculateBlueId(event))
+                                DirectBlueIdCalculator.calculateBlueId(event))
                         .revisions(3L, 3L)
                         .runtimeRegistryIdentity(
                                 blue.language.processor.registry.RuntimeBlueIds

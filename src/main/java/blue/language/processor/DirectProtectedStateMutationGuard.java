@@ -6,7 +6,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -172,8 +172,8 @@ final class DirectProtectedStateMutationGuard {
         if (left == null || right == null) {
             return left == right;
         }
-        return BlueIdCalculator.calculateUncheckedBlueId(left.toNode())
-                .equals(BlueIdCalculator.calculateUncheckedBlueId(
+        return DirectBlueIdCalculator.calculateUncheckedBlueId(left.toNode())
+                .equals(DirectBlueIdCalculator.calculateUncheckedBlueId(
                         right.toNode()));
     }
 
@@ -181,8 +181,8 @@ final class DirectProtectedStateMutationGuard {
         if (left == null || right == null) {
             return left == right;
         }
-        return BlueIdCalculator.calculateUncheckedBlueId(left)
-                .equals(BlueIdCalculator.calculateUncheckedBlueId(right));
+        return DirectBlueIdCalculator.calculateUncheckedBlueId(left)
+                .equals(DirectBlueIdCalculator.calculateUncheckedBlueId(right));
     }
 
     private ProcessorFailureException replacementFailure(String key) {

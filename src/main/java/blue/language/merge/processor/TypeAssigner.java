@@ -7,7 +7,7 @@ import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 import blue.language.model.NodeWireForm;
 
-import static blue.language.utils.Types.isSubtype;
+import static blue.language.provider.Types.isSubtype;
 
 /**
  * Applies a source declared type only when it is equal to or more specific than

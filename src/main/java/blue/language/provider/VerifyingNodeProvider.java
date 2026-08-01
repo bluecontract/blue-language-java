@@ -2,9 +2,9 @@ package blue.language.provider;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -188,7 +188,7 @@ public class VerifyingNodeProvider implements NodeProvider {
             }
             List<String> calculatedMemberBlueIds =
                     Collections.unmodifiableList(new ArrayList<>(
-                            CircularBlueIdCalculator
+                            CircularSetIdentityCalculator
                                     .calculateCircularSetBlueIds(
                                             proof.declaredPlaceholderSet())));
             Map<String, Integer> memberIndexByBlueId =
@@ -227,10 +227,10 @@ public class VerifyingNodeProvider implements NodeProvider {
 
     private void verifyPlainContent(String requestedBlueId, List<Node> nodes) {
         String actualBlueId = nodes.size() == 1
-                ? BlueIdCalculator.calculateBlueId(
+                ? DirectBlueIdCalculator.calculateBlueId(
                 contentWithoutRootIdentity(
                         nodes.get(0), requestedBlueId))
-                : BlueIdCalculator.calculateBlueId(
+                : DirectBlueIdCalculator.calculateBlueId(
                 contentWithoutRootIdentity(
                         nodes, requestedBlueId));
         if (requestedBlueId.equals(actualBlueId)) {

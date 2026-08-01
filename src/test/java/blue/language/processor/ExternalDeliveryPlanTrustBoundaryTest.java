@@ -11,7 +11,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -37,11 +37,11 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     private static final Node CHANNEL_TYPE =
             new Node().name("Plan External Channel");
     private static final String CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
     private static final Node TRACE_HANDLER_TYPE =
             new Node().name("Trace Handler");
     private static final String TRACE_HANDLER_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(TRACE_HANDLER_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(TRACE_HANDLER_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.asList(7, "source", 11));
 
@@ -152,7 +152,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 .name("Inherited External Surface")
                 .contracts(new Node().properties(
                         "inherited", inheritedChannel));
-        String baseBlueId = BlueIdCalculator.calculateBlueId(base);
+        String baseBlueId = DirectBlueIdCalculator.calculateBlueId(base);
         Map<String, Node> providerNodes = new LinkedHashMap<>();
         providerNodes.put(baseBlueId, base);
         providerNodes.put(CHANNEL_TYPE_BLUE_ID, CHANNEL_TYPE);
@@ -173,7 +173,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                             "inherited",
                             inheritedChannel,
                             event,
-                            BlueIdCalculator.calculateBlueId(
+                            DirectBlueIdCalculator.calculateBlueId(
                                     inheritedChannel));
             ExternalDeliveryPlan plan = plan(delivery);
             DocumentProcessor processor = processor(
@@ -187,7 +187,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                             "inherited",
                             inheritedChannel,
                             event,
-                            BlueIdCalculator.calculateBlueId(
+                            DirectBlueIdCalculator.calculateBlueId(
                                     inheritedChannel),
                             "forged-descendant-contribution");
             VerifiedExecutionEvidence forgedEvidence =
@@ -256,7 +256,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         Node base = new Node().name(
                 "Provider-Proven Empty Surface");
         String baseBlueId =
-                BlueIdCalculator.calculateBlueId(base);
+                DirectBlueIdCalculator.calculateBlueId(base);
         DocumentProcessingResult result;
 
         // when
@@ -391,12 +391,12 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         Node incoming = channel("incoming", 0, true);
         Node root = rootWithChannels(incoming);
         Node event = event("topic");
-        String missing = BlueIdCalculator.calculateBlueId(
+        String missing = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Missing activation proof"));
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(root),
-                                BlueIdCalculator.calculateBlueId(event))
+                                DirectBlueIdCalculator.calculateBlueId(root),
+                                DirectBlueIdCalculator.calculateBlueId(event))
                         .revisions(7L, 7L)
                         .runtimeRegistryIdentity(
                                 RuntimeBlueIds
@@ -426,7 +426,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         // given
         Node root = new Node();
         Node event = event("topic");
-        String missing = BlueIdCalculator.calculateBlueId(
+        String missing = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Feeder snapshot evidence"));
         DocumentProcessor processor = DocumentProcessor.builder()
                 .withExternalDeliveryPlanDeriver(
@@ -761,7 +761,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         .checkpointDomainBlueId(
                                 "derived-checkpoint-domain")
                         .checkpointSubjectBlueId(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         event))
                         .build();
         VerifiedExecutionEvidence evidence =
@@ -804,7 +804,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         ExternalDeliverySnapshot forged =
                 withCheckpointSubject(
                         snapshot("/", "incoming", incoming, event),
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 new Node().value("forged-subject")));
 
         // when
@@ -875,12 +875,12 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         "subject",
                         new Node().value("subject-v1"));
         String authoritativeSubject =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         event.getProperties().get("subject"));
         ExternalDeliverySnapshot forged =
                 withCheckpointSubject(
                         snapshot("/", "incoming", incoming, event),
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 new Node().value("feeder-forgery")));
         VerifiedExecutionEvidence evidence =
                 evidence(
@@ -928,7 +928,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         "/observedPayload"));
         assertEquals(
                 authoritativeSubject,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         checkpointSubject));
         assertEquals(
                 "subject-v1",
@@ -1099,8 +1099,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             String availableResource) {
         VerifiedExecutionEvidence.Builder builder =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(root),
-                                BlueIdCalculator.calculateBlueId(event))
+                                DirectBlueIdCalculator.calculateBlueId(root),
+                                DirectBlueIdCalculator.calculateBlueId(event))
                         .revisions(revision, revision)
                         .runtimeRegistryIdentity(
                                 RuntimeBlueIds
@@ -1125,7 +1125,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 key,
                 channel,
                 event,
-                BlueIdCalculator.calculateBlueId(channel));
+                DirectBlueIdCalculator.calculateBlueId(channel));
     }
 
     private static ExternalDeliverySnapshot snapshotWithContributions(
@@ -1148,7 +1148,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                         "/subscriptionKey"))
                         .checkpointDomainBlueId(domain)
                         .checkpointSubjectBlueId(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         event));
         for (String contribution : contributions) {
             builder.sourceContribution(contribution);

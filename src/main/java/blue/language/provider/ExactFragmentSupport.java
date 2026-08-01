@@ -3,7 +3,7 @@ package blue.language.provider;
 import blue.language.api.BlueViewPath;
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.BlueLanguageConstants;
@@ -195,7 +195,7 @@ final class ExactFragmentSupport {
     /** Calculates one exact ordinary identity with path-local diagnostics. */
     static String calculateExactBlueId(Node node, String path) {
         try {
-            return BlueIdCalculator.calculateBlueId(node);
+            return DirectBlueIdCalculator.calculateBlueId(node);
         } catch (RuntimeException invalid) {
             throw new IllegalArgumentException(
                     "Invalid exact ordinary Blue content at " + path + ".",

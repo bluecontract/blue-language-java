@@ -3,12 +3,12 @@ package blue.language.processor;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
-import blue.language.api.BlueLanguageRuntime;
+import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -55,7 +55,7 @@ final class LanguageRuntimeAccessContractIntegrationTest {
         // given
         Node externalType = new Node().name("External type");
         String externalTypeBlueId =
-                BlueIdCalculator.calculateBlueId(externalType);
+                DirectBlueIdCalculator.calculateBlueId(externalType);
         NodeProvider provider = blueId -> externalTypeBlueId.equals(blueId)
                 ? Collections.singletonList(externalType)
                 : null;

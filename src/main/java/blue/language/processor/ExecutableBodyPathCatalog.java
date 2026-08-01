@@ -5,7 +5,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.utils.NodePathEditor;
@@ -133,7 +133,7 @@ final class ExecutableBodyPathCatalog {
         Node exact = materialized.toNode();
         final String actualBlueId;
         try {
-            actualBlueId = BlueIdCalculator.calculateBlueId(exact);
+            actualBlueId = DirectBlueIdCalculator.calculateBlueId(exact);
         } catch (RuntimeException invalidContent) {
             throw new ProcessorFailureException(
                     ProcessorErrorCategory.InvalidProcessingDocument,
@@ -331,7 +331,7 @@ final class ExecutableBodyPathCatalog {
         Node type = contract.getType();
         return type.getBlueId() != null
                 ? type.getBlueId()
-                : BlueIdCalculator.calculateBlueId(type);
+                : DirectBlueIdCalculator.calculateBlueId(type);
     }
 
     private static String exactTypeBlueId(FrozenNode contract) {

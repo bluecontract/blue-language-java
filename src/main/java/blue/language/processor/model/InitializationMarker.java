@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
@@ -52,7 +52,7 @@ public class InitializationMarker extends MarkerContract {
     public String getDocumentId() {
         return document == null
                 ? null
-                : BlueIdCalculator.calculateBlueId(
+                : DirectBlueIdCalculator.calculateBlueId(
                         document);
     }
 

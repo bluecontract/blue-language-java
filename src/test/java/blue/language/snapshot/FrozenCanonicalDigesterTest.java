@@ -5,7 +5,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.util.NodeCanonicalizer;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.Nodes;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -148,7 +148,7 @@ class FrozenCanonicalDigesterTest {
         };
 
         // when
-        String mutableIdentity = BlueIdCalculator.calculateBlueId(mutable);
+        String mutableIdentity = DirectBlueIdCalculator.calculateBlueId(mutable);
         String genericIdentity = FrozenCanonicalDigester
                 .calculateGenericOracle(frozen);
         String streamingIdentity = FrozenCanonicalDigester
@@ -183,7 +183,7 @@ class FrozenCanonicalDigesterTest {
         ByteArraySink officialSink = new ByteArraySink();
 
         // when
-        String mutableIdentity = BlueIdCalculator.calculateBlueId(mutable);
+        String mutableIdentity = DirectBlueIdCalculator.calculateBlueId(mutable);
         String genericIdentity =
                 FrozenCanonicalDigester.calculateGenericOracle(frozen);
         String streamingIdentity =
@@ -253,7 +253,7 @@ class FrozenCanonicalDigesterTest {
             Node generated = generatedNode(random, index);
             FrozenNode frozen = FrozenNode.fromNode(generated);
             String expected = FrozenCanonicalDigester.calculateGenericOracle(frozen);
-            String mutableExpected = BlueIdCalculator.calculateBlueId(frozen.toNode());
+            String mutableExpected = DirectBlueIdCalculator.calculateBlueId(frozen.toNode());
             String actual = FrozenCanonicalDigester.calculateBlueId(frozen, observer);
             if (!mutableExpected.equals(expected)) {
                 genericOracleMismatches.add(index);
@@ -338,7 +338,7 @@ class FrozenCanonicalDigesterTest {
                     NodeCanonicalizer.canonicalSize(authored),
                     FrozenCanonicalWriter
                             .officialCanonicalSize(frozen),
-                    BlueIdCalculator.calculateBlueId(authored),
+                    DirectBlueIdCalculator.calculateBlueId(authored),
                     frozen.blueId()));
         }
         FailurePair invalidFailure = sameFailure(invalid);
@@ -380,7 +380,7 @@ class FrozenCanonicalDigesterTest {
             observations.add(new ContainerArrayObservation(
                     expectedCanonical,
                     sink.bytes(),
-                    BlueIdCalculator.calculateBlueId(authored),
+                    DirectBlueIdCalculator.calculateBlueId(authored),
                     frozen.blueId(),
                     FrozenCanonicalDigester
                             .calculateGenericOracle(frozen),
@@ -452,7 +452,7 @@ class FrozenCanonicalDigesterTest {
                     directSink.bytes(),
                     canonicalInputOracle,
                     nodeSink.bytes(),
-                    BlueIdCalculator.calculateBlueId(authored),
+                    DirectBlueIdCalculator.calculateBlueId(authored),
                     frozen.blueId(),
                     NodeCanonicalizer.canonicalSize(authored),
                     FrozenCanonicalWriter
@@ -590,7 +590,7 @@ class FrozenCanonicalDigesterTest {
 
     private static FailurePair sameFailure(Node input) {
         Throwable expected = captureFailure(
-                () -> BlueIdCalculator
+                () -> DirectBlueIdCalculator
                         .calculateBlueId(input));
         Throwable actual = captureFailure(
                 () -> FrozenNode.fromNode(input));

@@ -3,7 +3,7 @@ package blue.language.preprocess;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.provider.BootstrapProvider;
-import blue.language.utils.NodeProviderWrapper;
+import blue.language.provider.NodeProviderWrapper;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

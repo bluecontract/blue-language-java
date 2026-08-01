@@ -6,7 +6,7 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -560,7 +560,7 @@ public class ContractProcessorRegistry {
             }
             canonical.blueId(null);
         }
-        String calculatedBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String calculatedBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         if (!blueId.equals(calculatedBlueId)) {
             throw providerBlueIdMismatch(blueId, calculatedBlueId);
         }

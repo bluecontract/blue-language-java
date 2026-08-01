@@ -10,7 +10,7 @@ import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.TestEventChannel;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -59,7 +59,7 @@ final class ChannelCheckpointSubjectTest {
         scenario.deliver(first);
         scenario.resetObservations();
         String firstSubjectBlueId =
-                BlueIdCalculator.calculateBlueId(subject(10));
+                DirectBlueIdCalculator.calculateBlueId(subject(10));
 
         // when
         scenario.deliver(event("lower", 9));
@@ -87,7 +87,7 @@ final class ChannelCheckpointSubjectTest {
         scenario.deliver(first);
         scenario.resetObservations();
         String firstSubjectBlueId =
-                BlueIdCalculator.calculateBlueId(subject(10));
+                DirectBlueIdCalculator.calculateBlueId(subject(10));
 
         // when
         scenario.deliver(event("higher", 11));
@@ -130,10 +130,10 @@ final class ChannelCheckpointSubjectTest {
                 .getProperties().get(
                         "timeline");
         String contributionBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         channel);
         String subjectBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         subject(sequence(
                                 bindingEvent)
                                 .longValue()));
@@ -158,9 +158,9 @@ final class ChannelCheckpointSubjectTest {
                         .build();
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         document),
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         bindingEvent))
                         .revisions(0L, 0L)
                         .runtimeRegistryIdentity(
@@ -253,7 +253,7 @@ final class ChannelCheckpointSubjectTest {
                     subject(10),
                     subject(11))) {
                 snapshots.watch(
-                        BlueIdCalculator.calculateBlueId(watched));
+                        DirectBlueIdCalculator.calculateBlueId(watched));
             }
             ProcessorInvocationState execution =
                     execution(owner, document, firstEvent);
@@ -298,7 +298,7 @@ final class ChannelCheckpointSubjectTest {
             return new CheckpointObservation(
                     sequence(stored),
                     stored.isReferenceOnly(),
-                    BlueIdCalculator.calculateBlueId(stored),
+                    DirectBlueIdCalculator.calculateBlueId(stored),
                     checkpoint.entry("timeline").subjectBlueId(),
                     channelProcessor.previousSubjectBlueIds,
                     channelProcessor.secondReadSequences,

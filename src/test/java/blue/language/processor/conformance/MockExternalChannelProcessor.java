@@ -8,7 +8,7 @@ import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.util.ProcessorContractConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.List;
 public final class MockExternalChannelProcessor implements ChannelProcessor<MockExternalChannel> {
 
     private static final String OPTIONAL_PAYLOAD_DESCRIPTOR_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     new Node().description("Optional fixed payload."));
 
     private final ExternalChannelSubscriptionFunctions<MockExternalChannel>
@@ -251,7 +251,7 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
                 : null;
         return payload != null
                 && OPTIONAL_PAYLOAD_DESCRIPTOR_BLUE_ID.equals(
-                BlueIdCalculator.calculateBlueId(payload))
+                DirectBlueIdCalculator.calculateBlueId(payload))
                 ? null
                 : payload;
     }

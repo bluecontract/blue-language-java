@@ -11,7 +11,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -246,7 +246,7 @@ class SelectedScopeContentBlueIdFailFirstTest {
                 .resolveToSnapshot(source.clone())
                 .canonicalAt("/child")
                 .blueId();
-        String unchecked = BlueIdCalculator.calculateUncheckedBlueId(
+        String unchecked = DirectBlueIdCalculator.calculateUncheckedBlueId(
                 exactChild);
         Node providerReference = exactChild.getProperties().get("providerPayload");
         LifecycleRecorder recorder = new LifecycleRecorder();
@@ -343,12 +343,12 @@ class SelectedScopeContentBlueIdFailFirstTest {
         Node initialDocument = document.getAsNode(
                 prefix + "/contracts/initialized/document");
         return initialDocument != null
-                ? BlueIdCalculator.calculateBlueId(initialDocument)
+                ? DirectBlueIdCalculator.calculateBlueId(initialDocument)
                 : null;
     }
 
     private static String emptyNodeBlueId() {
-        return BlueIdCalculator.calculateBlueId(new Node());
+        return DirectBlueIdCalculator.calculateBlueId(new Node());
     }
 
     private static Node reference(String blueId) {
@@ -514,7 +514,7 @@ class SelectedScopeContentBlueIdFailFirstTest {
             FrozenNode canonicalChild = snapshot.canonicalAt("/child");
             String childId = canonicalChild != null
                     ? canonicalChild.blueId()
-                    : BlueIdCalculator.calculateBlueId(
+                    : DirectBlueIdCalculator.calculateBlueId(
                     exactChildBeforeLifecycle(exactRoot));
 
             Node rootAfterChildPhase1 = exactRoot.clone();
@@ -607,7 +607,7 @@ class SelectedScopeContentBlueIdFailFirstTest {
                 return;
             }
             recorder.record(context.scopePath(),
-                    BlueIdCalculator.calculateBlueId(document),
+                    DirectBlueIdCalculator.calculateBlueId(document),
                     context.documentAt(context.scopePath()));
             context.applyPatch(JsonPatch.replace(
                     context.resolvePointer(contract.getPropertyKey()),

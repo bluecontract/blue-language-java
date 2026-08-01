@@ -7,7 +7,7 @@ import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.ContractBundle;
 import blue.language.processor.model.SetProperty;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
@@ -114,7 +114,7 @@ class DocumentProcessorBoundaryTest {
     void shouldFailCrossProcessorRegistrationFromSharedReadCallbackWithoutDeadlocking() throws Exception {
         // given
         Node existingType = new Node().name("shared-read-callback");
-        String existingBlueId = BlueIdCalculator.calculateBlueId(existingType);
+        String existingBlueId = DirectBlueIdCalculator.calculateBlueId(existingType);
         String reentrantBlueId = exactTypeId(
                 "shared-read-callback-reentrant");
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
@@ -159,7 +159,7 @@ class DocumentProcessorBoundaryTest {
     void shouldNotBlockCrossProcessorCloseWhileRegistrationWaitsForSharedWrite() throws Exception {
         // given
         Node existingType = new Node().name("shared-close-callback");
-        String existingBlueId = BlueIdCalculator.calculateBlueId(existingType);
+        String existingBlueId = DirectBlueIdCalculator.calculateBlueId(existingType);
         SignallingRegistry registry = new SignallingRegistry();
         CallbackTypeClassResolver resolver = new CallbackTypeClassResolver(existingBlueId);
         DocumentProcessor readingProcessor = new DocumentProcessor(registry, resolver, null, null);
@@ -466,9 +466,9 @@ class DocumentProcessorBoundaryTest {
         assertFalse(mutableExecution.runtime().isScopeTerminated("/scope"));
         assertFalse(frozenExecution.runtime().isScopeTerminated("/scope"));
         assertEquals(
-                BlueIdCalculator.calculateUncheckedBlueId(
+                DirectBlueIdCalculator.calculateUncheckedBlueId(
                         mutableExecution.result().document().getAsNode("/scope").getContracts()),
-                BlueIdCalculator.calculateUncheckedBlueId(
+                DirectBlueIdCalculator.calculateUncheckedBlueId(
                         frozenExecution.result().document().getAsNode("/scope").getContracts()));
     }
 
@@ -481,7 +481,7 @@ class DocumentProcessorBoundaryTest {
     }
 
     private static String exactTypeId(String name) {
-        return BlueIdCalculator.calculateBlueId(
+        return DirectBlueIdCalculator.calculateBlueId(
                 new Node().name(name));
     }
 

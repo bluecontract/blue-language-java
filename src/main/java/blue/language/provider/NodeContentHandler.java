@@ -4,7 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -157,7 +157,7 @@ public class NodeContentHandler {
     private static ParsedContent calculateParsedContent(Node node) {
         List<ThisReference> references = findThisReferences(node);
         if (references.isEmpty()) {
-            String blueId = BlueIdCalculator.calculateBlueId(node);
+            String blueId = DirectBlueIdCalculator.calculateBlueId(node);
             return new ParsedContent(blueId, JSON_MAPPER.valueToTree(node), false);
         }
 
@@ -165,7 +165,7 @@ public class NodeContentHandler {
         Node preliminary = node.clone();
         rewriteThisReferences(preliminary, reference -> ZERO_BLUE_ID);
 
-        String blueId = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary);
+        String blueId = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary);
         return new ParsedContent(blueId, JSON_MAPPER.valueToTree(node), false);
     }
 
@@ -173,7 +173,7 @@ public class NodeContentHandler {
         boolean isMultipleDocuments = nodes.size() > 1;
         List<ThisReference> references = findThisReferences(nodes);
         if (!isMultipleDocuments || references.isEmpty()) {
-            String blueId = BlueIdCalculator.calculateBlueId(nodes);
+            String blueId = DirectBlueIdCalculator.calculateBlueId(nodes);
             return new ParsedContent(blueId, JSON_MAPPER.valueToTree(nodes), isMultipleDocuments);
         }
 
@@ -184,7 +184,7 @@ public class NodeContentHandler {
             Node preliminary = nodes.get(i).clone();
             rewriteThisReferences(preliminary, reference -> ZERO_BLUE_ID);
             indexedNodes.add(new IndexedNode(i, nodes.get(i),
-                    BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary)));
+                    DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary)));
         }
 
         indexedNodes.sort(Comparator
@@ -207,7 +207,7 @@ public class NodeContentHandler {
             sortedNodes.add(rewritten);
         }
 
-        String blueId = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(sortedNodes);
+        String blueId = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(sortedNodes);
         return new ParsedContent(blueId, JSON_MAPPER.valueToTree(sortedNodes), true);
     }
 

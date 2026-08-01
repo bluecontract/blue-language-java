@@ -3,8 +3,8 @@ package blue.language.processor.util;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenCanonicalWriter;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.Base58Sha256Provider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.Base58Sha256Provider;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
@@ -61,11 +61,12 @@ public final class NodeCanonicalizer {
         }
         final long[] directBytes = {0L};
         final Base58Sha256Provider hash = new Base58Sha256Provider();
-        BlueIdCalculator calculator = new BlueIdCalculator(value -> {
+        DirectBlueIdCalculator calculator = new DirectBlueIdCalculator(value -> {
             directBytes[0] = canonicalSize(value);
             return hash.apply(value);
         });
-        calculator.calculate(NodeToBlueIdInput.get(node));
+        calculator.directBlueIdFromCanonicalInput(
+                NodeToBlueIdInput.get(node));
         return directBytes[0];
     }
 

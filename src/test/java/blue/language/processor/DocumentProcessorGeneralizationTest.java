@@ -12,7 +12,7 @@ import blue.language.provider.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
@@ -1104,7 +1104,7 @@ class DocumentProcessorGeneralizationTest {
     }
 
     private String runtimeDocumentBlueId(Node node) {
-        return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+        return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
     }
 
     private List<String> updatePaths(List<DocumentProcessingRuntime.DocumentUpdateData> updates) {

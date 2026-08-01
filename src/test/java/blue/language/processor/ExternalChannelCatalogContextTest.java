@@ -9,7 +9,7 @@ import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -30,20 +30,20 @@ final class ExternalChannelCatalogContextTest {
     private static final Node SOURCE_TYPE =
             new Node().name("Catalog Source Channel");
     private static final String SOURCE_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(SOURCE_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(SOURCE_TYPE);
     private static final Node TARGET_TYPE =
             new Node().name("Catalog Target Channel");
     private static final String TARGET_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(TARGET_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(TARGET_TYPE);
     private static final Node NON_CHANNEL_TYPE =
             new Node()
                     .name("Catalog Non-Channel Handler")
                     .type(reference(RuntimeBlueIds.HANDLER));
     private static final String NON_CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     NON_CHANNEL_TYPE);
     private static final String TARGET_DEPENDENCY_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     new Node().value("target-header-dependency"));
     private static final Node EVENT = new Node()
             .properties(
@@ -153,7 +153,7 @@ final class ExternalChannelCatalogContextTest {
                             "target").headerIdentityBlueId(),
                     routed.headerIdentityBlueId());
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             new Node()
                                     .type(reference(
                                             TARGET_TYPE_BLUE_ID))
@@ -570,10 +570,10 @@ final class ExternalChannelCatalogContextTest {
                                 new Node().value(
                                         "managed-event")));
         String nonChannelBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         nonChannel);
         String managedChannelBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         managedChannel);
         BasicNodeProvider provider =
                 new BasicNodeProvider(
@@ -636,7 +636,7 @@ final class ExternalChannelCatalogContextTest {
     void shouldRehydrateRetainedCatalogThroughSparseVerifierWithoutBodyDemand() {
         // given
         String coldBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().value(
                                 "catalog-cold-body"));
         AtomicInteger bodyDemands =
@@ -848,7 +848,7 @@ final class ExternalChannelCatalogContextTest {
                                         .TRIGGERED_EVENT_CHANNEL,
                                 "processor-channel",
                                 index + 1,
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         new Node().value(
                                                 key)))
                                 .build());
@@ -1048,7 +1048,7 @@ final class ExternalChannelCatalogContextTest {
                                         "label"))
                         .executableBody(
                                 "program",
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         targetBody))
                         .deterministicDependency(
                                 TARGET_DEPENDENCY_BLUE_ID)
@@ -1071,11 +1071,11 @@ final class ExternalChannelCatalogContextTest {
                                 "/",
                                 "handler")
                         .sourceContribution(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         new Node().value(
                                                 "handler-source")))
                         .effectiveTypeBlueId(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         new Node().name(
                                                 "Non-Channel Handler")))
                         .role("handler")

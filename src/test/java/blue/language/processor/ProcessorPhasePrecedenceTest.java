@@ -7,7 +7,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -26,9 +26,9 @@ final class ProcessorPhasePrecedenceTest {
     private static final Node CHANNEL_TYPE =
             new Node().name("Phase Precedence External Channel");
     private static final String CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
     private static final String UNKNOWN_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     new Node().name("Unavailable Application Contract"));
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(
@@ -108,9 +108,9 @@ final class ProcessorPhasePrecedenceTest {
                     ProcessorStatus.CAPABILITY_FAILURE,
                     observation.debug.processResult().status());
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             observation.root),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             observation.debug
                                     .processResult().document()));
             assertTrue(
@@ -334,9 +334,9 @@ final class ProcessorPhasePrecedenceTest {
                 debug.processResult().status(),
                 diagnosticMessage(debug.processResult()));
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         observation.root),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         debug.processResult().document()));
         assertTrue(
                 debug.processResult().events().isEmpty());
@@ -365,7 +365,7 @@ final class ProcessorPhasePrecedenceTest {
     private static TerminatedPhaseFixture terminatedPhaseFixture() {
         Node root = terminatedRoot();
         Node event = event();
-        String missing = BlueIdCalculator.calculateBlueId(
+        String missing = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Unavailable feeder state"));
         AtomicInteger feederCalls = new AtomicInteger();
         ExternalDeliveryPlanDeriver unavailable =
@@ -389,11 +389,11 @@ final class ProcessorPhasePrecedenceTest {
                         .build();
         VerifiedExecutionEvidence invalidEvidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         new Node().properties(
                                                 "different",
                                                 new Node().value(true))),
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         event))
                         .revisions(0L, 0L)
                         .runtimeRegistryIdentity(
@@ -439,8 +439,8 @@ final class ProcessorPhasePrecedenceTest {
                 result.status(),
                 diagnosticMessage(result));
         assertEquals(
-                BlueIdCalculator.calculateBlueId(inputRoot),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(inputRoot),
+                DirectBlueIdCalculator.calculateBlueId(
                         result.document()));
         assertTrue(result.events().isEmpty());
         if (expectedSnapshot != null) {
@@ -494,7 +494,7 @@ final class ProcessorPhasePrecedenceTest {
             String channelKey,
             int order) {
         String contribution =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         return ExternalDeliverySnapshot.builder(
                         "/", channelKey)
                 .order(order)
@@ -509,7 +509,7 @@ final class ProcessorPhasePrecedenceTest {
                                         contribution),
                                 "phase-domain"))
                 .checkpointSubjectBlueId(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 event))
                 .build();
     }

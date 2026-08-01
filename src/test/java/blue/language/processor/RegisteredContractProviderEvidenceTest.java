@@ -11,7 +11,7 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -189,7 +189,7 @@ class RegisteredContractProviderEvidenceTest {
                 .build();
         ContractProcessorRegistry registry = standalone.getContractRegistry();
         long versionBefore = registry.version();
-        String evidenceBefore = BlueIdCalculator.calculateBlueId(
+        String evidenceBefore = DirectBlueIdCalculator.calculateBlueId(
                 registry.canonicalTypeNode(fixture.blueId));
 
         // when
@@ -209,7 +209,7 @@ class RegisteredContractProviderEvidenceTest {
         Class<?> resolvedClassAfter =
                 afterConflict.getContractTypeResolver()
                         .resolveClass(fixture.blueId);
-        String evidenceAfter = BlueIdCalculator.calculateBlueId(
+        String evidenceAfter = DirectBlueIdCalculator.calculateBlueId(
                 registryAfter.canonicalTypeNode(fixture.blueId));
 
         // then
@@ -280,7 +280,7 @@ class RegisteredContractProviderEvidenceTest {
         Node document = result.document().getAsNode(
                 "/contracts/initialized/document");
         return document != null
-                ? BlueIdCalculator.calculateBlueId(document)
+                ? DirectBlueIdCalculator.calculateBlueId(document)
                 : null;
     }
 

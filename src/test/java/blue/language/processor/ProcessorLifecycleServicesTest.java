@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,7 +53,7 @@ final class ProcessorLifecycleServicesTest {
     void shouldCollapseInlineInitializationDocumentToExactReference() {
         // given
         Node exactDocument = new Node().name("initial scope");
-        String expectedBlueId = BlueIdCalculator.calculateBlueId(exactDocument);
+        String expectedBlueId = DirectBlueIdCalculator.calculateBlueId(exactDocument);
         Node marker = new Node()
                 .type(new Node().blueId(
                         RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))

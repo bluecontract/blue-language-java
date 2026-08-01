@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.processor.model.JsonPatch;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.Objects;
 
@@ -55,7 +55,7 @@ final class ScopeCutoffTracker {
         if (left == null || right == null) {
             return left == right;
         }
-        return BlueIdCalculator.calculateUncheckedBlueId(left).equals(
-                BlueIdCalculator.calculateUncheckedBlueId(right));
+        return DirectBlueIdCalculator.calculateUncheckedBlueId(left).equals(
+                DirectBlueIdCalculator.calculateUncheckedBlueId(right));
     }
 }

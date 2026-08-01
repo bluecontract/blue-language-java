@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -112,6 +112,6 @@ class ProcessingSnapshotManagerPreservationTest {
         return new ResolvedSnapshot(
                 canonical,
                 canonical.clone(),
-                BlueIdCalculator.calculateBlueId(canonical));
+                DirectBlueIdCalculator.calculateBlueId(canonical));
     }
 }

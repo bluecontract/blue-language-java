@@ -7,7 +7,7 @@ import blue.language.processor.model.TestEventChannel;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -297,7 +297,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         Node after = before.clone();
         after.getContracts().getProperties().remove("embedded");
         String contribution =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         SubscriptionDelta.Entry retained =
                 new SubscriptionDelta.Entry(
                         "/child",
@@ -455,9 +455,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         Node beforeChannel = externalChannel(beforeKey);
         Node afterChannel = externalChannel(afterKey);
         String beforeChannelBlueId =
-                BlueIdCalculator.calculateBlueId(beforeChannel);
+                DirectBlueIdCalculator.calculateBlueId(beforeChannel);
         String afterChannelBlueId =
-                BlueIdCalculator.calculateBlueId(afterChannel);
+                DirectBlueIdCalculator.calculateBlueId(afterChannel);
         Node beforeType = new Node().contracts(
                 new Node().properties(
                         "incoming",
@@ -467,9 +467,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                         "incoming",
                         reference(afterChannelBlueId)));
         String beforeTypeBlueId =
-                BlueIdCalculator.calculateBlueId(beforeType);
+                DirectBlueIdCalculator.calculateBlueId(beforeType);
         String afterTypeBlueId =
-                BlueIdCalculator.calculateBlueId(afterType);
+                DirectBlueIdCalculator.calculateBlueId(afterType);
         Map<String, Node> nodes = new LinkedHashMap<>();
         nodes.put(beforeChannelBlueId, beforeChannel);
         nodes.put(afterChannelBlueId, afterChannel);
@@ -509,7 +509,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
             long activationRevision,
             ExternalOrderKey start) {
         String contribution =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         return new SubscriptionDelta.Entry(
                 "/",
                 "incoming",

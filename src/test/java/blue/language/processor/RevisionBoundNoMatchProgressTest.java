@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -63,16 +63,16 @@ final class RevisionBoundNoMatchProgressTest {
         assertEquals(ProcessorStatus.NO_MATCH, result.status());
         assertFalse(result.commits());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(root),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(
                         result.document()));
         assertTrue(result.events().isEmpty());
         assertFalse(companion.commitsRootAndOutbox());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(root),
                 companion.expectedRootBlueId());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(event),
+                DirectBlueIdCalculator.calculateBlueId(event),
                 companion.eventBlueId());
         assertEquals(rootRevision, companion.expectedRootRevision());
         assertEquals(rootRevision, companion.resultingRootRevision());

@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 import org.junit.jupiter.api.Test;
 
@@ -23,11 +23,11 @@ final class RuntimeWorkSessionProcessorPhaseIntegrationTest {
     private static final Node CHANNEL_TYPE =
             new Node().name("Runtime Work Session Integration Channel");
     private static final String CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
     private static final Node HANDLER_TYPE =
             new Node().name("Runtime Work Session Integration Handler");
     private static final String HANDLER_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(HANDLER_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(HANDLER_TYPE);
     private static final String TOPIC = "runtime-work-session-topic";
     private static final String DOMAIN = "runtime-work-session-domain";
     private static final String COUNTER_OPERATION = "operation";
@@ -239,9 +239,9 @@ final class RuntimeWorkSessionProcessorPhaseIntegrationTest {
         Node channel = root.getContracts()
                 .getProperties().get("source");
         String contribution =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         String checkpointSubject =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         ExternalDeliverySnapshot delivery =
                 ExternalDeliverySnapshot.builder(
                                 JsonPointer.ROOT, "source")

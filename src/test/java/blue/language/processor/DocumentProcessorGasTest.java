@@ -17,7 +17,7 @@ import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -432,7 +432,7 @@ class DocumentProcessorGasTest {
         // then
         assertProcessedAccount(result, types);
         assertEquals(snapshot.blueId(), documentBlueId(result));
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.document()),
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(result.document()),
                 documentBlueId(result));
         assertEquals(1, result.document().getAsInteger("/balance/cents"));
         assertEquals(1, snapshot.resolvedRoot().getAsInteger("/balance/cents"));
@@ -457,7 +457,7 @@ class DocumentProcessorGasTest {
         // then
         assertInitializedAccount(result, types);
         assertEquals(snapshot.blueId(), documentBlueId(result));
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.document()),
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(result.document()),
                 documentBlueId(result));
         assertEquals(0, result.document().getAsInteger("/balance/cents"));
         assertEquals(0, snapshot.resolvedRoot().getAsInteger("/balance/cents"));
@@ -1005,7 +1005,7 @@ final class DocumentProcessorExactFeederSupport {
                                 .eventOrderKey(
                                         ExternalOrderKey.of(
                                                 Collections.singletonList(
-                                                        BlueIdCalculator
+                                                        DirectBlueIdCalculator
                                                                 .calculateBlueId(
                                                                         event))))
                                 .activeSubscriptionIntervals(
@@ -1087,7 +1087,7 @@ final class DocumentProcessorExactFeederSupport {
                     "Exact test feeder has no processor owner");
         }
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         String eventTypeBlueId = event.getType() != null
                 ? event.getType().getBlueId() : null;
         ExternalOrderKey eventOrder =

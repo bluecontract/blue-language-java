@@ -4,9 +4,9 @@ import blue.language.merge.MergingProcessor;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.utils.Types;
+import blue.language.provider.Types;
 
-import static blue.language.utils.Types.findBasicTypeName;
+import static blue.language.provider.Types.findBasicTypeName;
 
 /**
  * Rejects resolved instances of scalar core types that also carry list or

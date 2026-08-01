@@ -50,6 +50,38 @@ public final class DirectBlueIdCalculator {
         this.listFold = new ListBlueIdFold(checkedHashProvider);
     }
 
+    /** Calculates a strict direct BlueId with the shared calculator. */
+    public static String calculateBlueId(Node node) {
+        return INSTANCE.directBlueId(node);
+    }
+
+    /** Calculates a strict ordered-list BlueId with the shared calculator. */
+    public static String calculateBlueId(List<Node> nodes) {
+        return INSTANCE.directBlueId(nodes);
+    }
+
+    /** Calculates unchecked structural identity with the shared calculator. */
+    public static String calculateUncheckedBlueId(Node node) {
+        return INSTANCE.uncheckedBlueId(node);
+    }
+
+    /** Calculates unchecked ordered-list identity with the shared calculator. */
+    public static String calculateUncheckedBlueId(List<Node> nodes) {
+        return INSTANCE.uncheckedBlueId(nodes);
+    }
+
+    /** Calculates direct identity while accepting cyclic placeholders. */
+    public static String calculateBlueIdAllowingCyclicPlaceholders(
+            Node node) {
+        return INSTANCE.directBlueIdAllowingCyclicPlaceholders(node);
+    }
+
+    /** Calculates ordered identity while accepting cyclic placeholders. */
+    public static String calculateBlueIdAllowingCyclicPlaceholders(
+            List<Node> nodes) {
+        return INSTANCE.directBlueIdAllowingCyclicPlaceholders(nodes);
+    }
+
     /**
      * Calculates a strict direct BlueId for one exact node.
      *

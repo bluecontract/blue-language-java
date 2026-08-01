@@ -5,7 +5,7 @@ import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,8 +50,8 @@ final class CheckpointManagerTest {
         manager.ensureCheckpointMarker("/", bundle);
 
         Node eventNode = new Node().value("payload");
-        String subjectBlueId = BlueIdCalculator.calculateBlueId(eventNode);
-        String domainBlueId = BlueIdCalculator.calculateBlueId(
+        String subjectBlueId = DirectBlueIdCalculator.calculateBlueId(eventNode);
+        String domainBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("test checkpoint domain"));
         CheckpointManager.CheckpointRecord record = manager.findCheckpoint(
                 bundle, "testChannel", domainBlueId);
@@ -139,15 +139,15 @@ final class CheckpointManagerTest {
         // given
         Node previousSubject = new Node().value("previous");
         String previousSubjectBlueId =
-                BlueIdCalculator.calculateBlueId(previousSubject);
+                DirectBlueIdCalculator.calculateBlueId(previousSubject);
         String previousDomainBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().name("previous domain"));
         Node currentSubject = new Node().value("current");
         String currentSubjectBlueId =
-                BlueIdCalculator.calculateBlueId(currentSubject);
+                DirectBlueIdCalculator.calculateBlueId(currentSubject);
         String currentDomainBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().name("current domain"));
         ChannelEventCheckpoint checkpoint =
                 new ChannelEventCheckpoint()

@@ -6,7 +6,7 @@ import blue.language.identity.CanonicalJsonHasher;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.ListBlueIdFold;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.value.BlueNumbers;
 import blue.language.model.NodeWireForm;
@@ -65,7 +65,7 @@ public final class FrozenNodeIdentity {
         if (node.strictCanonical) {
             return node.strictBlueIdValidation
                     ? FrozenCanonicalDigester.calculateBlueId(node)
-                    : BlueIdCalculator.calculateUncheckedBlueId(
+                    : DirectBlueIdCalculator.calculateUncheckedBlueId(
                             FrozenNodeConverter.INSTANCE.toNode(node));
         }
         return resolvedBlueId(node);

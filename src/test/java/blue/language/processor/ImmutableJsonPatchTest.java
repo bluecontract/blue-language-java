@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -95,7 +95,7 @@ class ImmutableJsonPatchTest {
     void shouldVerifySemanticIdentityDoesNotAliasDistinctAuthoredRepresentations() {
         // given
         Node materialized = new Node().properties("payload", new Node().value("value"));
-        String blueId = BlueIdCalculator.calculateBlueId(materialized);
+        String blueId = DirectBlueIdCalculator.calculateBlueId(materialized);
         FrozenNode canonicalRoot = FrozenNode.fromNode(new Node());
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(new Node());
 

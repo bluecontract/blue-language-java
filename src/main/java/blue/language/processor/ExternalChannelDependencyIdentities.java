@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ final class ExternalChannelDependencyIdentities {
                         ProcessorIdentityConstants.Field
                                 .ORDERED_DEPENDENCY_NODE_BLUE_IDS,
                         textList(orderedIdentities));
-        return BlueIdCalculator.calculateBlueId(descriptor);
+        return DirectBlueIdCalculator.calculateBlueId(descriptor);
     }
 
     static String channelCatalog(
@@ -48,7 +48,7 @@ final class ExternalChannelDependencyIdentities {
                         ProcessorIdentityConstants.Field
                                 .EFFECTIVE_CONTRACT_KEYS,
                         textList(contractKeys));
-        return BlueIdCalculator.calculateBlueId(descriptor);
+        return DirectBlueIdCalculator.calculateBlueId(descriptor);
     }
 
     static String entry(
@@ -78,7 +78,7 @@ final class ExternalChannelDependencyIdentities {
                         ProcessorIdentityConstants.Field
                                 .CHECKPOINT_DOMAIN_BLUE_ID,
                         new Node().value(checkpointDomainBlueId));
-        return BlueIdCalculator.calculateBlueId(descriptor);
+        return DirectBlueIdCalculator.calculateBlueId(descriptor);
     }
 
     static String channelEntry(
@@ -115,7 +115,7 @@ final class ExternalChannelDependencyIdentities {
                         ProcessorIdentityConstants.Field
                                 .HEADER_IDENTITY_BLUE_ID,
                         new Node().value(headerIdentityBlueId));
-        return BlueIdCalculator.calculateBlueId(descriptor);
+        return DirectBlueIdCalculator.calculateBlueId(descriptor);
     }
 
     static String typeFamily(
@@ -157,7 +157,7 @@ final class ExternalChannelDependencyIdentities {
                             .ORDERED_MEMBER_EFFECTIVE_TYPE_BLUE_IDS,
                     textList(actualTypes));
         }
-        return BlueIdCalculator.calculateBlueId(descriptor);
+        return DirectBlueIdCalculator.calculateBlueId(descriptor);
     }
 
     static String member(
@@ -178,7 +178,7 @@ final class ExternalChannelDependencyIdentities {
                         ProcessorIdentityConstants.Field
                                 .DETERMINISTIC_DEPENDENCY_NODE_BLUE_IDS,
                         textList(deterministicDependencyNodeBlueIds));
-        return BlueIdCalculator.calculateBlueId(descriptor);
+        return DirectBlueIdCalculator.calculateBlueId(descriptor);
     }
 
     static Node textList(List<String> values) {

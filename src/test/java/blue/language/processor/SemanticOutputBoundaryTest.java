@@ -9,7 +9,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -405,7 +405,7 @@ final class SemanticOutputBoundaryTest {
                         manager,
                         meter.semantic());
         String blueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().value(
                                 "provider content"));
         Throwable failure = null;
@@ -1038,7 +1038,7 @@ final class SemanticOutputBoundaryTest {
         try (Invocation invocation =
                      new Invocation(new Blue())) {
             String blueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             new Node().value("valid"));
             Node mixed =
                     new Node()

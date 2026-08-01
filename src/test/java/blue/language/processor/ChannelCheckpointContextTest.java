@@ -5,7 +5,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -189,7 +189,7 @@ class ChannelCheckpointContextTest {
                         "timestamp",
                         new Node().value(9));
         String blueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         exactPreviousSubject);
         RecordingExactManager manager =
                 RecordingExactManager.returning(
@@ -235,7 +235,7 @@ class ChannelCheckpointContextTest {
                 new Node().value(
                         "expected");
         String expectedBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         expected);
         RecordingExactManager manager =
                 RecordingExactManager.returning(
@@ -281,7 +281,7 @@ class ChannelCheckpointContextTest {
                 new Node().value(
                         "expected");
         String expectedBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         expected);
         IllegalStateException unavailable =
                 new IllegalStateException(
@@ -356,7 +356,7 @@ class ChannelCheckpointContextTest {
             return new ResolvedSnapshot(
                     canonical,
                     canonical.clone(),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             canonical));
         }
 

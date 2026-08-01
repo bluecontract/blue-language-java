@@ -5,7 +5,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -34,7 +34,7 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
         Node handlerType =
                 new Node().name("Snapshot Handler");
         String handlerTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         handlerType);
         Node handler = new Node()
                 .type(new Node().blueId(
@@ -85,7 +85,7 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
                 .type(new Node().blueId(
                         RuntimeBlueIds.JSON_PATCH_ENTRY));
         String canonicalBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         canonical);
         ResolvedSnapshot eagerSnapshot =
                 new ResolvedSnapshot(
@@ -130,9 +130,9 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
                         .frozenCanonicalRoot()
                         .blueId());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         canonicalBody),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         resolvedRootBody));
         assertNull(resolvedRootPatch.getType());
         assertNull(resolvedChildPatch.getType());
@@ -184,11 +184,11 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
         private Fixture(boolean deferred) {
             Node body = new Node().value("program");
             String bodyBlueId =
-                    BlueIdCalculator.calculateBlueId(body);
+                    DirectBlueIdCalculator.calculateBlueId(body);
             Node handlerType =
                     new Node().name("Deferred Handler");
             String handlerTypeBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             handlerType);
             Node handler = new Node()
                     .type(new Node().blueId(
@@ -270,7 +270,7 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
             return new ResolvedSnapshot(
                     canonical,
                     canonical.clone(),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             canonical));
         }
     }

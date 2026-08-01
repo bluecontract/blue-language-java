@@ -7,7 +7,7 @@ import java.util.Objects;
 
 /**
  * Immutable cache-ownership and weight snapshot for one
- * {@link BlueLanguageRuntime}.
+ * {@link blue.language.runtime.BlueLanguageRuntime}.
  * Weights are conservative estimates intended for bounding and operational
  * observability rather than exact heap-size measurements.
  */

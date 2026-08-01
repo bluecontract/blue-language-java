@@ -7,7 +7,7 @@ import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.nio.charset.StandardCharsets;
@@ -142,7 +142,7 @@ final class SubscriptionSurfaceRules {
         while (type != null) {
             String blueId = type.getBlueId() != null
                     ? type.getBlueId()
-                    : BlueIdCalculator.calculateBlueId(type);
+                    : DirectBlueIdCalculator.calculateBlueId(type);
             if (!visited.add(blueId)) {
                 throw new IllegalArgumentException(
                         "Cyclic effective contract type");
@@ -309,7 +309,7 @@ final class SubscriptionSurfaceRules {
     String exactIdentity(Node node) {
         return node.getBlueId() != null
                 ? node.getBlueId()
-                : BlueIdCalculator.calculateBlueId(node);
+                : DirectBlueIdCalculator.calculateBlueId(node);
     }
 
     /**

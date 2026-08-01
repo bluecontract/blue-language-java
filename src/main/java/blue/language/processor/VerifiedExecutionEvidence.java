@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
@@ -246,8 +246,8 @@ public final class VerifiedExecutionEvidence {
                            String expectedRuntimeRegistryIdentity) {
         Objects.requireNonNull(root, "root");
         Objects.requireNonNull(event, "event");
-        String actualRoot = BlueIdCalculator.calculateBlueId(root);
-        String actualEvent = BlueIdCalculator.calculateBlueId(event);
+        String actualRoot = DirectBlueIdCalculator.calculateBlueId(root);
+        String actualEvent = DirectBlueIdCalculator.calculateBlueId(event);
         if (!rootBlueId.equals(actualRoot) || !eventBlueId.equals(actualEvent)) {
             throw new InvalidExecutionEvidenceException(
                     "Execution evidence does not bind to the exact Root and event");

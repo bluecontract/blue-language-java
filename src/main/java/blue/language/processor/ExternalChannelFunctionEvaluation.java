@@ -5,9 +5,9 @@ import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.FrozenTypeMatcher;
+import blue.language.matching.FrozenTypeMatcher;
 
 import java.util.Collections;
 import java.util.List;
@@ -462,7 +462,7 @@ final class ExternalChannelFunctionEvaluation {
             final String actualBlueId;
             try {
                 actualBlueId =
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 exact);
             } catch (RuntimeException invalidContent) {
                 throw new IllegalStateException(

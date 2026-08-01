@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 public final class DocumentProcessingResultTestSupport {
 
@@ -30,7 +30,7 @@ public final class DocumentProcessingResultTestSupport {
 
     public static String documentBlueId(DocumentProcessingResult result) {
         return result != null
-                ? BlueIdCalculator.calculateBlueId(result.document())
+                ? DirectBlueIdCalculator.calculateBlueId(result.document())
                 : null;
     }
 

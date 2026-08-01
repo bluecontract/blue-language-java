@@ -4,13 +4,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
@@ -24,11 +22,11 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.VerifyingNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.NodeProviderWrapper;
+import blue.language.provider.NodeProviderWrapper;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -287,7 +285,7 @@ class ReferenceBlueIdResolutionValidationTest {
     @Test
     void shouldKeepValidMissingReferenceClassifiedAsProviderUnavailable() {
         // given
-        String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Missing Type"));
+        String missingBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().name("Missing Type"));
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(countingMiss(fetches));
 
@@ -305,7 +303,7 @@ class ReferenceBlueIdResolutionValidationTest {
     @Test
     void shouldKeepValidOrdinaryMismatchClassifiedAsProviderBlueIdMismatch() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Requested Type"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().name("Requested Type"));
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
             fetches.incrementAndGet();
@@ -332,7 +330,7 @@ class ReferenceBlueIdResolutionValidationTest {
                 .properties("fixed", new Node().value("requested"));
         Node trusted = new Node().name("Trusted Non-Direct Type")
                 .properties("fixed", new Node().value("trusted"));
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(requested);
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(requested);
         AtomicInteger fetches = new AtomicInteger();
         Blue blue = new Blue(NodeProviderWrapper.wrap(blueId -> {
             fetches.incrementAndGet();
@@ -469,7 +467,7 @@ class ReferenceBlueIdResolutionValidationTest {
     @Test
     void shouldPreserveProviderFailureClassifierMappings() {
         // given
-        String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Classifier Missing"));
+        String missingBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().name("Classifier Missing"));
 
         // when
         RuntimeException missing = captureFailure(
@@ -490,7 +488,7 @@ class ReferenceBlueIdResolutionValidationTest {
     @Test
     void shouldHandleSharedNodesAndAccidentalObjectCyclesWithoutMutation() {
         // given
-        String validBlueId = BlueIdCalculator.calculateBlueId(new Node().name("Shared Reference"));
+        String validBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().name("Shared Reference"));
         Node shared = reference(validBlueId);
         Node root = new Node().type(shared).properties("shared", shared);
         root.properties("self", root);

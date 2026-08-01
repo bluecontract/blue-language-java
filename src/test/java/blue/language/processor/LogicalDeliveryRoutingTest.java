@@ -8,7 +8,7 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -36,21 +36,21 @@ final class LogicalDeliveryRoutingTest {
     private static final Node DEFAULT_CHANNEL_TYPE =
             new Node().name("Generic Default External Channel");
     private static final String DEFAULT_CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     DEFAULT_CHANNEL_TYPE);
     private static final Node ROUTING_CHANNEL_TYPE =
             new Node().name("Generic Routing External Channel");
     private static final String ROUTING_CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     ROUTING_CHANNEL_TYPE);
     private static final Node HANDLER_TYPE =
             new Node().name("Generic Logical Delivery Handler");
     private static final String HANDLER_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(HANDLER_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(HANDLER_TYPE);
     private static final Node HEADER_PROBE_TYPE =
             new Node().name("Generic Header Materialization Probe");
     private static final String HEADER_PROBE_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     HEADER_PROBE_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(
@@ -197,9 +197,9 @@ final class LogicalDeliveryRoutingTest {
                     sourceOrderResult.processResult().status(),
                     reversedArrivalResult.processResult().status());
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             sourceOrderResult.processResult().document()),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             reversedArrivalResult.processResult().document()));
             assertEquals(
                     sourceOrderResult.processResult().totalGas(),
@@ -307,9 +307,9 @@ final class LogicalDeliveryRoutingTest {
             assertTrue(checkpointWrites(
                     replay.trace()).isEmpty());
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             checkpointed),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             replay.processResult().document()));
         }
     }
@@ -342,8 +342,8 @@ final class LogicalDeliveryRoutingTest {
                     debug.processResult().status());
             assertEquals(1, fixture.handlers.executions());
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(document),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(document),
+                    DirectBlueIdCalculator.calculateBlueId(
                             debug.processResult().document()));
             assertFalse(hasCheckpoint(
                     debug.processResult().document(),
@@ -501,7 +501,7 @@ final class LogicalDeliveryRoutingTest {
                                             "handler",
                                             inheritedHandler));
             String scopeTypeBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             scopeType);
             fixture.provider.put(
                     scopeTypeBlueId,
@@ -686,10 +686,10 @@ final class LogicalDeliveryRoutingTest {
                                     "shared-payload",
                                     "shared-payload"));
             inlineDocumentBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             inlineDocument);
             fragmentDocumentBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             fragmentDocument);
             fragmented.provider.put(
                     fragmentDocumentBlueId,
@@ -725,9 +725,9 @@ final class LogicalDeliveryRoutingTest {
 
         // then
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         inlineEvent),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         fragmentEvent));
         assertEquals(
                 inlineDocumentBlueId,
@@ -737,10 +737,10 @@ final class LogicalDeliveryRoutingTest {
                 inlineDebug.processResult().status(),
                 fragmentDebug.processResult().status());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         inlineDebug.processResult()
                                 .document()),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         fragmentDebug.processResult()
                                 .document()));
         assertEquals(
@@ -761,7 +761,7 @@ final class LogicalDeliveryRoutingTest {
                 "topic", "event-suspension");
         Node keyFragment = new Node().value("topic");
         String keyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         keyFragment);
         Node fragmentedEvent =
                 inlineEvent.clone()
@@ -803,9 +803,9 @@ final class LogicalDeliveryRoutingTest {
 
         // then
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         inlineEvent),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         fragmentedEvent));
         assertEquals(
                 ProcessAttemptResult.Kind
@@ -992,9 +992,9 @@ final class LogicalDeliveryRoutingTest {
             return InvalidRoutingObservation.processingFailure(
                     debug.processResult().status(),
                     fixture.handlers.executions(),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             document),
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             debug.processResult()
                                     .document()),
                     checkpointWrites(
@@ -1312,7 +1312,7 @@ final class LogicalDeliveryRoutingTest {
                             + "|" + record.logicalPath()
                             + "|" + record.details()
                             + "|" + (node != null
-                            ? BlueIdCalculator
+                            ? DirectBlueIdCalculator
                             .calculateBlueId(node)
                             : null));
         }
@@ -1820,10 +1820,10 @@ final class LogicalDeliveryRoutingTest {
         private final Node selectedBody =
                 new Node().value("selected-body");
         private final String selectedBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         selectedBody);
         private final String missingBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().value(
                                 "missing-body"));
         private final CountingProvider provider;

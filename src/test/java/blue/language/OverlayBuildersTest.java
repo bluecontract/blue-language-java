@@ -4,18 +4,16 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.model.wire.BlueLanguageConstants;
@@ -110,7 +108,7 @@ public class OverlayBuildersTest {
         assertFalse(reversed.getProperties().containsKey("y"));
         assertFalse(reversed.getProperties().containsKey("z"));
 
-        assertEquals(nodeProvider.getBlueIdByName("C"), BlueIdCalculator.calculateBlueId(reversed));
+        assertEquals(nodeProvider.getBlueIdByName("C"), DirectBlueIdCalculator.calculateBlueId(reversed));
     }
 
     @Test
@@ -245,7 +243,7 @@ public class OverlayBuildersTest {
                 "    - B");
         Blue blue = new Blue(nodeProvider);
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
         Node derived = blue.yamlToNode(
                 "name: Derived\n" +
@@ -286,7 +284,7 @@ public class OverlayBuildersTest {
                 "    - C");
         Blue blue = new Blue(nodeProvider);
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
         Node derived = blue.yamlToNode(
                 "name: Derived\n" +
@@ -338,7 +336,7 @@ public class OverlayBuildersTest {
                 "    - name: second");
         Blue blue = new Blue(nodeProvider);
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
         Node derived = blue.yamlToNode(
                 "name: Derived\n" +
@@ -380,7 +378,7 @@ public class OverlayBuildersTest {
                 "    - B");
         Blue blue = new Blue(nodeProvider);
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
         Node derived = blue.yamlToNode(
                 "name: Derived\n" +
@@ -418,7 +416,7 @@ public class OverlayBuildersTest {
                 "    - B");
         Blue blue = new Blue(nodeProvider);
         Node inheritedList = blue.resolve(nodeProvider.getNodeByName("Base")).getAsNode("/list");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedList.getItems());
         nodeProvider.addListAndItsItems(inheritedList.getItems());
         Node derived = blue.yamlToNode(
                 "name: Derived\n" +
@@ -472,7 +470,7 @@ public class OverlayBuildersTest {
         // then
         assertEquals("Same Label", canonical.getName());
         assertEquals("Same Description", canonical.getDescription());
-        assertEquals(BlueIdCalculator.calculateBlueId(expectedCanonical),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(expectedCanonical),
                 blue.calculateSourceDocumentBlueId(source));
         assertNotEquals(blue.calculateSourceDocumentBlueId(
                         new Node().type(new Node().blueId(typeBlueId))),

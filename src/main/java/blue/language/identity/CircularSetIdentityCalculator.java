@@ -25,6 +25,15 @@ import java.util.regex.Pattern;
  */
 public final class CircularSetIdentityCalculator {
 
+    private static final CircularSetIdentityCalculator SHARED =
+            new CircularSetIdentityCalculator();
+
+    /** Calculates cyclic-set member BlueIds in source order. */
+    public static List<String> calculateCircularSetBlueIds(
+            List<Node> documents) {
+        return SHARED.circularBlueIds(documents);
+    }
+
     private static final Pattern THIS_REFERENCE_PATTERN = Pattern.compile(
             "^" + BlueIds.THIS_PLACEHOLDER
                     + "("

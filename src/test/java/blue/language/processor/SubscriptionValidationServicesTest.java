@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -207,7 +207,7 @@ final class SubscriptionValidationServicesTest {
                 .properties(
                         "checkpointDomain",
                         new Node().value(CHECKPOINT_DOMAIN));
-        channel.blueId(BlueIdCalculator.calculateBlueId(channel));
+        channel.blueId(DirectBlueIdCalculator.calculateBlueId(channel));
         return channel;
     }
 }

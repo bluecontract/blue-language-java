@@ -6,7 +6,7 @@ import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.junit.jupiter.api.Test;
 
@@ -138,7 +138,7 @@ class JsonPropertyMappingTest {
         JsonPropertyBlueIdMetadata converted = blue.nodeToObject(node, JsonPropertyBlueIdMetadata.class);
 
         // then
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(target), converted.packageBlueId);
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(target), converted.packageBlueId);
     }
 
     @Test

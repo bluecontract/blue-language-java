@@ -4,19 +4,17 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -193,8 +191,8 @@ public class NodeDeserializerTest {
                 Node.class);
 
         // when
-        String baseId = BlueIdCalculator.calculateBlueId(withoutContracts);
-        String contractsId = BlueIdCalculator.calculateBlueId(withContracts);
+        String baseId = DirectBlueIdCalculator.calculateBlueId(withoutContracts);
+        String contractsId = DirectBlueIdCalculator.calculateBlueId(withContracts);
 
         // then
         assertNotEquals(baseId, contractsId);

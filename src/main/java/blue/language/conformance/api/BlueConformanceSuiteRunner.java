@@ -27,12 +27,12 @@ import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.SourceProviderEnvironment;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.registry.BlueCoreTypeRegistry;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodePath;
-import blue.language.utils.NodeProviderWrapper;
+import blue.language.provider.NodeProviderWrapper;
 import blue.language.model.NodeWireForm;
 import blue.language.utils.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
@@ -650,7 +650,7 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static void runCalculateBlueId(JsonNode spec) {
-        String actual = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.INPUT)));
+        String actual = DirectBlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.INPUT)));
         if (spec.has(FixtureField.EXPECTED_NODE_BLUE_ID)) {
             assertEquals(requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID), actual);
         }
@@ -659,8 +659,8 @@ public final class BlueConformanceSuiteRunner {
     }
 
     private static void runCalculateBlueIdPair(JsonNode spec) {
-        String left = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.LEFT)));
-        String right = BlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.RIGHT)));
+        String left = DirectBlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.LEFT)));
+        String right = DirectBlueIdCalculator.calculateBlueId(readNode(requirePresent(spec, FixtureField.RIGHT)));
         assertEquals(requirePresent(spec, FixtureField.EXPECTED_EQUAL).asBoolean(), left.equals(right));
     }
 
@@ -670,7 +670,7 @@ public final class BlueConformanceSuiteRunner {
             throw new IllegalArgumentException(
                     "calculateCircularSetBlueIds requires a documents list.");
         }
-        List<String> actual = CircularBlueIdCalculator.calculateCircularSetBlueIds(
+        List<String> actual = CircularSetIdentityCalculator.calculateCircularSetBlueIds(
                 documents.getItems());
         assertTextList(requirePresent(spec, FixtureField.EXPECTED_BLUE_IDS), actual);
     }
@@ -759,7 +759,7 @@ public final class BlueConformanceSuiteRunner {
             assertEquals(spec.get(FixtureField.EXPECTED_CANONICAL_CONTAINS_CONTROLS).asBoolean(),
                     containsListControls(actual));
         }
-        BlueIdCalculator.calculateBlueId(actual);
+        DirectBlueIdCalculator.calculateBlueId(actual);
     }
 
     private static void runCollapse(JsonNode spec) {
@@ -769,7 +769,7 @@ public final class BlueConformanceSuiteRunner {
         assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_COLLAPSED, actual);
         String expectedId = requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID);
         assertEquals(expectedId, actual.getBlueId());
-        assertEquals(expectedId, BlueIdCalculator.calculateBlueId(source));
+        assertEquals(expectedId, DirectBlueIdCalculator.calculateBlueId(source));
         assertTrue(actual.isReferenceOnly(), "Collapse must emit a pure reference.");
     }
 
@@ -782,8 +782,8 @@ public final class BlueConformanceSuiteRunner {
         assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_EXPANDED, actual);
         if (spec.has(FixtureField.EXPECTED_NODE_BLUE_ID)) {
             String expected = requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID);
-            assertEquals(expected, BlueIdCalculator.calculateBlueId(source));
-            assertEquals(expected, BlueIdCalculator.calculateBlueId(actual));
+            assertEquals(expected, DirectBlueIdCalculator.calculateBlueId(source));
+            assertEquals(expected, DirectBlueIdCalculator.calculateBlueId(actual));
         }
     }
 
@@ -869,7 +869,7 @@ public final class BlueConformanceSuiteRunner {
         for (JsonNode variant : variants) {
             Node source = readNode(requirePresent(variant, FixtureField.SOURCE));
             if (!source.isReferenceOnly()) {
-                derived.put(BlueIdCalculator.calculateBlueId(source),
+                derived.put(DirectBlueIdCalculator.calculateBlueId(source),
                         NodeProviderResult.found(Collections.singletonList(source)));
             }
         }
@@ -886,7 +886,7 @@ public final class BlueConformanceSuiteRunner {
             results.add(result);
             assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
             selected.add(selectFirstDemand(result.requireEstablished(), limits));
-            rootIds.add(BlueIdCalculator.calculateBlueId(source));
+            rootIds.add(DirectBlueIdCalculator.calculateBlueId(source));
         }
         assertAllNodeEqual(selected);
         assertAllEqual(rootIds);
@@ -915,7 +915,7 @@ public final class BlueConformanceSuiteRunner {
                             .expandLimited(source, limits);
             assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
             selected.add(selectFirstDemand(result.requireEstablished(), limits));
-            rootIds.add(BlueIdCalculator.calculateBlueId(source));
+            rootIds.add(DirectBlueIdCalculator.calculateBlueId(source));
         }
         assertAllNodeEqual(selected);
         assertAllEqual(rootIds);
@@ -960,7 +960,7 @@ public final class BlueConformanceSuiteRunner {
                         new Node().blueId(
                                 BlueIds.indexedThisPlaceholder(0)));
         List<Node> members = Arrays.asList(content, companion);
-        List<String> calculated = CircularBlueIdCalculator
+        List<String> calculated = CircularSetIdentityCalculator
                 .calculateCircularSetBlueIds(members);
         if (requestedMember < 0 || requestedMember >= calculated.size()) {
             throw new IllegalArgumentException(
@@ -1062,7 +1062,7 @@ public final class BlueConformanceSuiteRunner {
             }
         }
 
-        String inputBlueId = BlueIdCalculator.calculateBlueId(input);
+        String inputBlueId = DirectBlueIdCalculator.calculateBlueId(input);
         for (ExactNodeGraphFragments graph : graphs) {
             assertFragmentRootIdentity(spec, graph, inputBlueId);
             assertExpectedReferencePaths(spec, graph);
@@ -1109,7 +1109,7 @@ public final class BlueConformanceSuiteRunner {
         ExactNodeGraphFragments graph = ExactNodeGraphFragments.split(
                 input, textValues(requireArray(spec, FixtureField.CUTS)));
         assertFragmentRootIdentity(
-                spec, graph, BlueIdCalculator.calculateBlueId(input));
+                spec, graph, DirectBlueIdCalculator.calculateBlueId(input));
         assertLocalProviderOutcomes(
                 requirePresent(spec, FixtureField.EXPECTED_LOCAL_PROVIDER_OUTCOME), graph);
 
@@ -1180,9 +1180,9 @@ public final class BlueConformanceSuiteRunner {
                 graph.roots().get(0);
         assertEquals(expectedBlueId, root.blueId());
         assertEquals(expectedBlueId,
-                BlueIdCalculator.calculateBlueId(root.original()));
+                DirectBlueIdCalculator.calculateBlueId(root.original()));
         assertEquals(expectedBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         root.directFragment()));
         assertEquals(expectedBlueId,
                 root.pureReference().getBlueId());
@@ -1259,7 +1259,7 @@ public final class BlueConformanceSuiteRunner {
             return false;
         }
         firstSnapshot.name("mutated fixture snapshot");
-        if (!blueId.equals(BlueIdCalculator.calculateBlueId(
+        if (!blueId.equals(DirectBlueIdCalculator.calculateBlueId(
                 graph.fragments().get(blueId)))) {
             return false;
         }
@@ -1274,7 +1274,7 @@ public final class BlueConformanceSuiteRunner {
             return false;
         }
         firstFetch.get(0).name("mutated fixture provider result");
-        return blueId.equals(BlueIdCalculator.calculateBlueId(
+        return blueId.equals(DirectBlueIdCalculator.calculateBlueId(
                 graph.provider().fetchByBlueId(blueId).get(0)));
     }
 
@@ -1357,8 +1357,8 @@ public final class BlueConformanceSuiteRunner {
         Node canonical = blue.canonicalize(source);
         String contentBlueId = blue.calculateSourceDocumentBlueId(source);
         String canonicalIdentityInputBlueId =
-                BlueIdCalculator.calculateBlueId(canonical);
-        String directResolvedBlueId = BlueIdCalculator.calculateBlueId(resolved);
+                DirectBlueIdCalculator.calculateBlueId(canonical);
+        String directResolvedBlueId = DirectBlueIdCalculator.calculateBlueId(resolved);
         assertEquals(spec.path(
                         FixtureField.EXPECTED_CONTENT_BLUE_ID_EQUALS_CANONICAL_IDENTITY_INPUT)
                         .asBoolean(false),
@@ -1432,16 +1432,16 @@ public final class BlueConformanceSuiteRunner {
         if (BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY.equals(
                 parent.getMergePolicy())) {
             for (int index = 0; index < parent.getItems().size(); index++) {
-                if (!BlueIdCalculator.calculateBlueId(
+                if (!DirectBlueIdCalculator.calculateBlueId(
                                 parent.getItems().get(index))
-                        .equals(BlueIdCalculator.calculateBlueId(
+                        .equals(DirectBlueIdCalculator.calculateBlueId(
                                 desiredItems.get(index)))) {
                     throw new IllegalArgumentException(
                             "An append-only resolved list cannot modify inherited items.");
                 }
             }
             overlayItems.add(new Node().previousBlueId(
-                    BlueIdCalculator.calculateBlueId(parent.getItems())));
+                    DirectBlueIdCalculator.calculateBlueId(parent.getItems())));
             for (int index = parent.getItems().size();
                  index < desiredItems.size(); index++) {
                 overlayItems.add(desiredItems.get(index).clone());
@@ -1451,8 +1451,8 @@ public final class BlueConformanceSuiteRunner {
         for (int index = 0; index < parent.getItems().size(); index++) {
             Node inherited = parent.getItems().get(index);
             Node desired = desiredItems.get(index);
-            if (BlueIdCalculator.calculateBlueId(inherited)
-                    .equals(BlueIdCalculator.calculateBlueId(desired))) {
+            if (DirectBlueIdCalculator.calculateBlueId(inherited)
+                    .equals(DirectBlueIdCalculator.calculateBlueId(desired))) {
                 continue;
             }
             overlayItems.add(new Node()
@@ -1536,8 +1536,8 @@ public final class BlueConformanceSuiteRunner {
         Node candidate = readNode(requirePresent(spec, FixtureField.CANDIDATE));
         boolean matches = blue.nodeMatchesType(candidate, pattern);
         assertEquals(spec.get(FixtureField.EXPECTED_MATCH).asBoolean(), matches);
-        boolean identityEqual = BlueIdCalculator.calculateBlueId(pattern)
-                .equals(BlueIdCalculator.calculateBlueId(candidate));
+        boolean identityEqual = DirectBlueIdCalculator.calculateBlueId(pattern)
+                .equals(DirectBlueIdCalculator.calculateBlueId(candidate));
         assertEquals(spec.get(FixtureField.EXPECTED_IDENTITY_EQUAL).asBoolean(), identityEqual);
     }
 
@@ -1578,7 +1578,7 @@ public final class BlueConformanceSuiteRunner {
         assertEquals(spec.get(FixtureField.EXPECTED_VERIFIED).asBoolean(),
                 result.isEstablished());
         assertEquals(requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID),
-                BlueIdCalculator.calculateBlueId(direct));
+                DirectBlueIdCalculator.calculateBlueId(direct));
         assertTextList(requirePresent(spec, FixtureField.EXPECTED_DESCENDANT_REQUESTS),
                 Collections.<String>emptyList());
     }
@@ -1590,7 +1590,7 @@ public final class BlueConformanceSuiteRunner {
         List<Node> directIdentities = new ArrayList<>();
         for (Node item : list.getItems()) {
             directIdentities.add(new Node().blueId(
-                    BlueIdCalculator.calculateBlueId(item)));
+                    DirectBlueIdCalculator.calculateBlueId(item)));
         }
         for (Node identity : directIdentities) {
             assertTrue(identity.isReferenceOnly(),
@@ -1634,13 +1634,13 @@ public final class BlueConformanceSuiteRunner {
         String expected = requireText(spec, FixtureField.EXPECTED_PUBLISHED_BLUE_ID);
         BlueCoreTypeRegistry registry = BlueCoreTypeRegistry.INSTANCE;
         Node registryNode = registry.node(key);
-        assertEquals(expected, BlueIdCalculator.calculateBlueId(registryNode));
+        assertEquals(expected, DirectBlueIdCalculator.calculateBlueId(registryNode));
         assertEquals(expected, registry.blueId(key));
         assertEquals(expected, BlueLanguageConstants.CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(key));
         if (spec.has(FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING)) {
             Node withoutDescription = registryNode.clone().description(null);
-            boolean identityBearing = !BlueIdCalculator.calculateBlueId(withoutDescription)
-                    .equals(BlueIdCalculator.calculateBlueId(registryNode));
+            boolean identityBearing = !DirectBlueIdCalculator.calculateBlueId(withoutDescription)
+                    .equals(DirectBlueIdCalculator.calculateBlueId(registryNode));
             assertEquals(spec.get(FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING).asBoolean(),
                     identityBearing);
         }
@@ -1660,8 +1660,8 @@ public final class BlueConformanceSuiteRunner {
         mutated.description((mutated.getDescription() == null
                 ? "" : mutated.getDescription())
                 + requireText(mutation, "append"));
-        boolean changed = !BlueIdCalculator.calculateBlueId(original)
-                .equals(BlueIdCalculator.calculateBlueId(mutated));
+        boolean changed = !DirectBlueIdCalculator.calculateBlueId(original)
+                .equals(DirectBlueIdCalculator.calculateBlueId(mutated));
         assertEquals(spec.get(FixtureField.EXPECT_BLUE_ID_CHANGED).asBoolean(), changed);
     }
 
@@ -1945,11 +1945,11 @@ public final class BlueConformanceSuiteRunner {
         if (inputs.isArray()) {
             for (JsonNode input : inputs) {
                 assertEquals(actual,
-                        BlueIdCalculator.calculateBlueId(readNode(input)));
+                        DirectBlueIdCalculator.calculateBlueId(readNode(input)));
             }
         } else {
             assertEquals(actual,
-                    BlueIdCalculator.calculateBlueId(readNode(inputs)));
+                    DirectBlueIdCalculator.calculateBlueId(readNode(inputs)));
         }
     }
 
@@ -1959,12 +1959,12 @@ public final class BlueConformanceSuiteRunner {
         if (inputs.isArray()) {
             for (JsonNode input : inputs) {
                 assertTrue(!actual.equals(
-                                BlueIdCalculator.calculateBlueId(readNode(input))),
+                                DirectBlueIdCalculator.calculateBlueId(readNode(input))),
                         "Expected a different BlueId.");
             }
         } else {
             assertTrue(!actual.equals(
-                            BlueIdCalculator.calculateBlueId(readNode(inputs))),
+                            DirectBlueIdCalculator.calculateBlueId(readNode(inputs))),
                     "Expected a different BlueId.");
         }
     }
@@ -2218,7 +2218,7 @@ public final class BlueConformanceSuiteRunner {
             placeholders.add(placeholder);
         }
         List<String> calculated =
-                CircularBlueIdCalculator.calculateCircularSetBlueIds(placeholders);
+                CircularSetIdentityCalculator.calculateCircularSetBlueIds(placeholders);
         Map<String, NodeProviderResult> verifiedEntries = new LinkedHashMap<>();
         List<Node> materialized = new ArrayList<>(documents.size());
         for (int index = 0; index < documents.size(); index++) {
@@ -2310,7 +2310,7 @@ public final class BlueConformanceSuiteRunner {
                     try {
                         Node content = readNode(node);
                         if (requested.equals(
-                                BlueIdCalculator.calculateBlueId(content))) {
+                                DirectBlueIdCalculator.calculateBlueId(content))) {
                             discovered.put(requested,
                                     NodeProviderResult.found(
                                             Collections.singletonList(content)));
@@ -2718,7 +2718,7 @@ public final class BlueConformanceSuiteRunner {
                         PREPROCESSING_REGISTRY_ROOT + path));
                 assertEquals(
                         declaredBlueId,
-                        BlueIdCalculator.calculateBlueId(typeDefinition));
+                        DirectBlueIdCalculator.calculateBlueId(typeDefinition));
                 if (discovered.put(declaredBlueId, factory) != null) {
                     throw new IllegalStateException(
                             "Duplicate fixture transformation BlueId: "

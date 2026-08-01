@@ -6,7 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -203,7 +203,7 @@ class ProcessingSnapshotProviderPatchTest {
         // given
         Node requestedType = new Node().name("Requested One Shot Type")
                 .properties("inherited", new Node().value("requested"));
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger providerFetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
             if (!requestedBlueId.equals(blueId)) {
@@ -236,7 +236,7 @@ class ProcessingSnapshotProviderPatchTest {
         // given
         Node requestedType = new Node().name("Requested Preview One Shot Type")
                 .properties("inherited", new Node().value("requested"));
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger providerFetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
             if (!requestedBlueId.equals(blueId)) {
@@ -430,7 +430,7 @@ class ProcessingSnapshotProviderPatchTest {
         // given
         Node requestedType = new Node().name("Live Runtime Requested Type")
                 .properties("inherited", new Node().value("stable"));
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger oldFetches = new AtomicInteger();
         AtomicInteger newFetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
@@ -471,7 +471,7 @@ class ProcessingSnapshotProviderPatchTest {
         // given
         Node customType = new Node().name("Explicit Custom Conformance Type")
                 .properties("inherited", new Node().value("shared"));
-        String typeBlueId = BlueIdCalculator.calculateBlueId(customType);
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(customType);
         AtomicInteger blueProviderFetches = new AtomicInteger();
         AtomicInteger customProviderFetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
@@ -513,7 +513,7 @@ class ProcessingSnapshotProviderPatchTest {
         // given
         Node requestedType = new Node().name("Stale Close Requested Type")
                 .properties("inherited", new Node().value("stable"));
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(requestedType);
         Blue blue = new Blue(blueId ->
                 requestedBlueId.equals(blueId)
                         ? Collections.singletonList(requestedType.clone())
@@ -561,10 +561,10 @@ class ProcessingSnapshotProviderPatchTest {
         // given
         Node requestedNested = new Node().name("Requested Nested Type")
                 .properties("inherited", new Node().value("exact"));
-        String nestedBlueId = BlueIdCalculator.calculateBlueId(requestedNested);
+        String nestedBlueId = DirectBlueIdCalculator.calculateBlueId(requestedNested);
         Node outerType = new Node().name("Verified Outer Type")
                 .properties("nested", new Node().type(new Node().blueId(nestedBlueId)));
-        String outerBlueId = BlueIdCalculator.calculateBlueId(outerType);
+        String outerBlueId = DirectBlueIdCalculator.calculateBlueId(outerType);
         AtomicInteger nestedFetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
             if (outerBlueId.equals(blueId)) {
@@ -763,7 +763,7 @@ class ProcessingSnapshotProviderPatchTest {
         // given
         Node requestedType = new Node().name("Requested Patch Type")
                 .properties("inherited", new Node().value("requested"));
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(requestedType);
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(requestedType);
         AtomicInteger providerFetches = new AtomicInteger();
         Blue blue = new Blue(blueId -> {
             providerFetches.incrementAndGet();

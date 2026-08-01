@@ -59,7 +59,7 @@ class DirectNodeManifestTest {
     void shouldNotInferAbsenceBelowReferenceWithCompleteDirectManifest() {
         // given
         String referencedBlueId =
-                blue.language.utils.BlueIdCalculator.calculateBlueId(
+                blue.language.identity.DirectBlueIdCalculator.calculateBlueId(
                         new Node().properties(
                                 "present",
                                 new Node().value(true)));
@@ -83,7 +83,7 @@ class DirectNodeManifestTest {
     void shouldTreatReferenceWrapperBlueIdAsSemanticAbsence() {
         // given
         String referencedBlueId =
-                blue.language.utils.BlueIdCalculator.calculateBlueId(
+                blue.language.identity.DirectBlueIdCalculator.calculateBlueId(
                         new Node().value("content"));
         DirectNodeManifest manifest = DirectNodeManifest.complete(
                 new Node().properties(

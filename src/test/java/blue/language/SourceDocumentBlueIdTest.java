@@ -6,18 +6,16 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -72,7 +70,7 @@ class SourceDocumentBlueIdTest {
         Node source = YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class);
 
         // when
-        Throwable failure = captureFailure(() -> BlueIdCalculator.calculateBlueId(source));
+        Throwable failure = captureFailure(() -> DirectBlueIdCalculator.calculateBlueId(source));
 
         // then
         assertInstanceOf(IllegalArgumentException.class, failure);
@@ -88,7 +86,7 @@ class SourceDocumentBlueIdTest {
                 "value: 1", Node.class);
 
         // when
-        String directBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String directBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         String facadeBlueId = blue.calculateBlueId(canonical);
 
         // then
@@ -123,7 +121,7 @@ class SourceDocumentBlueIdTest {
         Node canonical = blue.canonicalize(noisy);
         String minimalBlueId = blue.calculateSourceDocumentBlueId(minimal);
         String noisyBlueId = blue.calculateSourceDocumentBlueId(noisy);
-        String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String canonicalBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
 
         // then
         assertEquals(productTypeBlueId, canonical.getType().getBlueId());
@@ -151,7 +149,7 @@ class SourceDocumentBlueIdTest {
 
         // when
         Node canonical = blue.canonicalize(source);
-        String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String canonicalBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         String sourceDocumentBlueId = blue.calculateSourceDocumentBlueId(source);
 
         // then
@@ -188,7 +186,7 @@ class SourceDocumentBlueIdTest {
     @Test
     void shouldRejectInvalidProviderContentWhenCalculatingSourceDocumentBlueId() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         Blue blue = new Blue(blueId -> Collections.singletonList(new Node().value("actual")));
         Node source = new Node().type(new Node().blueId(requestedBlueId)).value("x");
 
@@ -202,7 +200,7 @@ class SourceDocumentBlueIdTest {
     @Test
     void shouldRejectUnresolvableProviderReferencesWhenCalculatingSourceDocumentBlueId() {
         // given
-        String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().value("missing"));
+        String missingBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("missing"));
         Blue blue = new Blue(blueId -> null);
         Node source = new Node().type(new Node().blueId(missingBlueId)).value("x");
 
@@ -224,7 +222,7 @@ class SourceDocumentBlueIdTest {
                 "items:\n" +
                 "  - value: A");
         String typeBlueId = nodeProvider.getBlueIdByName("Append Type");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - value: A", Node.class).getItems());
         Blue blue = new Blue(nodeProvider);
@@ -238,7 +236,7 @@ class SourceDocumentBlueIdTest {
 
         // when
         Node canonical = blue.canonicalize(source);
-        String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String canonicalBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         String sourceDocumentBlueId = blue.calculateSourceDocumentBlueId(source);
 
         // then
@@ -258,7 +256,7 @@ class SourceDocumentBlueIdTest {
 
         // when
         Node canonical = blue.canonicalize(source);
-        String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String canonicalBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         String sourceDocumentBlueId = blue.calculateSourceDocumentBlueId(source);
 
         // then

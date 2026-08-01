@@ -3,6 +3,7 @@ package blue.language.utils;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.NodeIdentities;
 import blue.language.model.Schema;
 
 import java.util.ArrayList;
@@ -296,8 +297,8 @@ final class CanonicalIdentityInputReconstructor {
         if (left == null || right == null) {
             return false;
         }
-        return BlueIdCalculator.calculateBlueId(new Node().schema(left))
-                .equals(BlueIdCalculator.calculateBlueId(
+        return NodeIdentities.calculate(new Node().schema(left))
+                .equals(NodeIdentities.calculate(
                         new Node().schema(right)));
     }
 
@@ -312,8 +313,7 @@ final class CanonicalIdentityInputReconstructor {
     }
 
     private String comparisonBlueId(Node node) {
-        return BlueIdCalculator.INSTANCE.calculate(
-                NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+        return NodeIdentities.calculate(node);
     }
 
     private boolean isSourceReference(Node source) {

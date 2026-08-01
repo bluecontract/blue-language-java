@@ -17,7 +17,7 @@ import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.model.TypeGeneralizationPolicy;
 import blue.language.processor.model.TypeGeneralizationRule;
 import blue.language.utils.BlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.EnumMap;
@@ -82,7 +82,7 @@ class BlueRuntimeTypeRegistryTest {
             assertEquals(1, nodes.size(), entry.getKey().name());
             assertNotNull(nodes.get(0).getName(), entry.getKey().name());
             assertEquals(entry.getValue(),
-                    BlueIdCalculator.calculateBlueId(nodes.get(0)),
+                    DirectBlueIdCalculator.calculateBlueId(nodes.get(0)),
                     entry.getKey().name());
 
             List<Node> processorNodes =
@@ -90,11 +90,11 @@ class BlueRuntimeTypeRegistryTest {
             assertNotNull(processorNodes, entry.getKey().name());
             assertEquals(1, processorNodes.size(), entry.getKey().name());
             assertEquals(entry.getValue(),
-                    BlueIdCalculator.calculateBlueId(processorNodes.get(0)),
+                    DirectBlueIdCalculator.calculateBlueId(processorNodes.get(0)),
                     "processor snapshot provider " + entry.getKey().name());
             assertEquals(
-                    BlueIdCalculator.calculateBlueId(nodes.get(0)),
-                    BlueIdCalculator.calculateBlueId(processorNodes.get(0)),
+                    DirectBlueIdCalculator.calculateBlueId(nodes.get(0)),
+                    DirectBlueIdCalculator.calculateBlueId(processorNodes.get(0)),
                     "both registry provider views must expose the same exact node");
         }
         assertEquals(RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY,

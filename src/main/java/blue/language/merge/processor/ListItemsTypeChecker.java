@@ -5,11 +5,11 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
-import blue.language.utils.Types;
+import blue.language.provider.Types;
 
 import java.util.List;
 
-import static blue.language.utils.Types.isSubtype;
+import static blue.language.provider.Types.isSubtype;
 
 /**
  * Compatibility merge stage that checks contributed list-item types against

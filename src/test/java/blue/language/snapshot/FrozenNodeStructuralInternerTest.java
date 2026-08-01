@@ -4,7 +4,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.FrozenTypeMatcher;
+import blue.language.matching.FrozenTypeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;

@@ -1,5 +1,6 @@
 package blue.language.utils;
 
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
@@ -133,7 +134,7 @@ class SchemaEnumCanonicalizerTest {
         // given
         Node referencedValue = scalar("referenced");
         String referencedBlueId =
-                BlueIdCalculator.calculateBlueId(referencedValue);
+                DirectBlueIdCalculator.calculateBlueId(referencedValue);
         Node reference = new Node().blueId(referencedBlueId);
         List<Node> authored = Arrays.asList(
                 scalar("inline"),

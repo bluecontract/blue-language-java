@@ -9,7 +9,7 @@ import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -159,16 +159,16 @@ final class ActiveScopeCutOffBoundaryTest {
                 document,
                 "/child/contracts/source");
         String contributionBlueId =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         String checkpointDomainBlueId = CheckpointDomain.derive(
                 ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL,
                 Collections.singletonList(contributionBlueId),
                 null);
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         document),
                                 eventBlueId)
                         .revisions(0L, 0L)

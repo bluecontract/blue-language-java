@@ -4,22 +4,20 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.CircularBlueIdCalculator;
-import blue.language.utils.NodeExpander;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.graph.NodeExpander;
 import blue.language.utils.limits.PathLimits;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
@@ -104,7 +102,7 @@ public class SelfReferenceTest {
 
         // then
         assertEquals(
-                BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preprocessedPlaceholder),
+                DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preprocessedPlaceholder),
                 nodeProvider.getBlueIdByName("A"));
     }
 
@@ -254,8 +252,8 @@ public class SelfReferenceTest {
 
         // when
         BasicNodeProvider nodeProvider = new BasicNodeProvider(YAML_MAPPER.readValue(docs, Node.class));
-        String expectedFirstName = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(YAML_MAPPER.readValue(aWithPlaceholder, Node.class))
-                .compareTo(BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(YAML_MAPPER.readValue(bWithPlaceholder, Node.class))) <= 0
+        String expectedFirstName = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(YAML_MAPPER.readValue(aWithPlaceholder, Node.class))
+                .compareTo(DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(YAML_MAPPER.readValue(bWithPlaceholder, Node.class))) <= 0
                 ? "A" : "B";
         String masterBlueId = baseBlueId(nodeProvider.getBlueIdByName("A"));
         List<Node> fetched = nodeProvider.fetchByBlueId(masterBlueId);
@@ -360,7 +358,7 @@ public class SelfReferenceTest {
         BasicNodeProvider provider = new BasicNodeProvider(YAML_MAPPER.readValue(docs, Node.class));
 
         // when
-        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes);
+        List<String> ids = CircularSetIdentityCalculator.calculateCircularSetBlueIds(nodes);
 
         // then
         assertEquals(provider.getBlueIdByName("A"), ids.get(0));
@@ -413,7 +411,7 @@ public class SelfReferenceTest {
 
         // when
         RuntimeException failure = captureFailure(
-                () -> BlueIdCalculator.calculateBlueId(placeholderReference));
+                () -> DirectBlueIdCalculator.calculateBlueId(placeholderReference));
 
         // then
         assertTrue(failure instanceof RuntimeException);
@@ -426,7 +424,7 @@ public class SelfReferenceTest {
 
         // when
         IllegalArgumentException failure = captureFailure(
-                () -> CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes));
+                () -> CircularSetIdentityCalculator.calculateCircularSetBlueIds(nodes));
 
         // then
         assertTrue(failure instanceof IllegalArgumentException);
@@ -438,7 +436,7 @@ public class SelfReferenceTest {
         Node node = YAML_MAPPER.readValue("next:\n  blueId: this#0", Node.class);
 
         // when
-        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(Arrays.asList(node));
+        List<String> ids = CircularSetIdentityCalculator.calculateCircularSetBlueIds(Arrays.asList(node));
 
         // then
         assertEquals(1, ids.size());
@@ -452,7 +450,7 @@ public class SelfReferenceTest {
 
         // when
         IllegalArgumentException failure = captureFailure(
-                () -> CircularBlueIdCalculator.calculateCircularSetBlueIds(Arrays.asList(node)));
+                () -> CircularSetIdentityCalculator.calculateCircularSetBlueIds(Arrays.asList(node)));
 
         // then
         assertTrue(failure instanceof IllegalArgumentException);
@@ -466,7 +464,7 @@ public class SelfReferenceTest {
 
         // when
         RuntimeException calculationFailure = captureFailure(
-                () -> BlueIdCalculator.calculateBlueId(bareThisReference));
+                () -> DirectBlueIdCalculator.calculateBlueId(bareThisReference));
         RuntimeException parsingFailure = captureFailure(
                 () -> blue.parseBlueIdInputYaml("blueId: this"));
 
@@ -486,7 +484,7 @@ public class SelfReferenceTest {
 
         // when
         IllegalArgumentException failure = captureFailure(
-                () -> CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes));
+                () -> CircularSetIdentityCalculator.calculateCircularSetBlueIds(nodes));
 
         // then
         assertTrue(failure instanceof IllegalArgumentException);
@@ -539,7 +537,7 @@ public class SelfReferenceTest {
         // when
         NodeContentHandler.ParsedContent parsed = NodeContentHandler.parseAndCalculateBlueId(docs, node -> node);
         List<Node> stored = Arrays.asList(JSON_MAPPER.treeToValue(parsed.content, Node[].class));
-        String storedBlueId = BlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(stored);
+        String storedBlueId = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(stored);
         Map<String, Integer> nameToStoredIndex = IntStream.range(0, stored.size())
                 .boxed()
                 .collect(Collectors.toMap(i -> stored.get(i).getName(), i -> i));
@@ -605,7 +603,7 @@ public class SelfReferenceTest {
     }
 
     private Map<String, String> idsByName(List<Node> nodes) {
-        List<String> ids = CircularBlueIdCalculator.calculateCircularSetBlueIds(nodes);
+        List<String> ids = CircularSetIdentityCalculator.calculateCircularSetBlueIds(nodes);
         return IntStream.range(0, nodes.size())
                 .boxed()
                 .collect(Collectors.toMap(i -> nodes.get(i).getName(), ids::get));

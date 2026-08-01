@@ -9,7 +9,7 @@ import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -179,9 +179,9 @@ final class GasReactionBoundaryTest {
                 first.processResult().events().get(queueSize - 1)
                         .getAsText("/eventId"));
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         first.processResult().document()),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         replay.processResult().document()));
         assertEquals(
                 nodeProjection(first.processResult().events()),
@@ -466,8 +466,8 @@ final class GasReactionBoundaryTest {
                 result.document().toString(),
                 "noncommitting gas exhaustion must return the exact input Root");
         assertEquals(
-                BlueIdCalculator.calculateBlueId(input),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(input),
+                DirectBlueIdCalculator.calculateBlueId(
                         result.document()));
         assertTrue(
                 result.events().isEmpty(),

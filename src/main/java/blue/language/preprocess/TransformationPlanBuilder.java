@@ -1,7 +1,7 @@
 package blue.language.preprocess;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.wire.BlueLanguageConstants;
 
@@ -101,7 +101,7 @@ public final class TransformationPlanBuilder {
         }
         if (transformationBlueId == null) {
             transformationBlueId =
-                    BlueIdCalculator.calculateBlueId(transformation);
+                    DirectBlueIdCalculator.calculateBlueId(transformation);
         }
         return new TransformationSnapshot(
                 transformationBlueId,

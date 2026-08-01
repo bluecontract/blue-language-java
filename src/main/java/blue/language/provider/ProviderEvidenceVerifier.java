@@ -7,7 +7,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
@@ -120,7 +120,7 @@ public final class ProviderEvidenceVerifier {
 
         String actualBlueId;
         try {
-            actualBlueId = BlueIdCalculator.calculateBlueId(canonical);
+            actualBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         } catch (RuntimeException invalidEvidence) {
             throw new IllegalArgumentException(
                     "Provider content does not verify requested BlueId "
@@ -168,8 +168,8 @@ public final class ProviderEvidenceVerifier {
         String actualBlueId;
         try {
             actualBlueId = canonical.size() == 1
-                    ? BlueIdCalculator.calculateBlueId(canonical.get(0))
-                    : BlueIdCalculator.calculateBlueId(canonical);
+                    ? DirectBlueIdCalculator.calculateBlueId(canonical.get(0))
+                    : DirectBlueIdCalculator.calculateBlueId(canonical);
         } catch (RuntimeException invalidEvidence) {
             throw new IllegalArgumentException(
                     "Provider content does not verify requested BlueId "

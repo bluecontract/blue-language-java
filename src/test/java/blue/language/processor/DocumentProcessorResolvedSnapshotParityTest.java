@@ -9,7 +9,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
     private static final Node CHANNEL_TYPE =
             new Node().name("Snapshot Parity External Channel");
     private static final String CHANNEL_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.asList(1, "snapshot-parity"));
 
@@ -72,8 +72,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
                         snapshotResult.resultingSnapshot(),
                         "a noncommitting snapshot run must retain its exact input snapshot");
                 assertEquals(
-                        BlueIdCalculator.calculateBlueId(root),
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(root),
+                        DirectBlueIdCalculator.calculateBlueId(
                                 snapshotResult.processResult().document()),
                         "a noncommitting run must return the exact canonical input");
                 assertTrue(
@@ -124,11 +124,11 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 plan(root, event), FailureMode.SUCCESS, null);
         VerifiedExecutionEvidence forged =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         new Node().properties(
                                                 "different",
                                                 new Node().value(true))),
-                                BlueIdCalculator.calculateBlueId(event))
+                                DirectBlueIdCalculator.calculateBlueId(event))
                         .revisions(0L, 0L)
                         .runtimeRegistryIdentity(
                                 RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY)
@@ -156,8 +156,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 diagnosticCategory(snapshotResult.processResult()));
         assertSame(snapshot, snapshotResult.resultingSnapshot());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(root),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(
                         snapshotWithoutTrace.document()));
         assertTrue(snapshotResult.trace().gas().isEmpty());
         assertTrue(snapshotResult.trace().records().isEmpty());
@@ -187,8 +187,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 result.processResult().status());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(canonical),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(canonical),
+                DirectBlueIdCalculator.calculateBlueId(
                         result.processResult().document()));
         assertSame(snapshot, result.resultingSnapshot());
         assertEquals(0L, result.processResult().totalGas());
@@ -216,8 +216,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
                 context);
         assertEquals(left.totalGas(), right.totalGas(), context);
         assertEquals(
-                BlueIdCalculator.calculateBlueId(left.document()),
-                BlueIdCalculator.calculateBlueId(right.document()),
+                DirectBlueIdCalculator.calculateBlueId(left.document()),
+                DirectBlueIdCalculator.calculateBlueId(right.document()),
                 context);
         assertEquals(
                 nodeIdentities(left.events()),
@@ -244,7 +244,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
     private static List<String> nodeIdentities(List<Node> nodes) {
         List<String> identities = new ArrayList<>();
         for (Node node : nodes) {
-            identities.add(BlueIdCalculator.calculateBlueId(node));
+            identities.add(DirectBlueIdCalculator.calculateBlueId(node));
         }
         return identities;
     }
@@ -340,7 +340,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
         Node channel = root.getContracts()
                 .getProperties().get("incoming");
         String contribution =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         String checkpointDomain = CheckpointDomain.derive(
                 CHANNEL_TYPE_BLUE_ID,
                 Collections.singletonList(contribution),
@@ -356,7 +356,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
                         .checkpointDomainBlueId(
                                 checkpointDomain)
                         .checkpointSubjectBlueId(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         event))
                         .build();
         return ExternalDeliveryPlan.builder()

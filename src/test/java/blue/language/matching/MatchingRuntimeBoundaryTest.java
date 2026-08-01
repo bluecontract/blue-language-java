@@ -3,9 +3,9 @@ package blue.language.matching;
 import blue.language.api.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.FrozenTypeMatcher;
-import blue.language.utils.NodeTypeMatcher;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.matching.FrozenTypeMatcher;
+import blue.language.matching.NodeTypeMatcher;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
 
@@ -55,7 +55,7 @@ class MatchingRuntimeBoundaryTest {
     }
 
     private String typeBlueId(String value) {
-        return BlueIdCalculator.calculateBlueId(new Node().value(value));
+        return DirectBlueIdCalculator.calculateBlueId(new Node().value(value));
     }
 
     private Node reference(String blueId) {

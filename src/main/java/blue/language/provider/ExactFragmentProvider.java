@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +45,7 @@ final class ExactFragmentProvider implements NodeProvider {
         }
         final String actualBlueId;
         try {
-            actualBlueId = BlueIdCalculator.calculateBlueId(fragment);
+            actualBlueId = DirectBlueIdCalculator.calculateBlueId(fragment);
         } catch (RuntimeException invalidEvidence) {
             return NodeProviderResult.invalidEvidence(
                     "Stored exact fragment is invalid for requested BlueId "

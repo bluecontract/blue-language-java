@@ -2,7 +2,7 @@ package blue.language.conformance.contracts;
 
 import blue.language.model.Node;
 import blue.language.registry.BlueCoreTypeRegistry;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
@@ -74,7 +74,7 @@ class ContractsAssertionEvaluatorTest {
     void shouldVerifyEqualsProjectionTreatsPureReferenceAsExactMaterialization() {
         // given
         Node materialized = new Node().name("preinitialized");
-        String blueId = BlueIdCalculator.calculateBlueId(materialized);
+        String blueId = DirectBlueIdCalculator.calculateBlueId(materialized);
         // when
         ContractsConformanceProjection projection =
                 new ContractsConformanceProjection()
@@ -92,7 +92,7 @@ class ContractsAssertionEvaluatorTest {
     void shouldVerifyEqualsProjectionRejectsReferenceToAnotherExactNode() {
         // given
         Node materialized = new Node().name("preinitialized");
-        String otherBlueId = BlueIdCalculator.calculateBlueId(
+        String otherBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("different"));
         // when
         ContractsConformanceProjection projection =

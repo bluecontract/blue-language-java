@@ -9,7 +9,7 @@ import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -30,7 +30,7 @@ class DocumentProcessorHandlerFailureTest {
             "handlerStep";
     private static final long FAILURE_STEP_WEIGHT = 7L;
     private static final String EXISTING_DOCUMENT_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     new Node().value("existing"));
 
     @Test

@@ -11,7 +11,7 @@ import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.NormalizingTestEventChannelProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -365,7 +365,7 @@ final class ChannelRunnerTest {
         assertEquals(7, ((Number) flagNode.getValue()).intValue());
         assertNotNull(checkpoint);
         assertNotNull(storedSubject);
-        assertEquals(BlueIdCalculator.calculateBlueId(event),
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(event),
                 storedSubject.getBlueId());
     }
 
@@ -435,9 +435,9 @@ final class ChannelRunnerTest {
                 .toNode();
         VerifiedExecutionEvidence.Builder evidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         document),
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         bindingEvent))
                         .revisions(0L, 0L)
                         .runtimeRegistryIdentity(
@@ -450,7 +450,7 @@ final class ChannelRunnerTest {
             Node channel = document.getContracts()
                     .getProperties().get(channelKey);
             String contributionBlueId =
-                    BlueIdCalculator.calculateBlueId(channel);
+                    DirectBlueIdCalculator.calculateBlueId(channel);
             String effectiveTypeBlueId =
                     channel.getType().getBlueId();
             evidence.delivery(
@@ -466,7 +466,7 @@ final class ChannelRunnerTest {
                                                 contributionBlueId),
                                         null))
                         .checkpointSubjectBlueId(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         bindingEvent))
                         .build());
         }

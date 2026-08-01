@@ -7,7 +7,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -66,9 +66,9 @@ class ResolvedSnapshotPatchTransactionTest {
         assertMissing(result.resolvedRoot(), "/status/pendingOnly");
         assertEquals(fixture.blue.nodeToJson(result.resolvedRoot()),
                 fixture.blue.nodeToJson(runtime.document()));
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalRoot()), result.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(result.canonicalRoot()), result.blueId());
         assertEquals(
-                BlueIdCalculator.calculateUncheckedBlueId(
+                DirectBlueIdCalculator.calculateUncheckedBlueId(
                         result.canonicalRoot()),
                 result.blueId(),
                 "the snapshot identity must be derived from its canonical lane, not its resolved view");
@@ -193,7 +193,7 @@ class ResolvedSnapshotPatchTransactionTest {
         assertMissing(runtime.snapshot().canonicalRoot(), "/obsolete");
         assertMissing(runtime.snapshot().resolvedRoot(), "/obsolete");
         assertEquals(0, manager.inputs.size());
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(runtime.snapshot().canonicalRoot()),
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(runtime.snapshot().canonicalRoot()),
                 runtime.snapshot().blueId());
     }
 

@@ -3,6 +3,7 @@ package blue.language.utils;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.NodeIdentities;
 import blue.language.model.Schema;
 
 import java.util.ArrayList;
@@ -208,7 +209,7 @@ final class MinimizedOverlayReconstructor {
                 .anyMatch(item -> item.getPosition() != null);
         if (appendOnly || !positional) {
             result.add(0, new Node().previousBlueId(
-                    BlueIdCalculator.calculateBlueId(inheritedItems)));
+                    NodeIdentities.calculate(inheritedItems)));
         }
     }
 
@@ -309,8 +310,8 @@ final class MinimizedOverlayReconstructor {
         if (left == null || right == null) {
             return false;
         }
-        return BlueIdCalculator.calculateBlueId(new Node().schema(left))
-                .equals(BlueIdCalculator.calculateBlueId(
+        return NodeIdentities.calculate(new Node().schema(left))
+                .equals(NodeIdentities.calculate(
                         new Node().schema(right)));
     }
 
@@ -335,8 +336,7 @@ final class MinimizedOverlayReconstructor {
     }
 
     private String comparisonBlueId(Node node) {
-        return BlueIdCalculator.INSTANCE.calculate(
-                NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+        return NodeIdentities.calculate(node);
     }
 
     private Node derivationBaseline(Node inherited, Node resolved) {

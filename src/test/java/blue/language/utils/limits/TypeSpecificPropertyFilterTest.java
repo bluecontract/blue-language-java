@@ -3,8 +3,8 @@ package blue.language.utils.limits;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.NodeExpander;
-import blue.language.utils.NodeTypeMatcher;
+import blue.language.graph.NodeExpander;
+import blue.language.matching.NodeTypeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 

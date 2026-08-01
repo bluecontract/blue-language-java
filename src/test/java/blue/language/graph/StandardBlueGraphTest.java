@@ -8,7 +8,7 @@ import blue.language.api.BlueOperationResult;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -32,7 +32,7 @@ final class StandardBlueGraphTest {
     void shouldExpandExactReferenceWithoutMutatingProviderOrSource() {
         // given
         Node exact = new Node().value("exact");
-        String blueId = BlueIdCalculator.calculateBlueId(exact);
+        String blueId = DirectBlueIdCalculator.calculateBlueId(exact);
         Node providerNode = exact.clone().blueId(blueId);
         Node reference = new Node().blueId(blueId);
         StandardBlueGraph graph = new StandardBlueGraph(
@@ -60,9 +60,9 @@ final class StandardBlueGraphTest {
         Node unrelated = new Node().properties(
                 "leaf", new Node().value("unrelated"));
         String wantedBlueId =
-                BlueIdCalculator.calculateBlueId(wanted);
+                DirectBlueIdCalculator.calculateBlueId(wanted);
         String unrelatedBlueId =
-                BlueIdCalculator.calculateBlueId(unrelated);
+                DirectBlueIdCalculator.calculateBlueId(unrelated);
         Set<String> requested = new LinkedHashSet<>();
         NodeProvider provider = blueId -> {
             requested.add(blueId);
@@ -113,7 +113,7 @@ final class StandardBlueGraphTest {
         // then
         assertTrue(collapsed.isReferenceOnly());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(exact),
+                DirectBlueIdCalculator.calculateBlueId(exact),
                 collapsed.getBlueId());
         assertEquals("collapse me", exact.getValue());
     }

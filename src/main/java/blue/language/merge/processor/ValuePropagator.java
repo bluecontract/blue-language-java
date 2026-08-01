@@ -4,7 +4,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
-import blue.language.utils.Types;
+import blue.language.provider.Types;
 
 import java.math.BigInteger;
 

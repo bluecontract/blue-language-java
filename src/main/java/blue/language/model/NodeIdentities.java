@@ -1,6 +1,7 @@
 package blue.language.model;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.ServiceLoader;
 
 /** Resolves the single normative identity provider for model conveniences. */
@@ -19,6 +20,17 @@ public final class NodeIdentities {
      */
     public static String calculate(Node node) {
         return Holder.PROVIDER.calculate(node);
+    }
+
+    /**
+     * Calculates an ordered sequence identity through the installed Language
+     * provider.
+     *
+     * @param nodes ordered nodes to identify
+     * @return deterministic list BlueId
+     */
+    public static String calculate(List<Node> nodes) {
+        return Holder.PROVIDER.calculate(nodes);
     }
 
     private static final class Holder {

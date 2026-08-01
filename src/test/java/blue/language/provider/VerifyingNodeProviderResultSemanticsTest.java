@@ -4,8 +4,8 @@ import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -355,7 +355,7 @@ class VerifyingNodeProviderResultSemanticsTest {
     @Test
     void shouldKeepPlainProviderMissingBehaviorUnchanged() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         RecordingProvider missing = new RecordingProvider(null);
 
         // when
@@ -371,7 +371,7 @@ class VerifyingNodeProviderResultSemanticsTest {
     @Test
     void shouldKeepPlainProviderEmptyBehaviorUnchanged() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         List<Node> empty = Collections.emptyList();
         RecordingProvider terminalEmpty = new RecordingProvider(empty);
 
@@ -388,7 +388,7 @@ class VerifyingNodeProviderResultSemanticsTest {
     @Test
     void shouldKeepPlainProviderMatchingBehaviorUnchanged() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         List<Node> exact = Collections.singletonList(new Node().value("expected"));
         RecordingProvider matching = new RecordingProvider(exact);
 
@@ -399,15 +399,15 @@ class VerifyingNodeProviderResultSemanticsTest {
 
         // then
         assertNotSame(exact, actual);
-        assertEquals(BlueIdCalculator.calculateBlueId(exact),
-                BlueIdCalculator.calculateBlueId(actual));
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(exact),
+                DirectBlueIdCalculator.calculateBlueId(actual));
         assertEquals(1, fetchCount);
     }
 
     @Test
     void shouldKeepPlainProviderMismatchBehaviorUnchanged() {
         // given
-        String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
+        String requestedBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("expected"));
         RecordingProvider mismatch = new RecordingProvider(
                 Collections.singletonList(new Node().value("actual")));
 
@@ -526,7 +526,7 @@ class VerifyingNodeProviderResultSemanticsTest {
                         + "      blueId: this#0\n",
                 Node.class);
         private final String expectedMemberBlueId =
-                CircularBlueIdCalculator.calculateCircularSetBlueIds(
+                CircularSetIdentityCalculator.calculateCircularSetBlueIds(
                         documents.getItems()).get(0);
         private final BasicNodeProvider provider =
                 new BasicNodeProvider(documents);

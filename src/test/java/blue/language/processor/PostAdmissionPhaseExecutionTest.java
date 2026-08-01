@@ -9,7 +9,7 @@ import blue.language.processor.model.TestEvent;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 import org.junit.jupiter.api.Test;
 
@@ -139,14 +139,14 @@ final class PostAdmissionPhaseExecutionTest {
                 fixture.session,
                 fixture.event,
                 ProcessingPhaseState.Stage.CLOSURE_PREFLIGHTED);
-        String beforeBlueId = BlueIdCalculator.calculateBlueId(
+        String beforeBlueId = DirectBlueIdCalculator.calculateBlueId(
                 fixture.execution.runtime().document());
 
         // when
         ProcessingPhaseState classified =
                 new ExternalDeliveryClassification()
                         .execute(preflighted);
-        String afterBlueId = BlueIdCalculator.calculateBlueId(
+        String afterBlueId = DirectBlueIdCalculator.calculateBlueId(
                 fixture.execution.runtime().document());
         ProcessingConformanceTrace trace =
                 fixture.execution.runtime().conformanceTrace();
@@ -257,7 +257,7 @@ final class PostAdmissionPhaseExecutionTest {
                 JsonPointer.ROOT,
                 INCREMENT_HANDLER_KEY,
                 queuedEvent,
-                BlueIdCalculator.calculateBlueId(queuedEvent));
+                DirectBlueIdCalculator.calculateBlueId(queuedEvent));
         int pendingBefore =
                 fixture.session.eventQueue().pendingOccurrenceCount();
         ProcessingPhaseState executed = stateAt(
@@ -451,12 +451,12 @@ final class PostAdmissionPhaseExecutionTest {
                 .getProperties()
                 .get(SOURCE_CHANNEL_KEY);
         String sourceBlueId =
-                BlueIdCalculator.calculateBlueId(source);
+                DirectBlueIdCalculator.calculateBlueId(source);
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(document),
+                                DirectBlueIdCalculator.calculateBlueId(document),
                                 eventBlueId)
                         .revisions(0L, 0L)
                         .runtimeRegistryIdentity(

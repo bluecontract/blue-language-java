@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.List;
 
@@ -101,6 +101,6 @@ public final class CheckpointDomain {
                     ProcessorIdentityConstants.Field.RUNTIME_DISCRIMINATOR,
                     new Node().value(runtimeDiscriminator));
         }
-        return BlueIdCalculator.calculateBlueId(domain);
+        return DirectBlueIdCalculator.calculateBlueId(domain);
     }
 }

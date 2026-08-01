@@ -1,11 +1,21 @@
 package blue.language.utils;
 
+import blue.language.identity.Base58;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 import static blue.language.utils.BlueIds.isPotentialBlueId;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BlueIdsTest {
+
+    private static final int SHA_256_BYTE_COUNT = 32;
+    private static final int GENERATED_CORPUS_SIZE = 1_024;
+    private static final long GENERATED_CORPUS_SEED = 0xB10E_1D5L;
 
     @Test
     void shouldRecognizePotentialBlueIds() {
@@ -39,6 +49,50 @@ class BlueIdsTest {
             assertTrue(result);
         }
         for (boolean result : invalidResults) {
+            assertFalse(result);
+        }
+    }
+
+    @Test
+    void shouldAcceptCanonicalSha256Base58CorpusWithoutIdentityDependency() {
+        // given
+        Random random = new Random(GENERATED_CORPUS_SEED);
+        List<String> candidates = new ArrayList<>(GENERATED_CORPUS_SIZE);
+        for (int index = 0; index < GENERATED_CORPUS_SIZE; index++) {
+            byte[] digest = new byte[SHA_256_BYTE_COUNT];
+            random.nextBytes(digest);
+            candidates.add(Base58.encode(digest));
+        }
+
+        // when
+        List<String> validated = new ArrayList<>(candidates.size());
+        for (String candidate : candidates) {
+            validated.add(BlueIds.requirePlainBlueId(
+                    candidate, "generated-corpus"));
+        }
+
+        // then
+        assertEquals(candidates, validated);
+    }
+
+    @Test
+    void shouldRejectNonSha256AndHistoricallyNonCanonicalBase58Values() {
+        // given
+        byte[] tooShort = new byte[SHA_256_BYTE_COUNT - 1];
+        byte[] tooLong = new byte[SHA_256_BYTE_COUNT + 1];
+        Arrays.fill(tooShort, (byte) 1);
+        Arrays.fill(tooLong, (byte) 1);
+        String[] candidates = {
+                Base58.encode(tooShort),
+                Base58.encode(tooLong),
+                Base58.encode(new byte[SHA_256_BYTE_COUNT])
+        };
+
+        // when
+        boolean[] results = classify(candidates);
+
+        // then
+        for (boolean result : results) {
             assertFalse(result);
         }
     }

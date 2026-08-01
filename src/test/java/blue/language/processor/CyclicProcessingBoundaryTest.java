@@ -6,7 +6,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -51,7 +51,7 @@ final class CyclicProcessingBoundaryTest {
         // given
         Node ordinary = new Node().value("ordinary");
         String ordinaryBlueId =
-                BlueIdCalculator.calculateBlueId(ordinary);
+                DirectBlueIdCalculator.calculateBlueId(ordinary);
         BasicNodeProvider provider =
                 new BasicNodeProvider(ordinary);
         // when

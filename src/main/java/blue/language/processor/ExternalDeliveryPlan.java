@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -168,8 +168,8 @@ public final class ExternalDeliveryPlan {
                                    String runtimeRegistryIdentity) {
         VerifiedExecutionEvidence.Builder evidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator.calculateBlueId(root),
-                                BlueIdCalculator.calculateBlueId(event))
+                                DirectBlueIdCalculator.calculateBlueId(root),
+                                DirectBlueIdCalculator.calculateBlueId(event))
                         .revisions(
                                 managedRootRevision,
                                 indexedRootRevision)

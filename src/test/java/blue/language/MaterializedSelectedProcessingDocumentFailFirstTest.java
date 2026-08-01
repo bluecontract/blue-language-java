@@ -6,13 +6,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.conformance.ConformanceEngine;
@@ -36,7 +34,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -243,7 +241,7 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
                 Node root,
                 Node event) {
             String eventBlueId =
-                    BlueIdCalculator.calculateBlueId(event);
+                    DirectBlueIdCalculator.calculateBlueId(event);
             ExternalOrderKey eventOrder =
                     ExternalOrderKey.of(
                             Collections.singletonList(eventBlueId));
@@ -271,7 +269,7 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
 
             List<String> contributions =
                     Collections.singletonList(
-                            BlueIdCalculator.calculateBlueId(
+                            DirectBlueIdCalculator.calculateBlueId(
                                     channel));
             List<String> keys =
                     Collections.singletonList("audit");

@@ -1,7 +1,7 @@
 package blue.language.codec;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.model.NodeWireForm;
 
@@ -23,7 +23,7 @@ public final class StandardBlueCodec implements BlueCodec {
     public Node parseBlueIdInput(String text, BlueFormat format) {
         Node node = parseSource(text, format);
         BlueIdReferenceValidator.validate(node);
-        BlueIdCalculator.calculateBlueId(node);
+        DirectBlueIdCalculator.calculateBlueId(node);
         return node;
     }
 

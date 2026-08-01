@@ -5,7 +5,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -68,7 +68,7 @@ class ResolvedSnapshotTest {
         Node canonical = snapshot.canonicalRoot();
         Node resolved = snapshot.resolvedRoot();
         String snapshotBlueId = snapshot.blueId();
-        String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String canonicalBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         boolean inheritedLabelWasMinimized =
                 !canonical.getProperties().containsKey("label");
         String resolvedLabel = resolved.getAsText("/label");
@@ -102,7 +102,7 @@ class ResolvedSnapshotTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Product") + "\n" +
                 "local: local-value", Node.class);
 
-        String expectedBlueId = BlueIdCalculator.calculateBlueId(canonical);
+        String expectedBlueId = DirectBlueIdCalculator.calculateBlueId(canonical);
         ResolvedSnapshot snapshot = blue.loadSnapshot(canonical);
         // when
         canonical.properties("local", new Node().value("changed"));
@@ -130,7 +130,7 @@ class ResolvedSnapshotTest {
         // then
         assertSame(snapshot.frozenCanonicalRoot().property("left"), result.root().property("left"));
         assertEquals("new", result.after().getValue());
-        assertEquals(BlueIdCalculator.calculateBlueId(result.root().toNode()), result.blueId());
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(result.root().toNode()), result.blueId());
     }
 
     @Test

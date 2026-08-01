@@ -6,13 +6,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
@@ -21,7 +19,7 @@ import blue.language.merge.Merger;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.MinimizedOverlayBuilder;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.limits.PathLimits;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -312,7 +310,7 @@ class MinimizedOverlayJsonObjectOrderTest {
     void shouldDeclarationLabelProvenanceHonorsPartialResolutionLimits() {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
-        String missingTypeId = BlueIdCalculator.calculateBlueId(
+        String missingTypeId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Unavailable Nested Type"));
         provider.addSingleDocs(String.join("\n",
                 "name: Partially Resolved Type",
@@ -650,7 +648,7 @@ class MinimizedOverlayJsonObjectOrderTest {
     @Test
     void shouldFailedPublicMergeProvenanceSetupDoesNotPoisonMergerReuse() {
         // given
-        String missingTypeId = BlueIdCalculator.calculateBlueId(
+        String missingTypeId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Unavailable Public Merge Type"));
         Merger merger = new Merger(new Blue().getMergingProcessor(), blueId -> null);
         Node invalidTarget = new Node().type(new Node().blueId(missingTypeId));

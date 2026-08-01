@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.List;
@@ -45,7 +45,7 @@ final class ProcessingConformanceRecorder {
         }
         String bodyBlueId = body.isReferenceOnly()
                 ? body.getReferenceBlueId()
-                : BlueIdCalculator.calculateBlueId(body.toNode());
+                : DirectBlueIdCalculator.calculateBlueId(body.toNode());
         semanticDemand(bodyBlueId);
     }
 

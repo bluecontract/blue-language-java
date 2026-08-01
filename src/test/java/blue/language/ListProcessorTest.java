@@ -4,13 +4,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.merge.Merger;
@@ -20,7 +18,7 @@ import blue.language.merge.processor.ListProcessor;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.NodeExpander;
+import blue.language.graph.NodeExpander;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
@@ -28,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
 import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
 import static org.junit.jupiter.api.Assertions.*;
 

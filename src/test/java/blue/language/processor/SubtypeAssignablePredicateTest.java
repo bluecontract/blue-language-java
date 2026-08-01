@@ -6,8 +6,8 @@ import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.FrozenTypeMatcher;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.matching.FrozenTypeMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -147,7 +147,7 @@ final class SubtypeAssignablePredicateTest {
             failure = captureFailure(
                     () -> session.isAssignableToType(
                             cyclicTypeBlueId,
-                            BlueIdCalculator.calculateBlueId(
+                            DirectBlueIdCalculator.calculateBlueId(
                                     new Node().name(
                                             "Unrelated base"))));
             category = failure instanceof RuntimeException
@@ -198,7 +198,7 @@ final class SubtypeAssignablePredicateTest {
             Map<String, Node> definitions,
             Node definition) {
         String blueId =
-                BlueIdCalculator.calculateBlueId(definition);
+                DirectBlueIdCalculator.calculateBlueId(definition);
         definitions.put(blueId, definition);
         return blueId;
     }

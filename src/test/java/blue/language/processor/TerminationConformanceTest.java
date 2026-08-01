@@ -12,7 +12,7 @@ import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.TestEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -721,7 +721,7 @@ final class TerminationConformanceTest {
             Node event) {
         Node channel = nodeAt(document, "/contracts/events");
         String contributionBlueId =
-                BlueIdCalculator.calculateBlueId(channel);
+                DirectBlueIdCalculator.calculateBlueId(channel);
         String checkpointDomainBlueId =
                 CheckpointDomain.derive(
                         TEST_EVENT_CHANNEL,
@@ -729,7 +729,7 @@ final class TerminationConformanceTest {
                                 contributionBlueId),
                         null);
         String eventBlueId =
-                BlueIdCalculator.calculateBlueId(event);
+                DirectBlueIdCalculator.calculateBlueId(event);
         ExternalOrderKey eventOrder =
                 ExternalOrderKey.of(
                         Collections.singletonList(eventBlueId));
@@ -749,7 +749,7 @@ final class TerminationConformanceTest {
                         .build();
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(
-                                BlueIdCalculator
+                                DirectBlueIdCalculator
                                         .calculateBlueId(document),
                                 eventBlueId)
                         .revisions(1L, 1L)

@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -60,7 +60,7 @@ final class PlatformCommitCompanionTest {
         assertSame(companion, handOff.commitCompanion());
         assertSame(delta, companion.subscriptionDelta());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(root),
                 companion.expectedRootBlueId());
         assertEquals(12L,
                 companion.expectedRootRevision());
@@ -118,8 +118,8 @@ final class PlatformCommitCompanionTest {
             ExternalOrderKey order,
             long revision) {
         return VerifiedExecutionEvidence.builder(
-                        BlueIdCalculator.calculateBlueId(root),
-                        BlueIdCalculator.calculateBlueId(event))
+                        DirectBlueIdCalculator.calculateBlueId(root),
+                        DirectBlueIdCalculator.calculateBlueId(event))
                 .revisions(revision, revision)
                 .runtimeRegistryIdentity(
                         RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY)

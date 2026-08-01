@@ -2,9 +2,9 @@ package blue.language.merge;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.Types;
+import blue.language.provider.Types;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayList;
@@ -158,7 +158,7 @@ final class ListOverlayMerger {
         }
         List<String> inheritedIdentities = new ArrayList<>(targetChildren.size());
         for (Node inherited : targetChildren) {
-            inheritedIdentities.add(BlueIdCalculator.calculateBlueId(inherited));
+            inheritedIdentities.add(DirectBlueIdCalculator.calculateBlueId(inherited));
         }
         for (int index = 0; index < sourceLength; index++) {
             Node sourceChild = sourceChildren.get(start + index);
@@ -170,7 +170,7 @@ final class ListOverlayMerger {
                 }
                 continue;
             }
-            String sourceIdentity = BlueIdCalculator.calculateBlueId(sourceChild);
+            String sourceIdentity = DirectBlueIdCalculator.calculateBlueId(sourceChild);
             if (!sourceIdentity.equals(inheritedIdentities.get(index))
                     && inheritedIdentities.contains(sourceIdentity)) {
                 throw new IllegalArgumentException(
@@ -320,7 +320,7 @@ final class ListOverlayMerger {
 
     private void validatePreviousAnchor(
             List<Node> targetChildren, Node previousAnchor) {
-        String actualBlueId = BlueIdCalculator.calculateBlueId(targetChildren);
+        String actualBlueId = DirectBlueIdCalculator.calculateBlueId(targetChildren);
         if (!actualBlueId.equals(previousAnchor.getPreviousBlueId())) {
             throw new IllegalArgumentException(
                     "\"$previous\" blueId does not match the inherited list. Expected "

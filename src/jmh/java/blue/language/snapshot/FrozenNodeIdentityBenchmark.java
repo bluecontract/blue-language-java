@@ -1,7 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Scope;
@@ -74,7 +74,7 @@ public class FrozenNodeIdentityBenchmark {
             inputs.add(FrozenNodeToBlueIdInput.getListElement(
                     strictListItems.get(index), index));
         }
-        return BlueIdCalculator.INSTANCE.calculate(inputs);
+        return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(inputs);
     }
 
     @Benchmark

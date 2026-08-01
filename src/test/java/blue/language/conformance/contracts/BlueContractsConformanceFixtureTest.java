@@ -4,7 +4,7 @@ import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.model.Node;
 import blue.language.processor.CheckpointDomain;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -245,7 +245,7 @@ class BlueContractsConformanceFixtureTest {
                 UncheckedObjectMapper.JSON_MAPPER.convertValue(
                         body, Node.class);
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(bodyNode);
+                DirectBlueIdCalculator.calculateBlueId(bodyNode);
         ObjectNode provider =
                 (ObjectNode) input.path("provider");
         provider.putObject("nodes")
@@ -372,12 +372,12 @@ class BlueContractsConformanceFixtureTest {
         Node channelNode = UncheckedObjectMapper.JSON_MAPPER.convertValue(
                 channel, Node.class);
         String contributionBlueId =
-                BlueIdCalculator.calculateBlueId(channelNode);
+                DirectBlueIdCalculator.calculateBlueId(channelNode);
         String domainBlueId = CheckpointDomain.derive(
                 channel.path("type").path("blueId").asText(),
                 Collections.singletonList(contributionBlueId),
                 channel.path("checkpointDomain").asText());
-        String subjectBlueId = BlueIdCalculator.calculateBlueId(
+        String subjectBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().value("E1"));
         ObjectNode checkpoint = ((ObjectNode) root.path("contracts"))
                 .putObject("checkpoint");

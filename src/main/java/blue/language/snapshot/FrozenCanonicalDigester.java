@@ -2,8 +2,9 @@ package blue.language.snapshot;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.Base58;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.Base58;
+import blue.language.identity.CanonicalJsonValueWriter;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.model.value.BlueNumbers;
 import blue.language.utils.SchemaEnumCanonicalizer;
@@ -35,7 +36,7 @@ import static blue.language.model.wire.SchemaPropertyConstants.*;
  * produce exactly the same canonical JSON value, field ordering, list-chain
  * construction, and digest as
  * {@link FrozenNodeToBlueIdInput} followed by the generic
- * {@link BlueIdCalculator}. Changes to either canonical projection must be
+ * {@link DirectBlueIdCalculator}. Changes to either canonical projection must be
  * mirrored here. When parity cannot be proved for a shape, this implementation
  * must reject the direct path and use the generic projection rather than
  * introduce a second identity protocol.</p>
@@ -88,7 +89,7 @@ final class FrozenCanonicalDigester {
         int listIndex = node.isListElementContext() ? 0 : -1;
         try {
             return calculateValidatedNode(node, context, listIndex, actualObserver);
-        } catch (FrozenCanonicalWriter.UnsupportedCanonicalValueException exception) {
+        } catch (CanonicalJsonValueWriter.UnsupportedCanonicalValueException exception) {
             actualObserver.genericFallback();
             return genericNodeBlueId(node);
         } catch (IllegalArgumentException exception) {
@@ -110,7 +111,7 @@ final class FrozenCanonicalDigester {
         }
         try {
             return calculateValidatedList(source, actualObserver);
-        } catch (FrozenCanonicalWriter.UnsupportedCanonicalValueException exception) {
+        } catch (CanonicalJsonValueWriter.UnsupportedCanonicalValueException exception) {
             actualObserver.genericFallback();
             return genericListBlueId(source);
         } catch (IllegalArgumentException exception) {
@@ -138,11 +139,11 @@ final class FrozenCanonicalDigester {
         if (hasReservedPropertyCollision(node)) {
             // FrozenNodeToBlueIdInput writes authored fields first and arbitrary
             // properties last. Reserved property names can therefore replace a
-            // field before BlueIdCalculator's empty-map cleaning, and list
+            // field before DirectBlueIdCalculator's empty-map cleaning, and list
             // controls such as $previous have context-sensitive semantics.
             // These builder-only representations are uncommon enough that the
             // full compatibility oracle is the safer path.
-            throw new FrozenCanonicalWriter.UnsupportedCanonicalValueException(FrozenNode.class);
+            throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
         }
         if (context == Context.LIST_ELEMENT && isEmptyPlaceholder(node)) {
             // $empty's Boolean is a control marker rather than a scalar-node
@@ -203,10 +204,10 @@ final class FrozenCanonicalDigester {
                     remove(fields, key);
                 }
                 if (isRawMapKey(key)) {
-                    // This representation is legal but unusual: BlueIdCalculator
+                    // This representation is legal but unusual: DirectBlueIdCalculator
                     // treats these three map keys as raw JCS values. Preserve it
                     // via the full oracle rather than inventing a composition.
-                    throw new FrozenCanonicalWriter.UnsupportedCanonicalValueException(FrozenNode.class);
+                    throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
                 }
                 if (!inputCleansToEmptyMap(child)) {
                     addReference(fields, key, child.blueId());
@@ -226,7 +227,7 @@ final class FrozenCanonicalDigester {
                 // Only the whole-list oracle can preserve both the positional
                 // control/placeholder semantics and the original nested
                 // diagnostic path.
-                throw new FrozenCanonicalWriter.UnsupportedCanonicalValueException(FrozenNode.class);
+                throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
             }
         }
         String accumulator = hashListEmpty(observer);
@@ -271,7 +272,7 @@ final class FrozenCanonicalDigester {
                 } else {
                     FrozenNode frozen = FrozenNode.fromNode(value);
                     if (inputCleansToEmptyMap(frozen)) {
-                        throw new FrozenCanonicalWriter.UnsupportedCanonicalValueException(FrozenNode.class);
+                        throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
                     }
                     elementBlueId = frozen.blueId();
                 }
@@ -512,12 +513,12 @@ final class FrozenCanonicalDigester {
 
     private static String genericNodeBlueId(FrozenNode node) {
         if (node == null) {
-            return BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(null));
+            return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(FrozenNodeToBlueIdInput.get(null));
         }
         if (node.isStrictCanonical() && node.isStrictBlueIdValidation()) {
-            return BlueIdCalculator.INSTANCE.calculate(FrozenNodeToBlueIdInput.get(node));
+            return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(FrozenNodeToBlueIdInput.get(node));
         }
-        return BlueIdCalculator.calculateUncheckedBlueId(node.toNode());
+        return DirectBlueIdCalculator.calculateUncheckedBlueId(node.toNode());
     }
 
     private static String genericListBlueId(List<FrozenNode> nodes) {
@@ -525,7 +526,7 @@ final class FrozenCanonicalDigester {
         for (int index = 0; index < nodes.size(); index++) {
             objects.add(FrozenNodeToBlueIdInput.getListElement(nodes.get(index), index));
         }
-        return BlueIdCalculator.INSTANCE.calculate(objects);
+        return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(objects);
     }
 
     private static boolean isDirectlySupported(FrozenNode node) {
@@ -710,7 +711,7 @@ final class FrozenCanonicalDigester {
         if (node == null || node.isReferenceOnly() || node.getPreviousBlueId() != null
                 || isPayloadOnlyList(node)) return false;
         if (hasReservedPropertyCollision(node)) {
-            throw new FrozenCanonicalWriter.UnsupportedCanonicalValueException(FrozenNode.class);
+            throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
         }
         if (node.getName() != null || node.getDescription() != null || node.frozenValue() != null
                 || node.getItems() != null || node.getMergePolicy() != null) return false;

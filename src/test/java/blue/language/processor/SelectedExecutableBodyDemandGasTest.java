@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -17,7 +17,7 @@ final class SelectedExecutableBodyDemandGasTest {
         // given
         Node authoredBody = executableBodyNode();
         String exactBodyBlueId =
-                BlueIdCalculator.calculateBlueId(authoredBody);
+                DirectBlueIdCalculator.calculateBlueId(authoredBody);
         FrozenNode inline =
                 FrozenNode.fromResolvedNode(authoredBody);
         FrozenNode reference = FrozenNode.fromNode(
@@ -73,7 +73,7 @@ final class SelectedExecutableBodyDemandGasTest {
         // then
         assertEquals(
                 Arrays.asList(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 body.toNode())),
                 trace.semanticDemands());
         assertEquals(java.util.Collections.emptyList(), trace.gas());

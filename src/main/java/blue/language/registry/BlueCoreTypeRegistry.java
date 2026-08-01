@@ -5,7 +5,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.provider.VerifyingNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -283,7 +283,7 @@ public final class BlueCoreTypeRegistry {
                 throw new IllegalStateException("Core registry node " + path + " has name " + node.getName()
                         + " instead of " + name);
             }
-            String calculated = BlueIdCalculator.calculateBlueId(node);
+            String calculated = DirectBlueIdCalculator.calculateBlueId(node);
             if (!entry.blueId.equals(calculated)) {
                 throw new IllegalStateException("Core registry BlueId mismatch for " + name
                         + ": manifest=" + entry.blueId + ", calculated=" + calculated);

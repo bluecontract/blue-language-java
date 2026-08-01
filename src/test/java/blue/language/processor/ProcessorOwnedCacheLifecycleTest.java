@@ -5,7 +5,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
@@ -188,7 +188,7 @@ class ProcessorOwnedCacheLifecycleTest {
     }
 
     private String blueId(String value) {
-        return BlueIdCalculator.calculateBlueId(new Node().value(value));
+        return DirectBlueIdCalculator.calculateBlueId(new Node().value(value));
     }
 
     private static final class RecordingMetrics implements ProcessingObserver {

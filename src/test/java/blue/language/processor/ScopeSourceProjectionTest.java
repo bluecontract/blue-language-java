@@ -12,7 +12,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
@@ -79,7 +79,7 @@ class ScopeSourceProjectionTest {
         Blue blue = ProcessorTestSupport.blue(provider);
         Node inheritedItems = blue.resolve(new Node().type(reference(scopeTypeBlueId)))
                 .getAsNode("/list");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedItems.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedItems.getItems());
         provider.addListAndItsItems(inheritedItems.getItems());
         Node source = blue.yamlToNode(
                 "type:\n"
@@ -206,7 +206,7 @@ class ScopeSourceProjectionTest {
         Blue blue = ProcessorTestSupport.blue(provider);
         Node inheritedList = blue.resolve(new Node().type(reference(scopeTypeBlueId)))
                 .getAsNode("/list");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedList.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedList.getItems());
         provider.addListAndItsItems(inheritedList.getItems());
         Node source = blue.yamlToNode(
                 "type:\n"
@@ -288,7 +288,7 @@ class ScopeSourceProjectionTest {
         Blue blue = ProcessorTestSupport.blue(provider);
         List<Node> inheritedItems = blue.resolve(new Node().type(reference(childTypeBlueId)))
                 .getAsNode("/entries").getItems();
-        String previousBlueId = BlueIdCalculator.calculateBlueId(inheritedItems);
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(inheritedItems);
         provider.addListAndItsItems(inheritedItems);
         Node selectedChild = new Node()
                 .properties("entries", new Node()
@@ -379,8 +379,8 @@ class ScopeSourceProjectionTest {
         Node referencedLifecycleChannel = new Node()
                 .name("Protocol Reference Lifecycle Channel")
                 .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
-        String payloadBlueId = BlueIdCalculator.calculateBlueId(referencedPayload);
-        String channelBlueId = BlueIdCalculator.calculateBlueId(referencedLifecycleChannel);
+        String payloadBlueId = DirectBlueIdCalculator.calculateBlueId(referencedPayload);
+        String channelBlueId = DirectBlueIdCalculator.calculateBlueId(referencedLifecycleChannel);
         Node source = new Node()
                 .properties("propertyReference", reference(payloadBlueId))
                 .properties("list", new Node().items(Arrays.asList(
@@ -448,7 +448,7 @@ class ScopeSourceProjectionTest {
         Node referencedLifecycleChannel = new Node()
                 .name("Unavailable Protocol Reference Lifecycle Channel")
                 .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
-        String channelBlueId = BlueIdCalculator.calculateBlueId(referencedLifecycleChannel);
+        String channelBlueId = DirectBlueIdCalculator.calculateBlueId(referencedLifecycleChannel);
         Node source = new Node().contracts(new Node().properties(
                 "referencedLifecycle", reference(channelBlueId)));
 
@@ -483,7 +483,7 @@ class ScopeSourceProjectionTest {
                 .name("Mismatched Protocol Reference Lifecycle Channel")
                 .type(reference(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL));
         String channelBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         referencedLifecycleChannel);
         Node source = new Node().contracts(new Node().properties(
                 "referencedLifecycle", reference(channelBlueId)));
@@ -520,7 +520,7 @@ class ScopeSourceProjectionTest {
         // given
         Blue configured = ProcessorTestSupport.blue();
         DocumentProcessor configuredProcessor = configured.getDocumentProcessor();
-        String proofChildBlueId = BlueIdCalculator.calculateBlueId(
+        String proofChildBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Same BlueId Proof Child"));
         ProcessingSnapshotManager mismatchManager = new ProofMismatchSnapshotManager(
                 configuredProcessor.snapshotManager(), proofChildBlueId);
@@ -559,7 +559,7 @@ class ScopeSourceProjectionTest {
         String referencedBlueId = provider.getBlueIdByName(referenced.getName());
 
         List<Node> previousItems = Arrays.asList(text("old-a"), text("old-b"));
-        String previousBlueId = BlueIdCalculator.calculateBlueId(previousItems);
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(previousItems);
         provider.addList(previousItems);
 
         Node replacement = new Node()
@@ -645,7 +645,7 @@ class ScopeSourceProjectionTest {
         Node document = result.getAsNode(
                 scopePath + "/contracts/initialized/document");
         return document != null
-                ? BlueIdCalculator.calculateBlueId(document)
+                ? DirectBlueIdCalculator.calculateBlueId(document)
                 : null;
     }
 

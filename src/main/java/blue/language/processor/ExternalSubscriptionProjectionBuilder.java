@@ -6,7 +6,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
@@ -358,7 +358,7 @@ final class ExternalSubscriptionProjectionBuilder {
                     if (exactChild == null) {
                         continue;
                     }
-                    String identity = BlueIdCalculator.calculateBlueId(
+                    String identity = DirectBlueIdCalculator.calculateBlueId(
                             exactChild);
                     if (identities.add(identity)) {
                         next.add(exactChild);
@@ -402,7 +402,7 @@ final class ExternalSubscriptionProjectionBuilder {
         if (exact == null) {
             return;
         }
-        String identity = BlueIdCalculator.calculateBlueId(exact);
+        String identity = DirectBlueIdCalculator.calculateBlueId(exact);
         if (!active.add(identity)) {
             throw ExternalEvidenceVerificationSupport.invalid(
                     "Cyclic type hierarchy in enumeration-selector "
@@ -459,7 +459,7 @@ final class ExternalSubscriptionProjectionBuilder {
         }
         return type.getBlueId() != null
                 ? type.getBlueId()
-                : BlueIdCalculator.calculateBlueId(type);
+                : DirectBlueIdCalculator.calculateBlueId(type);
     }
 
     private Node copySubscriptionSpine(
@@ -654,7 +654,7 @@ final class ExternalSubscriptionProjectionBuilder {
         }
         String typeBlueId = type.getBlueId() != null
                 ? type.getBlueId()
-                : BlueIdCalculator.calculateBlueId(type);
+                : DirectBlueIdCalculator.calculateBlueId(type);
         return selection.isChannelType(typeBlueId);
     }
 

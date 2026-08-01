@@ -14,7 +14,7 @@ import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -385,7 +385,7 @@ class ExecutableBodyFieldMetadataTest {
             Node logicalBody,
             List<Node> providerResult) {
         String bodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         logicalBody);
         Node handlerType =
                 new Node()
@@ -393,7 +393,7 @@ class ExecutableBodyFieldMetadataTest {
                         .type(new Node().blueId(
                                 RuntimeBlueIds.HANDLER));
         String handlerTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         handlerType);
         OpaqueBodyHandlerProcessor processor =
                 new OpaqueBodyHandlerProcessor();
@@ -465,7 +465,7 @@ class ExecutableBodyFieldMetadataTest {
                         .programWasVisibleDuringMatch);
         assertEquals(
                 observation.bodyBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         observation.processor.executedProgram));
     }
 
@@ -506,7 +506,7 @@ class ExecutableBodyFieldMetadataTest {
                                                 BlueLanguageConstants
                                                         .TEXT_TYPE_BLUE_ID)));
         private final String programTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         programType);
         private final Node program =
                 new Node()
@@ -531,12 +531,12 @@ class ExecutableBodyFieldMetadataTest {
                                                         new Node().value(
                                                                 true))));
         private final String programBlueId =
-                BlueIdCalculator.calculateBlueId(program);
+                DirectBlueIdCalculator.calculateBlueId(program);
         private final Node ordinaryBody =
                 new Node().properties(
                         "ordinary", new Node().value("data"));
         private final String ordinaryBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         ordinaryBody);
         private final Node handlerType =
                 new Node()
@@ -549,7 +549,7 @@ class ExecutableBodyFieldMetadataTest {
                                         new Node().blueId(
                                                 programTypeBlueId)));
         private final String handlerTypeBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         handlerType);
         private final Node scopeType;
         private final String scopeTypeBlueId;
@@ -611,7 +611,7 @@ class ExecutableBodyFieldMetadataTest {
                                                     "program",
                                                     inheritedProgram)));
             this.scopeTypeBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             scopeType);
         }
 
@@ -622,7 +622,7 @@ class ExecutableBodyFieldMetadataTest {
                             == BodyForm
                             .WHOLE_CONTRACT_REFERENCE
                             ? new Node().blueId(
-                            BlueIdCalculator.calculateBlueId(
+                            DirectBlueIdCalculator.calculateBlueId(
                                     handler))
                             : handler;
             Node selectedContracts =
@@ -632,7 +632,7 @@ class ExecutableBodyFieldMetadataTest {
                     .WHOLE_CONTRACTS_MAP_REFERENCE) {
                 selectedContracts =
                         new Node().blueId(
-                                BlueIdCalculator.calculateBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(
                                         selectedContracts));
             }
             return new Node()
@@ -729,7 +729,7 @@ class ExecutableBodyFieldMetadataTest {
                 Node handler =
                         handlerContribution();
                 content.put(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 handler),
                         handler);
             } else if (bodyForm
@@ -739,7 +739,7 @@ class ExecutableBodyFieldMetadataTest {
                         contracts(
                                 handlerContribution());
                 content.put(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 exactContracts),
                         exactContracts);
             }
@@ -778,7 +778,7 @@ class ExecutableBodyFieldMetadataTest {
                                                     BlueLanguageConstants
                                                             .TEXT_TYPE_BLUE_ID)));
             String generalScopeTypeBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             generalScopeType);
             Node specificScopeType =
                     new Node()
@@ -790,7 +790,7 @@ class ExecutableBodyFieldMetadataTest {
                                     new Node().value(
                                             "before"));
             String specificScopeTypeBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             specificScopeType);
             content.put(
                     programBlueId, program);
@@ -813,7 +813,7 @@ class ExecutableBodyFieldMetadataTest {
                 Node handler =
                         handlerContribution();
                 content.put(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 handler),
                         handler);
             } else if (bodyForm
@@ -823,7 +823,7 @@ class ExecutableBodyFieldMetadataTest {
                         contracts(
                                 handlerContribution());
                 content.put(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 exactContracts),
                         exactContracts);
             }

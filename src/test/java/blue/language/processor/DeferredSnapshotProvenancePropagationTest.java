@@ -5,7 +5,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -123,11 +123,11 @@ class DeferredSnapshotProvenancePropagationTest {
         private Fixture() {
             Node body = new Node().value("program");
             String bodyBlueId =
-                    BlueIdCalculator.calculateBlueId(body);
+                    DirectBlueIdCalculator.calculateBlueId(body);
             Node handlerType =
                     new Node().name("Deferred Handler");
             String handlerTypeBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             handlerType);
             Node handler = new Node()
                     .type(new Node().blueId(
@@ -231,7 +231,7 @@ class DeferredSnapshotProvenancePropagationTest {
         return new ResolvedSnapshot(
                 canonical,
                 canonical.clone(),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         canonical));
     }
 }

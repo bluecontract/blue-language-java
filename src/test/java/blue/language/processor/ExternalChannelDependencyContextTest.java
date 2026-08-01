@@ -8,7 +8,7 @@ import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -32,7 +32,7 @@ final class ExternalChannelDependencyContextTest {
     private static final Node LEAF_TYPE =
             new Node().name("Dependency Leaf Channel");
     private static final String LEAF_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(LEAF_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(LEAF_TYPE);
     private static final Node ASSIGNABLE_BASE_TYPE =
             new Node()
                     .name("Dependency Assignable Base Channel")
@@ -42,7 +42,7 @@ final class ExternalChannelDependencyContextTest {
                             "assignableFamilyMarker",
                             new Node().value("dependency-family"));
     private static final String ASSIGNABLE_BASE_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     ASSIGNABLE_BASE_TYPE);
     private static final Node ASSIGNABLE_DIRECT_TYPE =
             new Node()
@@ -50,7 +50,7 @@ final class ExternalChannelDependencyContextTest {
                     .type(reference(
                             ASSIGNABLE_BASE_TYPE_BLUE_ID));
     private static final String ASSIGNABLE_DIRECT_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     ASSIGNABLE_DIRECT_TYPE);
     private static final Node ASSIGNABLE_DEEP_TYPE =
             new Node()
@@ -58,24 +58,24 @@ final class ExternalChannelDependencyContextTest {
                     .type(reference(
                             ASSIGNABLE_DIRECT_TYPE_BLUE_ID));
     private static final String ASSIGNABLE_DEEP_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     ASSIGNABLE_DEEP_TYPE);
     private static final Node AGGREGATE_TYPE =
             new Node().name("Dependency Aggregate Channel");
     private static final String AGGREGATE_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(AGGREGATE_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(AGGREGATE_TYPE);
     private static final Node OTHER_TYPE =
             new Node().name("Dependency Other Channel");
     private static final String OTHER_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(OTHER_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(OTHER_TYPE);
     private static final Node HANDLER_TYPE =
             new Node().name("Dependency Deferred Handler");
     private static final String HANDLER_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(HANDLER_TYPE);
+            DirectBlueIdCalculator.calculateBlueId(HANDLER_TYPE);
     private static final Node RECORDING_HANDLER_TYPE =
             new Node().name("Dependency Recording Handler");
     private static final String RECORDING_HANDLER_TYPE_BLUE_ID =
-            BlueIdCalculator.calculateBlueId(
+            DirectBlueIdCalculator.calculateBlueId(
                     RECORDING_HANDLER_TYPE);
     private static final ExternalOrderKey TEST_ORDER =
             ExternalOrderKey.of(
@@ -200,7 +200,7 @@ final class ExternalChannelDependencyContextTest {
     void shouldVerifyAssignableFamilyIncludesVerifiedDeepAndInheritedHeadersOnly() {
         // given
         String unavailableBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().value(
                                 "assignable-unavailable-handler-body"));
         AtomicInteger bodyDemands = new AtomicInteger();
@@ -217,7 +217,7 @@ final class ExternalChannelDependencyContextTest {
                         "deep",
                         inheritedDeep));
         String scopeTypeBlueId =
-                BlueIdCalculator.calculateBlueId(scopeType);
+                DirectBlueIdCalculator.calculateBlueId(scopeType);
         NodeProvider provider = blueId -> {
             if (scopeTypeBlueId.equals(blueId)) {
                 return Collections.singletonList(
@@ -812,7 +812,7 @@ final class ExternalChannelDependencyContextTest {
     void shouldVerifyInheritedUnselectedHandlerBodyIsNotDemandedBySelectorProof() {
         // given
         String unavailableBodyBlueId =
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         new Node().value(
                                 "unavailable-handler-body"));
         Node handler = new Node()
@@ -829,7 +829,7 @@ final class ExternalChannelDependencyContextTest {
                                 "unrelatedHandler",
                                 handler));
         String scopeTypeBlueId =
-                BlueIdCalculator.calculateBlueId(scopeType);
+                DirectBlueIdCalculator.calculateBlueId(scopeType);
         AtomicInteger unavailableBodyDemands =
                 new AtomicInteger();
         NodeProvider provider = blueId -> {
@@ -955,9 +955,9 @@ final class ExternalChannelDependencyContextTest {
                             firstEvaluation);
             VerifiedExecutionEvidence evidence =
                     VerifiedExecutionEvidence.builder(
-                                    BlueIdCalculator.calculateBlueId(
+                                    DirectBlueIdCalculator.calculateBlueId(
                                             document),
-                                    BlueIdCalculator.calculateBlueId(
+                                    DirectBlueIdCalculator.calculateBlueId(
                                             first))
                             .revisions(0L, 0L)
                             .runtimeRegistryIdentity(

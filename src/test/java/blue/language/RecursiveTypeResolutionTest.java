@@ -4,13 +4,11 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.api.BlueLanguageRuntime;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.api.LanguageRuntimeAccess;
-import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
@@ -20,8 +18,8 @@ import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.CyclicSetProof;
 import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.NodeContentHandler;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -314,7 +312,7 @@ class RecursiveTypeResolutionTest {
         BasicNodeProvider provider = new BasicNodeProvider(holder);
         Blue blue = new Blue(provider);
         String holderId = provider.getBlueIdByName("Reference Holder");
-        String previousId = BlueIdCalculator.calculateBlueId(new Node().name("Previous Entry"));
+        String previousId = DirectBlueIdCalculator.calculateBlueId(new Node().name("Previous Entry"));
         Node source = instanceOf(holderId).properties("previous", reference(previousId));
         Node expected = instanceOf(holderId)
                 .properties("previous", reference(previousId));
@@ -322,9 +320,9 @@ class RecursiveTypeResolutionTest {
         // when
         Node canonical = blue.canonicalize(source);
         String expectedBlueId =
-                BlueIdCalculator.calculateBlueId(expected);
+                DirectBlueIdCalculator.calculateBlueId(expected);
         String canonicalBlueId =
-                BlueIdCalculator.calculateBlueId(canonical);
+                DirectBlueIdCalculator.calculateBlueId(canonical);
 
         // then
         assertEquals(holderId, canonical.getType().getBlueId());
@@ -388,7 +386,7 @@ class RecursiveTypeResolutionTest {
 
         private SingletonCyclicProvider(Node source) {
             Node preprocessed = new Blue().preprocess(source.clone());
-            memberId = CircularBlueIdCalculator
+            memberId = CircularSetIdentityCalculator
                     .calculateCircularSetBlueIds(Collections.singletonList(preprocessed)).get(0);
             String masterId = memberId.substring(0, memberId.indexOf('#'));
             content = JSON_MAPPER.treeToValue(NodeContentHandler.resolveThisReferences(

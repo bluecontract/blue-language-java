@@ -13,7 +13,7 @@ import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.provider.DirectNodeManifest;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -241,7 +241,7 @@ final class FragmentedProcessingFailureMatrixTest {
             assertNull(unavailable.portableGas());
             assertEquals(
                     suspended.rootBlueId,
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             suspended.rootReference()));
             assertEquivalentSuccess(
                     available, retried);
@@ -294,7 +294,7 @@ final class FragmentedProcessingFailureMatrixTest {
         Node referenced = new Node().properties(
                 "child",
                 new Node().blueId(
-                        BlueIdCalculator.calculateBlueId(
+                        DirectBlueIdCalculator.calculateBlueId(
                                 new Node().value("child"))));
 
         // when
@@ -349,12 +349,12 @@ final class FragmentedProcessingFailureMatrixTest {
                 attempt.processResult().events().isEmpty());
         assertEquals(
                 rootBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         attempt.processResult()
                                 .document()));
         assertEquals(
                 rootBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         originalRoot));
     }
 
@@ -372,7 +372,7 @@ final class FragmentedProcessingFailureMatrixTest {
         assertFalse(result.commits());
         assertEquals(
                 fixture.rootBlueId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         result.document()));
         assertEquals(
                 "pending",
@@ -433,9 +433,9 @@ final class FragmentedProcessingFailureMatrixTest {
             DocumentProcessingResult actual) {
         assertEquals(expected.status(), actual.status());
         assertEquals(
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         expected.document()),
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         actual.document()));
         assertEquals(
                 expected.document().toString(),
@@ -477,7 +477,7 @@ final class FragmentedProcessingFailureMatrixTest {
                 new ArrayList<>(nodes.size());
         for (Node node : nodes) {
             blueIds.add(
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             node));
         }
         return Collections.unmodifiableList(blueIds);
@@ -553,7 +553,7 @@ final class FragmentedProcessingFailureMatrixTest {
                             "events",
                             list(emitted));
             String selectedBodyBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             selectedBody);
             Node unselectedBody = new Node()
                     .properties(
@@ -568,7 +568,7 @@ final class FragmentedProcessingFailureMatrixTest {
                                     "must remain unavailable "
                                             + "and unselected"));
             String unselectedBodyBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             unselectedBody);
 
             Node channel = new Node()
@@ -594,7 +594,7 @@ final class FragmentedProcessingFailureMatrixTest {
                             new Node().value(
                                     DOMAIN_DISCRIMINATOR));
             String contribution =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             channel);
             String domain = CheckpointDomain.derive(
                     MockTypeBlueIds
@@ -633,7 +633,7 @@ final class FragmentedProcessingFailureMatrixTest {
                             new Node().value("pending"))
                     .contracts(contracts);
             String rootBlueId =
-                    BlueIdCalculator.calculateBlueId(root);
+                    DirectBlueIdCalculator.calculateBlueId(root);
             Node event = new Node()
                     .properties(
                             "subscriptionKey",
@@ -647,7 +647,7 @@ final class FragmentedProcessingFailureMatrixTest {
                             new Node().value(
                                     "failure-matrix-event"));
             String eventBlueId =
-                    BlueIdCalculator.calculateBlueId(
+                    DirectBlueIdCalculator.calculateBlueId(
                             event);
 
             Map<String, Node> exact =

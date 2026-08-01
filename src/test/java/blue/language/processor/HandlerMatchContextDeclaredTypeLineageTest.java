@@ -12,8 +12,8 @@ import blue.language.processor.model.MarkerContract;
 import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.CyclicSetProof;
 import blue.language.provider.CyclicSetProofResult;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -281,7 +281,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         // given
         TypeFixture types = TypeFixture.create();
         Node incomplete = new Node().type(new Node().name("Anonymous Parent"));
-        String incompleteId = BlueIdCalculator.calculateBlueId(incomplete);
+        String incompleteId = DirectBlueIdCalculator.calculateBlueId(incomplete);
         MutableCountingProvider provider = new MutableCountingProvider();
         provider.put(incompleteId, incomplete);
 
@@ -342,7 +342,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
         List<Node> ambiguousDefinitions = Arrays.asList(
                 new Node().name("Ambiguous declaration A"),
                 new Node().name("Ambiguous declaration B"));
-        String ambiguousId = BlueIdCalculator.calculateBlueId(ambiguousDefinitions);
+        String ambiguousId = DirectBlueIdCalculator.calculateBlueId(ambiguousDefinitions);
         NodeProvider ambiguous = blueId -> ambiguousId.equals(blueId)
                 ? ambiguousDefinitions
                 : null;
@@ -541,13 +541,13 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     void shouldVerifyDirectEdgeCacheIsLazyBoundedAndLeastRecentlyUsed() {
         // given
         Node rootDefinition = new Node().name("Cache root");
-        String root = BlueIdCalculator.calculateBlueId(rootDefinition);
+        String root = DirectBlueIdCalculator.calculateBlueId(rootDefinition);
         Map<String, Node> definitions = new LinkedHashMap<String, Node>();
         definitions.put(root, rootDefinition);
         String[] children = new String[DeclaredTypeLineageMatcher.CACHE_ENTRY_LIMIT];
         for (int index = 0; index < children.length; index++) {
             Node child = new Node().name("Cache child " + index).type(reference(root));
-            children[index] = BlueIdCalculator.calculateBlueId(child);
+            children[index] = DirectBlueIdCalculator.calculateBlueId(child);
             definitions.put(children[index], child);
         }
         CountingMapProvider provider = new CountingMapProvider(definitions);
@@ -929,14 +929,14 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     private static DeepChain exactDeepChain(int depth) {
         Map<String, Node> definitions = new LinkedHashMap<String, Node>();
         Node rootDefinition = new Node().name("Deep root");
-        String root = BlueIdCalculator.calculateBlueId(rootDefinition);
+        String root = DirectBlueIdCalculator.calculateBlueId(rootDefinition);
         definitions.put(root, rootDefinition);
         String parent = root;
         for (int index = depth - 1; index >= 0; index--) {
             Node definition = new Node()
                     .name("Deep type " + index)
                     .type(reference(parent));
-            String current = BlueIdCalculator.calculateBlueId(definition);
+            String current = DirectBlueIdCalculator.calculateBlueId(definition);
             definitions.put(current, definition);
             parent = current;
         }
@@ -976,7 +976,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     }
 
     private static String syntheticId(String name) {
-        return BlueIdCalculator.calculateBlueId(new Node().name(name));
+        return DirectBlueIdCalculator.calculateBlueId(new Node().name(name));
     }
 
     private static Node reference(String blueId) {
@@ -1039,21 +1039,21 @@ class HandlerMatchContextDeclaredTypeLineageTest {
 
         private static TypeFixture create() {
             Node expected = sameShapeDefinition("Expected Event");
-            String expectedId = BlueIdCalculator.calculateBlueId(expected);
+            String expectedId = DirectBlueIdCalculator.calculateBlueId(expected);
             Node child = sameShapeDefinition("Child Event").type(reference(expectedId));
-            String childId = BlueIdCalculator.calculateBlueId(child);
+            String childId = DirectBlueIdCalculator.calculateBlueId(child);
             Node grandchild = sameShapeDefinition("Grandchild Event").type(reference(childId));
-            String grandchildId = BlueIdCalculator.calculateBlueId(grandchild);
+            String grandchildId = DirectBlueIdCalculator.calculateBlueId(grandchild);
             Node common = sameShapeDefinition("Common Event");
-            String commonId = BlueIdCalculator.calculateBlueId(common);
+            String commonId = DirectBlueIdCalculator.calculateBlueId(common);
             Node sibling = sameShapeDefinition("Sibling Event").type(reference(commonId));
-            String siblingId = BlueIdCalculator.calculateBlueId(sibling);
+            String siblingId = DirectBlueIdCalculator.calculateBlueId(sibling);
             Node unrelatedSameShape = sameShapeDefinition("Unrelated Same Shape Event");
-            String unrelatedSameShapeId = BlueIdCalculator.calculateBlueId(unrelatedSameShape);
+            String unrelatedSameShapeId = DirectBlueIdCalculator.calculateBlueId(unrelatedSameShape);
             Node unrelatedDifferentShape = new Node()
                     .name("Unrelated Different Shape Event")
                     .properties("different", requiredText());
-            String unrelatedDifferentShapeId = BlueIdCalculator.calculateBlueId(unrelatedDifferentShape);
+            String unrelatedDifferentShapeId = DirectBlueIdCalculator.calculateBlueId(unrelatedDifferentShape);
             Map<String, Node> definitions = new LinkedHashMap<String, Node>();
             definitions.put(expectedId, expected);
             definitions.put(childId, child);
@@ -1197,7 +1197,7 @@ class HandlerMatchContextDeclaredTypeLineageTest {
             placeholders.add(placeholder);
         }
         List<String> calculatedBlueIds =
-                CircularBlueIdCalculator.calculateCircularSetBlueIds(
+                CircularSetIdentityCalculator.calculateCircularSetBlueIds(
                         placeholders);
 
         Map<String, String> verifiedBlueIds =

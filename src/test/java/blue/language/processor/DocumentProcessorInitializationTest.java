@@ -13,7 +13,7 @@ import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
@@ -59,7 +59,7 @@ class DocumentProcessorInitializationTest {
         assertProcessorLifecycleIsLocal(result);
         assertNotNull(markerDocument);
         assertEquals(expectedDocumentId,
-                BlueIdCalculator.calculateBlueId(markerDocument));
+                DirectBlueIdCalculator.calculateBlueId(markerDocument));
     }
 
     @Test
@@ -86,7 +86,7 @@ class DocumentProcessorInitializationTest {
         assertEquals(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
                 initialized.getType().getBlueId());
         assertEquals(expectedDocumentId,
-                BlueIdCalculator.calculateBlueId(
+                DirectBlueIdCalculator.calculateBlueId(
                         initialized.getProperties().get(KEY_DOCUMENT)));
         assertProcessorLifecycleIsLocal(result);
         assertEquals(0L, snapshot.counter("mutablePatchValuesFrozen"), snapshot.toString());
@@ -220,7 +220,7 @@ class DocumentProcessorInitializationTest {
                 "items:\n" +
                         "  - previous-a\n" +
                         "  - previous-b\n");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(previous.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(previous.getItems());
         String fixture =
                 "name: Previous List Control Shape\n"
                         + "history:\n"
@@ -1074,7 +1074,7 @@ class DocumentProcessorInitializationTest {
     }
 
     private static String uncheckedInitializationId(FrozenNode node) {
-        return BlueIdCalculator.calculateUncheckedBlueId(node.toNode());
+        return DirectBlueIdCalculator.calculateUncheckedBlueId(node.toNode());
     }
 
     private static String rootDocumentIdentityAtInitialization(
@@ -1162,7 +1162,7 @@ class DocumentProcessorInitializationTest {
         Node initialDocument = document.getAsNode(
                 prefix + "/contracts/initialized/document");
         return initialDocument != null
-                ? BlueIdCalculator.calculateBlueId(initialDocument)
+                ? DirectBlueIdCalculator.calculateBlueId(initialDocument)
                 : null;
     }
 
@@ -1171,7 +1171,7 @@ class DocumentProcessorInitializationTest {
                 ? event.getProperties().get("document")
                 : null;
         return document != null
-                ? BlueIdCalculator.calculateBlueId(document)
+                ? DirectBlueIdCalculator.calculateBlueId(document)
                 : null;
     }
 
