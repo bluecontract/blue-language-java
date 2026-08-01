@@ -2,6 +2,7 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -19,6 +20,16 @@ public interface SourceContentVerificationRuntime {
 
     /** Returns an immutable snapshot of explicit preprocessing aliases. */
     Map<String, String> preprocessingAliases();
+
+    /**
+     * Returns immutable host aliases imported into the preprocessing
+     * environment.
+     *
+     * <p>The empty default preserves existing Language-only runtimes.</p>
+     */
+    default Map<String, String> environmentImports() {
+        return Collections.emptyMap();
+    }
 
     /** Canonicalizes one authored source under the released identity strategy. */
     Node canonicalizeSourceContent(Node source);

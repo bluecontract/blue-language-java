@@ -37,12 +37,14 @@ public final class BlueLanguage implements AutoCloseable {
     private final BlueSnapshots snapshots;
     private final BlueMatching matching;
     private final BluePatching patching;
+    private final LanguageProcessing processing;
 
     private BlueLanguage(Builder builder) {
         this.runtime = BlueLanguageRuntime.create(
                 builder.nodeProvider,
                 builder.cachePolicy,
-                builder.preprocessingAliases);
+                builder.preprocessingAliases,
+                builder.environmentImports);
         this.codec = runtime.codec();
         this.preprocessing = runtime.preprocessing();
         this.graph = runtime.graph();
@@ -51,6 +53,7 @@ public final class BlueLanguage implements AutoCloseable {
         this.snapshots = runtime.snapshots();
         this.matching = runtime.matching();
         this.patching = runtime.patching();
+        this.processing = runtime.processing();
     }
 
     /** Returns a new independently configurable runtime builder. */
@@ -98,6 +101,11 @@ public final class BlueLanguage implements AutoCloseable {
         return patching;
     }
 
+    /** Returns the Language-only bridge for deterministic processing scopes. */
+    public LanguageProcessing processing() {
+        return processing;
+    }
+
     /** Releases bounded caches and rejects later admitted runtime operations. */
     @Override
     public void close() {
@@ -110,6 +118,8 @@ public final class BlueLanguage implements AutoCloseable {
         private BlueCachePolicy cachePolicy =
                 BlueCachePolicy.boundedDefaults();
         private Map<String, String> preprocessingAliases =
+                Collections.emptyMap();
+        private Map<String, String> environmentImports =
                 Collections.emptyMap();
 
         private Builder() {
@@ -136,6 +146,19 @@ public final class BlueLanguage implements AutoCloseable {
                     new LinkedHashMap<>(Objects.requireNonNull(
                             preprocessingAliases,
                             "preprocessingAliases")));
+            return this;
+        }
+
+        /**
+         * Freezes host type aliases imported into root {@code blue}
+         * directives.
+         */
+        public Builder environmentImports(
+                Map<String, String> environmentImports) {
+            this.environmentImports = Collections.unmodifiableMap(
+                    new LinkedHashMap<>(Objects.requireNonNull(
+                            environmentImports,
+                            "environmentImports")));
             return this;
         }
 

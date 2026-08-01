@@ -94,6 +94,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
     private final BlueCachePolicy cachePolicy;
     private final ReferenceCacheAdmissionPolicy referenceCacheAdmission;
     private final Map<String, String> preprocessingAliases;
+    private final Map<String, String> environmentImports;
     private final MergingProcessor mergingProcessor;
     private final LanguageRuntimeSnapshotStore snapshotsStore;
     private final ReentrantReadWriteLock lifecycle =
@@ -109,12 +110,14 @@ public final class BlueLanguageRuntime implements NodeResolver,
     private final BlueSnapshots snapshots;
     private final BlueMatching matching;
     private final BluePatching patching;
+    private final LanguageProcessing processing;
 
     private volatile boolean closed;
 
     private BlueLanguageRuntime(NodeProvider nodeProvider,
                                 BlueCachePolicy cachePolicy,
                                 Map<String, String> preprocessingAliases,
+                                Map<String, String> environmentImports,
                                 ReferenceCacheAdmissionPolicy
                                         referenceCacheAdmission) {
         this.nodeProvider = blue.language.registry.NodeProviderWrapper.wrap(
@@ -126,6 +129,8 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 "referenceCacheAdmission");
         this.preprocessingAliases = immutableAliases(
                 preprocessingAliases);
+        this.environmentImports = immutableAliases(
+                environmentImports);
         this.mergingProcessor = defaultMergingProcessor();
         this.snapshotsStore = new LanguageRuntimeSnapshotStore(cachePolicy);
 
@@ -133,10 +138,11 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 Preprocessor.getStandardProvider(),
                 this.nodeProvider,
                 this.preprocessingAliases,
-                Collections.emptyMap());
+                this.environmentImports);
         String environmentIdentity =
                 LanguageRuntimeServices.preprocessingEnvironmentIdentity(
-                        this.preprocessingAliases);
+                        this.preprocessingAliases,
+                        this.environmentImports);
         this.codec = new StandardBlueCodec();
         this.preprocessing = new RuntimeBluePreprocessing(
                 this,
@@ -152,6 +158,14 @@ public final class BlueLanguageRuntime implements NodeResolver,
         this.snapshots = new RuntimeBlueSnapshots(this);
         this.matching = new RuntimeBlueMatching(this);
         this.patching = new RuntimeBluePatching(this);
+        this.processing = new RuntimeLanguageProcessing(
+                this,
+                this.nodeProvider,
+                this.mergingProcessor,
+                this.snapshotsStore,
+                this.preprocessingAliases,
+                this.environmentImports,
+                this.referenceCacheAdmission);
     }
 
     /**
@@ -170,6 +184,33 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 nodeProvider,
                 cachePolicy,
                 preprocessingAliases,
+                Collections.<String, String>emptyMap(),
+                REFERENCE_CACHE_ADMISSION);
+    }
+
+    /**
+     * Creates a Language runtime with explicit host environment imports.
+     *
+     * <p>Environment imports supplement canonical Language aliases during
+     * preprocessing. They are frozen at construction and become part of the
+     * preprocessing environment identity.</p>
+     *
+     * @param nodeProvider borrowed external-content provider
+     * @param cachePolicy runtime-owned cache bounds
+     * @param preprocessingAliases explicit directive aliases to freeze
+     * @param environmentImports host type aliases mapped to exact BlueIds
+     * @return a new focused runtime
+     */
+    static BlueLanguageRuntime create(
+            NodeProvider nodeProvider,
+            BlueCachePolicy cachePolicy,
+            Map<String, String> preprocessingAliases,
+            Map<String, String> environmentImports) {
+        return new BlueLanguageRuntime(
+                nodeProvider,
+                cachePolicy,
+                preprocessingAliases,
+                environmentImports,
                 REFERENCE_CACHE_ADMISSION);
     }
 
@@ -198,6 +239,32 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 nodeProvider,
                 cachePolicy,
                 preprocessingAliases,
+                Collections.<String, String>emptyMap(),
+                referenceCacheAdmission);
+    }
+
+    /**
+     * Creates a Language runtime with explicit host imports and cache
+     * admission.
+     *
+     * @param nodeProvider borrowed external-content provider
+     * @param cachePolicy runtime-owned cache bounds
+     * @param preprocessingAliases explicit directive aliases to freeze
+     * @param environmentImports host type aliases mapped to exact BlueIds
+     * @param referenceCacheAdmission retention policy for verified references
+     * @return a new focused runtime
+     */
+    static BlueLanguageRuntime create(
+            NodeProvider nodeProvider,
+            BlueCachePolicy cachePolicy,
+            Map<String, String> preprocessingAliases,
+            Map<String, String> environmentImports,
+            ReferenceCacheAdmissionPolicy referenceCacheAdmission) {
+        return new BlueLanguageRuntime(
+                nodeProvider,
+                cachePolicy,
+                preprocessingAliases,
+                environmentImports,
                 referenceCacheAdmission);
     }
 
@@ -239,6 +306,11 @@ public final class BlueLanguageRuntime implements NodeResolver,
     /** Returns immutable canonical patching operations. */
     public BluePatching patching() {
         return patching;
+    }
+
+    /** Returns the Language-owned document-processing bridge. */
+    LanguageProcessing processing() {
+        return processing;
     }
 
     /**
@@ -288,6 +360,12 @@ public final class BlueLanguageRuntime implements NodeResolver,
     @Override
     public Map<String, String> preprocessingAliases() {
         return preprocessingAliases;
+    }
+
+    /** Returns the frozen host aliases imported during preprocessing. */
+    @Override
+    public Map<String, String> environmentImports() {
+        return environmentImports;
     }
 
     /** Canonicalizes Source content under the released core environment. */
@@ -616,7 +694,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 Preprocessor.getStandardProvider(),
                 nodeProvider,
                 preprocessingAliases,
-                Collections.emptyMap())
+                environmentImports)
                 .preprocess(source);
     }
 

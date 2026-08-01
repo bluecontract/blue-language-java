@@ -58,6 +58,8 @@ public final class ProviderEvidenceVerifier {
             "preprocessingEnvironmentIdentity";
     private static final String FIELD_PREPROCESSING_ALIASES =
             "preprocessingAliases";
+    private static final String FIELD_ENVIRONMENT_IMPORTS =
+            "environmentImports";
     private static final String FIELD_PROVIDER_DOMAIN_IDENTITY =
             "providerDomainIdentity";
     private static final String FIELD_PROVIDER_MODE =
@@ -280,6 +282,10 @@ public final class ProviderEvidenceVerifier {
                 runtime.canonicalRegistryIdentity());
         payload.put(FIELD_PREPROCESSING_ALIASES,
                 new TreeMap<>(runtime.preprocessingAliases()));
+        if (!runtime.environmentImports().isEmpty()) {
+            payload.put(FIELD_ENVIRONMENT_IMPORTS,
+                    new TreeMap<>(runtime.environmentImports()));
+        }
         return sha256CanonicalIdentity(payload);
     }
 

@@ -19,6 +19,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -38,6 +39,28 @@ public final class LanguageRuntimeServices {
         return StandardBluePreprocessing.BASELINE_ENVIRONMENT_IDENTITY
                 + "/" + new CanonicalJsonHasher().hash(
                 new TreeMap<>(aliases));
+    }
+
+    /**
+     * Identifies directive aliases and host environment imports without
+     * conflating their distinct namespaces.
+     */
+    static String preprocessingEnvironmentIdentity(
+            Map<String, String> aliases,
+            Map<String, String> environmentImports) {
+        if (environmentImports == null
+                || environmentImports.isEmpty()) {
+            return preprocessingEnvironmentIdentity(aliases);
+        }
+        Map<String, Object> environment = new LinkedHashMap<>();
+        environment.put("directiveAliases",
+                aliases == null
+                        ? new TreeMap<String, String>()
+                        : new TreeMap<>(aliases));
+        environment.put("environmentImports",
+                new TreeMap<>(environmentImports));
+        return StandardBluePreprocessing.BASELINE_ENVIRONMENT_IDENTITY
+                + "/" + new CanonicalJsonHasher().hash(environment);
     }
 }
 

@@ -22,12 +22,15 @@ import java.util.concurrent.ConcurrentMap;
  */
 final class LanguageRuntimeSnapshotStore {
 
+    private static final int RECENT_PROCESSING_SNAPSHOT_LIMIT = 32;
     private static final String PINNED_SNAPSHOT_CACHE =
             "pinnedAuthoritativeSnapshots";
     private static final String DERIVED_SNAPSHOT_CACHE =
             "derivedResolvedSnapshots";
     private static final String CANONICAL_ALIAS_CACHE =
             "canonicalAliases";
+    private static final String RECENT_PROCESSING_CACHE =
+            "recentProcessingSnapshots";
     private static final String VERIFIED_REFERENCE_CACHE =
             "verifiedReferences";
     private static final String TRANSIENT_REFERENCE_CACHE =
@@ -45,6 +48,8 @@ final class LanguageRuntimeSnapshotStore {
             ResolvedSnapshot> derivedByCanonical;
     private final WeightedLruCache<String, WeakReference<ResolvedSnapshot>>
             derivedByBlueId;
+    private final WeightedLruCache<FrozenNode.ResolvedStructuralKey,
+            ResolvedSnapshot> recentProcessingSnapshots;
     private final ResolvedReferenceCache referenceCache;
 
     private long pinnedWeightBytes;
@@ -61,6 +66,13 @@ final class LanguageRuntimeSnapshotStore {
                 policy.canonicalAliasMaxWeightBytes(),
                 Math.min(policy.maximumDerivedEntryWeightBytes(), 512L),
                 ignored -> 64L);
+        this.recentProcessingSnapshots = new WeightedLruCache<>(
+                Math.min(
+                        RECENT_PROCESSING_SNAPSHOT_LIMIT,
+                        policy.derivedSnapshotMaxEntries()),
+                policy.derivedSnapshotMaxWeightBytes(),
+                policy.maximumDerivedEntryWeightBytes(),
+                LanguageRuntimeSnapshotStore::snapshotWeight);
         this.referenceCache = new ResolvedReferenceCache(policy);
     }
 
@@ -168,6 +180,29 @@ final class LanguageRuntimeSnapshotStore {
         return Optional.ofNullable(derived);
     }
 
+    ResolvedSnapshot processingSnapshot(
+            FrozenNode.ResolvedStructuralKey key) {
+        if (key == null) {
+            return null;
+        }
+        synchronized (mutationLock) {
+            return recentProcessingSnapshots.get(key);
+        }
+    }
+
+    void rememberProcessingSnapshot(
+            FrozenNode.ResolvedStructuralKey key,
+            ResolvedSnapshot snapshot) {
+        if (key == null
+                || snapshot == null
+                || !snapshot.isResolutionComplete()) {
+            return;
+        }
+        synchronized (mutationLock) {
+            recentProcessingSnapshots.put(key, snapshot);
+        }
+    }
+
     void clear() {
         referenceCache.clear();
         synchronized (mutationLock) {
@@ -176,6 +211,7 @@ final class LanguageRuntimeSnapshotStore {
             pinnedWeightBytes = 0L;
             derivedByCanonical.clear();
             derivedByBlueId.clear();
+            recentProcessingSnapshots.clear();
         }
     }
 
@@ -195,6 +231,8 @@ final class LanguageRuntimeSnapshotStore {
                     region(derivedByCanonical, false));
             regions.put(CANONICAL_ALIAS_CACHE,
                     region(derivedByBlueId, false));
+            regions.put(RECENT_PROCESSING_CACHE,
+                    region(recentProcessingSnapshots, false));
             regions.put(VERIFIED_REFERENCE_CACHE,
                     new BlueCacheStats.Region(
                             reference.verifiedEntries(),
