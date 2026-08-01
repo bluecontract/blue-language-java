@@ -19,7 +19,12 @@ public final class PersistentPatchingExample {
     private PersistentPatchingExample() {
     }
 
-    /** Applies one immutable patch and verifies old-state and structural-sharing guarantees. */
+    /**
+     * Applies one immutable patch and verifies old-state and structural-sharing
+     * guarantees.
+     *
+     * @return immutable summary of the snapshots and shared branch
+     */
     public static Result run() {
         Node canonical = new Node().properties(
                 LEFT_FIELD, new Node().value(LEFT_VALUE),
@@ -53,7 +58,11 @@ public final class PersistentPatchingExample {
         }
     }
 
-    /** Runs from a shell and prints the new snapshot identity. */
+    /**
+     * Runs from a shell and prints the new snapshot identity.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getAfterBlueId());
     }
@@ -73,22 +82,47 @@ public final class PersistentPatchingExample {
             this.sharedLeft = sharedLeft;
         }
 
+        /**
+         * Returns the identity of the snapshot before patching.
+         *
+         * @return original snapshot BlueId
+         */
         public String getBeforeBlueId() {
             return before.blueId();
         }
 
+        /**
+         * Returns the identity of the snapshot after patching.
+         *
+         * @return patched snapshot BlueId
+         */
         public String getAfterBlueId() {
             return after.blueId();
         }
 
+        /**
+         * Returns the original value at the replaced path.
+         *
+         * @return value from the snapshot before patching
+         */
         public Object getBeforeRightValue() {
             return before.canonicalAt(RIGHT_POINTER).getValue();
         }
 
+        /**
+         * Returns the replacement value at the patched path.
+         *
+         * @return value from the snapshot after patching
+         */
         public Object getAfterRightValue() {
             return after.canonicalAt(RIGHT_POINTER).getValue();
         }
 
+        /**
+         * Reports whether the unchanged left branch retains object identity.
+         *
+         * @return {@code true} when both snapshots share the left branch
+         */
         public boolean isLeftBranchShared() {
             return sharedLeft == after.frozenCanonicalRoot()
                     .property(LEFT_FIELD);

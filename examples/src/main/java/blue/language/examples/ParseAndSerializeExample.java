@@ -17,7 +17,11 @@ public final class ParseAndSerializeExample {
     private ParseAndSerializeExample() {
     }
 
-    /** Runs the example and verifies that transport format does not change identity. */
+    /**
+     * Runs the example and verifies that transport format does not change identity.
+     *
+     * @return the serialized forms, stable identity, and parsed scalar value
+     */
     public static Result run() {
         try (BlueLanguage language = BlueLanguage.builder().build()) {
             Node source = language.codec().parseSource(
@@ -46,7 +50,11 @@ public final class ParseAndSerializeExample {
         }
     }
 
-    /** Runs from a shell and prints the normalized JSON representation. */
+    /**
+     * Runs from a shell and prints the normalized JSON representation.
+     *
+     * @param args command-line arguments, which this example ignores
+     */
     public static void main(String[] args) {
         System.out.println(run().getJson());
     }
@@ -65,18 +73,38 @@ public final class ParseAndSerializeExample {
             this.value = value;
         }
 
+        /**
+         * Returns the normalized JSON representation.
+         *
+         * @return the serialized JSON
+         */
         public String getJson() {
             return json;
         }
 
+        /**
+         * Returns the normalized YAML representation.
+         *
+         * @return the serialized YAML
+         */
         public String getYaml() {
             return yaml;
         }
 
+        /**
+         * Returns the Source Document identity shared by both transports.
+         *
+         * @return the Source Document BlueId
+         */
         public String getBlueId() {
             return blueId;
         }
 
+        /**
+         * Returns the scalar value parsed from the Source Document.
+         *
+         * @return the parsed scalar value
+         */
         public Object getValue() {
             return value;
         }

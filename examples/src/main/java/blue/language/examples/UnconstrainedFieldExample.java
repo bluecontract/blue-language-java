@@ -21,7 +21,11 @@ public final class UnconstrainedFieldExample {
     private UnconstrainedFieldExample() {
     }
 
-    /** Resolves accepted shapes and captures deterministic validation failures. */
+    /**
+     * Resolves accepted shapes and captures deterministic validation failures.
+     *
+     * @return immutable accepted values and captured validation failures
+     */
     public static Result run() {
         Node optionalType = holderType(
                 OPTIONAL_TYPE_NAME,
@@ -96,7 +100,11 @@ public final class UnconstrainedFieldExample {
         return instance;
     }
 
-    /** Runs from a shell and prints the accepted unconstrained scalar. */
+    /**
+     * Runs from a shell and prints the accepted unconstrained scalar.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getResolvedScalar());
     }
@@ -119,18 +127,38 @@ public final class UnconstrainedFieldExample {
             this.missingRequiredFailure = missingRequiredFailure;
         }
 
+        /**
+         * Returns the scalar accepted by the unconstrained field.
+         *
+         * @return resolved scalar value
+         */
         public Object getResolvedScalar() {
             return resolvedScalar;
         }
 
+        /**
+         * Returns the member accepted by the Dictionary field.
+         *
+         * @return resolved Dictionary member value
+         */
         public Object getResolvedMember() {
             return resolvedMember;
         }
 
+        /**
+         * Returns the failure produced for a scalar Dictionary value.
+         *
+         * @return deterministic Dictionary shape failure
+         */
         public Throwable getDictionaryScalarFailure() {
             return dictionaryScalarFailure;
         }
 
+        /**
+         * Returns the failure produced for an absent required field.
+         *
+         * @return deterministic required-field failure
+         */
         public Throwable getMissingRequiredFailure() {
             return missingRequiredFailure;
         }

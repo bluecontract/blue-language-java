@@ -16,7 +16,12 @@ public final class SemanticFormsExample {
     private SemanticFormsExample() {
     }
 
-    /** Resolves meaning, calculates canonical identity input, and minimizes authoring form. */
+    /**
+     * Resolves meaning, calculates canonical identity input, and minimizes the
+     * authoring form.
+     *
+     * @return detached resolved, canonical, and minimized semantic forms
+     */
     public static Result run() {
         Node type = new Node()
                 .name(TYPE_NAME)
@@ -63,7 +68,11 @@ public final class SemanticFormsExample {
         }
     }
 
-    /** Runs from a shell and prints the common Source Document BlueId. */
+    /**
+     * Runs from a shell and prints the common Source Document BlueId.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getBlueId());
     }
@@ -86,18 +95,38 @@ public final class SemanticFormsExample {
             this.blueId = blueId;
         }
 
+        /**
+         * Returns a detached resolved view.
+         *
+         * @return resolved document copy
+         */
         public Node getResolved() {
             return resolved.clone();
         }
 
+        /**
+         * Returns a detached canonical identity input.
+         *
+         * @return canonical document copy
+         */
         public Node getCanonical() {
             return canonical.clone();
         }
 
+        /**
+         * Returns a detached minimized authoring form.
+         *
+         * @return minimized document copy
+         */
         public Node getMinimized() {
             return minimized.clone();
         }
 
+        /**
+         * Returns the identity shared by all three semantic forms.
+         *
+         * @return Source Document BlueId
+         */
         public String getBlueId() {
             return blueId;
         }

@@ -20,7 +20,12 @@ public final class SourceDocumentBlueIdExample {
     private SourceDocumentBlueIdExample() {
     }
 
-    /** Runs preprocess, resolve, canonicalize, and then the direct identity path. */
+    /**
+     * Runs preprocess, resolve, canonicalize, and then the direct identity
+     * path.
+     *
+     * @return detached canonical input and the two equivalent BlueIds
+     */
     public static Result run() {
         // tag::source-document-blueid[]
         try (BlueLanguage language = BlueLanguage.builder().build()) {
@@ -45,7 +50,11 @@ public final class SourceDocumentBlueIdExample {
         // end::source-document-blueid[]
     }
 
-    /** Runs from a shell and prints the Source Document BlueId. */
+    /**
+     * Runs from a shell and prints the Source Document BlueId.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getSourceBlueId());
     }
@@ -65,14 +74,29 @@ public final class SourceDocumentBlueIdExample {
             this.directBlueId = directBlueId;
         }
 
+        /**
+         * Returns a detached canonical identity input.
+         *
+         * @return canonical input copy
+         */
         public Node getCanonical() {
             return canonical.clone();
         }
 
+        /**
+         * Returns the identity calculated from the authored Source Document.
+         *
+         * @return Source Document BlueId
+         */
         public String getSourceBlueId() {
             return sourceBlueId;
         }
 
+        /**
+         * Returns the identity calculated from the canonical direct input.
+         *
+         * @return direct canonical BlueId
+         */
         public String getDirectBlueId() {
             return directBlueId;
         }

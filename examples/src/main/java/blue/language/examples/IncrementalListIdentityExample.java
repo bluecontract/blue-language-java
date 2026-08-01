@@ -20,7 +20,11 @@ public final class IncrementalListIdentityExample {
     private IncrementalListIdentityExample() {
     }
 
-    /** Applies the normative recursive list fold without rehashing an unchanged prefix. */
+    /**
+     * Applies the normative recursive list fold without rehashing an unchanged prefix.
+     *
+     * @return the established and recomputed list identities
+     */
     public static Result run() {
         Node first = new Node().value(FIRST_VALUE);
         Node second = new Node().value(SECOND_VALUE);
@@ -61,7 +65,11 @@ public final class IncrementalListIdentityExample {
                 updatedCompleteBlueId);
     }
 
-    /** Runs from a shell and prints the appended list identity. */
+    /**
+     * Runs from a shell and prints the appended list identity.
+     *
+     * @param args command-line arguments, which this example ignores
+     */
     public static void main(String[] args) {
         System.out.println(run().getAppendedBlueId());
     }
@@ -84,18 +92,38 @@ public final class IncrementalListIdentityExample {
             this.updatedCompleteBlueId = updatedCompleteBlueId;
         }
 
+        /**
+         * Returns the identity of the established unchanged prefix.
+         *
+         * @return the prefix BlueId
+         */
         public String getPrefixBlueId() {
             return prefixBlueId;
         }
 
+        /**
+         * Returns the list identity produced by appending one element.
+         *
+         * @return the appended list BlueId
+         */
         public String getAppendedBlueId() {
             return appendedBlueId;
         }
 
+        /**
+         * Returns the list identity produced by recomputing the changed suffix.
+         *
+         * @return the suffix-recomputed list BlueId
+         */
         public String getRecomputedSuffixBlueId() {
             return recomputedSuffixBlueId;
         }
 
+        /**
+         * Returns the directly calculated identity of the updated complete list.
+         *
+         * @return the updated complete-list BlueId
+         */
         public String getUpdatedCompleteBlueId() {
             return updatedCompleteBlueId;
         }

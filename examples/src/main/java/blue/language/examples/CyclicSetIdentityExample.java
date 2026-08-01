@@ -26,7 +26,11 @@ public final class CyclicSetIdentityExample {
     private CyclicSetIdentityExample() {
     }
 
-    /** Calculates member BlueIds in caller order from indexed cycle placeholders. */
+    /**
+     * Calculates member BlueIds in caller order from indexed cycle placeholders.
+     *
+     * @return the released identities of both cyclic-set members in caller order
+     */
     public static Result run() {
         Node first = new Node()
                 .name(FIRST_NAME)
@@ -62,7 +66,11 @@ public final class CyclicSetIdentityExample {
         return INDEXED_THIS_PREFIX + index;
     }
 
-    /** Runs from a shell and prints both member identities in caller order. */
+    /**
+     * Runs from a shell and prints both member identities in caller order.
+     *
+     * @param args command-line arguments, which this example ignores
+     */
     public static void main(String[] args) {
         for (String memberBlueId : run().getMemberBlueIds()) {
             System.out.println(memberBlueId);
@@ -78,6 +86,11 @@ public final class CyclicSetIdentityExample {
                     new java.util.ArrayList<>(memberBlueIds));
         }
 
+        /**
+         * Returns the cyclic member BlueIds in the order supplied by the caller.
+         *
+         * @return an unmodifiable list of member BlueIds
+         */
         public List<String> getMemberBlueIds() {
             return memberBlueIds;
         }

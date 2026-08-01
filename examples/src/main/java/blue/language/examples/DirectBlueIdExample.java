@@ -17,7 +17,11 @@ public final class DirectBlueIdExample {
     private DirectBlueIdExample() {
     }
 
-    /** Runs the exact-input path without preprocessing or resolution. */
+    /**
+     * Runs the exact-input path without preprocessing or resolution.
+     *
+     * @return the identities calculated from the inline and wrapped inputs
+     */
     public static Result run() {
         try (BlueLanguage language = BlueLanguage.builder().build()) {
             Node inline = language.codec().parseBlueIdInput(
@@ -36,7 +40,11 @@ public final class DirectBlueIdExample {
         }
     }
 
-    /** Runs from a shell and prints the direct BlueId. */
+    /**
+     * Runs from a shell and prints the direct BlueId.
+     *
+     * @param args command-line arguments, which this example ignores
+     */
     public static void main(String[] args) {
         System.out.println(run().getInlineBlueId());
     }
@@ -51,10 +59,20 @@ public final class DirectBlueIdExample {
             this.wrappedBlueId = wrappedBlueId;
         }
 
+        /**
+         * Returns the BlueId calculated from the inline scalar input.
+         *
+         * @return the inline input's direct BlueId
+         */
         public String getInlineBlueId() {
             return inlineBlueId;
         }
 
+        /**
+         * Returns the BlueId calculated from the wrapped scalar input.
+         *
+         * @return the wrapped input's direct BlueId
+         */
         public String getWrappedBlueId() {
             return wrappedBlueId;
         }

@@ -14,7 +14,11 @@ public final class RuntimeChildGasLedgerExample {
     private RuntimeChildGasLedgerExample() {
     }
 
-    /** Runs deterministic hosted work and returns child and total gas. */
+    /**
+     * Runs deterministic hosted work and returns child and total gas.
+     *
+     * @return immutable child-ledger and PROCESS gas totals
+     */
     public static Result run() {
         // tag::runtime-child-gas-ledger[]
         ContractsExampleSupport.RuntimeWorkProcessor runtimeWork =
@@ -45,7 +49,11 @@ public final class RuntimeChildGasLedgerExample {
         // end::runtime-child-gas-ledger[]
     }
 
-    /** Runs from a shell and prints the exact runtime child subtotal. */
+    /**
+     * Runs from a shell and prints the exact runtime child subtotal.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getChildGas());
     }
@@ -60,10 +68,20 @@ public final class RuntimeChildGasLedgerExample {
             this.processGas = processGas;
         }
 
+        /**
+         * Returns the gas submitted from the hosted-runtime child ledger.
+         *
+         * @return child gas subtotal
+         */
         public long getChildGas() {
             return childGas;
         }
 
+        /**
+         * Returns total gas charged for the PROCESS invocation.
+         *
+         * @return PROCESS gas total
+         */
         public long getProcessGas() {
             return processGas;
         }

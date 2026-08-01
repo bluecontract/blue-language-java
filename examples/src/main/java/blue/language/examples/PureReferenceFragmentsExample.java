@@ -19,7 +19,11 @@ public final class PureReferenceFragmentsExample {
     private PureReferenceFragmentsExample() {
     }
 
-    /** Runs fragmented processing and reports every exact fetched identity. */
+    /**
+     * Runs fragmented processing and reports every exact fetched identity.
+     *
+     * @return immutable summary of the resolved references and output counter
+     */
     public static Result run() {
         // tag::pure-reference-fragments[]
         Node fragmentedRoot = ContractsExampleSupport
@@ -79,7 +83,11 @@ public final class PureReferenceFragmentsExample {
         // end::pure-reference-fragments[]
     }
 
-    /** Runs from a shell and prints the committed counter. */
+    /**
+     * Runs from a shell and prints the committed counter.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getCounter());
     }
@@ -103,18 +111,38 @@ public final class PureReferenceFragmentsExample {
                     new ArrayList<>(requestedBlueIds));
         }
 
+        /**
+         * Returns the exact identity used to fetch the Root.
+         *
+         * @return Root BlueId
+         */
         public String getRootBlueId() {
             return rootBlueId;
         }
 
+        /**
+         * Returns the exact identity used to fetch the event.
+         *
+         * @return event BlueId
+         */
         public String getEventBlueId() {
             return eventBlueId;
         }
 
+        /**
+         * Returns the counter committed by fragmented processing.
+         *
+         * @return committed counter value
+         */
         public BigInteger getCounter() {
             return counter;
         }
 
+        /**
+         * Returns the immutable provider request history.
+         *
+         * @return requested BlueIds in observation order
+         */
         public List<String> getRequestedBlueIds() {
             return requestedBlueIds;
         }

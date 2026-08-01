@@ -16,7 +16,11 @@ public final class ImmutableSnapshotExample {
     private ImmutableSnapshotExample() {
     }
 
-    /** Resolves one Source and proves later caller mutation cannot enter the snapshot. */
+    /**
+     * Resolves one Source and proves later caller mutation cannot enter the snapshot.
+     *
+     * @return the stable identity, frozen value, and independent mutable views
+     */
     public static Result run() {
         Node source = new Node().properties(
                 MESSAGE_FIELD, new Node().value(ORIGINAL_MESSAGE));
@@ -50,7 +54,11 @@ public final class ImmutableSnapshotExample {
         }
     }
 
-    /** Runs from a shell and prints the immutable snapshot identity. */
+    /**
+     * Runs from a shell and prints the immutable snapshot identity.
+     *
+     * @param args command-line arguments, which this example ignores
+     */
     public static void main(String[] args) {
         System.out.println(run().getBlueId());
     }
@@ -73,18 +81,38 @@ public final class ImmutableSnapshotExample {
             this.freshDetachedView = freshDetachedView;
         }
 
+        /**
+         * Returns the stable identity of the resolved snapshot.
+         *
+         * @return the resolved snapshot BlueId
+         */
         public String getBlueId() {
             return blueId;
         }
 
+        /**
+         * Returns the immutable message node retained by the snapshot.
+         *
+         * @return the frozen message node
+         */
         public FrozenNode getFrozenMessage() {
             return frozenMessage;
         }
 
+        /**
+         * Returns a copy of the detached view modified by the example.
+         *
+         * @return a mutable copy containing the caller's mutation
+         */
         public Node getMutatedDetachedView() {
             return mutatedDetachedView.clone();
         }
 
+        /**
+         * Returns a copy of a fresh detached view from the snapshot.
+         *
+         * @return a mutable copy containing the original snapshot value
+         */
         public Node getFreshDetachedView() {
             return freshDetachedView.clone();
         }

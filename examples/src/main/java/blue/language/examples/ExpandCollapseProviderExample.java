@@ -17,7 +17,11 @@ public final class ExpandCollapseProviderExample {
     private ExpandCollapseProviderExample() {
     }
 
-    /** Runs exact graph operations against a defensive in-memory provider. */
+    /**
+     * Runs exact graph operations against a defensive in-memory provider.
+     *
+     * @return the preserved identity and detached expanded and collapsed graphs
+     */
     public static Result run() {
         // tag::verified-provider[]
         Node exactContent = new Node().value(CONTENT_VALUE);
@@ -53,7 +57,11 @@ public final class ExpandCollapseProviderExample {
         // end::verified-provider[]
     }
 
-    /** Runs from a shell and prints the preserved identity. */
+    /**
+     * Runs from a shell and prints the preserved identity.
+     *
+     * @param args command-line arguments, which this example ignores
+     */
     public static void main(String[] args) {
         System.out.println(run().getBlueId());
     }
@@ -70,14 +78,29 @@ public final class ExpandCollapseProviderExample {
             this.collapsed = collapsed.clone();
         }
 
+        /**
+         * Returns the identity preserved by expansion and collapse.
+         *
+         * @return the referenced BlueId
+         */
         public String getBlueId() {
             return blueId;
         }
 
+        /**
+         * Returns a detached copy of the expanded graph.
+         *
+         * @return a mutable copy of the expanded graph
+         */
         public Node getExpanded() {
             return expanded.clone();
         }
 
+        /**
+         * Returns a detached copy of the collapsed reference.
+         *
+         * @return a mutable copy of the collapsed reference
+         */
         public Node getCollapsed() {
             return collapsed.clone();
         }

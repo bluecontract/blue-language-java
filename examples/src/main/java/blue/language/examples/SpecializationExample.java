@@ -13,7 +13,12 @@ public final class SpecializationExample {
     private SpecializationExample() {
     }
 
-    /** Specializes Text while demonstrating that specialization is not expansion. */
+    /**
+     * Specializes Text while demonstrating that specialization is not
+     * expansion.
+     *
+     * @return detached specialization, its identity, and unchanged overlay
+     */
     public static Result run() {
         try (BlueLanguage language = BlueLanguage.builder().build()) {
             Node type = ExampleSupport.reference(TEXT_TYPE_BLUE_ID);
@@ -37,7 +42,11 @@ public final class SpecializationExample {
         }
     }
 
-    /** Runs from a shell and prints the new specialization identity. */
+    /**
+     * Runs from a shell and prints the new specialization identity.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getSpecializationBlueId());
     }
@@ -57,14 +66,29 @@ public final class SpecializationExample {
             this.originalOverlay = originalOverlay.clone();
         }
 
+        /**
+         * Returns a detached specialized node.
+         *
+         * @return specialization copy
+         */
         public Node getSpecialization() {
             return specialization.clone();
         }
 
+        /**
+         * Returns the Source Document identity of the specialization.
+         *
+         * @return specialization BlueId
+         */
         public String getSpecializationBlueId() {
             return specializationBlueId;
         }
 
+        /**
+         * Returns a detached copy of the unchanged overlay input.
+         *
+         * @return original overlay copy
+         */
         public Node getOriginalOverlay() {
             return originalOverlay.clone();
         }

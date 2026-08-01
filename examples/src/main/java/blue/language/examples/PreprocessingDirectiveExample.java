@@ -35,7 +35,12 @@ public final class PreprocessingDirectiveExample {
     private PreprocessingDirectiveExample() {
     }
 
-    /** Resolves the complete directive, removes it, runs both steps, then normalizes. */
+    /**
+     * Resolves the complete directive, removes it, runs both steps, then
+     * normalizes.
+     *
+     * @return detached preprocessing output, execution order, and source
+     */
     public static Result run() {
         Node firstType = new Node().name("Append first preprocessing suffix");
         Node secondType = new Node().name("Append second preprocessing suffix");
@@ -120,7 +125,11 @@ public final class PreprocessingDirectiveExample {
         };
     }
 
-    /** Runs from a shell and prints the final normalized scalar. */
+    /**
+     * Runs from a shell and prints the final normalized scalar.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getPreprocessed().getValue());
     }
@@ -141,14 +150,29 @@ public final class PreprocessingDirectiveExample {
             this.source = source.clone();
         }
 
+        /**
+         * Returns a detached copy of the preprocessed document.
+         *
+         * @return preprocessed document copy
+         */
         public Node getPreprocessed() {
             return preprocessed.clone();
         }
 
+        /**
+         * Returns the immutable transformation execution order.
+         *
+         * @return ordered transformation step names
+         */
         public List<String> getExecutionOrder() {
             return executionOrder;
         }
 
+        /**
+         * Returns a detached copy of the unchanged authored source.
+         *
+         * @return original source copy
+         */
         public Node getSource() {
             return source.clone();
         }

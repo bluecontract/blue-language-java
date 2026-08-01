@@ -13,7 +13,11 @@ public final class CustomExternalChannelExample {
     private CustomExternalChannelExample() {
     }
 
-    /** Runs one exact external delivery and returns its committed counter. */
+    /**
+     * Runs one exact external delivery and returns its committed counter.
+     *
+     * @return the committed counter, processor status, gas total, and channel keys
+     */
     public static Result run() {
         // tag::custom-external-channel-handler[]
         ContractsExampleSupport.RuntimeWorkProcessor unusedRuntimeWork =
@@ -52,7 +56,11 @@ public final class CustomExternalChannelExample {
         // end::custom-external-channel-handler[]
     }
 
-    /** Runs from a shell and prints the committed counter. */
+    /**
+     * Runs from a shell and prints the committed counter.
+     *
+     * @param args command-line arguments, which this example ignores
+     */
     public static void main(String[] args) {
         System.out.println(run().getCounter());
     }
@@ -78,22 +86,47 @@ public final class CustomExternalChannelExample {
             this.handlerChannelKey = handlerChannelKey;
         }
 
+        /**
+         * Returns the counter committed by the custom handler.
+         *
+         * @return the committed counter
+         */
         public BigInteger getCounter() {
             return counter;
         }
 
+        /**
+         * Returns the final processor status.
+         *
+         * @return the final processor status
+         */
         public ProcessorStatus getStatus() {
             return status;
         }
 
+        /**
+         * Returns the gas consumed by the delivery.
+         *
+         * @return the total consumed gas
+         */
         public long getTotalGas() {
             return totalGas;
         }
 
+        /**
+         * Returns the key of the channel that accepted the event.
+         *
+         * @return the source channel key
+         */
         public String getSourceChannelKey() {
             return sourceChannelKey;
         }
 
+        /**
+         * Returns the key of the channel targeted by the handler.
+         *
+         * @return the handler channel key
+         */
         public String getHandlerChannelKey() {
             return handlerChannelKey;
         }

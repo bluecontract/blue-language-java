@@ -11,7 +11,11 @@ public final class RootOnlyEventsExample {
     private RootOnlyEventsExample() {
     }
 
-    /** Processes one child delivery and one Root delivery. */
+    /**
+     * Processes one child delivery and one Root delivery.
+     *
+     * @return immutable summary of internal and externally visible events
+     */
     public static Result run() {
         // tag::root-only-events[]
         Node root = ContractsExampleSupport
@@ -55,7 +59,11 @@ public final class RootOnlyEventsExample {
         // end::root-only-events[]
     }
 
-    /** Runs from a shell and prints the number of returned Root events. */
+    /**
+     * Runs from a shell and prints the number of returned Root events.
+     *
+     * @param args ignored command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println(run().getRootEventCount());
     }
@@ -75,14 +83,29 @@ public final class RootOnlyEventsExample {
             this.publicEventOrigin = publicEventOrigin;
         }
 
+        /**
+         * Returns the number of child-scope events exposed by PROCESS.
+         *
+         * @return child-scope event count
+         */
         public int getChildEventCount() {
             return childEventCount;
         }
 
+        /**
+         * Returns the number of Root-scope events exposed by PROCESS.
+         *
+         * @return Root-scope event count
+         */
         public int getRootEventCount() {
             return rootEventCount;
         }
 
+        /**
+         * Returns the scope origin recorded on the public event.
+         *
+         * @return public event origin path
+         */
         public String getPublicEventOrigin() {
             return publicEventOrigin;
         }

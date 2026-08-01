@@ -35,7 +35,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-/** Shared exact runtime types and feeder evidence for Contracts examples. */
+/**
+ * Supplies the exact runtime types, processors, and deterministic fixture
+ * documents used by the runnable Contracts examples.
+ */
 public final class ContractsExampleSupport {
 
     static final String SOURCE_CHANNEL_KEY = "incoming";
@@ -515,41 +518,89 @@ public final class ContractsExampleSupport {
         return new Node().name(type.getSimpleName());
     }
 
-    /** Minimal custom External Channel model. */
+    /**
+     * Minimal External Channel model whose subscription value becomes the
+     * channel's external subscription key.
+     */
     public static final class ExampleExternalChannel
             extends ChannelContract {
         private String subscription;
 
+        /** Creates an External Channel model with no subscription assigned. */
+        public ExampleExternalChannel() {
+        }
+
+        /**
+         * Returns the external subscription key carried by this model.
+         *
+         * @return external subscription key, or {@code null} when unset
+         */
         public String getSubscription() {
             return subscription;
         }
 
+        /**
+         * Assigns the external subscription key carried by this model.
+         *
+         * @param subscription external subscription key, or {@code null} to
+         *                     clear it
+         */
         public void setSubscription(String subscription) {
             this.subscription = subscription;
         }
     }
 
-    /** Handler model that adds an event amount to one Root path. */
+    /**
+     * Handler model that adds the current event's amount to a document path.
+     */
     public static final class AddAmount extends HandlerContract {
         private String counterPath;
 
+        /** Creates an add-amount Handler with no counter path assigned. */
+        public AddAmount() {
+        }
+
+        /**
+         * Returns the document pointer whose numeric value is incremented.
+         *
+         * @return document pointer, or {@code null} when unset
+         */
         public String getCounterPath() {
             return counterPath;
         }
 
+        /**
+         * Assigns the document pointer whose numeric value is incremented.
+         *
+         * @param counterPath document pointer, or {@code null} to clear it
+         */
         public void setCounterPath(String counterPath) {
             this.counterPath = counterPath;
         }
     }
 
-    /** Handler model that emits one scope-local application event. */
+    /** Handler model that emits one labeled, scope-local application event. */
     public static final class EmitApplicationEvent extends HandlerContract {
         private String label;
 
+        /** Creates an event-emitting Handler with no label assigned. */
+        public EmitApplicationEvent() {
+        }
+
+        /**
+         * Returns the label copied to the emitted application event.
+         *
+         * @return event label, or {@code null} when unset
+         */
         public String getLabel() {
             return label;
         }
 
+        /**
+         * Assigns the label copied to the emitted application event.
+         *
+         * @param label event label, or {@code null} to clear it
+         */
         public void setLabel(String label) {
             this.label = label;
         }
@@ -559,22 +610,45 @@ public final class ContractsExampleSupport {
     public static final class ChargeRuntimeWork extends HandlerContract {
         private BigInteger units;
 
+        /** Creates a runtime-work Handler with no unit count assigned. */
+        public ChargeRuntimeWork() {
+        }
+
+        /**
+         * Returns the number of hosted-runtime work units to charge.
+         *
+         * @return work-unit count, or {@code null} when unset
+         */
         public BigInteger getUnits() {
             return units;
         }
 
+        /**
+         * Assigns the number of hosted-runtime work units to charge.
+         *
+         * @param units work-unit count, or {@code null} to clear it
+         */
         public void setUnits(BigInteger units) {
             this.units = units;
         }
     }
 
-    /** Exact Channel implementation used by the runnable examples. */
+    /**
+     * Exact Channel processor that exposes the example subscription surface
+     * and accepts each event selected by the delivery plan.
+     */
     public static final class ExampleExternalChannelProcessor
             implements ChannelProcessor<ExampleExternalChannel> {
         private static final ExternalChannelSubscriptionFunctions<
                 ExampleExternalChannel> SUBSCRIPTIONS =
                 new ExternalChannelSubscriptionFunctions<
                         ExampleExternalChannel>() {
+                    /**
+                     * Returns the single subscription key on the contract.
+                     *
+                     * @param contract immutable example Channel contract
+                     * @return singleton list containing its subscription key
+                     */
                     @Override
                     public List<String> channelKeys(
                             ExampleExternalChannel contract) {
@@ -582,6 +656,14 @@ public final class ContractsExampleSupport {
                                 contract.getSubscription());
                     }
 
+                    /**
+                     * Declares the same-scope Handler channel dependency and
+                     * returns the contract's subscription key.
+                     *
+                     * @param contract immutable example Channel contract
+                     * @param context dependency-recording function context
+                     * @return singleton list containing the subscription key
+                     */
                     @Override
                     public List<String> channelKeys(
                             ExampleExternalChannel contract,
@@ -594,12 +676,28 @@ public final class ContractsExampleSupport {
                         return channelKeys(contract);
                     }
 
+                    /**
+                     * Returns no additional checkpoint-domain discriminator.
+                     *
+                     * @param contract immutable example Channel contract
+                     * @return always {@code null}
+                     */
                     @Override
                     public String checkpointDomainDiscriminator(
                             ExampleExternalChannel contract) {
                         return null;
                     }
 
+                    /**
+                     * Routes each accepted occurrence to the example Handler
+                     * channel.
+                     *
+                     * @param contract immutable example Channel contract
+                     * @param event delivered event
+                     * @param payload payload produced by Channel evaluation
+                     * @param context immutable function context
+                     * @return the fixed Handler channel key
+                     */
                     @Override
                     public String handlerChannelKey(
                             ExampleExternalChannel contract,
@@ -610,17 +708,39 @@ public final class ContractsExampleSupport {
                     }
                 };
 
+        /** Creates the stateless example External Channel processor. */
+        public ExampleExternalChannelProcessor() {
+        }
+
+        /**
+         * Returns the exact contract model handled by this processor.
+         *
+         * @return example External Channel model class
+         */
         @Override
         public Class<ExampleExternalChannel> contractType() {
             return ExampleExternalChannel.class;
         }
 
+        /**
+         * Returns the immutable functions used to derive subscriptions and
+         * route matching occurrences.
+         *
+         * @return example External Channel subscription functions
+         */
         @Override
         public ExternalChannelSubscriptionFunctions<
                 ExampleExternalChannel> externalSubscriptionFunctions() {
             return SUBSCRIPTIONS;
         }
 
+        /**
+         * Accepts every event selected for this Channel by the delivery plan.
+         *
+         * @param contract immutable example Channel contract
+         * @param context immutable Channel evaluation context
+         * @return always {@code true}
+         */
         @Override
         public boolean matches(
                 ExampleExternalChannel contract,
@@ -629,14 +749,30 @@ public final class ContractsExampleSupport {
         }
     }
 
-    /** Exact Handler implementation that buffers one counter patch. */
+    /** Exact Handler processor that buffers one counter-replacement patch. */
     public static final class AddAmountProcessor
             implements HandlerProcessor<AddAmount> {
+        /** Creates the stateless add-amount Handler processor. */
+        public AddAmountProcessor() {
+        }
+
+        /**
+         * Returns the exact contract model handled by this processor.
+         *
+         * @return add-amount Handler model class
+         */
         @Override
         public Class<AddAmount> contractType() {
             return AddAmount.class;
         }
 
+        /**
+         * Adds the event amount to the configured counter and buffers the
+         * resulting replacement patch.
+         *
+         * @param contract immutable add-amount Handler contract
+         * @param context invocation-local execution context
+         */
         @Override
         public void execute(
                 AddAmount contract,
@@ -656,14 +792,30 @@ public final class ContractsExampleSupport {
         }
     }
 
-    /** Exact Handler implementation that buffers one application event. */
+    /** Exact Handler processor that buffers one labeled application event. */
     public static final class EmitApplicationEventProcessor
             implements HandlerProcessor<EmitApplicationEvent> {
+        /** Creates the stateless application-event Handler processor. */
+        public EmitApplicationEventProcessor() {
+        }
+
+        /**
+         * Returns the exact contract model handled by this processor.
+         *
+         * @return application-event Handler model class
+         */
         @Override
         public Class<EmitApplicationEvent> contractType() {
             return EmitApplicationEvent.class;
         }
 
+        /**
+         * Buffers an application event containing the configured label and
+         * current scope path.
+         *
+         * @param contract immutable event-emitting Handler contract
+         * @param context invocation-local execution context
+         */
         @Override
         public void execute(
                 EmitApplicationEvent contract,
@@ -676,16 +828,35 @@ public final class ContractsExampleSupport {
         }
     }
 
-    /** Exact Handler implementation with an invocation-owned child ledger. */
+    /**
+     * Exact Handler processor that records hosted work in an invocation-owned
+     * child gas ledger.
+     */
     public static final class RuntimeWorkProcessor
             implements HandlerProcessor<ChargeRuntimeWork> {
         private final AtomicLong lastChildGas = new AtomicLong();
 
+        /** Creates a runtime-work processor with a zero latest subtotal. */
+        public RuntimeWorkProcessor() {
+        }
+
+        /**
+         * Returns the exact contract model handled by this processor.
+         *
+         * @return runtime-work Handler model class
+         */
         @Override
         public Class<ChargeRuntimeWork> contractType() {
             return ChargeRuntimeWork.class;
         }
 
+        /**
+         * Charges the requested work units to a child ledger and submits that
+         * ledger to the invocation.
+         *
+         * @param contract immutable runtime-work Handler contract
+         * @param context invocation-local execution context
+         */
         @Override
         public void execute(
                 ChargeRuntimeWork contract,
@@ -702,7 +873,11 @@ public final class ContractsExampleSupport {
             context.submitRuntimeGasLedger(ledger);
         }
 
-        /** Returns the exact subtotal admitted by the latest child ledger. */
+        /**
+         * Returns the exact subtotal admitted by the latest child ledger.
+         *
+         * @return latest admitted child-ledger gas subtotal
+         */
         public long lastChildGas() {
             return lastChildGas.get();
         }
