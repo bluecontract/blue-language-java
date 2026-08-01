@@ -55,7 +55,7 @@ public final class WorkingDocument implements AutoCloseable {
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final boolean exactReplacement;
     private final PatchSource mutablePatchSource;
-    private final ProcessingMetricsSink metrics;
+    private final ProcessingObserver metrics;
     private final Set<String> openedScopePaths;
     private final Map<String, List<String>>
             executableBodyFieldsByType;
@@ -74,7 +74,7 @@ public final class WorkingDocument implements AutoCloseable {
                     boolean materializedFallback,
                     boolean exactReplacement,
                     PatchSource mutablePatchSource,
-                    ProcessingMetricsSink metrics) {
+                    ProcessingObserver metrics) {
         this(originScope,
                 canonicalRoot,
                 resolvedRoot,
@@ -102,7 +102,7 @@ public final class WorkingDocument implements AutoCloseable {
                     boolean materializedFallback,
                     boolean exactReplacement,
                     PatchSource mutablePatchSource,
-                    ProcessingMetricsSink metrics,
+                    ProcessingObserver metrics,
                     Iterable<String> openedScopePaths,
                     Map<String, List<String>>
                             executableBodyFieldsByType,
@@ -119,7 +119,7 @@ public final class WorkingDocument implements AutoCloseable {
         this.mutablePatchSource = mutablePatchSource != null
                 ? mutablePatchSource
                 : PatchSource.UNKNOWN_INTERNAL;
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
         this.openedScopePaths =
                 immutableScopePaths(openedScopePaths);
         this.executableBodyFieldsByType =
@@ -639,7 +639,7 @@ public final class WorkingDocument implements AutoCloseable {
                 return false;
             }
             ImmutableJsonPatch.PreparationContext preparation =
-                    ImmutableJsonPatch.preparationContext(ProcessingMetricsSink.NOOP);
+                    ImmutableJsonPatch.preparationContext(NoOpProcessingObserver.INSTANCE);
             return patch.matches(candidate.prepare(preparation, baseCanonical, baseResolved));
         }
 

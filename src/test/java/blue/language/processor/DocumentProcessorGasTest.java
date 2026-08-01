@@ -1026,8 +1026,8 @@ final class DocumentProcessorExactFeederSupport {
                         current.getContractTypeResolver())
                 .withMatchingService(
                         new ContractMatchingService(blue))
-                .withProcessingMetricsSink(
-                        current.processingMetricsSink())
+                .observer(
+                        current.processingObserver())
                 .withGasSchedule(current.gasSchedule())
                 .withRuntimeRegistryIdentity(
                         current.runtimeRegistryIdentity())
@@ -1103,8 +1103,8 @@ final class DocumentProcessorExactFeederSupport {
                                                 emptyList())
                         .exactRuntimeState();
 
-        ProcessorEngine.Execution inspection =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState inspection =
+                new ProcessorInvocationState(
                         owner, root.clone());
         Deque<String> pending = new ArrayDeque<>();
         List<String> visited = new ArrayList<>();

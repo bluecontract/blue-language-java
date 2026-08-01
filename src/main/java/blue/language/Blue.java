@@ -23,7 +23,12 @@ import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExecutionEvidenceUnavailableException;
 import blue.language.processor.InvalidExecutionEvidenceException;
-import blue.language.processor.ProcessingMetricsSink;
+import blue.language.processor.NoOpProcessingObserver;
+import blue.language.processor.ProcessingMetricId;
+import blue.language.processor.ProcessingObservation;
+import blue.language.processor.ProcessingObservationContext;
+import blue.language.processor.ProcessingObservationDimension;
+import blue.language.processor.ProcessingObserver;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
@@ -70,6 +75,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -132,7 +138,8 @@ public class Blue implements NodeResolver,
     private final ThreadLocal<CacheGenerationStamp> activeProcessingCacheStamp =
             new ThreadLocal<>();
     private final ThreadLocal<Integer> directCacheOperationDepth = new ThreadLocal<>();
-    private volatile ProcessingMetricsSink lifecycleMetricsSink = ProcessingMetricsSink.NOOP;
+    private volatile ProcessingObserver lifecycleObserver =
+            NoOpProcessingObserver.INSTANCE;
     private volatile boolean closed;
     private volatile boolean closeInProgress;
     private Thread closingThread;
@@ -999,7 +1006,7 @@ public class Blue implements NodeResolver,
      */
     public void clearResolvedSnapshotCache() {
         DocumentProcessor ownedProcessor;
-        ProcessingMetricsSink metrics;
+        ProcessingObserver observer;
         CacheGaugeSnapshot gauges;
         synchronized (lifecycleLock) {
             beginCacheInvalidation();
@@ -1012,7 +1019,7 @@ public class Blue implements NodeResolver,
             synchronized (lifecycleLock) {
                 ensureOpen();
                 clearAllRuntimeCaches();
-                metrics = metricsSink();
+                observer = processingObserver();
                 gauges = captureCacheGauges();
                 endCacheInvalidation();
             }
@@ -1022,7 +1029,7 @@ public class Blue implements NodeResolver,
             }
             throw exception;
         }
-        gauges.emit(metrics);
+        gauges.emit(observer);
     }
 
     /**
@@ -1832,12 +1839,11 @@ public class Blue implements NodeResolver,
         if (processor == null) {
             throw new IllegalArgumentException("processor must not be null");
         }
-        DocumentProcessor target = beginDocumentProcessorMutation();
-        try {
-            target.registerContractProcessor(processor);
-        } finally {
-            endDocumentProcessorMutation();
-        }
+        ConfigurationRefresh refresh = refreshDocumentProcessorGeneration(
+                builder -> builder.registerContractProcessor(processor),
+                () -> { });
+        closeProcessor(refresh.processorToClose);
+        refresh.gauges.emit(refresh.metrics);
         return this;
     }
 
@@ -1855,12 +1861,11 @@ public class Blue implements NodeResolver,
         if (processor == null) {
             throw new IllegalArgumentException("processor must not be null");
         }
-        DocumentProcessor target = beginDocumentProcessorMutation();
-        try {
-            target.registerContractProcessor(blueId, processor);
-        } finally {
-            endDocumentProcessorMutation();
-        }
+        ConfigurationRefresh refresh = refreshDocumentProcessorGeneration(
+                builder -> builder.registerContractProcessor(blueId, processor),
+                () -> { });
+        closeProcessor(refresh.processorToClose);
+        refresh.gauges.emit(refresh.metrics);
         return this;
     }
 
@@ -1888,24 +1893,14 @@ public class Blue implements NodeResolver,
             throw new IllegalArgumentException("processor must not be null");
         }
         Node validatedCanonicalType = validatedExternalTypeNode(blueId, canonicalTypeNode);
-        DocumentProcessor target = beginDocumentProcessorMutation();
-        ProcessingMetricsSink metrics;
-        CacheGaugeSnapshot gauges;
-        try {
-            target.registerContractProcessor(
-                    blueId, validatedCanonicalType, processor);
-            synchronized (lifecycleLock) {
+        ConfigurationRefresh refresh = refreshDocumentProcessorGeneration(
+                builder -> builder.registerContractProcessor(
+                        blueId, validatedCanonicalType, processor),
+                () -> {
                 externalContractTypeNodes.put(blueId, validatedCanonicalType);
-                // The extension provider is consulted by snapshot resolution. Any
-                // unresolved/false result produced before registration is stale.
-                clearReloadableRuntimeCaches();
-                metrics = metricsSink();
-                gauges = captureCacheGauges();
-            }
-        } finally {
-            endDocumentProcessorMutation();
-        }
-        gauges.emit(metrics);
+                });
+        closeProcessor(refresh.processorToClose);
+        refresh.gauges.emit(refresh.metrics);
         return this;
     }
 
@@ -1931,7 +1926,10 @@ public class Blue implements NodeResolver,
                     operation, processor.processDocument(document, event));
         } finally {
             try {
-                processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
+                recordObservation(
+                        processor.processingObserver(),
+                        ProcessingMetricId.BLUE_PROCESS_DOCUMENT_NANOS,
+                        System.nanoTime() - start);
             } finally {
                 finishProcessingOperation(previousStamp);
             }
@@ -1958,7 +1956,10 @@ public class Blue implements NodeResolver,
                     processor.processDocument(snapshot, event));
         } finally {
             try {
-                processor.processingMetricsSink().addBlueProcessDocumentNanos(System.nanoTime() - start);
+                recordObservation(
+                        processor.processingObserver(),
+                        ProcessingMetricId.BLUE_PROCESS_DOCUMENT_NANOS,
+                        System.nanoTime() - start);
             } finally {
                 finishProcessingOperation(previousStamp);
             }
@@ -1980,6 +1981,25 @@ public class Blue implements NodeResolver,
             ensureOpen();
             return ensureDocumentProcessor();
         }
+    }
+
+    /**
+     * Installs an observer on a new immutable processor generation.
+     *
+     * <p>The observer is operational only: its failures are isolated and it
+     * cannot affect processing results, diagnostics, gas, or cache admission.</p>
+     *
+     * @param observer non-null typed processing observer
+     * @return this runtime
+     */
+    public Blue processingObserver(ProcessingObserver observer) {
+        Objects.requireNonNull(observer, "observer");
+        ConfigurationRefresh refresh = refreshDocumentProcessorGeneration(
+                builder -> builder.observer(observer),
+                () -> { });
+        closeProcessor(refresh.processorToClose);
+        refresh.gauges.emit(refresh.metrics);
+        return this;
     }
 
     /**
@@ -2308,6 +2328,40 @@ public class Blue implements NodeResolver,
         }
     }
 
+    /**
+     * Builds and atomically installs one immutable processor successor while
+     * runtime work is excluded from the configuration handoff.
+     */
+    private ConfigurationRefresh refreshDocumentProcessorGeneration(
+            Consumer<DocumentProcessor.Builder> configurationMutation,
+            Runnable runtimeMutation) {
+        DocumentProcessor previous = beginDocumentProcessorMutation();
+        boolean previousOwned;
+        synchronized (lifecycleLock) {
+            previousOwned = documentProcessorOwned;
+        }
+        try {
+            DocumentProcessor.Builder builder =
+                    DocumentProcessor.Builder.from(previous);
+            configurationMutation.accept(builder);
+            DocumentProcessor replacement = builder
+                    .withMatchingService(new ContractMatchingService(this))
+                    .build();
+            synchronized (lifecycleLock) {
+                runtimeMutation.run();
+                documentProcessor = replacement;
+                documentProcessorOwned = true;
+                clearReloadableRuntimeCaches();
+                return new ConfigurationRefresh(
+                        previousOwned ? previous : null,
+                        replacement.processingObserver(),
+                        captureCacheGauges());
+            }
+        } finally {
+            endDocumentProcessorMutation();
+        }
+    }
+
     private ProcessingOperation beginProcessingOperation() {
         synchronized (lifecycleLock) {
             CacheGenerationStamp activeStamp = activeProcessingCacheStamp.get();
@@ -2528,7 +2582,7 @@ public class Blue implements NodeResolver,
     }
 
     private ResolvedSnapshot cachedProcessingSnapshotFor(Node document,
-                                                         ProcessingMetricsSink metrics,
+                                                         ProcessingObserver observer,
                                                          CacheGenerationStamp stamp) {
         if (document == null) {
             return null;
@@ -2537,18 +2591,30 @@ public class Blue implements NodeResolver,
         try {
             FrozenNode.ResolvedStructuralKey selectedKey = selectedStructuralKey(document);
             if (selectedKey == null) {
-                metrics.incrementProcessingSnapshotCacheMisses();
+                recordObservation(
+                        observer,
+                        ProcessingMetricId.PROCESSING_SNAPSHOT_CACHE_MISSES,
+                        1L);
                 return null;
             }
             ResolvedSnapshot cached = recentProcessingSnapshot(selectedKey, stamp);
             if (cached != null) {
-                metrics.incrementProcessingSnapshotCacheHits();
+                recordObservation(
+                        observer,
+                        ProcessingMetricId.PROCESSING_SNAPSHOT_CACHE_HITS,
+                        1L);
                 return cached;
             }
-            metrics.incrementProcessingSnapshotCacheMisses();
+            recordObservation(
+                    observer,
+                    ProcessingMetricId.PROCESSING_SNAPSHOT_CACHE_MISSES,
+                    1L);
             return null;
         } finally {
-            metrics.addProcessingSnapshotCacheLookupNanos(System.nanoTime() - start);
+            recordObservation(
+                    observer,
+                    ProcessingMetricId.PROCESSING_SNAPSHOT_CACHE_LOOKUP_NANOS,
+                    System.nanoTime() - start);
         }
     }
 
@@ -2581,7 +2647,7 @@ public class Blue implements NodeResolver,
             return;
         }
         CacheMutationMetrics mutation;
-        ProcessingMetricsSink metrics;
+        ProcessingObserver observer;
         synchronized (lifecycleLock) {
             if (!isCurrentCacheStampLocked(stamp)) {
                 return;
@@ -2593,9 +2659,9 @@ public class Blue implements NodeResolver,
                     recentProcessingDocumentSnapshots,
                     evictionsBefore,
                     oversizedBefore);
-            metrics = metricsSink();
+            observer = processingObserver();
         }
-        mutation.emit(metrics);
+        mutation.emit(observer);
     }
 
     /** Swaps the processor while holding lifecycleLock and returns only owned state to close. */
@@ -2610,11 +2676,10 @@ public class Blue implements NodeResolver,
             Map<String, String> capturedAliases = Collections.unmodifiableMap(
                     new HashMap<>(preprocessingAliases));
             Limits capturedLimits = globalLimits;
-            documentProcessor = new DocumentProcessor(previous.getContractRegistry(),
-                    previous.getContractTypeResolver(),
-                    processorConformanceEngine(
-                            capturedSnapshotProvider, capturedMergingProcessor),
-                    new BlueProcessingSnapshotManager(
+            documentProcessor = DocumentProcessor.Builder.from(previous)
+                    .withConformanceEngine(processorConformanceEngine(
+                            capturedSnapshotProvider, capturedMergingProcessor))
+                    .withSnapshotManager(new BlueProcessingSnapshotManager(
                             ownerToken,
                             capturedPreprocessingProvider,
                             capturedSnapshotProvider,
@@ -2622,9 +2687,9 @@ public class Blue implements NodeResolver,
                             capturedAliases,
                             capturedLimits,
                             null,
-                            null),
-                    new ContractMatchingService(this),
-                    previous.processingMetricsSink());
+                            null))
+                    .withMatchingService(new ContractMatchingService(this))
+                    .build();
             documentProcessorOwned = true;
             return previousOwned ? previous : null;
         }
@@ -2645,7 +2710,7 @@ public class Blue implements NodeResolver,
                         ? refreshDocumentProcessorConformanceEngine()
                         : null;
                 return new ConfigurationRefresh(
-                        processorToClose, metricsSink(), captureCacheGauges());
+                        processorToClose, processingObserver(), captureCacheGauges());
             } finally {
                 endCacheInvalidation();
             }
@@ -2712,11 +2777,11 @@ public class Blue implements NodeResolver,
             return local;
         }
 
-        private ProcessingMetricsSink processingMetrics() {
+        private ProcessingObserver processingObserver() {
             synchronized (lifecycleLock) {
                 return processorOwnerToken == ownerToken && documentProcessor != null
-                        ? documentProcessor.processingMetricsSink()
-                        : ProcessingMetricsSink.NOOP;
+                        ? documentProcessor.processingObserver()
+                        : NoOpProcessingObserver.INSTANCE;
             }
         }
 
@@ -2724,7 +2789,7 @@ public class Blue implements NodeResolver,
         public ResolvedSnapshot fromDocument(Node document) {
             CacheGenerationStamp stamp = operationStamp();
             ResolvedSnapshot cached = cachedProcessingSnapshotFor(
-                    document, processingMetrics(), stamp);
+                    document, processingObserver(), stamp);
             if (cached != null) {
                 return cached;
             }
@@ -2756,7 +2821,7 @@ public class Blue implements NodeResolver,
         public ResolvedSnapshot fromDocumentTransient(Node document) {
             CacheGenerationStamp stamp = operationStamp();
             ResolvedSnapshot cached = cachedProcessingSnapshotFor(
-                    document, processingMetrics(), stamp);
+                    document, processingObserver(), stamp);
             if (cached != null) {
                 return cached;
             }
@@ -3401,7 +3466,7 @@ public class Blue implements NodeResolver,
                     result.verifiedReferenceResolution());
         }
         return new CacheSnapshotPublication(result,
-                metricsSink(),
+                processingObserver(),
                 derivedMutation,
                 aliasMutation,
                 gauges);
@@ -3421,7 +3486,7 @@ public class Blue implements NodeResolver,
                     && !transientReferenceCache.isCurrentGeneration()) {
                 return snapshot;
             }
-            snapshot = publishableCacheSnapshot(snapshot, metricsSink());
+            snapshot = publishableCacheSnapshot(snapshot, processingObserver());
             if (transientReferenceCache != null) {
                 transientReferenceCache.promoteReferencesReachableFrom(
                         snapshot.frozenCanonicalRoot());
@@ -3447,7 +3512,7 @@ public class Blue implements NodeResolver,
                 snapshot.frozenCanonicalRoot().resolvedStructuralKey();
         ResolvedSnapshot selected;
         CacheGaugeSnapshot gauges;
-        ProcessingMetricsSink metrics;
+        ProcessingObserver observer;
         synchronized (lifecycleLock) {
             ensureOpen();
             ResolvedSnapshot pinned = pinnedSnapshotsByCanonicalRepresentation.get(key);
@@ -3472,36 +3537,48 @@ public class Blue implements NodeResolver,
                 derivedSnapshotsByBlueId.remove(selected.blueId());
             }
             gauges = captureCacheGauges();
-            metrics = metricsSink();
+            observer = processingObserver();
         }
         if (selected.verifiedReferenceResolution() != null) {
             resolvedReferenceCache.putPinnedVerifiedResolved(
                     selected.verifiedReferenceResolution());
         }
-        gauges.emit(metrics);
+        gauges.emit(observer);
     }
 
     private ResolvedSnapshot publishableCacheSnapshot(ResolvedSnapshot snapshot) {
         return publishableCacheSnapshot(snapshot, null);
     }
 
-    private ResolvedSnapshot publishableCacheSnapshot(ResolvedSnapshot snapshot,
-                                                      ProcessingMetricsSink metrics) {
+    private ResolvedSnapshot publishableCacheSnapshot(
+            ResolvedSnapshot snapshot,
+            ProcessingObserver observer) {
         Objects.requireNonNull(snapshot, "snapshot");
         FrozenNode canonicalRoot = snapshot.frozenCanonicalRoot();
         if (canonicalRoot.isStrictCanonical()
                 && canonicalRoot.isStrictBlueIdValidation()) {
             return snapshot;
         }
-        if (metrics != null) {
-            metrics.incrementProcessorPublicationCanonicalizations();
-            metrics.incrementProcessorPublicationCanonicalMaterializations();
-            metrics.incrementProcessorPublicationStrictBlueIdCalculations();
+        if (observer != null) {
+            recordObservation(
+                    observer,
+                    ProcessingMetricId.PROCESSOR_PUBLICATION_CANONICALIZATIONS,
+                    1L);
+            recordObservation(
+                    observer,
+                    ProcessingMetricId.PROCESSOR_PUBLICATION_CANONICAL_MATERIALIZATIONS,
+                    1L);
+            recordObservation(
+                    observer,
+                    ProcessingMetricId.PROCESSOR_PUBLICATION_STRICT_BLUE_ID_CALCULATIONS,
+                    1L);
             long canonicalizationStart = System.nanoTime();
             try {
                 return snapshot.toStrictBlueIdValidatedCanonical();
             } finally {
-                metrics.addProcessorPublicationCanonicalizationNanos(
+                recordObservation(
+                        observer,
+                        ProcessingMetricId.PROCESSOR_PUBLICATION_CANONICALIZATION_NANOS,
                         Math.max(1L, System.nanoTime() - canonicalizationStart));
             }
         }
@@ -3541,14 +3618,26 @@ public class Blue implements NodeResolver,
         ensureOpen();
         ResolvedSnapshot pinned = pinnedSnapshotsByCanonicalRepresentation.get(key);
         if (pinned != null) {
-            metricsSink().incrementCacheHits(PINNED_SNAPSHOT_CACHE);
+            recordCacheObservation(
+                    processingObserver(),
+                    ProcessingMetricId.CACHE_HITS,
+                    PINNED_SNAPSHOT_CACHE,
+                    1L);
             return pinned;
         }
         ResolvedSnapshot derived = derivedSnapshotsByCanonicalRepresentation.get(key);
         if (derived != null) {
-            metricsSink().incrementCacheHits(DERIVED_SNAPSHOT_CACHE);
+            recordCacheObservation(
+                    processingObserver(),
+                    ProcessingMetricId.CACHE_HITS,
+                    DERIVED_SNAPSHOT_CACHE,
+                    1L);
         } else {
-            metricsSink().incrementCacheMisses(DERIVED_SNAPSHOT_CACHE);
+            recordCacheObservation(
+                    processingObserver(),
+                    ProcessingMetricId.CACHE_MISSES,
+                    DERIVED_SNAPSHOT_CACHE,
+                    1L);
         }
         return derived;
     }
@@ -3557,7 +3646,11 @@ public class Blue implements NodeResolver,
         ensureOpen();
         ResolvedSnapshot pinned = pinnedSnapshotsByBlueId.get(blueId);
         if (pinned != null) {
-            metricsSink().incrementCacheHits(PINNED_SNAPSHOT_CACHE);
+            recordCacheObservation(
+                    processingObserver(),
+                    ProcessingMetricId.CACHE_HITS,
+                    PINNED_SNAPSHOT_CACHE,
+                    1L);
             return pinned;
         }
         WeakReference<ResolvedSnapshot> reference = derivedSnapshotsByBlueId.get(blueId);
@@ -3566,9 +3659,17 @@ public class Blue implements NodeResolver,
             if (reference != null) {
                 derivedSnapshotsByBlueId.remove(blueId);
             }
-            metricsSink().incrementCacheMisses(CANONICAL_ALIAS_CACHE);
+            recordCacheObservation(
+                    processingObserver(),
+                    ProcessingMetricId.CACHE_MISSES,
+                    CANONICAL_ALIAS_CACHE,
+                    1L);
         } else {
-            metricsSink().incrementCacheHits(CANONICAL_ALIAS_CACHE);
+            recordCacheObservation(
+                    processingObserver(),
+                    ProcessingMetricId.CACHE_HITS,
+                    CANONICAL_ALIAS_CACHE,
+                    1L);
         }
         return derived;
     }
@@ -3654,18 +3755,18 @@ public class Blue implements NodeResolver,
 
     private static final class CacheSnapshotPublication {
         private final ResolvedSnapshot result;
-        private final ProcessingMetricsSink metrics;
+        private final ProcessingObserver observer;
         private final CacheMutationMetrics derivedMutation;
         private final CacheMutationMetrics aliasMutation;
         private final CacheGaugeSnapshot gauges;
 
         private CacheSnapshotPublication(ResolvedSnapshot result,
-                                         ProcessingMetricsSink metrics,
+                                         ProcessingObserver observer,
                                          CacheMutationMetrics derivedMutation,
                                          CacheMutationMetrics aliasMutation,
                                          CacheGaugeSnapshot gauges) {
             this.result = result;
-            this.metrics = metrics;
+            this.observer = observer;
             this.derivedMutation = derivedMutation;
             this.aliasMutation = aliasMutation;
             this.gauges = gauges;
@@ -3673,13 +3774,13 @@ public class Blue implements NodeResolver,
 
         private void emit() {
             if (derivedMutation != null) {
-                derivedMutation.emit(metrics);
+                derivedMutation.emit(observer);
             }
             if (aliasMutation != null) {
-                aliasMutation.emit(metrics);
+                aliasMutation.emit(observer);
             }
             if (gauges != null) {
-                gauges.emit(metrics);
+                gauges.emit(observer);
             }
         }
     }
@@ -3706,17 +3807,36 @@ public class Blue implements NodeResolver,
             this.entries = entries;
         }
 
-        private void emit(ProcessingMetricsSink metrics) {
+        private void emit(ProcessingObserver observer) {
             if (evictionDelta > 0L) {
-                metrics.addMetric("cache." + cacheName + ".evictions", evictionDelta);
+                recordCacheObservation(
+                        observer,
+                        ProcessingMetricId.CACHE_EVICTIONS,
+                        cacheName,
+                        evictionDelta);
             }
             if (oversizedDelta > 0L) {
-                metrics.addMetric(
-                        "cache." + cacheName + ".oversizedRejections", oversizedDelta);
+                recordCacheObservation(
+                        observer,
+                        ProcessingMetricId.CACHE_OVERSIZED_REJECTIONS,
+                        cacheName,
+                        oversizedDelta);
             }
-            metrics.setCacheCurrentWeightBytes(cacheName, currentWeight);
-            metrics.recordCacheHighWaterBytes(cacheName, highWaterWeight);
-            metrics.setCacheEntries(cacheName, entries);
+            recordCacheObservation(
+                    observer,
+                    ProcessingMetricId.CACHE_CURRENT_WEIGHT_BYTES,
+                    cacheName,
+                    currentWeight);
+            recordCacheObservation(
+                    observer,
+                    ProcessingMetricId.CACHE_HIGH_WATER_BYTES,
+                    cacheName,
+                    highWaterWeight);
+            recordCacheObservation(
+                    observer,
+                    ProcessingMetricId.CACHE_ENTRIES,
+                    cacheName,
+                    entries);
         }
     }
 
@@ -3727,16 +3847,36 @@ public class Blue implements NodeResolver,
             this.gauges = gauges;
         }
 
-        private void emit(ProcessingMetricsSink metrics) {
+        private void emit(ProcessingObserver observer) {
             for (CacheGauge gauge : gauges) {
-                metrics.setCacheCurrentWeightBytes(gauge.cacheName, gauge.currentWeight);
-                metrics.recordCacheHighWaterBytes(gauge.cacheName, gauge.highWaterWeight);
-                metrics.setCacheEntries(gauge.cacheName, gauge.entries);
+                recordCacheObservation(
+                        observer,
+                        ProcessingMetricId.CACHE_CURRENT_WEIGHT_BYTES,
+                        gauge.cacheName,
+                        gauge.currentWeight);
+                recordCacheObservation(
+                        observer,
+                        ProcessingMetricId.CACHE_HIGH_WATER_BYTES,
+                        gauge.cacheName,
+                        gauge.highWaterWeight);
+                recordCacheObservation(
+                        observer,
+                        ProcessingMetricId.CACHE_ENTRIES,
+                        gauge.cacheName,
+                        gauge.entries);
                 if (gauge.pinnedEntries >= 0) {
-                    metrics.setCachePinnedEntries(gauge.cacheName, gauge.pinnedEntries);
+                    recordCacheObservation(
+                            observer,
+                            ProcessingMetricId.CACHE_PINNED_ENTRIES,
+                            gauge.cacheName,
+                            gauge.pinnedEntries);
                 }
                 if (gauge.derivedEntries >= 0) {
-                    metrics.setCacheDerivedEntries(gauge.cacheName, gauge.derivedEntries);
+                    recordCacheObservation(
+                            observer,
+                            ProcessingMetricId.CACHE_DERIVED_ENTRIES,
+                            gauge.cacheName,
+                            gauge.derivedEntries);
                 }
             }
         }
@@ -3792,11 +3932,11 @@ public class Blue implements NodeResolver,
 
     private static final class ConfigurationRefresh {
         private final DocumentProcessor processorToClose;
-        private final ProcessingMetricsSink metrics;
+        private final ProcessingObserver metrics;
         private final CacheGaugeSnapshot gauges;
 
         private ConfigurationRefresh(DocumentProcessor processorToClose,
-                                     ProcessingMetricsSink metrics,
+                                     ProcessingObserver metrics,
                                      CacheGaugeSnapshot gauges) {
             this.processorToClose = processorToClose;
             this.metrics = metrics;
@@ -3867,10 +4007,54 @@ public class Blue implements NodeResolver,
         }
     }
 
-    private ProcessingMetricsSink metricsSink() {
+    private ProcessingObserver processingObserver() {
         return documentProcessor != null
-                ? documentProcessor.processingMetricsSink()
-                : lifecycleMetricsSink;
+                ? documentProcessor.processingObserver()
+                : lifecycleObserver;
+    }
+
+    /** Emits one context-free observation without exposing exporter failures. */
+    private static void recordObservation(
+            ProcessingObserver observer,
+            ProcessingMetricId metricId,
+            long value) {
+        if (observer == null) {
+            return;
+        }
+        try {
+            observer.record(ProcessingObservation.of(metricId, value));
+        } catch (ThreadDeath failure) {
+            throw failure;
+        } catch (VirtualMachineError failure) {
+            throw failure;
+        } catch (Throwable ignored) {
+            // Telemetry is operational only and cannot change Language behavior.
+        }
+    }
+
+    /** Emits one cache observation with the manifest's bounded cache dimension. */
+    private static void recordCacheObservation(
+            ProcessingObserver observer,
+            ProcessingMetricId metricId,
+            String cacheName,
+            long value) {
+        if (observer == null) {
+            return;
+        }
+        try {
+            observer.record(ProcessingObservation.of(
+                    metricId,
+                    value,
+                    ProcessingObservationContext.of(
+                            ProcessingObservationDimension.CACHE_NAME,
+                            cacheName)));
+        } catch (ThreadDeath failure) {
+            throw failure;
+        } catch (VirtualMachineError failure) {
+            throw failure;
+        } catch (Throwable ignored) {
+            // Telemetry is operational only and cannot change Language behavior.
+        }
     }
 
     private void ensureOpen() {
@@ -3910,7 +4094,7 @@ public class Blue implements NodeResolver,
      */
     @Override
     public void close() {
-        ProcessingMetricsSink metrics;
+        ProcessingObserver observer;
         DocumentProcessor processorToClose;
         CacheGaugeSnapshot gauges;
         long released;
@@ -3961,7 +4145,7 @@ public class Blue implements NodeResolver,
                 lifecycleLock.notifyAll();
                 throw exception;
             }
-            metrics = metricsSink();
+            observer = processingObserver();
             if (closed) {
                 processorToClose = null;
                 gauges = null;
@@ -3969,7 +4153,7 @@ public class Blue implements NodeResolver,
                 firstClose = false;
                 previousFailure = lifecycleCloseFailure;
             } else {
-                lifecycleMetricsSink = metrics;
+                lifecycleObserver = observer;
                 closed = true;
                 processorOwnerToken = new Object();
                 processorToClose = documentProcessorOwned ? documentProcessor : null;
@@ -4004,10 +4188,16 @@ public class Blue implements NodeResolver,
             }
         }
         try {
-            metrics.incrementRuntimeCloseCalls();
+            recordObservation(
+                    observer,
+                    ProcessingMetricId.RUNTIME_CLOSE_CALLS,
+                    1L);
             if (firstClose) {
-                gauges.emit(metrics);
-                metrics.addRuntimeCloseReleasedWeightBytes(released);
+                gauges.emit(observer);
+                recordObservation(
+                        observer,
+                        ProcessingMetricId.RUNTIME_CLOSE_RELEASED_WEIGHT_BYTES,
+                        released);
             }
         } catch (Throwable throwable) {
             failure = combineFailure(failure, throwable);

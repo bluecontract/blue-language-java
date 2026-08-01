@@ -881,8 +881,8 @@ class ExecutableBodyFieldMetadataTest {
                         bodyForm
                                 + " snapshot setup eagerly requested the program");
                 providerRequests.clear();
-                RecordingProcessingMetricsSink metrics =
-                        new RecordingProcessingMetricsSink();
+                RecordingProcessingObserver metrics =
+                        new RecordingProcessingObserver();
                 DocumentProcessingRuntime runtime =
                         new DocumentProcessingRuntime(
                                 snapshot,

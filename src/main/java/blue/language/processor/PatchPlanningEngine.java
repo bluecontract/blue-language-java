@@ -41,7 +41,7 @@ final class PatchPlanningEngine {
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics;
     private final ImmutableJsonPatch.PreparationContext patchPreparation;
-    private final ProcessingMetricsSink metrics;
+    private final ProcessingObserver metrics;
     private final PatchImpactAnalyzer impactAnalyzer;
     private final Set<String> openedScopePaths;
     private final Map<String, List<String>> executableBodyFieldsByType;
@@ -57,7 +57,7 @@ final class PatchPlanningEngine {
                 conformanceEngine,
                 conformancePlannerOverride,
                 materializationMetrics,
-                ProcessingMetricsSink.NOOP,
+                NoOpProcessingObserver.INSTANCE,
                 true);
     }
 
@@ -66,7 +66,7 @@ final class PatchPlanningEngine {
                         ConformanceEngine conformanceEngine,
                         ConformancePlannerOverride conformancePlannerOverride,
                         DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
-                        ProcessingMetricsSink metrics) {
+                        ProcessingObserver metrics) {
         this(originScopePath,
                 planning,
                 conformanceEngine,
@@ -81,7 +81,7 @@ final class PatchPlanningEngine {
                         ConformanceEngine conformanceEngine,
                         ConformancePlannerOverride conformancePlannerOverride,
                         DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
-                        ProcessingMetricsSink metrics,
+                        ProcessingObserver metrics,
                         boolean retainInitialRoots) {
         this.originScopePath = originScopePath;
         Objects.requireNonNull(planning, "planning");
@@ -98,7 +98,7 @@ final class PatchPlanningEngine {
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.materializationMetrics = materializationMetrics;
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
         this.patchPreparation = ImmutableJsonPatch.preparationContext(this.metrics);
         this.impactAnalyzer = new PatchImpactAnalyzer(conformanceEngine,
                 conformancePlannerOverride,
@@ -285,9 +285,18 @@ final class PatchPlanningEngine {
             PatchImpact.FallbackReason reason = authoritativeFallbackReason != null
                     ? authoritativeFallbackReason
                     : PatchImpact.FallbackReason.DEPENDENCY_INDEX_MISSING_OR_STALE;
-            metrics.incrementFullSnapshotFallback(reason.name());
-            metrics.incrementFullCanonicalRootMaterializations();
-            metrics.incrementFullFrozenRootToNodeMaterializations();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.FULL_SNAPSHOT_FALLBACKS, 1L);
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.FULL_SNAPSHOT_FALLBACK_REASON,
+                    1L,
+                    ProcessingObservationContext.of(
+                            ProcessingObservationDimension.FALLBACK_REASON,
+                            reason.name()));
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.FULL_CANONICAL_ROOT_MATERIALIZATIONS, 1L);
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.FULL_FROZEN_ROOT_TO_NODE_MATERIALIZATIONS, 1L);
             ResolvedSnapshot authoritative =
                     DocumentProcessingRuntime
                     .resolveCanonicalTransient(
@@ -295,7 +304,8 @@ final class PatchPlanningEngine {
                             finalCanonical,
                             openedScopePaths,
                             executableBodyFieldsByType);
-            metrics.incrementFullResolvedRootMaterializations();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.FULL_RESOLVED_ROOT_MATERIALIZATIONS, 1L);
             finalCanonical = authoritative.frozenCanonicalRoot();
             finalResolved = authoritative.frozenResolvedRoot();
             finalResolutionComplete =
@@ -303,12 +313,18 @@ final class PatchPlanningEngine {
         } else if (exactReplacement) {
             for (BatchPatchRecord record : records) {
                 if (record.impact().localResolutionProvenSafe()) {
-                    metrics.incrementIncrementalSnapshotResolutions();
+                    ProcessingObservations.record(metrics,
+                            ProcessingMetricId.INCREMENTAL_SNAPSHOT_RESOLUTIONS, 1L);
                     if (record.impact().kind() == PatchImpact.Kind.PROCESSOR_MANAGED_STATE) {
-                        metrics.incrementProcessorManagedMarkerIncrementalResolutions();
+                        ProcessingObservations.record(metrics,
+                                ProcessingMetricId.PROCESSOR_MANAGED_MARKER_INCREMENTAL_RESOLUTIONS,
+                                1L);
                     }
-                    metrics.addIncrementalBoundaryPathDepth(record.impact().path().depth());
-                    metrics.addIncrementalBoundaryNodeCount(1L);
+                    ProcessingObservations.record(metrics,
+                            ProcessingMetricId.INCREMENTAL_BOUNDARY_PATH_DEPTH,
+                            record.impact().path().depth());
+                    ProcessingObservations.record(metrics,
+                            ProcessingMetricId.INCREMENTAL_BOUNDARY_NODE_COUNT, 1L);
                 }
             }
         }
@@ -532,7 +548,8 @@ final class PatchPlanningEngine {
         if (changedPaths.isEmpty()) {
             return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
         }
-        metrics.incrementConformancePlans();
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.CONFORMANCE_PLANS, 1L);
         if (hasOverride) {
             ConformancePlan plan = conformancePlannerOverride.plan(canonicalRoot, resolvedRoot, changedPathRecords);
             String originScope = originScopeForGeneratedUpdate(records);

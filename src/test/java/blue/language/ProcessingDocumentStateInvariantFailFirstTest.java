@@ -5,7 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture;
 import blue.language.model.Node;
 import blue.language.processor.CheckpointDomain;
-import blue.language.processor.DocumentProcessingRuntime;
+import blue.language.processor.DocumentProcessingRuntimeTestAccess;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.ProcessorStatus;
@@ -55,7 +55,9 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 throw new AssertionError("no write is allowed in this boundary characterization");
             }
         };
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(runtimeOwnedSelection, null, manager);
+        DocumentProcessingRuntimeTestAccess.RuntimeSnapshot runtime =
+                DocumentProcessingRuntimeTestAccess.snapshot(
+                        runtimeOwnedSelection, manager);
 
         // when
         ResolvedSnapshot snapshot = runtime.snapshot();

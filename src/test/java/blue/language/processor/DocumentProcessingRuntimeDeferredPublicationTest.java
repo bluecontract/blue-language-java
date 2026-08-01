@@ -103,7 +103,7 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
                         null,
                         null,
                         manager,
-                        ProcessingMetricsSink.NOOP,
+                        NoOpProcessingObserver.INSTANCE,
                         new GasMeter(),
                         Collections.singletonMap(
                                 handlerTypeBlueId,
@@ -207,7 +207,7 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
                     null,
                     null,
                     manager,
-                    ProcessingMetricsSink.NOOP,
+                    NoOpProcessingObserver.INSTANCE,
                     new GasMeter(),
                     Collections.singletonMap(
                             handlerTypeBlueId,

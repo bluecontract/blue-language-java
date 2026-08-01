@@ -1,8 +1,6 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.utils.JsonPointer;
 
@@ -23,7 +21,7 @@ final class TerminationService {
         this.runtime = runtime;
     }
 
-    void terminateScope(ProcessorEngine.Execution execution,
+    void terminateScope(ProcessorInvocationState execution,
                         String scopePath,
                         ContractBundle bundle,
                         String cause,
@@ -43,7 +41,7 @@ final class TerminationService {
                 bundleRef,
                 cause,
                 reason));
-        Node lifecycleEvent = createTerminationLifecycleEvent(cause, reason);
+        Node lifecycleEvent = LifecycleEventFactory.terminated(cause, reason);
         execution.deliverTerminationLifecycle(normalized, bundleRef, lifecycleEvent);
         /*
          * The accepted occurrence is a completed business transition even
@@ -56,7 +54,7 @@ final class TerminationService {
     }
 
     void completePendingTerminations(
-            ProcessorEngine.Execution execution) {
+            ProcessorInvocationState execution) {
         while (!pending.isEmpty()) {
             PendingTermination transition = pending.pollFirst();
             if (!execution.canCompleteTermination(
@@ -69,7 +67,7 @@ final class TerminationService {
          * observers never see a terminated marker while termination effects
          * are still pending.
          */
-            Node marker = createTerminationMarker(
+            Node marker = LifecycleEventFactory.terminationMarker(
                     transition.cause,
                     transition.reason);
             runtime.chargeTerminationMarker();
@@ -105,33 +103,6 @@ final class TerminationService {
         } catch (RuntimeException markerFailure) {
             return false;
         }
-    }
-
-    private Node createTerminationMarker(String cause, String reason) {
-        Node marker = new Node()
-                .type(new Node().blueId(RuntimeBlueIds.PROCESSING_TERMINATED_MARKER))
-                .properties(
-                        ProcessorContractConstants.KEY_CAUSE,
-                        new Node().value(cause));
-        if (reason != null && !reason.isEmpty()) {
-            marker.properties(
-                    ProcessorContractConstants.KEY_REASON,
-                    new Node().value(reason));
-        }
-        return marker;
-    }
-
-    private Node createTerminationLifecycleEvent(String cause, String reason) {
-        Node event = new Node().type(new Node().blueId(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED));
-        event.properties(
-                ProcessorContractConstants.KEY_CAUSE,
-                new Node().value(cause));
-        if (reason != null && !reason.isEmpty()) {
-            event.properties(
-                    ProcessorContractConstants.KEY_REASON,
-                    new Node().value(reason));
-        }
-        return event;
     }
 
     private static final class PendingTermination {

@@ -80,7 +80,7 @@ class ImmutableJsonPatchTest {
         // given
         FrozenNode root = FrozenNode.fromResolvedNode(new Node());
         ImmutableJsonPatch.PreparationContext context =
-                ImmutableJsonPatch.preparationContext(ProcessingMetricsSink.NOOP);
+                ImmutableJsonPatch.preparationContext(NoOpProcessingObserver.INSTANCE);
 
         // when
         for (int index = 0; index < 1_024; index++) {
@@ -115,24 +115,26 @@ class ImmutableJsonPatchTest {
         assertFalse(referenceMatchesMaterialized);
     }
 
-    private static final class RecordingMetrics implements ProcessingMetricsSink {
+    private static final class RecordingMetrics implements ProcessingObserver {
         private long pointerHits;
         private long pointerMisses;
         private long frozenValueHits;
 
         @Override
-        public void incrementParsedPointerCacheHits() {
-            pointerHits++;
-        }
-
-        @Override
-        public void incrementParsedPointerCacheMisses() {
-            pointerMisses++;
-        }
-
-        @Override
-        public void incrementFrozenPatchValueHits() {
-            frozenValueHits++;
+        public void record(ProcessingObservation observation) {
+            switch (observation.metricId()) {
+                case PARSED_POINTER_CACHE_HITS:
+                    pointerHits += observation.value();
+                    break;
+                case PARSED_POINTER_CACHE_MISSES:
+                    pointerMisses += observation.value();
+                    break;
+                case FROZEN_PATCH_VALUE_HITS:
+                    frozenValueHits += observation.value();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

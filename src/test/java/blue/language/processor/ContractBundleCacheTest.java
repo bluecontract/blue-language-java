@@ -114,7 +114,7 @@ class ContractBundleCacheTest {
 
     private Blue configuredBlue(RecordingMetrics metrics) {
         Blue blue = ProcessorTestSupport.blue();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        blue.processingObserver(metrics);
         blue.registerContractProcessor(
                 DocumentProcessorExactFeederSupport.testEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
@@ -127,24 +127,26 @@ class ContractBundleCacheTest {
         return blue.objectToNode(new TestEvent().eventId(eventId));
     }
 
-    private static final class RecordingMetrics implements ProcessingMetricsSink {
+    private static final class RecordingMetrics implements ProcessingObserver {
         long bundleLoadCacheHits;
         long bundleLoadCacheMisses;
         long bundlesReused;
 
         @Override
-        public void incrementBundleLoadCacheHits() {
-            bundleLoadCacheHits++;
-        }
-
-        @Override
-        public void incrementBundleLoadCacheMisses() {
-            bundleLoadCacheMisses++;
-        }
-
-        @Override
-        public void incrementBundlesReused() {
-            bundlesReused++;
+        public void record(ProcessingObservation observation) {
+            switch (observation.metricId()) {
+                case BUNDLE_LOAD_CACHE_HITS:
+                    bundleLoadCacheHits += observation.value();
+                    break;
+                case BUNDLE_LOAD_CACHE_MISSES:
+                    bundleLoadCacheMisses += observation.value();
+                    break;
+                case BUNDLES_REUSED:
+                    bundlesReused += observation.value();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

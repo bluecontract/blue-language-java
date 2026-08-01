@@ -188,7 +188,7 @@ final class TerminationConformanceTest {
                 + "      blueId: "
                 + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n"
                 + "    sourcePath: /child\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
         execution.preflightScope("/");
         execution.preflightScope("/child");
         execution.runtime().attachScopeOccurrence("/", "/child");
@@ -229,7 +229,7 @@ final class TerminationConformanceTest {
     @Test
     void shouldVerifyLifecycleCutOffDiscardsChildMarkerButCompletesTheBusinessRun() {
         // given
-        AtomicReference<ProcessorEngine.Execution> executionRef =
+        AtomicReference<ProcessorInvocationState> executionRef =
                 new AtomicReference<>();
         Blue blue = blueWithLifecycleProbe(new ArrayList<String>());
         blue.registerContractProcessor(
@@ -246,8 +246,8 @@ final class TerminationConformanceTest {
                 "      channel: lifecycle\n" +
                 "      type:\n" +
                 "        blueId: " + SET_PROPERTY + "\n");
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         blue.getDocumentProcessor(),
                         document,
                         new Node().value("event"));
@@ -443,7 +443,7 @@ final class TerminationConformanceTest {
                 + "        blueId: " + SET_PROPERTY + "\n"
                 + "      propertyKey: /failing\n"
                 + "      propertyValue: 1\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
         // when
         execution.preflightScope("/child");
         Throwable failure = captureFailure(
@@ -472,7 +472,7 @@ final class TerminationConformanceTest {
                 .name("Parent")
                 .contracts(new Node())
                 .properties("child", new Node().name("Child"));
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
 
         // when
         Throwable failure = captureFailure(
@@ -570,7 +570,7 @@ final class TerminationConformanceTest {
                 + "        blueId: " + SET_PROPERTY + "\n"
                 + "      propertyKey: /failing\n"
                 + "      propertyValue: 1\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
         // when
         execution.preflightScope("/child");
         Throwable failure = captureFailure(
@@ -594,7 +594,7 @@ final class TerminationConformanceTest {
         // given
         Blue blue = ProcessorTestSupport.blue();
         Node document = new Node().name("Malformed Root").contracts(new Node().value("not-an-object"));
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
 
         // when
         Throwable failure = captureFailure(
@@ -624,7 +624,7 @@ final class TerminationConformanceTest {
                 .name("Parent")
                 .contracts(new Node().properties("rootOnly", new Node().value("preserve")))
                 .properties("child", new Node().name("Child").contracts(malformedChildContracts));
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
 
         // when
         Throwable failure = captureFailure(
@@ -658,7 +658,7 @@ final class TerminationConformanceTest {
                 .name("Broken Fallback")
                 .contracts(new Node().value("malformed"))
                 .properties("unrelated", invalidUnrelatedContent);
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
 
         // when
         Throwable failure = captureFailure(
@@ -686,7 +686,7 @@ final class TerminationConformanceTest {
     }
 
     private static List<ProcessingTraceRecord> ancestorDeliveries(
-            ProcessorEngine.Execution execution) {
+            ProcessorInvocationState execution) {
         List<ProcessingTraceRecord> deliveries =
                 new ArrayList<>();
         for (ProcessingTraceRecord delivered
@@ -926,11 +926,11 @@ final class TerminationConformanceTest {
 
     private static final class CutOffOnLifecycleProcessor
             implements HandlerProcessor<SetProperty> {
-        private final AtomicReference<ProcessorEngine.Execution>
+        private final AtomicReference<ProcessorInvocationState>
                 execution;
 
         private CutOffOnLifecycleProcessor(
-                AtomicReference<ProcessorEngine.Execution> execution) {
+                AtomicReference<ProcessorInvocationState> execution) {
             this.execution = execution;
         }
 

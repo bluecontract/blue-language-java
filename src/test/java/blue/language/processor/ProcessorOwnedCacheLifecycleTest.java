@@ -109,9 +109,9 @@ class ProcessorOwnedCacheLifecycleTest {
         TypeClassResolver resolver = new TypeClassResolver("blue.language.processor.model");
         ContractMatchingService matchingService = new ContractMatchingService();
         DocumentProcessor processor = new DocumentProcessor(
-                registry, resolver, null, null, matchingService, ProcessingMetricsSink.NOOP);
+                registry, resolver, null, null, matchingService, NoOpProcessingObserver.INSTANCE);
 
-        loadEmpty(processor.contractLoader(), "/cached", ProcessingMetricsSink.NOOP);
+        loadEmpty(processor.contractLoader(), "/cached", NoOpProcessingObserver.INSTANCE);
 
         // when
         FrozenNode value = FrozenNode.fromResolvedNode(new Node().value("match"));
@@ -147,16 +147,18 @@ class ProcessorOwnedCacheLifecycleTest {
         // given
         AtomicReference<DocumentProcessor> reference = new AtomicReference<>();
         AtomicBoolean closeOnce = new AtomicBoolean();
-        ProcessingMetricsSink metrics = new ProcessingMetricsSink() {
+        ProcessingObserver metrics = new ProcessingObserver() {
             @Override
-            public void addEventPreprocessNanos(long nanos) {
-                if (closeOnce.compareAndSet(false, true)) {
+            public void record(ProcessingObservation observation) {
+                if (observation.metricId()
+                        == ProcessingMetricId.EVENT_PREPROCESS_NANOS
+                        && closeOnce.compareAndSet(false, true)) {
                     reference.get().close();
                 }
             }
         };
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withProcessingMetricsSink(metrics)
+                .observer(metrics)
                 .build();
         reference.set(processor);
 
@@ -181,7 +183,7 @@ class ProcessorOwnedCacheLifecycleTest {
 
     private ContractBundle loadEmpty(ContractLoader loader,
                                      String scope,
-                                     ProcessingMetricsSink metrics) {
+                                     ProcessingObserver metrics) {
         return loader.load((Node) null, (FrozenNode) null, scope, metrics);
     }
 
@@ -189,18 +191,19 @@ class ProcessorOwnedCacheLifecycleTest {
         return BlueIdCalculator.calculateBlueId(new Node().value(value));
     }
 
-    private static final class RecordingMetrics implements ProcessingMetricsSink {
+    private static final class RecordingMetrics implements ProcessingObserver {
         private long hits;
         private long misses;
 
         @Override
-        public void incrementBundleLoadCacheHits() {
-            hits++;
-        }
-
-        @Override
-        public void incrementBundleLoadCacheMisses() {
-            misses++;
+        public void record(ProcessingObservation observation) {
+            if (observation.metricId()
+                    == ProcessingMetricId.BUNDLE_LOAD_CACHE_HITS) {
+                hits += observation.value();
+            } else if (observation.metricId()
+                    == ProcessingMetricId.BUNDLE_LOAD_CACHE_MISSES) {
+                misses += observation.value();
+            }
         }
     }
 }

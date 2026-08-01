@@ -117,12 +117,12 @@ final class ChannelCheckpointSubjectTest {
     }
 
     private static ContractBundle refreshBundle(
-            ProcessorEngine.Execution execution) {
+            ProcessorInvocationState execution) {
         execution.preflightScope("/");
         return execution.bundleForScope("/");
     }
 
-    private static ProcessorEngine.Execution execution(
+    private static ProcessorInvocationState execution(
             DocumentProcessor owner,
             Node document,
             Node bindingEvent) {
@@ -171,7 +171,7 @@ final class ChannelCheckpointSubjectTest {
                                                 "feeder-order-is-not-newness")))
                         .delivery(delivery)
                         .build();
-        return new ProcessorEngine.Execution(
+        return new ProcessorInvocationState(
                 owner,
                 document.clone(),
                 bindingEvent,
@@ -208,7 +208,7 @@ final class ChannelCheckpointSubjectTest {
     private static final class CheckpointScenario {
         private final InlineSequenceChannelProcessor channelProcessor;
         private final TrackingSnapshotManager snapshots;
-        private final ProcessorEngine.Execution execution;
+        private final ProcessorInvocationState execution;
         private final ChannelRunner runner;
         private ContractBundle bundle;
         private ContractBundle.ChannelBinding channel;
@@ -216,7 +216,7 @@ final class ChannelCheckpointSubjectTest {
         private CheckpointScenario(
                 InlineSequenceChannelProcessor channelProcessor,
                 TrackingSnapshotManager snapshots,
-                ProcessorEngine.Execution execution,
+                ProcessorInvocationState execution,
                 ChannelRunner runner,
                 ContractBundle bundle,
                 ContractBundle.ChannelBinding channel) {
@@ -255,7 +255,7 @@ final class ChannelCheckpointSubjectTest {
                 snapshots.watch(
                         BlueIdCalculator.calculateBlueId(watched));
             }
-            ProcessorEngine.Execution execution =
+            ProcessorInvocationState execution =
                     execution(owner, document, firstEvent);
             execution.preflightScope("/");
             ContractBundle bundle = execution.bundleForScope("/");

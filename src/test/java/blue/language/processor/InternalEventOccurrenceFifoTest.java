@@ -136,8 +136,8 @@ final class InternalEventOccurrenceFifoTest {
         // given
         ProbeProcessor probe = new ProbeProcessor();
         try (Blue blue = configuredBlue(probe)) {
-            ProcessorEngine.Execution execution =
-                    new ProcessorEngine.Execution(
+            ProcessorInvocationState execution =
+                    new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
                             frozenRootTerminationDocument());
             execution.preflightScope("/");

@@ -268,8 +268,8 @@ final class ContractExecutionResultPortableLimitTest {
     }
 
     private Fixture fixture() {
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         new DocumentProcessor(),
                         new Node());
         execution.preflightScope("/");

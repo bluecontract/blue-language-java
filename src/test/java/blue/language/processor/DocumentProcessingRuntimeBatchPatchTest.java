@@ -449,7 +449,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     }
 
     @Test
-    void shouldVerifyUpdateDataMaterializesBeforeAndAfterLazily() {
+    void shouldMaterializeDetachedUpdateViewsOnlyWhenRead() {
         // given
         Node document = new Node().properties("status", new Node().value("idle"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
@@ -478,8 +478,8 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertEquals("active", firstAfter);
         assertEquals("idle", repeatedBefore);
         assertEquals("active", repeatedAfter);
-        assertEquals(1, beforeMaterializationsAfterRead);
-        assertEquals(1, afterMaterializationsAfterRead);
+        assertEquals(2, beforeMaterializationsAfterRead);
+        assertEquals(2, afterMaterializationsAfterRead);
     }
 
     @Test

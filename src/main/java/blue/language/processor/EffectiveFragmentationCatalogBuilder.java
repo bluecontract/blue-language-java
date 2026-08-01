@@ -188,7 +188,7 @@ final class EffectiveFragmentationCatalogBuilder {
                             selected,
                             effective,
                             frame.scopePath,
-                            ProcessingMetricsSink.NOOP);
+                            NoOpProcessingObserver.INSTANCE);
             List<EffectiveContractSnapshot> contracts =
                     new ArrayList<>(
                             bundle.effectiveContractSnapshots());

@@ -44,7 +44,7 @@ final class BatchPatchTransaction {
                 conformancePlannerOverride,
                 materializationMetrics,
                 buildUpdates,
-                ProcessingMetricsSink.NOOP);
+                NoOpProcessingObserver.INSTANCE);
     }
 
     BatchPatchTransaction(String originScopePath,
@@ -54,7 +54,7 @@ final class BatchPatchTransaction {
                           ConformancePlannerOverride conformancePlannerOverride,
                           DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
                           boolean buildUpdates,
-                          ProcessingMetricsSink metrics) {
+                          ProcessingObserver metrics) {
         this.patches = PatchInput.mutableList(patches);
         this.planningEngine = new PatchPlanningEngine(originScopePath,
                 planning,
@@ -72,7 +72,7 @@ final class BatchPatchTransaction {
                                   ConformancePlannerOverride conformancePlannerOverride,
                                   DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
                                   boolean buildUpdates,
-                                  ProcessingMetricsSink metrics) {
+                                  ProcessingObserver metrics) {
         this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
         this.planningEngine = new PatchPlanningEngine(originScopePath,
                 planning,
@@ -90,7 +90,7 @@ final class BatchPatchTransaction {
                                             ConformancePlannerOverride conformancePlannerOverride,
                                             DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
                                             boolean buildUpdates,
-                                            ProcessingMetricsSink metrics) {
+                                            ProcessingObserver metrics) {
         return new BatchPatchTransaction(patches,
                 originScopePath,
                 planning,

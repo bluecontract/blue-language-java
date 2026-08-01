@@ -17,6 +17,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 final class CheckpointManagerTest {
 
+    private static final long EXPECTED_MARKER_WRITES = 1L;
+    private static final long EXPECTED_CHECKPOINT_WRITES = 1L;
+    private static final long EXPECTED_IDENTITY_NODES = 9L;
+    private static final long EXPECTED_REBUILT_MEMBERS = 9L;
+    private static final long EXPECTED_DIRECT_HASH_BLOCKS = 16L;
+
     @Test
     void shouldCreateCheckpointMarkerWhenAbsent() {
         // given
@@ -55,6 +61,30 @@ final class CheckpointManagerTest {
         Node stored = ProcessorEngine.nodeAt(runtime.document(),
                 ProcessorPointerConstants.relativeCheckpointEntry(
                         record.markerKey, record.channelKey));
+        ProcessingConformanceTrace trace =
+                runtime.conformanceTrace();
+        GasSchedule schedule = runtime.gasMeter().schedule();
+        long expectedGas =
+                EXPECTED_MARKER_WRITES * schedule.weight(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .PROCESSOR_MARKER_WRITTEN)
+                + EXPECTED_CHECKPOINT_WRITES * schedule.weight(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .CHECKPOINT_WRITTEN)
+                + EXPECTED_IDENTITY_NODES * schedule.weight(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .NODE_IDENTITY_ESTABLISHED)
+                + EXPECTED_REBUILT_MEMBERS * schedule.weight(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .OBJECT_MEMBER_REBUILT)
+                + EXPECTED_DIRECT_HASH_BLOCKS * schedule.weight(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .DIRECT_IDENTITY_HASH_BLOCK);
 
         // then
         assertNotNull(stored);
@@ -69,8 +99,38 @@ final class CheckpointManagerTest {
                         .entry("testChannel")
                         .getSubject()
                         .getValue());
-        assertEquals(71L, runtime.totalGas(),
-                "inline exact checkpoint subjects pay their direct identity work");
+        assertEquals(
+                EXPECTED_MARKER_WRITES,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .PROCESSOR_MARKER_WRITTEN));
+        assertEquals(
+                EXPECTED_CHECKPOINT_WRITES,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .CHECKPOINT_WRITTEN));
+        assertEquals(
+                EXPECTED_IDENTITY_NODES,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .NODE_IDENTITY_ESTABLISHED));
+        assertEquals(
+                EXPECTED_REBUILT_MEMBERS,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .OBJECT_MEMBER_REBUILT));
+        assertEquals(
+                EXPECTED_DIRECT_HASH_BLOCKS,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .DIRECT_IDENTITY_HASH_BLOCK));
+        assertEquals(expectedGas, runtime.totalGas(),
+                "checkpoint gas is 40 processor gas plus 34 identity gas");
         assertEquals(subjectBlueId, record.lastEventSignature);
     }
 

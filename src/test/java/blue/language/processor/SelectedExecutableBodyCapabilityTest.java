@@ -217,8 +217,8 @@ final class SelectedExecutableBodyCapabilityTest {
                 BlueIdCalculator.calculateBlueId(body);
 
         try (Blue blue = new Blue(provider)) {
-            ProcessorEngine.Execution execution =
-                    new ProcessorEngine.Execution(
+            ProcessorInvocationState execution =
+                    new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
                             new Node());
             execution.preflightScope("/");
@@ -316,8 +316,8 @@ final class SelectedExecutableBodyCapabilityTest {
                         "Selected Cyclic A");
 
         try (Blue blue = new Blue(provider)) {
-            ProcessorEngine.Execution execution =
-                    new ProcessorEngine.Execution(
+            ProcessorInvocationState execution =
+                    new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
                             new Node());
             execution.preflightScope("/");

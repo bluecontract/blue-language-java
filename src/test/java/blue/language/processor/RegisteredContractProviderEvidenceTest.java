@@ -63,16 +63,17 @@ class RegisteredContractProviderEvidenceTest {
     }
 
     @Test
-    void shouldVerifyRuntimeExactCanonicalRegistrationInitializesStandaloneProcessor() {
+    void shouldVerifyExactCanonicalBuilderRegistrationInitializesStandaloneProcessor() {
         // given
         TypeFixture fixture = new TypeFixture();
-        DocumentProcessor standalone = new DocumentProcessor();
+        DocumentProcessor standalone = DocumentProcessor.builder()
+                .registerContractProcessor(
+                        fixture.blueId,
+                        fixture.canonicalType,
+                        new EvidenceChannelProcessor())
+                .build();
 
         // when
-        standalone.registerContractProcessor(
-                fixture.blueId,
-                fixture.canonicalType,
-                new EvidenceChannelProcessor());
         DocumentProcessingResult result = standalone.initializeDocument(
                 fixture.document());
 
@@ -133,8 +134,8 @@ class RegisteredContractProviderEvidenceTest {
                         fixture.blueId,
                         new EvidenceChannelProcessor())
                 .build();
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         standalone,
                         fixture.document());
 
@@ -192,19 +193,24 @@ class RegisteredContractProviderEvidenceTest {
                 registry.canonicalTypeNode(fixture.blueId));
 
         // when
+        DocumentProcessor.Builder successor = DocumentProcessor.Builder
+                .from(standalone);
         IllegalStateException failure = captureFailure(
-                () -> standalone.registerContractProcessor(
+                () -> successor.registerContractProcessor(
                         fixture.blueId,
                         fixture.canonicalType,
                         new ConflictingEvidenceChannelProcessor()));
-        long versionAfter = registry.version();
+        DocumentProcessor afterConflict = successor.build();
+        ContractProcessorRegistry registryAfter =
+                afterConflict.getContractRegistry();
+        long versionAfter = registryAfter.version();
         ContractProcessor<?> processorAfter =
-                registry.processors().get(fixture.blueId);
+                registryAfter.processors().get(fixture.blueId);
         Class<?> resolvedClassAfter =
-                standalone.getContractTypeResolver()
+                afterConflict.getContractTypeResolver()
                         .resolveClass(fixture.blueId);
         String evidenceAfter = BlueIdCalculator.calculateBlueId(
-                registry.canonicalTypeNode(fixture.blueId));
+                registryAfter.canonicalTypeNode(fixture.blueId));
 
         // then
         assertNotNull(failure);

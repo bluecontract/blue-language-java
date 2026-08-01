@@ -2,7 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,6 +22,7 @@ public final class GasMeter {
     private final long gasLimit;
     private final List<GasTraceEntry> trace = new ArrayList<>();
     private final SemanticGasMeter semantic;
+    private final ProcessorGasCharges processorCharges;
     private long totalGas;
     /*
      * Runtime work sessions stage their ordered child traces until the
@@ -65,6 +65,7 @@ public final class GasMeter {
         }
         this.gasLimit = gasLimit;
         this.semantic = new SemanticGasMeter(this);
+        this.processorCharges = new ProcessorGasCharges(this);
     }
 
     /**
@@ -248,338 +249,137 @@ public final class GasMeter {
     }
 
     void chargeProcessInvocation() {
-        chargeProcessor(
-                GasScheduleConstants.ProcessorCounter.PROCESS_INVOCATION,
-                1L,
-                GasChargeContext.of(
-                        JsonPointer.ROOT,
-                        null,
-                        null,
-                        GasScheduleConstants.ChargeReason.INVOCATION));
+        processorCharges.processInvocation();
     }
 
     void chargeDeliverySnapshotEntry(String scopePath, String contractKey) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.DELIVERY_SNAPSHOT_ENTRY,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        contractKey,
-                        null,
-                        GasScheduleConstants
-                                .ChargeReason.REVALIDATE_DELIVERY));
+        processorCharges.deliverySnapshotEntry(scopePath, contractKey);
     }
 
     void chargeScopeEntry(String scopePath) {
-        chargeProcessor(
-                GasScheduleConstants.ProcessorCounter.SCOPE_OPENED,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        null,
-                        null,
-                        GasScheduleConstants
-                                .ChargeReason.PARTICIPATING_SCOPE));
+        processorCharges.scopeEntry(scopePath);
     }
 
     void chargeParticipatingClosure(long quantity) {
-        chargeProcessor(
-                GasScheduleConstants.ProcessorCounter.SCOPE_OPENED,
-                quantity,
-                GasChargeContext.of(
-                        JsonPointer.ROOT, null, null,
-                        quantity == 1L
-                                ? GasScheduleConstants
-                                .ChargeReason.PARTICIPATING_SCOPE
-                                : GasScheduleConstants
-                                .ChargeReason.PARTICIPATING_CLOSURE));
+        processorCharges.participatingClosure(quantity);
     }
 
     void chargeContractHeaderRecognized(String scopePath,
                                         String contractKey,
                                         String reason) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.CONTRACT_HEADER_RECOGNIZED,
-                1L,
-                GasChargeContext.of(scopePath, contractKey, null, reason));
+        processorCharges.contractHeaderRecognized(scopePath, contractKey, reason);
     }
 
     void chargeContractHeadersRecognized(long quantity, String reason) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.CONTRACT_HEADER_RECOGNIZED,
-                quantity,
-                GasChargeContext.of(JsonPointer.ROOT, null, null, reason));
+        processorCharges.contractHeadersRecognized(quantity, reason);
     }
 
     void chargeEmbeddedPathEntryRead(String scopePath, String logicalPath) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.EMBEDDED_PATH_ENTRY_READ,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        null,
-                        logicalPath,
-                        GasScheduleConstants.ChargeReason.ROUTE));
+        processorCharges.embeddedPathEntryRead(scopePath, logicalPath);
     }
 
     void chargeEmbeddedPathSegmentsValidated(String scopePath,
                                              String logicalPath,
                                              long quantity) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.EMBEDDED_PATH_SEGMENT_VALIDATED,
-                quantity,
-                GasChargeContext.of(
-                        scopePath,
-                        null,
-                        logicalPath,
-                        GasScheduleConstants.ChargeReason.ROUTE));
+        processorCharges.embeddedPathSegmentsValidated(
+                scopePath, logicalPath, quantity);
     }
 
     void chargeScopeEntry(int embeddedDepth) {
-        if (embeddedDepth < 0) {
-            throw new IllegalArgumentException("Scope embedded depth must be non-negative");
-        }
-        chargeScopeEntry(JsonPointer.ROOT);
+        processorCharges.scopeEntry(embeddedDepth);
     }
 
     void chargeInitialization(String scopePath) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.SCOPE_INITIALIZATION,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        null,
-                        null,
-                        GasScheduleConstants
-                                .ChargeReason.SCOPE_INITIALIZATION));
+        processorCharges.initialization(scopePath);
     }
 
     void chargeChannelMatchAttempt(String scopePath, String contractKey) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.CHANNEL_CANDIDATE_TESTED,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        contractKey,
-                        null,
-                        GasScheduleConstants.ChargeReason.ACCEPTANCE));
+        processorCharges.channelMatchAttempt(scopePath, contractKey);
     }
 
     void chargeChannelAccepted(String scopePath, String contractKey) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.CHANNEL_ACCEPTED,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        contractKey,
-                        null,
-                        GasScheduleConstants.ChargeReason.ACCEPTANCE));
+        processorCharges.channelAccepted(scopePath, contractKey);
     }
 
     void chargeHandlerCandidateTested(String scopePath, String contractKey) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.HANDLER_CANDIDATE_TESTED,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        contractKey,
-                        null,
-                        GasScheduleConstants.ChargeReason.MATCHING));
+        processorCharges.handlerCandidateTested(scopePath, contractKey);
     }
 
     void chargeHandlerOverhead(String scopePath, String contractKey) {
-        chargeProcessor(
-                GasScheduleConstants.ProcessorCounter.HANDLER_CALL,
-                1L,
-                GasChargeContext.of(
-                        scopePath,
-                        contractKey,
-                        null,
-                        GasScheduleConstants.ChargeReason.HANDLER_CALL));
+        processorCharges.handlerOverhead(scopePath, contractKey);
     }
 
     void chargeBoundaryCheck() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.PATCH_BOUNDARY_CHECKED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.PATCH_BOUNDARY));
+        processorCharges.boundaryCheck();
     }
 
     void chargePointerSegments(long quantity, String logicalPath) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.POINTER_SEGMENT_TRAVERSED,
-                quantity,
-                GasChargeContext.of(
-                        null,
-                        null,
-                        logicalPath,
-                        GasScheduleConstants.ChargeReason.RUNTIME_POINTER));
+        processorCharges.pointerSegments(quantity, logicalPath);
     }
 
     void chargePatchAddOrReplace(Node ignoredValue) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.PATCH_ADD_OR_REPLACE,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.APPLICATION_PATCH));
+        processorCharges.patchAddOrReplace(ignoredValue);
     }
 
     void chargeFrozenPatchAddOrReplace(FrozenNode ignoredValue) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.PATCH_ADD_OR_REPLACE,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.APPLICATION_PATCH));
+        processorCharges.frozenPatchAddOrReplace(ignoredValue);
     }
 
     void chargeFrozenPatchAddOrReplace(long ignoredAuthoredCanonicalSizeBytes) {
-        if (ignoredAuthoredCanonicalSizeBytes < 0L) {
-            throw new IllegalArgumentException("Authored canonical size must be non-negative");
-        }
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.PATCH_ADD_OR_REPLACE,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.APPLICATION_PATCH));
+        processorCharges.frozenPatchAddOrReplace(
+                ignoredAuthoredCanonicalSizeBytes);
     }
 
     void chargePatchRemove() {
-        chargeProcessor(
-                GasScheduleConstants.ProcessorCounter.PATCH_REMOVE,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.APPLICATION_PATCH));
+        processorCharges.patchRemove();
     }
 
     void chargeCascadeRouting(int matchingDeliveryCount) {
-        if (matchingDeliveryCount > 0) {
-            chargeProcessor(
-                    GasScheduleConstants
-                            .ProcessorCounter.DOCUMENT_UPDATE_DELIVERED,
-                    matchingDeliveryCount,
-                    GasChargeContext.reason(
-                            GasScheduleConstants
-                                    .ChargeReason.DOCUMENT_UPDATE));
-        }
+        processorCharges.cascadeRouting(matchingDeliveryCount);
     }
 
     void chargeEmitEvent(Node ignoredEvent) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.INTERNAL_EVENT_ENQUEUED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.EVENT_EMISSION));
+        processorCharges.emitEvent(ignoredEvent);
     }
 
     void chargeRootEventRecorded() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.ROOT_EVENT_RECORDED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.ROOT_EMISSION));
+        processorCharges.rootEventRecorded();
     }
 
     void chargeBridge(Node ignoredEvent) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.EMBEDDED_EVENT_DELIVERED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.EMBEDDED_EVENT));
+        processorCharges.bridge(ignoredEvent);
     }
 
     void chargeTriggeredDelivery() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.TRIGGERED_EVENT_DELIVERED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.TRIGGERED_EVENT));
+        processorCharges.triggeredDelivery();
     }
 
     void chargeDrainEvent() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.INTERNAL_EVENT_DEQUEUED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.EVENT_DRAIN));
+        processorCharges.drainEvent();
     }
 
     void chargeCheckpointCompared() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.CHECKPOINT_COMPARED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.CHECKPOINT_COMPARE));
+        processorCharges.checkpointCompared();
     }
 
     void chargeCheckpointUpdate() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.CHECKPOINT_WRITTEN,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.CHECKPOINT_WRITE));
+        processorCharges.checkpointUpdate();
     }
 
     void chargeProcessorMarkerWritten(String reason) {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.PROCESSOR_MARKER_WRITTEN,
-                1L,
-                GasChargeContext.reason(reason));
+        processorCharges.processorMarkerWritten(reason);
     }
 
     void chargeTerminationRequest() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.TERMINATION_REQUESTED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.TERMINATION_REQUEST));
+        processorCharges.terminationRequest();
     }
 
     void chargeTerminationMarker() {
-        chargeProcessorMarkerWritten(
-                GasScheduleConstants.ChargeReason.TERMINATION_MARKER);
+        processorCharges.terminationMarker();
     }
 
     void chargeLifecycleDelivery() {
-        chargeProcessor(
-                GasScheduleConstants
-                        .ProcessorCounter.LIFECYCLE_DELIVERED,
-                1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.LIFECYCLE));
-    }
-
-    private void chargeProcessor(String counter,
-                                 long quantity,
-                                 GasChargeContext context) {
-        charge(
-                GasScheduleConstants.Namespace.PROCESSOR,
-                counter,
-                quantity,
-                context);
+        processorCharges.lifecycleDelivery();
     }
 
     private void chargeWeighted(String namespace,

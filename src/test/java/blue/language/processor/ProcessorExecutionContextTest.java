@@ -27,7 +27,7 @@ final class ProcessorExecutionContextTest {
                 .properties("nested", new Node().properties("inner", new Node().value("x")));
 
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        ProcessorInvocationState execution = new ProcessorInvocationState(owner, document.clone());
         execution.preflightScope("/");
 
         // when
@@ -60,7 +60,7 @@ final class ProcessorExecutionContextTest {
     void shouldEnqueueOneInvocationOccurrenceAndRecordRootOutputWhenEmittingEvent() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
         execution.preflightScope("/");
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
 
@@ -88,8 +88,8 @@ final class ProcessorExecutionContextTest {
                             "target",
                             new Node().value(
                                     "before"));
-            ProcessorEngine.Execution execution =
-                    new ProcessorEngine.Execution(
+            ProcessorInvocationState execution =
+                    new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
                             document);
             execution.preflightScope("/");
@@ -166,8 +166,8 @@ final class ProcessorExecutionContextTest {
                 "child",
                 new Node().properties(
                         "x", new Node().value(0)));
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         new DocumentProcessor(), document);
         execution.preflightScope("/child");
         ProcessorExecutionContext context = execution.createContext(
@@ -205,8 +205,8 @@ final class ProcessorExecutionContextTest {
         Node document = new Node().properties(
                 "counter",
                 new Node().value(0));
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         new DocumentProcessor(), document);
         execution.preflightScope("/");
         ProcessorExecutionContext context = execution.createContext(
@@ -240,7 +240,7 @@ final class ProcessorExecutionContextTest {
     void shouldVerifyInvalidEmitEventAbortsBeforeQueueOrPortableGas() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
         execution.preflightScope("/");
         long admittedBeforeEffects = execution.runtime().totalGas();
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
@@ -268,7 +268,7 @@ final class ProcessorExecutionContextTest {
     void shouldVerifyRuntimeFailureDoesNotApplyBufferedEffects() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("existing", new Node().value(1)));
+        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node().properties("existing", new Node().value(1)));
         execution.preflightScope("/");
         long admittedBeforeEffects = execution.runtime().totalGas();
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
@@ -298,8 +298,8 @@ final class ProcessorExecutionContextTest {
         // given
         Node input = new Node().properties(
                 "existing", new Node().value(1));
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         new DocumentProcessor(), input.clone());
         execution.preflightScope("/");
         long admittedBeforeRuntime =
@@ -362,8 +362,8 @@ final class ProcessorExecutionContextTest {
     @Test
     void shouldVerifySeveralRuntimeLedgersMergeOnceInCanonicalNamespaceOrder() {
         // given
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         new DocumentProcessor(), new Node());
         execution.preflightScope("/");
         ProcessorExecutionContext context =
@@ -413,7 +413,7 @@ final class ProcessorExecutionContextTest {
                 .description("Captures execution context metadata")
                 .properties("propertyKey", new Node().value("/x"));
         FrozenNode frozen = FrozenNode.fromResolvedNode(contract);
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
+        ProcessorInvocationState execution = new ProcessorInvocationState(
                 new DocumentProcessor(), new Node());
         execution.preflightScope("/");
         // when

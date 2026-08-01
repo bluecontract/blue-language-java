@@ -102,7 +102,7 @@ class ProcessorPreviewOwnershipTest {
                 .withRegistry(registry)
                 .withSnapshotManager(manager)
                 .build();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
         SetProperty contract = new SetProperty();
         contract.setChannelKey("events");
         ContractBundle bundle = ContractBundle.builder()
@@ -235,7 +235,7 @@ class ProcessorPreviewOwnershipTest {
         DocumentProcessor processor = DocumentProcessor.builder()
                 .withSnapshotManager(manager)
                 .build();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
+        ProcessorInvocationState execution = new ProcessorInvocationState(
                 processor, new Node());
         ProcessorExecutionContext context = execution.createContext(
                 "/", ContractBundle.empty(), new Node(), false);
@@ -258,10 +258,10 @@ class ProcessorPreviewOwnershipTest {
     }
 
     private static final class Fixture {
-        private final ProcessorEngine.Execution execution;
+        private final ProcessorInvocationState execution;
         private final ProcessorExecutionContext context;
 
-        private Fixture(ProcessorEngine.Execution execution,
+        private Fixture(ProcessorInvocationState execution,
                         ProcessorExecutionContext context) {
             this.execution = execution;
             this.context = context;

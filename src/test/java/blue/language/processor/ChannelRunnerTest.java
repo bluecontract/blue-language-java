@@ -54,7 +54,7 @@ final class ChannelRunnerTest {
                 + "    propertyKey: /aCount\n";
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = execution(
+        ProcessorInvocationState execution = execution(
                 owner,
                 document,
                 Arrays.asList("zSource", "aSource"));
@@ -119,7 +119,7 @@ final class ChannelRunnerTest {
                 + "    propertyKey: /counter\n";
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = execution(owner, document);
+        ProcessorInvocationState execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
         ChannelRunner runner = new ChannelRunner(
@@ -172,7 +172,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = execution(owner, document);
+        ProcessorInvocationState execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -235,7 +235,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = execution(owner, document);
+        ProcessorInvocationState execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -289,7 +289,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = execution(owner, document);
+        ProcessorInvocationState execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -341,7 +341,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = execution(owner, document);
+        ProcessorInvocationState execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
         CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
@@ -388,7 +388,7 @@ final class ChannelRunnerTest {
 
         Node document = blue.yamlToNode(yaml);
         DocumentProcessor owner = blue.getDocumentProcessor();
-        ProcessorEngine.Execution execution = execution(owner, document);
+        ProcessorInvocationState execution = execution(owner, document);
         execution.preflightScope("/");
         ContractBundle bundle = execution.bundleForScope("/");
 
@@ -412,12 +412,12 @@ final class ChannelRunnerTest {
     }
 
     private static ContractBundle refreshBundle(
-            ProcessorEngine.Execution execution) {
+            ProcessorInvocationState execution) {
         execution.preflightScope("/");
         return execution.bundleForScope("/");
     }
 
-    private static ProcessorEngine.Execution execution(
+    private static ProcessorInvocationState execution(
             DocumentProcessor owner,
             Node document) {
         return execution(
@@ -426,7 +426,7 @@ final class ChannelRunnerTest {
                 Collections.singletonList("testChannel"));
     }
 
-    private static ProcessorEngine.Execution execution(
+    private static ProcessorInvocationState execution(
             DocumentProcessor owner,
             Node document,
             List<String> channelKeys) {
@@ -470,7 +470,7 @@ final class ChannelRunnerTest {
                                         bindingEvent))
                         .build());
         }
-        return new ProcessorEngine.Execution(
+        return new ProcessorInvocationState(
                 owner,
                 document.clone(),
                 bindingEvent,

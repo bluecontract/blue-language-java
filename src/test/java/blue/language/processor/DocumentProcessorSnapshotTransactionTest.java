@@ -78,7 +78,7 @@ class DocumentProcessorSnapshotTransactionTest {
     @Test
     void shouldAttributeWorkingDocumentMutablePatchToFixedCallerSource() {
         // given
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         Node document = YAML_MAPPER.readValue("x: 1\nother: keep", Node.class);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, null, metrics);
 
@@ -771,7 +771,7 @@ class DocumentProcessorSnapshotTransactionTest {
         Node resolved = YAML_MAPPER.readValue("local: yes\ninherited: from-type", Node.class);
         CountingSnapshotManager manager = new CountingSnapshotManager(canonical, resolved);
         DocumentProcessor processor = new DocumentProcessor(null, manager);
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, canonical.clone());
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, canonical.clone());
         execution.preflightScope("/");
         execution.runtime().snapshot();
         // when

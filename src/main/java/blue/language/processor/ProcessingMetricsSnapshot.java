@@ -51,6 +51,22 @@ public final class ProcessingMetricsSnapshot {
     }
 
     /**
+     * Reads one typed additive counter.
+     *
+     * @param metricId counter metric identifier
+     * @param context metric context
+     * @return current value, or zero when absent
+     */
+    public long counter(
+            ProcessingMetricId metricId,
+            ProcessingObservationContext context) {
+        if (metricId.kind() != ObservationKind.COUNTER_DELTA) {
+            throw new IllegalArgumentException(metricId + " is not an additive counter");
+        }
+        return counter(metricId.legacyName(context));
+    }
+
+    /**
      * Reads one current-value gauge.
      *
      * @param name metric name
@@ -59,6 +75,22 @@ public final class ProcessingMetricsSnapshot {
     public long gauge(String name) {
         Long value = gauges.get(name);
         return value != null ? value : 0L;
+    }
+
+    /**
+     * Reads one typed current or high-water gauge.
+     *
+     * @param metricId gauge metric identifier
+     * @param context metric context
+     * @return current value, or zero when absent
+     */
+    public long gauge(
+            ProcessingMetricId metricId,
+            ProcessingObservationContext context) {
+        if (metricId.kind() == ObservationKind.COUNTER_DELTA) {
+            throw new IllegalArgumentException(metricId + " is not a gauge");
+        }
+        return gauge(metricId.legacyName(context));
     }
 
     /**

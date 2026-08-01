@@ -10,6 +10,16 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
+import static blue.language.processor.SemanticGasFormulas.blocks;
+import static blue.language.processor.SemanticGasFormulas.ceilingDivide;
+import static blue.language.processor.SemanticGasFormulas.checkedAdd;
+import static blue.language.processor.SemanticGasFormulas.limbs;
+import static blue.language.processor.SemanticGasFormulas.multiply;
+import static blue.language.processor.SemanticGasFormulas.requireIndex;
+import static blue.language.processor.SemanticGasFormulas.requireKey;
+import static blue.language.processor.SemanticGasFormulas.requireNonNegative;
+import static blue.language.processor.SemanticGasFormulas.requirePositive;
+
 /**
  * Canonical Contracts 1.0 semantic-work formulas backed by one invocation's
  * shared {@link GasMeter}.
@@ -73,10 +83,8 @@ public final class SemanticGasMeter {
      * @throws GasLimitExceededException if budget is insufficient
      */
     public void objectMembersRead(long quantity, GasChargeContext context) {
-        charge(
-                GasScheduleConstants.SemanticCounter.OBJECT_MEMBER_READ,
-                quantity,
-                context);
+        charge(GasScheduleConstants.SemanticCounter.OBJECT_MEMBER_READ,
+                quantity, context);
     }
 
     /**
@@ -88,10 +96,8 @@ public final class SemanticGasMeter {
      * @throws GasLimitExceededException if budget is insufficient
      */
     public void listItemsRead(long quantity, GasChargeContext context) {
-        charge(
-                GasScheduleConstants.SemanticCounter.LIST_ITEM_READ,
-                quantity,
-                context);
+        charge(GasScheduleConstants.SemanticCounter.LIST_ITEM_READ,
+                quantity, context);
     }
 
     /**
@@ -106,7 +112,7 @@ public final class SemanticGasMeter {
                                        GasChargeContext context) {
         charge(
                 GasScheduleConstants.SemanticCounter.TEXT_BLOCK_EXAMINED,
-                blocks(codePointCount),
+                blocks(meter.schedule(), codePointCount),
                 context);
     }
 
@@ -136,7 +142,7 @@ public final class SemanticGasMeter {
         charge(
                 GasScheduleConstants
                         .SemanticCounter.TEXT_BLOCK_CONSTRUCTED,
-                blocks(codePointCount),
+                blocks(meter.schedule(), codePointCount),
                 context);
     }
 
@@ -191,7 +197,7 @@ public final class SemanticGasMeter {
         if (result == 0) {
             result = Boolean.compare(leftOffset < left.length(), rightOffset < right.length());
         }
-        long operandBlocks = blocks(read);
+        long operandBlocks = blocks(meter.schedule(), read);
         charge(
                 GasScheduleConstants.SemanticCounter.TEXT_BLOCK_EXAMINED,
                 operandBlocks,
@@ -212,10 +218,8 @@ public final class SemanticGasMeter {
      * @throws GasLimitExceededException if budget is insufficient
      */
     public void scalarComparisons(long quantity, GasChargeContext context) {
-        charge(
-                GasScheduleConstants.SemanticCounter.SCALAR_COMPARISON,
-                quantity,
-                context);
+        charge(GasScheduleConstants.SemanticCounter.SCALAR_COMPARISON,
+                quantity, context);
     }
 
     /**
@@ -284,8 +288,8 @@ public final class SemanticGasMeter {
         Objects.requireNonNull(leftMagnitude, "leftMagnitude");
         Objects.requireNonNull(rightMagnitude, "rightMagnitude");
         integerOperation(operation,
-                limbs(leftMagnitude),
-                limbs(rightMagnitude),
+                limbs(meter.schedule(), leftMagnitude),
+                limbs(meter.schedule(), rightMagnitude),
                 context);
     }
 
@@ -303,13 +307,11 @@ public final class SemanticGasMeter {
         charge(
                 GasScheduleConstants
                         .SemanticCounter.INTEGER_LIMB_OPERATION,
-                limbs(magnitude),
+                limbs(meter.schedule(), magnitude),
                 context);
     }
 
-    GasSchedule schedule() {
-        return meter.schedule();
-    }
+    GasSchedule schedule() { return meter.schedule(); }
 
     /**
      * Charges stable-sort comparator invocations.
@@ -320,10 +322,8 @@ public final class SemanticGasMeter {
      * @throws GasLimitExceededException if budget is insufficient
      */
     public void sortComparisons(long quantity, GasChargeContext context) {
-        charge(
-                GasScheduleConstants.SemanticCounter.SORT_COMPARISON,
-                quantity,
-                context);
+        charge(GasScheduleConstants.SemanticCounter.SORT_COMPARISON,
+                quantity, context);
     }
 
     /**
@@ -405,10 +405,8 @@ public final class SemanticGasMeter {
      * @throws GasLimitExceededException if budget is insufficient
      */
     public void typeEdgesFollowed(long quantity, GasChargeContext context) {
-        charge(
-                GasScheduleConstants.SemanticCounter.TYPE_EDGE_FOLLOWED,
-                quantity,
-                context);
+        charge(GasScheduleConstants.SemanticCounter.TYPE_EDGE_FOLLOWED,
+                quantity, context);
     }
 
     /**
@@ -703,77 +701,6 @@ public final class SemanticGasMeter {
                 counter,
                 quantity,
                 context != null ? context : GasChargeContext.empty());
-    }
-
-    private long blocks(long codePoints) {
-        requireNonNegative(codePoints, "codePointCount");
-        return ceilingDivide(codePoints,
-                meter.schedule().formulaParameter(
-                        GasScheduleConstants.FormulaParameter
-                                .TEXT_BLOCK_CODE_POINTS));
-    }
-
-    private long limbs(BigInteger magnitude) {
-        int bits = magnitude.abs().bitLength();
-        long radixBits = meter.schedule()
-                .formulaParameter(
-                        GasScheduleConstants.FormulaParameter
-                                .INTEGER_RADIX_BITS);
-        return Math.max(
-                meter.schedule().formulaParameter(
-                        GasScheduleConstants.FormulaParameter
-                                .INTEGER_MINIMUM_LIMBS),
-                ceilingDivide(bits, radixBits));
-    }
-
-    private static long ceilingDivide(long value, long divisor) {
-        if (value == 0L) {
-            return 0L;
-        }
-        return 1L + ((value - 1L) / divisor);
-    }
-
-    private static long multiply(long left, long right, String label) {
-        if (left != 0L && right > Long.MAX_VALUE / left) {
-            throw new IllegalArgumentException(label + " exceeds long range");
-        }
-        return left * right;
-    }
-
-    private static long checkedAdd(long left, long right, String label) {
-        if (right > Long.MAX_VALUE - left) {
-            throw new IllegalArgumentException(label + " exceeds long range");
-        }
-        return left + right;
-    }
-
-    private static void requireIndex(long index,
-                                     long resultLength,
-                                     boolean insertion) {
-        requireNonNegative(resultLength, "resultLength");
-        requireNonNegative(index, "index");
-        long upper = insertion ? resultLength : resultLength - 1L;
-        if (resultLength == 0L || index > upper) {
-            throw new IllegalArgumentException("index is outside result list");
-        }
-    }
-
-    private static void requirePositive(long value, String label) {
-        if (value <= 0L) {
-            throw new IllegalArgumentException(label + " must be positive");
-        }
-    }
-
-    private static void requireNonNegative(long value, String label) {
-        if (value < 0L) {
-            throw new IllegalArgumentException(label + " must be non-negative");
-        }
-    }
-
-    private static void requireKey(String value, String label) {
-        if (value == null || value.isEmpty()) {
-            throw new IllegalArgumentException(label + " must be non-empty");
-        }
     }
 
     /** Formula categories for logical integer work. */

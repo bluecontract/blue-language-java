@@ -67,8 +67,8 @@ class DocumentProcessorInitializationTest {
     void shouldVerifyInitializationMarkerUsesDirectWriteWithoutApplicationPatchMetrics() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
+        blue.processingObserver(metrics);
         Node original = blue.yamlToNode("name: Minimal Doc\n" +
                 "contracts: {}\n");
         ResolvedSnapshot preInitialization = blue.resolveToSnapshot(original.clone());
@@ -106,8 +106,8 @@ class DocumentProcessorInitializationTest {
     void shouldVerifySnapshotBackedInitializationMarkerUsesDirectWriteWithoutPatchResolution() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
+        blue.processingObserver(metrics);
         ResolvedSnapshot preInitialization = blue.resolveToSnapshot(blue.yamlToNode(
                 "name: Snapshot Minimal Doc\n" +
                         "contracts: {}\n"));
@@ -134,8 +134,8 @@ class DocumentProcessorInitializationTest {
     void shouldVerifyInitializationDocumentUsesVerifiedExactIdentityWhenUncheckedIdentityDiffers() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
+        blue.processingObserver(metrics);
         Node original = blue.yamlToNode(
                 "name: Nested List Divergence\n" +
                         "bex:\n" +
@@ -308,7 +308,7 @@ class DocumentProcessorInitializationTest {
         blue.registerExternalContractType(CAPTURE_LIFECYCLE_DOCUMENT_ID_BLUE_ID,
                 new Node().name("CaptureLifecycleDocumentId"),
                 new CaptureLifecycleDocumentIdProcessor());
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         Node original = blue.yamlToNode(
                 "name: Embedded Nested List\n" +
                         "child:\n" +
@@ -345,7 +345,7 @@ class DocumentProcessorInitializationTest {
         String childContentBlueId = childPreInitialization.blueId();
         String rootDocumentBlueId =
                 rootDocumentIdentityAtInitialization(blue, original);
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        blue.processingObserver(metrics);
 
         // when
         String childUnchecked = uncheckedInitializationId(childPreInitialization.frozenCanonicalRoot());
@@ -374,8 +374,8 @@ class DocumentProcessorInitializationTest {
     void shouldVerifyNonObjectEmbeddedChildTerminatesDuringPhase1WithoutInitialization() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
+        blue.processingObserver(metrics);
         Node original = blue.yamlToNode(
                 "name: Non Object Embedded Child\n" +
                         "payload:\n" +

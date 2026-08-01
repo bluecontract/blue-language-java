@@ -582,27 +582,29 @@ class FrozenJsonPatchApiTest {
                 false,
                 true,
                 PatchSource.LEGACY_PUBLIC_API,
-                ProcessingMetricsSink.NOOP);
+                NoOpProcessingObserver.INSTANCE);
     }
 
-    private static final class RecordingMetrics implements ProcessingMetricsSink {
+    private static final class RecordingMetrics implements ProcessingObserver {
         private int frozenAccepted;
         private int mutableFrozen;
         private int frozenMaterialized;
 
         @Override
-        public void incrementFrozenPatchValuesAccepted() {
-            frozenAccepted++;
-        }
-
-        @Override
-        public void incrementMutablePatchValuesFrozen() {
-            mutableFrozen++;
-        }
-
-        @Override
-        public void incrementFrozenPatchValuesMaterialized() {
-            frozenMaterialized++;
+        public void record(ProcessingObservation observation) {
+            switch (observation.metricId()) {
+                case FROZEN_PATCH_VALUES_ACCEPTED:
+                    frozenAccepted += observation.value();
+                    break;
+                case MUTABLE_PATCH_VALUES_FROZEN:
+                    mutableFrozen += observation.value();
+                    break;
+                case FROZEN_PATCH_VALUES_MATERIALIZED:
+                    frozenMaterialized += observation.value();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

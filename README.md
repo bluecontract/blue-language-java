@@ -1095,6 +1095,20 @@ examples so documentation changes cannot silently drift from the public API.
 | [Processor Contract Matching](docs/processor-contract-matching.md) | External evidence, channel and handler SPI, execution order, checkpointing, and atomic failure |
 | [Processor Results, Diagnostics, And Recovery](docs/processor-results-diagnostics-and-recovery.md) | Completed statuses, diagnostics, portable limits, subscription surfaces, rollback, retry, and cross-language handling |
 | [Fragmented PROCESS Inputs And Logical Delivery](docs/fragmented-processing-and-logical-delivery.md) | Exact fragments, locality, selected bodies, Phase-B dependencies, and coalesced logical delivery |
+| [One-Root Contracts](docs/concepts/one-root-contracts.md) | The two-input PROCESS model, owned embedded scopes, representation equivalence, and atomicity |
+| [Channels, Handlers, And Logical Deliveries](docs/concepts/channels-handlers-and-deliveries.md) | Source authority, read-only targets, classification, grouping, and per-source checkpoints |
+| [Events And Document Updates](docs/concepts/events-and-document-updates.md) | Immutable occurrences, frozen propagation, Root outbox rules, and update operation classification |
+| [Checkpoints](docs/concepts/checkpoints.md) | Domains, stale gating, pending-write coalescing, cleanup, and idempotent host commit |
+| [Lifecycle](docs/concepts/lifecycle.md) | Initialization, termination, active-scope cut-off, marker ownership, and rollback |
+| [Portable Gas](docs/concepts/gas.md) | Named charge admission, semantic formulas, child ledgers, trace prefixes, and portable limits |
+| [Adding A Contract Runtime](docs/guides/adding-a-contract-runtime.md) | Runtime type, processor, exact registration, immutable configuration, and required tests |
+| [Processing From Two BlueIds](docs/guides/processing-from-two-blueids.md) | Pure-reference Root/event admission, resource suspension, retry, and platform commit |
+| [Fragmented Processing Guide](docs/guides/fragmented-processing.md) | Exact fragment storage, locality, lazy bodies, changed-spine rebuilding, and cyclic boundaries |
+| [Debugging And Diagnostics](docs/guides/debugging-and-diagnostics.md) | Closed status triage, exact trace comparison, resource demands, limits, and observers |
+| [Processing Observation Reference](docs/reference/processing-observations.md) | Generated typed metric names, aggregation kinds, and bounded dimensions |
+| [Contracts Pipeline Architecture](docs/architecture/contracts-pipeline.md) | Explicit deterministic phases from admission through result assembly |
+| [Transactional State](docs/architecture/transactional-state.md) | Invocation-owned session components, tentative mutation, checkpoints, and atomic commit |
+| [Thread Safety And Ownership](docs/architecture/thread-safety.md) | Immutable processor generations, invocation isolation, collaborator contracts, and concurrency |
 | [`Blue` Facade Method Reference](docs/blue-facade-method-reference.md) | Complete facade inventory, operational distinctions, caching, and lifecycle behavior |
 | [Language 1.0 And Contracts Kernel 1.0 Migration](docs/language-1.0-contracts-kernel-1.0-migration.md) | Migration from preview APIs to the final generic hosted-runtime boundary |
 | [Language 1.0 And Contracts Kernel 1.0 JVM API Report](docs/language-1.0-contracts-kernel-1.0-api-report.md) | Historical cleanup ledger and current binary-compatibility evidence |

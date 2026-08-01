@@ -18,8 +18,8 @@ class PublishedSnapshotRoundTripTest {
     void shouldPublishStrictDurableCanonicalSnapshotDuringSnapshotInitialization() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
+        blue.processingObserver(metrics);
         ResolvedSnapshot input = blue.resolveToSnapshot(blue.yamlToNode(
                 "name: Published Snapshot Initialization\n" +
                 "bex:\n" +
@@ -60,8 +60,8 @@ class PublishedSnapshotRoundTripTest {
                 "contracts: {}\n");
         DocumentProcessingResult initialized = blue.initializeDocument(document);
         ResolvedSnapshot strictInitialized = snapshot(blue, initialized);
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
+        blue.processingObserver(metrics);
 
         // when
         DocumentProcessingResult result = blue.processDocument(strictInitialized,
@@ -87,8 +87,8 @@ class PublishedSnapshotRoundTripTest {
     void shouldCanonicalizeUncheckedSnapshotInputBeforePublication() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
+        blue.processingObserver(metrics);
         Node document = blue.yamlToNode(
                 "name: Unchecked Published Snapshot Input\n" +
                 "bex:\n" +

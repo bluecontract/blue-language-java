@@ -28,7 +28,7 @@ final class ImmutableJsonPatch {
     private final FrozenNode canonicalValue;
     private final FrozenNode resolvedValue;
     private final String valueBlueId;
-    private final ProcessingMetricsSink metrics;
+    private final ProcessingObserver metrics;
 
     private ImmutableJsonPatch(JsonPatch.Op op,
                                String authoredPath,
@@ -36,7 +36,7 @@ final class ImmutableJsonPatch {
                                Node authoredValue,
                                FrozenNode canonicalValue,
                                FrozenNode resolvedValue,
-                               ProcessingMetricsSink metrics) {
+                               ProcessingObserver metrics) {
         this.op = Objects.requireNonNull(op, "op");
         this.authoredPath = Objects.requireNonNull(authoredPath, "authoredPath");
         this.path = Objects.requireNonNull(path, "path");
@@ -44,10 +44,10 @@ final class ImmutableJsonPatch {
         this.canonicalValue = canonicalValue;
         this.resolvedValue = resolvedValue;
         this.valueBlueId = op == JsonPatch.Op.REMOVE ? null : resolvedValue.blueId();
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
     }
 
-    static PreparationContext preparationContext(ProcessingMetricsSink metrics) {
+    static PreparationContext preparationContext(ProcessingObserver metrics) {
         return new PreparationContext(metrics);
     }
 
@@ -71,14 +71,14 @@ final class ImmutableJsonPatch {
     static ImmutableJsonPatch from(JsonPatch patch,
                                    FrozenNode canonicalRoot,
                                    FrozenNode resolvedRoot) {
-        return new PreparationContext(ProcessingMetricsSink.NOOP)
+        return new PreparationContext(NoOpProcessingObserver.INSTANCE)
                 .prepare(patch, canonicalRoot, resolvedRoot);
     }
 
     static ImmutableJsonPatch from(FrozenJsonPatch patch,
                                    FrozenNode canonicalRoot,
                                    FrozenNode resolvedRoot) {
-        return new PreparationContext(ProcessingMetricsSink.NOOP)
+        return new PreparationContext(NoOpProcessingObserver.INSTANCE)
                 .prepare(patch, canonicalRoot, resolvedRoot);
     }
 
@@ -166,7 +166,8 @@ final class ImmutableJsonPatch {
         if (authoredValue != null) {
             return authoredValue.clone();
         }
-        metrics.incrementFrozenPatchValuesMaterialized();
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.FROZEN_PATCH_VALUES_MATERIALIZED, 1L);
         return canonicalValue.toNode();
     }
 
@@ -186,7 +187,7 @@ final class ImmutableJsonPatch {
 
     static final class PreparationContext {
         private static final int MAX_PARSED_POINTERS = 256;
-        private final ProcessingMetricsSink metrics;
+        private final ProcessingObserver metrics;
         private final Map<String, ParsedJsonPointer> parsedPointers =
                 new LinkedHashMap<String, ParsedJsonPointer>(16, 0.75f, true) {
                     @Override
@@ -195,8 +196,8 @@ final class ImmutableJsonPatch {
                     }
                 };
 
-        private PreparationContext(ProcessingMetricsSink metrics) {
-            this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        private PreparationContext(ProcessingObserver metrics) {
+            this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
         }
 
         ImmutableJsonPatch prepare(JsonPatch patch,
@@ -218,9 +219,11 @@ final class ImmutableJsonPatch {
             if (parsed == null) {
                 parsed = ParsedJsonPointer.parse(authoredPath);
                 parsedPointers.put(authoredPath, parsed);
-                metrics.incrementParsedPointerCacheMisses();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PARSED_POINTER_CACHE_MISSES, 1L);
             } else {
-                metrics.incrementParsedPointerCacheHits();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PARSED_POINTER_CACHE_HITS, 1L);
             }
 
             if (op == JsonPatch.Op.REMOVE) {
@@ -228,12 +231,23 @@ final class ImmutableJsonPatch {
             }
 
             Node value = Objects.requireNonNull(patch.getVal(), "patch value");
-            metrics.incrementMutablePatchValuesFrozen(source);
+            PatchSource fixedSource = source != null
+                    ? source
+                    : PatchSource.UNKNOWN_INTERNAL;
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.MUTABLE_PATCH_VALUES_FROZEN, 1L);
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.MUTABLE_PATCH_VALUES_FROZEN_BY_SOURCE,
+                    1L,
+                    ProcessingObservationContext.of(
+                            ProcessingObservationDimension.PATCH_SOURCE,
+                            fixedSource.name()));
             FrozenNode canonical = freeze(value, canonicalRoot);
             FrozenNode resolved;
             if (sameFreezeMode(canonicalRoot, resolvedRoot)) {
                 resolved = canonical;
-                metrics.incrementFrozenPatchValueHits();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.FROZEN_PATCH_VALUE_HITS, 1L);
             } else {
                 resolved = freeze(value, resolvedRoot);
             }
@@ -254,12 +268,14 @@ final class ImmutableJsonPatch {
             }
 
             FrozenNode authored = Objects.requireNonNull(patch.getValue(), "patch value");
-            metrics.incrementFrozenPatchValuesAccepted();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.FROZEN_PATCH_VALUES_ACCEPTED, 1L);
             FrozenNode canonical = FrozenNode.authoredValueInModeOf(authored, canonicalRoot);
             FrozenNode resolved;
             if (sameFreezeMode(canonicalRoot, resolvedRoot)) {
                 resolved = canonical;
-                metrics.incrementFrozenPatchValueHits();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.FROZEN_PATCH_VALUE_HITS, 1L);
             } else {
                 resolved = FrozenNode.authoredValueInModeOf(authored, resolvedRoot);
             }

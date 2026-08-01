@@ -8,9 +8,11 @@ import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ProcessingMetricsSnapshot;
-import blue.language.processor.ProcessingMetricsSink;
+import blue.language.processor.ProcessingMetricId;
+import blue.language.processor.ProcessingObservation;
+import blue.language.processor.ProcessingObserver;
 import blue.language.processor.ProcessingSnapshotManager;
-import blue.language.processor.RecordingProcessingMetricsSink;
+import blue.language.processor.RecordingProcessingObserver;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.provider.BasicNodeProvider;
@@ -33,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -154,7 +157,7 @@ class BlueCacheLifecycleTest {
     }
 
     @Test
-    void shouldRetainSharedBorrowedRegistryAndTypeResolverAfterRefresh() {
+    void shouldSnapshotBorrowedRegistryAndTypeResolverDuringRefresh() {
         // given
         DocumentProcessor shared = new DocumentProcessor();
         Blue first = new Blue().documentProcessor(shared);
@@ -164,12 +167,14 @@ class BlueCacheLifecycleTest {
         DocumentProcessor refreshed = first.getDocumentProcessor();
 
         // then
-        assertSame(shared.getContractRegistry(), refreshed.getContractRegistry());
-        assertSame(shared.getContractTypeResolver(), refreshed.getContractTypeResolver());
+        assertNotSame(shared.getContractRegistry(), refreshed.getContractRegistry());
+        assertNotSame(shared.getContractTypeResolver(), refreshed.getContractTypeResolver());
+        assertEquals(shared.getContractRegistry().processors(),
+                refreshed.getContractRegistry().processors());
     }
 
     @Test
-    void shouldExposeRegistrationAcrossRuntimesSharingBorrowedProcessor() {
+    void shouldIsolateRegistrationIntoOneRuntimeSuccessorGeneration() {
         // given
         DocumentProcessor shared = new DocumentProcessor();
         Blue first = new Blue().documentProcessor(shared);
@@ -180,13 +185,18 @@ class BlueCacheLifecycleTest {
         first.nodeProvider(node -> null);
         DocumentProcessor refreshed = first.getDocumentProcessor();
         second.registerContractProcessor("shared-registration", processor);
-        ContractProcessor<?> registered =
+        ContractProcessor<?> registeredInFirst =
                 refreshed.getContractRegistry().processors().get("shared-registration");
-        Class<?> registeredType =
-                refreshed.getContractTypeResolver().resolveClass("shared-registration");
+        DocumentProcessor secondGeneration = second.getDocumentProcessor();
+        ContractProcessor<?> registeredInSecond =
+                secondGeneration.getContractRegistry()
+                        .processors().get("shared-registration");
+        Class<?> registeredType = secondGeneration
+                .getContractTypeResolver().resolveClass("shared-registration");
 
         // then
-        assertSame(processor, registered);
+        assertNull(registeredInFirst);
+        assertSame(processor, registeredInSecond);
         assertSame(RegistrationMarker.class, registeredType);
     }
 
@@ -297,14 +307,19 @@ class BlueCacheLifecycleTest {
         // given
         Blue blue = new Blue();
         AtomicBoolean closeOnce = new AtomicBoolean();
-        blue.getDocumentProcessor().processingMetricsSink(new ProcessingMetricsSink() {
+        AtomicBoolean armed = new AtomicBoolean();
+        blue.processingObserver(new ProcessingObserver() {
             @Override
-            public void setCacheCurrentWeightBytes(String cacheName, long bytes) {
-                if (closeOnce.compareAndSet(false, true)) {
+            public void record(ProcessingObservation observation) {
+                if (observation.metricId()
+                        == ProcessingMetricId.CACHE_CURRENT_WEIGHT_BYTES
+                        && armed.get()
+                        && closeOnce.compareAndSet(false, true)) {
                     blue.close();
                 }
             }
         });
+        armed.set(true);
 
         // when
         Throwable failure = captureFailure(() -> blue.resolveToSnapshot(document(1)));
@@ -314,9 +329,8 @@ class BlueCacheLifecycleTest {
         BlueCacheStats closedStats = blue.cacheStats();
 
         // then
-        assertTrue(failure instanceof IllegalStateException);
-        assertEquals("Blue runtime cannot close from active runtime work",
-                failure.getMessage());
+        assertNull(failure,
+                "observer failures must not escape deterministic runtime work");
         assertFalse(closedAfterRejectedClose);
         assertTrue(closedAfterExplicitClose);
         assertEquals(0, closedStats.entries());
@@ -328,11 +342,14 @@ class BlueCacheLifecycleTest {
         // given
         Blue blue = new Blue();
         AtomicInteger callbacks = new AtomicInteger();
-        blue.getDocumentProcessor().processingMetricsSink(new ProcessingMetricsSink() {
+        blue.processingObserver(new ProcessingObserver() {
             @Override
-            public void incrementRuntimeCloseCalls() {
-                callbacks.incrementAndGet();
-                blue.close();
+            public void record(ProcessingObservation observation) {
+                if (observation.metricId()
+                        == ProcessingMetricId.RUNTIME_CLOSE_CALLS) {
+                    callbacks.incrementAndGet();
+                    blue.close();
+                }
             }
         });
 
@@ -504,9 +521,9 @@ class BlueCacheLifecycleTest {
     @Test
     void shouldReleaseOwnedStateIdempotentlyAndRecordCloseMetrics() {
         // given
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         Blue blue = Blue.withCachePolicy(BlueCachePolicy.boundedDefaults());
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        blue.processingObserver(metrics);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(document(1));
         blue.cacheResolvedSnapshot(snapshot);
         long retainedBeforeClose = blue.cacheStats().currentWeightBytes();
@@ -1672,13 +1689,6 @@ class BlueCacheLifecycleTest {
                     0L);
         }
 
-        @Override
-        public DocumentProcessor registerContractProcessor(
-                String blueId,
-                ContractProcessor<? extends Contract> processor) {
-            registrationEntered.countDown();
-            return super.registerContractProcessor(blueId, processor);
-        }
     }
 
     private static final class RegistrationMarker extends MarkerContract {

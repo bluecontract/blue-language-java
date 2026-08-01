@@ -86,7 +86,7 @@ final class ProcessorStaticSafetyTest {
                 String relative = PROCESSOR_MAIN.relativize(file).toString();
                 boolean allowed = relative.equals("CheckpointManager.java")
                         || relative.equals("TerminationService.java")
-                        || relative.equals("ScopeExecutor.java")
+                        || relative.equals("ScopeLifecycleExecutor.java")
                         || (relative.equals("DocumentProcessingRuntime.java") && line.contains("void directWrite("));
                 if (!allowed) {
                     offenders.add(file + ":" + (i + 1) + ": " + line.trim());
@@ -101,7 +101,8 @@ final class ProcessorStaticSafetyTest {
     @Test
     void shouldVerifyInitializationMarkerUsesTheNormativeDirectWrite() throws IOException {
         // given
-        String source = read(PROCESSOR_MAIN.resolve("ScopeExecutor.java"));
+        String source = read(PROCESSOR_MAIN.resolve(
+                "ScopeLifecycleExecutor.java"));
 
         // when
         boolean usesDirectWrite = source.contains(

@@ -1,7 +1,7 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.processor.DocumentProcessingRuntime;
+import blue.language.processor.DocumentProcessingRuntimeTestAccess;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.ResolvedSnapshot;
@@ -41,12 +41,12 @@ class LimitedCanonicalPatchTest {
         // given
         // Processing starts from authoritative Canonical Identity Input, not Source.
         ResolvedSnapshot limited = limitedBlue().loadSnapshot(source());
-        DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(limited, null, passThroughManager());
-
         // when
-        runtime.applyPatch("/", JsonPatch.replace("/a", new Node().value("new")));
-        ResolvedSnapshot after = runtime.snapshot();
+        ResolvedSnapshot after = DocumentProcessingRuntimeTestAccess.applyPatch(
+                limited,
+                passThroughManager(),
+                "/",
+                JsonPatch.replace("/a", new Node().value("new")));
 
         // then
         assertLimitedSnapshot(limited);
@@ -65,13 +65,12 @@ class LimitedCanonicalPatchTest {
                 "changed", new Node().value("old"),
                 "untouched", new Node().items(items));
         ResolvedSnapshot before = new Blue().loadSnapshot(source);
-        DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(before, null, passThroughManager());
-
         // when
-        runtime.applyPatch("/",
+        ResolvedSnapshot after = DocumentProcessingRuntimeTestAccess.applyPatch(
+                before,
+                passThroughManager(),
+                "/",
                 JsonPatch.replace("/changed", new Node().value("new")));
-        ResolvedSnapshot after = runtime.snapshot();
 
         // then
         assertEquals("new", after.canonicalNodeAt("/changed").getValue());

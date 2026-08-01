@@ -9,29 +9,40 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class RecordingProcessingMetricsSinkTest {
+class RecordingProcessingObserverTest {
 
     @Test
     void shouldSnapshotCountersGaugesAndHighWaterImmutably() {
         // given
-        RecordingProcessingMetricsSink sink = new RecordingProcessingMetricsSink();
-        sink.incrementPatchImpactAnalyses();
-        sink.incrementPatchImpactAnalyses();
-        sink.incrementFullSnapshotFallback("ROOT_REPLACEMENT");
-        sink.addProcessDocumentNanos(7L);
-        sink.addProcessDocumentNanos(5L);
-        sink.addBundleLoadNanos(11L);
-        sink.incrementBundleLoadCacheHits();
-        sink.addHandlerExecutionNanos(13L);
-        sink.incrementHandlersExecuted();
-        sink.setCacheCurrentWeightBytes("resolvedSnapshots", 100L);
-        sink.recordCacheHighWaterBytes("resolvedSnapshots", 100L);
-        sink.setCacheCurrentWeightBytes("resolvedSnapshots", 40L);
-        sink.recordCacheHighWaterBytes("resolvedSnapshots", 40L);
+        RecordingProcessingObserver sink = new RecordingProcessingObserver();
+        record(sink, ProcessingMetricId.PATCH_IMPACT_ANALYSES, 1L);
+        record(sink, ProcessingMetricId.PATCH_IMPACT_ANALYSES, 1L);
+        record(sink, ProcessingMetricId.FULL_SNAPSHOT_FALLBACKS, 1L);
+        record(sink, ProcessingMetricId.FULL_SNAPSHOT_FALLBACK_REASON, 1L,
+                ProcessingObservationDimension.FALLBACK_REASON,
+                "ROOT_REPLACEMENT");
+        record(sink, ProcessingMetricId.PROCESS_DOCUMENT_NANOS, 7L);
+        record(sink, ProcessingMetricId.PROCESS_DOCUMENT_NANOS, 5L);
+        record(sink, ProcessingMetricId.BUNDLE_LOAD_NANOS, 11L);
+        record(sink, ProcessingMetricId.BUNDLE_LOAD_CACHE_HITS, 1L);
+        record(sink, ProcessingMetricId.HANDLER_EXECUTION_NANOS, 13L);
+        record(sink, ProcessingMetricId.HANDLERS_EXECUTED, 1L);
+        record(sink, ProcessingMetricId.CACHE_CURRENT_WEIGHT_BYTES, 100L,
+                ProcessingObservationDimension.CACHE_NAME,
+                "resolvedSnapshots");
+        record(sink, ProcessingMetricId.CACHE_HIGH_WATER_BYTES, 100L,
+                ProcessingObservationDimension.CACHE_NAME,
+                "resolvedSnapshots");
+        record(sink, ProcessingMetricId.CACHE_CURRENT_WEIGHT_BYTES, 40L,
+                ProcessingObservationDimension.CACHE_NAME,
+                "resolvedSnapshots");
+        record(sink, ProcessingMetricId.CACHE_HIGH_WATER_BYTES, 40L,
+                ProcessingObservationDimension.CACHE_NAME,
+                "resolvedSnapshots");
 
         // when
         ProcessingMetricsSnapshot first = sink.snapshot();
-        sink.incrementPatchImpactAnalyses();
+        record(sink, ProcessingMetricId.PATCH_IMPACT_ANALYSES, 1L);
         ProcessingMetricsSnapshot second = sink.snapshot();
 
         // then
@@ -55,7 +66,7 @@ class RecordingProcessingMetricsSinkTest {
     @Test
     void shouldNotLoseConcurrentUpdates() throws Exception {
         // given
-        RecordingProcessingMetricsSink sink = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver sink = new RecordingProcessingObserver();
         int threads = 8;
         int iterations = 2_000;
         CountDownLatch start = new CountDownLatch(1);
@@ -65,8 +76,14 @@ class RecordingProcessingMetricsSinkTest {
                 try {
                     start.await();
                     for (int iteration = 0; iteration < iterations; iteration++) {
-                        sink.incrementIncrementalSnapshotResolutions();
-                        sink.recordCacheHighWaterBytes("plans", iteration);
+                        record(sink,
+                                ProcessingMetricId.INCREMENTAL_SNAPSHOT_RESOLUTIONS,
+                                1L);
+                        record(sink,
+                                ProcessingMetricId.CACHE_HIGH_WATER_BYTES,
+                                iteration,
+                                ProcessingObservationDimension.CACHE_NAME,
+                                "plans");
                     }
                 } catch (InterruptedException exception) {
                     Thread.currentThread().interrupt();
@@ -92,12 +109,13 @@ class RecordingProcessingMetricsSinkTest {
     @Test
     void shouldAttributeMutablePatchesUsingFixedSourceNames() {
         // given
-        RecordingProcessingMetricsSink sink = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver sink = new RecordingProcessingObserver();
 
         // when
-        sink.incrementMutablePatchValuesFrozen(PatchSource.PROCESSOR_INITIALIZATION_MARKER);
-        sink.incrementMutablePatchValuesFrozen(PatchSource.CONFORMANCE_FIXTURE);
-        sink.incrementMutablePatchValuesFrozen(null);
+        recordMutablePatch(sink,
+                PatchSource.PROCESSOR_INITIALIZATION_MARKER);
+        recordMutablePatch(sink, PatchSource.CONFORMANCE_FIXTURE);
+        recordMutablePatch(sink, null);
         ProcessingMetricsSnapshot snapshot = sink.snapshot();
 
         // then
@@ -108,5 +126,39 @@ class RecordingProcessingMetricsSinkTest {
                 "mutablePatchValuesFrozenBySource.CONFORMANCE_FIXTURE"));
         assertEquals(1L, snapshot.counter(
                 "mutablePatchValuesFrozenBySource.UNKNOWN_INTERNAL"));
+    }
+
+    private static void record(
+            RecordingProcessingObserver observer,
+            ProcessingMetricId metricId,
+            long value) {
+        observer.record(ProcessingObservation.of(metricId, value));
+    }
+
+    private static void record(
+            RecordingProcessingObserver observer,
+            ProcessingMetricId metricId,
+            long value,
+            ProcessingObservationDimension dimension,
+            String dimensionValue) {
+        observer.record(ProcessingObservation.of(
+                metricId,
+                value,
+                ProcessingObservationContext.of(
+                        dimension, dimensionValue)));
+    }
+
+    private static void recordMutablePatch(
+            RecordingProcessingObserver observer,
+            PatchSource source) {
+        PatchSource effective = source != null
+                ? source
+                : PatchSource.UNKNOWN_INTERNAL;
+        record(observer, ProcessingMetricId.MUTABLE_PATCH_VALUES_FROZEN, 1L);
+        record(observer,
+                ProcessingMetricId.MUTABLE_PATCH_VALUES_FROZEN_BY_SOURCE,
+                1L,
+                ProcessingObservationDimension.PATCH_SOURCE,
+                effective.name());
     }
 }

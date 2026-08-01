@@ -56,7 +56,7 @@ class DocumentProcessorBatchPatchTest {
     void shouldRollBackWholeInvocationWhenSecondPatchViolatesBoundary() {
         // given
         Node document = new Node();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -95,7 +95,7 @@ class DocumentProcessorBatchPatchTest {
         // given
         Node document = new Node().properties("foo", new Node());
         String exactInput = document.toString();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -133,7 +133,7 @@ class DocumentProcessorBatchPatchTest {
         // given
         Node document = new Node().properties("foo", new Node());
         String exactInput = document.toString();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -176,8 +176,8 @@ class DocumentProcessorBatchPatchTest {
                         "cyclic",
                         new Node().blueId(CYCLIC_MEMBER_BLUE_ID)));
         String exactInput = document.toString();
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(new DocumentProcessor(), document);
 
         // when
         Throwable failure = captureFailure(
@@ -257,7 +257,7 @@ class DocumentProcessorBatchPatchTest {
                 "    type:\n" +
                 "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /other\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         execution.preflightScope("/");
 
         // when
@@ -282,7 +282,7 @@ class DocumentProcessorBatchPatchTest {
                 "    type:\n" +
                 "      blueId: " + RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL + "\n" +
                 "    path: /a\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         execution.preflightScope("/");
 
         // when

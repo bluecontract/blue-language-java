@@ -50,10 +50,10 @@ final class ProcessorProcessEventContextTest {
 
         // when
         ResolvedSnapshot snapshot = snapshot(document);
-        ProcessorEngine.Execution documentExecution =
-                new ProcessorEngine.Execution(owner, document);
-        ProcessorEngine.Execution snapshotExecution =
-                new ProcessorEngine.Execution(owner, snapshot);
+        ProcessorInvocationState documentExecution =
+                new ProcessorInvocationState(owner, document);
+        ProcessorInvocationState snapshotExecution =
+                new ProcessorInvocationState(owner, snapshot);
         ProcessorExecutionContext documentContext =
                 documentExecution.createContext(
                         "/",
@@ -87,11 +87,11 @@ final class ProcessorProcessEventContextTest {
         // given
         RecordingMetrics metrics = new RecordingMetrics();
         DocumentProcessor owner = DocumentProcessor.builder()
-                .withProcessingMetricsSink(metrics)
+                .observer(metrics)
                 .build();
         Node processEvent = processEvent("root");
         AtomicInteger freezerCalls = new AtomicInteger();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner,
+        ProcessorInvocationState execution = new ProcessorInvocationState(owner,
                 new Node(),
                 processEvent,
                 source -> {
@@ -145,8 +145,8 @@ final class ProcessorProcessEventContextTest {
         RecordingMetrics metrics = new RecordingMetrics();
         IllegalStateException expected = new IllegalStateException("snapshot failed");
         AtomicInteger freezerCalls = new AtomicInteger();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
-                DocumentProcessor.builder().withProcessingMetricsSink(metrics).build(),
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                DocumentProcessor.builder().observer(metrics).build(),
                 new Node(),
                 processEvent("root"),
                 source -> {
@@ -189,8 +189,8 @@ final class ProcessorProcessEventContextTest {
         // given
         RecordingMetrics metrics = new RecordingMetrics();
         AtomicInteger freezerCalls = new AtomicInteger();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
-                DocumentProcessor.builder().withProcessingMetricsSink(metrics).build(),
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                DocumentProcessor.builder().observer(metrics).build(),
                 new Node(),
                 processEvent("root"),
                 source -> {
@@ -232,8 +232,8 @@ final class ProcessorProcessEventContextTest {
         CountDownLatch readersReady = new CountDownLatch(CONCURRENT_READER_COUNT);
         CountDownLatch startReaders = new CountDownLatch(1);
         CountDownLatch readAttempts = new CountDownLatch(CONCURRENT_READER_COUNT);
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
-                DocumentProcessor.builder().withProcessingMetricsSink(metrics).build(),
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                DocumentProcessor.builder().observer(metrics).build(),
                 new Node(),
                 processEvent("concurrent-root"),
                 source -> {
@@ -313,8 +313,8 @@ final class ProcessorProcessEventContextTest {
         CountDownLatch readersReady = new CountDownLatch(CONCURRENT_READER_COUNT);
         CountDownLatch startReaders = new CountDownLatch(1);
         CountDownLatch readAttempts = new CountDownLatch(CONCURRENT_READER_COUNT);
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(
-                DocumentProcessor.builder().withProcessingMetricsSink(metrics).build(),
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                DocumentProcessor.builder().observer(metrics).build(),
                 snapshot(new Node()),
                 processEvent("concurrent-root"),
                 source -> {
@@ -722,7 +722,7 @@ final class ProcessorProcessEventContextTest {
                                        ChannelProcessor<TestEventChannel> channelProcessor,
                                        RecordingMetrics metrics) {
         Blue blue = ProcessorTestSupport.blue();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        blue.processingObserver(metrics);
         ChannelProcessor<TestEventChannel> exactChannelProcessor =
                 channelProcessor.getClass() == TestEventChannelProcessor.class
                         ? DocumentProcessorExactFeederSupport
@@ -980,7 +980,7 @@ final class ProcessorProcessEventContextTest {
         }
     }
 
-    private static final class RecordingMetrics implements ProcessingMetricsSink {
+    private static final class RecordingMetrics implements ProcessingObserver {
         long processEventSnapshotAttempts;
         long processEventSnapshotBuilds;
         long processEventSnapshotFailures;
@@ -988,24 +988,24 @@ final class ProcessorProcessEventContextTest {
         long processEventSnapshotConstructionNanos;
 
         @Override
-        public void incrementProcessEventSnapshotAttempts() {
-            processEventSnapshotAttempts++;
-        }
-
-        @Override
-        public void incrementProcessEventSnapshotBuilds() {
-            processEventSnapshotBuilds++;
-        }
-
-        @Override
-        public void incrementProcessEventSnapshotFailures() {
-            processEventSnapshotFailures++;
-        }
-
-        @Override
-        public void addProcessEventSnapshotConstructionNanos(long nanos) {
-            processEventSnapshotConstructionSamples++;
-            processEventSnapshotConstructionNanos += nanos;
+        public void record(ProcessingObservation observation) {
+            switch (observation.metricId()) {
+                case PROCESS_EVENT_SNAPSHOT_ATTEMPTS:
+                    processEventSnapshotAttempts += observation.value();
+                    break;
+                case PROCESS_EVENT_SNAPSHOT_BUILDS:
+                    processEventSnapshotBuilds += observation.value();
+                    break;
+                case PROCESS_EVENT_SNAPSHOT_FAILURES:
+                    processEventSnapshotFailures += observation.value();
+                    break;
+                case PROCESS_EVENT_SNAPSHOT_CONSTRUCTION_NANOS:
+                    processEventSnapshotConstructionSamples++;
+                    processEventSnapshotConstructionNanos += observation.value();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

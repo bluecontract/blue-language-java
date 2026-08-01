@@ -194,7 +194,7 @@ class PreparedPatchSequenceTest {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
-        ProcessorEngine.Execution execution = execution(new Node(), manager, metrics);
+        ProcessorInvocationState execution = execution(new Node(), manager, metrics);
         DocumentProcessingRuntime runtime = execution.runtime();
         List<JsonPatch> patches = new ArrayList<>();
         for (int index = 0; index < 9; index++) {
@@ -225,7 +225,7 @@ class PreparedPatchSequenceTest {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
-        ProcessorEngine.Execution execution = execution(new Node(), manager, metrics);
+        ProcessorInvocationState execution = execution(new Node(), manager, metrics);
         DocumentProcessingRuntime runtime = execution.runtime();
         List<JsonPatch> patches = patchesAdding("p", 5);
         WorkingDocument.Preview preview = runtime.workingDocument("/")
@@ -612,7 +612,7 @@ class PreparedPatchSequenceTest {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         Node document = new Node().properties("scope", new Node());
-        ProcessorEngine.Execution execution = execution(document, manager, new RecordingMetrics());
+        ProcessorInvocationState execution = execution(document, manager, new RecordingMetrics());
         Node invalidReferenceOverlay = new Node()
                 .blueId("not-a-valid-reference")
                 .properties("forbiddenSibling", new Node().value(true));
@@ -654,7 +654,7 @@ class PreparedPatchSequenceTest {
     void shouldVerifyGasUsesTheAuthoredValueBeforeCanonicalEmptyNodeElision() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        ProcessorEngine.Execution execution = execution(new Node(), manager, new RecordingMetrics());
+        ProcessorInvocationState execution = execution(new Node(), manager, new RecordingMetrics());
         Map<String, Node> authoredProperties = new LinkedHashMap<>();
         for (int index = 0; index < 40; index++) {
             authoredProperties.put("empty-child-with-a-long-key-" + index, new Node());
@@ -696,14 +696,14 @@ class PreparedPatchSequenceTest {
         assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
     }
 
-    private ProcessorEngine.Execution execution(Node document,
+    private ProcessorInvocationState execution(Node document,
                                                 CountingSnapshotManager manager,
                                                 RecordingMetrics metrics) {
         DocumentProcessor processor = DocumentProcessor.builder()
                 .withSnapshotManager(manager)
-                .withProcessingMetricsSink(metrics)
+                .observer(metrics)
                 .build();
-        return new ProcessorEngine.Execution(processor, document);
+        return new ProcessorInvocationState(processor, document);
     }
 
     private List<JsonPatch> patchesAdding(String prefix, int count) {
@@ -840,24 +840,26 @@ class PreparedPatchSequenceTest {
         }
     }
 
-    private static final class RecordingMetrics implements ProcessingMetricsSink {
+    private static final class RecordingMetrics implements ProcessingObserver {
         private long patchSequencesPrepared;
         private long patchesPrepared;
         private long singletonPatchTransactions;
 
         @Override
-        public void incrementPatchSequencesPrepared() {
-            patchSequencesPrepared++;
-        }
-
-        @Override
-        public void addPatchesPrepared(long count) {
-            patchesPrepared += count;
-        }
-
-        @Override
-        public void incrementSingletonPatchTransactions() {
-            singletonPatchTransactions++;
+        public void record(ProcessingObservation observation) {
+            switch (observation.metricId()) {
+                case PATCH_SEQUENCES_PREPARED:
+                    patchSequencesPrepared += observation.value();
+                    break;
+                case PATCHES_PREPARED:
+                    patchesPrepared += observation.value();
+                    break;
+                case SINGLETON_PATCH_TRANSACTIONS:
+                    singletonPatchTransactions += observation.value();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

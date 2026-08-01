@@ -142,14 +142,14 @@ final class ContractRecognitionMeterTest {
                 frozen,
                 frozen,
                 "/",
-                ProcessingMetricsSink.NOOP,
+                NoOpProcessingObserver.INSTANCE,
                 meter,
                 "participating-contract-header");
         loader.load(
                 frozen,
                 frozen,
                 "/",
-                ProcessingMetricsSink.NOOP,
+                NoOpProcessingObserver.INSTANCE,
                 meter,
                 "participating-contract-header");
         long quantityAfterDuplicateLoad =
@@ -165,7 +165,7 @@ final class ContractRecognitionMeterTest {
                 changed,
                 changed,
                 "/",
-                ProcessingMetricsSink.NOOP,
+                NoOpProcessingObserver.INSTANCE,
                 meter,
                 "participating-contract-header");
         long quantityAfterChangedContribution =
@@ -211,7 +211,7 @@ final class ContractRecognitionMeterTest {
                                 "/",
                                 null,
                                 true,
-                                ProcessingMetricsSink.NOOP,
+                                NoOpProcessingObserver.INSTANCE,
                                 new ContractRecognitionMeter(gas),
                                 "structural-route-header"));
 
@@ -251,7 +251,7 @@ final class ContractRecognitionMeterTest {
                                 "/",
                                 null,
                                 true,
-                                ProcessingMetricsSink.NOOP,
+                                NoOpProcessingObserver.INSTANCE,
                                 new ContractRecognitionMeter(gas),
                                 "structural-route-header");
 
@@ -293,7 +293,7 @@ final class ContractRecognitionMeterTest {
                                 "/",
                                 null,
                                 true,
-                                ProcessingMetricsSink.NOOP);
+                                NoOpProcessingObserver.INSTANCE);
 
         // then
         assertEquals(
@@ -326,7 +326,7 @@ final class ContractRecognitionMeterTest {
                         "/",
                         null,
                         true,
-                        ProcessingMetricsSink.NOOP,
+                        NoOpProcessingObserver.INSTANCE,
                         new ContractRecognitionMeter(
                                 completeGas),
                         "structural-route-header");
@@ -352,7 +352,7 @@ final class ContractRecognitionMeterTest {
                                         "/",
                                         null,
                                         true,
-                                        ProcessingMetricsSink.NOOP,
+                                        NoOpProcessingObserver.INSTANCE,
                                         new ContractRecognitionMeter(
                                                 limited),
                                         "structural-route-header"));

@@ -965,8 +965,8 @@ final class ExternalChannelDependencyContextTest {
                             .eventOrderKey(TEST_ORDER)
                             .delivery(delivery)
                             .build();
-            ProcessorEngine.Execution execution =
-                    new ProcessorEngine.Execution(
+            ProcessorInvocationState execution =
+                    new ProcessorInvocationState(
                             owner,
                             document.clone(),
                             first,

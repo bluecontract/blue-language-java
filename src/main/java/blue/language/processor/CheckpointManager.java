@@ -32,23 +32,23 @@ final class CheckpointManager {
     private final CheckpointIdentityCache identityCache;
 
     CheckpointManager(DocumentProcessingRuntime runtime) {
-        this(runtime, (Blue) null, ProcessingMetricsSink.NOOP);
+        this(runtime, (Blue) null, NoOpProcessingObserver.INSTANCE);
     }
 
     CheckpointManager(DocumentProcessingRuntime runtime, Blue blue) {
-        this(runtime, blue, ProcessingMetricsSink.NOOP);
+        this(runtime, blue, NoOpProcessingObserver.INSTANCE);
     }
 
     CheckpointManager(DocumentProcessingRuntime runtime,
                       Blue blue,
-                      ProcessingMetricsSink metrics) {
+                      ProcessingObserver metrics) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
         this.identityCache = new CheckpointIdentityCache(blue, metrics);
     }
 
     CheckpointManager(DocumentProcessingRuntime runtime,
                       Function<Node, String> ignoredSignatureFn) {
-        this(runtime, (Blue) null, ProcessingMetricsSink.NOOP);
+        this(runtime, (Blue) null, NoOpProcessingObserver.INSTANCE);
     }
 
     void ensureCheckpointMarker(String scopePath, ContractBundle bundle) {

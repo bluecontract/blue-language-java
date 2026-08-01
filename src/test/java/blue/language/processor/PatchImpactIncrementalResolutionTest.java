@@ -34,7 +34,7 @@ class PatchImpactIncrementalResolutionTest {
         Fixture fixture = Fixture.withUnrelatedTypeContribution();
         ResolvedSnapshot base = fixture.snapshot();
         FrozenNode unaffected = base.resolvedAt("/inheritedUnrelated");
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
 
         DocumentProcessor processor = fixture.blue.getDocumentProcessor();
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
@@ -109,7 +109,7 @@ class PatchImpactIncrementalResolutionTest {
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshot();
         FrozenNode unaffected = base.resolvedAt("/inheritedUnrelated");
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
                 base,
@@ -180,7 +180,7 @@ class PatchImpactIncrementalResolutionTest {
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshotWithNonEmptyContracts();
         FrozenNode unaffectedContract = base.resolvedAt("/contracts/retained");
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
                 base,
@@ -244,7 +244,7 @@ class PatchImpactIncrementalResolutionTest {
         // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshotWithNonEmptyContracts();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
                 base,
@@ -277,7 +277,7 @@ class PatchImpactIncrementalResolutionTest {
         // given
         Fixture fixture = Fixture.withFixedStatusSubtype();
         ResolvedSnapshot base = fixture.snapshot();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
                 base,
@@ -311,7 +311,7 @@ class PatchImpactIncrementalResolutionTest {
         // given
         Fixture fixture = Fixture.withSchemaStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshot();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
                 base,
@@ -343,7 +343,7 @@ class PatchImpactIncrementalResolutionTest {
         // given
         Fixture fixture = Fixture.withBasicStatusTypeContribution();
         ResolvedSnapshot base = fixture.snapshotWithEmptyContracts();
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
                 base,
@@ -378,7 +378,7 @@ class PatchImpactIncrementalResolutionTest {
 
         // when
         ConformanceEngine customEngine = new ConformanceEngine(fixture.blue.getNodeProvider(), custom);
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager manager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 fixture.snapshot(), customEngine, manager, metrics);
@@ -404,7 +404,7 @@ class PatchImpactIncrementalResolutionTest {
                 fixture.blue.getMergingProcessor(), null);
         Blue wrappedBlue = new Blue(fixture.provider, wrapper);
         ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 base,
                 wrappedBlue.conformanceEngine(),
@@ -446,7 +446,7 @@ class PatchImpactIncrementalResolutionTest {
                 fixture.blue.getMergingProcessor(), "/status");
         Blue wrappedBlue = new Blue(fixture.provider, wrapper);
         ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager manager = new FullOracleSnapshotManager(wrappedBlue, true);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 base,
@@ -476,7 +476,7 @@ class PatchImpactIncrementalResolutionTest {
         DishonestWrapper wrapper = new DishonestWrapper(fixture.blue.getMergingProcessor());
         Blue wrappedBlue = new Blue(fixture.provider, wrapper);
         ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
                 base,
                 wrappedBlue.conformanceEngine(),
@@ -518,7 +518,7 @@ class PatchImpactIncrementalResolutionTest {
                 ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot())
                         .planWithExactReplacement("/", patch);
         FullOracleSnapshotManager manager = new FullOracleSnapshotManager(fixture.blue, true);
-        RecordingProcessingMetricsSink metrics = new RecordingProcessingMetricsSink();
+        RecordingProcessingObserver metrics = new RecordingProcessingObserver();
 
         // when
         PatchImpact impact = new PatchImpactAnalyzer(

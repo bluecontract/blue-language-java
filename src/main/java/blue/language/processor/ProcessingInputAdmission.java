@@ -7,6 +7,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodePathEditor;
@@ -38,6 +39,58 @@ final class ProcessingInputAdmission {
 
     ProcessingInputAdmission(ProcessingSnapshotManager snapshotManager) {
         this.snapshotManager = snapshotManager;
+    }
+
+    static DocumentProcessingResult validateDocument(Node document) {
+        if (document == null) {
+            throw new NullPointerException("document");
+        }
+        if (document.getBlue() != null) {
+            return DocumentProcessingResult.invalidProcessingDocument(
+                    document.clone(),
+                    "Invalid Processing Document: root blue directive is not allowed");
+        }
+        if (document.isReferenceOnly()) {
+            return DocumentProcessingResult.invalidProcessingDocument(
+                    document.clone(),
+                    "Invalid Processing Document: Root must be concrete");
+        }
+        try {
+            BlueIdReferenceValidator.validate(document);
+        } catch (IllegalArgumentException failure) {
+            return DocumentProcessingResult.invalidProcessingDocument(
+                    document.clone(),
+                    deterministicMessage(
+                            failure,
+                            "Invalid Processing Document reference"));
+        }
+        return null;
+    }
+
+    static DocumentProcessingResult validateDocument(FrozenNode document) {
+        if (document == null) {
+            throw new NullPointerException("document");
+        }
+        if (document.getBlue() != null) {
+            return DocumentProcessingResult.invalidProcessingDocument(
+                    document.toNode(),
+                    "Invalid Processing Document: root blue directive is not allowed");
+        }
+        if (document.isReferenceOnly()) {
+            return DocumentProcessingResult.invalidProcessingDocument(
+                    document.toNode(),
+                    "Invalid Processing Document: Root must be concrete");
+        }
+        try {
+            BlueIdReferenceValidator.validate(document.toNode());
+        } catch (IllegalArgumentException failure) {
+            return DocumentProcessingResult.invalidProcessingDocument(
+                    document.toNode(),
+                    deterministicMessage(
+                            failure,
+                            "Invalid Processing Document reference"));
+        }
+        return null;
     }
 
     AdmittedNode materializeTopLevel(Node input, String label) {
@@ -309,6 +362,13 @@ final class ProcessingInputAdmission {
             }
         });
         return ordered;
+    }
+
+    private static String deterministicMessage(
+            Throwable failure,
+            String fallback) {
+        String message = failure != null ? failure.getMessage() : null;
+        return message != null && !message.isEmpty() ? message : fallback;
     }
 
     static final class AdmittedNode {

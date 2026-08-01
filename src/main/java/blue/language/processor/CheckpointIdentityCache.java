@@ -18,13 +18,13 @@ import java.util.Map;
  */
 final class CheckpointIdentityCache {
     private final Blue blue;
-    private final ProcessingMetricsSink metrics;
+    private final ProcessingObserver metrics;
     private final IdentityHashMap<Node, String> eventIdentities = new IdentityHashMap<>();
     private final Map<StoredCheckpointKey, String> storedIdentities = new LinkedHashMap<>();
 
-    CheckpointIdentityCache(Blue blue, ProcessingMetricsSink metrics) {
+    CheckpointIdentityCache(Blue blue, ProcessingObserver metrics) {
         this.blue = blue;
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
     }
 
     String identity(Node event) {
@@ -32,10 +32,12 @@ final class CheckpointIdentityCache {
             return null;
         }
         if (eventIdentities.containsKey(event)) {
-            metrics.incrementCheckpointIdentityCacheHits();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.CHECKPOINT_IDENTITY_CACHE_HITS, 1L);
             return eventIdentities.get(event);
         }
-        metrics.incrementCheckpointIdentityCacheMisses();
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.CHECKPOINT_IDENTITY_CACHE_MISSES, 1L);
         String identity = CheckpointIdentityCalculator.identity(event, blue, metrics);
         eventIdentities.put(event, identity);
         return identity;
@@ -47,10 +49,12 @@ final class CheckpointIdentityCache {
         }
         StoredCheckpointKey key = new StoredCheckpointKey(checkpoint, channelKey);
         if (storedIdentities.containsKey(key)) {
-            metrics.incrementCheckpointStoredIdentityCacheHits();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.CHECKPOINT_STORED_IDENTITY_CACHE_HITS, 1L);
             return storedIdentities.get(key);
         }
-        metrics.incrementCheckpointStoredIdentityCacheMisses();
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.CHECKPOINT_STORED_IDENTITY_CACHE_MISSES, 1L);
         String identity = CheckpointIdentityCalculator.identity(event, blue, metrics);
         storedIdentities.put(key, identity);
         return identity;

@@ -26,7 +26,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     private static final String EVENT_LIMIT =
             GasScheduleConstants.PortableLimit.EVENTS_PER_CONTRACT_RESULT;
 
-    private final ProcessorEngine.Execution execution;
+    private final ProcessorInvocationState execution;
     private final ContractBundle bundle;
     private final String scopePath;
     private final String contractKey;
@@ -44,7 +44,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     private boolean effectsApplied;
     private boolean closed;
 
-    ProcessorExecutionContext(ProcessorEngine.Execution execution,
+    ProcessorExecutionContext(ProcessorInvocationState execution,
                               ContractBundle bundle,
                               String scopePath,
                               String contractKey,
@@ -393,142 +393,13 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     }
 
     private void applyBufferedEffectsNow() {
-        if (execution.shouldStopScopeWork(scopePath)) {
-            recordCutOffDiscardedEffects(0, 0);
-            return;
-        }
-        for (int batchIndex = 0;
-             batchIndex < effects.patchBatches().size();
-             batchIndex++) {
-            ContractEffectBuffer.PatchBatch patchBatch =
-                    effects.patchBatches().get(batchIndex);
-            execution.handlePatchInputs(scopePath,
-                    bundle,
-                    patchBatch.patches(),
-                    allowReservedMutation,
-                    patchBatch.preview());
-            if (execution.shouldStopScopeWork(scopePath)) {
-                recordCutOffDiscardedEffects(batchIndex + 1, 0);
-                return;
-            }
-        }
-        for (int eventIndex = 0;
-             eventIndex < effects.emittedEvents().size();
-             eventIndex++) {
-            ContractEffectBuffer.EventEmission emission =
-                    effects.emittedEvents().get(eventIndex);
-            if (!emitEventNow(emission)) {
-                recordCutOffDiscardedEffects(
-                        effects.patchBatches().size(), eventIndex);
-                return;
-            }
-            if (execution.shouldStopScopeWork(scopePath)) {
-                recordCutOffDiscardedEffects(
-                        effects.patchBatches().size(), eventIndex + 1);
-                return;
-            }
-        }
-        ContractEffectBuffer.TerminationRequest termination = effects.terminationRequest();
-        if (termination != null) {
-            execution.enterGracefulTermination(
-                    scopePath, bundle, termination.cause(), termination.reason());
-        }
-    }
-
-    private void recordCutOffDiscardedEffects(int firstPatchBatchIndex,
-                                              int firstEventIndex) {
-        ScopeRuntimeContext scope = runtime().existingScope(
-                execution.normalizeScope(scopePath));
-        if (scope == null || !scope.isCutOff()) {
-            return;
-        }
-        List<ContractEffectBuffer.PatchBatch> patchBatches =
-                effects.patchBatches();
-        for (int batchIndex = Math.max(0, firstPatchBatchIndex);
-             batchIndex < patchBatches.size();
-             batchIndex++) {
-            for (PatchInput patch :
-                    patchBatches.get(batchIndex).patches()) {
-                Map<String, Object> details = new LinkedHashMap<>();
-                details.put(
-                        ProcessingTraceConstants.FIELD_EFFECT,
-                        ProcessingTraceConstants.EFFECT_PATCH);
-                details.put(
-                        ProcessingTraceConstants.FIELD_REASON,
-                        ProcessingTraceConstants.REASON_SCOPE_CUT_OFF);
-                details.put(
-                        ProcessingTraceConstants.FIELD_LABEL,
-                        patch.authoredPath());
-                runtime().recordTrace(
-                        ProcessingTraceRecord.Kind.DISCARDED_EFFECT,
-                        scopePath,
-                        contractKey,
-                        patch.authoredPath(),
-                        details,
-                        null);
-            }
-        }
-        List<ContractEffectBuffer.EventEmission> emissions =
-                effects.emittedEvents();
-        for (int index = Math.max(0, firstEventIndex);
-             index < emissions.size();
-             index++) {
-            Node emission =
-                    emissions.get(index).event();
-            Map<String, Object> details = new LinkedHashMap<>();
-            details.put(
-                    ProcessingTraceConstants.FIELD_EFFECT,
-                    ProcessingTraceConstants.EFFECT_EVENT);
-            details.put(
-                    ProcessingTraceConstants.FIELD_REASON,
-                    ProcessingTraceConstants.REASON_SCOPE_CUT_OFF);
-            details.put(
-                    ProcessingTraceConstants.FIELD_LABEL,
-                    discardedEventLabel(emission));
-            runtime().recordTrace(
-                    ProcessingTraceRecord.Kind.DISCARDED_EFFECT,
-                    scopePath,
-                    contractKey,
-                    null,
-                    details,
-                    emission);
-        }
-        ContractEffectBuffer.TerminationRequest termination =
-                effects.terminationRequest();
-        if (termination != null) {
-            Map<String, Object> details = new LinkedHashMap<>();
-            details.put(
-                    ProcessingTraceConstants.FIELD_EFFECT,
-                    ProcessingTraceConstants.EFFECT_TERMINATION);
-            details.put(
-                    ProcessingTraceConstants.FIELD_REASON,
-                    ProcessingTraceConstants.REASON_SCOPE_CUT_OFF);
-            details.put(
-                    ProcessingTraceConstants.FIELD_LABEL,
-                    ProcessingTraceConstants.LABEL_PREFIX_TERMINATION
-                            + termination.cause());
-            runtime().recordTrace(
-                    ProcessingTraceRecord.Kind.DISCARDED_EFFECT,
-                    scopePath,
-                    contractKey,
-                    null,
-                    details,
-                    null);
-        }
-    }
-
-    private String discardedEventLabel(Node event) {
-        Node id = event != null && event.getProperties() != null
-                ? event.getProperties().get(
-                ProcessingTraceConstants.EVENT_LABEL_PROPERTY)
-                : null;
-        if (id != null && id.getValue() != null) {
-            return String.valueOf(id.getValue());
-        }
-        if (event != null && event.getValue() != null) {
-            return String.valueOf(event.getValue());
-        }
-        return ProcessingTraceConstants.DEFAULT_EVENT_LABEL;
+        new BufferedContractEffectExecutor(
+                execution,
+                bundle,
+                scopePath,
+                contractKey,
+                allowReservedMutation,
+                effects).apply();
     }
 
     /**
@@ -611,12 +482,8 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         runtimeWorkSession.submit(exactLedger);
     }
 
-    /**
-     * Returns this execution unit's processor-owned runtime work session.
-     *
-     * @return live invocation-owned work session
-     */
-    public RuntimeWorkSession runtimeWorkSession() {
+    /** Returns the raw work session to processor-internal collaborators. */
+    RuntimeWorkSession runtimeWorkSession() {
         ensureOpen();
         return runtimeWorkSession;
     }
@@ -644,13 +511,8 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         return selectedExecutableBodies.get(field);
     }
 
-    /**
-     * Returns a defensive immutable map of the invocation-bound executable
-     * body capabilities selected for this handler.
-     *
-     * @return immutable field-to-capability snapshot
-     */
-    public Map<String, SelectedExecutableBody>
+    /** Returns selected capabilities to processor-internal orchestration. */
+    Map<String, SelectedExecutableBody>
     selectedExecutableBodies() {
         ensureOpen();
         return Collections.unmodifiableMap(
@@ -797,13 +659,8 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         return runtime().workingDocument(scopePath, PatchSource.CUSTOM_PROCESSOR);
     }
 
-    /**
-     * Opens an invocation-owned working document for an explicit origin scope.
-     *
-     * @param originScope absolute scope used to resolve authored patch paths
-     * @return invocation-owned working document
-     */
-    public WorkingDocument newWorkingDocument(String originScope) {
+    /** Opens processor-internal working state for an explicit origin scope. */
+    WorkingDocument newWorkingDocument(String originScope) {
         ensureOpen();
         return runtime().workingDocument(originScope, PatchSource.CUSTOM_PROCESSOR);
     }
@@ -895,38 +752,6 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         }
         return Collections.unmodifiableList(
                 admitted);
-    }
-
-    private boolean emitEventNow(
-            ContractEffectBuffer.EventEmission emission) {
-        Node event =
-                emission.event();
-        String eventBlueId;
-        try {
-            eventBlueId =
-                    emission.exactValue() != null
-                            ? emission.exactValue()
-                                    .blueId()
-                            : CheckpointIdentityCalculator
-                                    .identity(
-                                            event,
-                                            execution.blue());
-        } catch (RuntimeException ex) {
-            execution.abortRuntimeFailure(scopePath,
-                    bundle,
-                    ProcessorErrorCategory.InvalidPatch,
-                    "Invalid emitted event: " + ex.getMessage());
-            return false;
-        }
-        if (execution.shouldStopScopeWork(scopePath)) {
-            return false;
-        }
-        execution.enqueueApplicationEvent(
-                scopePath,
-                contractKey,
-                event,
-                eventBlueId);
-        return true;
     }
 
     private DocumentProcessingRuntime runtime() {

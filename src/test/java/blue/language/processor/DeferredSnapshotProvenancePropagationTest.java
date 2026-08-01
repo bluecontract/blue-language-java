@@ -40,7 +40,7 @@ class DeferredSnapshotProvenancePropagationTest {
                 false,
                 false,
                 PatchSource.LEGACY_PUBLIC_API,
-                ProcessingMetricsSink.NOOP,
+                NoOpProcessingObserver.INSTANCE,
                 Collections.singleton("/"),
                 fixture.executableBodyFields,
                 fixture.snapshot.isResolutionComplete())) {
@@ -158,7 +158,7 @@ class DeferredSnapshotProvenancePropagationTest {
                     null,
                     null,
                     manager,
-                    ProcessingMetricsSink.NOOP,
+                    NoOpProcessingObserver.INSTANCE,
                     new GasMeter(),
                     executableBodyFields);
         }

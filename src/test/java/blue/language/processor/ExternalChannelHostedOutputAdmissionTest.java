@@ -319,8 +319,8 @@ final class ExternalChannelHostedOutputAdmissionTest {
             ContractBundle bundle =
                     processor.contractLoader()
                             .load(snapshot, "/");
-            ProcessorEngine.Execution execution =
-                    new ProcessorEngine.Execution(
+            ProcessorInvocationState execution =
+                    new ProcessorInvocationState(
                             processor, snapshot);
             RuntimeWorkSession phase =
                     execution.runtime()

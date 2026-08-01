@@ -113,6 +113,22 @@ public final class FrozenTypeMatcher {
     }
 
     /**
+     * Creates a structural matcher with no ambient provider lookup and with
+     * explicitly bounded derived caches.
+     *
+     * @param cachePolicy bounds for matcher-owned derived caches
+     * @return independent matcher without an ambient matching runtime
+     */
+    public static FrozenTypeMatcher withoutRuntime(
+            BlueCachePolicy cachePolicy) {
+        return new FrozenTypeMatcher(
+                null,
+                true,
+                Objects.requireNonNull(cachePolicy, "cachePolicy"),
+                null);
+    }
+
+    /**
      * Tests a resolved value against a resolved type/shape pattern.
      *
      * <p>A null pattern imposes no constraint. A null candidate matches only

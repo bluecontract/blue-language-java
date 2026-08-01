@@ -81,8 +81,8 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 .build();
         ResolvedSnapshot invocationSnapshot =
                 activeManager.fromDocument(new Node());
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         owner, invocationSnapshot);
         ChannelRunner runner = new ChannelRunner(
                 owner,
@@ -214,8 +214,8 @@ class SelectedExecutableBodyProviderProvenanceTest {
                                 bodyBlueId),
                         Collections.singletonList(
                                 "result"));
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         owner,
                         manager.fromDocument(
                                 new Node()));
@@ -269,8 +269,8 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 selectedHandlerBundle(
                         body,
                         Collections.<String>emptyList());
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         owner,
                         manager.fromDocument(
                                 new Node()));
@@ -347,7 +347,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
 
     private static ChannelRunner runner(
             DocumentProcessor owner,
-            ProcessorEngine.Execution execution) {
+            ProcessorInvocationState execution) {
         return new ChannelRunner(
                 owner,
                 execution,

@@ -1156,8 +1156,8 @@ final class SemanticOutputBoundaryTest {
     void shouldVerifyInvocationMemoIsSharedAcrossProcessorPhases() {
         // given
         Blue blue = new Blue();
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         blue.getDocumentProcessor(),
                         new Node());
         execution.preflightScope("/");
@@ -1256,7 +1256,7 @@ final class SemanticOutputBoundaryTest {
     private static final class Invocation
             implements AutoCloseable {
         private final Blue blue;
-        private final ProcessorEngine.Execution execution;
+        private final ProcessorInvocationState execution;
         private final ProcessorExecutionContext context;
         private boolean closed;
 
@@ -1265,7 +1265,7 @@ final class SemanticOutputBoundaryTest {
             DocumentProcessor owner =
                     blue.getDocumentProcessor();
             this.execution =
-                    new ProcessorEngine.Execution(
+                    new ProcessorInvocationState(
                             owner, new Node());
             execution.preflightScope("/");
             this.context =

@@ -4,6 +4,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.model.Node;
 import blue.language.processor.ContractProcessor;
+import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.model.MarkerContract;
 import blue.language.provider.BasicNodeProvider;
@@ -95,15 +96,24 @@ class ProcessingSnapshotProviderProvenanceTest {
         Node exactDerivedType = new Node().name("Exact Derived Marker")
                 .type(reference(baseBlueId));
         String requestedBlueId = new Blue().calculateBlueId(exactDerivedType);
-        NodeProvider trustedLeaf = blueId -> requestedBlueId.equals(blueId)
-                ? Collections.singletonList(exactDerivedType.clone())
-                : null;
+        NodeProvider trustedLeaf = blueId -> {
+            if (requestedBlueId.equals(blueId)) {
+                return Collections.singletonList(exactDerivedType.clone());
+            }
+            if (baseBlueId.equals(blueId)) {
+                return Collections.singletonList(baseType.clone());
+            }
+            return null;
+        };
         Blue blue = new Blue(trustedLeaf);
         blue.registerExternalContractType(baseBlueId, baseType, new GenericMarkerProcessor());
 
         // when
-        blue.getDocumentProcessor().getContractTypeResolver()
-                .register(requestedBlueId, GenericMarker.class);
+        DocumentProcessor successor = DocumentProcessor.Builder
+                .from(blue.getDocumentProcessor())
+                .registerContractType(requestedBlueId, GenericMarker.class)
+                .build();
+        blue.documentProcessor(successor);
         Node document = new Node().contracts(new Node().properties(
                 "derived", new Node().type(reference(requestedBlueId))));
         DocumentProcessingResult result = blue.initializeDocument(document);

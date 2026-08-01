@@ -26,6 +26,7 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,7 +46,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             ExternalOrderKey.of(Arrays.asList(7, "source", 11));
 
     @Test
-    void shouldReconfigureStrictVerifierWhenReplacingPlanDeriver() {
+    void shouldBuildStrictVerifierForSuccessorPlanDeriver() {
         // given
         Node root = rootWithChannels(
                 channel("alpha", 0, true));
@@ -61,19 +62,26 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         AtomicInteger derivations = new AtomicInteger();
         DocumentProcessor processor =
                 processor(null, null, null);
+        ExternalDeliveryPlanDeriver originalDeriver =
+                processor.externalDeliveryPlanDeriver();
 
         // when
-        DocumentProcessor configured =
-                processor.externalDeliveryPlanDeriver(
+        DocumentProcessor configured = DocumentProcessor.Builder
+                .from(processor)
+                .withExternalDeliveryPlanDeriver(
                         (suppliedRoot, suppliedEvent) -> {
                             derivations.incrementAndGet();
                             return exactPlan;
-                        });
+                        })
+                .build();
         DocumentProcessingResult result =
-                processor.processDocument(root, event);
+                configured.processDocument(root, event);
 
         // then
-        assertSame(processor, configured);
+        assertNotSame(processor, configured);
+        assertSame(
+                originalDeriver,
+                processor.externalDeliveryPlanDeriver());
         assertEquals(1, derivations.get());
         assertEquals(
                 ProcessorStatus.SUCCESS,
@@ -760,8 +768,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 evidence(root, event, 7L,
                         new ExternalDeliverySnapshot[]{delivery},
                         null);
-        ProcessorEngine.Execution execution =
-                new ProcessorEngine.Execution(
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
                         new DocumentProcessor(),
                         root,
                         event,

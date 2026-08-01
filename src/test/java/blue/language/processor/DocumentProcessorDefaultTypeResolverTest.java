@@ -8,6 +8,7 @@ import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class DocumentProcessorDefaultTypeResolverTest {
@@ -18,7 +19,7 @@ class DocumentProcessorDefaultTypeResolverTest {
             "document-processor-default-resolver-isolation";
 
     @Test
-    void shouldCopyExactDefaultMappingsIntoIndependentResolvers() {
+    void shouldReturnDetachedDefaultResolverViews() {
         // given
         Map<String, Class<?>> expected =
                 new TreeMap<>(
@@ -45,7 +46,9 @@ class DocumentProcessorDefaultTypeResolverTest {
                     new TreeMap<>(
                             second.getContractTypeResolver()
                                     .getBlueIdMap());
-            first.getContractTypeResolver().register(
+            TypeClassResolver detachedFirstResolver =
+                    first.getContractTypeResolver();
+            detachedFirstResolver.register(
                     ISOLATED_TEST_BLUE_ID,
                     String.class);
 
@@ -55,6 +58,10 @@ class DocumentProcessorDefaultTypeResolverTest {
             assertEquals(expected, secondMappings);
             assertSame(
                     String.class,
+                    detachedFirstResolver
+                            .resolveClass(
+                                    ISOLATED_TEST_BLUE_ID));
+            assertNull(
                     first.getContractTypeResolver()
                             .resolveClass(
                                     ISOLATED_TEST_BLUE_ID));

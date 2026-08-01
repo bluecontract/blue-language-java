@@ -37,16 +37,16 @@ final class PatchImpactAnalyzer {
     private final ConformanceEngine conformanceEngine;
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final ProcessingSnapshotManager snapshotManager;
-    private final ProcessingMetricsSink metrics;
+    private final ProcessingObserver metrics;
 
     PatchImpactAnalyzer(ConformanceEngine conformanceEngine,
                         ConformancePlannerOverride conformancePlannerOverride,
                         ProcessingSnapshotManager snapshotManager,
-                        ProcessingMetricsSink metrics) {
+                        ProcessingObserver metrics) {
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
     }
 
     PatchImpact analyze(boolean exactReplacement,
@@ -61,7 +61,8 @@ final class PatchImpactAnalyzer {
         Objects.requireNonNull(resolvedPlan, "resolvedPlan");
         Objects.requireNonNull(patch, "patch");
 
-        metrics.incrementPatchImpactAnalyses();
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.PATCH_IMPACT_ANALYSES, 1L);
         ParsedJsonPointer path = patch.path();
         List<String> ancestors = ancestorPaths(path);
         List<String> typedBoundaries = new ArrayList<>();
@@ -161,7 +162,9 @@ final class PatchImpactAnalyzer {
                 referenceChange,
                 mergePolicyChange);
         recordKind(kind);
-        metrics.addConformanceTypedBoundariesConsidered(typedBoundaries.size());
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.CONFORMANCE_TYPED_BOUNDARIES_CONSIDERED,
+                typedBoundaries.size());
 
         boolean legacyRequiresAuthoritative = hasResolutionContext
                 || !sameStructure(canonicalPlan.before(), resolvedPlan.before())
@@ -298,18 +301,25 @@ final class PatchImpactAnalyzer {
                 referenceChange,
                 collectionChange,
                 contractsChange);
-        metrics.incrementIncrementalMergerCapabilityRequests();
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.INCREMENTAL_MERGER_CAPABILITY_REQUESTS, 1L);
         if (conformanceEngine == null || !conformanceEngine.supportsIncrementalValueResolution(request)) {
-            metrics.incrementIncrementalMergerCapabilityDenied();
-            metrics.incrementIncrementalMergerCapabilityDeniedByConformance();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.INCREMENTAL_MERGER_CAPABILITY_DENIED, 1L);
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.INCREMENTAL_MERGER_CAPABILITY_DENIED_BY_CONFORMANCE, 1L);
             return Decision.fallback(PatchImpact.FallbackReason.CUSTOM_MERGING_PROCESSOR);
         }
         if (snapshotManager == null || !snapshotManager.supportsIncrementalValueResolution(request)) {
-            metrics.incrementIncrementalMergerCapabilityDenied();
-            metrics.incrementIncrementalMergerCapabilityDeniedBySnapshotManager();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.INCREMENTAL_MERGER_CAPABILITY_DENIED, 1L);
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.INCREMENTAL_MERGER_CAPABILITY_DENIED_BY_SNAPSHOT_MANAGER,
+                    1L);
             return Decision.fallback(PatchImpact.FallbackReason.UNKNOWN_PROCESSOR_CAPABILITY);
         }
-        metrics.incrementIncrementalMergerCapabilityAllowed();
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.INCREMENTAL_MERGER_CAPABILITY_ALLOWED, 1L);
         return Decision.local();
     }
 
@@ -465,39 +475,51 @@ final class PatchImpactAnalyzer {
     private void recordKind(PatchImpact.Kind kind) {
         switch (kind) {
             case VALUE_ONLY:
-                metrics.incrementPatchImpactValueOnly();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_VALUE_ONLY, 1L);
                 break;
             case OBJECT_MEMBER_VALUE:
-                metrics.incrementPatchImpactObjectMemberValue();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_OBJECT_MEMBER_VALUE, 1L);
                 break;
             case COLLECTION_SHAPE:
-                metrics.incrementPatchImpactCollectionShape();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_COLLECTION_SHAPE, 1L);
                 break;
             case TYPE_METADATA:
-                metrics.incrementPatchImpactTypeMetadata();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_TYPE_METADATA, 1L);
                 break;
             case SCHEMA_METADATA:
-                metrics.incrementPatchImpactSchemaMetadata();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_SCHEMA_METADATA, 1L);
                 break;
             case REFERENCE_OR_BLUE_ID:
-                metrics.incrementPatchImpactReference();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_REFERENCE, 1L);
                 break;
             case MERGE_POLICY:
-                metrics.incrementPatchImpactMergePolicy();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_MERGE_POLICY, 1L);
                 break;
             case PROCESSOR_MANAGED_STATE:
-                metrics.incrementPatchImpactProcessorManagedState();
-                metrics.incrementProcessorManagedMarkerPatches();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_PROCESSOR_MANAGED_STATE, 1L);
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PROCESSOR_MANAGED_MARKER_PATCHES, 1L);
                 break;
             case CONTRACT_OR_PROCESSING_STRUCTURE:
-                metrics.incrementPatchImpactContractsOrProcessing();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_CONTRACTS_OR_PROCESSING, 1L);
                 break;
             case ROOT_REPLACEMENT:
-                metrics.incrementPatchImpactRootReplacement();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_ROOT_REPLACEMENT, 1L);
                 break;
             case UNKNOWN:
             default:
-                metrics.incrementPatchImpactUnknown();
+                ProcessingObservations.record(metrics,
+                        ProcessingMetricId.PATCH_IMPACT_UNKNOWN, 1L);
                 break;
         }
     }

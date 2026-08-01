@@ -216,8 +216,8 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
                     .withSnapshotManager(snapshotManager)
                     .withMatchingService(
                             new ContractMatchingService(blue))
-                    .withProcessingMetricsSink(
-                            current.processingMetricsSink())
+                    .observer(
+                            current.processingObserver())
                     .withExternalDeliveryPlanDeriver(
                             this::deriveExactAuditPlan)
                     .build();

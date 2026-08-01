@@ -102,12 +102,65 @@ public class ContractProcessorRegistry {
                         }
                     });
     private final ReentrantReadWriteLock configurationLock = new ReentrantReadWriteLock();
+    private final boolean mutable;
     private long version;
 
     /**
      * Creates an empty, independently synchronized processor registry.
      */
     public ContractProcessorRegistry() {
+        this.mutable = true;
+    }
+
+    private ContractProcessorRegistry(
+            ContractProcessorRegistry source) {
+        this(source, false);
+    }
+
+    private ContractProcessorRegistry(
+            ContractProcessorRegistry source,
+            boolean mutable) {
+        this.mutable = mutable;
+        synchronized (source) {
+            this.processorsByBlueId.putAll(
+                    source.processorsByBlueId);
+            for (Map.Entry<String, Node> entry
+                    : source.canonicalTypeNodesByBlueId.entrySet()) {
+                this.canonicalTypeNodesByBlueId.put(
+                        entry.getKey(),
+                        entry.getValue().clone());
+            }
+            this.providerEvidenceRequiredBlueIds.addAll(
+                    source.providerEvidenceRequiredBlueIds);
+            this.handlerProcessors.putAll(source.handlerProcessors);
+            this.channelProcessors.putAll(source.channelProcessors);
+            this.markerProcessors.putAll(source.markerProcessors);
+            this.handlerProcessorsByBlueId.putAll(
+                    source.handlerProcessorsByBlueId);
+            for (Map.Entry<String, List<String>> entry
+                    : source.handlerExecutableBodyFieldsByBlueId
+                            .entrySet()) {
+                this.handlerExecutableBodyFieldsByBlueId.put(
+                        entry.getKey(),
+                        Collections.unmodifiableList(
+                                new ArrayList<>(entry.getValue())));
+            }
+            this.channelProcessorsByBlueId.putAll(
+                    source.channelProcessorsByBlueId);
+            this.markerProcessorsByBlueId.putAll(
+                    source.markerProcessorsByBlueId);
+            this.version = source.version;
+        }
+    }
+
+    /** Returns a detached, read-only snapshot of this registry generation. */
+    ContractProcessorRegistry immutableSnapshot() {
+        return mutable ? new ContractProcessorRegistry(this) : this;
+    }
+
+    /** Returns a detached mutable copy used only while building a successor. */
+    ContractProcessorRegistry mutableCopy() {
+        return new ContractProcessorRegistry(this, true);
     }
 
     Lock configurationReadLock() {
@@ -263,6 +316,10 @@ public class ContractProcessorRegistry {
     }
 
     private void mutateConfiguration(Runnable mutation) {
+        if (!mutable) {
+            throw new UnsupportedOperationException(
+                    "Runtime registry is immutable; build a new processor generation");
+        }
         if (configurationLock.getReadHoldCount() > 0
                 && !configurationLock.isWriteLockedByCurrentThread()) {
             throw new IllegalStateException(

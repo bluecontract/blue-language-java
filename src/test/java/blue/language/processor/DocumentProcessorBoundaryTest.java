@@ -232,7 +232,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -255,7 +255,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -278,7 +278,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ProcessEmbedded embedded = new ProcessEmbedded().addPath("/child");
         ContractBundle bundle = ContractBundle.builder()
                 .setEmbedded(embedded)
@@ -307,7 +307,7 @@ class DocumentProcessorBoundaryTest {
         Node document = new Node().properties("foo", parent);
 
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ProcessEmbedded embedded = new ProcessEmbedded().addPath("/child");
         ContractBundle bundle = ContractBundle.builder()
                 .setEmbedded(embedded)
@@ -331,7 +331,7 @@ class DocumentProcessorBoundaryTest {
         Node document = new Node().properties("foo", parent);
 
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ProcessEmbedded embedded = new ProcessEmbedded().addPath("/child");
         ContractBundle bundle = ContractBundle.builder()
                 .setEmbedded(embedded)
@@ -351,7 +351,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node document = new Node().properties("foo", new Node().properties("value", new Node().value("existing")));
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -378,7 +378,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node document = new Node().properties("foo", new Node().value("ok"));
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -398,7 +398,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node document = new Node();
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -416,7 +416,7 @@ class DocumentProcessorBoundaryTest {
         // given
         Node document = new Node().properties("foo", new Node());
         DocumentProcessor processor = new DocumentProcessor();
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
 
         // when
@@ -449,14 +449,14 @@ class DocumentProcessorBoundaryTest {
         Node source = new Node().properties("scope", new Node().contracts(contracts));
         ContractBundle bundle = ContractBundle.builder().build();
 
-        ProcessorEngine.Execution mutableExecution =
-                new ProcessorEngine.Execution(new DocumentProcessor(), source.clone());
+        ProcessorInvocationState mutableExecution =
+                new ProcessorInvocationState(new DocumentProcessor(), source.clone());
         mutableExecution.handlePatch("/scope", bundle,
                 JsonPatch.replace("/scope/contracts", contracts.clone()), false);
 
         // when
-        ProcessorEngine.Execution frozenExecution =
-                new ProcessorEngine.Execution(new DocumentProcessor(), source.clone());
+        ProcessorInvocationState frozenExecution =
+                new ProcessorInvocationState(new DocumentProcessor(), source.clone());
         frozenExecution.handlePatchInputs("/scope", bundle,
                 PatchInput.frozenList(Collections.singletonList(FrozenJsonPatch.from(
                         JsonPatch.replace("/scope/contracts", contracts.clone())))),
@@ -487,7 +487,7 @@ class DocumentProcessorBoundaryTest {
     }
 
     private void assertAtomicFailure(
-            ProcessorEngine.Execution execution,
+            ProcessorInvocationState execution,
             Node exactInput) {
         DocumentProcessingResult result =
                 execution.result();

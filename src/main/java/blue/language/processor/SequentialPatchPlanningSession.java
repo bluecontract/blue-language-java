@@ -20,7 +20,7 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
 
     private final String originScope;
     private final PatchPlanningEngine planningEngine;
-    private final ProcessingMetricsSink metrics;
+    private final ProcessingObserver metrics;
     private final ConformanceEngine conformanceEngine;
     private FrozenNode canonicalRoot;
     private FrozenNode resolvedRoot;
@@ -37,7 +37,7 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
                 conformanceEngine,
                 conformancePlannerOverride,
                 materializationMetrics,
-                ProcessingMetricsSink.NOOP);
+                NoOpProcessingObserver.INSTANCE);
     }
 
     SequentialPatchPlanningSession(String originScope,
@@ -45,10 +45,10 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
                                    ConformanceEngine conformanceEngine,
                                    ConformancePlannerOverride conformancePlannerOverride,
                                    DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
-                                   ProcessingMetricsSink metrics) {
+                                   ProcessingObserver metrics) {
         this.originScope = PointerUtils.normalizeScope(Objects.requireNonNull(originScope, "originScope"));
         Objects.requireNonNull(planning, "planning");
-        this.metrics = metrics != null ? metrics : ProcessingMetricsSink.NOOP;
+        this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
         this.conformanceEngine = conformanceEngine;
         this.canonicalRoot = planning.baseSnapshot() != null
                 ? planning.baseSnapshot().frozenCanonicalRoot()
@@ -105,7 +105,8 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
 
     PlannedStep planNext(ImmutableJsonPatch patch) {
         if (!metricsStarted) {
-            metrics.incrementPatchSequencesPrepared();
+            ProcessingObservations.record(metrics,
+                    ProcessingMetricId.PATCH_SEQUENCES_PREPARED, 1L);
             metricsStarted = true;
         }
         FrozenNode baseCanonical = canonicalRoot;
@@ -115,9 +116,14 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
                 baseResolved,
                 baseResolutionComplete,
                 Objects.requireNonNull(patch, "patch"));
-        metrics.addPatchesPrepared(1L);
-        metrics.addSequencePlanningNanos(result.patchPlanningNanos());
-        metrics.addSequenceConformanceNanos(result.conformanceNanos());
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.PATCHES_PREPARED, 1L);
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.SEQUENCE_PLANNING_NANOS,
+                result.patchPlanningNanos());
+        ProcessingObservations.record(metrics,
+                ProcessingMetricId.SEQUENCE_CONFORMANCE_NANOS,
+                result.conformanceNanos());
         canonicalRoot = result.canonicalRoot();
         resolvedRoot = result.resolvedRoot();
         resolutionComplete =
