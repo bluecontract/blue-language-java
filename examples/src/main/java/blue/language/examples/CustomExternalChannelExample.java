@@ -21,6 +21,11 @@ public final class CustomExternalChannelExample {
         Node root = ContractsExampleSupport.initializedCounterRoot();
         Node event = ContractsExampleSupport.amountEvent(7L);
 
+        ExampleSupport.require(
+                !ContractsExampleSupport.SOURCE_CHANNEL_KEY.equals(
+                        ContractsExampleSupport.TARGET_CHANNEL_KEY),
+                "The accepting source and Handler target must be distinct");
+
         try (BlueRuntime runtime = ContractsExampleSupport.runtime(
                 unusedRuntimeWork)) {
             DocumentProcessingResult processed =
@@ -40,7 +45,9 @@ public final class CustomExternalChannelExample {
             return new Result(
                     counter,
                     processed.status(),
-                    processed.totalGas());
+                    processed.totalGas(),
+                    ContractsExampleSupport.SOURCE_CHANNEL_KEY,
+                    ContractsExampleSupport.TARGET_CHANNEL_KEY);
         }
         // end::custom-external-channel-handler[]
     }
@@ -55,14 +62,20 @@ public final class CustomExternalChannelExample {
         private final BigInteger counter;
         private final ProcessorStatus status;
         private final long totalGas;
+        private final String sourceChannelKey;
+        private final String handlerChannelKey;
 
         private Result(
                 BigInteger counter,
                 ProcessorStatus status,
-                long totalGas) {
+                long totalGas,
+                String sourceChannelKey,
+                String handlerChannelKey) {
             this.counter = counter;
             this.status = status;
             this.totalGas = totalGas;
+            this.sourceChannelKey = sourceChannelKey;
+            this.handlerChannelKey = handlerChannelKey;
         }
 
         public BigInteger getCounter() {
@@ -75,6 +88,14 @@ public final class CustomExternalChannelExample {
 
         public long getTotalGas() {
             return totalGas;
+        }
+
+        public String getSourceChannelKey() {
+            return sourceChannelKey;
+        }
+
+        public String getHandlerChannelKey() {
+            return handlerChannelKey;
         }
     }
 }

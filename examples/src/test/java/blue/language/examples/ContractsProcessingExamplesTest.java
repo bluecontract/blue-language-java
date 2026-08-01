@@ -7,13 +7,18 @@ import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ContractsProcessingExamplesTest {
 
     @Test
     void shouldRunCustomExternalChannelAndHandlerExample() {
-        // given / when
+        // given
+        String expectedSource = ContractsExampleSupport.SOURCE_CHANNEL_KEY;
+        String expectedTarget = ContractsExampleSupport.TARGET_CHANNEL_KEY;
+
+        // when
         CustomExternalChannelExample.Result result =
                 CustomExternalChannelExample.run();
 
@@ -21,6 +26,10 @@ final class ContractsProcessingExamplesTest {
         assertEquals(ProcessorStatus.SUCCESS, result.getStatus());
         assertEquals(BigInteger.valueOf(7L), result.getCounter());
         assertTrue(result.getTotalGas() > 0L);
+        assertEquals(expectedSource, result.getSourceChannelKey());
+        assertEquals(expectedTarget, result.getHandlerChannelKey());
+        assertNotEquals(result.getSourceChannelKey(),
+                result.getHandlerChannelKey());
     }
 
     @Test

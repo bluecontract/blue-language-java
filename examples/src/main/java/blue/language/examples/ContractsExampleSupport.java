@@ -9,6 +9,9 @@ import blue.language.processor.CheckpointDomain;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
 import blue.language.processor.DocumentProcessingResult;
+import blue.language.processor.EffectiveContractSnapshotConstants;
+import blue.language.processor.ExternalChannelDependencySnapshot;
+import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.ExternalDeliveryPlan;
 import blue.language.processor.ExternalDeliverySnapshot;
@@ -35,7 +38,8 @@ import java.util.concurrent.atomic.AtomicLong;
 /** Shared exact runtime types and feeder evidence for Contracts examples. */
 public final class ContractsExampleSupport {
 
-    static final String CHANNEL_KEY = "incoming";
+    static final String SOURCE_CHANNEL_KEY = "incoming";
+    static final String TARGET_CHANNEL_KEY = "accepted";
     static final String KEY_AMOUNT = "amount";
     static final String KEY_CHANNEL = "channel";
     static final String KEY_COUNTER_PATH = "counterPath";
@@ -49,6 +53,7 @@ public final class ContractsExampleSupport {
 
     private static final String ROOT_SUBSCRIPTION_KEY = "root-incoming";
     private static final String CHILD_SUBSCRIPTION_KEY = "child-incoming";
+    private static final String TARGET_SUBSCRIPTION_KEY = "handler-only";
 
     static final String COUNTER_KEY = "counter";
     private static final String CHILD_KEY = "child";
@@ -116,14 +121,17 @@ public final class ContractsExampleSupport {
     static Node initializedCounterRoot() {
         Node contracts = new Node()
                 .properties(
-                        CHANNEL_KEY,
-                        channel(ROOT_SUBSCRIPTION_KEY))
+                        SOURCE_CHANNEL_KEY,
+                        sourceChannel(ROOT_SUBSCRIPTION_KEY))
+                .properties(
+                        TARGET_CHANNEL_KEY,
+                        handlerChannel())
                 .properties(
                         ADD_HANDLER_KEY,
                         typed(ADD_HANDLER_TYPE_BLUE_ID)
                                 .properties(
                                         KEY_CHANNEL,
-                                        text(CHANNEL_KEY))
+                                        text(TARGET_CHANNEL_KEY))
                                 .properties(
                                         KEY_COUNTER_PATH,
                                         text("/" + COUNTER_KEY)));
@@ -155,14 +163,17 @@ public final class ContractsExampleSupport {
     static Node initializedRuntimeWorkRoot(long units) {
         Node contracts = new Node()
                 .properties(
-                        CHANNEL_KEY,
-                        channel(ROOT_SUBSCRIPTION_KEY))
+                        SOURCE_CHANNEL_KEY,
+                        sourceChannel(ROOT_SUBSCRIPTION_KEY))
+                .properties(
+                        TARGET_CHANNEL_KEY,
+                        handlerChannel())
                 .properties(
                         GAS_HANDLER_KEY,
                         typed(GAS_HANDLER_TYPE_BLUE_ID)
                                 .properties(
                                         KEY_CHANNEL,
-                                        text(CHANNEL_KEY))
+                                        text(TARGET_CHANNEL_KEY))
                                 .properties(
                                         KEY_UNITS,
                                         integer(units)));
@@ -218,22 +229,29 @@ public final class ContractsExampleSupport {
             String subscriptionKey) {
         return new Node()
                 .properties(
-                        CHANNEL_KEY,
-                        channel(subscriptionKey))
+                        SOURCE_CHANNEL_KEY,
+                        sourceChannel(subscriptionKey))
+                .properties(
+                        TARGET_CHANNEL_KEY,
+                        handlerChannel())
                 .properties(
                         EMIT_HANDLER_KEY,
                         typed(EMIT_HANDLER_TYPE_BLUE_ID)
                                 .properties(
                                         KEY_CHANNEL,
-                                        text(CHANNEL_KEY))
+                                        text(TARGET_CHANNEL_KEY))
                                 .properties(KEY_LABEL, text(label)));
     }
 
-    private static Node channel(String subscriptionKey) {
+    private static Node sourceChannel(String subscriptionKey) {
         return typed(CHANNEL_TYPE_BLUE_ID)
                 .properties(
                         KEY_EXTERNAL_SUBSCRIPTION,
                         text(subscriptionKey));
+    }
+
+    private static Node handlerChannel() {
+        return sourceChannel(TARGET_SUBSCRIPTION_KEY);
     }
 
     private static String subscriptionKey(String scopePath) {
@@ -300,28 +318,36 @@ public final class ContractsExampleSupport {
             String subscriptionKey = textProperty(
                     channel.channel,
                     KEY_EXTERNAL_SUBSCRIPTION,
-                    CHANNEL_KEY);
+                    SOURCE_CHANNEL_KEY);
             String contributionBlueId = blueId(channel.channel);
+            ExternalChannelDependencySnapshot dependencies =
+                    channelDependencies(channel, channels);
             String checkpointDomainBlueId = CheckpointDomain.derive(
                     CHANNEL_TYPE_BLUE_ID,
                     Collections.singletonList(contributionBlueId),
+                    dependencies,
                     null);
             plan.activeSubscriptionInterval(
                     new SubscriptionDelta.Entry(
                             channel.scopePath,
-                            CHANNEL_KEY,
+                            channel.channelKey,
                             CHANNEL_TYPE_BLUE_ID,
                             Collections.singletonList(
                                     contributionBlueId),
                             0,
                             Collections.singletonList(subscriptionKey),
                             checkpointDomainBlueId,
+                            dependencies,
                             0L,
                             null,
                             null));
-            if (channel.scopePath.equals(selectedScope)) {
+            if (channel.scopePath.equals(selectedScope)
+                    && SOURCE_CHANNEL_KEY.equals(
+                            channel.channelKey)) {
                 plan.delivery(ExternalDeliverySnapshot
-                        .builder(channel.scopePath, CHANNEL_KEY)
+                        .builder(
+                                channel.scopePath,
+                                channel.channelKey)
                         .order(0)
                         .sourceContribution(contributionBlueId)
                         .effectiveTypeBlueId(CHANNEL_TYPE_BLUE_ID)
@@ -335,15 +361,71 @@ public final class ContractsExampleSupport {
         return plan.build();
     }
 
+    private static ExternalChannelDependencySnapshot channelDependencies(
+            ScopeChannel source,
+            List<ScopeChannel> channels) {
+        if (!SOURCE_CHANNEL_KEY.equals(source.channelKey)) {
+            return ExternalChannelDependencySnapshot.none();
+        }
+        ScopeChannel target = findChannel(
+                channels,
+                source.scopePath,
+                TARGET_CHANNEL_KEY);
+        if (target == null) {
+            throw new IllegalStateException(
+                    "Missing same-scope Handler target Channel");
+        }
+        String contributionBlueId = blueId(target.channel);
+        ExternalChannelDependencySnapshot.ChannelEntry targetHeader =
+                new ExternalChannelDependencySnapshot.ChannelEntry(
+                        target.channelKey,
+                        0,
+                        CHANNEL_TYPE_BLUE_ID,
+                        EffectiveContractSnapshotConstants.Role
+                                .EXTERNAL_CHANNEL,
+                        Collections.singletonList(contributionBlueId),
+                        Collections.<String>emptyList(),
+                        contributionBlueId);
+        return new ExternalChannelDependencySnapshot(
+                Collections.<String>emptyList(),
+                Collections.<ExternalChannelDependencySnapshot.Entry>
+                        emptyList(),
+                Collections.<ExternalChannelDependencySnapshot.TypeFamily>
+                        emptyList(),
+                false,
+                Collections.singletonList(targetHeader),
+                false,
+                Collections.<String>emptyList());
+    }
+
+    private static ScopeChannel findChannel(
+            List<ScopeChannel> channels,
+            String scopePath,
+            String channelKey) {
+        for (ScopeChannel channel : channels) {
+            if (scopePath.equals(channel.scopePath)
+                    && channelKey.equals(channel.channelKey)) {
+                return channel;
+            }
+        }
+        return null;
+    }
+
     private static void collectScopeChannels(
             Node scope,
             String scopePath,
             List<ScopeChannel> channels) {
         Node contracts = scope != null ? scope.getContracts() : null;
-        Node channel = property(contracts, CHANNEL_KEY);
-        if (channel != null) {
-            channels.add(new ScopeChannel(scopePath, channel));
-        }
+        collectScopeChannel(
+                contracts,
+                scopePath,
+                SOURCE_CHANNEL_KEY,
+                channels);
+        collectScopeChannel(
+                contracts,
+                scopePath,
+                TARGET_CHANNEL_KEY,
+                channels);
         Node embedded = property(
                 contracts,
                 ProcessorContractConstants.KEY_EMBEDDED);
@@ -366,6 +448,20 @@ public final class ContractsExampleSupport {
                         appendScope(scopePath, relativePath),
                         channels);
             }
+        }
+    }
+
+    private static void collectScopeChannel(
+            Node contracts,
+            String scopePath,
+            String channelKey,
+            List<ScopeChannel> channels) {
+        Node channel = property(contracts, channelKey);
+        if (channel != null) {
+            channels.add(new ScopeChannel(
+                    scopePath,
+                    channelKey,
+                    channel));
         }
     }
 
@@ -487,9 +583,30 @@ public final class ContractsExampleSupport {
                     }
 
                     @Override
+                    public List<String> channelKeys(
+                            ExampleExternalChannel contract,
+                            ExternalChannelFunctionContext context) {
+                        if (!TARGET_CHANNEL_KEY.equals(
+                                context.channelKey())) {
+                            context.dependOnSameScopeChannel(
+                                    TARGET_CHANNEL_KEY);
+                        }
+                        return channelKeys(contract);
+                    }
+
+                    @Override
                     public String checkpointDomainDiscriminator(
                             ExampleExternalChannel contract) {
                         return null;
+                    }
+
+                    @Override
+                    public String handlerChannelKey(
+                            ExampleExternalChannel contract,
+                            Node event,
+                            Node payload,
+                            ExternalChannelFunctionContext context) {
+                        return TARGET_CHANNEL_KEY;
                     }
                 };
 
@@ -593,10 +710,15 @@ public final class ContractsExampleSupport {
 
     private static final class ScopeChannel {
         private final String scopePath;
+        private final String channelKey;
         private final Node channel;
 
-        private ScopeChannel(String scopePath, Node channel) {
+        private ScopeChannel(
+                String scopePath,
+                String channelKey,
+                Node channel) {
             this.scopePath = scopePath;
+            this.channelKey = channelKey;
             this.channel = channel;
         }
     }
