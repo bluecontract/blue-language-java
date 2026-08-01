@@ -212,8 +212,24 @@ than just compile it:
 
 Use the module-local `:blue-language-core:jmh` or
 `:blue-contracts-core:jmh` task for benchmarks physically owned by those
-modules. See the README benchmark section for the repository-owned single-
-benchmark filter.
+modules. Run one root-owned benchmark with the repository-owned regex filter:
+
+```bash
+./gradlew jmh \
+  -PblueJmhIncludes='.*DeepGraphPhysicalLocalityBenchmark.*'
+```
+
+Multiple comma-separated regular expressions are accepted. An empty or invalid
+expression fails during configuration instead of silently running a different
+set. JMH forks fresh benchmark JVMs, performs warmup iterations, then records
+measured iterations; its results are performance observations, not semantic
+conformance evidence.
+
+In IntelliJ IDEA, importing the repository as a Gradle project is sufficient.
+For gutter run actions, install the **JMH Java Microbenchmark Harness** plugin
+from *Settings/Preferences → Plugins → Marketplace*, then reload Gradle so
+`src/jmh/java` is indexed. IDE runs are convenient while exploring; use the
+Gradle commands above for reviewable and release evidence.
 
 ## API baselines
 
