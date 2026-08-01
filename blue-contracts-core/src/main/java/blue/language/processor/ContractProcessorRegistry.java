@@ -7,6 +7,7 @@ import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.provider.NodeProvider;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -156,6 +157,38 @@ public class ContractProcessorRegistry {
     /** Returns a detached, read-only snapshot of this registry generation. */
     ContractProcessorRegistry immutableSnapshot() {
         return mutable ? new ContractProcessorRegistry(this) : this;
+    }
+
+    /**
+     * Returns a detached immutable runtime generation.
+     *
+     * <p>The returned registry may be shared by a processor and its exact type
+     * provider so both observe precisely the same registration generation.</p>
+     *
+     * @return immutable registry generation
+     */
+    public ContractProcessorRegistry snapshot() {
+        return immutableSnapshot();
+    }
+
+    /**
+     * Returns a provider over exact canonical type nodes captured by this
+     * registry generation.
+     *
+     * <p>The provider captures an immutable snapshot immediately. Registrations
+     * that declare only a Java processor mapping remain provider misses; this
+     * method never invents canonical Blue content.</p>
+     *
+     * @return immutable exact type-content provider
+     */
+    public NodeProvider exactTypeProvider() {
+        ContractProcessorRegistry captured = immutableSnapshot();
+        return blueId -> {
+            Node canonical = captured.canonicalTypeNode(blueId);
+            return canonical != null
+                    ? Collections.singletonList(canonical)
+                    : null;
+        };
     }
 
     /** Returns a detached mutable copy used only while building a successor. */

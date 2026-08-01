@@ -2,10 +2,7 @@ package blue.language.utils;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.model.TypeBlueId;
-
 import java.math.BigInteger;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -232,16 +229,6 @@ public class BlueIds {
             String masterBlueId,
             int index) {
         return masterBlueId + CYCLIC_MEMBER_SEPARATOR + index;
-    }
-
-    /**
-     * Resolves the preferred BlueId declared for a Java type.
-     *
-     * @param clazz Java class to inspect
-     * @return preferred identity, if declared
-     */
-    public static Optional<String> getBlueId(Class<?> clazz) {
-        return Optional.ofNullable(BlueIdResolver.resolveBlueId(clazz));
     }
 
 }
